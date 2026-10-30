@@ -415,7 +415,7 @@ final class DescriptionChaptersTest extends TestCase
 
     public function testAnEpisodeRunMayStartAfterZero(): void
     {
-        $described = DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B<br>2:00 C</p>');
+        $described = DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B<br>2:00 C</p>', null);
 
         self::assertEquals(
             [new EntryChapter(10, 'A'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
@@ -426,7 +426,7 @@ final class DescriptionChaptersTest extends TestCase
 
     public function testAnEpisodeRunStillNeedsThreeLines(): void
     {
-        self::assertSame([], DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B</p>')->chapters);
+        self::assertSame([], DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B</p>', null)->chapters);
     }
 
     public function testAVideoSkipsARunThatStartsAfterZeroAndAnEpisodeTakesIt(): void
@@ -434,13 +434,14 @@ final class DescriptionChaptersTest extends TestCase
         $html = '<p>0:10 A<br>1:00 B<br>2:00 C</p><p>0:00 X<br>1:00 Y<br>2:00 Z</p>';
 
         self::assertSame('X', DescriptionChapters::in($html)->chapters[0]->title);
-        self::assertSame('A', DescriptionChapters::inEpisode($html)->chapters[0]->title);
+        self::assertSame('A', DescriptionChapters::inEpisode($html, null)->chapters[0]->title);
     }
 
     public function testAnEpisodeRunEndsAtItsFirstUnstampedLine(): void
     {
         $described = DescriptionChapters::inEpisode(
             '(02:23) A<br>(06:38) B<br>(25:20) C<br><br>Mehr zum Thema<br>Lorem<br>30:00 Uhr Wiederholung',
+            null,
         );
 
         self::assertEquals(
@@ -455,7 +456,7 @@ final class DescriptionChaptersTest extends TestCase
     {
         $html = 'Sprecher: X<br>Zusp. Floßmann (4:02)<br>Text<br>Zusp. Meier (7:10)<br>More<br>Zusp. Kunz (9:00)';
 
-        $described = DescriptionChapters::inEpisode($html);
+        $described = DescriptionChapters::inEpisode($html, null);
 
         self::assertSame([], $described->chapters);
         self::assertSame($html, $described->contentHtml);
@@ -463,7 +464,7 @@ final class DescriptionChaptersTest extends TestCase
 
     public function testAnEpisodeKeepsTheChapterLinesPastItsEndInTheBody(): void
     {
-        $described = DescriptionChapters::inEpisodeLasting('<p>0:10 A<br>1:00 B<br>2:00 C<br>3:00 D</p>', 180);
+        $described = DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B<br>2:00 C<br>3:00 D</p>', 180);
 
         self::assertCount(3, $described->chapters);
         self::assertSame('<p>3:00 D</p>', $described->contentHtml);
@@ -473,7 +474,7 @@ final class DescriptionChaptersTest extends TestCase
     {
         $html = '<p>0:10 A<br>1:00 B<br>2:00 C</p>';
 
-        $described = DescriptionChapters::inEpisodeLasting($html, 120);
+        $described = DescriptionChapters::inEpisode($html, 120);
 
         self::assertSame([], $described->chapters);
         self::assertSame($html, $described->contentHtml);
@@ -483,7 +484,7 @@ final class DescriptionChaptersTest extends TestCase
     {
         $html = (string) file_get_contents(self::FIXTURES . 'deutschlandfunk-description-ki-verstehen.html');
 
-        $described = DescriptionChapters::inEpisode($html);
+        $described = DescriptionChapters::inEpisode($html, null);
 
         self::assertEquals(
             [

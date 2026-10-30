@@ -61,9 +61,15 @@ final readonly class EntryAttachment implements \JsonSerializable
         if ($this->mimeType !== null) {
             return str_starts_with(strtolower($this->mimeType), 'audio/');
         }
-        $path = strtolower((string) parse_url(trim($this->url), \PHP_URL_PATH));
 
-        return \in_array(pathinfo($path, \PATHINFO_EXTENSION), self::AUDIO_EXTENSIONS, true);
+        return \in_array(self::extensionOf($this->url), self::AUDIO_EXTENSIONS, true);
+    }
+
+    public static function extensionOf(string $url): string
+    {
+        $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
+
+        return pathinfo($path, \PATHINFO_EXTENSION);
     }
 
     /** @return array<string, string|int> */

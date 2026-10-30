@@ -11,6 +11,7 @@ use App\Service\Chapter\Model\ChapteredEmbed;
 use App\Service\Chapter\Model\EmbedAddressModel;
 use App\Service\Chapter\Model\EmbedDescriptionModel;
 use App\Service\Chapter\Model\EmbedDetailsModel;
+use App\Service\Chapter\Support\ChapterSequence;
 use App\Service\Chapter\Support\DescriptionChapters;
 use App\Service\Text\Support\LinkedPlainText;
 use Psr\Container\ContainerInterface;
@@ -45,7 +46,7 @@ final readonly class EmbedDetails
         return new EmbedDetailsModel(
             $described->title,
             $described->durationSeconds,
-            self::chaptersBefore($described->durationSeconds, self::chaptersIn($described->description)),
+            ChapterSequence::before(self::chaptersIn($described->description), $described->durationSeconds),
             $described->artworkUrl,
         );
     }
@@ -56,23 +57,6 @@ final readonly class EmbedDetails
         $html = LinkedPlainText::asHtml($description);
 
         return $html === null ? [] : DescriptionChapters::in($html)->chapters;
-    }
-
-    /**
-     * @param list<EntryChapter> $chapters
-     *
-     * @return list<EntryChapter>
-     */
-    private static function chaptersBefore(?int $end, array $chapters): array
-    {
-        if ($end === null) {
-            return $chapters;
-        }
-
-        return array_values(array_filter(
-            $chapters,
-            static fn (EntryChapter $chapter): bool => $chapter->startSeconds < $end,
-        ));
     }
 
     private function sourceFor(ChapteredEmbed $provider): EmbedDetailsSourceInterface

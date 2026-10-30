@@ -24,13 +24,7 @@ final class DescriptionChapters
     }
 
     /** A show often opens on an intro its notes leave out, so an episode's run may start later. */
-    public static function inEpisode(string $html): ServedChaptersModel
-    {
-        return self::read($html, ChapterRunRule::Episode, null);
-    }
-
-    /** A chapter starting at or past the audio's end stays in the body, and fewer than three left read as none. */
-    public static function inEpisodeLasting(string $html, int $durationInSeconds): ServedChaptersModel
+    public static function inEpisode(string $html, ?int $durationInSeconds): ServedChaptersModel
     {
         return self::read($html, ChapterRunRule::Episode, $durationInSeconds);
     }
@@ -68,7 +62,7 @@ final class DescriptionChapters
         $run = [];
         foreach ($lines as $line) {
             $text = $line->text();
-            if (self::passesOver($rule, $run, $line)) {
+            if (self::passesOver($rule, $run, $line, $text)) {
                 continue;
             }
             $chapter = ChapterLine::chapterOf($text);
@@ -92,21 +86,16 @@ final class DescriptionChapters
      */
     private static function startingBefore(array $run, ?int $endSeconds): array
     {
-        if ($endSeconds === null) {
-            return $run;
-        }
+        $chapters = array_map(static fn (array $pair): EntryChapter => $pair[1], $run);
 
-        return array_values(array_filter(
-            $run,
-            static fn (array $pair): bool => $pair[1]->startSeconds < $endSeconds,
-        ));
+        return \array_slice($run, 0, \count(ChapterSequence::before($chapters, $endSeconds)));
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
-    private static function passesOver(ChapterRunRule $rule, array $run, DescriptionLine $line): bool
+    private static function passesOver(ChapterRunRule $rule, array $run, DescriptionLine $line, string $text): bool
     {
         return $rule->skipsUnstampedLines()
-            && ChapterLine::holdsNoStamp($line->text())
+            && ChapterLine::holdsNoStamp($text)
             && ($run === [] || $line->block === $run[\count($run) - 1][0]->block);
     }
 

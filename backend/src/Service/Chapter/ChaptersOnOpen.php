@@ -10,7 +10,6 @@ use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Chapter\Support\DescriptionChapters;
 use App\Service\Url\Support\YouTubeUrl;
 
-/** The chapters an opened entry shows, and the body to show beside them; a video's or an undeclared episode's come from its description. Opening may store a fetched chapters file. */
 final readonly class ChaptersOnOpen
 {
     public function __construct(private ChapterFiller $filler)
@@ -25,21 +24,14 @@ final readonly class ChaptersOnOpen
         }
 
         $this->filler->fillOnOpen($entry);
-        $audio = self::audioOf($entry);
-        if ($body !== null && $audio !== null && $entry->getChapters() === []) {
-            return self::episodeChapters($body, $audio);
+        if ($body !== null && $entry->getChapters() === []) {
+            $audio = self::audioOf($entry);
+            if ($audio !== null) {
+                return DescriptionChapters::inEpisode($body, $audio->durationInSeconds);
+            }
         }
 
         return new ServedChaptersModel($entry->getChapters(), $body);
-    }
-
-    private static function episodeChapters(string $body, EntryAttachment $audio): ServedChaptersModel
-    {
-        if ($audio->durationInSeconds === null) {
-            return DescriptionChapters::inEpisode($body);
-        }
-
-        return DescriptionChapters::inEpisodeLasting($body, $audio->durationInSeconds);
     }
 
     private static function audioOf(Entry $entry): ?EntryAttachment

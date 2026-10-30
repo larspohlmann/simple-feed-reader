@@ -66,8 +66,7 @@ final class FeedMediaClassifier
 
     public static function kindOfUrl(string $url): FeedMediaKind
     {
-        $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
-        $extension = pathinfo($path, \PATHINFO_EXTENSION);
+        $extension = EntryAttachment::extensionOf($url);
         if (\in_array($extension, EntryAttachment::AUDIO_EXTENSIONS, true)) {
             return FeedMediaKind::Audio;
         }

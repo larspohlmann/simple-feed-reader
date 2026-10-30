@@ -18,6 +18,23 @@ final class ChapterSequenceTest extends TestCase
         self::assertSame(['A', 'B'], array_map(static fn (EntryChapter $chapter): string => $chapter->title, $ordered));
     }
 
+    public function testBeforeKeepsEveryChapterWithoutAnEnd(): void
+    {
+        $chapters = [new EntryChapter(0, 'A'), new EntryChapter(90, 'B')];
+
+        self::assertSame($chapters, ChapterSequence::before($chapters, null));
+    }
+
+    public function testBeforeDropsTheChaptersStartingAtOrAfterTheEnd(): void
+    {
+        $kept = ChapterSequence::before(
+            [new EntryChapter(0, 'A'), new EntryChapter(60, 'B'), new EntryChapter(90, 'C'), new EntryChapter(99, 'D')],
+            90,
+        );
+
+        self::assertSame(['A', 'B'], array_map(static fn (EntryChapter $chapter): string => $chapter->title, $kept));
+    }
+
     public function testASingleChapterIsNoList(): void
     {
         self::assertSame([], ChapterSequence::ordered([new EntryChapter(0, 'Only')]));
