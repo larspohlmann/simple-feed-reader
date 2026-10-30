@@ -1,4 +1,5 @@
 import { Component, computed, input, linkedSignal } from '@angular/core';
+import { avatarThumbnailUrl } from '../avatar-thumbnail';
 import { IconComponent } from '../icon/icon.component';
 
 /**
@@ -25,5 +26,7 @@ export class FaviconComponent {
     computation: () => false,
   });
   protected readonly src = computed(() => (this.broken() ? null : this.url()));
-  protected readonly avatarSrc = computed(() => (this.avatarBroken() ? null : this.avatarUrl()));
+  protected readonly avatarSrc = computed(() =>
+    this.avatarBroken() ? null : avatarThumbnailUrl(this.avatarUrl()),
+  );
 }

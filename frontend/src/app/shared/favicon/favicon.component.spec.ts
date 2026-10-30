@@ -86,6 +86,18 @@ describe('FaviconComponent', () => {
       expect(avatar.getAttribute('height')).toBe('14');
     });
 
+    it("loads a Bluesky avatar as the CDN's thumbnail", () => {
+      const fixture = render();
+      fixture.componentInstance.avatarUrl.set(
+        'https://cdn.bsky.app/img/avatar/plain/did:plc:a/b@jpeg',
+      );
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('img').getAttribute('src')).toBe(
+        'https://cdn.bsky.app/img/avatar_thumbnail/plain/did:plc:a/b@jpeg',
+      );
+    });
+
     it('falls back to the favicon when the avatar fails to load', () => {
       const fixture = renderWithAvatar();
       fixture.nativeElement.querySelector('img').dispatchEvent(new Event('error'));
