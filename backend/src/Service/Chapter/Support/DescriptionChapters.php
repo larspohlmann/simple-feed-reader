@@ -5,26 +5,39 @@ declare(strict_types=1);
 namespace App\Service\Chapter\Support;
 
 use App\Entity\EntryChapter;
+use App\Service\Chapter\Model\ChapterRunRule;
 use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Chapter\Pass\DescriptionLine;
 use App\Service\Html\Support\HtmlDocumentParser;
 use Dom\Element;
 use Dom\Text;
 
-/** YouTube's chapter rule: the first run of three or more ascending chapter lines from `0:00`, stamped alike. */
+/** A description's first run of three or more ascending chapter lines, stamped alike, taken out of its body. */
 final class DescriptionChapters
 {
     private const int MINIMUM = 3;
 
+    /** YouTube's chapter rule: the run starts at `0:00`. */
     public static function in(string $html): ServedChaptersModel
     {
-        if (!str_contains($html, '0:00')) {
+        return self::read($html, ChapterRunRule::YouTube, null);
+    }
+
+    /** A show often opens on an intro its notes leave out, so an episode's run may start later. */
+    public static function inEpisode(string $html, ?int $durationInSeconds): ServedChaptersModel
+    {
+        return self::read($html, ChapterRunRule::Episode, $durationInSeconds);
+    }
+
+    private static function read(string $html, ChapterRunRule $rule, ?int $endSeconds): ServedChaptersModel
+    {
+        if (ChapterLine::holdsNoStamp($html)) {
             return new ServedChaptersModel([], $html);
         }
 
         $document = HtmlDocumentParser::parseFragment($html);
-        $run = self::firstRun(DescriptionLines::of($document));
-        if ($run === []) {
+        $run = self::startingBefore(self::firstRun(DescriptionLines::of($document), $rule), $endSeconds);
+        if (\count($run) < self::MINIMUM) {
             return new ServedChaptersModel([], $html);
         }
 
@@ -44,12 +57,12 @@ final class DescriptionChapters
      *
      * @return list<array{DescriptionLine, EntryChapter}>
      */
-    private static function firstRun(array $lines): array
+    private static function firstRun(array $lines, ChapterRunRule $rule): array
     {
         $run = [];
         foreach ($lines as $line) {
             $text = $line->text();
-            if (ChapterLine::holdsNoStamp($text) && self::staysInTheBlockOf($run, $line)) {
+            if (self::passesOver($rule, $run, $line, $text)) {
                 continue;
             }
             $chapter = ChapterLine::chapterOf($text);
@@ -57,19 +70,33 @@ final class DescriptionChapters
                 $run[] = [$line, $chapter];
                 continue;
             }
-            if (self::isChapterBlock($run)) {
+            if (self::isChapterBlock($run, $rule)) {
                 return $run;
             }
             $run = $chapter === null ? [] : [[$line, $chapter]];
         }
 
-        return self::isChapterBlock($run) ? $run : [];
+        return self::isChapterBlock($run, $rule) ? $run : [];
+    }
+
+    /**
+     * @param list<array{DescriptionLine, EntryChapter}> $run
+     *
+     * @return list<array{DescriptionLine, EntryChapter}>
+     */
+    private static function startingBefore(array $run, ?int $endSeconds): array
+    {
+        $chapters = array_map(static fn (array $pair): EntryChapter => $pair[1], $run);
+
+        return \array_slice($run, 0, \count(ChapterSequence::before($chapters, $endSeconds)));
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
-    private static function staysInTheBlockOf(array $run, DescriptionLine $line): bool
+    private static function passesOver(ChapterRunRule $rule, array $run, DescriptionLine $line, string $text): bool
     {
-        return $run === [] || $line->block === $run[\count($run) - 1][0]->block;
+        return $rule->skipsUnstampedLines()
+            && ChapterLine::holdsNoStamp($text)
+            && ($run === [] || $line->block === $run[\count($run) - 1][0]->block);
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
@@ -101,9 +128,9 @@ final class DescriptionChapters
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
-    private static function isChapterBlock(array $run): bool
+    private static function isChapterBlock(array $run, ChapterRunRule $rule): bool
     {
-        return \count($run) >= self::MINIMUM && $run[0][1]->startSeconds === 0;
+        return \count($run) >= self::MINIMUM && $rule->admitsStart($run[0][1]->startSeconds);
     }
 
     private static function tidy(Element $block): void
@@ -120,7 +147,11 @@ final class DescriptionChapters
 
     private static function dropIfEmpty(Element $block): void
     {
-        if (trim((string) $block->textContent) !== '' || $block->firstElementChild !== null) {
+        if (
+            $block->localName === 'body'
+            || trim((string) $block->textContent) !== ''
+            || $block->firstElementChild !== null
+        ) {
             return;
         }
         $parent = $block->parentElement;

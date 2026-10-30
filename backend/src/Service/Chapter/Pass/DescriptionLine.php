@@ -7,7 +7,7 @@ namespace App\Service\Chapter\Pass;
 use Dom\Element;
 use Dom\Node;
 
-/** One `<br>`-separated line of a description paragraph. */
+/** One `<br>`-separated line of a description, inside the block that holds it. */
 final readonly class DescriptionLine
 {
     /** @param list<Node> $nodes */

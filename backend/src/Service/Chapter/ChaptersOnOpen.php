@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Chapter;
 
 use App\Entity\Entry;
+use App\Entity\EntryAttachment;
 use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Chapter\Support\DescriptionChapters;
 use App\Service\Url\Support\YouTubeUrl;
 
-/** The chapters an opened entry shows, and the body to show beside them. Opening may store a fetched chapters file. */
 final readonly class ChaptersOnOpen
 {
     public function __construct(private ChapterFiller $filler)
@@ -24,8 +24,25 @@ final readonly class ChaptersOnOpen
         }
 
         $this->filler->fillOnOpen($entry);
+        if ($body !== null && $entry->getChapters() === []) {
+            $audio = self::audioOf($entry);
+            if ($audio !== null) {
+                return DescriptionChapters::inEpisode($body, $audio->durationInSeconds);
+            }
+        }
 
         return new ServedChaptersModel($entry->getChapters(), $body);
+    }
+
+    private static function audioOf(Entry $entry): ?EntryAttachment
+    {
+        foreach ($entry->getAttachments() as $attachment) {
+            if ($attachment->isAudio()) {
+                return $attachment;
+            }
+        }
+
+        return null;
     }
 
     private static function isYouTubeVideo(?string $url): bool

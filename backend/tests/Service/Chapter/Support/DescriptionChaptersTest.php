@@ -273,6 +273,61 @@ final class DescriptionChaptersTest extends TestCase
         self::assertSame('<ul><li>Intro</li></ul>', $described->contentHtml);
     }
 
+    public function testReadsLinesThatSitDirectlyInTheBody(): void
+    {
+        $described = DescriptionChapters::in('Intro<br>0:00 A<br>1:00 B<br>2:00 C<br>Outro');
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('Intro<br>Outro', $described->contentHtml);
+    }
+
+    public function testKeepsTheBodyThatHeldOnlyTheBlock(): void
+    {
+        $described = DescriptionChapters::in('0:00 A<br>1:00 B<br>2:00 C');
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('', $described->contentHtml);
+    }
+
+    public function testReadsTheLinesAroundAListInReadingOrder(): void
+    {
+        $described = DescriptionChapters::in('0:00 A<ul><li>1:00 B</li></ul>2:00 C');
+
+        self::assertEquals(
+            [new EntryChapter(0, 'A'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
+            $described->chapters,
+        );
+    }
+
+    public function testReadsLinesInsideADivision(): void
+    {
+        $described = DescriptionChapters::in('<div>0:00 A<br>1:00 B<br>2:00 C</div><div>Outro</div>');
+
+        self::assertCount(3, $described->chapters);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function wrappedParagraphs(): iterable
+    {
+        yield 'span' => ['<span><p>0:00 A<br>1:00 B<br>2:00 C</p></span>'];
+        yield 'font' => ['<font><p>0:00 A<br>1:00 B<br>2:00 C</p></font>'];
+        yield 'main' => ['<main><p>0:00 A<br>1:00 B<br>2:00 C</p></main>'];
+        yield 'details' => ['<details><p>0:00 A<br>1:00 B<br>2:00 C</p></details>'];
+    }
+
+    #[DataProvider('wrappedParagraphs')]
+    public function testReadsAParagraphWrappedInAnUnlistedElement(string $html): void
+    {
+        self::assertCount(3, DescriptionChapters::in($html)->chapters);
+    }
+
+    public function testWhitespaceBetweenListItemsKeepsTheRun(): void
+    {
+        $described = DescriptionChapters::in("<ul>\n<li>0:00 A</li>\n<li>1:00 B</li>\n<li>2:00 C</li>\n</ul>");
+
+        self::assertCount(3, $described->chapters);
+    }
+
     public function testReturnsTheBodyVerbatimWhenNothingIsRead(): void
     {
         $html = '<p>No chapters<br />here</p>';
@@ -356,5 +411,103 @@ final class DescriptionChaptersTest extends TestCase
 
         self::assertSame([], $described->chapters);
         self::assertSame($html, $described->contentHtml);
+    }
+
+    public function testAnEpisodeRunMayStartAfterZero(): void
+    {
+        $described = DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B<br>2:00 C</p>', null);
+
+        self::assertEquals(
+            [new EntryChapter(10, 'A'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
+            $described->chapters,
+        );
+        self::assertSame('', $described->contentHtml);
+    }
+
+    public function testAnEpisodeRunStillNeedsThreeLines(): void
+    {
+        self::assertSame([], DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B</p>', null)->chapters);
+    }
+
+    public function testAVideoSkipsARunThatStartsAfterZeroAndAnEpisodeTakesIt(): void
+    {
+        $html = '<p>0:10 A<br>1:00 B<br>2:00 C</p><p>0:00 X<br>1:00 Y<br>2:00 Z</p>';
+
+        self::assertSame('X', DescriptionChapters::in($html)->chapters[0]->title);
+        self::assertSame('A', DescriptionChapters::inEpisode($html, null)->chapters[0]->title);
+    }
+
+    public function testAnEpisodeRunEndsAtItsFirstUnstampedLine(): void
+    {
+        $described = DescriptionChapters::inEpisode(
+            '(02:23) A<br>(06:38) B<br>(25:20) C<br><br>Mehr zum Thema<br>Lorem<br>30:00 Uhr Wiederholung',
+            null,
+        );
+
+        self::assertEquals(
+            [new EntryChapter(143, 'A'), new EntryChapter(398, 'B'), new EntryChapter(1520, 'C')],
+            $described->chapters,
+        );
+        self::assertNotNull($described->contentHtml);
+        self::assertStringContainsString('30:00 Uhr Wiederholung', $described->contentHtml);
+    }
+
+    public function testAnEpisodeTakesNoStampsScatteredBetweenUnstampedLines(): void
+    {
+        $html = 'Sprecher: X<br>Zusp. Floßmann (4:02)<br>Text<br>Zusp. Meier (7:10)<br>More<br>Zusp. Kunz (9:00)';
+
+        $described = DescriptionChapters::inEpisode($html, null);
+
+        self::assertSame([], $described->chapters);
+        self::assertSame($html, $described->contentHtml);
+    }
+
+    public function testAnEpisodeKeepsTheChapterLinesPastItsEndInTheBody(): void
+    {
+        $described = DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B<br>2:00 C<br>3:00 D</p>', 180);
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('<p>3:00 D</p>', $described->contentHtml);
+    }
+
+    public function testAnEpisodeWithFewerThanThreeChaptersBeforeItsEndKeepsItsBody(): void
+    {
+        $html = '<p>0:10 A<br>1:00 B<br>2:00 C</p>';
+
+        $described = DescriptionChapters::inEpisode($html, 120);
+
+        self::assertSame([], $described->chapters);
+        self::assertSame($html, $described->contentHtml);
+    }
+
+    public function testReadsADeutschlandfunkEpisodeDescription(): void
+    {
+        $html = (string) file_get_contents(self::FIXTURES . 'deutschlandfunk-description-ki-verstehen.html');
+
+        $described = DescriptionChapters::inEpisode($html, null);
+
+        self::assertEquals(
+            [
+                new EntryChapter(143, 'Wie weit deutsche Unternehmen beim KI-Einsatz sind'),
+                new EntryChapter(398, 'Erst in der Integrationsphase steigt die Produktivität'),
+                new EntryChapter(677, 'KI ist viel mehr als Chatbots und kann sogar Stahlrohre prüfen'),
+                new EntryChapter(912, 'Die Kehrseite des KI-Booms und die Angst vor dem Jobverlust'),
+                new EntryChapter(1140, 'Nvidia-Boss Jensen Huang sagt: KI schafft massenhaft neue Arbeitsplätze'),
+                new EntryChapter(1520, 'Das Produktivitätsparadoxon und die J-Kurve'),
+            ],
+            $described->chapters,
+        );
+        self::assertNotNull($described->contentHtml);
+        self::assertStringNotContainsString('(02:23)', $described->contentHtml);
+        self::assertStringNotContainsString('(25:20)', $described->contentHtml);
+        self::assertStringContainsString(
+            '<strong>Das erwartet Euch in dieser Folge:</strong>',
+            $described->contentHtml,
+        );
+        self::assertStringContainsString('Barbara Engels', $described->contentHtml);
+        self::assertStringContainsString(
+            '<strong>Mehr zum Thema in der Deutschlandfunk-App:</strong>',
+            $described->contentHtml,
+        );
     }
 }

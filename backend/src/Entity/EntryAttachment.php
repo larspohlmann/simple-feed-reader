@@ -13,6 +13,9 @@ use App\Entity\Exception\IncompleteStoredMediaException;
  */
 final readonly class EntryAttachment implements \JsonSerializable
 {
+    /** @var list<string> */
+    public const array AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav', 'flac', 'wma'];
+
     public function __construct(
         public string $url,
         public ?string $mimeType = null,
@@ -51,6 +54,22 @@ final readonly class EntryAttachment implements \JsonSerializable
             \is_int($sizeInBytes) ? $sizeInBytes : null,
             \is_string($title) ? $title : null,
         );
+    }
+
+    public function isAudio(): bool
+    {
+        if ($this->mimeType !== null) {
+            return str_starts_with(strtolower($this->mimeType), 'audio/');
+        }
+
+        return \in_array(self::extensionOf($this->url), self::AUDIO_EXTENSIONS, true);
+    }
+
+    public static function extensionOf(string $url): string
+    {
+        $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
+
+        return pathinfo($path, \PATHINFO_EXTENSION);
     }
 
     /** @return array<string, string|int> */

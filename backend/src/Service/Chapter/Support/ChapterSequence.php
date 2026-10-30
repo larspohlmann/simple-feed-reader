@@ -35,6 +35,23 @@ final class ChapterSequence
         return true;
     }
 
+    /**
+     * @param list<EntryChapter> $chapters
+     *
+     * @return list<EntryChapter>
+     */
+    public static function before(array $chapters, ?int $endSeconds): array
+    {
+        if ($endSeconds === null) {
+            return $chapters;
+        }
+
+        return array_values(array_filter(
+            $chapters,
+            static fn (EntryChapter $chapter): bool => $chapter->startSeconds < $endSeconds,
+        ));
+    }
+
     private function __construct()
     {
     }
