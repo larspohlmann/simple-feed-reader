@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal } from '@angular/core';
 import { ProxiedImageDirective } from '../proxied-image/proxied-image.directive';
+import { avatarThumbnailUrl } from '../avatar-thumbnail';
 import { avatarToneOf } from '../avatar-tone';
 import { initialsOf } from '../initials';
 
@@ -23,6 +24,7 @@ export class AvatarComponent {
   readonly toneSeed = input<string | null>(null);
   readonly size = input<AvatarSize>('sm');
 
+  protected readonly src = computed(() => avatarThumbnailUrl(this.url()));
   protected readonly failed = linkedSignal({ source: this.url, computation: () => false });
   protected readonly initials = computed(() => initialsOf(this.name()));
   protected readonly toneClass = computed(() => {

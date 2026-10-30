@@ -1,9 +1,9 @@
-@let src = url();
-@if (src && !failed()) {
+@let source = src();
+@if (source && !failed()) {
   <img
     class="avatar"
     appProxiedImage
-    [src]="src"
+    [src]="source"
     alt=""
     loading="lazy"
     decoding="async"

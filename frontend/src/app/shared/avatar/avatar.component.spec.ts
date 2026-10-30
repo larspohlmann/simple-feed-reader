@@ -37,6 +37,16 @@ describe('AvatarComponent', () => {
     expect(host(mount({ url: 'https://cdn.test/ann.jpg' })).querySelector('.initials')).toBeNull();
   });
 
+  it("loads a Bluesky avatar as the CDN's thumbnail", () => {
+    const image = host(
+      mount({ url: 'https://cdn.bsky.app/img/avatar/plain/did:plc:a/b@jpeg' }),
+    ).querySelector('img.avatar')!;
+
+    expect(image.getAttribute('src')).toBe(
+      'https://cdn.bsky.app/img/avatar_thumbnail/plain/did:plc:a/b@jpeg',
+    );
+  });
+
   it('falls back to the initials when the picture fails', async () => {
     const fixture = mount({ url: 'https://cdn.test/ann.jpg' });
 
