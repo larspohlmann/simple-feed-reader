@@ -34,6 +34,7 @@ export class ReaderRouteState {
   readonly selection = computed(() => this.listPreferences.appliedTo(this.parsed().selection), {
     equal: sameSelection,
   });
+  private readonly inSearch = computed(() => isDirectSearch(this.parsed().selection));
   readonly entryId = computed(() => this.parsed().entryId);
   readonly linkTarget = computed(() => signedUrlFromParam(this.queryParameters().get('link')), {
     equal: sameSignedUrl,
@@ -62,7 +63,7 @@ export class ReaderRouteState {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.entries.releaseUnlisted());
     effect(() => {
-      if (isDirectSearch(this.parsed().selection)) return;
+      if (this.inSearch()) return;
       untracked(() => this.listPreferences.endSearch());
     });
     effect(() => {

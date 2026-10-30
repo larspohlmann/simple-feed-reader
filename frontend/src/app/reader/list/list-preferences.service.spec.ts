@@ -59,13 +59,16 @@ describe('ListPreferences', () => {
       expect(preferences.appliedTo(search).unread).toBe(false);
     });
 
-    it('reports a flip inside a search as a preference change', () => {
+    it('reports a flip inside a search as a preference change, and its end as none', () => {
       const preferences = TestBed.inject(ListPreferences);
       const before = preferences.values();
 
       preferences.setUnreadOnly(search, true);
+      const flipped = preferences.values();
+      preferences.endSearch();
 
-      expect(preferences.values()).not.toEqual(before);
+      expect(flipped).not.toEqual(before);
+      expect(preferences.values()).toEqual(flipped);
     });
   });
 
