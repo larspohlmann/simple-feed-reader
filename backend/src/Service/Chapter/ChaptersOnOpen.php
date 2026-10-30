@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Chapter;
 
 use App\Entity\Entry;
+use App\Entity\EntryAttachment;
 use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Chapter\Support\DescriptionChapters;
 use App\Service\Url\Support\YouTubeUrl;
@@ -33,7 +34,18 @@ final readonly class ChaptersOnOpen
 
     private static function isEpisodeWithoutChapters(Entry $entry): bool
     {
-        return $entry->getAttachments() !== [] && $entry->getChapters() === [];
+        return self::audioOf($entry) !== null && $entry->getChapters() === [];
+    }
+
+    private static function audioOf(Entry $entry): ?EntryAttachment
+    {
+        foreach ($entry->getAttachments() as $attachment) {
+            if ($attachment->isAudio()) {
+                return $attachment;
+            }
+        }
+
+        return null;
     }
 
     private static function isYouTubeVideo(?string $url): bool

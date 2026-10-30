@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Support;
 
+use App\Entity\EntryAttachment;
 use App\Service\Parser\Model\FeedMediaKind;
 
 /**
@@ -17,9 +18,6 @@ final class FeedMediaClassifier
         'jpg' => FeedMediaKind::Image, 'jpeg' => FeedMediaKind::Image, 'png' => FeedMediaKind::Image,
         'gif' => FeedMediaKind::Image, 'webp' => FeedMediaKind::Image, 'avif' => FeedMediaKind::Image,
         'bmp' => FeedMediaKind::Image, 'svg' => FeedMediaKind::Image,
-        'mp3' => FeedMediaKind::Audio, 'm4a' => FeedMediaKind::Audio, 'aac' => FeedMediaKind::Audio,
-        'ogg' => FeedMediaKind::Audio, 'oga' => FeedMediaKind::Audio, 'opus' => FeedMediaKind::Audio,
-        'wav' => FeedMediaKind::Audio, 'flac' => FeedMediaKind::Audio, 'wma' => FeedMediaKind::Audio,
         'mp4' => FeedMediaKind::Video, 'm4v' => FeedMediaKind::Video, 'mov' => FeedMediaKind::Video,
         'webm' => FeedMediaKind::Video, 'mkv' => FeedMediaKind::Video, 'avi' => FeedMediaKind::Video,
         'ogv' => FeedMediaKind::Video,
@@ -70,6 +68,9 @@ final class FeedMediaClassifier
     {
         $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
         $extension = pathinfo($path, \PATHINFO_EXTENSION);
+        if (\in_array($extension, EntryAttachment::AUDIO_EXTENSIONS, true)) {
+            return FeedMediaKind::Audio;
+        }
 
         return self::EXTENSION_KINDS[$extension] ?? FeedMediaKind::Unknown;
     }
