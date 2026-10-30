@@ -28,7 +28,7 @@ export class MarkReadActions {
     const question = {
       title: this.i18n.translate('reader.markAllReadConfirm'),
       message: this.i18n.translate('reader.markAllReadConfirmMessage'),
-      confirmLabel: this.i18n.translate('reader.markAllRead'),
+      confirmLabel: this.i18n.translate('reader.markAllReadConfirmAction'),
     };
     this.confirm.confirmThen(question, () => this.markAllReadNow(target));
   }
@@ -38,7 +38,7 @@ export class MarkReadActions {
     const question = {
       title: this.i18n.translate('reader.markAboveReadConfirm'),
       message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
-      confirmLabel: this.i18n.translate('reader.markAboveRead'),
+      confirmLabel: this.i18n.translate('reader.markAboveReadConfirmAction'),
     };
     this.confirm.confirmThen(question, () => this.markAboveReadNow(ids, hideInUnreadList));
   }

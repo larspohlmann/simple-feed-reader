@@ -323,7 +323,7 @@ export class MailSectionComponent {
     const data: ConfirmData = {
       title: this.i18n.translate('settings.mail.resetToEnv'),
       message: this.i18n.translate('settings.mail.resetConfirm'),
-      confirmLabel: this.i18n.translate('settings.mail.resetToEnv'),
+      confirmLabel: this.i18n.translate('settings.mail.resetConfirmAction'),
       danger: true,
     };
     this.confirm.confirmThen(data, () => {

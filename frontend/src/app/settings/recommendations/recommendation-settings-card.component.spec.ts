@@ -766,7 +766,7 @@ describe('RecommendationSettingsCardComponent', () => {
         { data: { title: string; confirmLabel: string; danger?: boolean } },
       ];
       expect(config.data.title).toBe('Clear all recommendations?');
-      expect(config.data.confirmLabel).toBe('Clear recommendations');
+      expect(config.data.confirmLabel).toBe('Clear');
       expect(config.data.danger).toBe(true);
     });
   });
