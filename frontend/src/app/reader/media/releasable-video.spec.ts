@@ -77,18 +77,49 @@ describe('ReleasableVideo', () => {
     expect(element.currentTime).toBe(0);
   });
 
-  it('drops a pending resume when released again before the media arrived', () => {
+  it('keeps its place when released again before the media returned', () => {
+    const element = document.createElement('video');
+    const video = new ReleasableVideo(element, SOURCE);
+    video.attach();
+    at(element, 42);
+    video.release();
+    at(element, 0);
+    video.attach();
+    video.release();
+
+    video.attach();
+    element.dispatchEvent(new Event('loadedmetadata'));
+
+    expect(element.currentTime).toBe(42);
+  });
+
+  it('does not seek on a stray loadedmetadata after a pending resume was dropped', () => {
+    const element = document.createElement('video');
+    const video = new ReleasableVideo(element, SOURCE);
+    video.attach();
+    at(element, 42);
+    video.release();
+    at(element, 0);
+    video.attach();
+    video.release();
+
+    element.dispatchEvent(new Event('loadedmetadata'));
+
+    expect(element.currentTime).toBe(0);
+  });
+
+  it('seeks only once per attach', () => {
     const element = document.createElement('video');
     const video = new ReleasableVideo(element, SOURCE);
     video.attach();
     at(element, 42);
     video.release();
     video.attach();
-    video.release();
-    at(element, 0);
+    element.dispatchEvent(new Event('loadedmetadata'));
+    at(element, 5);
 
     element.dispatchEvent(new Event('loadedmetadata'));
 
-    expect(element.currentTime).toBe(0);
+    expect(element.currentTime).toBe(5);
   });
 });

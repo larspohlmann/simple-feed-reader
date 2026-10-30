@@ -17,19 +17,28 @@ export class ReleasableVideo {
 
   release(): void {
     if (!this.element.hasAttribute('src')) return;
-    this.pendingResume?.abort();
-    this.pendingResume = null;
-    this.resumeAt = this.element.ended ? 0 : this.element.currentTime;
+    if (this.pendingResume) this.dropPendingResume();
+    else this.resumeAt = this.element.ended ? 0 : this.element.currentTime;
     this.element.pause();
     this.element.removeAttribute('src');
     this.element.load();
   }
 
+  private dropPendingResume(): void {
+    this.pendingResume?.abort();
+    this.pendingResume = null;
+  }
+
   private resumeOnceLoaded(seconds: number): void {
-    this.pendingResume = new AbortController();
-    this.element.addEventListener('loadedmetadata', () => (this.element.currentTime = seconds), {
-      once: true,
-      signal: this.pendingResume.signal,
-    });
+    const pending = new AbortController();
+    this.pendingResume = pending;
+    this.element.addEventListener(
+      'loadedmetadata',
+      () => {
+        this.element.currentTime = seconds;
+        this.pendingResume = null;
+      },
+      { once: true, signal: pending.signal },
+    );
   }
 }
