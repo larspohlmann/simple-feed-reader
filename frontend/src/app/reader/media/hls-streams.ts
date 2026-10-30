@@ -22,10 +22,12 @@ const armed = new WeakMap<HTMLVideoElement, AbortController>();
 /** Arms the host's playlist videos for their first play, and releases the streams of the videos a re-render removed. */
 export function armHlsStreams(host: HTMLElement): void {
   releaseWhere(host, (video) => !host.contains(video));
-  for (const video of Array.from(host.querySelectorAll('video'))) {
-    if (!isPlaylist(video) || armed.has(video)) continue;
-    armFirstPlay(host, video, video.getAttribute('src') ?? '');
-  }
+  for (const video of Array.from(host.querySelectorAll('video'))) armHlsStream(host, video);
+}
+
+export function armHlsStream(host: HTMLElement, video: HTMLVideoElement): void {
+  if (!isPlaylist(video) || armed.has(video)) return;
+  armFirstPlay({ host, video, source: video.getAttribute('src') ?? '' });
 }
 
 export function releaseHlsStreams(host: HTMLElement): void {
@@ -33,7 +35,6 @@ export function releaseHlsStreams(host: HTMLElement): void {
   streamsByHost.delete(host);
 }
 
-/** Releases one video's stream and its arming, for a list video losing its source (#1903). */
 export function releaseHlsStream(host: HTMLElement, video: HTMLVideoElement): void {
   armed.get(video)?.abort();
   armed.delete(video);
@@ -49,22 +50,27 @@ function isPlaylist(video: HTMLVideoElement): boolean {
   return PLAYLIST.test(video.getAttribute('src') ?? '');
 }
 
-function armFirstPlay(host: HTMLElement, video: HTMLVideoElement, source: string): void {
-  const arming = new AbortController();
-  armed.set(video, arming);
-  const rearm = (): void => armFirstPlay(host, video, source);
-  video.addEventListener('play', () => void play(host, video, source).catch(rearm), {
-    once: true,
-    signal: arming.signal,
-  });
+interface Stream {
+  host: HTMLElement;
+  video: HTMLVideoElement;
+  source: string;
 }
 
-async function play(host: HTMLElement, video: HTMLVideoElement, source: string): Promise<void> {
+function armFirstPlay(stream: Stream): void {
+  const arming = new AbortController();
+  armed.set(stream.video, arming);
+  stream.video.addEventListener(
+    'play',
+    () => void play(stream, arming.signal).catch(() => armFirstPlay(stream)),
+    { once: true, signal: arming.signal },
+  );
+}
+
+async function play({ host, video, source }: Stream, arming: AbortSignal): Promise<void> {
   const { default: HlsPlayer } = await import('hls.js');
-  if (!HlsPlayer.isSupported()) return;
-  if (!isPlaylist(video)) return;
+  if (!HlsPlayer.isSupported() || arming.aborted) return;
   if (video.paused || !video.isConnected) {
-    armFirstPlay(host, video, source);
+    armFirstPlay({ host, video, source });
     return;
   }
   const hls = new HlsPlayer();

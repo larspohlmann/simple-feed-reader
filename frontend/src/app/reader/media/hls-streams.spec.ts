@@ -8,6 +8,7 @@ import {
   startPlaying,
 } from '../../../testing/hls-testing';
 import {
+  armHlsStream,
   armHlsStreams,
   releaseHlsStream,
   releaseHlsStreams,
@@ -157,6 +158,20 @@ describe('armHlsStreams', () => {
   });
 });
 
+describe('armHlsStream', () => {
+  it('arms only the video it is given', async () => {
+    const host = attachedArticleHost(`${PLAYLIST_VIDEO}${PLAYLIST_VIDEO}`);
+    const [armedVideo, otherVideo] = Array.from(host.querySelectorAll('video'));
+
+    armHlsStream(host, armedVideo);
+    await firstPlay(armedVideo);
+    await firstPlay(otherVideo);
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+    expect(fakeHls.attachMedia).toHaveBeenCalledWith(armedVideo);
+  });
+});
+
 describe('releaseHlsStreams', () => {
   it('destroys the stream its host played, once, though the swap detached its video', async () => {
     const host = await playedStream();
@@ -229,7 +244,6 @@ describe('releaseHlsStream', () => {
     armHlsStreams(host);
     startPlaying(video);
 
-    video.removeAttribute('src');
     releaseHlsStream(host, video);
     await flushHls();
 
