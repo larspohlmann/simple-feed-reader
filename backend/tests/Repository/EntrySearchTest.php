@@ -19,10 +19,7 @@ use App\Repository\EntrySearchQuery;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
-/**
- * The LIKE search over title, summary and transcript text. Case folds on both engines, accents on MySQL alone, so no
- * test asks "Ubung" to find "Übung": that would pass in production and fail here.
- */
+/** The database search over title, summary and transcript text, ignoring case and accents on either engine. */
 final class EntrySearchTest extends DbTestCase
 {
     private User $user;
@@ -236,6 +233,40 @@ final class EntrySearchTest extends DbTestCase
         $this->transcribed($this->entry('spoken', 'Episode one', 'Nothing relevant'), 'Ann: Über den Fluss.');
 
         self::assertSame(['spoken'], $this->search('über den '));
+    }
+
+    public function testIgnoresAccentsEitherWay(): void
+    {
+        $this->entry('accented', 'Ein Café in Zürich');
+        $this->entry('plain', 'Cafe culture');
+        $this->entry('miss', 'Nothing here');
+
+        self::assertEqualsCanonicalizing(['accented', 'plain'], $this->search('cafe'));
+        self::assertEqualsCanonicalizing(['accented', 'plain'], $this->search('CAFÉ'));
+    }
+
+    public function testIgnoresAccentsInAWholeWord(): void
+    {
+        $this->entry('hit', 'Ein Café heute');
+        $this->entry('miss', 'Cafeteria heute');
+
+        self::assertSame(['hit'], $this->search('cafe '));
+    }
+
+    public function testIgnoresAccentsInTheTranscript(): void
+    {
+        $this->transcribed($this->entry('spoken', 'Episode one', 'Nothing relevant'), 'Ann: Über den Fluss.');
+
+        self::assertSame(['spoken'], $this->search('uber den '));
+        self::assertSame(['spoken'], $this->search('"uber den fluss"'));
+    }
+
+    public function testATermTooShortForTheIndexStillIgnoresCaseAndAccents(): void
+    {
+        $this->entry('hit', 'ÖL-Preis steigt');
+        $this->entry('miss', 'Preis fällt');
+
+        self::assertSame(['hit'], $this->search('ol preis'));
     }
 
     public function testRequiresEveryTermToMatch(): void

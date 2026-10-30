@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Search\Support;
 
-use App\Doctrine\CaseFolding;
 use App\Doctrine\WordBoundaries;
 
 /**
@@ -29,28 +28,6 @@ final readonly class LikePattern
     public static function wholeWord(string $term): string
     {
         return '% ' . self::escape(WordBoundaries::normalize($term)) . ' %';
-    }
-
-    /**
-     * A stretch native LIKE finds, ignoring case, in every row the full match accepts on any engine, so it can reject
-     * rows before a folded or normalized haystack is computed. Alphanumerics alone survive both CaseFolding and
-     * WordBoundaries unchanged.
-     */
-    public static function anchor(string $term): ?string
-    {
-        if (!CaseFolding::isNeededFor($term) && !WordBoundaries::areIn($term)) {
-            return $term;
-        }
-
-        preg_match_all('/[A-Za-z0-9]+/', $term, $stretches);
-        $longest = '';
-        foreach ($stretches[0] as $stretch) {
-            if (\strlen($stretch) > \strlen($longest)) {
-                $longest = $stretch;
-            }
-        }
-
-        return $longest === '' ? null : $longest;
     }
 
     private static function escape(string $term): string

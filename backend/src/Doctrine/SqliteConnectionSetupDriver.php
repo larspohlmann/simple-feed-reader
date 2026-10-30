@@ -39,7 +39,7 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
 
     /**
      * NORMALIZE_WORD_BOUNDARIES is one native call because the nested-REPLACE rendering overflows the parser stack of
-     * SQLite before 3.46 (#584). It folds case too, as SQLite's LIKE folds ASCII alone, so a whole word costs one call.
+     * SQLite before 3.46 (#584). It folds too, so a whole-word check costs one call on each index candidate.
      */
     private function registerSearchFunctions(Connection $connection): void
     {
@@ -49,10 +49,10 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
         }
 
         $functions = [
-            NormalizeWordBoundariesFunction::NAME => static fn (string $value): string => CaseFolding::fold(
+            NormalizeWordBoundariesFunction::NAME => static fn (string $value): string => SearchFolding::fold(
                 WordBoundaries::normalize($value),
             ),
-            FoldCaseFunction::NAME => CaseFolding::fold(...),
+            SearchFoldFunction::NAME => SearchFolding::fold(...),
         ];
         foreach ($functions as $name => $function) {
             $nativeConnection->sqliteCreateFunction(

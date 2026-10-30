@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Doctrine;
 
-use App\Doctrine\CaseFolding;
+use App\Doctrine\SearchFolding;
 use App\Doctrine\WordBoundaries;
 use App\Tests\DbTestCase;
 
@@ -22,10 +22,10 @@ final class NormalizeWordBoundariesOnSqliteTest extends DbTestCase
 
     public function testTheConnectionNormalizesAndFoldsLikePhpDoes(): void
     {
-        $text = 'E-Mail (heute), „Corona-Krise“/US-Wahl! ÄRGER';
+        $text = 'E-Mail (heute), „Corona-Krise“/US-Wahl! ÄRGER im Café';
 
         self::assertSame(
-            CaseFolding::fold(WordBoundaries::normalize($text)),
+            SearchFolding::fold(WordBoundaries::normalize($text)),
             $this->entityManager->getConnection()->fetchOne('SELECT NORMALIZE_WORD_BOUNDARIES(?)', [$text]),
         );
     }

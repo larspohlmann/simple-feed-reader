@@ -9,8 +9,9 @@ doctrine:
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
         # messenger_messages is created lazily by the failure transport, and only the worker ever creates it. The
-        # filter keeps it out of the mapped schema, so schema:validate and migrations:diff do not demand it.
-        schema_filter: '~^(?!messenger_messages$)~'
+        # filter keeps it out of the mapped schema, so schema:validate and migrations:diff do not demand it. The same
+        # goes for SQLite's entry_search index and its shadow tables (App\Doctrine\EntrySearchIndex).
+        schema_filter: '~^(?!messenger_messages$|entry_search)~'
     orm:
         auto_generate_proxy_classes: true
         # PHP 8.4 native lazy objects instead of generated proxies: no deprecated proxy autoloader, no proxy_dir.
@@ -26,7 +27,9 @@ doctrine:
                 # Backs the whole-word entry search (SearchTermsModel::isWholeWord);
                 # see the function class for the punctuation list it normalizes.
                 NORMALIZE_WORD_BOUNDARIES: App\Doctrine\NormalizeWordBoundariesFunction
-                FOLD_CASE: App\Doctrine\FoldCaseFunction
+                SEARCH_FOLD: App\Doctrine\SearchFoldFunction
+            numeric_functions:
+                SEARCH_INDEX_MATCHES: App\Doctrine\SearchIndexMatchFunction
         mappings:
             App:
                 type: attribute

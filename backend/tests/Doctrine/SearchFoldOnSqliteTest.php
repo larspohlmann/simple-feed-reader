@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Doctrine;
 
-use App\Doctrine\CaseFolding;
+use App\Doctrine\SearchFolding;
 use App\Tests\DbTestCase;
 
 /** Read from the application's connection, so it proves SqliteConnectionSetupDriver registered the function. */
-final class FoldCaseOnSqliteTest extends DbTestCase
+final class SearchFoldOnSqliteTest extends DbTestCase
 {
     protected function setUp(): void
     {
@@ -18,16 +18,16 @@ final class FoldCaseOnSqliteTest extends DbTestCase
 
     public function testTheConnectionFoldsLikePhpDoes(): void
     {
-        $text = 'ÄRGER im Büro, ΑΘΗΝΑ';
+        $text = 'ÄRGER im Café, ΑΘΗΝΑ';
 
         self::assertSame(
-            CaseFolding::fold($text),
-            $this->entityManager->getConnection()->fetchOne('SELECT FOLD_CASE(?)', [$text]),
+            SearchFolding::fold($text),
+            $this->entityManager->getConnection()->fetchOne('SELECT SEARCH_FOLD(?)', [$text]),
         );
     }
 
     public function testANullHaystackStaysNull(): void
     {
-        self::assertNull($this->entityManager->getConnection()->fetchOne('SELECT FOLD_CASE(NULL)'));
+        self::assertNull($this->entityManager->getConnection()->fetchOne('SELECT SEARCH_FOLD(NULL)'));
     }
 }

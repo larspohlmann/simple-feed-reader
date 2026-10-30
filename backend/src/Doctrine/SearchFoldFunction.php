@@ -10,10 +10,10 @@ use Doctrine\ORM\Query\Parser;
 use Doctrine\ORM\Query\SqlWalker;
 use Doctrine\ORM\Query\TokenType;
 
-/** FOLD_CASE(expr): SQLite's UDF for CaseFolding::fold(), emitted only where LIKE folds ASCII alone. */
-final class FoldCaseFunction extends FunctionNode
+/** SEARCH_FOLD(expr): SQLite's UDF for SearchFolding::fold(), for a term too short for the search index. */
+final class SearchFoldFunction extends FunctionNode
 {
-    public const string NAME = 'FOLD_CASE';
+    public const string NAME = 'SEARCH_FOLD';
 
     private Node $stringExpression;
 

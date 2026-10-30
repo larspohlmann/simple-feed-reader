@@ -38,25 +38,4 @@ final class LikePatternTest extends TestCase
     {
         self::assertSame('%!!!%%', LikePattern::containing('!%'));
     }
-
-    public function testAnAsciiTermWithoutBoundariesIsItsOwnAnchor(): void
-    {
-        self::assertSame('C++', LikePattern::anchor('C++'));
-    }
-
-    public function testAnAsciiTermWithABoundaryIsAnchoredOnItsLongestAlphanumericStretch(): void
-    {
-        self::assertSame('Mail', LikePattern::anchor('E-Mail'));
-    }
-
-    public function testANonAsciiTermIsAnchoredOnItsLongestAsciiStretch(): void
-    {
-        self::assertSame('bersee', LikePattern::anchor('Übersee'));
-        self::assertSame('Fluss', LikePattern::anchor('über den Fluss'));
-    }
-
-    public function testATermWithoutAsciiLettersHasNoAnchor(): void
-    {
-        self::assertNull(LikePattern::anchor('αθηνα'));
-    }
 }
