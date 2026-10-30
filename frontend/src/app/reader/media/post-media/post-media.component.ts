@@ -11,8 +11,8 @@ import { EntryMediumDto, isGif } from '../../entry-medium';
 import { AltTextComponent } from '../alt-text/alt-text.component';
 import { GifComponent } from '../gif/gif.component';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { armHlsStreams, releaseHlsStream, releaseHlsStreams } from '../hls-streams';
-import { NearViewportMedia } from '../near-viewport-media';
+import { armHlsStream, armHlsStreams, releaseHlsStream, releaseHlsStreams } from '../hls-streams';
+import { NearViewportMedia, keepNear } from '../near-viewport-media';
 import { ReleasableVideo } from '../releasable-video';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
@@ -48,6 +48,7 @@ export class PostMediaComponent {
       const videos = this.mountedVideos();
       this.pauseWhenScrolledAway(videos);
       this.registerForAutoplay(videos);
+      this.forgetUnrendered(videos);
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
@@ -80,22 +81,24 @@ export class PostMediaComponent {
     if (clip.previewImageUrl) element.setAttribute('poster', clip.previewImageUrl);
     const video = new ReleasableVideo(element, clip.url);
     this.releasable.set(element, video);
-    this.attachWhenNear(video);
+    keepNear(this.nearViewport, element, {
+      approach: () => {
+        video.attach();
+        armHlsStream(this.host, element);
+      },
+      leave: () => this.release(element),
+    });
     return element;
   }
 
-  private attachWhenNear(video: ReleasableVideo): void {
-    if (this.nearViewport === null) {
-      video.attach();
-      return;
+  private forgetUnrendered(videos: HTMLVideoElement[]): void {
+    const rendered = new Set(videos);
+    for (const element of this.releasable.keys()) {
+      if (rendered.has(element)) continue;
+      this.nearViewport?.unwatch(element);
+      this.release(element);
+      this.releasable.delete(element);
     }
-    this.nearViewport.watch(video.element, {
-      approach: () => {
-        video.attach();
-        armHlsStreams(this.host);
-      },
-      leave: () => this.release(video.element),
-    });
   }
 
   private release(element: HTMLVideoElement): void {

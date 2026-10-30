@@ -9,7 +9,7 @@ import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action
 import { EMBED_FRAME_ATTRIBUTES } from '../../../../media/media-embeds';
 import { ListAutoplayCoordinator } from '../../../../media/autoplay/list-autoplay-coordinator';
 import { AutoplayPlayer } from '../../../../media/autoplay/autoplay-player';
-import { NearViewportMedia } from '../../../../media/near-viewport-media';
+import { fakeNearViewportMedia } from '../../../../../../testing/near-viewport-media-testing';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../../../testing/hls-testing';
@@ -353,17 +353,16 @@ describe('EntryMediaComponent in an autoplaying list', () => {
     soundChanged: jest.fn(),
   };
 
-  const nearViewport = { watch: jest.fn(), unwatch: jest.fn() };
+  const nearViewport = fakeNearViewportMedia();
 
   beforeEach(() => {
     Object.values(coordinator).forEach((spy) => spy.mockReset());
-    Object.values(nearViewport).forEach((spy) => spy.mockReset());
+    nearViewport.reset();
   });
 
   const mountInList = (testEntry: EntryDto) => mountWith(testEntry, []);
 
-  const mountNearViewport = (testEntry: EntryDto) =>
-    mountWith(testEntry, [{ provide: NearViewportMedia, useValue: nearViewport }]);
+  const mountNearViewport = (testEntry: EntryDto) => mountWith(testEntry, [nearViewport.provider]);
 
   async function mountWith(testEntry: EntryDto, extraProviders: Provider[]) {
     TestBed.configureTestingModule({

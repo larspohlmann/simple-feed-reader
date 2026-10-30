@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { GifComponent } from './gif.component';
-import { NearViewportClient, NearViewportMedia } from '../near-viewport-media';
+import { fakeNearViewportMedia } from '../../../../testing/near-viewport-media-testing';
 import { EntryMediumDto } from '../../entry-medium';
 import {
   restoreIntersectionObserver,
@@ -203,23 +203,21 @@ describe('GifComponent', () => {
 });
 
 describe('GifComponent in a list', () => {
-  const nearViewport = { watch: jest.fn(), unwatch: jest.fn() };
+  const nearViewport = fakeNearViewportMedia();
 
-  beforeEach(() => {
-    Object.values(nearViewport).forEach((spy) => spy.mockReset());
-  });
+  beforeEach(() => nearViewport.reset());
 
   async function mountInList() {
     TestBed.configureTestingModule({
       imports: [HostComponent, provideTranslocoTesting()],
-      providers: [{ provide: NearViewportMedia, useValue: nearViewport }],
+      providers: [nearViewport.provider],
     });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.medium = gifv;
     fixture.detectChanges();
     await fixture.whenStable();
     const host = fixture.nativeElement.querySelector('app-gif') as HTMLElement;
-    const client = nearViewport.watch.mock.calls[0][1] as NearViewportClient;
+    const client = nearViewport.clientOf(host);
     return { fixture, host, client, clip: host.querySelector('video')! };
   }
 

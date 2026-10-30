@@ -5,7 +5,7 @@ import { EntryMediumDto } from '../../entry-medium';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
-import { NearViewportClient, NearViewportMedia } from '../near-viewport-media';
+import { fakeNearViewportMedia } from '../../../../testing/near-viewport-media-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
@@ -261,14 +261,13 @@ describe('PostMediaComponent in the list', () => {
   });
 });
 
-const nearViewport = { watch: jest.fn(), unwatch: jest.fn() };
-const clientOf = (video: Element): NearViewportClient =>
-  nearViewport.watch.mock.calls.find(([element]) => element === video)![1];
+const nearViewport = fakeNearViewportMedia();
+const { clientOf } = nearViewport;
 
 async function mountNearViewport(media: EntryMediumDto[]) {
   TestBed.configureTestingModule({
     imports: [HostComponent, provideTranslocoTesting()],
-    providers: [{ provide: NearViewportMedia, useValue: nearViewport }],
+    providers: [nearViewport.provider],
   });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.componentInstance.media = media;
@@ -278,7 +277,7 @@ async function mountNearViewport(media: EntryMediumDto[]) {
 }
 
 describe('PostMediaComponent near the viewport', () => {
-  beforeEach(() => Object.values(nearViewport).forEach((spy) => spy.mockReset()));
+  beforeEach(() => nearViewport.reset());
 
   const mp4: EntryMediumDto = { ...clip, url: 'https://video.test/clip.mp4' };
   const videoOf = (fixture: { nativeElement: HTMLElement }) =>
@@ -325,6 +324,19 @@ describe('PostMediaComponent near the viewport', () => {
     await firstPlay(video);
 
     expect(fakeHls.loadSource).toHaveBeenCalledWith('https://video.test/playlist.m3u8');
+  });
+
+  it('stops watching and releases a video a re-render removed', async () => {
+    const fixture = await mountNearViewport([mp4]);
+    const video = videoOf(fixture);
+    clientOf(video).approach();
+
+    fixture.componentInstance.media = [];
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(nearViewport.unwatch).toHaveBeenCalledWith(video);
+    expect(video.hasAttribute('src')).toBe(false);
   });
 
   it('releases its videos and stops watching them when it goes away', async () => {
