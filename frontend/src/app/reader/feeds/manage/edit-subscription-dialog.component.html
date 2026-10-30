@@ -74,6 +74,15 @@
       }
     </div>
 
+    <app-button
+      footer
+      class="unsubscribe"
+      variant="danger-outline"
+      data-test="edit-feed-unsubscribe"
+      (click)="requestUnsubscribe()"
+    >
+      {{ 'reader.unsubscribe' | transloco }}
+    </app-button>
     <app-button footer (click)="ref.close()">
       {{ 'dialog.cancel' | transloco }}
     </app-button>

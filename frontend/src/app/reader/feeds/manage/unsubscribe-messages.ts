@@ -1,9 +1,54 @@
 import { TranslocoService } from '@jsverse/transloco';
+import { pluralKey } from '../../../core/i18n/plural-key';
+import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { SubscriptionDto } from '../../models';
 import { isSavedFeed, networkOf } from '../../state/social-sections';
 import { savedFeedLabel } from '../display-title';
 
-export function unsubscribeMessage(i18n: TranslocoService, subscription: SubscriptionDto): string {
+/** The most feed titles a bulk confirmation names before it says "and N more".
+ *  Five is enough to recognise the selection and short enough to read. */
+const CONFIRM_TITLE_LIMIT = 5;
+/** From this many feeds up, the confirmation makes the user type the count.
+ *  One feed keeps its single click; a mass delete is what requireText is for. */
+const TYPED_CONFIRM_THRESHOLD = 5;
+
+export function unsubscribeConfirm(
+  i18n: TranslocoService,
+  subscription: SubscriptionDto,
+): ConfirmData {
+  return {
+    title: i18n.translate('manage.unsubscribeTitle'),
+    message: unsubscribeMessage(i18n, subscription),
+    confirmLabel: i18n.translate('manage.unsubscribeConfirm'),
+    danger: true,
+  };
+}
+
+export function bulkUnsubscribeConfirm(
+  i18n: TranslocoService,
+  subscriptions: readonly SubscriptionDto[],
+): ConfirmData {
+  const count = subscriptions.length;
+  const named = subscriptions
+    .slice(0, CONFIRM_TITLE_LIMIT)
+    .map((subscription) => subscription.title)
+    .join(', ');
+  const rest = count - Math.min(count, CONFIRM_TITLE_LIMIT);
+
+  return {
+    title: i18n.translate(pluralKey('manage.bulk.unsubscribeTitle', count), { count }),
+    message:
+      (rest > 0
+        ? i18n.translate('manage.bulk.unsubscribeMessageMore', { named, rest })
+        : i18n.translate('manage.bulk.unsubscribeMessage', { named })) +
+      bulkSavedNote(i18n, subscriptions),
+    confirmLabel: i18n.translate('manage.unsubscribeConfirm'),
+    danger: true,
+    requireText: count >= TYPED_CONFIRM_THRESHOLD ? String(count) : undefined,
+  };
+}
+
+function unsubscribeMessage(i18n: TranslocoService, subscription: SubscriptionDto): string {
   if (isSavedFeed(subscription)) {
     return i18n.translate('manage.unsubscribeSavedMessage', { title: subscription.title });
   }
@@ -14,10 +59,7 @@ export function unsubscribeMessage(i18n: TranslocoService, subscription: Subscri
 }
 
 /** What a bulk unsubscribe adds to its confirmation: where saved posts go, which saved feeds are deleted. */
-export function bulkSavedNote(
-  i18n: TranslocoService,
-  subscriptions: readonly SubscriptionDto[],
-): string {
+function bulkSavedNote(i18n: TranslocoService, subscriptions: readonly SubscriptionDto[]): string {
   const savedOnes = subscriptions.filter(isSavedFeed);
   const destinations = new Set(
     subscriptions.filter((subscription) => !isSavedFeed(subscription)).map(networkOf),

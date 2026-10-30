@@ -6,6 +6,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { ReplaySubject, of } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api';
 import { ManageActions } from './manage-actions.service';
+import { UNSUBSCRIBE_REQUESTED } from './edit-subscription-dialog.component';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
@@ -72,6 +73,18 @@ describe('ManageActions', () => {
       .mockImplementation(() => undefined);
     service.editSubscription(sub);
     expect(savedSearchesLoad).toHaveBeenCalled();
+  });
+
+  it('opens the unsubscribe confirmation when the edit dialog asks for it', () => {
+    open.mockReturnValueOnce({ closed: of(UNSUBSCRIBE_REQUESTED) });
+    closed = true; // the confirmation that follows returns true
+    const spy = jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+      .mockImplementation(() => undefined);
+    service.editSubscription(sub);
+    expect(open).toHaveBeenCalledTimes(2);
+    ctrl.expectOne({ method: 'DELETE', url: 'https://api.test/api/subscriptions/5' }).flush(null);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('unsubscribe: on confirm, DELETEs then reloads', () => {
