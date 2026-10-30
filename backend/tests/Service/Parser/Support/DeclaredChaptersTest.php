@@ -50,6 +50,25 @@ final class DeclaredChaptersTest extends TestCase
         self::assertSame('https://cdn.test/ch.json', $chapters->url);
     }
 
+    public function testReadsALinkWrittenAsHref(): void
+    {
+        $chapters = DeclaredChapters::of($this->rssItem(
+            '<podcast:chapters href="https://cdn.test/ch.json" type="application/json+chapters"/>',
+        ));
+
+        self::assertSame('https://cdn.test/ch.json', $chapters->url);
+    }
+
+    public function testTheSpecUrlWinsOverHref(): void
+    {
+        $chapters = DeclaredChapters::of($this->rssItem(
+            '<podcast:chapters url="https://cdn.test/url.json" href="https://cdn.test/href.json"'
+            . ' type="application/json+chapters"/>',
+        ));
+
+        self::assertSame('https://cdn.test/url.json', $chapters->url);
+    }
+
     public function testSkipsAChapterWithoutATitleOrAStart(): void
     {
         $chapters = DeclaredChapters::of($this->rssItem(

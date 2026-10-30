@@ -20,10 +20,20 @@ final class DeclaredChapters
             return new ParsedChaptersModel($inline);
         }
 
-        $link = $item->in(FeedNamespace::Podcast)->child('chapters');
-        $url = trim($link?->getAttribute('url') ?? '');
+        return new ParsedChaptersModel([], self::linkedFile($item->in(FeedNamespace::Podcast)->child('chapters')));
+    }
 
-        return new ParsedChaptersModel([], $url === '' ? null : $url);
+    /** The spec names the attribute `url`; Podigee writes `href`. */
+    private static function linkedFile(?\DOMElement $link): ?string
+    {
+        foreach (['url', 'href'] as $attribute) {
+            $url = trim($link?->getAttribute($attribute) ?? '');
+            if ($url !== '') {
+                return $url;
+            }
+        }
+
+        return null;
     }
 
     /** @return list<EntryChapter> */
