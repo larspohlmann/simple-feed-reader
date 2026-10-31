@@ -383,3 +383,11 @@ larger body ends the call with the bare status sentence. Both that client and th
 422 refusals) show only the JSON `detail` or `error.message` field, never the raw body, because OpenRouter's body
 carries the account's `user_id`. The connection's API key is replaced by `[redacted]` wherever it appears in the
 reason, and only then is the reason clipped to 500 characters, so a key the clip would cut leaves no prefix.
+
+## Self-update (updater)
+
+The optional `updater` container (compose profile `updater`, off unless the operator enabled it) mounts the Docker
+socket, which is root-equivalent on the host: whoever controls that container controls the machine. It publishes no
+port and joins no network the app reaches it through. The app talks to it only through `.update-state/`, and the only
+input the updater takes from the app is that a request file exists; it reads nothing else from it and always runs the
+fixed `scripts/update.sh`. The backend endpoint is admin-only. Keep the updater off where that trust is not acceptable.
