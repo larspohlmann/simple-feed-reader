@@ -259,8 +259,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
     // Reopening the app resumes a for-you run left in flight by an earlier session.
     this.recs.resume();
-    // Check once for a newer release; the sidebar shows the badge if there is
-    // one. The backend caches the upstream lookup, so this call is cheap.
+    // The service re-checks on its own when the tab returns to the foreground.
     this.versions.load();
   }
 

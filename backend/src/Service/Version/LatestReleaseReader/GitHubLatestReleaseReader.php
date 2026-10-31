@@ -19,7 +19,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInterface
 {
     private const string CACHE_KEY = 'github_latest_release';
-    private const int CACHE_TTL_SECONDS = 21600; // six hours
+    private const int CACHE_TTL_SECONDS = 3600; // one hour
     private const float TIMEOUT_SECONDS = 5.0;
     private const int MAX_RESPONSE_BYTES = 524288; // 512 KiB — a release payload is far smaller
 
