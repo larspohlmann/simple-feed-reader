@@ -12,6 +12,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\LegalLinkListRemover;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
@@ -74,6 +75,7 @@ final class ReaderBodyCleanerTest extends TestCase
                 new BoilerplateVerdict(new LinkListDetector()),
                 new SubstantialProseDetector(new LinkListDetector()),
             ),
+            new LegalLinkListRemover(new LinkListDetector()),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup()),
             new DuplicateBlockCollapser($embedProviders, new EmptiedWrapperRemover()),

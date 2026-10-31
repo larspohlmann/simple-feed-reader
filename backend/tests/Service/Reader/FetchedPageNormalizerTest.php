@@ -13,6 +13,7 @@ use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\PageRepair\CommentThreadRemover;
 use App\Service\Reader\PageRepair\CustomElementUnwrapper;
 use App\Service\Reader\PageRepair\HeadingClassRemover;
+use App\Service\Reader\PageRepair\HiddenClassElementRemover;
 use App\Service\Reader\PageRepair\HorizontalRuleUnwrapper;
 use App\Service\Reader\PageRepair\ImageButtonUnwrapper;
 use App\Service\Reader\PageRepair\ImageWrapperClassRemover;
@@ -51,6 +52,7 @@ final class FetchedPageNormalizerTest extends TestCase
             new CommentThreadRemover(),
             new SubstackGatedVideoPlaceholder(),
             new ScreenReaderOnlyElementRemover(),
+            new HiddenClassElementRemover(),
             new OrphanIconGlyphRemover(new EmptiedWrapperRemover()),
             new ImageWrapperClassRemover(new PageFurniture()),
             new HeadingClassRemover(),

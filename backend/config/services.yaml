@@ -120,6 +120,7 @@ services:
                 - '@App\Service\Reader\PageRepair\CommentThreadRemover'
                 - '@App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder'
                 - '@App\Service\Reader\PageRepair\ScreenReaderOnlyElementRemover'
+                - '@App\Service\Reader\PageRepair\HiddenClassElementRemover'
                 - '@App\Service\Reader\PageRepair\OrphanIconGlyphRemover'
                 - '@App\Service\Reader\PageRepair\ImageWrapperClassRemover'
                 - '@App\Service\Reader\PageRepair\HeadingClassRemover'
@@ -139,6 +140,7 @@ services:
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner'
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover'
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer'
+                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\LegalLinkListRemover'
                 # After the trimmers, which could drop its anchor; before media placement, which must see it.
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter'
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner'
