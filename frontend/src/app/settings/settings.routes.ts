@@ -164,6 +164,15 @@ export const SETTINGS_ROUTES: Routes = [
             (module) => module.MailSectionComponent,
           ),
       },
+      {
+        path: 'admin/about',
+        title: sectionLabelKey('admin/about'),
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/about/about-section.component').then(
+            (module) => module.AboutSectionComponent,
+          ),
+      },
     ],
   },
 ];

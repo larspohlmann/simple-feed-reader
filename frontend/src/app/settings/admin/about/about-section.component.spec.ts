@@ -1,0 +1,110 @@
+import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { AboutSectionComponent } from './about-section.component';
+import { ReleaseVersion, VersionService } from '../../../core/version.service';
+import { buildVersion } from '../../../../environments/version';
+
+describe('AboutSectionComponent', () => {
+  const bakedIn = { ...buildVersion };
+  const load = jest.fn();
+
+  function mount(api: ReleaseVersion | null, options: { unavailable?: boolean } = {}) {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        {
+          provide: VersionService,
+          useValue: {
+            load,
+            apiVersion: signal(api),
+            unavailable: signal(options.unavailable ?? false),
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(AboutSectionComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function text(fixture: { nativeElement: HTMLElement }) {
+    return fixture.nativeElement.textContent ?? '';
+  }
+
+  beforeEach(() => {
+    load.mockReset();
+  });
+  afterEach(() => Object.assign(buildVersion, bakedIn));
+
+  it('asks the API which build it is running', () => {
+    mount(null);
+    expect(load).toHaveBeenCalled();
+  });
+
+  it('shows the version and commit of both halves', () => {
+    Object.assign(buildVersion, { version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
+    const fixture = mount({
+      version: 'v0.5.0-dev.3',
+      commit: 'a1b2c3d',
+      builtAt: '2026-07-27T10:04:11Z',
+    });
+
+    expect(text(fixture)).toContain('v0.5.0-dev.3');
+    expect(text(fixture)).toContain('a1b2c3d');
+    // Localised through the same helper the rest of the app uses, not DatePipe.
+    expect(text(fixture)).toContain('July 27, 2026');
+  });
+
+  it('shows no build date for a development build, which has none', () => {
+    Object.assign(buildVersion, { version: 'dev', commit: 'local', builtAt: '' });
+    const fixture = mount({ version: 'dev', commit: 'local', builtAt: '' });
+
+    expect(text(fixture)).toContain('local');
+    expect(text(fixture)).not.toContain('·');
+  });
+
+  it('still shows the app version when the API cannot be reached', () => {
+    Object.assign(buildVersion, { version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
+    const fixture = mount(null, { unavailable: true });
+
+    expect(text(fixture)).toContain('v0.5.0-dev.3');
+    expect(text(fixture)).toContain('unavailable');
+  });
+
+  it('reports a stale bundle when the two releases differ', () => {
+    Object.assign(buildVersion, { version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
+    const fixture = mount({ version: 'v0.5.0-dev.4', commit: 'e5f6a7b', builtAt: '' });
+
+    expect(fixture.nativeElement.querySelector('.stale')).not.toBeNull();
+  });
+
+  it('says nothing when the two releases match', () => {
+    Object.assign(buildVersion, { version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
+    const fixture = mount({ version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
+
+    expect(fixture.nativeElement.querySelector('.stale')).toBeNull();
+  });
+
+  it('does not cry stale when a development build is involved', () => {
+    Object.assign(buildVersion, { version: 'dev', commit: 'local', builtAt: '' });
+    const fixture = mount({ version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
+
+    expect(fixture.nativeElement.querySelector('.stale')).toBeNull();
+  });
+
+  it('renders the section as a settings group', () => {
+    const element = mount(null).nativeElement;
+    expect(element.querySelector('app-settings-group')).not.toBeNull();
+  });
+
+  it('links the source code to the project repository', () => {
+    const fixture = mount(null);
+    const source = fixture.nativeElement.querySelector(
+      'a[href*="github.com/larspohlmann/simple-feed-reader"]',
+    );
+
+    expect(source).not.toBeNull();
+  });
+});

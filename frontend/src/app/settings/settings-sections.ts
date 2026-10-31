@@ -53,6 +53,7 @@ export const SETTINGS_SECTIONS = [
   { path: 'admin/mail', icon: 'outgoing_mail', labelKey: 'settings.mail.title', group: 'admin' },
   { path: 'admin/grafana', icon: 'monitoring', labelKey: 'settings.grafana.title', group: 'admin' },
   { path: 'admin/queues', icon: 'stacks', labelKey: 'settings.queues.title', group: 'admin' },
+  { path: 'admin/about', icon: 'info', labelKey: 'settings.about.title', group: 'admin' },
 ] as const satisfies readonly SettingsSection[];
 
 /** The path of a section that exists. A typo in a caller is a compile error,
