@@ -54,6 +54,11 @@ export class SelfUpdateComponent implements OnInit {
       this.latest() !== null,
   );
 
+  readonly showsManualHint = computed(() => {
+    const current = this.status();
+    return current !== null && !current.updaterPresent && current.phase === 'idle';
+  });
+
   readonly visible = computed(() => {
     const current = this.status();
     if (current === null) return false;

@@ -86,6 +86,28 @@ describe('SelfUpdateComponent', () => {
     expect(button(fixture)).toBeNull();
   });
 
+  it('keeps a running update and its log in view while the heartbeat is stale', () => {
+    offerUpdate();
+    updateStatus.mockReturnValue(
+      of(status('running', { updaterPresent: false, log: 'Rebuilding the stack' })),
+    );
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('.manual')).toBeNull();
+    expect(element(fixture).textContent).toContain('Updating…');
+    expect(element(fixture).querySelector('pre.log')?.textContent).toContain(
+      'Rebuilding the stack',
+    );
+  });
+
+  it('shows how the last run ended even when the updater has gone', () => {
+    updateStatus.mockReturnValue(of(status('failed', { updaterPresent: false, exitCode: 2 })));
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('.manual')).toBeNull();
+    expect(element(fixture).querySelector('.phase.failed')).not.toBeNull();
+  });
+
   it('offers the newer release as an update', () => {
     offerUpdate();
     updateStatus.mockReturnValue(of(status('idle')));

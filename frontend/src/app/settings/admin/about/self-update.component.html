@@ -1,7 +1,7 @@
 @if (visible()) {
   @let current = status()!;
   <div class="self-update">
-    @if (!current.updaterPresent) {
+    @if (showsManualHint()) {
       <p class="manual">{{ 'settings.about.update.manual' | transloco }}</p>
     } @else {
       @switch (current.phase) {
