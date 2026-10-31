@@ -136,4 +136,9 @@ for bad_id in '$(touch pwned)' 0123456789abcde 0123456789abcdef0 0123456789ABCDE
   grep -q 'id is not 16 lowercase hex digits' "${work}/stderr" || fail "a request id like ${bad_id} is reported"
 done
 [ ! -e pwned ] && [ ! -e "${outbox}/pwned" ] || fail 'a request id is never executed'
+: > "${STUB_LOG}"
+printf '{"id":"00000000000000cd"}' > "${work}/planted.json"
+ln -sf "${work}/planted.json" "${work}/state/inbox/request.json"
+watch_once
+no_run_started || fail 'a symlinked request.json never starts a run'
 printf 'ok\n'

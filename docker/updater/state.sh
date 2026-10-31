@@ -13,8 +13,8 @@ now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
 json_field() {
   local file=$1 field=$2
-  [ -f "${file}" ] || return 0
-  jq -r --arg field "${field}" '.[$field] // empty' "${file}"
+  [ -f "${file}" ] && [ ! -L "${file}" ] || return 0
+  timeout 5 head -c 65536 -- "${file}" | jq -r --arg field "${field}" '.[$field] // empty'
 }
 
 write_atomically() {

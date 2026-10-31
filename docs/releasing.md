@@ -94,8 +94,7 @@ a login. GitHub creates a new package private, so after the first release that
 publishes one, open it under the repository's Packages and set its visibility
 to public; until then every install builds it on the host. This is still due
 for `ghcr.io/larspohlmann/simple-feed-reader-updater` (#1948), the updater
-image: after the first release that publishes it, set it public, or every
-install with the updater enabled builds it locally.
+image.
 
 ## Highlights
 
