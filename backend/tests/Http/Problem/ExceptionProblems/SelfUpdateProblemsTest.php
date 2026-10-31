@@ -55,7 +55,9 @@ final class SelfUpdateProblemsTest extends TestCase
 
     public function testAMissingUpdaterIsAnExpectedAnswerNotAServerFault(): void
     {
-        self::assertFalse((new SelfUpdateProblems())->resolve(new UpdaterUnavailableException('gone'))?->isServerFault());
+        self::assertFalse(
+            (new SelfUpdateProblems())->resolve(new UpdaterUnavailableException('gone'))?->isServerFault(),
+        );
     }
 
     public function testAnUnreadableStateIsAServerFault(): void
