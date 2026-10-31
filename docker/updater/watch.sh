@@ -48,13 +48,12 @@ fail_vanished_run() {
 is_request_id() { [[ $1 =~ ^[0-9a-f]{16}$ ]]; }
 
 tick() {
-  date -u +%s | write_atomically "${OUTBOX_DIR}/heartbeat"
-
   local running_run
   if ! running_run=$(docker ps -q --filter "name=^${RUN_CONTAINER}$"); then
     warn 'docker ps failed; skipping this tick'
     return 0
   fi
+  date -u +%s | write_atomically "${OUTBOX_DIR}/heartbeat"
   if [ -n "${running_run}" ]; then
     return 0
   fi

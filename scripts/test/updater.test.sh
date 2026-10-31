@@ -75,7 +75,7 @@ touch "${STUB_PS_FAILS}"
 rm "${outbox}/heartbeat"
 watch_once
 rm "${STUB_PS_FAILS}"
-[ -s "${outbox}/heartbeat" ] || fail 'a failing docker ps still writes the heartbeat'
+[ ! -e "${outbox}/heartbeat" ] || fail 'a failing docker ps never refreshes the heartbeat'
 [ "$(status_field phase)" = running ] || fail 'a failing docker ps never fails a running run'
 no_run_started || fail 'a failing docker ps starts nothing'
 grep -q 'docker ps failed' "${work}/stderr" || fail 'a failing docker ps is reported'
