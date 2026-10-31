@@ -53,7 +53,7 @@ A `FeedBodyParserInterface` with `format()` = `mixcloud-api`. It delegates to a 
 `ParsedFeedModel`:
 
 - feed title: the first show's `user.name`; feed link: `user.url`
-- one entry per show with `is_exclusive` false: title `name`, link `url`, guid `key`, published
+- one entry per show not marked `is_exclusive: true` (the key appears only on exclusive shows): title `name`, link `url`, guid `key`, published
   `created_time` (`YYYY-MM-DDTHH:MM:SSZ`) normalised to UTC, image `pictures.extra_large`, categories the
   tag names, author `user.name`
 - an item missing `key`, `url` or `name` is skipped; a body that is not a JSON object with a `data` list
@@ -82,8 +82,8 @@ reserved top-level path such as `discover`, `upload`, `select`) and offers
 ### Verbatim subscribe and preview, merged
 
 - `SubscriptionService::subscribe`: one branch for `SourceFormat::VERBATIM`. The scrape gate
-  (`assertMayScrape`) stays, for `scraped` only; the candidate title passes through for every verbatim
-  format.
+  (`assertMayScrape`) stays, for `scraped` only; the candidate title passes through for the
+  published formats (wp-json, mixcloud-api), not for a scrape (#787).
 - `FeedPreviewService`: `scraped` keeps the extractor; every other format parses through the
   `FeedBodyParser` locator, keyed by format, instead of a hand-written arm per format.
 
