@@ -80,6 +80,7 @@ if ! check_ports_free "${http_port}" "${tls_port}"; then
   warn 'Both ports are published regardless of mode, so docker will fail to publish them while busy.'
 fi
 
+offer_updater_if_undecided
 ensure_update_state_directory
 
 # Stamp the real release version into the images this build produces, so the

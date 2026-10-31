@@ -204,6 +204,7 @@ if quick_package_chosen; then
   apply_default_public_origin
   use_no_mail
   use_no_grafana
+  use_no_updater
 else
   configure_public_url
   if custom_package_chosen; then

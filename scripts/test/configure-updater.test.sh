@@ -48,6 +48,9 @@ fresh_install_answer_with() {
 
 # --- 1. an empty answer on a default of no leaves the updater off -----------
 fresh_install_answer_with 'n' ''
+printf 'UPDATER_ENABLED=1\n' > "${ENV_PROD_FILE}"
+printf '\n' > "${queue}"
+configure_updater 'n' > /dev/null 2>&1
 assert_env UPDATER_ENABLED ''
 if prod_uses_updater; then
   fail 'a default of no must not enable the updater'
@@ -88,8 +91,48 @@ prod_uses_updater || fail 'a headless default of yes must enable the updater'
 configure_updater 'n' > /dev/null 2>&1
 assert_env UPDATER_ENABLED ''
 
+# --- 5b. a failed socket-group lookup leaves the updater off and returns 0 --
+# shellcheck disable=SC2329 # invoked by use_updater
+docker_socket_gid() { return 1; }
+printf 'UPDATER_ENABLED=\n' > "${ENV_PROD_FILE}"
+configure_updater 'y' > /dev/null 2>&1 || fail 'a failed gid lookup must not fail configure_updater'
+assert_env UPDATER_ENABLED ''
+assert_env UPDATER_SOCKET_GID ''
+docker_socket_gid() { printf '991'; }
+
+# --- 5c. the first update asks once -----------------------------------------
+can_prompt() { return 0; }
+printf 'DATABASE_URL=\n' > "${ENV_PROD_FILE}"
+printf 'y\n' > "${queue}"
+offer_updater_if_undecided > /dev/null 2>&1
+assert_env UPDATER_ENABLED 1
+
+can_prompt() { return 1; }
+printf 'DATABASE_URL=\n' > "${ENV_PROD_FILE}"
+hint=$(offer_updater_if_undecided 2>&1)
+case "${hint}" in
+  *'prod-configure.sh'*) ;;
+  *) fail 'a headless undecided update must print the hint' ;;
+esac
+if updater_choice_recorded; then
+  fail 'a headless undecided update must record nothing'
+fi
+
+can_prompt() { return 0; }
+printf 'UPDATER_ENABLED=\n' > "${ENV_PROD_FILE}"
+printf 'y\n' > "${queue}"
+offer_updater_if_undecided > /dev/null 2>&1
+assert_env UPDATER_ENABLED ''
+
+offer_line=$(grep -n '^offer_updater_if_undecided' "${_dir}/../prod-start.sh" | head -n 1 | cut -d: -f1)
+state_line=$(grep -n '^ensure_update_state_directory' "${_dir}/../prod-start.sh" | head -n 1 | cut -d: -f1)
+[ -n "${offer_line}" ] && [ -n "${state_line}" ] && [ "${offer_line}" -lt "${state_line}" ] \
+  || fail 'prod-start.sh must offer the updater before ensure_update_state_directory'
+
 # --- 6. install.sh asks with 'n' as the default -----------------------------
 grep -q "configure_updater 'n'" "${_dir}/../install.sh" \
   || fail "install.sh must pass 'n' as the updater default"
+grep -q 'use_no_updater' "${_dir}/../install.sh" \
+  || fail "install.sh's quick branch must apply use_no_updater"
 
 printf 'ok: configure_updater\n'

@@ -500,9 +500,9 @@ prod_uses_updater() {
 
 # The compose profiles the stack runs with: 'mysql' for the bundled database,
 # 'meilisearch' for the bundled search engine, 'grafana' for the log
-# dashboard, 'updater' for the self-update container, comma-separated in that
-# order when more than one is on, nothing at all when none is. docker-compose.prod.yml puts each service behind its
-# own profile.
+# dashboard, 'updater' for the self-update container, comma-separated in
+# that order when more than one is on, nothing at all when none is.
+# docker-compose.prod.yml puts each service behind its own profile.
 prod_compose_profiles() {
   local profiles=''
   if prod_uses_bundled_mysql; then
@@ -592,6 +592,23 @@ stop_disabled_grafana_containers() {
   fi
   say 'Grafana is disabled -- removing its containers (data volumes are kept) ...'
   prod_compose rm -sf loki grafana >/dev/null
+}
+
+updater_choice_recorded() {
+  grep -qE '^UPDATER_ENABLED=' "${ENV_PROD_FILE}" 2>/dev/null
+}
+
+# Asks the updater question once on an install that predates it; without a
+# terminal it records nothing, so a later interactive update still asks.
+offer_updater_if_undecided() {
+  if updater_choice_recorded; then
+    return 0
+  fi
+  if ! can_prompt; then
+    say 'Updates from the app are off -- enable them with ./scripts/prod-configure.sh.'
+    return 0
+  fi
+  configure_updater 'n'
 }
 
 stop_disabled_updater_container() {
@@ -1830,7 +1847,7 @@ docker_socket_gid() {
 configure_updater() {
   local default=$1 choice
   if ! can_prompt; then
-    apply_updater_choice "${default}"
+    apply_updater_choice "${default}" || true
     return 0
   fi
   say 'Allow updates from the app?'
@@ -1838,7 +1855,7 @@ configure_updater() {
   tell '  It holds the Docker socket, which is root on this host; it publishes'
   tell '  nothing and can only update to the latest release.'
   choice=$(prompt_with_default 'Enable updates from the app? (y/n)' "${default}")
-  apply_updater_choice "${choice}"
+  apply_updater_choice "${choice}" || true
 }
 
 apply_updater_choice() {
@@ -1862,11 +1879,17 @@ use_no_updater() {
 }
 
 use_updater() {
-  env_prod_set UPDATER_ENABLED 1
+  local socket_gid
+  if ! socket_gid=$(docker_socket_gid); then
+    warn 'Could not read the Docker socket group -- updates from the app stay off.'
+    use_no_updater
+    return 1
+  fi
   env_prod_set SFR_REPO_ROOT "${REPO_ROOT}"
   env_prod_set UPDATER_UID "$(id -u)"
   env_prod_set UPDATER_GID "$(id -g)"
-  env_prod_set UPDATER_SOCKET_GID "$(docker_socket_gid)"
+  env_prod_set UPDATER_SOCKET_GID "${socket_gid}"
+  env_prod_set UPDATER_ENABLED 1
   say 'Admins can run the update from Settings -> About.'
 }
 
