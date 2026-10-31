@@ -256,7 +256,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.savedSearchesStore.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
-    if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
     // Reopening the app resumes a for-you run left in flight by an earlier session.
     this.recs.resume();
     // The service re-checks on its own when the tab returns to the foreground.

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ReleaseVersion, VersionService } from '../../../core/version.service';
 import { LanguageService } from '../../../core/i18n/language.service';
@@ -11,7 +11,6 @@ import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SelfUpdateComponent } from './self-update.component';
 
-/** One line of the version table: which half of the app, and what it reports. */
 interface VersionRow {
   labelKey: string;
   release: ReleaseVersion | null;
@@ -34,7 +33,7 @@ const REPOSITORY_URL = 'https://github.com/larspohlmann/simple-feed-reader';
   styleUrl: './about-section.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AboutSectionComponent implements OnInit {
+export class AboutSectionComponent {
   private readonly versions = inject(VersionService);
   private readonly language = inject(LanguageService);
 
@@ -49,8 +48,6 @@ export class AboutSectionComponent implements OnInit {
 
   readonly unavailable = this.versions.unavailable;
 
-  /** True until the API version arrives or the endpoint is confirmed
-   *  unreachable. The baked-in app version is always available. */
   readonly loading = computed(() => this.versions.apiVersion() === null && !this.unavailable());
 
   readonly rows = computed<VersionRow[]>(() => [
@@ -75,9 +72,5 @@ export class AboutSectionComponent implements OnInit {
   /** Empty for a development build, which has no build date to show. */
   buildDate(iso: string): string {
     return formatLongDate(iso, this.language.lang());
-  }
-
-  ngOnInit(): void {
-    this.versions.load();
   }
 }

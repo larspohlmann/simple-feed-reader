@@ -4,8 +4,7 @@ import { Observable, catchError, map, of } from 'rxjs';
 import { AuthService } from './auth.service';
 
 /** UX-only gate for the admin surface — the real guard is ROLE_ADMIN on
- *  ^/api/admin/ in security.yaml. On a deep link (no reader visited yet) the
- *  user may not be loaded; fetch it first, then decide. */
+ *  ^/api/admin/ in security.yaml. On a deep link the user may still be loading; wait for it. */
 export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -13,7 +12,7 @@ export const adminGuard: CanActivateFn = () => {
 
   if (auth.user()) return decide();
 
-  return auth.loadMe().pipe(
+  return auth.ensureUserLoaded().pipe(
     map(() => decide()),
     catchError(() => of<boolean | UrlTree>(router.createUrlTree(['/']))),
   ) as Observable<boolean | UrlTree>;

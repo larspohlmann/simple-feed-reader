@@ -2,7 +2,6 @@ import { Component, signal } from '@angular/core';
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { provideLocationMocks } from '@angular/common/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth/auth.service';
 import { ReaderLocationService } from '../core/auth/reader-location.service';
@@ -17,8 +16,6 @@ class BlankComponent {}
 
 describe('SettingsShellComponent', () => {
   const isWide = signal(true);
-  const loadMe = jest.fn(() => of({}));
-  let currentUser: object | null = null;
 
   function mount() {
     TestBed.configureTestingModule({
@@ -30,7 +27,7 @@ describe('SettingsShellComponent', () => {
         { provide: LayoutService, useValue: { isWide } },
         {
           provide: AuthService,
-          useValue: { user: () => currentUser, loadMe, isAdmin: () => false },
+          useValue: { user: () => null, isAdmin: () => false },
         },
       ],
     }).overrideComponent(SettingsShellComponent, {
@@ -43,25 +40,12 @@ describe('SettingsShellComponent', () => {
 
   beforeEach(() => {
     sessionStorage.clear();
-    loadMe.mockClear();
-    currentUser = null;
     isWide.set(true);
   });
 
   async function goTo(url: string) {
     await TestBed.inject(Router).navigateByUrl(url);
   }
-
-  it('fetches the current user when none is loaded (deep link)', () => {
-    mount();
-    expect(loadMe).toHaveBeenCalled();
-  });
-
-  it('does not re-fetch an already-loaded user', () => {
-    currentUser = { id: 1 };
-    mount();
-    expect(loadMe).not.toHaveBeenCalled();
-  });
 
   it('leads back to the saved list from a section on desktop', async () => {
     const fixture = mount();
@@ -126,7 +110,7 @@ describe('SettingsShellComponent reader return link', () => {
         { provide: LayoutService, useValue: { isWide } },
         {
           provide: AuthService,
-          useValue: { user: () => ({ id: 1 }), loadMe: () => of({}), isAdmin: () => false },
+          useValue: { user: () => ({ id: 1 }), isAdmin: () => false },
         },
         { provide: SubscriptionsStore, useValue: { unhealthyCount: () => 0 } },
         { provide: MailHealthStore, useValue: { failureCount: () => 0, refresh: () => undefined } },

@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  untracked,
+} from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth/auth.service';
@@ -52,9 +60,14 @@ export class SettingsNavComponent {
   });
 
   constructor() {
-    if (this.auth.isAdmin()) {
-      this.mailHealth.refresh();
-      this.versions.load();
-    }
+    let checkedForAdmin = false;
+    effect(() => {
+      if (checkedForAdmin || !this.auth.isAdmin()) return;
+      checkedForAdmin = true;
+      untracked(() => {
+        this.mailHealth.refresh();
+        this.versions.load();
+      });
+    });
   }
 }

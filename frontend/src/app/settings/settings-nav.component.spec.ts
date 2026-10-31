@@ -11,11 +11,16 @@ import { SETTINGS_SECTIONS } from './settings-sections';
 
 describe('SettingsNavComponent', () => {
   const versionLoad = jest.fn();
+  const mailRefresh = jest.fn();
+  const user = signal<{ roles: string[] } | null>(null);
 
-  beforeEach(() => versionLoad.mockReset());
+  beforeEach(() => {
+    versionLoad.mockReset();
+    mailRefresh.mockReset();
+  });
 
   function mount(
-    roles: string[],
+    roles: string[] | null,
     options: {
       variant?: 'rail' | 'hub';
       unhealthyCount?: number;
@@ -23,13 +28,14 @@ describe('SettingsNavComponent', () => {
       updateAvailable?: boolean;
     } = {},
   ) {
+    user.set(roles === null ? null : { roles });
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         provideRouter([]),
         {
           provide: AuthService,
-          useValue: { user: () => ({ roles }), isAdmin: () => roles.includes('ROLE_ADMIN') },
+          useValue: { user, isAdmin: () => user()?.roles.includes('ROLE_ADMIN') ?? false },
         },
         {
           provide: SubscriptionsStore,
@@ -37,7 +43,7 @@ describe('SettingsNavComponent', () => {
         },
         {
           provide: MailHealthStore,
-          useValue: { failureCount: signal(options.mailFailureCount ?? 0), refresh: jest.fn() },
+          useValue: { failureCount: signal(options.mailFailureCount ?? 0), refresh: mailRefresh },
         },
         {
           provide: VersionService,
@@ -136,5 +142,30 @@ describe('SettingsNavComponent', () => {
     TestBed.resetTestingModule();
     mount(['ROLE_USER', 'ROLE_ADMIN']);
     expect(versionLoad).toHaveBeenCalled();
+  });
+
+  it('shows the admin group once a cold-loaded admin arrives', () => {
+    const fixture = mount(null);
+    const adminLink = () =>
+      (fixture.nativeElement as HTMLElement).querySelector('a[href="/settings/admin/about"]');
+    expect(adminLink()).toBeNull();
+
+    user.set({ roles: ['ROLE_USER', 'ROLE_ADMIN'] });
+    fixture.detectChanges();
+
+    expect(adminLink()).not.toBeNull();
+  });
+
+  it('checks the version and mail health once, when the user turns out to be an admin', () => {
+    const fixture = mount(null);
+    expect(versionLoad).not.toHaveBeenCalled();
+
+    user.set({ roles: ['ROLE_USER', 'ROLE_ADMIN'] });
+    fixture.detectChanges();
+    user.set({ roles: ['ROLE_ADMIN'] });
+    fixture.detectChanges();
+
+    expect(versionLoad).toHaveBeenCalledTimes(1);
+    expect(mailRefresh).toHaveBeenCalledTimes(1);
   });
 });

@@ -43,9 +43,9 @@ describe('AboutSectionComponent', () => {
   });
   afterEach(() => Object.assign(buildVersion, bakedIn));
 
-  it('asks the API which build it is running', () => {
+  it('leaves the version check to the settings nav that frames it', () => {
     mount(null);
-    expect(load).toHaveBeenCalled();
+    expect(load).not.toHaveBeenCalled();
   });
 
   it('shows the version and commit of both halves', () => {
@@ -58,7 +58,6 @@ describe('AboutSectionComponent', () => {
 
     expect(text(fixture)).toContain('v0.5.0-dev.3');
     expect(text(fixture)).toContain('a1b2c3d');
-    // Localised through the same helper the rest of the app uses, not DatePipe.
     expect(text(fixture)).toContain('July 27, 2026');
   });
 
