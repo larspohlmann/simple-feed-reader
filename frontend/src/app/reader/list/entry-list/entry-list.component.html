@@ -200,14 +200,21 @@
 
 <app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
 
-@if (scrolling.showToTop() && content.visibleEntryCount() > 0) {
+@let toTopShown = scrolling.showToTop() && content.visibleEntryCount() > 0;
+@if (toTopShown || cornerLeading()) {
   <div class="end-corner">
     @if (cornerLeading(); as leading) {
       <ng-container [ngTemplateOutlet]="leading" />
     }
-    <app-to-top-button (activate)="scrollToTop()" />
+    @if (toTopShown) {
+      <app-to-top-button (activate)="scrollToTop()" />
+    } @else {
+      <span class="to-top-place"></span>
+    }
   </div>
+}
 
+@if (toTopShown) {
   <div class="corner-actions">
     @if (canMarkAllRead()) {
       <button
