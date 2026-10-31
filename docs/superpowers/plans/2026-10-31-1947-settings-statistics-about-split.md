@@ -341,7 +341,7 @@ i18n: `reader.updateAvailableAdminLabel` — en `"Update available: version {{ve
 
 ### The state directory contract
 
-Every task below reads or writes `${REPO_ROOT}/.update-state/` (mode `1777`, gitignored). Mounted at `/state` in the updater and at `/app/var/update-state` in `php`.
+Every task below reads or writes `${REPO_ROOT}/.update-state/` (mode `1777`, gitignored). Mounted at `/state` in the updater and at `/app/update-state` in `php` — outside `var/`, which the php entrypoint `chown -R`s to www-data on every start.
 
 | File | Writer | Content |
 |---|---|---|
@@ -647,7 +647,7 @@ ENTRYPOINT ["/usr/local/bin/sfr-updater-watch"]
       - ./.update-state:/state
 ```
 
-`php`'s `volumes:` gains `- ./.update-state:/app/var/update-state` (not the worker's).
+`php`'s `volumes:` gains `- ./.update-state:/app/update-state` (not the worker's).
 
 `.gitignore`, under the `.installed-commit` entry:
 
@@ -955,7 +955,7 @@ Exceptions: `final class … extends \RuntimeException`, one per file, as in `sr
 
 ```yaml
     # Where the updater container and the app hand over an update (#1948); docker-compose.prod.yml mounts it.
-    update_state_directory: '%kernel.project_dir%/var/update-state'
+    update_state_directory: '%kernel.project_dir%/update-state'
 ```
 
 with `when@test: parameters: update_state_directory: '%kernel.cache_dir%/update-state'` (the cache dir is per `TEST_TOKEN`), and next to the Version aliases:
