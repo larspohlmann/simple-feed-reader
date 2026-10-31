@@ -8,6 +8,8 @@ final class MixcloudUrl
 {
     private const array PAGE_HOSTS = ['www.mixcloud.com', 'mixcloud.com', 'm.mixcloud.com'];
 
+    private const string API_HOST = 'api.mixcloud.com';
+
     /** A key segment as the API spells it: ASCII, with any other character percent-encoded. */
     private const string SEGMENT = '(?:[A-Za-z0-9_-]|%[0-9A-Fa-f]{2})+';
 
@@ -50,6 +52,21 @@ final class MixcloudUrl
         }
 
         return !self::isSiteSection($matches[1]) && !\in_array(strtolower($matches[2]), self::PROFILE_TABS, true);
+    }
+
+    public static function cloudcastsUrl(string $user): string
+    {
+        return 'https://' . self::API_HOST . '/' . $user . '/cloudcasts/';
+    }
+
+    public static function isCloudcastsUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (!\is_array($parts) || strtolower($parts['host'] ?? '') !== self::API_HOST) {
+            return false;
+        }
+
+        return preg_match('#^/' . self::SEGMENT . '/cloudcasts/?\z#', $parts['path'] ?? '') === 1;
     }
 
     private static function pagePath(string $url): ?string

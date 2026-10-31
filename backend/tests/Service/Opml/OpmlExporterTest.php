@@ -26,6 +26,36 @@ final class OpmlExporterTest extends DbTestCase
         return $exporter;
     }
 
+    public function testAVerbatimFeedCarriesItsSourceFormat(): void
+    {
+        $user = new User('verbatim@example.com', new \DateTimeImmutable('2026-10-31T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $feed = new Feed('https://api.mixcloud.com/johndigweed/cloudcasts/');
+        $feed->setSourceFormat(SourceFormat::MIXCLOUD_API);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-10-31T00:00:00Z')));
+        $this->entityManager->flush();
+
+        $outline = $this->onlyFeedOutline($user);
+
+        self::assertSame(SourceFormat::MIXCLOUD_API, $outline->getAttribute('sourceFormat'));
+        self::assertSame('rss', $outline->getAttribute('type'));
+    }
+
+    public function testAnXmlFeedCarriesNoSourceFormat(): void
+    {
+        $user = new User('plain@example.com', new \DateTimeImmutable('2026-10-31T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $feed = new Feed('https://plain.example.com/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-10-31T00:00:00Z')));
+        $this->entityManager->flush();
+
+        $outline = $this->onlyFeedOutline($user);
+
+        self::assertFalse($outline->hasAttribute('sourceFormat'));
+    }
+
     public function testAChildTagNestsInsideItsParentsOutline(): void
     {
         $user = new User('opml-nested@example.com', new \DateTimeImmutable('2026-10-21T00:00:00Z'));
@@ -132,6 +162,17 @@ final class OpmlExporterTest extends DbTestCase
         $this->entityManager->persist($tag);
 
         return $tag;
+    }
+
+    private function onlyFeedOutline(User $user): \DOMElement
+    {
+        $outlines = new \DOMXPath($this->exportedDocument($user))->query('//outline[@xmlUrl]');
+        self::assertNotFalse($outlines);
+        self::assertCount(1, $outlines);
+        $outline = $outlines->item(0);
+        self::assertInstanceOf(\DOMElement::class, $outline);
+
+        return $outline;
     }
 
     private function exportedDocument(User $user): \DOMDocument

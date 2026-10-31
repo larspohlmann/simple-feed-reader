@@ -63,6 +63,19 @@ final class ExportableSubscriptionsTest extends DbTestCase
         self::assertSame([$rss, $saved], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
     }
 
+    public function testAnOpmlLeavesTheScrapedFeedsOutAndABackupKeepsThem(): void
+    {
+        $user = new User('exportable-scraped@example.com', new \DateTimeImmutable('2026-10-31T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $rss = $this->subscribed($user, 'https://example.com/scraped-test.xml', SourceFormat::XML);
+        $scraped = $this->subscribed($user, 'https://example.com/news', SourceFormat::SCRAPED);
+        $this->entityManager->flush();
+
+        self::assertSame([$rss], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
+        self::assertSame([$rss, $scraped], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
+    }
+
     public function testTheCapCountsNoSavedFeed(): void
     {
         $user = new User('count-saved@example.com', new \DateTimeImmutable('2026-10-17T00:00:00Z'));

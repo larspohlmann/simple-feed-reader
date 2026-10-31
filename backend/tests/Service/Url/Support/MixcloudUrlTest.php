@@ -36,6 +36,28 @@ final class MixcloudUrlTest extends TestCase
         self::assertSame($user, MixcloudUrl::profileUser($url));
     }
 
+    /** @return iterable<string, array{string, bool}> */
+    public static function cloudcastsUrls(): iterable
+    {
+        yield 'a cloudcasts list' => ['https://api.mixcloud.com/johndigweed/cloudcasts/', true];
+        yield 'without the trailing slash' => ['https://api.mixcloud.com/johndigweed/cloudcasts', true];
+        yield 'with a query' => ['https://api.mixcloud.com/johndigweed/cloudcasts/?limit=20', true];
+        yield 'a mixed-case host' => ['https://API.Mixcloud.com/johndigweed/cloudcasts/', true];
+        yield 'an encoded user' => ['https://api.mixcloud.com/caf%C3%A9/cloudcasts/', true];
+        yield 'the user itself' => ['https://api.mixcloud.com/johndigweed/', false];
+        yield 'another list' => ['https://api.mixcloud.com/johndigweed/favorites/', false];
+        yield 'a show' => ['https://api.mixcloud.com/johndigweed/transitions-1154/', false];
+        yield 'a deeper path' => ['https://api.mixcloud.com/johndigweed/cloudcasts/extra/', false];
+        yield 'the site host' => ['https://www.mixcloud.com/johndigweed/cloudcasts/', false];
+        yield 'a look-alike host' => ['https://api.mixcloud.com.evil.test/johndigweed/cloudcasts/', false];
+    }
+
+    #[DataProvider('cloudcastsUrls')]
+    public function testTellsACloudcastsListFromAnythingElse(string $url, bool $isCloudcasts): void
+    {
+        self::assertSame($isCloudcasts, MixcloudUrl::isCloudcastsUrl($url));
+    }
+
     /** @return iterable<string, array{string, ?string}> */
     public static function showPages(): iterable
     {
