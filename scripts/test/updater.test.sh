@@ -48,6 +48,7 @@ no_run_started || fail 'no request, no run'
 request 00000000000000ab
 watch_once
 grep -q '^run .*--name sfr-update-run' "${STUB_LOG}" || fail 'a new request starts the run'
+grep -q '^run .*--memory 256m' "${STUB_LOG}" || fail 'the run container is capped at 256 MiB'
 grep -q -- "-v ${work}/repo/.update-state/inbox:/state/inbox:ro " "${STUB_LOG}" \
   || fail 'the run container reads the inbox read-only'
 grep -q -- "-v ${work}/repo/.update-state/outbox:/state/outbox " "${STUB_LOG}" \

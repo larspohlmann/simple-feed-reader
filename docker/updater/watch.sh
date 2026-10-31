@@ -25,7 +25,7 @@ start_run() {
   : > "${OUTBOX_DIR}/run.log"
   write_status "${request_id}" running "$(now_iso)" '' ''
   remove_stopped_run_container
-  docker run -d --rm --name "${RUN_CONTAINER}" \
+  docker run -d --rm --name "${RUN_CONTAINER}" --memory 256m \
     --user "$(id -u):$(id -g)" --group-add "${UPDATER_SOCKET_GID}" \
     --network "${SFR_RUN_NETWORK}" \
     -e SFR_REPO_ROOT -e HOME=/tmp -e SFR_PROD_INTERNAL_HOST=web -e SFR_SKIP_DEV_STACK=1 \
