@@ -65,11 +65,15 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
     public function logTail(): string
     {
         $path = $this->path(self::RUN_LOG);
-        if (!is_file($path)) {
+        $handle = is_file($path) ? fopen($path, 'rb') : false;
+        if (false === $handle) {
             return '';
         }
+        fseek($handle, -self::LOG_TAIL_BYTES, \SEEK_END);
+        $tail = (string) stream_get_contents($handle);
+        fclose($handle);
 
-        return (string) file_get_contents($path, offset: max(0, filesize($path) - self::LOG_TAIL_BYTES));
+        return self::wholeCharacters($tail);
     }
 
     public function saveRequest(UpdateRequestModel $request): void
@@ -112,6 +116,12 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
         $path = $this->path($name);
 
         return is_file($path) ? (string) file_get_contents($path) : null;
+    }
+
+    // The byte cut can land inside a character, and invalid UTF-8 makes the JSON response fail.
+    private static function wholeCharacters(string $tail): string
+    {
+        return mb_scrub(ltrim($tail, "\x80..\xBF"), 'UTF-8');
     }
 
     private function path(string $name): string

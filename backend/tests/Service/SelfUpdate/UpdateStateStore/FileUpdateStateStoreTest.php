@@ -159,6 +159,20 @@ final class FileUpdateStateStoreTest extends TestCase
         self::assertSame(str_repeat('b', 16 * 1024), $this->store->logTail());
     }
 
+    public function testATailCutInsideACharacterStartsAtTheNextWholeOne(): void
+    {
+        $this->write('outbox/run.log', str_repeat('a', 100) . '—' . str_repeat('b', 16 * 1024 - 1));
+
+        self::assertSame(str_repeat('b', 16 * 1024 - 1), $this->store->logTail());
+    }
+
+    public function testInvalidBytesInTheLogNeverReachTheTail(): void
+    {
+        $this->write('outbox/run.log', "pulling \xFF images\n");
+
+        self::assertTrue(mb_check_encoding($this->store->logTail(), 'UTF-8'));
+    }
+
     public function testAShortLogIsReadWhole(): void
     {
         $this->write('outbox/run.log', "pulling images\n");
