@@ -158,8 +158,8 @@ export class AddFeedDialogComponent implements OnInit {
 
   pick(candidate: FeedCandidate): void {
     const format = this.storedFormat(candidate);
-    const stored = format !== undefined && format !== 'scraped';
-    this.subscribe(candidate.url, format, stored ? (candidate.title ?? undefined) : undefined);
+    const passesTitle = format !== undefined && format !== 'scraped';
+    this.subscribe(candidate.url, format, passesTitle ? (candidate.title ?? undefined) : undefined);
   }
 
   /** Expands or collapses a candidate's preview rows; expanding fetches the
@@ -173,9 +173,6 @@ export class AddFeedDialogComponent implements OnInit {
     this.ensurePreview(candidate);
   }
 
-  /** Formats the backend must persist verbatim (it cannot re-derive them by
-   *  parsing): scraped pages and WordPress REST endpoints. Others re-run
-   *  discovery, so they pass no format. */
   private storedFormat(candidate: FeedCandidate): string | undefined {
     return VERBATIM_FORMATS.has(candidate.format) ? candidate.format : undefined;
   }

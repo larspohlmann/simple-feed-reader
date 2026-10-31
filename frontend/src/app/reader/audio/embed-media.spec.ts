@@ -41,10 +41,6 @@ describe('youTubeVideoId', () => {
     expect(youTubeVideoId(url)).toBe(VIDEO_ID);
   });
 
-  it('reads the Mixcloud widget url as the show, kept as is and without a poster', () => {
-    expect(embedMediaOfUrl(MIXCLOUD_WIDGET_URL)).toEqual(MIXCLOUD_MEDIA);
-  });
-
   it.each([
     ['a Shorts embed', `https://www.youtube-nocookie.com/embed/${VIDEO_ID}#shorts`],
     ['a Shorts page', `https://www.youtube.com/shorts/${VIDEO_ID}`],
@@ -53,7 +49,6 @@ describe('youTubeVideoId', () => {
     ['an id of the wrong length', 'https://www.youtube.com/watch?v=abc'],
     ['an id with characters outside the alphabet', 'https://youtu.be/dQw4w9WgXc!'],
     ['a look-alike host', `https://www.youtube.com.evil.test/watch?v=${VIDEO_ID}`],
-    ['a Mixcloud widget the allow-list does not carry', `${MIXCLOUD_WIDGET_URL}&autoplay=1`],
     ['another provider', 'https://player.vimeo.com/video/123456'],
     ['an audio file', 'https://x.test/episode.mp3'],
     ['an empty string', ''],
@@ -120,9 +115,14 @@ describe('embedMediaOfUrl', () => {
     expect(embedMediaOfUrl(WIDGET_URL)).toEqual(SOUND_MEDIA);
   });
 
+  it('reads the Mixcloud widget url as the show, kept as is and without a poster', () => {
+    expect(embedMediaOfUrl(MIXCLOUD_WIDGET_URL)).toEqual(MIXCLOUD_MEDIA);
+  });
+
   it.each([
     ['a Short, by design', `https://www.youtube-nocookie.com/embed/${VIDEO_ID}#shorts`],
     ['a SoundCloud widget the allow-list does not carry', `${WIDGET_URL}&auto_play=true`],
+    ['a Mixcloud widget the allow-list does not carry', `${MIXCLOUD_WIDGET_URL}&autoplay=1`],
     ['another provider', 'https://player.vimeo.com/video/123456'],
     ['an audio file', 'https://x.test/episode.mp3'],
     ['an empty string', ''],
