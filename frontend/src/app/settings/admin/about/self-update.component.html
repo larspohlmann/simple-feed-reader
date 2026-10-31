@@ -16,7 +16,11 @@
         }
         @case ('failed') {
           <p class="phase failed">
-            {{ 'settings.about.update.failed' | transloco: { code: current.exitCode } }}
+            @if (current.exitCode === null) {
+              {{ 'settings.about.update.failedWithoutCode' | transloco }}
+            } @else {
+              {{ 'settings.about.update.failed' | transloco: { code: current.exitCode } }}
+            }
           </p>
         }
       }
@@ -30,7 +34,7 @@
       }
 
       @if (canStart()) {
-        <app-button variant="primary" (click)="startUpdate()">
+        <app-button variant="primary" [loading]="starting()" (click)="startUpdate()">
           {{ 'settings.about.update.button' | transloco: { version: latest()?.version } }}
         </app-button>
       }

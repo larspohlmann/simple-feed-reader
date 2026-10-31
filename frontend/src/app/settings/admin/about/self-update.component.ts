@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { filter, switchMap, timer } from 'rxjs';
+import { filter, finalize, switchMap, take, timer } from 'rxjs';
 import { AdminApi } from '../../../admin/admin-api';
 import { SelfUpdatePhase, SelfUpdateStatusDto } from '../../../admin/admin.models';
 import { parseProblem, problemMessage } from '../../../core/problem';
@@ -41,6 +41,7 @@ export class SelfUpdateComponent implements OnInit {
 
   readonly status = signal<SelfUpdateStatusDto | null>(null);
   readonly refusal = signal<string | null>(null);
+  readonly starting = signal(false);
   readonly latest = this.versions.latest;
 
   readonly inProgress = computed(() => isInProgress(this.status()));
@@ -69,6 +70,7 @@ export class SelfUpdateComponent implements OnInit {
   }
 
   startUpdate(): void {
+    this.starting.set(true);
     this.confirm
       .ask({
         title: this.i18n.translate('settings.about.update.confirmTitle'),
@@ -76,19 +78,32 @@ export class SelfUpdateComponent implements OnInit {
         confirmLabel: this.i18n.translate('settings.about.update.confirm'),
       })
       .pipe(
+        take(1),
         filter(Boolean),
         switchMap(() => {
           this.refusal.set(null);
           return this.api.requestUpdate();
         }),
+        finalize(() => this.starting.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (status) => this.apply(status),
-        error: (error: HttpErrorResponse) => {
-          this.refusal.set(problemMessage(parseProblem(error)));
-          this.fetchStatus();
+        error: (error: HttpErrorResponse) =>
+          this.rereadAfterRefusal(problemMessage(parseProblem(error))),
+      });
+  }
+
+  private rereadAfterRefusal(message: string): void {
+    this.api
+      .updateStatus()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (status) => {
+          this.apply(status);
+          this.refusal.set(message);
         },
+        error: () => this.refusal.set(message),
       });
   }
 
@@ -105,15 +120,18 @@ export class SelfUpdateComponent implements OnInit {
   private apply(status: SelfUpdateStatusDto): void {
     const previous = this.status();
     this.status.set(status);
+    if (previous !== null && previous.phase !== status.phase) {
+      this.refusal.set(null);
+    }
     if (previous !== null && previous.phase !== 'succeeded' && status.phase === 'succeeded') {
       this.versions.load();
     }
     this.schedulePoll();
   }
 
-  /** One timer per poll, outside the zone: a pending timer inside it would keep `whenStable()` from settling. */
+  // Outside the zone: a pending timer inside it keeps `whenStable()` from settling.
   private schedulePoll(): void {
-    if (!this.inProgress()) return;
+    if (this.status() !== null && !this.inProgress()) return;
     this.zone.runOutsideAngular(() =>
       timer(SELF_UPDATE_POLL_INTERVAL_MS)
         .pipe(takeUntilDestroyed(this.destroyRef))

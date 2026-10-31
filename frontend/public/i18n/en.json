@@ -503,6 +503,7 @@
         "requested": "Update requested — the updater picks it up within a minute.",
         "running": "Updating…",
         "succeeded": "Update finished.",
+        "failedWithoutCode": "The update failed.",
         "failed": "The update failed (exit code {{code}}).",
         "manual": "Run ./scripts/update.sh on the host to update. To update from here, enable it with ./scripts/prod-configure.sh."
       }

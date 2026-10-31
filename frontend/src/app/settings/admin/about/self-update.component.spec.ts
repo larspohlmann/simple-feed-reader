@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AdminApi } from '../../../admin/admin-api';
 import { SelfUpdatePhase, SelfUpdateStatusDto } from '../../../admin/admin.models';
@@ -121,6 +121,7 @@ describe('SelfUpdateComponent', () => {
 
     button(fixture)?.click();
 
+    expect(ask).toHaveBeenCalledTimes(1);
     expect(requestUpdate).not.toHaveBeenCalled();
   });
 
@@ -128,7 +129,74 @@ describe('SelfUpdateComponent', () => {
     updateStatus.mockReturnValue(of(status('idle')));
     const fixture = mount();
 
+    expect(updateStatus).toHaveBeenCalledTimes(1);
+    expect(element(fixture).querySelector('.self-update')).toBeNull();
     expect(element(fixture).textContent?.trim()).toBe('');
+  });
+
+  it('asks only once while a start is under way', () => {
+    offerUpdate();
+    updateStatus.mockReturnValue(of(status('idle')));
+    const answer = new Subject<boolean>();
+    ask.mockReturnValue(answer);
+    const pendingRequest = new Subject<SelfUpdateStatusDto>();
+    requestUpdate.mockReturnValue(pendingRequest);
+    const fixture = mount();
+
+    button(fixture)?.click();
+    fixture.detectChanges();
+    button(fixture)?.click();
+    answer.next(true);
+    fixture.detectChanges();
+    button(fixture)?.click();
+
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(requestUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers the start again after the admin backs out', () => {
+    offerUpdate();
+    updateStatus.mockReturnValue(of(status('idle')));
+    ask.mockReturnValue(of(false));
+    const fixture = mount();
+
+    button(fixture)?.click();
+    fixture.detectChanges();
+    button(fixture)?.click();
+
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries the first status read until one arrives', () => {
+    offerUpdate();
+    updateStatus
+      .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 502 })))
+      .mockReturnValue(of(status('idle')));
+    const fixture = mount();
+    expect(button(fixture)).toBeNull();
+
+    advancePoll(fixture);
+    expect(button(fixture)?.textContent).toContain('Update to v9.9.9');
+
+    advancePoll(fixture);
+    expect(updateStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not re-read the release for an update that finished before the page opened', () => {
+    updateStatus.mockReturnValue(of(status('succeeded')));
+    const fixture = mount();
+
+    expect(element(fixture).textContent).toContain('Update finished.');
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('reports a failed update that left no exit code', () => {
+    updateStatus.mockReturnValue(of(status('failed', { exitCode: null })));
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('.phase')?.textContent?.trim()).toBe(
+      'The update failed.',
+    );
   });
 
   it('shows a running update with its log and polls again', () => {
@@ -234,5 +302,33 @@ describe('SelfUpdateComponent', () => {
     );
     expect(updateStatus).toHaveBeenCalledTimes(2);
     expect(element(fixture).textContent).toContain('Updating…');
+  });
+
+  it('drops the refusal once the phase moves on', () => {
+    offerUpdate();
+    updateStatus
+      .mockReturnValueOnce(of(status('idle')))
+      .mockReturnValueOnce(of(status('running')))
+      .mockReturnValue(of(status('succeeded')));
+    ask.mockReturnValue(of(true));
+    requestUpdate.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { type: 'update_in_progress', title: 'Conflict', detail: 'Already running.' },
+          }),
+      ),
+    );
+    const fixture = mount();
+
+    button(fixture)?.click();
+    fixture.detectChanges();
+    expect(element(fixture).querySelector('app-error-banner')).not.toBeNull();
+
+    advancePoll(fixture);
+
+    expect(element(fixture).textContent).toContain('Update finished.');
+    expect(element(fixture).querySelector('app-error-banner')).toBeNull();
   });
 });
