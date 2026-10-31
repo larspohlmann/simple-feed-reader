@@ -24,7 +24,7 @@ final readonly class MixcloudEmbedProvider implements EmbedProviderInterface
 
     public function target(string $url): ?EmbedTargetModel
     {
-        $key = $this->showKey($url);
+        $key = MixcloudUrl::showKey($url) ?? $this->widgetKey($url);
 
         return $key === null ? null : new EmbedTargetModel(self::PLAYER_URL . rawurlencode($key), null, self::LABEL);
     }
@@ -44,26 +44,17 @@ final readonly class MixcloudEmbedProvider implements EmbedProviderInterface
         return [self::HOST];
     }
 
-    private function showKey(string $url): ?string
+    /** The widget's `feed` is a key, or a whole show URL in the iframe Mixcloud's oEmbed hands out. */
+    private function widgetKey(string $url): ?string
     {
         $parts = parse_url($url);
-        if (!\is_array($parts)) {
+        if (!\is_array($parts) || strtolower($parts['host'] ?? '') !== self::HOST) {
             return null;
         }
-        if (strtolower($parts['host'] ?? '') !== self::HOST) {
-            return MixcloudUrl::showKey($url);
-        }
-
-        return $this->widgetKey($parts['path'] ?? '', $parts['query'] ?? '');
-    }
-
-    /** The widget's `feed` is a key, or a whole show URL in the iframe Mixcloud's oEmbed hands out. */
-    private function widgetKey(string $path, string $query): ?string
-    {
-        if (!\in_array(rtrim($path, '/'), ['', '/widget/iframe'], true)) {
+        if (!\in_array(rtrim($parts['path'] ?? '', '/'), ['', '/widget/iframe'], true)) {
             return null;
         }
-        parse_str($query, $queryParameters);
+        parse_str($parts['query'] ?? '', $queryParameters);
         $feed = $queryParameters['feed'] ?? null;
         if (!\is_string($feed)) {
             return null;

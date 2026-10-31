@@ -197,10 +197,14 @@ final readonly class SubscriptionService
         if (SourceFormat::SCRAPED === $format) {
             // This shortcut skips discovery's scrape gate, so a hand-made request must meet the preference here.
             $this->scrapeFallbackPolicy->assertMayScrape($user);
-
-            return SubscribeOutcomeModel::subscribed($this->creator->create($user, $url, $format, $tags, null));
         }
 
-        return SubscribeOutcomeModel::subscribed($this->creator->create($user, $url, $format, $tags, $initialTitle));
+        return SubscribeOutcomeModel::subscribed($this->creator->create(
+            $user,
+            $url,
+            $format,
+            $tags,
+            SourceFormat::SCRAPED === $format ? null : $initialTitle,
+        ));
     }
 }

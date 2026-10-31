@@ -64,7 +64,6 @@ final readonly class FeedPreviewService
         }
 
         try {
-            // One catch covers every format: HtmlExtractionException is a FeedParseException.
             $feed = $this->bodyParser->parseAs($format ?? SourceFormat::XML, $body, $response->finalUrl);
         } catch (FeedParseException $exception) {
             // A scraped preview keeps the extractor's message, which already names the problem in the user's words.

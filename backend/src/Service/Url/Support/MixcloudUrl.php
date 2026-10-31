@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Url\Support;
 
-/** Every rule for reading a Mixcloud page URL: its hosts, a profile's user and a show's key. */
 final class MixcloudUrl
 {
     private const array PAGE_HOSTS = ['www.mixcloud.com', 'mixcloud.com', 'm.mixcloud.com'];

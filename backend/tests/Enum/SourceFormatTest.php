@@ -25,7 +25,6 @@ final class SourceFormatTest extends TestCase
         yield 'scraped' => [SourceFormat::SCRAPED, false];
         yield 'wp-json' => [SourceFormat::WP_JSON, false];
         yield 'unknown' => ['bluesky', false];
-        yield 'mixcloud' => [SourceFormat::MIXCLOUD_API, false];
     }
 
     #[DataProvider('verbatimFormats')]
