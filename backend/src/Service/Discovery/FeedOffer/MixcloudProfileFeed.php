@@ -14,8 +14,6 @@ use Dom\HTMLDocument;
 /** Offers the shows of the Mixcloud user a profile page belongs to; Mixcloud publishes no RSS, only this API. */
 final readonly class MixcloudProfileFeed implements FeedOfferInterface
 {
-    private const string CLOUDCASTS_URL = 'https://api.mixcloud.com/%s/cloudcasts/';
-
     public function offer(string $body, string $pageUrl): ?FeedCandidateModel
     {
         $user = MixcloudUrl::profileUser($pageUrl);
@@ -24,7 +22,7 @@ final readonly class MixcloudProfileFeed implements FeedOfferInterface
         }
 
         return new FeedCandidateModel(
-            sprintf(self::CLOUDCASTS_URL, $user),
+            MixcloudUrl::cloudcastsUrl($user),
             $this->pageTitle(HtmlDocumentParser::parseOrEmpty($body)),
             SourceFormat::MIXCLOUD_API,
         );

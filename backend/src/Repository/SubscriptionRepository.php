@@ -56,7 +56,7 @@ final class SubscriptionRepository extends ServiceEntityRepository
      */
     public function findExportableForUserWithTags(int $userId): array
     {
-        return $this->withTagsExcluding($userId, [...SourceFormat::NOT_PROFILES, SourceFormat::SCRAPED]);
+        return $this->withTagsExcluding($userId, SourceFormat::NOT_IN_OPML);
     }
 
     /**

@@ -166,7 +166,7 @@ final class OpmlExporterTest extends DbTestCase
 
     private function onlyFeedOutline(User $user): \DOMElement
     {
-        $outlines = (new \DOMXPath($this->exportedDocument($user)))->query('//outline[@xmlUrl]');
+        $outlines = new \DOMXPath($this->exportedDocument($user))->query('//outline[@xmlUrl]');
         self::assertNotFalse($outlines);
         self::assertCount(1, $outlines);
         $outline = $outlines->item(0);

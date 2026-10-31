@@ -54,6 +54,11 @@ final class MixcloudUrl
         return !self::isSiteSection($matches[1]) && !\in_array(strtolower($matches[2]), self::PROFILE_TABS, true);
     }
 
+    public static function cloudcastsUrl(string $user): string
+    {
+        return 'https://' . self::API_HOST . '/' . $user . '/cloudcasts/';
+    }
+
     public static function isCloudcastsUrl(string $url): bool
     {
         $parts = parse_url($url);
