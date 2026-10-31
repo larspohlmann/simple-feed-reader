@@ -13,7 +13,8 @@ use Dom\Text;
 
 /**
  * Parses a fetched page once and runs the PageRepairInterface pipeline over it, in the order services.yaml wires,
- * before readability scores it. <script> blocks are cut from the raw source first.
+ * before readability scores it. <script> blocks are cut from the raw source first, <style> blocks after the repairs,
+ * which read the page's stylesheet.
  */
 final readonly class FetchedPageNormalizer
 {
@@ -50,6 +51,9 @@ final readonly class FetchedPageNormalizer
         $document = HtmlDocumentParser::parse($this->removeScriptBlocks($html));
         foreach ($this->repairs as $repair) {
             $repair->repairIn($document);
+        }
+        foreach ($document->querySelectorAll('style') as $style) {
+            $style->remove();
         }
 
         return $document;

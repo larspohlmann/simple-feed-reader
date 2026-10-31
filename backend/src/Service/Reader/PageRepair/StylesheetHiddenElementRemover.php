@@ -9,7 +9,7 @@ use Dom\HTMLDocument;
 
 /**
  * Removes the elements the page's own stylesheet hides by id (a no-JS fallback's "browser not supported" notice), which
- * readability cannot see as hidden, then the <style> blocks themselves.
+ * readability cannot see as hidden.
  */
 final readonly class StylesheetHiddenElementRemover implements PageRepairInterface
 {
@@ -17,7 +17,6 @@ final readonly class StylesheetHiddenElementRemover implements PageRepairInterfa
     {
         foreach ($document->querySelectorAll('style') as $style) {
             $this->removeElementsHiddenBy($document, (string) $style->textContent);
-            $style->remove();
         }
     }
 

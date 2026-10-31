@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\PageRepair;
 
 use App\Service\Html\Support\ClassTokenMatcher;
-use Dom\Element;
 use Dom\HTMLDocument;
-use Dom\XPath;
 
 /**
  * Removes a page's reader-comment thread, found by a whole class token, while readability can still see the class: a
@@ -21,23 +19,10 @@ final readonly class CommentThreadRemover implements PageRepairInterface
 
     public function repairIn(HTMLDocument $document): void
     {
-        foreach ($this->elementsWithClass($document) as $element) {
+        foreach ($document->querySelectorAll('[class]') as $element) {
             if (ClassTokenMatcher::hasAnyToken($element, self::COMMENT_THREAD_CLASS_TOKENS)) {
                 $element->remove();
             }
         }
-    }
-
-    /** @return list<Element> */
-    private function elementsWithClass(HTMLDocument $document): array
-    {
-        $elements = [];
-        foreach ((new XPath($document))->query('//*[@class]') as $node) {
-            if ($node instanceof Element) {
-                $elements[] = $node;
-            }
-        }
-
-        return $elements;
     }
 }

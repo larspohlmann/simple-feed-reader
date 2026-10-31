@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\PageRepair\CommentThreadRemover;
-use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\RepairsPages;
 use PHPUnit\Framework\TestCase;
 
 final class CommentThreadRemoverTest extends TestCase
 {
-    use ParsesHtml;
+    use RepairsPages;
 
     private CommentThreadRemover $remover;
 
@@ -25,7 +25,7 @@ final class CommentThreadRemoverTest extends TestCase
             . '<section class="comments"><h2>Comment by <a href="/setareh">Setareh</a></h2>'
             . '<p>Next level sound design.</p><time pubdate>2026-08-08T20:20:06Z</time></section></article>';
 
-        $result = $this->htmlAfterRemoval($html);
+        $result = $this->htmlAfterRepair($this->remover, $html);
 
         self::assertStringNotContainsString('Comment by', $result);
         self::assertStringNotContainsString('Next level sound design.', $result);
@@ -41,7 +41,7 @@ final class CommentThreadRemoverTest extends TestCase
             . '<form class="comment-form">form</form>'
             . '<p>Kept.</p>';
 
-        $result = $this->htmlAfterRemoval($html);
+        $result = $this->htmlAfterRepair($this->remover, $html);
 
         foreach (['area', 'list', 'dashed list', 'respond', 'form'] as $removed) {
             self::assertStringNotContainsString('>' . $removed . '<', $result);
@@ -53,17 +53,9 @@ final class CommentThreadRemoverTest extends TestCase
     {
         $html = '<p class="comments-open">Kept one.</p><p class="nocomments">Kept two.</p>';
 
-        $result = $this->htmlAfterRemoval($html);
+        $result = $this->htmlAfterRepair($this->remover, $html);
 
         self::assertStringContainsString('Kept one.', $result);
         self::assertStringContainsString('Kept two.', $result);
-    }
-
-    private function htmlAfterRemoval(string $bodyHtml): string
-    {
-        $document = $this->document('<!doctype html><html lang="en"><body>' . $bodyHtml . '</body></html>');
-        $this->remover->repairIn($document);
-
-        return $document->saveHtml();
     }
 }

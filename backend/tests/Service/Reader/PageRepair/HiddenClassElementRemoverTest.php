@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\PageRepair\HiddenClassElementRemover;
-use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\RepairsPages;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class HiddenClassElementRemoverTest extends TestCase
 {
-    use ParsesHtml;
+    use RepairsPages;
 
     private HiddenClassElementRemover $remover;
 
@@ -22,7 +22,8 @@ final class HiddenClassElementRemoverTest extends TestCase
 
     public function testRemovesTheTimeoutErrorThePageHidesByClass(): void
     {
-        $result = $this->htmlAfterRemoval(
+        $result = $this->htmlAfterRepair(
+            $this->remover,
             '<p>New tune with my good mate Pogo.</p>'
             . '<div id="error__timeout" class="errorPage__inner sc-hidden"><p>Sorry! Something went wrong</p></div>'
         );
@@ -42,7 +43,9 @@ final class HiddenClassElementRemoverTest extends TestCase
     #[DataProvider('hiddenClasses')]
     public function testRemovesAnElementWithAHidingClass(string $class): void
     {
-        self::assertStringNotContainsString('Gone.', $this->htmlAfterRemoval('<p class="' . $class . '">Gone.</p>'));
+        $result = $this->htmlAfterRepair($this->remover, '<p class="' . $class . '">Gone.</p>');
+
+        self::assertStringNotContainsString('Gone.', $result);
     }
 
     /** @return iterable<string, array{string}> */
@@ -58,14 +61,8 @@ final class HiddenClassElementRemoverTest extends TestCase
     #[DataProvider('visibleClasses')]
     public function testKeepsAnElementThatCanStillShow(string $class): void
     {
-        self::assertStringContainsString('Kept.', $this->htmlAfterRemoval('<p class="' . $class . '">Kept.</p>'));
-    }
+        $result = $this->htmlAfterRepair($this->remover, '<p class="' . $class . '">Kept.</p>');
 
-    private function htmlAfterRemoval(string $bodyHtml): string
-    {
-        $document = $this->document('<!doctype html><html lang="en"><body>' . $bodyHtml . '</body></html>');
-        $this->remover->repairIn($document);
-
-        return $document->saveHtml();
+        self::assertStringContainsString('Kept.', $result);
     }
 }

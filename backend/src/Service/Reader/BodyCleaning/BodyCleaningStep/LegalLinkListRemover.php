@@ -9,15 +9,12 @@ use App\Service\Reader\LinkListDetector;
 use Dom\Element;
 
 /**
- * Removes a site's footer links: a link list with a link that names a legal page. Unlike other boilerplate it goes
- * wherever it sits, since no article holds one, and only the innermost list goes, never the block around it.
+ * Removes a site's footer links: the innermost link list around a link that names a legal page. Unlike other
+ * boilerplate it goes wherever it sits, since no article holds one.
  */
 final readonly class LegalLinkListRemover implements BodyCleaningStepInterface
 {
-    private const int MIN_LINKS_FOR_LIST = 3;
-
-    /** Whole link texts that name a site's legal pages, German and English. */
-    private const array LEGAL_PAGE_LABELS = [
+    private const array WHOLE_LEGAL_LINK_TEXTS = [
         'privacy policy', 'cookie policy', 'terms of service', 'terms of use', 'imprint',
         'datenschutz', 'datenschutzerklärung', 'impressum', 'nutzungsbedingungen',
     ];
@@ -28,48 +25,26 @@ final readonly class LegalLinkListRemover implements BodyCleaningStepInterface
 
     public function cleanIn(BodyCleaningPass $pass): void
     {
-        $body = $pass->document->body;
-        if ($body === null) {
-            return;
-        }
-
-        foreach (array_filter($this->legalLinkLists($body), $this->holdsNoOtherList(...)) as $list) {
-            $list->remove();
+        foreach ($pass->document->querySelectorAll('a') as $link) {
+            if ($link->isConnected && self::namesALegalPage($link)) {
+                $this->innermostListAround($link)?->remove();
+            }
         }
     }
 
-    /** @return list<Element> */
-    private function legalLinkLists(Element $body): array
+    private function innermostListAround(Element $link): ?Element
     {
-        $lists = [];
-        foreach ($body->querySelectorAll('*') as $element) {
-            if ($this->isLegalLinkList($element)) {
-                $lists[] = $element;
+        for ($ancestor = $link->parentElement; $ancestor !== null; $ancestor = $ancestor->parentElement) {
+            if ($this->linkLists->isLinkList($ancestor)) {
+                return $ancestor;
             }
         }
 
-        return $lists;
-    }
-
-    private function holdsNoOtherList(Element $list): bool
-    {
-        return !array_any(
-            iterator_to_array($list->querySelectorAll('*')),
-            fn (Element $descendant): bool => $this->isLegalLinkList($descendant),
-        );
-    }
-
-    private function isLegalLinkList(Element $element): bool
-    {
-        $links = $element->getElementsByTagName('a');
-
-        return $links->length >= self::MIN_LINKS_FOR_LIST
-            && $this->linkLists->isLinkDominated($element)
-            && array_any(iterator_to_array($links), self::namesALegalPage(...));
+        return null;
     }
 
     private static function namesALegalPage(Element $link): bool
     {
-        return in_array(mb_strtolower(trim((string) $link->textContent)), self::LEGAL_PAGE_LABELS, true);
+        return in_array(mb_strtolower(trim((string) $link->textContent)), self::WHOLE_LEGAL_LINK_TEXTS, true);
     }
 }
