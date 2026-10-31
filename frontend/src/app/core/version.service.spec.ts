@@ -176,6 +176,32 @@ describe('VersionService', () => {
     ctrl.expectNone('https://api.test/api/version');
   });
 
+  it('loads on a first freshness-gated call', () => {
+    service.loadIfStale();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
+  it('skips a freshness-gated call within half an hour of the last load', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 29 * 60_000);
+    service.loadIfStale();
+
+    ctrl.expectNone('https://api.test/api/version');
+  });
+
+  it('loads on a freshness-gated call once half an hour has passed', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 30 * 60_000);
+    service.loadIfStale();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
   it('waits for the first load before checking on its own', () => {
     showTab();
     ctrl.expectNone('https://api.test/api/version');

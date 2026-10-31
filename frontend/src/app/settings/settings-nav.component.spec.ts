@@ -48,7 +48,7 @@ describe('SettingsNavComponent', () => {
         {
           provide: VersionService,
           useValue: {
-            load: versionLoad,
+            loadIfStale: versionLoad,
             updateAvailable: signal(options.updateAvailable ?? false),
             latest: signal(
               options.updateAvailable

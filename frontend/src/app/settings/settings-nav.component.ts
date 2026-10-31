@@ -66,7 +66,7 @@ export class SettingsNavComponent {
       checkedForAdmin = true;
       untracked(() => {
         this.mailHealth.refresh();
-        this.versions.load();
+        this.versions.loadIfStale();
       });
     });
   }

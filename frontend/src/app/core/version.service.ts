@@ -44,7 +44,7 @@ export class VersionService {
 
   constructor() {
     onTabVisibilityChange((hidden) => {
-      if (!hidden) this.zone.run(() => this.recheckIfDue());
+      if (!hidden && this.lastLoadedAt !== null) this.zone.run(() => this.loadIfStale());
     });
   }
 
@@ -70,8 +70,8 @@ export class VersionService {
     });
   }
 
-  private recheckIfDue(): void {
-    if (this.lastLoadedAt === null || Date.now() - this.lastLoadedAt < RECHECK_AFTER_MS) return;
+  loadIfStale(): void {
+    if (this.lastLoadedAt !== null && Date.now() - this.lastLoadedAt < RECHECK_AFTER_MS) return;
     this.load();
   }
 }
