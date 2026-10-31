@@ -307,6 +307,13 @@ app-reader-header.hidden {
   padding: 0;
 }
 
+/* A narrow-layout run pill is a bottom toast that would bury the corner buttons
+   (#641). `--app-toast-height` is the live toast's measured height, published by
+   ToastService; its fallback cancels the gap so they keep their base offset. */
+.body.is-narrow {
+  --corner-lift: calc(var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
+}
+
 /* The drawer presentation. Keyed to the `is-narrow` class from
    LayoutService.isNarrow(), not a media query, so the 720px boundary is
    declared once (#185). A full-height sheet over the app bar (#1749). */

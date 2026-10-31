@@ -410,22 +410,14 @@ app-loading-overlay {
 }
 
 /* Anchored to this component's box, not the viewport: in split-pane mode a
-   fixed button would hang over the reader pane. The button renders even under
-   an open article, so it must stay below `.article-overlay`'s z-index: 5. */
-app-to-top-button {
-  position: absolute;
-  right: var(--space-5);
-  bottom: var(--space-5);
-  z-index: 4;
+   fixed button would hang over the reader pane. The buttons render even under
+   an open article, so they must stay below `.article-overlay`'s z-index: 5. */
+.corner-actions {
+  @include circle.corner-anchor(left, 4);
 }
 
-.corner-actions {
-  position: absolute;
-  left: var(--space-5);
-  bottom: var(--space-5);
-  z-index: 4;
-
-  @include circle.corner-group;
+.end-corner {
+  @include circle.corner-anchor(right, 4);
 }
 
 .corner-actions button {
@@ -435,13 +427,8 @@ app-to-top-button {
 /* An open playlist can squeeze the list to a strip; there the corner buttons
    would ride up over the list header, and the player wins. */
 @container entry-list (height < #{bp.$container-list-corner-buttons}) {
-  app-to-top-button,
+  .end-corner,
   .corner-actions {
     display: none;
   }
-}
-
-:host-context(.is-narrow) app-to-top-button,
-:host-context(.is-narrow) .corner-actions {
-  @include circle.corner-toast-lift;
 }
