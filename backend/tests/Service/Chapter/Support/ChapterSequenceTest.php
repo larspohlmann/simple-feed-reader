@@ -35,6 +35,26 @@ final class ChapterSequenceTest extends TestCase
         self::assertSame(['A', 'B'], array_map(static fn (EntryChapter $chapter): string => $chapter->title, $kept));
     }
 
+    public function testFromZeroPutsAnIntroBeforeALateFirstChapter(): void
+    {
+        self::assertEquals(
+            [new EntryChapter(0, 'Intro'), new EntryChapter(77, 'A'), new EntryChapter(676, 'B')],
+            ChapterSequence::fromZero([new EntryChapter(77, 'A'), new EntryChapter(676, 'B')]),
+        );
+    }
+
+    public function testFromZeroLeavesAListThatStartsAtZero(): void
+    {
+        $chapters = [new EntryChapter(0, 'A'), new EntryChapter(60, 'B')];
+
+        self::assertSame($chapters, ChapterSequence::fromZero($chapters));
+    }
+
+    public function testFromZeroLeavesNoChaptersAsNone(): void
+    {
+        self::assertSame([], ChapterSequence::fromZero([]));
+    }
+
     public function testASingleChapterIsNoList(): void
     {
         self::assertSame([], ChapterSequence::ordered([new EntryChapter(0, 'Only')]));
