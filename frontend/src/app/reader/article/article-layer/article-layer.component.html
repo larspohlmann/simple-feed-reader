@@ -44,6 +44,11 @@
     <ng-content select="[articleCorner]" />
   </div>
   @if (showToTop() && !leaving()) {
-    <app-to-top-button (activate)="toTop.emit()" />
+    <div class="end-corner">
+      <button class="corner-back" type="button" [attr.aria-label]="backLabel()" (click)="back()">
+        <app-icon name="arrow_back" size="dense" />
+      </button>
+      <app-to-top-button (activate)="toTop.emit()" />
+    </div>
   }
 </div>

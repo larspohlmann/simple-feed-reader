@@ -413,6 +413,7 @@ app-loading-overlay {
    fixed button would hang over the reader pane. The button renders even under
    an open article, so it must stay below `.article-overlay`'s z-index: 5. */
 app-to-top-button {
+  position: absolute;
   right: var(--space-5);
   bottom: var(--space-5);
   z-index: 4;
