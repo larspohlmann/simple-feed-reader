@@ -132,7 +132,19 @@ state_line=$(grep -n '^ensure_update_state_directory' "${_dir}/../prod-start.sh"
 # --- 6. install.sh asks with 'n' as the default -----------------------------
 grep -q "configure_updater 'n'" "${_dir}/../install.sh" \
   || fail "install.sh must pass 'n' as the updater default"
-grep -q 'use_no_updater' "${_dir}/../install.sh" \
-  || fail "install.sh's quick branch must apply use_no_updater"
+grep -q 'use_updater || true' "${_dir}/../install.sh" \
+  || fail "install.sh's quick branch must apply use_updater"
+
+# --- 7. the quick install enables the updater, or records no on a failed lookup
+printf 'UPDATER_ENABLED=\n' > "${ENV_PROD_FILE}"
+use_updater > /dev/null 2>&1
+assert_env UPDATER_ENABLED 1
+assert_env UPDATER_SOCKET_GID 991
+
+# shellcheck disable=SC2329 # invoked by use_updater
+docker_socket_gid() { return 1; }
+printf 'UPDATER_ENABLED=\n' > "${ENV_PROD_FILE}"
+use_updater > /dev/null 2>&1 || true
+assert_env UPDATER_ENABLED ''
 
 printf 'ok: configure_updater\n'

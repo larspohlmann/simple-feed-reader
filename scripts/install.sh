@@ -204,7 +204,8 @@ if quick_package_chosen; then
   apply_default_public_origin
   use_no_mail
   use_no_grafana
-  use_no_updater
+  # The quick install includes the updater; a failed socket lookup records "no".
+  use_updater || true
 else
   configure_public_url
   if custom_package_chosen; then
