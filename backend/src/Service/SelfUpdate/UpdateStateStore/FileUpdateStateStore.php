@@ -33,7 +33,7 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
     public function heartbeatAt(): ?\DateTimeImmutable
     {
-        $seconds = trim($this->contentsOrEmpty(self::HEARTBEAT));
+        $seconds = trim($this->contents(self::HEARTBEAT) ?? '');
         if (!ctype_digit($seconds)) {
             return null;
         }
@@ -65,12 +65,11 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
     public function logTail(): string
     {
         $path = $this->path(self::RUN_LOG);
-        $size = is_file($path) ? filesize($path) : false;
-        if (false === $size) {
+        if (!is_file($path)) {
             return '';
         }
 
-        return $this->tailOf($path, $size);
+        return (string) file_get_contents($path, offset: max(0, (int) filesize($path) - self::LOG_TAIL_BYTES));
     }
 
     public function saveRequest(UpdateRequestModel $request): void
@@ -91,12 +90,13 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
     private function decodedFile(string $name): ?StateFileFields
     {
-        if (!is_file($this->path($name))) {
+        $contents = $this->contents($name);
+        if (null === $contents) {
             return null;
         }
 
         try {
-            $decoded = json_decode($this->contentsOrEmpty($name), flags: \JSON_THROW_ON_ERROR);
+            $decoded = json_decode($contents, flags: \JSON_THROW_ON_ERROR);
         } catch (\JsonException $exception) {
             throw new MalformedUpdateStateException(sprintf('%s is not valid JSON.', $name), previous: $exception);
         }
@@ -107,26 +107,11 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
         return new StateFileFields($name, get_object_vars($decoded));
     }
 
-    private function contentsOrEmpty(string $name): string
+    private function contents(string $name): ?string
     {
         $path = $this->path($name);
 
-        return is_file($path) ? (string) file_get_contents($path) : '';
-    }
-
-    private function tailOf(string $path, int $size): string
-    {
-        $handle = fopen($path, 'rb');
-        if (false === $handle) {
-            return '';
-        }
-        if ($size > self::LOG_TAIL_BYTES) {
-            fseek($handle, -self::LOG_TAIL_BYTES, \SEEK_END);
-        }
-        $tail = stream_get_contents($handle);
-        fclose($handle);
-
-        return false === $tail ? '' : $tail;
+        return is_file($path) ? (string) file_get_contents($path) : null;
     }
 
     private function path(string $name): string
