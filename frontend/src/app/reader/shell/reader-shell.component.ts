@@ -230,6 +230,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly sidebarCollapsed = computed(
     () => this.sidebarVisibility.hidden() && !this.screen.isNarrow(),
   );
+  /** Closed drawer or collapsed column: what `openSidebar()` reveals. */
+  readonly sidebarOutOfView = computed(() => this.screen.isNarrow() || this.sidebarCollapsed());
 
   private readonly showSidebarButton =
     viewChild<ElementRef<HTMLButtonElement>>('showSidebarButton');
@@ -312,6 +314,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   private readonly tabTitle = inject(ReaderTabTitle);
+
+  /** The drawer on a narrow layout, the collapsed column on a wide one. */
+  openSidebar(): void {
+    if (this.screen.isNarrow()) this.setSidebarOpen(true);
+    else this.sidebarVisibility.show();
+  }
 
   setSidebarOpen(open: boolean): void {
     if (!open) this.sidebarOrganising.set(false);

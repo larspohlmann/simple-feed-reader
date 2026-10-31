@@ -202,6 +202,9 @@
 
 @if (scrolling.showToTop() && content.visibleEntryCount() > 0) {
   <div class="end-corner">
+    @if (cornerLeading(); as leading) {
+      <ng-container [ngTemplateOutlet]="leading" />
+    }
     <app-to-top-button (activate)="scrollToTop()" />
   </div>
 

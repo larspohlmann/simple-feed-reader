@@ -1,4 +1,5 @@
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/corner-circle-button' as circle;
 
 :host {
   display: flex;
@@ -363,6 +364,10 @@ app-reader-header.hidden {
   left: var(--space-2);
   border-radius: var(--radius-lg);
   color: var(--text-secondary);
+}
+
+.corner-sidebar {
+  @include circle.corner-circle-button;
 }
 
 // Follows the list header's slim collapsed padding, which applies below lg only.

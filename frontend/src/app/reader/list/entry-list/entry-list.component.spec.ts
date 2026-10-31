@@ -1695,6 +1695,20 @@ describe('EntryListComponent', () => {
       expect(element.querySelector('app-to-top-button')).toBeNull();
     });
 
+    it('renders the corner slot left of the button (#1943)', () => {
+      const tb = topBlockTemplate();
+      const fixture = mount({ cornerLeading: tb });
+      const element = fixture.nativeElement as HTMLElement;
+
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
+      fixture.detectChanges();
+
+      const marker = element.querySelector('.end-corner .top-marker')!;
+      expect(marker.nextElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
+    });
+
     it('scrolls the container to the top, expands the bar and forgets the offset', () => {
       const fixture = mount();
       const { scrollTo } = stubScroller(fixture);
