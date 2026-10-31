@@ -60,6 +60,7 @@ configure_public_url
 configure_search_engine "$(current_search_engine_choice)"
 configure_mail
 configure_grafana "$(current_grafana_choice)"
+configure_updater "$(current_updater_choice)"
 
 say 'Applying the configuration ...'
 # The mail check below still asks a question, so the closing block waits until

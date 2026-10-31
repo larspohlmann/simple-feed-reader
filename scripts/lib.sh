@@ -493,10 +493,15 @@ prod_uses_grafana() {
   [ -n "$(trim_whitespace "$(env_prod_get GRAFANA_LOKI_PUSH_URL)")" ]
 }
 
+# Whether the operator opted in to the self-update container (#1948).
+prod_uses_updater() {
+  [ "$(trim_whitespace "$(env_prod_get UPDATER_ENABLED)")" = 1 ]
+}
+
 # The compose profiles the stack runs with: 'mysql' for the bundled database,
 # 'meilisearch' for the bundled search engine, 'grafana' for the log
-# dashboard, comma-separated in that order when more than one is on, nothing
-# at all when none is. docker-compose.prod.yml puts each service behind its
+# dashboard, 'updater' for the self-update container, comma-separated in that
+# order when more than one is on, nothing at all when none is. docker-compose.prod.yml puts each service behind its
 # own profile.
 prod_compose_profiles() {
   local profiles=''
@@ -508,6 +513,9 @@ prod_compose_profiles() {
   fi
   if prod_uses_grafana; then
     profiles="${profiles:+${profiles},}grafana"
+  fi
+  if prod_uses_updater; then
+    profiles="${profiles:+${profiles},}updater"
   fi
   printf '%s' "${profiles}"
 }
@@ -584,6 +592,17 @@ stop_disabled_grafana_containers() {
   fi
   say 'Grafana is disabled -- removing its containers (data volumes are kept) ...'
   prod_compose rm -sf loki grafana >/dev/null
+}
+
+stop_disabled_updater_container() {
+  if prod_uses_updater; then
+    return 0
+  fi
+  if [ -z "$(prod_compose ps -aq updater 2>/dev/null)" ]; then
+    return 0
+  fi
+  say 'Updates from the app are disabled -- removing the updater container ...'
+  prod_compose rm -sf updater >/dev/null
 }
 
 # --- what an earlier production install leaves behind -----------------------
@@ -1797,6 +1816,58 @@ use_grafana() {
   fi
   say 'Using the bundled Grafana + Loki containers. The admin password is in'
   say '.env.prod (GRAFANA_ADMIN_PASSWORD).'
+}
+
+# The group that owns the Docker socket as containers see it -- not always the
+# host's docker group (Docker Desktop maps its own).
+docker_socket_gid() {
+  docker run --rm --entrypoint stat -v /var/run/docker.sock:/var/run/docker.sock \
+    docker:27.5.1-cli -c %g /var/run/docker.sock
+}
+
+# Ask whether admins may run the update from the app. Opt-in, because the
+# updater container holds the Docker socket.
+configure_updater() {
+  local default=$1 choice
+  if ! can_prompt; then
+    apply_updater_choice "${default}"
+    return 0
+  fi
+  say 'Allow updates from the app?'
+  tell '  An updater container lets an admin run the update from Settings -> About.'
+  tell '  It holds the Docker socket, which is root on this host; it publishes'
+  tell '  nothing and can only update to the latest release.'
+  choice=$(prompt_with_default 'Enable updates from the app? (y/n)' "${default}")
+  apply_updater_choice "${choice}"
+}
+
+apply_updater_choice() {
+  case "$1" in
+    [yY]*) use_updater ;;
+    *) use_no_updater ;;
+  esac
+}
+
+current_updater_choice() {
+  if prod_uses_updater; then
+    printf 'y'
+    return 0
+  fi
+  printf 'n'
+}
+
+use_no_updater() {
+  env_prod_set UPDATER_ENABLED ''
+  say 'Updates run from the shell only (./scripts/update.sh).'
+}
+
+use_updater() {
+  env_prod_set UPDATER_ENABLED 1
+  env_prod_set SFR_REPO_ROOT "${REPO_ROOT}"
+  env_prod_set UPDATER_UID "$(id -u)"
+  env_prod_set UPDATER_GID "$(id -g)"
+  env_prod_set UPDATER_SOCKET_GID "$(docker_socket_gid)"
+  say 'Admins can run the update from Settings -> About.'
 }
 
 # The host part of PUBLIC_URL -- the default mail domain both the transport

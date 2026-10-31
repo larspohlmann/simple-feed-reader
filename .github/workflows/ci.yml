@@ -376,6 +376,11 @@ jobs:
       - name: configure_search_engine
         run: scripts/test/configure-search-engine.test.sh
 
+      # The self-update question (#1948). The updater holds the Docker socket,
+      # so a wrong default would hand out root on the host.
+      - name: configure_updater
+        run: scripts/test/configure-updater.test.sh
+
       # The mail question, whose default decides whether a new instance can
       # send account mail at all. A wrong answer here is invisible until the
       # first registration nobody receives.
