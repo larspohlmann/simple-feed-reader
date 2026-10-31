@@ -416,8 +416,21 @@ app-loading-overlay {
   @include circle.corner-anchor(left, 4);
 }
 
+/* The slot can show without the to-top disc, so only its children take taps. */
 .end-corner {
   @include circle.corner-anchor(right, 4);
+
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+/* Holds the to-top disc's place so the slot's discs never shift when it goes. */
+.to-top-place {
+  width: var(--corner-button-size);
+  pointer-events: none;
 }
 
 .corner-actions button {

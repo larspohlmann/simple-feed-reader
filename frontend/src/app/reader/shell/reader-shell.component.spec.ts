@@ -363,7 +363,7 @@ describe('ReaderShellComponent', () => {
       const fixture = boot();
       const element = fixture.nativeElement as HTMLElement;
       expect(element.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
-      expect(element.querySelector('[aria-label="Show sidebar"]')).toBeNull();
+      expect(element.querySelector('.sidebar-show')).toBeNull();
 
       TestBed.inject(SidebarVisibilityService).hide();
       fixture.detectChanges();
@@ -421,6 +421,16 @@ describe('ReaderShellComponent', () => {
         expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(false);
       });
 
+      it('stays while the to-top button is gone, as after mark all read (#1945)', () => {
+        screen.isNarrow.set(true);
+        const fixture = boot();
+
+        expect(
+          (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
+        ).toBeNull();
+        expect(cornerButton(fixture)).not.toBeNull();
+      });
+
       it('is absent on a wide layout while the sidebar shows', () => {
         const fixture = boot();
         scrollListDown(fixture);
@@ -440,7 +450,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       expect(element.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
-      expect(element.querySelector('[aria-label="Show sidebar"]')).toBeNull();
+      expect(element.querySelector('.sidebar-show')).toBeNull();
     });
   });
 

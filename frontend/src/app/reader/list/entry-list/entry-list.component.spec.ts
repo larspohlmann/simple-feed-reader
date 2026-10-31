@@ -1709,6 +1709,32 @@ describe('EntryListComponent', () => {
       expect(marker.nextElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
     });
 
+    it('keeps the corner slot in place without the button (#1945)', () => {
+      const fixture = mount({ cornerLeading: topBlockTemplate() });
+      const element = fixture.nativeElement as HTMLElement;
+
+      const marker = element.querySelector('.end-corner .top-marker')!;
+      expect(element.querySelector('app-to-top-button')).toBeNull();
+      expect(marker.nextElementSibling!.classList).toContain('to-top-place');
+      expect(element.querySelector('.corner-actions')).toBeNull();
+    });
+
+    it('keeps the corner slot when marking all read empties an unread view (#1945)', () => {
+      const fixture = mount({ cornerLeading: topBlockTemplate() });
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('entries', []);
+      fixture.detectChanges();
+
+      expect(element.querySelector('.empty')).not.toBeNull();
+      expect(element.querySelector('app-to-top-button')).toBeNull();
+      expect(element.querySelector('.end-corner .top-marker')).not.toBeNull();
+    });
+
     it('scrolls the container to the top, expands the bar and forgets the offset', () => {
       const fixture = mount();
       const { scrollTo } = stubScroller(fixture);
