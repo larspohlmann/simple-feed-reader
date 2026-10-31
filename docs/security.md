@@ -388,6 +388,8 @@ reason, and only then is the reason clipped to 500 characters, so a key the clip
 
 The optional `updater` container (compose profile `updater`, off unless the operator enabled it) mounts the Docker
 socket, which is root-equivalent on the host: whoever controls that container controls the machine. It publishes no
-port and serves nothing. The app talks to it only through `.update-state/`, and the only
-input the updater takes from the app is that a request file exists; it reads nothing else from it and always runs the
-fixed `scripts/update.sh`. The backend endpoint is admin-only. Keep the updater off where that trust is not acceptable.
+port and serves nothing. The app talks to it only through `.update-state/`. The watcher reads the
+`id` of `request.json` (to tell a new request from a handled one) and passes it to the run and to `status.json`; it
+ignores `requestedBy` and every other field, and always runs the fixed `scripts/update.sh`. `.update-state/` is mode
+1777, so any local user on the host can write `request.json` and trigger a run, which only ever updates to the latest
+release. The backend endpoint is admin-only. Keep the updater off where that trust is not acceptable.
