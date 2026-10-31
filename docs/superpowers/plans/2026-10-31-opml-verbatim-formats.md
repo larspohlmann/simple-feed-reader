@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** An OPML export and re-import keeps a feed's verbatim source format (`scraped`, `wp-json`, `mixcloud-api`) instead of turning it into an XML feed that cannot parse (#1934).
+**Goal:** An OPML export and re-import keeps a feed's published verbatim source format (`wp-json`, `mixcloud-api`) instead of turning it into an XML feed that cannot parse, and scraped feeds never enter or leave an OPML file (#1934).
 
-**Architecture:** The exporter writes a `sourceFormat` attribute on a feed outline whose format is verbatim; the importer reads it back into the `BulkSubscribeItemModel::$sourceFormat` the bulk subscriber already honours. Without the attribute, a Mixcloud cloudcasts API URL imports as `mixcloud-api`. A `scraped` outline for an account with scraping off is dropped before the bulk subscribe and counted as invalid, the same gate `SubscriptionService` applies.
+**Architecture:** The exporter writes a `sourceFormat` attribute on a feed outline whose format is verbatim; the importer reads it back into the `BulkSubscribeItemModel::$sourceFormat` the bulk subscriber already honours. Without the attribute, a Mixcloud cloudcasts API URL imports as `mixcloud-api`. A scraped feed is this reader's own reading of a page: the export leaves it out (`SourceFormat::NOT_IN_OPML`) and a `scraped` outline is dropped before the bulk subscribe and counted as invalid, whatever the account's scrape preference.
+
+**Changed after this plan was written:** the owner decided on 2026-10-31 that scraped feeds never travel in OPML. Task 3 originally gated scraped outlines on the scrape preference; that gate was removed in `fix(#1934): keep scraped feeds out of OPML in both directions`. Task 3 below records what was finally built.
 
 **Tech Stack:** Symfony 7.4, PHP 8.4, PHPUnit 12.
 
@@ -15,8 +17,8 @@
 - Branch `feature/1934-opml-verbatim-formats`, cut from `feature/1932-mixcloud-profiles`; commits `type(#1934): …`, no Claude attribution.
 - Only `SourceFormat::VERBATIM` values are written or read; any other declared value imports as `SourceFormat::XML` (a social format must never come back from a file).
 - The outline keeps `type="rss"`; the attribute name is exactly `sourceFormat`.
-- A refused scraped outline counts in `OpmlImportResultModel::$invalid` and persists no `Feed` row.
-- The scrape decision goes through `App\Service\Discovery\ScrapeFallbackPolicy::forUser()`, never the preference directly.
+- A scraped outline counts in `OpmlImportResultModel::$invalid` and persists no `Feed` row, whatever the scrape preference; the export never writes a scraped feed.
+- A declared `sourceFormat` (trimmed) wins over the cloudcasts-URL inference.
 - Gates: `composer check`, `composer md`, both PHPUnit legs, `composer infection:diff`, PhpStorm lint on changed PHP (block on ERROR/WARNING). CLAUDE.md Clean Code rules apply; no new comments unless a reader would get the code wrong without one.
 
 ---
@@ -218,91 +220,13 @@ and the new private method (with `use App\Enum\SourceFormat;` and `use App\Servi
 
 - [ ] **Step 6: Commit** — `feat(#1934): import a feed's verbatim source format from OPML`.
 
-### Task 3: Refuse scraped outlines when scraping is off
+### Task 3: Keep scraped feeds out of OPML (as built)
 
-**Files:**
-- Modify: `backend/src/Service/Opml/OpmlImporter.php` (constructor, `import`, new private `withoutRefusedScrapes`)
-- Test: `backend/tests/Service/Opml/OpmlImporterTest.php`
+**Files:** `backend/src/Enum/SourceFormat.php` (`NOT_IN_OPML`), `backend/src/Repository/SubscriptionRepository.php` (`findExportableForUserWithTags` excludes it), `backend/src/Service/Opml/OpmlImporter.php` (`withoutScraped`, the invalid count), tests in `backend/tests/Repository/ExportableSubscriptionsTest.php` and `backend/tests/Service/Opml/OpmlImporterTest.php`.
 
-**Interfaces:**
-- Consumes: Task 2's items carrying `sourceFormat`; `ScrapeFallbackPolicy::forUser(User): ScrapeFallback` (`App\Service\Discovery\Model\ScrapeFallback::Enabled`).
-
-- [ ] **Step 1: Write the failing tests**:
-
-```php
-    public function testAScrapedOutlineIsInvalidWhenScrapingIsOff(): void
-    {
-        $user = $this->user('noscrape@example.com');
-        $scrapedUrl = 'https://page.example.com/news';
-        $goodUrl = 'https://ok.example.com/feed.xml';
-        $opml = $this->opml(
-            '<outline type="rss" text="Page" xmlUrl="' . $scrapedUrl . '" sourceFormat="scraped"/>'
-            . '<outline type="rss" text="Good" xmlUrl="' . $goodUrl . '"/>',
-        );
-
-        $result = $this->importer()->import($user, $opml);
-
-        self::assertSame(1, $result->invalid);
-        self::assertSame(1, $result->imported);
-        self::assertSame([], $this->feedsWithUrl($scrapedUrl));
-    }
-
-    public function testAScrapedOutlineImportsWhenScrapingIsOn(): void
-    {
-        $user = $this->user('scrape@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $this->entityManager->flush();
-        $url = 'https://page.example.com/news';
-
-        $result = $this->importer()->import(
-            $user,
-            $this->opml('<outline type="rss" text="Page" xmlUrl="' . $url . '" sourceFormat="scraped"/>'),
-        );
-
-        self::assertSame(1, $result->imported);
-        self::assertSame(SourceFormat::SCRAPED, $this->feedsWithUrl($url)[0]->getSourceFormat());
-    }
-```
-
-- [ ] **Step 2: Run to see the first fail** — `php bin/phpunit --filter OpmlImporterTest` → the scraping-off test fails (`invalid` 0, `imported` 2).
-
-- [ ] **Step 3: Implement** — inject `private ScrapeFallbackPolicy $scrapeFallbackPolicy` into `OpmlImporter`, then in `import()`:
-
-```php
-        $items = $this->collectFeeds($body, []);
-        $permitted = $this->withoutRefusedScrapes($user, $items);
-        $result = $this->subscriber->subscribeAll($user, $permitted);
-
-        return new OpmlImportResultModel(
-            imported: $result->imported,
-            alreadySubscribed: $result->alreadySubscribed,
-            invalid: $result->invalid + \count($items) - \count($permitted),
-            skippedOverLimit: $result->skippedOverLimit,
-        );
-```
-
-```php
-    /**
-     * @param list<BulkSubscribeItemModel> $items
-     *
-     * @return list<BulkSubscribeItemModel>
-     */
-    private function withoutRefusedScrapes(User $user, array $items): array
-    {
-        if ($this->scrapeFallbackPolicy->forUser($user) === ScrapeFallback::Enabled) {
-            return $items;
-        }
-
-        return array_values(array_filter(
-            $items,
-            static fn (BulkSubscribeItemModel $item): bool => $item->sourceFormat !== SourceFormat::SCRAPED,
-        ));
-    }
-```
-
-- [ ] **Step 4: Run** — `php bin/phpunit --filter OpmlImporterTest` → all pass.
-
-- [ ] **Step 5: Commit** — `feat(#1934): count a scraped OPML outline as invalid while scraping is off`.
+- The export query excludes `SourceFormat::NOT_IN_OPML` (the private and saved formats, plus `scraped`), author feeds aside; a backup still carries scraped feeds.
+- The importer drops every item whose format is `scraped` before `BulkSubscriber::subscribeAll` and adds them to `invalid`; it reads no preference.
+- Tests: an OPML export leaves a scraped feed out while a backup keeps it; a scraped outline is invalid and persists no row even for an account with scraping on.
 
 ### Task 4: Gates
 

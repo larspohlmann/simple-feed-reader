@@ -93,12 +93,12 @@ final readonly class OpmlImporter
 
     private function sourceFormatOf(\DOMElement $outline, string $xmlUrl): string
     {
-        $declared = $outline->getAttribute('sourceFormat');
-        if (SourceFormat::isVerbatim($declared)) {
-            return $declared;
+        if (!$outline->hasAttribute('sourceFormat')) {
+            return MixcloudUrl::isCloudcastsUrl($xmlUrl) ? SourceFormat::MIXCLOUD_API : SourceFormat::XML;
         }
+        $declared = trim($outline->getAttribute('sourceFormat'));
 
-        return MixcloudUrl::isCloudcastsUrl($xmlUrl) ? SourceFormat::MIXCLOUD_API : SourceFormat::XML;
+        return SourceFormat::isVerbatim($declared) ? $declared : SourceFormat::XML;
     }
 
     private function groupName(\DOMElement $outline): ?string

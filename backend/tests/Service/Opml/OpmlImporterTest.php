@@ -496,6 +496,32 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(SourceFormat::XML, $this->feedsWithUrl($url)[0]->getSourceFormat());
     }
 
+    public function testADeclaredFormatWinsOverTheCloudcastsUrl(): void
+    {
+        $user = $this->user('declared-xml@example.com');
+        $url = 'https://api.mixcloud.com/johndigweed/cloudcasts/';
+
+        $this->importer()->import(
+            $user,
+            $this->opml('<outline type="rss" text="JD" xmlUrl="' . $url . '" sourceFormat="xml"/>'),
+        );
+
+        self::assertSame(SourceFormat::XML, $this->feedsWithUrl($url)[0]->getSourceFormat());
+    }
+
+    public function testADeclaredFormatIsTrimmed(): void
+    {
+        $user = $this->user('padded@example.com');
+        $url = 'https://blog.example.com/wp-json/wp/v2/posts';
+
+        $this->importer()->import(
+            $user,
+            $this->opml('<outline type="rss" text="Blog" xmlUrl="' . $url . '" sourceFormat=" wp-json "/>'),
+        );
+
+        self::assertSame(SourceFormat::WP_JSON, $this->feedsWithUrl($url)[0]->getSourceFormat());
+    }
+
     public function testACloudcastsUrlWithoutAFormatImportsAsMixcloud(): void
     {
         $user = $this->user('mixcloud@example.com');

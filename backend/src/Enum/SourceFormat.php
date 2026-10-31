@@ -40,7 +40,7 @@ final class SourceFormat
     /** Formats whose networked feed is no person's profile. */
     public const array NOT_PROFILES = [self::BLUESKY_API, self::MASTODON_API, self::SAVED];
 
-    /** Formats an OPML export leaves out: a scraped feed is this reader's own reading of a page (#1934). */
+    /** Formats an OPML export leaves out, author feeds aside: private, saved and scraped feeds are this reader's own. */
     public const array NOT_IN_OPML = [...self::NOT_PROFILES, self::SCRAPED];
 
     public static function isSocial(string $sourceFormat): bool
