@@ -33,7 +33,33 @@ final readonly class ProblemCatalog
             return self::unauthorized();
         }
 
-        return $this->mapped($exception) ?? self::fromFramework($exception) ?? $this->unexpected($exception, $path);
+        $mapped = $this->mapped($exception);
+        if (null !== $mapped) {
+            return $this->reportedWhenServerSide($mapped, $exception, $path);
+        }
+
+        return self::fromFramework($exception) ?? $this->unexpected($exception, $path);
+    }
+
+    private function reportedWhenServerSide(
+        ResolvedProblem $resolved,
+        \Throwable $exception,
+        string $path,
+    ): ResolvedProblem {
+        if (self::isServerFault($resolved->problem->status)) {
+            $this->logger->error(
+                'Server-side API problem',
+                ['exception' => $exception, 'path' => $path, 'type' => $resolved->problem->type],
+            );
+        }
+
+        return $resolved;
+    }
+
+    // A 503 is an expected answer (no updater installed, a throttled network), not a fault.
+    private static function isServerFault(int $status): bool
+    {
+        return $status >= Response::HTTP_INTERNAL_SERVER_ERROR && Response::HTTP_SERVICE_UNAVAILABLE !== $status;
     }
 
     private function mapped(\Throwable $exception): ?ResolvedProblem

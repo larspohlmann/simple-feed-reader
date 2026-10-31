@@ -9,10 +9,14 @@ use App\Http\Problem\ExceptionProblems\ExceptionProblemsInterface;
 use App\Http\Problem\ProblemCatalog;
 use App\Http\Problem\ResolvedProblem;
 use App\Security\AccountStatusException;
+use App\Tests\Support\RecordingLogger;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException as RevokedJwtException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 use Psr\Log\NullLogger;
+use Symfony\Component\HttpFoundation\Response;
 
 final class ProblemCatalogTest extends TestCase
 {
@@ -88,9 +92,53 @@ final class ProblemCatalogTest extends TestCase
         }
     }
 
-    private static function problem(string $type): ResolvedProblem
+    public function testAMappedServerSideProblemIsLogged(): void
     {
-        return new ResolvedProblem(new ApiProblem($type, 'Title', 409));
+        $exception = new \DomainException('status.json is not valid JSON.');
+        $logger = new RecordingLogger();
+
+        $this->catalogMapping(self::problem('update_state_unreadable', Response::HTTP_INTERNAL_SERVER_ERROR), $logger)
+            ->resolve($exception, '/api/admin/update');
+
+        self::assertSame(
+            [[
+                'level' => LogLevel::ERROR,
+                'message' => 'Server-side API problem',
+                'context' => [
+                    'exception' => $exception,
+                    'path' => '/api/admin/update',
+                    'type' => 'update_state_unreadable',
+                ],
+            ]],
+            $logger->records,
+        );
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function unloggedStatuses(): iterable
+    {
+        yield 'a client-side conflict' => [Response::HTTP_CONFLICT];
+        yield 'an expected unavailability' => [Response::HTTP_SERVICE_UNAVAILABLE];
+    }
+
+    #[DataProvider('unloggedStatuses')]
+    public function testAMappedProblemThatIsNoServerFaultIsNotLogged(int $status): void
+    {
+        $logger = new RecordingLogger();
+
+        $this->catalogMapping(self::problem('mapped', $status), $logger)->resolve(new \DomainException('x'), '/api/x');
+
+        self::assertSame([], $logger->records);
+    }
+
+    private function catalogMapping(ResolvedProblem $problem, RecordingLogger $logger): ProblemCatalog
+    {
+        return new ProblemCatalog([self::claiming(\DomainException::class, $problem)], $logger, debug: false);
+    }
+
+    private static function problem(string $type, int $status = Response::HTTP_CONFLICT): ResolvedProblem
+    {
+        return new ResolvedProblem(new ApiProblem($type, 'Title', $status));
     }
 
     /** @param class-string<\Throwable> $class */
