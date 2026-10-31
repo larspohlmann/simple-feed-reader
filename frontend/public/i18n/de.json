@@ -494,7 +494,18 @@
       "unavailable": "nicht verfügbar",
       "stale": "Dein Browser führt einen älteren Build aus als der Server. Lade die Seite neu.",
       "updatePill": "Update",
-      "updatePillLabel": "Update verfügbar: Version {{version}}"
+      "updatePillLabel": "Update verfügbar: Version {{version}}",
+      "update": {
+        "button": "Auf {{version}} aktualisieren",
+        "confirmTitle": "Diese Installation aktualisieren?",
+        "confirmMessage": "Die App startet während des Updates neu und ist einige Minuten nicht erreichbar. Lege vorher einen Datenbank-Dump an, wenn dieses Release das Schema ändert.",
+        "confirm": "Aktualisieren",
+        "requested": "Update angefordert — der Updater übernimmt es innerhalb einer Minute.",
+        "running": "Wird aktualisiert…",
+        "succeeded": "Update abgeschlossen.",
+        "failed": "Das Update ist fehlgeschlagen (Exit-Code {{code}}).",
+        "manual": "Führe ./scripts/update.sh auf dem Host aus, um zu aktualisieren. Für Updates von hier aus aktiviere sie mit ./scripts/prod-configure.sh."
+      }
     },
     "reading": {
       "title": "Deine Lektüre",

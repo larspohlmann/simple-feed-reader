@@ -164,3 +164,14 @@ export interface QueueDepthDto {
   waiting: number;
   oldestQueuedAt: string | null;
 }
+
+export type SelfUpdatePhase = 'idle' | 'requested' | 'running' | 'succeeded' | 'failed';
+
+export interface SelfUpdateStatusDto {
+  updaterPresent: boolean;
+  phase: SelfUpdatePhase;
+  startedAt: string | null;
+  finishedAt: string | null;
+  exitCode: number | null;
+  log: string;
+}

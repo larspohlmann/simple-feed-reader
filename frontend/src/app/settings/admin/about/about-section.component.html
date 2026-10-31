@@ -61,6 +61,7 @@
       @if (staleBundle()) {
         <p class="stale">{{ 'settings.about.stale' | transloco }}</p>
       }
+      <app-self-update />
     }
 
     <p class="copyright">© {{ copyrightYear }} {{ author }}</p>

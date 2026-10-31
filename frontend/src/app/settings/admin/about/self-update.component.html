@@ -1,0 +1,39 @@
+@if (visible()) {
+  @let current = status()!;
+  <div class="self-update">
+    @if (!current.updaterPresent) {
+      <p class="manual">{{ 'settings.about.update.manual' | transloco }}</p>
+    } @else {
+      @switch (current.phase) {
+        @case ('requested') {
+          <p class="phase">{{ 'settings.about.update.requested' | transloco }}</p>
+        }
+        @case ('running') {
+          <p class="phase">{{ 'settings.about.update.running' | transloco }}</p>
+        }
+        @case ('succeeded') {
+          <p class="phase">{{ 'settings.about.update.succeeded' | transloco }}</p>
+        }
+        @case ('failed') {
+          <p class="phase failed">
+            {{ 'settings.about.update.failed' | transloco: { code: current.exitCode } }}
+          </p>
+        }
+      }
+
+      @if (current.phase !== 'idle' && current.log !== '') {
+        <pre class="log">{{ current.log }}</pre>
+      }
+
+      @if (refusal(); as message) {
+        <app-error-banner [message]="message" />
+      }
+
+      @if (canStart()) {
+        <app-button variant="primary" (click)="startUpdate()">
+          {{ 'settings.about.update.button' | transloco: { version: latest()?.version } }}
+        </app-button>
+      }
+    }
+  </div>
+}

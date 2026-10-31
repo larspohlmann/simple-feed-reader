@@ -9,6 +9,7 @@ import { SettingsRowComponent } from '../../../shared/settings/settings-row/sett
 import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { SelfUpdateComponent } from './self-update.component';
 
 /** One line of the version table: which half of the app, and what it reports. */
 interface VersionRow {
@@ -26,6 +27,7 @@ const REPOSITORY_URL = 'https://github.com/larspohlmann/simple-feed-reader';
     SettingsStackComponent,
     SpinnerComponent,
     IconComponent,
+    SelfUpdateComponent,
     TranslocoPipe,
   ],
   templateUrl: './about-section.component.html',
