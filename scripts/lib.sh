@@ -529,9 +529,19 @@ prod_compose() {
            --env-file .env.prod "$@" ) < /dev/null
 }
 
-# Inside an in-app update run (SFR_PROD_INTERNAL_HOST) the stack's own ports are in use by definition.
+# Set by the updater's run container (docker/updater/watch.sh), which sits on the production stack's network.
+running_inside_prod_stack() {
+  [ -n "${SFR_UPDATE_IN_PROD_STACK:-}" ]
+}
+
+# Any php container (running or stopped) under the dev project marks a dev install.
+dev_stack_to_update() {
+  ! running_inside_prod_stack && [ -n "$(compose ps -aq php 2>/dev/null)" ]
+}
+
+# Inside an in-app update run the stack's own ports are in use by definition.
 warn_if_prod_ports_busy() {
-  [ -z "${SFR_PROD_INTERNAL_HOST:-}" ] || return 0
+  ! running_inside_prod_stack || return 0
   local http_port tls_port
   http_port=$(env_prod_get WEB_HTTP_PORT); http_port=${http_port:-80}
   tls_port=$(env_prod_get WEB_TLS_PORT); tls_port=${tls_port:-443}
@@ -577,38 +587,39 @@ export_build_version_args() {
 # always matches the current MEILISEARCH_URL decision by the time the summary
 # is printed.
 #
-# Naming the service explicitly targets it even though 'meilisearch' is not
-# in COMPOSE_PROFILES for this call -- verified against a throwaway compose
+# Removes the containers of services an operator switched off, since `up` only
+# starts what is in the active profiles and never stops the rest. Naming the
+# services explicitly targets them even though their profile is not in
+# COMPOSE_PROFILES for this call -- verified against a throwaway compose
 # project before relying on it, since compose's profile rules are easy to
-# get wrong. `rm -sf` stops it first, then removes the container; without
-# `-v` it never removes a volume, named or anonymous, so meili-data survives
-# whether or not the container existed. No container at all -- the common
-# case, an install that never enabled the engine -- is a no-op that still
-# exits 0, which `service_running`-style status checks would not be: it looks
-# for a RUNNING container, and a stopped-but-not-removed one would slip past.
-stop_disabled_search_engine_container() {
-  if prod_uses_search_engine; then
+# get wrong. `rm -sf` stops them first, then removes the containers; without
+# `-v` it never removes a volume, named or anonymous, so the data volumes
+# survive whether or not a container existed. No container at all -- the
+# common case, an install that never enabled the service -- is a no-op that
+# still exits 0, which `service_running`-style status checks would not be: it
+# looks for a RUNNING container, and a stopped-but-not-removed one would slip
+# past.
+remove_containers_unless_enabled() {
+  local enabled=$1 message=$2
+  shift 2
+  if "${enabled}"; then
     return 0
   fi
-  if [ -z "$(prod_compose ps -aq meilisearch 2>/dev/null)" ]; then
+  if [ -z "$(prod_compose ps -aq "$@" 2>/dev/null)" ]; then
     return 0
   fi
-  say 'The search engine is disabled -- removing its container (the meili-data volume is kept) ...'
-  prod_compose rm -sf meilisearch >/dev/null
+  say "${message}"
+  prod_compose rm -sf "$@" >/dev/null
 }
 
-# Mirrors stop_disabled_search_engine_container above, for the loki+grafana
-# pair: prod-start.sh calls this after every `up` so a decline removes both
-# containers while keeping loki-data and grafana-data.
+stop_disabled_search_engine_container() {
+  remove_containers_unless_enabled prod_uses_search_engine \
+    'The search engine is disabled -- removing its container (the meili-data volume is kept) ...' meilisearch
+}
+
 stop_disabled_grafana_containers() {
-  if prod_uses_grafana; then
-    return 0
-  fi
-  if [ -z "$(prod_compose ps -aq loki grafana 2>/dev/null)" ]; then
-    return 0
-  fi
-  say 'Grafana is disabled -- removing its containers (data volumes are kept) ...'
-  prod_compose rm -sf loki grafana >/dev/null
+  remove_containers_unless_enabled prod_uses_grafana \
+    'Grafana is disabled -- removing its containers (data volumes are kept) ...' loki grafana
 }
 
 updater_choice_recorded() {
@@ -629,14 +640,8 @@ offer_updater_if_undecided() {
 }
 
 stop_disabled_updater_container() {
-  if prod_uses_updater; then
-    return 0
-  fi
-  if [ -z "$(prod_compose ps -aq updater 2>/dev/null)" ]; then
-    return 0
-  fi
-  say 'Updates from the app are disabled -- removing the updater container ...'
-  prod_compose rm -sf updater >/dev/null
+  remove_containers_unless_enabled prod_uses_updater \
+    'Updates from the app are disabled -- removing the updater container ...' updater
 }
 
 # --- what an earlier production install leaves behind -----------------------
@@ -891,6 +896,15 @@ can_prompt() {
   [ -r /dev/tty ]
 }
 
+# The y/n default a re-ask offers: whether the predicate it runs holds.
+yes_or_no() {
+  if "$@"; then
+    printf 'y'
+    return 0
+  fi
+  printf 'n'
+}
+
 prompt_with_default() {
   local question=$1 default=$2 answer
   if ! can_prompt; then
@@ -951,12 +965,12 @@ prod_web_mode() {
 # This is the LOCAL view; the public origin is PUBLIC_URL and may differ.
 prod_base_url() {
   local port
-  # The updater's run sits on the stack's network, where localhost is itself.
-  if [ -n "${SFR_PROD_INTERNAL_HOST:-}" ]; then
+  # On the stack's network localhost is the run's own container; the compose service listens on its default port.
+  if running_inside_prod_stack; then
     if [ "$(prod_web_mode)" = tls ]; then
-      printf 'https://%s' "${SFR_PROD_INTERNAL_HOST}"
+      printf 'https://web'
     else
-      printf 'http://%s' "${SFR_PROD_INTERNAL_HOST}"
+      printf 'http://web'
     fi
     return 0
   fi
@@ -1771,11 +1785,7 @@ apply_search_engine_choice() {
 # a fresh install has no decision on file yet to read back, which is exactly
 # why install.sh passes a literal instead ('n', the package default's answer).
 current_search_engine_choice() {
-  if prod_uses_search_engine; then
-    printf 'y'
-    return 0
-  fi
-  printf 'n'
+  yes_or_no prod_uses_search_engine
 }
 
 use_database_search() {
@@ -1826,11 +1836,7 @@ apply_grafana_choice() {
 # The default configure_grafana offers on a re-ask -- mirrors
 # current_search_engine_choice.
 current_grafana_choice() {
-  if prod_uses_grafana; then
-    printf 'y'
-    return 0
-  fi
-  printf 'n'
+  yes_or_no prod_uses_grafana
 }
 
 use_no_grafana() {
@@ -1855,8 +1861,10 @@ use_grafana() {
 # The group that owns the Docker socket as containers see it -- not always the
 # host's docker group (Docker Desktop maps its own).
 docker_socket_gid() {
+  local image
+  image=$(sed -n 's/^FROM //p' "${REPO_ROOT}/docker/updater/Dockerfile")
   docker run --rm --entrypoint stat -v /var/run/docker.sock:/var/run/docker.sock \
-    docker:27.5.1-cli -c %g /var/run/docker.sock
+    "${image}" -c %g /var/run/docker.sock
 }
 
 # Ask whether admins may run the update from the app. Opt-in, because the
@@ -1883,11 +1891,7 @@ apply_updater_choice() {
 }
 
 current_updater_choice() {
-  if prod_uses_updater; then
-    printf 'y'
-    return 0
-  fi
-  printf 'n'
+  yes_or_no prod_uses_updater
 }
 
 use_no_updater() {

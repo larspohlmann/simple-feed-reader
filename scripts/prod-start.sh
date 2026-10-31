@@ -89,10 +89,8 @@ prepare_prod_images
 run_step 'Starting the production stack (a build takes a few minutes)' \
   up_holding_worker prod_compose "${PROD_BUILD_OPTION}" --remove-orphans
 
-# `up` only starts what is in the active profiles; it never stops the search
-# engine's container when the operator has just declined it, so this runs on
-# every start to keep the container in step with MEILISEARCH_URL -- see
-# stop_disabled_search_engine_container in lib.sh.
+# Runs on every start so a service the operator just declined loses its
+# container -- see remove_containers_unless_enabled in lib.sh.
 stop_disabled_search_engine_container
 stop_disabled_grafana_containers
 stop_disabled_updater_container

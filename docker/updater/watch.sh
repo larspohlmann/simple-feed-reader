@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# The updater's resident half (#1948): a heartbeat the app reads as "the
-# updater is here", and one update run per new request.
-
 # shellcheck source=docker/updater/state.sh
 source "${SFR_UPDATER_LIB:-/usr/local/lib/sfr-updater/state.sh}"
 : "${SFR_REPO_ROOT:?set SFR_REPO_ROOT in .env.prod (./scripts/prod-configure.sh)}"
@@ -28,7 +25,7 @@ start_run() {
   docker run -d --rm --name "${RUN_CONTAINER}" --memory 256m \
     --user "$(id -u):$(id -g)" --group-add "${UPDATER_SOCKET_GID}" \
     --network "${SFR_RUN_NETWORK}" \
-    -e SFR_REPO_ROOT -e HOME=/tmp -e SFR_PROD_INTERNAL_HOST=web -e SFR_SKIP_DEV_STACK=1 \
+    -e SFR_REPO_ROOT -e HOME=/tmp -e SFR_UPDATE_IN_PROD_STACK=1 \
     -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "${SFR_REPO_ROOT}:${SFR_REPO_ROOT}" \
