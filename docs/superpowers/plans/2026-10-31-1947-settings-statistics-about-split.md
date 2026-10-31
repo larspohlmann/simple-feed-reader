@@ -341,16 +341,21 @@ i18n: `reader.updateAvailableAdminLabel` — en `"Update available: version {{ve
 
 ### The state directory contract
 
-Every task below reads or writes `${REPO_ROOT}/.update-state/` (mode `1777`, gitignored). Mounted at `/state` in the updater and at `/app/update-state` in `php` — outside `var/`, which the php entrypoint `chown -R`s to www-data on every start.
+Every task below reads or writes `${REPO_ROOT}/.update-state/` (mode `0755`, gitignored), split in two by writer (final review, I1): `inbox/` (mode `1777`) is the only place php can write; `outbox/` (mode `0755`, owned by the host user the updater runs as) holds everything the updater writes. `ensure_update_state_directory` creates all three and only warns (with the `sudo chown` fix) when it cannot. Outside `var/`, which the php entrypoint `chown -R`s to www-data on every start.
+
+| Directory | php (`/app/update-state/…`) | updater and run (`/state/…`) |
+|---|---|---|
+| `inbox/` | read-write | read-only |
+| `outbox/` | read-only | read-write |
 
 | File | Writer | Content |
 |---|---|---|
-| `heartbeat` | watcher, every poll | Unix seconds, one line |
-| `request.json` | backend | `{"id":"<16 hex>","requestedBy":"<email>","requestedAt":"<ISO 8601 UTC>"}` |
-| `status.json` | watcher, run | `{"requestId":"…","phase":"running\|succeeded\|failed","startedAt":"<ISO>","finishedAt":"<ISO>\|null","exitCode":<int>\|null}` |
-| `run.log` | run | `update.sh` output |
+| `outbox/heartbeat` | watcher, every poll on which `docker ps` succeeds | Unix seconds, one line |
+| `inbox/request.json` | backend | `{"id":"<16 hex>","requestedBy":"<email>","requestedAt":"<ISO 8601 UTC>"}`; the watcher ignores (and warns about) any id not matching `^[0-9a-f]{16}$` |
+| `outbox/status.json` | watcher, run | `{"requestId":"…","phase":"running\|succeeded\|failed","startedAt":"<ISO>","finishedAt":"<ISO>\|null","exitCode":<int>\|null}`; the phases are frozen, the backend rejects any other |
+| `outbox/run.log` | run | `update.sh` output |
 
-A request is **pending** while `request.json`'s `id` differs from `status.json`'s `requestId`. Every write is temp file + `mv`, so a reader never sees half a file. Nobody deletes a file, which is why `1777` (sticky) is enough for two writers with different UIDs.
+A request is **pending** while `request.json`'s `id` differs from `status.json`'s `requestId`. Every write is a temp file + `mv` (the updater's temp file is a `mktemp` in the outbox), so a reader never sees half a file. Fields are only ever added.
 
 ---
 

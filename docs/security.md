@@ -388,8 +388,12 @@ reason, and only then is the reason clipped to 500 characters, so a key the clip
 
 The optional `updater` container (compose profile `updater`, off unless the operator enabled it) mounts the Docker
 socket, which is root-equivalent on the host: whoever controls that container controls the machine. It publishes no
-port and serves nothing. The app talks to it only through `.update-state/`. The watcher reads the
-`id` of `request.json` (to tell a new request from a handled one) and passes it to the run and to `status.json`; it
-ignores `requestedBy` and every other field, and always runs the fixed `scripts/update.sh`. `.update-state/` is mode
-1777, so any local user on the host can write `request.json` and trigger a run, which only ever updates to the latest
-release. The backend endpoint is admin-only. Keep the updater off where that trust is not acceptable.
+port and serves nothing. The app talks to it only through `.update-state/`, which is split in two. `inbox/` holds
+only `request.json`; it is the one place php can write (mode 1777, mounted read-only into the updater). `outbox/`
+holds `heartbeat`, `status.json` and `run.log`; it belongs to the host user the updater runs as (mode 0755, mounted
+read-only into php), so neither php nor another local user can plant a file or a symlink the updater would write
+through. The watcher reads only the `id` of `request.json`, ignores any request whose id is not 16 lowercase hex
+digits before it reaches `status.json` or the `docker run` arguments, ignores `requestedBy` and every other field,
+and always runs the fixed `scripts/update.sh`. Because only the inbox is world-writable, a local user on the host can
+still request an update to the latest release, and nothing more. The backend endpoint is admin-only. Keep the
+updater off where that trust is not acceptable.

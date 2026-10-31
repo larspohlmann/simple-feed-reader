@@ -90,7 +90,12 @@ finds no images, builds on the host and warns, so a failed image job never
 breaks an install.
 
 The packages are public, as the repository is, so installs pull them without
-a login.
+a login. GitHub creates a new package private, so after the first release that
+publishes one, open it under the repository's Packages and set its visibility
+to public; until then every install builds it on the host. This is still due
+for `ghcr.io/larspohlmann/simple-feed-reader-updater` (#1948), the updater
+image: after the first release that publishes it, set it public, or every
+install with the updater enabled builds it locally.
 
 ## Highlights
 
