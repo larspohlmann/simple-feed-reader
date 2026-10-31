@@ -1876,9 +1876,10 @@ configure_updater() {
     return 0
   fi
   say 'Allow updates from the app?'
-  tell '  An updater container lets an admin run the update from Settings -> About.'
-  tell '  It holds the Docker socket, which is root on this host; it publishes'
-  tell '  nothing and can only update to the latest release.'
+  tell '  An admin can then run the update from Settings -> About.'
+  tell '  A small updater container does the same job as ./scripts/update.sh,'
+  tell '  with the same access to Docker. The app can only ask it to update'
+  tell '  to the latest release; it opens no ports. Details: docs/security.md'
   choice=$(prompt_with_default 'Enable updates from the app? (y/n)' "${default}")
   apply_updater_choice "${choice}" || true
 }

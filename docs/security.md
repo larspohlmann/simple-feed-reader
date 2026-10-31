@@ -387,12 +387,13 @@ reason, and only then is the reason clipped to 500 characters, so a key the clip
 ## Self-update (updater)
 
 The optional `updater` container (compose profile `updater`, off unless the operator enabled it) mounts the Docker
-socket, which is root-equivalent on the host: whoever controls that container controls the machine. It publishes no
-port and serves nothing. The app talks to it only through `.update-state/`, which is split in two. `inbox/` holds
+socket. That is the same access `./scripts/update.sh` uses when the operator runs it by hand, and like the docker group
+it is root-equivalent on the host: whoever controls that container controls the machine. The updater runs as the host
+user, with a read-only root filesystem, every capability dropped, 64 MiB of memory, and no port; it serves nothing. The app talks to it only through `.update-state/`, which is split in two. `inbox/` holds
 only `request.json`; it is the one place php can write (mode 1777, mounted read-only into the updater). `outbox/`
 holds `heartbeat`, `status.json` and `run.log`; it belongs to the host user the updater runs as (mode 0755, mounted
 read-only into php), so neither php nor another local user can plant a file or a symlink the updater would write
-through. The watcher reads only the `id` of `request.json`, ignores any request whose id is not 16 lowercase hex
+through. The watcher reads only the `id` of `request.json`, refuses a symlinked or non-regular file and bounds the read, ignores any request whose id is not 16 lowercase hex
 digits before it reaches `status.json` or the `docker run` arguments, ignores `requestedBy` and every other field,
 and always runs the fixed `scripts/update.sh`. Because only the inbox is world-writable, a local user on the host can
 still request an update to the latest release, and nothing more. The backend endpoint is admin-only. Keep the
