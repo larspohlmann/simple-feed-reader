@@ -34,6 +34,9 @@ parameters:
 
     app.loki_spool_directory: '%kernel.logs_dir%/loki-spool'
 
+    # Where the updater container and the app hand over an update (#1948); docker-compose.prod.yml mounts it.
+    update_state_directory: '%kernel.project_dir%/update-state'
+
     comments_cache_lifetime: 7200
     comments_gathering_cache_lifetime: 60
     social_replies_max_depth: 6
@@ -177,6 +180,7 @@ services:
     App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader:
         arguments:
             $gitHubRepository: '%github_release_repository%'
+    App\Service\SelfUpdate\UpdateStateStore\UpdateStateStoreInterface: '@App\Service\SelfUpdate\UpdateStateStore\FileUpdateStateStore'
     App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\CompositeModelCatalog'
     App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Recommendation\Llm\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
     App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface: '@App\Service\Recommendation\Scoring\SystemOneClient\HttpSystemOneClient'
@@ -309,3 +313,8 @@ services:
         arguments:
             $appLabel: 'simple-feed-reader'
             $envLabel: '%kernel.environment%'
+
+when@test:
+    parameters:
+        # The kernel cache directory is shared by every parallel worker; CACHE_DIRECTORY carries the TEST_TOKEN.
+        update_state_directory: '%env(resolve:CACHE_DIRECTORY)%-update-state'

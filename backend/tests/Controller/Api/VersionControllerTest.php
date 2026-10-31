@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Controller\Api\VersionController;
-use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
 use App\Service\Version\Model\LatestReleaseModel;
 use App\Service\Version\Model\ReleaseVersionModel;
-use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
-use App\Service\Version\VersionReporter;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\VersionReporters;
 
 final class VersionControllerTest extends ApiTestCase
 {
@@ -65,7 +63,7 @@ final class VersionControllerTest extends ApiTestCase
     /** The kernel test above only ever sees a null `latest`; this drives the action directly with a real release. */
     public function testMapsAnAvailableReleaseIntoThePayload(): void
     {
-        $reporter = $this->reporterReporting(
+        $reporter = VersionReporters::reporting(
             new ReleaseVersionModel('v1.0.0', 'abc123', '2026-01-01T00:00:00Z'),
             new LatestReleaseModel('v1.1.0', 'https://github.test/releases/tag/v1.1.0'),
         );
@@ -80,34 +78,5 @@ final class VersionControllerTest extends ApiTestCase
             ['version' => 'v1.1.0', 'notesUrl' => 'https://github.test/releases/tag/v1.1.0'],
             $payload['latest'],
         );
-    }
-
-    private function reporterReporting(ReleaseVersionModel $running, LatestReleaseModel $latest): VersionReporter
-    {
-        $releaseReader = new class ($running) implements ReleaseVersionReaderInterface {
-            public function __construct(private readonly ReleaseVersionModel $version)
-            {
-            }
-
-            public function read(): ReleaseVersionModel
-            {
-                return $this->version;
-            }
-        };
-
-        $latestReader = new class ($latest) implements LatestReleaseReaderInterface {
-            public function __construct(private readonly LatestReleaseModel $latest)
-            {
-            }
-
-            // Narrowed to non-null on purpose: this stub always reports a
-            // release, which is the whole point of the mapping it drives.
-            public function read(): LatestReleaseModel
-            {
-                return $this->latest;
-            }
-        };
-
-        return new VersionReporter($releaseReader, $latestReader);
     }
 }
