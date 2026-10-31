@@ -418,6 +418,9 @@ jobs:
       - name: release-images
         run: scripts/test/release-images.test.sh
 
+      - name: update-in-container
+        run: scripts/test/update-in-container.test.sh
+
       # What the installers put on the screen, and the options they accept
       # (#430). The default port each topology offers becomes a published
       # container port and the port in every account-mail link; --ref is parsed

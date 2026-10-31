@@ -891,6 +891,15 @@ prod_web_mode() {
 # This is the LOCAL view; the public origin is PUBLIC_URL and may differ.
 prod_base_url() {
   local port
+  # The updater's run sits on the stack's network, where localhost is itself.
+  if [ -n "${SFR_PROD_INTERNAL_HOST:-}" ]; then
+    if [ "$(prod_web_mode)" = tls ]; then
+      printf 'https://%s' "${SFR_PROD_INTERNAL_HOST}"
+    else
+      printf 'http://%s' "${SFR_PROD_INTERNAL_HOST}"
+    fi
+    return 0
+  fi
   if [ "$(prod_web_mode)" = tls ]; then
     port=$(env_prod_get WEB_TLS_PORT)
     port=${port:-443}

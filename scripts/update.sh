@@ -33,6 +33,7 @@ Options:
 
 Environment:
   SFR_REF                 Same as --ref.
+  SFR_SKIP_DEV_STACK      Non-empty: update the production stack only.
 EOF
 }
 handle_help_request "$@"
@@ -96,7 +97,7 @@ fi
 # --- development stack ------------------------------------------------------
 # Any php container (running or stopped) under the dev project marks a dev
 # install. Both stacks can exist on a developer machine; update both.
-if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
+if [ -z "${SFR_SKIP_DEV_STACK:-}" ] && [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
   say 'Updating the development stack ...'
   run_step 'Pulling updated base images' refresh_images compose \
     || warn 'Could not pull updated base images; building on the cached ones.'
