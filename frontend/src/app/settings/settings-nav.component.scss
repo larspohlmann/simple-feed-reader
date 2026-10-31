@@ -21,6 +21,12 @@ a {
   white-space: nowrap;
 }
 
+.badge.update {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* Unhealthy-feed count on the Organise entry: amber, matching the "Failing"
    status pill, because the badge flags feeds that need attention rather than a
    neutral count. */

@@ -492,7 +492,9 @@
       "api": "API",
       "loading": "wird geprüft…",
       "unavailable": "nicht verfügbar",
-      "stale": "Dein Browser führt einen älteren Build aus als der Server. Lade die Seite neu."
+      "stale": "Dein Browser führt einen älteren Build aus als der Server. Lade die Seite neu.",
+      "updatePill": "Update",
+      "updatePillLabel": "Update verfügbar: Version {{version}}"
     },
     "reading": {
       "title": "Deine Lektüre",

@@ -492,7 +492,9 @@
       "api": "API",
       "loading": "checking…",
       "unavailable": "unavailable",
-      "stale": "Your browser is running an older build than the server. Reload the page to update."
+      "stale": "Your browser is running an older build than the server. Reload the page to update.",
+      "updatePill": "Update",
+      "updatePillLabel": "Update available: version {{version}}"
     },
     "reading": {
       "title": "Your reading",

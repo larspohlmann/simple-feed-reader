@@ -3,15 +3,25 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth/auth.service';
+import { VersionService } from '../core/version.service';
 import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SettingsNavComponent } from './settings-nav.component';
 import { SETTINGS_SECTIONS } from './settings-sections';
 
 describe('SettingsNavComponent', () => {
+  const versionLoad = jest.fn();
+
+  beforeEach(() => versionLoad.mockReset());
+
   function mount(
     roles: string[],
-    options: { variant?: 'rail' | 'hub'; unhealthyCount?: number; mailFailureCount?: number } = {},
+    options: {
+      variant?: 'rail' | 'hub';
+      unhealthyCount?: number;
+      mailFailureCount?: number;
+      updateAvailable?: boolean;
+    } = {},
   ) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -28,6 +38,18 @@ describe('SettingsNavComponent', () => {
         {
           provide: MailHealthStore,
           useValue: { failureCount: signal(options.mailFailureCount ?? 0), refresh: jest.fn() },
+        },
+        {
+          provide: VersionService,
+          useValue: {
+            load: versionLoad,
+            updateAvailable: signal(options.updateAvailable ?? false),
+            latest: signal(
+              options.updateAvailable
+                ? { version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' }
+                : null,
+            ),
+          },
         },
       ],
     });
@@ -91,5 +113,28 @@ describe('SettingsNavComponent', () => {
     const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
     const mail = links.find((anchor) => anchor.getAttribute('href') === '/settings/admin/mail');
     expect(mail?.querySelector('.badge')).toBeNull();
+  });
+
+  it('pills the About entry while an update is available', () => {
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], { updateAvailable: true });
+    const about = (fixture.nativeElement as HTMLElement).querySelector(
+      'a[href="/settings/admin/about"]',
+    );
+    const pill = about?.querySelector('.badge.update');
+    expect(pill?.textContent?.trim()).toBe('Update');
+    expect(pill?.getAttribute('aria-label')).toBe('Update available: version v9.9.9');
+  });
+
+  it('shows no pill when the running build is current', () => {
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN']);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.badge.update')).toBeNull();
+  });
+
+  it('asks for the version only for an admin, who alone sees the pill', () => {
+    mount(['ROLE_USER']);
+    expect(versionLoad).not.toHaveBeenCalled();
+    TestBed.resetTestingModule();
+    mount(['ROLE_USER', 'ROLE_ADMIN']);
+    expect(versionLoad).toHaveBeenCalled();
   });
 });

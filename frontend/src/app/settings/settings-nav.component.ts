@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth/auth.service';
+import { VersionService } from '../core/version.service';
 import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { IconComponent } from '../shared/icon/icon.component';
 import { MailHealthStore } from './admin/mail/mail-health.store';
@@ -30,6 +31,9 @@ export class SettingsNavComponent {
   private readonly mailHealth = inject(MailHealthStore);
   readonly unhealthyCount = inject(SubscriptionsStore).unhealthyCount;
   readonly mailFailureCount = this.mailHealth.failureCount;
+  private readonly versions = inject(VersionService);
+  readonly updateAvailable = this.versions.updateAvailable;
+  readonly latestVersion = computed(() => this.versions.latest()?.version ?? '');
 
   readonly groups = computed<readonly NavGroup[]>(() => {
     const groups: NavGroup[] = [
@@ -48,6 +52,9 @@ export class SettingsNavComponent {
   });
 
   constructor() {
-    if (this.auth.isAdmin()) this.mailHealth.refresh();
+    if (this.auth.isAdmin()) {
+      this.mailHealth.refresh();
+      this.versions.load();
+    }
   }
 }
