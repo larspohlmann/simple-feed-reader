@@ -17,6 +17,7 @@ final class ChapterProblemsTest extends TestCase
 
         self::assertNotNull($resolved);
         self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $resolved->problem->status);
+        self::assertFalse($resolved->isServerFault());
     }
 
     public function testOtherExceptionsPassThrough(): void

@@ -46,7 +46,7 @@ final readonly class ProblemCatalog
         \Throwable $exception,
         string $path,
     ): ResolvedProblem {
-        if (self::isServerFault($resolved->problem->status)) {
+        if ($resolved->isServerFault()) {
             $this->logger->error(
                 'Server-side API problem',
                 ['exception' => $exception, 'path' => $path, 'type' => $resolved->problem->type],
@@ -54,12 +54,6 @@ final readonly class ProblemCatalog
         }
 
         return $resolved;
-    }
-
-    // A 503 is an expected answer (no updater installed, a throttled network), not a fault.
-    private static function isServerFault(int $status): bool
-    {
-        return $status >= Response::HTTP_INTERNAL_SERVER_ERROR && Response::HTTP_SERVICE_UNAVAILABLE !== $status;
     }
 
     private function mapped(\Throwable $exception): ?ResolvedProblem

@@ -53,6 +53,18 @@ final class SelfUpdateProblemsTest extends TestCase
         ];
     }
 
+    public function testAMissingUpdaterIsAnExpectedAnswerNotAServerFault(): void
+    {
+        self::assertFalse((new SelfUpdateProblems())->resolve(new UpdaterUnavailableException('gone'))?->isServerFault());
+    }
+
+    public function testAnUnreadableStateIsAServerFault(): void
+    {
+        self::assertTrue(
+            (new SelfUpdateProblems())->resolve(new MalformedUpdateStateException('broken'))?->isServerFault(),
+        );
+    }
+
     public function testOtherExceptionsPassThrough(): void
     {
         self::assertNull((new SelfUpdateProblems())->resolve(new \RuntimeException('x')));

@@ -18,7 +18,7 @@ final readonly class SelfUpdateProblems implements ExceptionProblemsInterface
     public function resolve(\Throwable $exception): ?ResolvedProblem
     {
         return match (true) {
-            $exception instanceof UpdaterUnavailableException => new ResolvedProblem(new ApiProblem(
+            $exception instanceof UpdaterUnavailableException => ResolvedProblem::expected(new ApiProblem(
                 'updater_unavailable',
                 'The updater is not running',
                 Response::HTTP_SERVICE_UNAVAILABLE,

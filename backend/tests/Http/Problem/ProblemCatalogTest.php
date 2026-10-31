@@ -114,19 +114,31 @@ final class ProblemCatalogTest extends TestCase
         );
     }
 
-    /** @return iterable<string, array{int}> */
-    public static function unloggedStatuses(): iterable
-    {
-        yield 'a client-side conflict' => [Response::HTTP_CONFLICT];
-        yield 'an expected unavailability' => [Response::HTTP_SERVICE_UNAVAILABLE];
-    }
-
-    #[DataProvider('unloggedStatuses')]
-    public function testAMappedProblemThatIsNoServerFaultIsNotLogged(int $status): void
+    public function testAnUnavailabilityTheMapperDidNotExpectIsLogged(): void
     {
         $logger = new RecordingLogger();
 
-        $this->catalogMapping(self::problem('mapped', $status), $logger)->resolve(new \DomainException('x'), '/api/x');
+        $this->catalogMapping(self::problem('mapped', Response::HTTP_SERVICE_UNAVAILABLE), $logger)
+            ->resolve(new \DomainException('x'), '/api/x');
+
+        self::assertCount(1, $logger->records);
+    }
+
+    /** @return iterable<string, array{ResolvedProblem}> */
+    public static function unloggedProblems(): iterable
+    {
+        yield 'a client-side conflict' => [self::problem('mapped')];
+        yield 'an expected unavailability' => [
+            ResolvedProblem::expected(new ApiProblem('mapped', 'Title', Response::HTTP_SERVICE_UNAVAILABLE)),
+        ];
+    }
+
+    #[DataProvider('unloggedProblems')]
+    public function testAMappedProblemThatIsNoServerFaultIsNotLogged(ResolvedProblem $problem): void
+    {
+        $logger = new RecordingLogger();
+
+        $this->catalogMapping($problem, $logger)->resolve(new \DomainException('x'), '/api/x');
 
         self::assertSame([], $logger->records);
     }
