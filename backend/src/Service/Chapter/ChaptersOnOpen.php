@@ -7,6 +7,7 @@ namespace App\Service\Chapter;
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Service\Chapter\Model\ServedChaptersModel;
+use App\Service\Chapter\Support\ChapterSequence;
 use App\Service\Chapter\Support\DescriptionChapters;
 use App\Service\Url\Support\YouTubeUrl;
 
@@ -17,6 +18,13 @@ final readonly class ChaptersOnOpen
     }
 
     public function serve(Entry $entry): ServedChaptersModel
+    {
+        $served = $this->chaptersOf($entry);
+
+        return new ServedChaptersModel(ChapterSequence::fromZero($served->chapters), $served->contentHtml);
+    }
+
+    private function chaptersOf(Entry $entry): ServedChaptersModel
     {
         $body = $entry->getContentHtml();
         if ($body !== null && self::isYouTubeVideo($entry->getUrl())) {

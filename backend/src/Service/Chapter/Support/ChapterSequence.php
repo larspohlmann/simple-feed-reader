@@ -8,6 +8,8 @@ use App\Entity\EntryChapter;
 
 final class ChapterSequence
 {
+    private const string INTRO = 'Intro';
+
     /**
      * @param list<EntryChapter> $chapters
      *
@@ -50,6 +52,20 @@ final class ChapterSequence
             $chapters,
             static fn (EntryChapter $chapter): bool => $chapter->startSeconds < $endSeconds,
         ));
+    }
+
+    /**
+     * @param list<EntryChapter> $chapters
+     *
+     * @return list<EntryChapter>
+     */
+    public static function fromZero(array $chapters): array
+    {
+        if ($chapters === [] || $chapters[0]->startSeconds === 0) {
+            return $chapters;
+        }
+
+        return [new EntryChapter(0, self::INTRO), ...$chapters];
     }
 
     private function __construct()
