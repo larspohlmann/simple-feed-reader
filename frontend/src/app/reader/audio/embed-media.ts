@@ -1,4 +1,5 @@
 import { isAllowedEmbed } from '../media/media-embeds';
+import { MIXCLOUD_PLAYER_URL } from '../media/mixcloud-widget-protocol';
 import { SOUNDCLOUD_PLAYER_URL } from '../media/soundcloud-widget-protocol';
 import type { FrameKind } from './playback/playback-kind';
 
@@ -25,6 +26,10 @@ export function isSoundCloudPlayerUrl(url: string): boolean {
   return url.startsWith(SOUNDCLOUD_PLAYER_URL) && isAllowedEmbed(url);
 }
 
+export function isMixcloudPlayerUrl(url: string): boolean {
+  return url.startsWith(MIXCLOUD_PLAYER_URL) && isAllowedEmbed(url);
+}
+
 export function soundCloudTrackId(playerUrl: string): string | null {
   if (!playerUrl.startsWith(SOUNDCLOUD_PLAYER_URL) || !URL.canParse(playerUrl)) return null;
   const trackUrl = new URL(playerUrl).searchParams.get('url') ?? '';
@@ -36,6 +41,7 @@ export function embedMediaOfUrl(url: string): EmbedMedia | null {
   const videoId = youTubeVideoId(url);
   if (videoId !== null) return youTubeEmbedMedia(videoId);
   if (isSoundCloudPlayerUrl(url)) return { kind: 'soundcloud', url, posterUrl: null };
+  if (isMixcloudPlayerUrl(url)) return { kind: 'mixcloud', url, posterUrl: null };
   return null;
 }
 

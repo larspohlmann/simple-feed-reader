@@ -11,6 +11,11 @@ export const MIXCLOUD_WIDGET_URL =
 
 export const VIDEO_MEDIA: EmbedMedia = { kind: 'youtube', url: WATCH_URL, posterUrl: POSTER_URL };
 export const SOUND_MEDIA: EmbedMedia = { kind: 'soundcloud', url: WIDGET_URL, posterUrl: null };
+export const MIXCLOUD_MEDIA: EmbedMedia = {
+  kind: 'mixcloud',
+  url: MIXCLOUD_WIDGET_URL,
+  posterUrl: null,
+};
 
 export function fakeListenActions(): ListenActions {
   return { listen: jest.fn(), toggleQueued: jest.fn() };

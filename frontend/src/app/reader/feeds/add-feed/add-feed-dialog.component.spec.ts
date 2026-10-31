@@ -313,6 +313,53 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 7 });
   });
 
+  it('labels a Mixcloud candidate and subscribes and previews with its format and title', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://www.mixcloud.com/johndigweed/' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [
+        {
+          url: 'https://api.mixcloud.com/johndigweed/cloudcasts/',
+          title: 'John Digweed | Mixcloud',
+          format: 'mixcloud-api',
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const previewTestRequest = ctrl.expectOne((request) =>
+      request.url.endsWith('/api/feeds/preview'),
+    );
+    expect(previewTestRequest.request.body).toEqual({
+      url: 'https://api.mixcloud.com/johndigweed/cloudcasts/',
+      format: 'mixcloud-api',
+    });
+    previewTestRequest.flush({
+      feed: {
+        title: 'John Digweed',
+        itemCount: 2,
+        content: 'title-only',
+        hasImages: true,
+        items: [],
+      },
+    });
+    fixture.detectChanges();
+
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('Mixcloud');
+
+    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subTestRequest.request.body).toEqual({
+      url: 'https://api.mixcloud.com/johndigweed/cloudcasts/',
+      format: 'mixcloud-api',
+      title: 'John Digweed | Mixcloud',
+    });
+    subTestRequest.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
+    expect(close).toHaveBeenCalledWith({ id: 9 });
+  });
+
   it('detects the dialog dropping the selected WordPress title when it subscribes', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://wp.example/' });

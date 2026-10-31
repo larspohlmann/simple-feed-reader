@@ -35,6 +35,14 @@ describe('upgradeMediaEmbeds', () => {
     expect(element.querySelector('iframe')?.getAttribute('allow')).toBe('autoplay');
   });
 
+  it('replaces a Mixcloud widget link', () => {
+    const element = host(
+      '<a href="https://player-widget.mixcloud.com/widget/iframe/?feed=%2Fjohndigweed%2Ftransitions-1154%2F">x</a>',
+    );
+
+    expect(element.querySelector('.reader-embed--strip iframe')).not.toBeNull();
+  });
+
   it('replaces a SoundCloud player link', () => {
     const element = host(
       '<a href="https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2370150908">x</a>',
@@ -238,6 +246,15 @@ describe('withScriptablePlayer', () => {
       ),
     ).toEqual({
       url: 'https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=http%3A%2F%2Flocalhost%3A4200',
+      allow: 'autoplay',
+    });
+  });
+
+  it('lets a Mixcloud widget autoplay, its URL unchanged', () => {
+    const widget =
+      'https://player-widget.mixcloud.com/widget/iframe/?feed=%2Fjohndigweed%2Ftransitions-1154%2F';
+    expect(withScriptablePlayer(widget, 'http://localhost:4200')).toEqual({
+      url: widget,
       allow: 'autoplay',
     });
   });

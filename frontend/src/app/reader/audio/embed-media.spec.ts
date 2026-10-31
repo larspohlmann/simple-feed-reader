@@ -1,4 +1,6 @@
 import {
+  MIXCLOUD_MEDIA,
+  MIXCLOUD_WIDGET_URL,
   SOUND_MEDIA,
   VIDEO_ID,
   VIDEO_MEDIA,
@@ -8,6 +10,7 @@ import {
 import {
   embedMediaOfFrame,
   embedMediaOfUrl,
+  isMixcloudPlayerUrl,
   isSoundCloudPlayerUrl,
   soundCloudTrackId,
   youTubeVideoId,
@@ -38,6 +41,10 @@ describe('youTubeVideoId', () => {
     expect(youTubeVideoId(url)).toBe(VIDEO_ID);
   });
 
+  it('reads the Mixcloud widget url as the show, kept as is and without a poster', () => {
+    expect(embedMediaOfUrl(MIXCLOUD_WIDGET_URL)).toEqual(MIXCLOUD_MEDIA);
+  });
+
   it.each([
     ['a Shorts embed', `https://www.youtube-nocookie.com/embed/${VIDEO_ID}#shorts`],
     ['a Shorts page', `https://www.youtube.com/shorts/${VIDEO_ID}`],
@@ -46,6 +53,7 @@ describe('youTubeVideoId', () => {
     ['an id of the wrong length', 'https://www.youtube.com/watch?v=abc'],
     ['an id with characters outside the alphabet', 'https://youtu.be/dQw4w9WgXc!'],
     ['a look-alike host', `https://www.youtube.com.evil.test/watch?v=${VIDEO_ID}`],
+    ['a Mixcloud widget the allow-list does not carry', `${MIXCLOUD_WIDGET_URL}&autoplay=1`],
     ['another provider', 'https://player.vimeo.com/video/123456'],
     ['an audio file', 'https://x.test/episode.mp3'],
     ['an empty string', ''],
@@ -74,6 +82,27 @@ describe('isSoundCloudPlayerUrl', () => {
 
   it('rejects an empty string', () => {
     expect(isSoundCloudPlayerUrl('')).toBe(false);
+  });
+});
+
+describe('isMixcloudPlayerUrl', () => {
+  it('accepts the allow-listed widget url', () => {
+    expect(isMixcloudPlayerUrl(MIXCLOUD_WIDGET_URL)).toBe(true);
+  });
+
+  it('rejects a widget url the allow-list does not carry', () => {
+    expect(isMixcloudPlayerUrl(`${MIXCLOUD_WIDGET_URL}&autoplay=1`)).toBe(false);
+    expect(
+      isMixcloudPlayerUrl(
+        'https://player-widget.mixcloud.com/widget/iframe/?feed=%2Fjohndigweed%2F',
+      ),
+    ).toBe(false);
+  });
+
+  it('rejects a Mixcloud url that is not the widget', () => {
+    expect(isMixcloudPlayerUrl('https://www.mixcloud.com/johndigweed/transitions-1154/')).toBe(
+      false,
+    );
   });
 });
 
@@ -107,6 +136,7 @@ describe('embedMediaOfFrame', () => {
   it('reads the media of the frame source', () => {
     expect(embedMediaOfFrame(frameWithSource(API_EMBED_URL))).toEqual(VIDEO_MEDIA);
     expect(embedMediaOfFrame(frameWithSource(WIDGET_URL))).toEqual(SOUND_MEDIA);
+    expect(embedMediaOfFrame(frameWithSource(MIXCLOUD_WIDGET_URL))).toEqual(MIXCLOUD_MEDIA);
   });
 
   it('leaves a frame without a source alone', () => {
