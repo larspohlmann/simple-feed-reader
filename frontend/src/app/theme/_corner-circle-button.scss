@@ -57,17 +57,13 @@
   }
 }
 
-/* A row of corner discs. */
-@mixin corner-group {
+/* A row of corner discs pinned to a bottom corner ($side: left or right) of the
+   positioned pane it sits in, stacked at $layer, and raised by `--corner-lift`. */
+@mixin corner-anchor($side, $layer) {
+  position: absolute;
+  bottom: calc(var(--space-5) + var(--corner-lift, 0px));
+  #{$side}: var(--space-5);
+  z-index: $layer;
   display: flex;
   gap: var(--space-2);
-}
-
-/* A narrow-layout run pill is a bottom toast that would bury the corner buttons
-   (#641). `--app-toast-height` is the live toast's measured height, published by
-   ToastService; its fallback cancels the gap so they keep their base offset. */
-@mixin corner-toast-lift {
-  bottom: calc(
-    var(--space-5) + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3)))
-  );
 }
