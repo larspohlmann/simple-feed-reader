@@ -1,0 +1,99 @@
+{
+  "data": [
+    {
+      "key": "/johndigweed/transitions-with-john-digweed-moshic/",
+      "url": "https://www.mixcloud.com/johndigweed/transitions-with-john-digweed-moshic/",
+      "name": "Transitions with John Digweed (Live in Amsterdam) and Moshic",
+      "tags": [
+        {
+          "key": "/genres/electronica/",
+          "url": "https://www.mixcloud.com/genres/electronica/",
+          "name": "Electronica"
+        },
+        {
+          "key": "/genres/progressive-house/",
+          "url": "https://www.mixcloud.com/genres/progressive-house/",
+          "name": "Progressive house"
+        }
+      ],
+      "created_time": "2026-10-30T16:00:36Z",
+      "updated_time": "2026-10-31T07:54:12Z",
+      "play_count": 414,
+      "favorite_count": 37,
+      "comment_count": 7,
+      "listener_count": 261,
+      "repost_count": 2,
+      "pictures": {
+        "large": "https://thumbnailer.mixcloud.com/unsafe/300x300/extaudio/9/d/8/2/83ba-416d-4af9-b22a-2a58d510751d",
+        "extra_large": "https://thumbnailer.mixcloud.com/unsafe/600x600/extaudio/9/d/8/2/83ba-416d-4af9-b22a-2a58d510751d"
+      },
+      "slug": "transitions-with-john-digweed-moshic",
+      "user": {
+        "key": "/johndigweed/",
+        "url": "https://www.mixcloud.com/johndigweed/",
+        "name": "John Digweed",
+        "username": "johndigweed"
+      },
+      "is_exclusive": true,
+      "audio_length": 7177
+    },
+    {
+      "key": "/johndigweed/transitions-with-john-digweed-and-tigerhook/",
+      "url": "https://www.mixcloud.com/johndigweed/transitions-with-john-digweed-and-tigerhook/",
+      "name": "Transitions with John Digweed and Tigerhook",
+      "tags": [
+        {
+          "key": "/genres/techno/",
+          "url": "https://www.mixcloud.com/genres/techno/",
+          "name": "Techno"
+        },
+        {
+          "key": "/genres/dub-techno/",
+          "url": "https://www.mixcloud.com/genres/dub-techno/",
+          "name": "Dub techno"
+        }
+      ],
+      "created_time": "2026-10-23T17:00:14+02:00",
+      "updated_time": "2026-10-31T07:54:14Z",
+      "play_count": 7813,
+      "favorite_count": 351,
+      "comment_count": 46,
+      "listener_count": 4404,
+      "repost_count": 42,
+      "pictures": {
+        "large": "https://thumbnailer.mixcloud.com/unsafe/300x300/extaudio/0/0/8/3/13e4-324d-45f4-bd8f-70c23dd0781f",
+        "extra_large": "https://thumbnailer.mixcloud.com/unsafe/600x600/extaudio/0/0/8/3/13e4-324d-45f4-bd8f-70c23dd0781f"
+      },
+      "slug": "transitions-with-john-digweed-and-tigerhook",
+      "user": {
+        "key": "/johndigweed/",
+        "url": "https://www.mixcloud.com/johndigweed/",
+        "name": "John Digweed",
+        "username": "johndigweed"
+      },
+      "audio_length": 7093
+    },
+    {
+      "key": "/johndigweed/transitions-john-digweed-and-martin-garcia/",
+      "url": "https://www.mixcloud.com/johndigweed/transitions-john-digweed-and-martin-garcia/",
+      "name": "Transitions with John Digweed and Martin Garcia",
+      "play_count": 9977,
+      "favorite_count": 397,
+      "comment_count": 56,
+      "listener_count": 5638,
+      "repost_count": 55,
+      "slug": "transitions-john-digweed-and-martin-garcia",
+      "user": {
+        "key": "/johndigweed/",
+        "url": "https://www.mixcloud.com/johndigweed/",
+        "name": "John Digweed",
+        "username": "johndigweed"
+      }
+    }
+  ],
+  "paging": {
+    "next": "https://api.mixcloud.com/johndigweed/cloudcasts/?limit=5&until=2026-10-02+15%3A00%3A47",
+    "previous": "https://api.mixcloud.com/johndigweed/cloudcasts/?limit=5&since=2026-10-30+16%3A00%3A36"
+  },
+  "name": "John Digweed's Cloudcasts"
+}
