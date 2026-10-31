@@ -427,6 +427,12 @@ app-loading-overlay {
   }
 }
 
+/* The filler comes from another component's template, out of reach of the rule
+   above; it inherits the taps from this list-owned box instead (#1952). */
+.corner-leading {
+  display: contents;
+}
+
 /* Holds the to-top disc's place so the slot's discs never shift when it goes. */
 .to-top-place {
   width: var(--corner-button-size);
