@@ -39,7 +39,8 @@ curated catalog gets a new account started.
 
 Podcasts, SoundCloud feeds and Mixcloud shows play in a playlist, seekable like
 any episode: episode artwork, previous and next, and a panel to reorder the
-queue. A podcast can also be added by pasting its share link from Apple Podcasts.
+queue. A podcast can also be added by pasting its share link from Apple
+Podcasts.
 
 <p>
   <img src="docs/screenshots/mobile-podcast-player-light.webp" alt="The full-size audio player on a phone" width="24%">
