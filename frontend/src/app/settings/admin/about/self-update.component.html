@@ -1,28 +1,16 @@
-@if (visible()) {
-  @let current = status()!;
+@if (visible() && status(); as current) {
   <div class="self-update">
     @if (showsManualHint()) {
       <p class="manual">{{ 'settings.about.update.manual' | transloco }}</p>
     } @else {
-      @switch (current.phase) {
-        @case ('requested') {
-          <p class="phase">{{ 'settings.about.update.requested' | transloco }}</p>
-        }
-        @case ('running') {
-          <p class="phase">{{ 'settings.about.update.running' | transloco }}</p>
-        }
-        @case ('succeeded') {
-          <p class="phase">{{ 'settings.about.update.succeeded' | transloco }}</p>
-        }
-        @case ('failed') {
-          <p class="phase failed">
-            @if (current.exitCode === null) {
-              {{ 'settings.about.update.failedWithoutCode' | transloco }}
-            } @else {
-              {{ 'settings.about.update.failed' | transloco: { code: current.exitCode } }}
-            }
-          </p>
-        }
+      @if (current.phase === 'failed' && current.exitCode !== null) {
+        <p class="phase failed">
+          {{ 'settings.about.update.failedWithCode' | transloco: { code: current.exitCode } }}
+        </p>
+      } @else if (current.phase !== 'idle') {
+        <p class="phase" [class.failed]="current.phase === 'failed'">
+          {{ 'settings.about.update.' + current.phase | transloco }}
+        </p>
       }
 
       @if (current.phase !== 'idle' && current.log !== '') {
@@ -33,9 +21,9 @@
         <app-error-banner [message]="message" />
       }
 
-      @if (canStart()) {
+      @if (offeredRelease(); as release) {
         <app-button variant="primary" [loading]="starting()" (click)="startUpdate()">
-          {{ 'settings.about.update.button' | transloco: { version: latest()?.version } }}
+          {{ 'settings.about.update.button' | transloco: { version: release.version } }}
         </app-button>
       }
     }

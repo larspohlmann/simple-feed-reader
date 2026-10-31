@@ -503,8 +503,8 @@
         "requested": "Update angefordert — der Updater übernimmt es innerhalb einer Minute.",
         "running": "Wird aktualisiert…",
         "succeeded": "Update abgeschlossen.",
-        "failedWithoutCode": "Das Update ist fehlgeschlagen.",
-        "failed": "Das Update ist fehlgeschlagen (Exit-Code {{code}}).",
+        "failed": "Das Update ist fehlgeschlagen.",
+        "failedWithCode": "Das Update ist fehlgeschlagen (Exit-Code {{code}}).",
         "manual": "Führe ./scripts/update.sh auf dem Host aus, um zu aktualisieren. Für Updates von hier aus aktiviere sie mit ./scripts/prod-configure.sh."
       }
     },

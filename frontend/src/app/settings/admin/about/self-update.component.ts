@@ -13,16 +13,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { filter, finalize, switchMap, take, timer } from 'rxjs';
 import { AdminApi } from '../../../admin/admin-api';
-import { SelfUpdatePhase, SelfUpdateStatusDto } from '../../../admin/admin.models';
+import { SelfUpdateStatusDto } from '../../../admin/admin.models';
 import { parseProblem, problemMessage } from '../../../core/problem';
+import { isTabHidden, onTabVisibilityChange } from '../../../core/tab-visibility';
 import { VersionService } from '../../../core/version.service';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 
 export const SELF_UPDATE_POLL_INTERVAL_MS = 10_000;
-
-const IN_PROGRESS: readonly SelfUpdatePhase[] = ['requested', 'running'];
 
 @Component({
   selector: 'app-self-update',
@@ -42,17 +41,18 @@ export class SelfUpdateComponent implements OnInit {
   readonly status = signal<SelfUpdateStatusDto | null>(null);
   readonly refusal = signal<string | null>(null);
   readonly starting = signal(false);
-  readonly latest = this.versions.latest;
+  private pollDue = false;
+  private failedFirstReads = 0;
 
-  readonly inProgress = computed(() => isInProgress(this.status()));
+  readonly inProgress = computed(() => {
+    const phase = this.status()?.phase;
+    return phase === 'requested' || phase === 'running';
+  });
 
-  readonly canStart = computed(
-    () =>
-      this.status()?.updaterPresent === true &&
-      !this.inProgress() &&
-      this.versions.updateAvailable() &&
-      this.latest() !== null,
-  );
+  readonly offeredRelease = computed(() => {
+    if (this.status()?.updaterPresent !== true || this.inProgress()) return null;
+    return this.versions.updateAvailable() ? this.versions.latest() : null;
+  });
 
   readonly showsManualHint = computed(() => {
     const current = this.status();
@@ -65,10 +65,18 @@ export class SelfUpdateComponent implements OnInit {
     return (
       !current.updaterPresent ||
       current.phase !== 'idle' ||
-      this.canStart() ||
+      this.offeredRelease() !== null ||
       this.refusal() !== null
     );
   });
+
+  constructor() {
+    onTabVisibilityChange((hidden) => {
+      if (hidden || !this.pollDue) return;
+      this.pollDue = false;
+      this.zone.run(() => this.fetchStatus());
+    });
+  }
 
   ngOnInit(): void {
     this.fetchStatus();
@@ -118,18 +126,24 @@ export class SelfUpdateComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (status) => this.apply(status),
-        error: () => this.schedulePoll(),
+        error: () => this.retryOrWaitForTab(),
       });
   }
 
-  private apply(status: SelfUpdateStatusDto): void {
-    const previous = this.status();
-    this.status.set(status);
-    if (previous !== null && previous.phase !== status.phase) {
-      this.refusal.set(null);
+  private retryOrWaitForTab(): void {
+    if (this.status() === null && ++this.failedFirstReads > 1) {
+      this.pollDue = true;
+      return;
     }
-    if (previous !== null && previous.phase !== 'succeeded' && status.phase === 'succeeded') {
-      this.versions.load();
+    this.schedulePoll();
+  }
+
+  private apply(status: SelfUpdateStatusDto): void {
+    const previousPhase = this.status()?.phase;
+    this.status.set(status);
+    if (previousPhase !== undefined && previousPhase !== status.phase) {
+      this.refusal.set(null);
+      if (status.phase === 'succeeded') this.versions.load();
     }
     this.schedulePoll();
   }
@@ -140,11 +154,15 @@ export class SelfUpdateComponent implements OnInit {
     this.zone.runOutsideAngular(() =>
       timer(SELF_UPDATE_POLL_INTERVAL_MS)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(() => this.zone.run(() => this.fetchStatus())),
+        .subscribe(() => this.pollUnlessHidden()),
     );
   }
-}
 
-function isInProgress(status: SelfUpdateStatusDto | null): boolean {
-  return status !== null && IN_PROGRESS.includes(status.phase);
+  private pollUnlessHidden(): void {
+    if (isTabHidden()) {
+      this.pollDue = true;
+      return;
+    }
+    this.zone.run(() => this.fetchStatus());
+  }
 }

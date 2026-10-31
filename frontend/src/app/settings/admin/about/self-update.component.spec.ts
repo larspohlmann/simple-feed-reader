@@ -65,8 +65,24 @@ describe('SelfUpdateComponent', () => {
     fixture.detectChanges();
   }
 
+  let visibility: DocumentVisibilityState = 'visible';
+
+  function setTab(
+    fixture: ComponentFixture<SelfUpdateComponent>,
+    state: DocumentVisibilityState,
+  ): void {
+    visibility = state;
+    document.dispatchEvent(new Event('visibilitychange'));
+    fixture.detectChanges();
+  }
+
   beforeEach(() => {
     jest.useFakeTimers();
+    visibility = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibility,
+    });
     updateStatus.mockReset();
     requestUpdate.mockReset();
     ask.mockReset();
@@ -75,7 +91,10 @@ describe('SelfUpdateComponent', () => {
     latest.set(null);
   });
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => {
+    jest.useRealTimers();
+    Reflect.deleteProperty(document, 'visibilityState');
+  });
 
   it('points to the host script when the updater is not installed', () => {
     offerUpdate();
@@ -202,6 +221,44 @@ describe('SelfUpdateComponent', () => {
 
     advancePoll(fixture);
     expect(updateStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up on a failing first read after one retry until the tab is shown again', () => {
+    updateStatus.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+    const fixture = mount();
+
+    advancePoll(fixture);
+    advancePoll(fixture);
+    advancePoll(fixture);
+    expect(updateStatus).toHaveBeenCalledTimes(2);
+
+    setTab(fixture, 'hidden');
+    setTab(fixture, 'visible');
+    expect(updateStatus).toHaveBeenCalledTimes(3);
+  });
+
+  it('holds a due poll while the tab is hidden and reads once it is shown', () => {
+    updateStatus.mockReturnValue(of(status('running')));
+    const fixture = mount();
+
+    setTab(fixture, 'hidden');
+    advancePoll(fixture);
+    advancePoll(fixture);
+    expect(updateStatus).toHaveBeenCalledTimes(1);
+
+    setTab(fixture, 'visible');
+    expect(updateStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads nothing when the tab is shown again with no poll due', () => {
+    updateStatus.mockReturnValue(of(status('idle')));
+    const fixture = mount();
+
+    setTab(fixture, 'hidden');
+    advancePoll(fixture);
+    setTab(fixture, 'visible');
+
+    expect(updateStatus).toHaveBeenCalledTimes(1);
   });
 
   it('does not re-read the release for an update that finished before the page opened', () => {
