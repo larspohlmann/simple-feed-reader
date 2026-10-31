@@ -6,6 +6,7 @@ namespace App\Service\Opml;
 
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Repository\SubscriptionRepository;
 use App\Service\Opml\Pass\OpmlTagTree;
 use App\Service\Social\Model\ExportedSubscriptionModel;
@@ -88,6 +89,9 @@ final readonly class OpmlExporter
         $outline->setAttribute('text', $title);
         $outline->setAttribute('title', $title);
         $outline->setAttribute('xmlUrl', $exported->feedUrl);
+        if (SourceFormat::isVerbatim($exported->feedSourceFormat)) {
+            $outline->setAttribute('sourceFormat', $exported->feedSourceFormat);
+        }
         if ($feed->getSiteUrl() !== null) {
             $outline->setAttribute('htmlUrl', $feed->getSiteUrl());
         }
