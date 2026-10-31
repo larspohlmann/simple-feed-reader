@@ -1436,6 +1436,7 @@
     "versionLabel": "Version {{version}} — open settings",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update available: version {{version}} — open the release notes",
+    "updateAvailableAdminLabel": "Update available: version {{version}} — open About",
     "trialDaysLeft": "Trial · {{days}} days left",
     "trialDayLeft": "Trial · 1 day left",
     "forYouReady": "Recommendations ready",

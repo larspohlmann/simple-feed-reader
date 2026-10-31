@@ -40,7 +40,12 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
 const inDays = (days: number): string => new Date(Date.now() + days * 86_400_000).toISOString();
 
 function mount(
-  over: Partial<{ user: CurrentUser | null; coarse: boolean; organising: boolean }> = {},
+  over: Partial<{
+    user: CurrentUser | null;
+    coarse: boolean;
+    organising: boolean;
+    admin: boolean;
+  }> = {},
 ) {
   TestBed.configureTestingModule({
     imports: [SidebarFootComponent, provideTranslocoTesting()],
@@ -49,7 +54,13 @@ function mount(
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
-      { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
+      {
+        provide: AuthService,
+        useValue: {
+          user: signal(over.user ?? account(null)),
+          isAdmin: () => over.admin ?? false,
+        },
+      },
       {
         provide: LayoutService,
         useValue: { isCoarse: signal(over.coarse ?? false), isNarrow: signal(false) },
@@ -83,6 +94,19 @@ describe('SidebarFootComponent', () => {
     expect(badge?.getAttribute('href')).toBe('https://github.test/releases/tag/v9.9.9');
     expect(badge?.getAttribute('target')).toBe('_blank');
     expect(badge?.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('sends an admin to the About page instead of the release notes', () => {
+    const fixture = mount({ admin: true });
+    const versions = TestBed.inject(VersionService);
+    versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
+    versions.updateAvailable.set(true);
+    fixture.detectChanges();
+
+    const badge = (fixture.nativeElement as HTMLElement).querySelector('.update-badge');
+    expect(badge?.getAttribute('href')).toBe('/settings/admin/about');
+    expect(badge?.getAttribute('target')).toBeNull();
+    expect(badge?.getAttribute('aria-label')).toBe('Update available: version v9.9.9 — open About');
   });
 
   it('leads the version and feedback row with the update badge', () => {

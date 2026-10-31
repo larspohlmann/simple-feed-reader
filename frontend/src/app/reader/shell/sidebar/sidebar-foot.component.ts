@@ -49,6 +49,8 @@ export class SidebarFootComponent {
     this.versions.updateAvailable() ? this.versions.latest() : null,
   );
 
+  readonly isAdmin = computed(() => this.auth.isAdmin());
+
   /** Whole days left in the current trial, or null when the account has no
    *  active trial. Expired trials read as null here — the account is suspended
    *  by then and never reaches this view. */
