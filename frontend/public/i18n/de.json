@@ -475,6 +475,9 @@
       "unsaved": "Ungespeicherte Änderungen",
       "saved": "Gespeichert."
     },
+    "statistics": {
+      "title": "Statistik"
+    },
     "about": {
       "title": "Über",
       "tagline": "Ein selbst gehosteter RSS/Atom-Reader",

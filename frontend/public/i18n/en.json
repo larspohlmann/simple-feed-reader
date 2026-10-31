@@ -475,6 +475,9 @@
       "unsaved": "Unsaved changes",
       "saved": "Saved."
     },
+    "statistics": {
+      "title": "Statistics"
+    },
     "about": {
       "title": "About",
       "tagline": "A self-hosted RSS/Atom reader you run yourself",

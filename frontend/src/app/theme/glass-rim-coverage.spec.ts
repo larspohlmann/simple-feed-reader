@@ -41,7 +41,7 @@ const EXEMPT: readonly Exemption[] = [
     reason: 'a solid accent button: its border is its fill colour, flat like primary',
   },
   {
-    file: 'app/settings/about/day-chart.component.scss',
+    file: 'app/settings/statistics/day-chart.component.scss',
     selector: '.chart-marker',
     reason: 'a 2px surface ring that lifts the marker dot off the chart line',
   },

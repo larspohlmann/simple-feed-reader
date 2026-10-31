@@ -28,7 +28,7 @@ export const SETTINGS_SECTIONS = [
   { path: 'account', icon: 'person', labelKey: 'settings.account.title', group: 'general' },
   { path: 'ai', icon: 'smart_toy', labelKey: 'settings.ai.title', group: 'general' },
   { path: 'social', icon: 'forum', labelKey: 'settings.social.title', group: 'general' },
-  { path: 'about', icon: 'info', labelKey: 'settings.about.title', group: 'general' },
+  { path: 'statistics', icon: 'insights', labelKey: 'settings.statistics.title', group: 'general' },
   { path: 'admin/users', icon: 'shield_person', labelKey: 'admin.title', group: 'admin' },
   {
     path: 'admin/catalog',

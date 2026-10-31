@@ -74,11 +74,15 @@ export const SETTINGS_ROUTES: Routes = [
           ),
       },
       {
-        path: 'about',
-        title: sectionLabelKey('about'),
+        path: 'statistics',
+        title: sectionLabelKey('statistics'),
         loadComponent: () =>
-          import('./about/about-section.component').then((module) => module.AboutSectionComponent),
+          import('./statistics/statistics-section.component').then(
+            (module) => module.StatisticsSectionComponent,
+          ),
       },
+      // #1947: About became admin-only; the old path forwards to what every user had there.
+      { path: 'about', redirectTo: 'statistics', pathMatch: 'full' },
       {
         path: 'admin/users',
         title: sectionLabelKey('admin/users'),
