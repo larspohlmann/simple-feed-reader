@@ -10,6 +10,16 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.11] - 2026-10-31
+
+## What's Changed
+* feat(#1943): open-sidebar circle left of the list's to-top button by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1944
+* fix(#1945): keep the list's sidebar circle in place when the to-top button goes by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1946
+* feat(#1947, #1948): split Settings About into Statistics and admin About, add in-app self-update by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1949
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.10...v1.6.11
+
 ## [v1.6.10] - 2026-10-31
 
 ## What's Changed
