@@ -23,11 +23,11 @@ export function youTubeVideoId(url: string): string | null {
 }
 
 export function isSoundCloudPlayerUrl(url: string): boolean {
-  return url.startsWith(SOUNDCLOUD_PLAYER_URL) && isAllowedEmbed(url);
+  return isAllowedPlayerUrl(url, SOUNDCLOUD_PLAYER_URL);
 }
 
 export function isMixcloudPlayerUrl(url: string): boolean {
-  return url.startsWith(MIXCLOUD_PLAYER_URL) && isAllowedEmbed(url);
+  return isAllowedPlayerUrl(url, MIXCLOUD_PLAYER_URL);
 }
 
 export function soundCloudTrackId(playerUrl: string): string | null {
@@ -47,6 +47,10 @@ export function embedMediaOfUrl(url: string): EmbedMedia | null {
 
 export function embedMediaOfFrame(frame: HTMLIFrameElement): EmbedMedia | null {
   return embedMediaOfUrl(frame.getAttribute('src') ?? '');
+}
+
+function isAllowedPlayerUrl(url: string, playerUrl: string): boolean {
+  return url.startsWith(playerUrl) && isAllowedEmbed(url);
 }
 
 function youTubeEmbedMedia(videoId: string): EmbedMedia {

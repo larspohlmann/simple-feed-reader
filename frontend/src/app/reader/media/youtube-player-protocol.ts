@@ -32,7 +32,7 @@ export function finiteNumberOf(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function recordOf(value: unknown): PlayerMessage | null {
+export function recordOf(value: unknown): PlayerMessage | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
   return value as PlayerMessage;
 }

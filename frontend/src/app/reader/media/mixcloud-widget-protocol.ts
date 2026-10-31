@@ -1,3 +1,5 @@
+import { playerMessageOf, recordOf } from './youtube-player-protocol';
+
 export const MIXCLOUD_WIDGET_ORIGIN = 'https://player-widget.mixcloud.com';
 export const MIXCLOUD_PLAYER_URL = `${MIXCLOUD_WIDGET_ORIGIN}/widget/iframe/`;
 
@@ -36,7 +38,7 @@ export function methodCall(
 
 /** A message the player widget posts; ours carry no `mixcloud` key, so they never read as one. */
 export function mixcloudMessageOf(data: unknown): MixcloudMessage | null {
-  const message = parsedRecordOf(data);
+  const message = playerMessageOf(data);
   const type = message?.['type'];
   if (message?.['mixcloud'] !== PLAYER_WIDGET || typeof type !== 'string') return null;
   return { type, data: message['data'] };
@@ -53,18 +55,4 @@ export function mixcloudEventOf(message: MixcloudMessage): MixcloudEvent | null 
 
 export function postToMixcloudFrame(frame: HTMLIFrameElement, message: object): void {
   frame.contentWindow?.postMessage(JSON.stringify(message), MIXCLOUD_WIDGET_ORIGIN);
-}
-
-function parsedRecordOf(data: unknown): Record<string, unknown> | null {
-  if (typeof data !== 'string') return null;
-  try {
-    return recordOf(JSON.parse(data));
-  } catch {
-    return null;
-  }
-}
-
-function recordOf(value: unknown): Record<string, unknown> | null {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
 }
