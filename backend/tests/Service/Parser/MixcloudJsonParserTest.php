@@ -48,6 +48,27 @@ final class MixcloudJsonParserTest extends TestCase
         self::assertNull($feed->imageUrl);
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function unsafePictures(): iterable
+    {
+        yield 'plain http' => ['http://thumbnailer.mixcloud.com/unsafe/300x300/profile/a'];
+        yield 'a script' => ['javascript:alert(1)'];
+        yield 'over the column length' => ['https://thumbnailer.mixcloud.com/' . str_repeat('a', 2048)];
+    }
+
+    #[DataProvider('unsafePictures')]
+    public function testAPictureThatIsNoSafeImageUrlLeavesTheFeedWithoutALogo(string $picture): void
+    {
+        $feed = $this->parse(json_encode(['data' => [[
+            'key' => '/a/b/',
+            'url' => 'https://www.mixcloud.com/a/b/',
+            'name' => 'B',
+            'user' => ['name' => 'A', 'pictures' => ['large' => $picture]],
+        ]]], \JSON_THROW_ON_ERROR));
+
+        self::assertNull($feed->imageUrl);
+    }
+
     public function testAnExclusiveShowNeverBecomesAnEntry(): void
     {
         $guids = array_map(

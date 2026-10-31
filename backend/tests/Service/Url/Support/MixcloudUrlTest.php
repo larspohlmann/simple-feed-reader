@@ -117,7 +117,7 @@ final class MixcloudUrlTest extends TestCase
     public static function showPageUsers(): iterable
     {
         yield 'a show page' => ['https://www.mixcloud.com/johndigweed/transitions-1154/', 'johndigweed'];
-        yield 'an encoded user' => ['https://www.mixcloud.com/worldwidefm/caf%C3%A9-show/', 'worldwidefm'];
+        yield 'an encoded show' => ['https://www.mixcloud.com/worldwidefm/caf%C3%A9-show/', 'worldwidefm'];
         yield 'a profile page' => ['https://www.mixcloud.com/johndigweed/', null];
         yield 'a profile tab' => ['https://www.mixcloud.com/johndigweed/favorites/', null];
         yield 'a site section' => ['https://www.mixcloud.com/discover/house/', null];
@@ -137,6 +137,7 @@ final class MixcloudUrlTest extends TestCase
         yield 'a list without the slash' => ['https://api.mixcloud.com/johndigweed/cloudcasts', 'johndigweed'];
         yield 'a user' => ['https://api.mixcloud.com/johndigweed/', 'johndigweed'];
         yield 'a user without the slash' => ['https://api.mixcloud.com/johndigweed', 'johndigweed'];
+        yield 'an encoded user' => ['https://api.mixcloud.com/caf%C3%A9/', 'caf%C3%A9'];
         yield 'with a query' => ['https://api.mixcloud.com/johndigweed/cloudcasts/?limit=5', 'johndigweed'];
         yield 'a mixed-case host' => ['https://API.Mixcloud.com/johndigweed/', 'johndigweed'];
         yield 'another list' => ['https://api.mixcloud.com/johndigweed/favorites/', null];
