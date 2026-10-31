@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.12] - 2026-10-31
+
+## What's Changed
+* docs(#1950): reword the updater opt-in prompt by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1951
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.11...v1.6.12
+
 ## [v1.6.11] - 2026-10-31
 
 ## What's Changed
