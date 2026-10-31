@@ -3,23 +3,39 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth/auth.service';
+import { VersionService } from '../core/version.service';
 import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SettingsNavComponent } from './settings-nav.component';
 import { SETTINGS_SECTIONS } from './settings-sections';
 
 describe('SettingsNavComponent', () => {
+  const versionLoad = jest.fn();
+  const mailRefresh = jest.fn();
+  const user = signal<{ roles: string[] } | null>(null);
+
+  beforeEach(() => {
+    versionLoad.mockReset();
+    mailRefresh.mockReset();
+  });
+
   function mount(
-    roles: string[],
-    options: { variant?: 'rail' | 'hub'; unhealthyCount?: number; mailFailureCount?: number } = {},
+    roles: string[] | null,
+    options: {
+      variant?: 'rail' | 'hub';
+      unhealthyCount?: number;
+      mailFailureCount?: number;
+      updateAvailable?: boolean;
+    } = {},
   ) {
+    user.set(roles === null ? null : { roles });
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         provideRouter([]),
         {
           provide: AuthService,
-          useValue: { user: () => ({ roles }), isAdmin: () => roles.includes('ROLE_ADMIN') },
+          useValue: { user, isAdmin: () => user()?.roles.includes('ROLE_ADMIN') ?? false },
         },
         {
           provide: SubscriptionsStore,
@@ -27,7 +43,19 @@ describe('SettingsNavComponent', () => {
         },
         {
           provide: MailHealthStore,
-          useValue: { failureCount: signal(options.mailFailureCount ?? 0), refresh: jest.fn() },
+          useValue: { failureCount: signal(options.mailFailureCount ?? 0), refresh: mailRefresh },
+        },
+        {
+          provide: VersionService,
+          useValue: {
+            loadIfStale: versionLoad,
+            updateAvailable: signal(options.updateAvailable ?? false),
+            latest: signal(
+              options.updateAvailable
+                ? { version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' }
+                : null,
+            ),
+          },
         },
       ],
     });
@@ -91,5 +119,53 @@ describe('SettingsNavComponent', () => {
     const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
     const mail = links.find((anchor) => anchor.getAttribute('href') === '/settings/admin/mail');
     expect(mail?.querySelector('.badge')).toBeNull();
+  });
+
+  it('pills the About entry while an update is available', () => {
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], { updateAvailable: true });
+    const about = (fixture.nativeElement as HTMLElement).querySelector(
+      'a[href="/settings/admin/about"]',
+    );
+    const pill = about?.querySelector('.badge.update');
+    expect(pill?.textContent?.trim()).toBe('Update');
+    expect(pill?.getAttribute('aria-label')).toBe('Update available: version v9.9.9');
+  });
+
+  it('shows no pill when the running build is current', () => {
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN']);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.badge.update')).toBeNull();
+  });
+
+  it('asks for the version only for an admin, who alone sees the pill', () => {
+    mount(['ROLE_USER']);
+    expect(versionLoad).not.toHaveBeenCalled();
+    TestBed.resetTestingModule();
+    mount(['ROLE_USER', 'ROLE_ADMIN']);
+    expect(versionLoad).toHaveBeenCalled();
+  });
+
+  it('shows the admin group once a cold-loaded admin arrives', () => {
+    const fixture = mount(null);
+    const adminLink = () =>
+      (fixture.nativeElement as HTMLElement).querySelector('a[href="/settings/admin/about"]');
+    expect(adminLink()).toBeNull();
+
+    user.set({ roles: ['ROLE_USER', 'ROLE_ADMIN'] });
+    fixture.detectChanges();
+
+    expect(adminLink()).not.toBeNull();
+  });
+
+  it('checks the version and mail health once, when the user turns out to be an admin', () => {
+    const fixture = mount(null);
+    expect(versionLoad).not.toHaveBeenCalled();
+
+    user.set({ roles: ['ROLE_USER', 'ROLE_ADMIN'] });
+    fixture.detectChanges();
+    user.set({ roles: ['ROLE_ADMIN'] });
+    fixture.detectChanges();
+
+    expect(versionLoad).toHaveBeenCalledTimes(1);
+    expect(mailRefresh).toHaveBeenCalledTimes(1);
   });
 });

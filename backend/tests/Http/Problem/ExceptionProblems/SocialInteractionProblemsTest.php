@@ -80,6 +80,14 @@ final class SocialInteractionProblemsTest extends TestCase
         self::assertSame([], $problems->resolve(new SocialNetworkThrottledException('x'))?->headers);
     }
 
+    public function testAThrottleIsAnExpectedAnswerWhileAnUnreachableNetworkIsAServerFault(): void
+    {
+        $problems = new SocialInteractionProblems();
+
+        self::assertFalse($problems->resolve(new SocialNetworkThrottledException('x'))?->isServerFault());
+        self::assertTrue($problems->resolve(new SocialNetworkUnreachableException('x'))?->isServerFault());
+    }
+
     public function testTheAccountProblemsNoLongerClaimAnUnreachableNetworkAndOthersPassThrough(): void
     {
         self::assertNull((new SocialProblems())->resolve(new SocialNetworkUnreachableException('x')));

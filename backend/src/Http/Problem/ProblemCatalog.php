@@ -33,7 +33,27 @@ final readonly class ProblemCatalog
             return self::unauthorized();
         }
 
-        return $this->mapped($exception) ?? self::fromFramework($exception) ?? $this->unexpected($exception, $path);
+        $mapped = $this->mapped($exception);
+        if (null !== $mapped) {
+            return $this->reportedWhenServerSide($mapped, $exception, $path);
+        }
+
+        return self::fromFramework($exception) ?? $this->unexpected($exception, $path);
+    }
+
+    private function reportedWhenServerSide(
+        ResolvedProblem $resolved,
+        \Throwable $exception,
+        string $path,
+    ): ResolvedProblem {
+        if ($resolved->isServerFault()) {
+            $this->logger->error(
+                'Server-side API problem',
+                ['exception' => $exception, 'path' => $path, 'type' => $resolved->problem->type],
+            );
+        }
+
+        return $resolved;
     }
 
     private function mapped(\Throwable $exception): ?ResolvedProblem

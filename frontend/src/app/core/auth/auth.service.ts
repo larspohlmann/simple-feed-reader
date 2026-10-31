@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, finalize, of, shareReplay, tap } from 'rxjs';
 import { AiAvailability, AiAvailabilityService } from '../ai-availability.service';
 import { API_BASE_URL } from '../api';
 import { DigestService } from '../preferences/digest.service';
@@ -56,6 +56,7 @@ export class AuthService {
 
   readonly user = signal<CurrentUser | null>(null);
   readonly accountLoadFailed = signal(false);
+  private userInFlight: Observable<CurrentUser> | null = null;
 
   login(email: string, password: string): Observable<{ token: string }> {
     return this.http
@@ -82,6 +83,17 @@ export class AuthService {
         error: () => this.accountLoadFailed.set(true),
       }),
     );
+  }
+
+  /** The signed-in user, fetched only when none is loaded; concurrent callers share one request. */
+  ensureUserLoaded(): Observable<CurrentUser> {
+    const user = this.user();
+    if (user) return of(user);
+    this.userInFlight ??= this.loadMe().pipe(
+      finalize(() => (this.userInFlight = null)),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    return this.userInFlight;
   }
 
   /** Loads the account, then lands the visitor on the reader location saved

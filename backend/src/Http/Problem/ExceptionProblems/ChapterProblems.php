@@ -14,7 +14,7 @@ final readonly class ChapterProblems implements ExceptionProblemsInterface
     public function resolve(\Throwable $exception): ?ResolvedProblem
     {
         return match (true) {
-            $exception instanceof EmbedDescriptionUnreachableException => new ResolvedProblem(
+            $exception instanceof EmbedDescriptionUnreachableException => ResolvedProblem::expected(
                 ApiProblem::forStatus(Response::HTTP_SERVICE_UNAVAILABLE),
             ),
             default => null,

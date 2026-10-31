@@ -13,13 +13,14 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Caches only a success, so a transient failure never pins the update badge shut for the whole window. Every
- * failure, and an empty repository, reads as null: the badge stays silent.
+ * A failure is cached briefly, so an outage neither costs every request the timeout nor pins the update badge shut
+ * for the whole window. Every failure, and an empty repository, reads as null: the badge stays silent.
  */
 final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInterface
 {
     private const string CACHE_KEY = 'github_latest_release';
-    private const int CACHE_TTL_SECONDS = 21600; // six hours
+    private const int RELEASE_TTL_SECONDS = 60 * 60;
+    private const int FAILURE_TTL_SECONDS = 5 * 60;
     private const float TIMEOUT_SECONDS = 5.0;
     private const int MAX_RESPONSE_BYTES = 524288; // 512 KiB — a release payload is far smaller
 
@@ -46,11 +47,9 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
         }
 
         $latest = $this->fetch();
-        if (null !== $latest) {
-            $item->set($latest);
-            $item->expiresAfter(self::CACHE_TTL_SECONDS);
-            $this->githubReleaseCache->save($item);
-        }
+        $item->set($latest);
+        $item->expiresAfter(null === $latest ? self::FAILURE_TTL_SECONDS : self::RELEASE_TTL_SECONDS);
+        $this->githubReleaseCache->save($item);
 
         return $latest;
     }

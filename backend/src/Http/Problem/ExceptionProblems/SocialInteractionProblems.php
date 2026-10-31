@@ -66,7 +66,7 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
     {
         $retryAfter = $exception->retryAfterSeconds;
 
-        return new ResolvedProblem(
+        return ResolvedProblem::expected(
             new ApiProblem(
                 'social_network_throttled',
                 'The network asked for fewer requests',

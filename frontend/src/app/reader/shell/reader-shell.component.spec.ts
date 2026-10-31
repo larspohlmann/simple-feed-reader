@@ -4023,6 +4023,9 @@ describe('ReaderShellComponent', () => {
 
     it('loads the list with the defaults when the account never loads', () => {
       reconfigureShell([]);
+      TestBed.inject(AuthService)
+        .ensureUserLoaded()
+        .subscribe({ error: () => undefined });
       const fixture = TestBed.createComponent(ReaderShellComponent);
       fixture.detectChanges();
       expect(ctrl.match((request) => request.url === 'https://api.test/api/entries')).toHaveLength(

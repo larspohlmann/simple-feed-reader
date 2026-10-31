@@ -1,0 +1,31 @@
+@if (visible() && status(); as current) {
+  <div class="self-update">
+    @if (showsManualHint()) {
+      <p class="manual">{{ 'settings.about.update.manual' | transloco }}</p>
+    } @else {
+      @if (current.phase === 'failed' && current.exitCode !== null) {
+        <p class="phase failed">
+          {{ 'settings.about.update.failedWithCode' | transloco: { code: current.exitCode } }}
+        </p>
+      } @else if (current.phase !== 'idle') {
+        <p class="phase" [class.failed]="current.phase === 'failed'">
+          {{ 'settings.about.update.' + current.phase | transloco }}
+        </p>
+      }
+
+      @if (current.phase !== 'idle' && current.log !== '') {
+        <pre class="log">{{ current.log }}</pre>
+      }
+
+      @if (refusal(); as message) {
+        <app-error-banner [message]="message" />
+      }
+
+      @if (offeredRelease(); as release) {
+        <app-button variant="primary" [loading]="starting()" (click)="startUpdate()">
+          {{ 'settings.about.update.button' | transloco: { version: release.version } }}
+        </app-button>
+      }
+    }
+  </div>
+}

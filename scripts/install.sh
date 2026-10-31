@@ -204,6 +204,8 @@ if quick_package_chosen; then
   apply_default_public_origin
   use_no_mail
   use_no_grafana
+  # The quick install includes the updater; a failed socket lookup records "no".
+  use_updater || true
 else
   configure_public_url
   if custom_package_chosen; then
@@ -219,6 +221,8 @@ else
   # 'n' for the same reason as configure_search_engine above: a fresh
   # .env.prod has no Grafana decision on file to read back.
   configure_grafana 'n'
+  # 'n': the updater is root on the host, so it is never on by default.
+  configure_updater 'n'
 fi
 
 # --- 7. start, or explain how to --------------------------------------------

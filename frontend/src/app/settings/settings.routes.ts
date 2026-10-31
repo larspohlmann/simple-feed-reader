@@ -74,11 +74,14 @@ export const SETTINGS_ROUTES: Routes = [
           ),
       },
       {
-        path: 'about',
-        title: sectionLabelKey('about'),
+        path: 'statistics',
+        title: sectionLabelKey('statistics'),
         loadComponent: () =>
-          import('./about/about-section.component').then((module) => module.AboutSectionComponent),
+          import('./statistics/statistics-section.component').then(
+            (module) => module.StatisticsSectionComponent,
+          ),
       },
+      { path: 'about', redirectTo: 'statistics', pathMatch: 'full' },
       {
         path: 'admin/users',
         title: sectionLabelKey('admin/users'),
@@ -158,6 +161,15 @@ export const SETTINGS_ROUTES: Routes = [
         loadComponent: () =>
           import('./admin/mail/mail-section.component').then(
             (module) => module.MailSectionComponent,
+          ),
+      },
+      {
+        path: 'admin/about',
+        title: sectionLabelKey('admin/about'),
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/about/about-section.component').then(
+            (module) => module.AboutSectionComponent,
           ),
       },
     ],

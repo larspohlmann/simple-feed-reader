@@ -475,6 +475,9 @@
       "unsaved": "Unsaved changes",
       "saved": "Saved."
     },
+    "statistics": {
+      "title": "Statistics"
+    },
     "about": {
       "title": "About",
       "tagline": "A self-hosted RSS/Atom reader you run yourself",
@@ -489,7 +492,21 @@
       "api": "API",
       "loading": "checking…",
       "unavailable": "unavailable",
-      "stale": "Your browser is running an older build than the server. Reload the page to update."
+      "stale": "Your browser is running an older build than the server. Reload the page to update.",
+      "updatePill": "Update",
+      "updatePillLabel": "Update available: version {{version}}",
+      "update": {
+        "button": "Update to {{version}}",
+        "confirmTitle": "Update this install?",
+        "confirmMessage": "The app restarts during the update and is unavailable for a few minutes. Take a database dump first if this release changes the schema.",
+        "confirm": "Update",
+        "requested": "Update requested — the updater picks it up within a minute.",
+        "running": "Updating…",
+        "succeeded": "Update finished.",
+        "failed": "The update failed.",
+        "failedWithCode": "The update failed (exit code {{code}}).",
+        "manual": "Run ./scripts/update.sh on the host to update. To update from here, enable it with ./scripts/prod-configure.sh."
+      }
     },
     "reading": {
       "title": "Your reading",
@@ -1431,6 +1448,7 @@
     "versionLabel": "Version {{version}} — open settings",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update available: version {{version}} — open the release notes",
+    "updateAvailableAdminLabel": "Update available: version {{version}} — open About",
     "trialDaysLeft": "Trial · {{days}} days left",
     "trialDayLeft": "Trial · 1 day left",
     "forYouReady": "Recommendations ready",

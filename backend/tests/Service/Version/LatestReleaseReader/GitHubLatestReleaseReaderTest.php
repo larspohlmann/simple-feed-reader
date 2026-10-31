@@ -9,6 +9,7 @@ use App\Service\Version\Model\LatestReleaseModel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -16,6 +17,13 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 final class GitHubLatestReleaseReaderTest extends TestCase
 {
     private const string REPOSITORY = 'larspohlmann/simple-feed-reader';
+
+    private MockClock $clock;
+
+    protected function setUp(): void
+    {
+        $this->clock = new MockClock();
+    }
 
     public function testReadsTheTagAndNotesUrlFromTheLatestRelease(): void
     {
@@ -94,13 +102,54 @@ final class GitHubLatestReleaseReaderTest extends TestCase
         self::assertSame(1, $client->getRequestsCount());
     }
 
+    public function testASuccessIsReadAgainOnlyAfterAnHour(): void
+    {
+        $client = new MockHttpClient([self::release(), self::release()]);
+        $reader = $this->reader($client);
+
+        $reader->read();
+        $this->clock->sleep(3590);
+        $reader->read();
+        self::assertSame(1, $client->getRequestsCount());
+
+        $this->clock->sleep(20);
+        $reader->read();
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    public function testAFailedReadIsRetriedOnlyAfterFiveMinutes(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('', ['error' => 'network down']),
+            self::release(),
+        ]);
+        $reader = $this->reader($client);
+
+        self::assertNull($reader->read());
+        $this->clock->sleep(290);
+        self::assertNull($reader->read());
+        self::assertSame(1, $client->getRequestsCount());
+
+        $this->clock->sleep(20);
+        self::assertInstanceOf(LatestReleaseModel::class, $reader->read());
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    private static function release(): MockResponse
+    {
+        return new MockResponse((string) json_encode([
+            'tag_name' => 'v1.4.2',
+            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
+        ]));
+    }
+
     private function reader(
         MockHttpClient $client,
         string $gitHubRepository = self::REPOSITORY,
     ): GitHubLatestReleaseReader {
         return new GitHubLatestReleaseReader(
             $client,
-            new ArrayAdapter(),
+            new ArrayAdapter(clock: $this->clock),
             new NullLogger(),
             $gitHubRepository,
             'SimpleFeedReader/1.0',

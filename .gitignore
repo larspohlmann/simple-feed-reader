@@ -22,5 +22,8 @@ AGENTS.local.md
 # The commit the installed stacks run, written by update.sh and the installers (#1378).
 /.installed-commit
 
+# The self-update hand-over between the app and the updater container (#1948).
+/.update-state/
+
 # Local Docker Compose overrides (developer machine only).
 /docker-compose.override.yml

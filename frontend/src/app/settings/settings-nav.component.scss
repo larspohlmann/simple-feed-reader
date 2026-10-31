@@ -34,6 +34,12 @@ a {
   white-space: nowrap;
 }
 
+.badge.update {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .group {
   margin: var(--space-4) 0 var(--space-1);
   padding: 0 var(--row-pad-x);

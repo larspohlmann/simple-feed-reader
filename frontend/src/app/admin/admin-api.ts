@@ -14,6 +14,7 @@ import {
   CatalogWarmReport,
   ImportMode,
   QueueDepthDto,
+  SelfUpdateStatusDto,
 } from './admin.models';
 
 @Injectable({ providedIn: 'root' })
@@ -143,5 +144,13 @@ export class AdminApi {
 
   warmFavicons(): Observable<CatalogWarmReport> {
     return this.http.post<CatalogWarmReport>(`${this.base}/api/admin/catalog/favicons/warm`, {});
+  }
+
+  updateStatus(): Observable<SelfUpdateStatusDto> {
+    return this.http.get<SelfUpdateStatusDto>(`${this.base}/api/admin/update`);
+  }
+
+  requestUpdate(): Observable<SelfUpdateStatusDto> {
+    return this.http.post<SelfUpdateStatusDto>(`${this.base}/api/admin/update`, {});
   }
 }

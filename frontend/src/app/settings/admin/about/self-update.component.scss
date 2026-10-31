@@ -1,0 +1,32 @@
+.self-update {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  border-top: 1px solid var(--border);
+}
+
+.manual,
+.phase {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.failed {
+  color: var(--danger);
+}
+
+.log {
+  align-self: stretch;
+  max-block-size: calc(var(--space-7) * 5);
+  margin: 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  white-space: pre-wrap;
+}

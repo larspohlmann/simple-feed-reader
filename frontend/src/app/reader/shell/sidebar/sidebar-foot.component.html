@@ -25,14 +25,25 @@
 }
 <div class="meta">
   @if (availableUpdate(); as update) {
-    <a
-      class="update-badge"
-      [href]="update.notesUrl"
-      target="_blank"
-      rel="noopener noreferrer"
-      [attr.aria-label]="'reader.updateAvailableLabel' | transloco: { version: update.version }"
-      >{{ 'reader.updateAvailable' | transloco: { version: update.version } }}</a
-    >
+    @if (auth.isAdmin()) {
+      <a
+        class="update-badge"
+        routerLink="/settings/admin/about"
+        [attr.aria-label]="
+          'reader.updateAvailableAdminLabel' | transloco: { version: update.version }
+        "
+        >{{ 'reader.updateAvailable' | transloco: { version: update.version } }}</a
+      >
+    } @else {
+      <a
+        class="update-badge"
+        [href]="update.notesUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        [attr.aria-label]="'reader.updateAvailableLabel' | transloco: { version: update.version }"
+        >{{ 'reader.updateAvailable' | transloco: { version: update.version } }}</a
+      >
+    }
   }
   <a
     class="version"

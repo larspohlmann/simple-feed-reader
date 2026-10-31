@@ -1,9 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { filter, map } from 'rxjs';
-import { AuthService } from '../core/auth/auth.service';
 import { ReaderLocationService } from '../core/auth/reader-location.service';
 import { LayoutService } from '../reader/layout.service';
 import { IconComponent } from '../shared/icon/icon.component';
@@ -20,8 +19,7 @@ import { SETTINGS_SECTIONS, SettingsSection } from './settings-sections';
   styleUrl: './settings-shell.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SettingsShellComponent implements OnInit {
-  private readonly auth = inject(AuthService);
+export class SettingsShellComponent {
   private readonly layout = inject(LayoutService);
   private readonly readerLocation = inject(ReaderLocationService);
   private readonly router = inject(Router);
@@ -57,12 +55,4 @@ export class SettingsShellComponent implements OnInit {
   readonly backLabelKey = computed(() =>
     this.stepsBackToHub() ? 'settings.title' : 'settings.backReader',
   );
-
-  ngOnInit(): void {
-    // A deep link lands here without a loaded user, and the nav needs it to
-    // decide on the admin group. authGuard has already ensured a token exists.
-    if (this.auth.user() === null) {
-      this.auth.loadMe().subscribe({ error: () => undefined });
-    }
-  }
 }

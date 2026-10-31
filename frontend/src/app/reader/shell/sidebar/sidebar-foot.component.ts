@@ -36,7 +36,7 @@ export class SidebarFootComponent {
   readonly version = buildVersion.version;
 
   private readonly versions = inject(VersionService);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   readonly screen = inject(LayoutService);
 
   /** Toggled by the Organise switch and read by the sidebar to hide the nav. */

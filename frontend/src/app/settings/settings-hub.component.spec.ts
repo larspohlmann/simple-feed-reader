@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth/auth.service';
+import { VersionService } from '../core/version.service';
 import { LayoutService } from '../reader/layout.service';
 import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { MailHealthStore } from './admin/mail/mail-health.store';
@@ -25,6 +26,10 @@ describe('SettingsHubComponent', () => {
         { provide: AuthService, useValue: { user: () => null, isAdmin: () => false } },
         { provide: SubscriptionsStore, useValue: { unhealthyCount: signal(0) } },
         { provide: MailHealthStore, useValue: { failureCount: signal(0), refresh: jest.fn() } },
+        {
+          provide: VersionService,
+          useValue: { load: jest.fn(), updateAvailable: signal(false), latest: signal(null) },
+        },
       ],
     });
     const fixture = TestBed.createComponent(SettingsHubComponent);

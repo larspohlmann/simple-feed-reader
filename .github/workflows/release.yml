@@ -28,7 +28,7 @@ concurrency:
 permissions:
   contents: write
 
-# ghcr.io/larspohlmann/simple-feed-reader-{php,web}, the names
+# ghcr.io/larspohlmann/simple-feed-reader-{php,web,updater}, the names
 # docker-compose.prod.yml pulls.
 env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository }}
@@ -218,7 +218,7 @@ jobs:
     needs: release
     strategy:
       matrix:
-        image: [php, web]
+        image: [php, web, updater]
         platform: [linux/amd64, linux/arm64]
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 45
@@ -291,7 +291,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        image: [php, web]
+        image: [php, web, updater]
     permissions:
       contents: read
       packages: write

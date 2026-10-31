@@ -27,6 +27,15 @@
                 >{{ mailFailureCount() }}</span
               >
             }
+            @if (s.path === 'admin/about' && updateAvailable()) {
+              <span
+                class="badge update"
+                [attr.aria-label]="
+                  'settings.about.updatePillLabel' | transloco: { version: latestVersion() }
+                "
+                >{{ 'settings.about.updatePill' | transloco }}</span
+              >
+            }
             <app-icon class="chev" name="chevron_right" size="sm" />
           </a>
         </li>

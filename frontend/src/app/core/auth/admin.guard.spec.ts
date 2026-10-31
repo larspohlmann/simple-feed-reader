@@ -41,11 +41,11 @@ function run() {
 
 describe('adminGuard', () => {
   let userSignal: () => CurrentUser | null;
-  let loadMe: jest.Mock;
+  let ensureUserLoaded: jest.Mock;
   let isAdmin: jest.Mock;
 
   beforeEach(() => {
-    loadMe = jest.fn();
+    ensureUserLoaded = jest.fn();
     isAdmin = jest.fn();
     TestBed.configureTestingModule({
       providers: [
@@ -54,7 +54,7 @@ describe('adminGuard', () => {
           provide: AuthService,
           useValue: {
             user: () => userSignal(),
-            loadMe: () => loadMe(),
+            ensureUserLoaded: () => ensureUserLoaded(),
             isAdmin: () => isAdmin(),
           },
         },
@@ -78,16 +78,16 @@ describe('adminGuard', () => {
 
   it('loads the user first on a deep link, then allows an admin', async () => {
     userSignal = () => null;
-    loadMe.mockReturnValue(of(admin));
+    ensureUserLoaded.mockReturnValue(of(admin));
     isAdmin.mockReturnValue(true);
     const result = run();
     expect(isObservable(result)).toBe(true);
     await expect(firstValueFrom(result as never)).resolves.toBe(true);
   });
 
-  it('redirects to / when loadMe fails', async () => {
+  it('redirects to / when the user load fails', async () => {
     userSignal = () => null;
-    loadMe.mockReturnValue(throwError(() => new Error('401')));
+    ensureUserLoaded.mockReturnValue(throwError(() => new Error('401')));
     const result = run();
     const value = await firstValueFrom(result as never);
     expect(value instanceof UrlTree).toBe(true);

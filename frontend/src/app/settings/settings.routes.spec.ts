@@ -1,6 +1,7 @@
 import { Route, Router, provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { hasTranslation } from '../../testing/translation-keys';
+import { adminGuard } from '../core/auth/admin.guard';
 import { SETTINGS_ROUTES } from './settings.routes';
 
 describe('SETTINGS_ROUTES', () => {
@@ -10,6 +11,11 @@ describe('SETTINGS_ROUTES', () => {
     for (const section of sections.filter(isSection)) {
       expect(section.title).toBeDefined();
     }
+  });
+
+  it('keeps About to admins', () => {
+    const about = SETTINGS_ROUTES[0].children?.find((route) => route.path === 'admin/about');
+    expect(about?.canActivate).toEqual([adminGuard]);
   });
 
   it('leaves the hub to the title of the settings area itself', () => {
@@ -45,6 +51,15 @@ describe('SETTINGS_ROUTES', () => {
     await router.navigateByUrl('/profile');
 
     expect(router.url).toBe('/ai');
+  });
+
+  it('forwards the retired About path to Statistics, so an old link still lands', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter(SETTINGS_ROUTES)] });
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/about');
+
+    expect(router.url).toBe('/statistics');
   });
 });
 

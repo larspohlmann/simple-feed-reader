@@ -10,7 +10,23 @@ describe('VersionService', () => {
 
   const release = { version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '2026-07-27T10:04:11Z' };
 
+  let visibility: DocumentVisibilityState = 'visible';
+
+  const setTab = (state: DocumentVisibilityState): void => {
+    visibility = state;
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+  const showTab = (): void => setTab('visible');
+  const hideTab = (): void => setTab('hidden');
+
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-31T10:00:00Z'));
+    visibility = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibility,
+    });
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -21,7 +37,14 @@ describe('VersionService', () => {
     service = TestBed.inject(VersionService);
     ctrl = TestBed.inject(HttpTestingController);
   });
-  afterEach(() => ctrl.verify());
+  afterEach(() => {
+    try {
+      ctrl.verify();
+    } finally {
+      jest.useRealTimers();
+      Reflect.deleteProperty(document, 'visibilityState');
+    }
+  });
 
   it('exposes the build the API reports', () => {
     service.load();
@@ -121,5 +144,78 @@ describe('VersionService', () => {
 
     expect(service.updateAvailable()).toBe(false);
     expect(service.latest()).toBeNull();
+  });
+
+  it('checks again when the tab comes back after half an hour', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 30 * 60_000);
+    showTab();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
+  it('does not check again when the tab comes back sooner', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 29 * 60_000);
+    showTab();
+
+    ctrl.expectNone('https://api.test/api/version');
+  });
+
+  it('does not check while the tab is hidden', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 60 * 60_000);
+    hideTab();
+
+    ctrl.expectNone('https://api.test/api/version');
+  });
+
+  it('loads on a first freshness-gated call', () => {
+    service.loadIfStale();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
+  it('skips a freshness-gated call within half an hour of the last load', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 29 * 60_000);
+    service.loadIfStale();
+
+    ctrl.expectNone('https://api.test/api/version');
+  });
+
+  it('loads on a freshness-gated call once half an hour has passed', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 30 * 60_000);
+    service.loadIfStale();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
+  it('retries on a freshness-gated call after a failed load', () => {
+    service.load();
+    ctrl
+      .expectOne('https://api.test/api/version')
+      .flush(null, { status: 502, statusText: 'Bad Gateway' });
+
+    jest.setSystemTime(Date.now() + 60_000);
+    service.loadIfStale();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
+  it('waits for the first load before checking on its own', () => {
+    showTab();
+    ctrl.expectNone('https://api.test/api/version');
   });
 });

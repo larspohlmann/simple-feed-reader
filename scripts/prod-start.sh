@@ -74,11 +74,10 @@ else
   fi
 fi
 
-http_port=$(env_prod_get WEB_HTTP_PORT); http_port=${http_port:-80}
-tls_port=$(env_prod_get WEB_TLS_PORT); tls_port=${tls_port:-443}
-if ! check_ports_free "${http_port}" "${tls_port}"; then
-  warn 'Both ports are published regardless of mode, so docker will fail to publish them while busy.'
-fi
+warn_if_prod_ports_busy
+
+offer_updater_if_undecided
+ensure_update_state_directory
 
 # Stamp the real release version into the images this build produces, so the
 # sidebar and /api/version report it instead of the 'dev' placeholder (#500).
@@ -90,12 +89,11 @@ prepare_prod_images
 run_step 'Starting the production stack (a build takes a few minutes)' \
   up_holding_worker prod_compose "${PROD_BUILD_OPTION}" --remove-orphans
 
-# `up` only starts what is in the active profiles; it never stops the search
-# engine's container when the operator has just declined it, so this runs on
-# every start to keep the container in step with MEILISEARCH_URL -- see
-# stop_disabled_search_engine_container in lib.sh.
+# Runs on every start so a service the operator just declined loses its
+# container -- see remove_containers_unless_enabled in lib.sh.
 stop_disabled_search_engine_container
 stop_disabled_grafana_containers
+stop_disabled_updater_container
 
 # The web entrypoint picks HTTP or TLS mode by checking docker/certs-prod/
 # once, at container start. That directory is a bind mount, so dropping

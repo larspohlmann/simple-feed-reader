@@ -196,6 +196,8 @@ services:
       # Logs and cache pools outlive the container; JWT keys outlive rebuilds.
       - php-var:/app/var
       - jwt-keys:/app/config/jwt
+      - ./.update-state/inbox:/app/update-state/inbox
+      - ./.update-state/outbox:/app/update-state/outbox:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -261,6 +263,36 @@ services:
       - ./docker/certs-prod:/etc/nginx/certs:ro
     depends_on:
       - php
+
+  # #1948: runs ./scripts/update.sh when an admin asks for it in Settings → About.
+  # The only service holding the Docker socket, which is root on the host; it
+  # publishes nothing and the app can only ask for "the latest release".
+  # Defaults are permissive for the same reason as grafana's: compose resolves
+  # them while the profile is off.
+  updater:
+    image: ghcr.io/larspohlmann/simple-feed-reader-updater:${APP_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: docker/updater/Dockerfile
+    profiles: ["updater"]
+    restart: unless-stopped
+    user: "${UPDATER_UID:-0}:${UPDATER_GID:-0}"
+    group_add:
+      - "${UPDATER_SOCKET_GID:-0}"
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs: [/tmp]
+    mem_limit: 64m
+    environment:
+      SFR_REPO_ROOT: ${SFR_REPO_ROOT:-}
+      UPDATER_IMAGE: ghcr.io/larspohlmann/simple-feed-reader-updater:${APP_IMAGE_TAG:-local}
+      UPDATER_SOCKET_GID: ${UPDATER_SOCKET_GID:-0}
+      SFR_RUN_NETWORK: simple-feed-reader-prod_default
+      HOME: /tmp
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.update-state/inbox:/state/inbox:ro
+      - ./.update-state/outbox:/state/outbox
 
 volumes:
   mysql-data:

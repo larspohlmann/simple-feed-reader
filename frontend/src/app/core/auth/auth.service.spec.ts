@@ -118,6 +118,37 @@ describe('AuthService', () => {
     ctrl.expectNone({ method: 'PATCH', url: 'https://api.test/api/me' });
   });
 
+  it('ensureUserLoaded shares one /api/me among concurrent callers', () => {
+    const users: CurrentUser[] = [];
+    service.ensureUserLoaded().subscribe((user) => users.push(user));
+    service.ensureUserLoaded().subscribe((user) => users.push(user));
+
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
+
+    expect(users.map((user) => user.id)).toEqual([1, 1]);
+  });
+
+  it('ensureUserLoaded never refetches a loaded user', () => {
+    service.ensureUserLoaded().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
+
+    let user: CurrentUser | undefined;
+    service.ensureUserLoaded().subscribe((loaded) => (user = loaded));
+
+    ctrl.expectNone('https://api.test/api/me');
+    expect(user?.id).toBe(1);
+  });
+
+  it('ensureUserLoaded tries again after a failed load', () => {
+    service.ensureUserLoaded().subscribe({ error: () => undefined });
+    ctrl.expectOne('https://api.test/api/me').flush(null, { status: 503, statusText: 'down' });
+
+    service.ensureUserLoaded().subscribe();
+
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
+    expect(service.user()?.id).toBe(1);
+  });
+
   it('loadMe records a failed account load, and a later success clears it', () => {
     service.loadMe().subscribe({ error: () => undefined });
     ctrl

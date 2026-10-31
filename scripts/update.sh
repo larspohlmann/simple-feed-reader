@@ -94,9 +94,8 @@ if [ -f "${ENV_PROD_FILE}" ]; then
 fi
 
 # --- development stack ------------------------------------------------------
-# Any php container (running or stopped) under the dev project marks a dev
-# install. Both stacks can exist on a developer machine; update both.
-if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
+# Both stacks can exist on a developer machine; update both.
+if dev_stack_to_update; then
   say 'Updating the development stack ...'
   run_step 'Pulling updated base images' refresh_images compose \
     || warn 'Could not pull updated base images; building on the cached ones.'
