@@ -28,7 +28,7 @@ final readonly class MixcloudJsonParser
             $this->text($owner, 'name'),
             $this->text($owner, 'url'),
             null,
-            null,
+            $this->text($this->record($owner, 'pictures'), 'large'),
             $this->entries($shows),
         );
     }

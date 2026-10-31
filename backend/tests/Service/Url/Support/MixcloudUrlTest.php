@@ -134,7 +134,7 @@ final class MixcloudUrlTest extends TestCase
     public static function apiUsers(): iterable
     {
         yield 'a cloudcasts list' => ['https://api.mixcloud.com/johndigweed/cloudcasts/', 'johndigweed'];
-        yield 'a cloudcasts list without the slash' => ['https://api.mixcloud.com/johndigweed/cloudcasts', 'johndigweed'];
+        yield 'a list without the slash' => ['https://api.mixcloud.com/johndigweed/cloudcasts', 'johndigweed'];
         yield 'a user' => ['https://api.mixcloud.com/johndigweed/', 'johndigweed'];
         yield 'a user without the slash' => ['https://api.mixcloud.com/johndigweed', 'johndigweed'];
         yield 'with a query' => ['https://api.mixcloud.com/johndigweed/cloudcasts/?limit=5', 'johndigweed'];

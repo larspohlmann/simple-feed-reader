@@ -74,7 +74,8 @@ final class MixcloudUrl
     public static function apiUser(string $url): ?string
     {
         $path = self::pathOn($url, [self::API_HOST]);
-        if ($path === null || preg_match('#^/(' . self::SEGMENT . ')(?:/(?:cloudcasts/?)?)?\z#', $path, $matches) !== 1) {
+        $pattern = '#^/(' . self::SEGMENT . ')(?:/(?:cloudcasts/?)?)?\z#';
+        if ($path === null || preg_match($pattern, $path, $matches) !== 1) {
             return null;
         }
 
