@@ -24,6 +24,11 @@ export class MixcloudPlayback extends FramePlayback {
     super(host, MIXCLOUD_WIDGET_ORIGIN, 'Mixcloud');
   }
 
+  override dispose(): void {
+    this.cancelStartWatch();
+    super.dispose();
+  }
+
   protected frameUrlFor(url: string): string {
     return url;
   }

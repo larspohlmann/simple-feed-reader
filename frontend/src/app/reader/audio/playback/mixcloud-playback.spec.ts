@@ -1,10 +1,12 @@
 import { MIXCLOUD_WIDGET_URL } from '../../../../testing/embed-media-testing';
 import {
   deliverMessage,
+  frameOf,
   messagesOf,
   playbackFixture,
   PlaybackFixture,
   Posted,
+  recordPosts,
 } from '../../../../testing/frame-playback-testing';
 import { MIXCLOUD_WIDGET_ORIGIN } from '../../media/mixcloud-widget-protocol';
 import { MixcloudPlayback } from './mixcloud-playback';
@@ -321,6 +323,29 @@ describe('MixcloudPlayback', () => {
       playback.dispose();
     });
 
+    it('waits the full ten seconds again after a second play', async () => {
+      const { playback } = await startedPlayback();
+      jest.advanceTimersByTime(6000);
+      await playback.play();
+
+      jest.advanceTimersByTime(6000);
+      expect(playback.error).toBeNull();
+      jest.advanceTimersByTime(4000);
+
+      expect(playback.error?.code).toBe(4);
+      playback.dispose();
+    });
+
+    it('stops waiting when the show ends', async () => {
+      const { playback, frame, events } = await startedPlayback();
+      widgetEvent(frame, 'ended');
+
+      jest.advanceTimersByTime(20000);
+
+      expect(events).not.toContain('error');
+      playback.dispose();
+    });
+
     it('does not fail a new source for the old one', async () => {
       const { playback, events } = await startedPlayback();
       playback.src = MIXCLOUD_WIDGET_URL;
@@ -329,6 +354,24 @@ describe('MixcloudPlayback', () => {
 
       expect(playback.error).toBeNull();
       expect(events).not.toContain('error');
+      playback.dispose();
+    });
+
+    it('fails a new source only for its own wait', async () => {
+      const { playback, host } = await startedPlayback();
+      jest.advanceTimersByTime(6000);
+      playback.load();
+      const reloaded = frameOf(host);
+      recordPosts(reloaded);
+      reloaded.dispatchEvent(new Event('load'));
+      fromWidget(reloaded, 'api', API);
+      await playback.play();
+
+      jest.advanceTimersByTime(6000);
+      expect(playback.error).toBeNull();
+      jest.advanceTimersByTime(4000);
+
+      expect(playback.error?.code).toBe(4);
       playback.dispose();
     });
 
