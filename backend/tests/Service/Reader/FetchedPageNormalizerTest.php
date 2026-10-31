@@ -10,6 +10,7 @@ use App\Service\Html\PictureSources;
 use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\PageRepair\CommentThreadRemover;
 use App\Service\Reader\PageRepair\CustomElementUnwrapper;
 use App\Service\Reader\PageRepair\HeadingClassRemover;
 use App\Service\Reader\PageRepair\HorizontalRuleUnwrapper;
@@ -22,6 +23,7 @@ use App\Service\Reader\PageRepair\PageRepairInterface;
 use App\Service\Reader\PageRepair\ScreenReaderOnlyElementRemover;
 use App\Service\Reader\PageRepair\ShareIntentLinkRemover;
 use App\Service\Reader\PageRepair\ShareWidgetRemover;
+use App\Service\Reader\PageRepair\StylesheetHiddenElementRemover;
 use App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -39,12 +41,14 @@ final class FetchedPageNormalizerTest extends TestCase
     public static function repairs(): array
     {
         return [
+            new StylesheetHiddenElementRemover(),
             new CustomElementUnwrapper(),
             new NoscriptImageUnwrapper(),
             new LazyImageSources(new PictureSources(new DesktopViewport())),
             new ImageButtonUnwrapper(),
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),
+            new CommentThreadRemover(),
             new SubstackGatedVideoPlaceholder(),
             new ScreenReaderOnlyElementRemover(),
             new OrphanIconGlyphRemover(new EmptiedWrapperRemover()),
@@ -165,6 +169,20 @@ final class FetchedPageNormalizerTest extends TestCase
         $normalized = $this->normalizer->normalize($html)->saveHtml();
 
         self::assertStringNotContainsString('teilen', $normalized);
+        self::assertStringContainsString('Body text', $normalized);
+    }
+
+    public function testStripsANoScriptCommentThreadBeforeReadabilitySeesIt(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><noscript><article><img src="https://i1.sndcdn.com/artwork.jpg" alt="">'
+            . '<p>Body text long enough to be real content.</p><section class="comments">'
+            . '<h2>Comment by <a href="/pedro">Pedro</a></h2><p>super set</p></section></article></noscript>'
+            . '</body></html>';
+
+        $normalized = $this->normalizer->normalize($html)->saveHtml();
+
+        self::assertStringNotContainsString('Comment by', $normalized);
         self::assertStringContainsString('Body text', $normalized);
     }
 
