@@ -10,8 +10,13 @@ source "${SFR_UPDATER_LIB:-/usr/local/lib/sfr-updater/state.sh}"
 RUN_CONTAINER=sfr-update-run
 POLL_SECONDS=${SFR_UPDATER_POLL_SECONDS:-30}
 
-run_in_progress() {
-  [ -n "$(docker ps -q --filter "name=^${RUN_CONTAINER}$")" ]
+warn() { printf 'sfr-updater: %s\n' "$1" >&2; }
+
+# A run that died with its daemon (host reboot) leaves the name taken.
+remove_stopped_run_container() {
+  [ -n "$(docker ps -aq --filter "name=^${RUN_CONTAINER}$")" ] || return 0
+  warn "removing the stopped ${RUN_CONTAINER} container a previous run left behind"
+  docker rm -f "${RUN_CONTAINER}" >/dev/null
 }
 
 # Paths after -v are host paths: the daemon resolves them, not this container.
@@ -19,6 +24,7 @@ start_run() {
   local request_id=$1
   : > "${STATE_DIR}/run.log"
   write_status "${request_id}" running "$(now_iso)" '' ''
+  remove_stopped_run_container
   docker run -d --rm --name "${RUN_CONTAINER}" \
     --user "$(id -u):$(id -g)" --group-add "${UPDATER_SOCKET_GID}" \
     --network "${SFR_RUN_NETWORK}" \
@@ -30,21 +36,32 @@ start_run() {
     --entrypoint sfr-updater-run "${UPDATER_IMAGE}" "${request_id}" >/dev/null
 }
 
+fail_vanished_run() {
+  local status_file="${STATE_DIR}/status.json"
+  [ "$(json_field "${status_file}" phase)" = running ] || return 0
+  write_status "$(json_field "${status_file}" requestId)" failed \
+    "$(json_field "${status_file}" startedAt)" "$(now_iso)" ''
+}
+
 tick() {
   date -u +%s | write_atomically "${STATE_DIR}/heartbeat"
 
-  local status_file="${STATE_DIR}/status.json"
-  if [ "$(json_field "${status_file}" phase)" = running ] && ! run_in_progress; then
-    write_status "$(json_field "${status_file}" requestId)" failed \
-      "$(json_field "${status_file}" startedAt)" "$(now_iso)" ''
-  fi
-
-  local request_id
-  request_id=$(json_field "${STATE_DIR}/request.json" id)
-  if [ -z "${request_id}" ] || [ "${request_id}" = "$(json_field "${status_file}" requestId)" ]; then
+  local running_run
+  if ! running_run=$(docker ps -q --filter "name=^${RUN_CONTAINER}$"); then
+    warn 'docker ps failed; skipping this tick'
     return 0
   fi
-  if run_in_progress; then
+  if [ -n "${running_run}" ]; then
+    return 0
+  fi
+  fail_vanished_run
+
+  local request_id
+  if ! request_id=$(json_field "${STATE_DIR}/request.json" id); then
+    warn 'request.json is unreadable; treating it as no request'
+    return 0
+  fi
+  if [ -z "${request_id}" ] || [ "${request_id}" = "$(json_field "${STATE_DIR}/status.json" requestId)" ]; then
     return 0
   fi
   start_run "${request_id}" \

@@ -196,7 +196,7 @@ services:
       # Logs and cache pools outlive the container; JWT keys outlive rebuilds.
       - php-var:/app/var
       - jwt-keys:/app/config/jwt
-      - ./.update-state:/app/var/update-state
+      - ./.update-state:/app/update-state
     depends_on:
       mysql:
         condition: service_healthy
