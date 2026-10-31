@@ -10,6 +10,11 @@
         "shape": "landscape"
     },
     {
+        "pattern": "^https://player\\-widget\\.mixcloud\\.com/widget/iframe/\\?feed=%2F(?:[A-Za-z0-9_-]|%25[0-9A-Fa-f]{2})+%2F(?:[A-Za-z0-9_-]|%25[0-9A-Fa-f]{2})+%2F$",
+        "kind": "audio",
+        "shape": "strip"
+    },
+    {
         "pattern": "^https://player\\.vimeo\\.com/video/\\d+(?:\\?h=[A-Za-z0-9]+)?$",
         "kind": "video",
         "shape": "landscape"
