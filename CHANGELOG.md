@@ -10,6 +10,22 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.10] - 2026-10-31
+
+## What's Changed
+* Podcast chapters from episode descriptions; Podigee href chapter links by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1926
+* Chapters that start after 0:00 get an Intro chapter by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1928
+* fix(#1930): link bare URLs in the article body by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1931
+* fix(#1929): keep SoundCloud's no-JS fallback out of the reader body by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1933
+* Mixcloud profiles: subscribe, play and seek by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1936
+* OPML keeps WordPress REST and Mixcloud feeds; scraped feeds stay out by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1937
+* Mixcloud: subscribe from a show or API link; user picture as feed logo by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1938
+* feat(#1939): back circle left of the article's to-top button by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1940
+* refactor(#1941): one corner-anchor mixin for the floating corner groups by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1942
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.9...v1.6.10
+
 ## [v1.6.9] - 2026-10-30
 
 ## What's Changed
