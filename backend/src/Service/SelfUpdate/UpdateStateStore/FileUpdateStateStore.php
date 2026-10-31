@@ -69,7 +69,7 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
             return '';
         }
 
-        return (string) file_get_contents($path, offset: max(0, (int) filesize($path) - self::LOG_TAIL_BYTES));
+        return (string) file_get_contents($path, offset: max(0, filesize($path) - self::LOG_TAIL_BYTES));
     }
 
     public function saveRequest(UpdateRequestModel $request): void
