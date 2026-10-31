@@ -1068,7 +1068,90 @@ i18n under `settings.about.update`: `button` "Update to {{version}}" / "Auf {{ve
 
 ---
 
-### Task 11: Gates and live checks
+### Task 11: Check for a new release more often
+
+Today the backend asks GitHub at most every 6 h (`GitHubLatestReleaseReader::CACHE_TTL_SECONDS = 21600`) and the app calls `/api/version` once per app load, so an open tab or home-screen app never learns of a release. Agreed with the user: backend cache 1 h; the app re-checks when it returns to the foreground, at most every 30 min. No timer.
+
+**Files:**
+- Modify: `backend/src/Service/Version/LatestReleaseReader/GitHubLatestReleaseReader.php`
+- Modify: `frontend/src/app/core/version.service.ts`, `frontend/src/app/core/version.service.spec.ts`, `frontend/src/app/reader/shell/reader-shell.component.ts` (its "Check once" comment)
+
+**Interfaces:**
+- Consumes: `onTabVisibilityChange(onChange: (hidden: boolean) => void)` from `frontend/src/app/core/tab-visibility.ts` (runs outside the Angular zone; call in an injection context).
+- Produces: unchanged `VersionService` API; `load()` additionally records when it ran.
+
+- [ ] **Step 1: Backend.** `private const int CACHE_TTL_SECONDS = 3600; // one hour`. No test asserts the lifetime; none is added (a constant).
+
+- [ ] **Step 2: Failing tests** in `version.service.spec.ts` (`jest.useFakeTimers()` + `jest.setSystemTime`, `afterEach(() => jest.useRealTimers())`; a helper that sets `document.visibilityState` via `Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })` and dispatches `new Event('visibilitychange')`):
+
+```ts
+  it('checks again when the tab comes back after half an hour', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 30 * 60_000);
+    showTab();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
+  it('does not check again when the tab comes back sooner', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 29 * 60_000);
+    showTab();
+
+    ctrl.expectNone('https://api.test/api/version');
+  });
+
+  it('does not check while the tab is hidden', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    jest.setSystemTime(Date.now() + 60 * 60_000);
+    hideTab();
+
+    ctrl.expectNone('https://api.test/api/version');
+  });
+
+  it('waits for the first load before checking on its own', () => {
+    showTab();
+    ctrl.expectNone('https://api.test/api/version');
+  });
+```
+
+- [ ] **Step 3: Run** `docker compose exec -T frontend npm test -- src/app/core/version.service` — FAIL.
+
+- [ ] **Step 4: Implement** in `VersionService`:
+
+```ts
+const RECHECK_AFTER_MS = 30 * 60_000;
+
+  private readonly zone = inject(NgZone);
+  private lastLoadedAt: number | null = null;
+
+  constructor() {
+    onTabVisibilityChange((hidden) => {
+      if (!hidden) this.zone.run(() => this.recheckIfDue());
+    });
+  }
+
+  private recheckIfDue(): void {
+    if (this.lastLoadedAt === null || Date.now() - this.lastLoadedAt < RECHECK_AFTER_MS) return;
+    this.load();
+  }
+```
+
+and `load()` sets `this.lastLoadedAt = Date.now();` before the request. Update the reader-shell comment to say the service re-checks on its own when the tab returns (one line).
+
+- [ ] **Step 5: Run** the spec, then every spec that injects `VersionService` unstubbed (`grep -rln "VersionService" frontend/src/app --include=*.spec.ts`), then `cd frontend && npm run check` — PASS. Backend: `php bin/phpunit tests/Service/Version` — PASS.
+
+- [ ] **Step 6: Commit** `feat(#1948): check for a new release when the app returns, and hourly upstream`
+
+---
+
+### Task 12: Gates and live checks
 
 - [ ] Frontend: `cd frontend && npm run check` and `npx ng build` — clean.
 - [ ] Backend: `composer check`, `composer md`, `php bin/phpunit`, and in parallel `docker compose exec php composer test:parallel` — green; `composer infection:diff` meets `minMsi`.
