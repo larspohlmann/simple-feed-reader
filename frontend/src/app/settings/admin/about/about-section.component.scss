@@ -1,11 +1,7 @@
-// Every direct child of the group panel pads itself: the panel is unpadded by
-// design (its rows pad themselves), so these blocks read the same inset the
-// shared rows do.
+// The group panel is unpadded (its rows pad themselves), so these blocks pad to the rows' inset.
 %inset {
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
-
-// --- About identity -----------------------------------------------------------
 
 .identity {
   @extend %inset;
@@ -32,8 +28,6 @@
   font-size: var(--fs-xs);
   color: var(--text-muted);
 }
-
-// --- Version rows (carried over from the previous About page) ------------------
 
 .loading {
   @extend %inset;

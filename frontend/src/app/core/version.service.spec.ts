@@ -38,9 +38,12 @@ describe('VersionService', () => {
     ctrl = TestBed.inject(HttpTestingController);
   });
   afterEach(() => {
-    ctrl.verify();
-    jest.useRealTimers();
-    Reflect.deleteProperty(document, 'visibilityState');
+    try {
+      ctrl.verify();
+    } finally {
+      jest.useRealTimers();
+      Reflect.deleteProperty(document, 'visibilityState');
+    }
   });
 
   it('exposes the build the API reports', () => {
