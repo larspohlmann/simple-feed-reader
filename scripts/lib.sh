@@ -521,6 +521,13 @@ prod_compose() {
            --env-file .env.prod "$@" ) < /dev/null
 }
 
+# Created here, not by docker: a bind mount docker creates is root-owned 0755,
+# and php (www-data) and the updater (the host user) both write into it.
+ensure_update_state_directory() {
+  mkdir -p "${REPO_ROOT}/.update-state"
+  chmod 1777 "${REPO_ROOT}/.update-state"
+}
+
 # Derive the checked-out tree's release version and export it as the build args
 # the prod images bake in: the SPA carries it in version.ts, the backend in
 # version.json, and both would otherwise report the 'dev' placeholder on a
