@@ -40,9 +40,9 @@ final class MixcloudProfileFeedTest extends TestCase
     }
 
     /** @return iterable<string, array{string}> */
-    public static function pagesThatAreNoProfile(): iterable
+    public static function pagesThatOfferNothing(): iterable
     {
-        yield 'a show page' => ['https://www.mixcloud.com/johndigweed/transitions-1154/'];
+        yield 'a profile tab' => ['https://www.mixcloud.com/johndigweed/favorites/'];
         yield 'the discover section' => ['https://www.mixcloud.com/discover/'];
         yield 'the upload page' => ['https://www.mixcloud.com/upload/'];
         yield 'the select page' => ['https://www.mixcloud.com/select/'];
@@ -51,9 +51,28 @@ final class MixcloudProfileFeedTest extends TestCase
         yield 'a look-alike host' => ['https://www.mixcloud.com.evil.test/johndigweed/'];
     }
 
-    #[DataProvider('pagesThatAreNoProfile')]
-    public function testOffersNothingForAPageThatIsNoProfile(string $pageUrl): void
+    #[DataProvider('pagesThatOfferNothing')]
+    public function testOffersNothingForAPageThatNamesNoUser(string $pageUrl): void
     {
         self::assertNull((new MixcloudProfileFeed())->offer(self::PROFILE_PAGE, $pageUrl));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function addressesNamingTheUser(): iterable
+    {
+        yield 'a show page' => ['https://www.mixcloud.com/johndigweed/transitions-1154/'];
+        yield 'the cloudcasts API' => ['https://api.mixcloud.com/johndigweed/cloudcasts/'];
+        yield 'the user API' => ['https://api.mixcloud.com/johndigweed/'];
+    }
+
+    #[DataProvider('addressesNamingTheUser')]
+    public function testOffersTheUsersCloudcastsUntitledForAShowPageOrAnApiAddress(string $pageUrl): void
+    {
+        $candidate = (new MixcloudProfileFeed())->offer(self::PROFILE_PAGE, $pageUrl);
+
+        self::assertNotNull($candidate);
+        self::assertSame('https://api.mixcloud.com/johndigweed/cloudcasts/', $candidate->url);
+        self::assertNull($candidate->title);
+        self::assertSame(SourceFormat::MIXCLOUD_API, $candidate->format);
     }
 }

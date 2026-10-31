@@ -27,13 +27,45 @@ final class MixcloudJsonParserTest extends TestCase
         return $this->parse($this->fixture('mixcloud/cloudcasts.json'));
     }
 
-    public function testTheFeedIsNamedAndLinkedAfterTheUser(): void
+    public function testTheFeedIsNamedLinkedAndPicturedAfterTheUser(): void
     {
         $feed = $this->recorded();
 
         self::assertSame('John Digweed', $feed->title);
         self::assertSame('https://www.mixcloud.com/johndigweed/', $feed->siteUrl);
         self::assertNull($feed->description);
+        self::assertSame(
+            'https://thumbnailer.mixcloud.com/unsafe/300x300/profile/2/d/9/f/2595-e2a4-4c6b-aa0e-e7420a523bd1',
+            $feed->imageUrl,
+        );
+    }
+
+    public function testAUserWithoutAPictureLeavesTheFeedWithoutALogo(): void
+    {
+        $feed = $this->parse('{"data":[{"key":"/a/b/","url":"https://www.mixcloud.com/a/b/","name":"B",'
+            . '"user":{"name":"A","url":"https://www.mixcloud.com/a/","pictures":{"medium":"https://x.test/m"}}}]}');
+
+        self::assertNull($feed->imageUrl);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unsafePictures(): iterable
+    {
+        yield 'plain http' => ['http://thumbnailer.mixcloud.com/unsafe/300x300/profile/a'];
+        yield 'a script' => ['javascript:alert(1)'];
+        yield 'over the column length' => ['https://thumbnailer.mixcloud.com/' . str_repeat('a', 2048)];
+    }
+
+    #[DataProvider('unsafePictures')]
+    public function testAPictureThatIsNoSafeImageUrlLeavesTheFeedWithoutALogo(string $picture): void
+    {
+        $feed = $this->parse(json_encode(['data' => [[
+            'key' => '/a/b/',
+            'url' => 'https://www.mixcloud.com/a/b/',
+            'name' => 'B',
+            'user' => ['name' => 'A', 'pictures' => ['large' => $picture]],
+        ]]], \JSON_THROW_ON_ERROR));
+
         self::assertNull($feed->imageUrl);
     }
 
@@ -145,6 +177,7 @@ final class MixcloudJsonParserTest extends TestCase
 
         self::assertSame([], $feed->entries);
         self::assertNull($feed->title);
+        self::assertNull($feed->imageUrl);
     }
 
     /** @return iterable<string, array{string}> */

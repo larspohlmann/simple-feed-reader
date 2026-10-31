@@ -32,7 +32,12 @@
         "key": "/johndigweed/",
         "url": "https://www.mixcloud.com/johndigweed/",
         "name": "John Digweed",
-        "username": "johndigweed"
+        "username": "johndigweed",
+        "pictures": {
+          "medium": "https://thumbnailer.mixcloud.com/unsafe/100x100/profile/2/d/9/f/2595-e2a4-4c6b-aa0e-e7420a523bd1",
+          "large": "https://thumbnailer.mixcloud.com/unsafe/300x300/profile/2/d/9/f/2595-e2a4-4c6b-aa0e-e7420a523bd1",
+          "extra_large": "https://thumbnailer.mixcloud.com/unsafe/600x600/profile/2/d/9/f/2595-e2a4-4c6b-aa0e-e7420a523bd1"
+        }
       },
       "is_exclusive": true,
       "audio_length": 7177

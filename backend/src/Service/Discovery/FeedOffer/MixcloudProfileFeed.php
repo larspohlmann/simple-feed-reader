@@ -11,21 +11,23 @@ use App\Service\Scraper\Support\TextNormalizer;
 use App\Service\Url\Support\MixcloudUrl;
 use Dom\HTMLDocument;
 
-/** Offers the shows of the Mixcloud user a profile page belongs to; Mixcloud publishes no RSS, only this API. */
+/** Offers the shows of the Mixcloud user a profile, show or API address names; Mixcloud publishes no RSS, only this API. */
 final readonly class MixcloudProfileFeed implements FeedOfferInterface
 {
     public function offer(string $body, string $pageUrl): ?FeedCandidateModel
     {
-        $user = MixcloudUrl::profileUser($pageUrl);
-        if ($user === null) {
-            return null;
+        $profileUser = MixcloudUrl::profileUser($pageUrl);
+        if ($profileUser !== null) {
+            return $this->cloudcastsOf($profileUser, $this->pageTitle(HtmlDocumentParser::parseOrEmpty($body)));
         }
+        $user = MixcloudUrl::showUser($pageUrl) ?? MixcloudUrl::apiUser($pageUrl);
 
-        return new FeedCandidateModel(
-            MixcloudUrl::cloudcastsUrl($user),
-            $this->pageTitle(HtmlDocumentParser::parseOrEmpty($body)),
-            SourceFormat::MIXCLOUD_API,
-        );
+        return $user === null ? null : $this->cloudcastsOf($user, null);
+    }
+
+    private function cloudcastsOf(string $user, ?string $title): FeedCandidateModel
+    {
+        return new FeedCandidateModel(MixcloudUrl::cloudcastsUrl($user), $title, SourceFormat::MIXCLOUD_API);
     }
 
     private function pageTitle(HTMLDocument $document): ?string

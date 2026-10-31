@@ -12,6 +12,7 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\EntryTitle;
+use App\Service\Url\Support\HttpsImageUrl;
 
 /**
  * Turns a Mixcloud `/<user>/cloudcasts/` list into a ParsedFeedModel. The list carries no descriptions, and an
@@ -28,7 +29,7 @@ final readonly class MixcloudJsonParser
             $this->text($owner, 'name'),
             $this->text($owner, 'url'),
             null,
-            null,
+            HttpsImageUrl::orNull($this->text($this->record($owner, 'pictures'), 'large')),
             $this->entries($shows),
         );
     }

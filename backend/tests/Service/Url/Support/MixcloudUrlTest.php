@@ -112,4 +112,45 @@ final class MixcloudUrlTest extends TestCase
     {
         self::assertSame($isShowKey, MixcloudUrl::isShowKey($key));
     }
+
+    /** @return iterable<string, array{string, ?string}> */
+    public static function showPageUsers(): iterable
+    {
+        yield 'a show page' => ['https://www.mixcloud.com/johndigweed/transitions-1154/', 'johndigweed'];
+        yield 'an encoded show' => ['https://www.mixcloud.com/worldwidefm/caf%C3%A9-show/', 'worldwidefm'];
+        yield 'a profile page' => ['https://www.mixcloud.com/johndigweed/', null];
+        yield 'a profile tab' => ['https://www.mixcloud.com/johndigweed/favorites/', null];
+        yield 'a site section' => ['https://www.mixcloud.com/discover/house/', null];
+        yield 'the API host' => ['https://api.mixcloud.com/johndigweed/transitions-1154/', null];
+    }
+
+    #[DataProvider('showPageUsers')]
+    public function testReadsTheUserOfAShowPage(string $url, ?string $user): void
+    {
+        self::assertSame($user, MixcloudUrl::showUser($url));
+    }
+
+    /** @return iterable<string, array{string, ?string}> */
+    public static function apiUsers(): iterable
+    {
+        yield 'a cloudcasts list' => ['https://api.mixcloud.com/johndigweed/cloudcasts/', 'johndigweed'];
+        yield 'a list without the slash' => ['https://api.mixcloud.com/johndigweed/cloudcasts', 'johndigweed'];
+        yield 'a user' => ['https://api.mixcloud.com/johndigweed/', 'johndigweed'];
+        yield 'a user without the slash' => ['https://api.mixcloud.com/johndigweed', 'johndigweed'];
+        yield 'an encoded user' => ['https://api.mixcloud.com/caf%C3%A9/', 'caf%C3%A9'];
+        yield 'with a query' => ['https://api.mixcloud.com/johndigweed/cloudcasts/?limit=5', 'johndigweed'];
+        yield 'a mixed-case host' => ['https://API.Mixcloud.com/johndigweed/', 'johndigweed'];
+        yield 'another list' => ['https://api.mixcloud.com/johndigweed/favorites/', null];
+        yield 'a show' => ['https://api.mixcloud.com/johndigweed/transitions-1154/', null];
+        yield 'a site section' => ['https://api.mixcloud.com/discover/', null];
+        yield 'the API root' => ['https://api.mixcloud.com/', null];
+        yield 'the site host' => ['https://www.mixcloud.com/johndigweed/', null];
+        yield 'a look-alike host' => ['https://api.mixcloud.com.evil.test/johndigweed/', null];
+    }
+
+    #[DataProvider('apiUsers')]
+    public function testReadsTheUserOfAnApiAddress(string $url, ?string $user): void
+    {
+        self::assertSame($user, MixcloudUrl::apiUser($url));
+    }
 }
