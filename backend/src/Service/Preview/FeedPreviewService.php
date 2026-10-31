@@ -13,13 +13,11 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedParser;
 use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\WordPressJsonParser;
 use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Preview\Model\FeedPreviewItemModel;
 use App\Service\Preview\Model\FeedPreviewModel;
-use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Refresh\FeedBodyParser;
 use App\Service\Text\Support\PlainText;
 
 /**
@@ -40,10 +38,8 @@ final readonly class FeedPreviewService
 
     public function __construct(
         private FeedFetcherInterface $fetcher,
-        private FeedParser $parser,
-        private HtmlItemExtractor $extractor,
+        private FeedBodyParser $bodyParser,
         private ScrapeFallbackPolicy $scrapeFallbackPolicy,
-        private WordPressJsonParser $wordPressJsonParser,
     ) {
     }
 
@@ -68,13 +64,8 @@ final readonly class FeedPreviewService
         }
 
         try {
-            // A scraped preview runs the extraction a refresh will run, so the dialog shows what subscribing buys.
-            // One catch covers every branch: HtmlExtractionException is a FeedParseException.
-            $feed = match ($format) {
-                SourceFormat::SCRAPED => $this->extractor->extract($body, $response->finalUrl),
-                SourceFormat::WP_JSON => $this->wordPressJsonParser->parse($body),
-                default => $this->parser->parse($body),
-            };
+            // One catch covers every format: HtmlExtractionException is a FeedParseException.
+            $feed = $this->bodyParser->parseAs($format ?? SourceFormat::XML, $body, $response->finalUrl);
         } catch (FeedParseException $exception) {
             // A scraped preview keeps the extractor's message, which already names the problem in the user's words.
             throw new FeedPreviewException(

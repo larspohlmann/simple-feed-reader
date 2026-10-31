@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\FeedBodyParser;
 
-use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Parser\MixcloudJsonParser;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -21,7 +20,7 @@ final readonly class MixcloudBodyParser implements FeedBodyParserInterface
         return SourceFormat::MIXCLOUD_API;
     }
 
-    public function parse(string $body, Feed $feed): ParsedFeedModel
+    public function parse(string $body, string $feedUrl): ParsedFeedModel
     {
         return $this->parser->parse($body);
     }

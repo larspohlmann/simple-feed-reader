@@ -38,8 +38,8 @@ final readonly class SubscriptionCreator
      * Both single-feed paths come through here, so the cap, the shared-feed
      * lookup and the duplicate check cannot diverge between them.
      *
-     * @param 'xml'|'scraped'|'wp-json'|'bluesky-api'|'mastodon-api' $sourceFormat
-     * @param list<Tag>                 $tags
+     * @param 'xml'|'scraped'|'wp-json'|'mixcloud-api'|'bluesky-api'|'mastodon-api' $sourceFormat
+     * @param list<Tag>                                                            $tags
      */
     public function create(
         User $user,

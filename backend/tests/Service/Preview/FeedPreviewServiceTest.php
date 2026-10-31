@@ -11,36 +11,27 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Parser\FeedParser;
-use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\WordPressJsonParser;
 use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Preview\FeedPreviewService;
-use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Refresh\FeedBodyParser;
 use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class FeedPreviewServiceTest extends KernelTestCase
 {
     use ScrapedFixtures;
+    use ReadsFixtures;
 
     private const URL = 'https://example.com/feed';
 
     private function service(StubFeedFetcher $fetcher): FeedPreviewService
     {
-        $parser = self::getContainer()->get(FeedParser::class);
-        self::assertInstanceOf(FeedParser::class, $parser);
-        $extractor = self::getContainer()->get(HtmlItemExtractor::class);
-        self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
+        $bodyParser = self::getContainer()->get(FeedBodyParser::class);
+        self::assertInstanceOf(FeedBodyParser::class, $bodyParser);
 
-        return new FeedPreviewService(
-            $fetcher,
-            $parser,
-            $extractor,
-            new ScrapeFallbackPolicy(),
-            new WordPressJsonParser(new ItemImageExtractor()),
-        );
+        return new FeedPreviewService($fetcher, $bodyParser, new ScrapeFallbackPolicy());
     }
 
     /** These tests never touch the database, so a User is built inline rather than through a factory. */
@@ -374,5 +365,34 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
         self::assertSame(1, $preview->itemCount);
         self::assertSame('full', $preview->content);
+    }
+
+    public function testPreviewsAMixcloudCandidateWithoutItsExclusiveShows(): void
+    {
+        $fetcher = $this->fetcherWithBody($this->fixture('mixcloud/cloudcasts.json'));
+
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL, SourceFormat::MIXCLOUD_API);
+
+        self::assertSame('John Digweed', $preview->title);
+        self::assertSame(2, $preview->itemCount);
+        self::assertSame('title-only', $preview->content);
+        self::assertTrue($preview->hasImages);
+    }
+
+    public function testAMixcloudBodyThatIsNoListIsNotAReadableFeed(): void
+    {
+        $fetcher = $this->fetcherWithBody('{"error":{"type":"NotFound"}}');
+
+        $this->expectException(FeedPreviewException::class);
+        $this->expectExceptionMessage('That address is not a readable feed.');
+        $this->service($fetcher)->preview($this->user(), self::URL, SourceFormat::MIXCLOUD_API);
+    }
+
+    /** A format this build has no parser for reads as a feed document, as a refresh reads it. */
+    public function testAnUnknownFormatPreviewsAsAFeedDocument(): void
+    {
+        $fetcher = $this->fetcherWithBody($this->rss(''));
+
+        self::assertSame('Example Feed', $this->service($fetcher)->preview($this->user(), self::URL, 'rss')->title);
     }
 }

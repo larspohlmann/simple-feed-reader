@@ -79,18 +79,8 @@ final readonly class SubscriptionService
         array $tags = [],
         ?string $initialTitle = null,
     ): SubscribeOutcomeModel {
-        // Re-running discovery on a candidate it just offered could fail this time and block the offered subscribe.
-        if (SourceFormat::SCRAPED === $format) {
-            // This shortcut skips discovery's scrape gate, so a hand-made request must meet the preference here.
-            $this->scrapeFallbackPolicy->assertMayScrape($user);
-
-            return $this->subscribeVerbatim($user, $url, SourceFormat::SCRAPED, $tags);
-        }
-
-        if (SourceFormat::WP_JSON === $format) {
-            // No permission gate: unlike scraping, a REST endpoint is a real
-            // machine source the site publishes, not a synthesized page scrape.
-            return $this->subscribeVerbatim($user, $url, SourceFormat::WP_JSON, $tags, $initialTitle);
+        if (SourceFormat::isVerbatim($format)) {
+            return $this->subscribeVerbatim($user, $url, $format, $tags, $initialTitle);
         }
 
         $routed = $this->routed(new SubscribeRequestModel($user, $url, $tags));
@@ -191,19 +181,26 @@ final readonly class SubscriptionService
     }
 
     /**
-     * A candidate whose URL is the source itself (scraped page, REST endpoint):
-     * store it verbatim and skip re-discovery.
+     * A candidate whose URL is the source itself is stored as offered: discovery run again could fail this time and
+     * block the subscribe it just offered.
      *
-     * @param 'scraped'|'wp-json' $format
-     * @param list<Tag>           $tags
+     * @param value-of<SourceFormat::VERBATIM> $format
+     * @param list<Tag>                        $tags
      */
     private function subscribeVerbatim(
         User $user,
         string $url,
         string $format,
         array $tags,
-        ?string $initialTitle = null,
+        ?string $initialTitle,
     ): SubscribeOutcomeModel {
+        if (SourceFormat::SCRAPED === $format) {
+            // This shortcut skips discovery's scrape gate, so a hand-made request must meet the preference here.
+            $this->scrapeFallbackPolicy->assertMayScrape($user);
+
+            return SubscribeOutcomeModel::subscribed($this->creator->create($user, $url, $format, $tags, null));
+        }
+
         return SubscribeOutcomeModel::subscribed($this->creator->create($user, $url, $format, $tags, $initialTitle));
     }
 }
