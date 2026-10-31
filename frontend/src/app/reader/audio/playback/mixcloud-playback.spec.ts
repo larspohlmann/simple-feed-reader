@@ -260,6 +260,98 @@ describe('MixcloudPlayback', () => {
     });
   });
 
+  describe('a show that never starts', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('fails when no progress follows a start within ten seconds', async () => {
+      const { playback, events } = await startedPlayback();
+
+      jest.advanceTimersByTime(9999);
+      expect(events).toEqual(['play']);
+      jest.advanceTimersByTime(1);
+
+      expect(playback.error?.code).toBe(4);
+      expect(events).toEqual(['play', 'error']);
+      playback.dispose();
+    });
+
+    it('stays alive once the show makes progress', async () => {
+      const { playback, frame, events } = await startedPlayback();
+      widgetEvent(frame, 'progress', [0.5, 3600]);
+
+      jest.advanceTimersByTime(20000);
+
+      expect(playback.error).toBeNull();
+      expect(events).not.toContain('error');
+      playback.dispose();
+    });
+
+    it('ignores progress without a position', async () => {
+      const { playback, frame } = await startedPlayback();
+      widgetEvent(frame, 'progress', [null, 3600]);
+
+      jest.advanceTimersByTime(10000);
+
+      expect(playback.error?.code).toBe(4);
+      playback.dispose();
+    });
+
+    it('stops waiting when the listener pauses', async () => {
+      const { playback } = await startedPlayback();
+      playback.pause();
+
+      jest.advanceTimersByTime(20000);
+
+      expect(playback.error).toBeNull();
+      playback.dispose();
+    });
+
+    it('waits the full ten seconds again after a new start', async () => {
+      const { playback } = await startedPlayback();
+      jest.advanceTimersByTime(6000);
+      playback.pause();
+      await playback.play();
+
+      jest.advanceTimersByTime(6000);
+      expect(playback.error).toBeNull();
+      jest.advanceTimersByTime(4000);
+
+      expect(playback.error?.code).toBe(4);
+      playback.dispose();
+    });
+
+    it('does not fail a new source for the old one', async () => {
+      const { playback, events } = await startedPlayback();
+      playback.src = MIXCLOUD_WIDGET_URL;
+
+      jest.advanceTimersByTime(20000);
+
+      expect(playback.error).toBeNull();
+      expect(events).not.toContain('error');
+      playback.dispose();
+    });
+
+    it('reports a widget error once, not again when the wait runs out', async () => {
+      const { playback, frame, events } = await startedPlayback();
+      widgetEvent(frame, 'error');
+
+      jest.advanceTimersByTime(20000);
+
+      expect(events).toEqual(['play', 'error']);
+      playback.dispose();
+    });
+
+    it('does not fail once disposed', async () => {
+      const { playback } = await startedPlayback();
+      playback.dispose();
+
+      jest.advanceTimersByTime(20000);
+
+      expect(playback.error).toBeNull();
+    });
+  });
+
   describe('playback rate', () => {
     it('sends no rate, the widget has none', () => {
       const { playback, posted } = readyPlayback();
