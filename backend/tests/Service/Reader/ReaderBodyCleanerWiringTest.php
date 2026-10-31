@@ -14,6 +14,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\LegalLinkListRemover;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
@@ -39,6 +40,7 @@ final class ReaderBodyCleanerWiringTest extends KernelTestCase
         LeadingEngagementCleaner::class,
         LeadingTitleRemover::class,
         EdgeBoilerplateTrimmer::class,
+        LegalLinkListRemover::class,
         SlideshowInserter::class,
         RecipeFactsCleaner::class,
         DuplicateBlockCollapser::class,

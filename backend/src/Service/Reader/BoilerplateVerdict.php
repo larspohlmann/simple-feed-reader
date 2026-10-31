@@ -23,9 +23,6 @@ final readonly class BoilerplateVerdict
         'comments', 'comments-area', 'comment-respond', 'comment-form', 'disqus',
     ];
 
-    /** A link list, or a list of picture cards, carries at least this many links. */
-    private const int MIN_LINKS_FOR_LIST = 3;
-
     /** Standalone labels that mark a block as ad chrome, no corroboration needed. */
     private const array AD_LABELS = ['advertisement', 'anzeige', 'werbung', 'sponsored'];
 
@@ -88,8 +85,7 @@ final readonly class BoilerplateVerdict
 
     private function isLinkList(Element $block): bool
     {
-        return $block->getElementsByTagName('a')->length >= self::MIN_LINKS_FOR_LIST
-            && $this->linkLists->isLinkDominated($block);
+        return $this->linkLists->isLinkList($block);
     }
 
     /**
@@ -103,7 +99,7 @@ final readonly class BoilerplateVerdict
             $cards += $link->getElementsByTagName('img')->length > 0 ? 1 : 0;
         }
 
-        return $cards >= self::MIN_LINKS_FOR_LIST;
+        return $cards >= LinkListDetector::MIN_LINKS_FOR_LIST;
     }
 
     private function hasFormOrEmail(Element $block): bool

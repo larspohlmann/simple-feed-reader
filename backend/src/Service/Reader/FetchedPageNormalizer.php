@@ -13,11 +13,12 @@ use Dom\Text;
 
 /**
  * Parses a fetched page once and runs the PageRepairInterface pipeline over it, in the order services.yaml wires,
- * before readability scores it. <script>/<style> blocks are cut from the raw source first.
+ * before readability scores it. <script> blocks are cut from the raw source first, <style> blocks after the repairs,
+ * which read the page's stylesheet.
  */
 final readonly class FetchedPageNormalizer
 {
-    private const string SCRIPT_OR_STYLE_PATTERN = '#<(script|style)\b[^>]*>.*?</\1\s*>#is';
+    private const string SCRIPT_PATTERN = '#<script\b[^>]*>.*?</script\s*>#is';
 
     /** @param iterable<PageRepairInterface> $repairs */
     public function __construct(private iterable $repairs)
@@ -47,17 +48,20 @@ final readonly class FetchedPageNormalizer
 
     private function repair(string $html): HTMLDocument
     {
-        $document = HtmlDocumentParser::parse($this->removeScriptAndStyleBlocks($html));
+        $document = HtmlDocumentParser::parse($this->removeScriptBlocks($html));
         foreach ($this->repairs as $repair) {
             $repair->repairIn($document);
+        }
+        foreach ($document->querySelectorAll('style') as $style) {
+            $style->remove();
         }
 
         return $document;
     }
 
-    private function removeScriptAndStyleBlocks(string $html): string
+    private function removeScriptBlocks(string $html): string
     {
-        return preg_replace(self::SCRIPT_OR_STYLE_PATTERN, '', $html) ?? $html;
+        return preg_replace(self::SCRIPT_PATTERN, '', $html) ?? $html;
     }
 
     private function unwrapSingleChildDivs(HTMLDocument $document): int
