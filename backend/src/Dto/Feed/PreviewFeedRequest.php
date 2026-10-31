@@ -14,8 +14,8 @@ final readonly class PreviewFeedRequest
         #[Assert\Length(max: 750)]
         public string $url = '',
         /**
-         * 'scraped' extracts the page's article list. Not an enum on purpose: any other value, known or not, takes
-         * the feed-document path instead of failing validation.
+         * A SourceFormat::VERBATIM value is previewed as that format; any other value is read as a feed document.
+         * Not an enum on purpose, so an unknown value never fails validation.
          */
         #[Assert\Length(max: 20)]
         public ?string $format = null,
