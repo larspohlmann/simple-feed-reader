@@ -21,7 +21,8 @@ write_status() {
   local request_id=$1 phase=$2 started_at=$3 finished_at=$4 exit_code=$5
   jq -n --arg requestId "${request_id}" --arg phase "${phase}" --arg startedAt "${started_at}" \
     --arg finishedAt "${finished_at}" --arg exitCode "${exit_code}" \
-    '{requestId: $requestId, phase: $phase, startedAt: $startedAt,
+    '{requestId: $requestId, phase: $phase,
+      startedAt: (if $startedAt == "" then null else $startedAt end),
       finishedAt: (if $finishedAt == "" then null else $finishedAt end),
       exitCode: (if $exitCode == "" then null else ($exitCode | tonumber) end)}' \
     | write_atomically "${STATE_DIR}/status.json"

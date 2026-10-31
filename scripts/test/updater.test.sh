@@ -96,6 +96,11 @@ watch_once
 [ -s "${work}/state/heartbeat" ] || fail 'an unreadable request keeps the heartbeat alive'
 grep -q 'request.json is unreadable' "${work}/stderr" || fail 'an unreadable request is reported'
 
+printf '{"requestId":"jkl","phase":"running"}' > "${work}/state/status.json"
+watch_once
+[ "$(status_field phase)" = failed ] || fail 'a vanished run without a start time is failed'
+[ "$(status_field startedAt)" = null ] || fail 'a missing start time is written as null, never ""'
+
 printf '#!/usr/bin/env bash\necho updating\nexit 3\n' > "${work}/repo/scripts/update.sh"
 chmod +x "${work}/repo/scripts/update.sh"
 bash "${updater}/run.sh" abc

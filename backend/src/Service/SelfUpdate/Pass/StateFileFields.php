@@ -39,7 +39,7 @@ final readonly class StateFileFields
     public function dateOrNull(string $name): ?\DateTimeImmutable
     {
         $value = $this->fields[$name] ?? null;
-        if (null === $value) {
+        if (null === $value || '' === $value) {
             return null;
         }
 

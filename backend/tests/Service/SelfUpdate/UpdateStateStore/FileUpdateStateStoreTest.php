@@ -93,6 +93,17 @@ final class FileUpdateStateStoreTest extends TestCase
         self::assertNull($run->exitCode);
     }
 
+    public function testAnEmptyStartTimeIsNoStartTime(): void
+    {
+        $this->write('status.json', '{"requestId":"abc","phase":"failed","startedAt":"","finishedAt":""}');
+
+        $run = $this->store->lastRun();
+
+        self::assertNotNull($run);
+        self::assertNull($run->startedAt);
+        self::assertNull($run->finishedAt);
+    }
+
     #[DataProvider('malformedStatusFiles')]
     public function testAStructurallyWrongStatusFileIsMalformed(string $contents): void
     {
