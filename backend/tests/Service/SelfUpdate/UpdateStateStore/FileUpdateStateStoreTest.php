@@ -146,6 +146,7 @@ final class FileUpdateStateStoreTest extends TestCase
         yield 'no request id' => ['{"phase":"running"}'];
         yield 'an unknown phase' => ['{"requestId":"abc","phase":"sleeping"}'];
         yield 'an unreadable date' => ['{"requestId":"abc","phase":"running","startedAt":"soon"}'];
+        yield 'a non-integer exit code' => ['{"requestId":"abc","phase":"failed","exitCode":"3"}'];
         yield 'the idle phase only the backend derives' => ['{"requestId":"abc","phase":"idle"}'];
         yield 'the requested phase only the backend derives' => ['{"requestId":"abc","phase":"requested"}'];
     }

@@ -41,6 +41,13 @@ final class SelfUpdaterTest extends TestCase
         self::assertTrue($this->updater()->status()->updaterPresent);
     }
 
+    public function testAHeartbeatExactlyNinetySecondsOldStillMeansAnUpdaterIsPresent(): void
+    {
+        $this->state->heartbeat = $this->secondsAgo(90);
+
+        self::assertTrue($this->updater()->status()->updaterPresent);
+    }
+
     public function testAHeartbeatNinetyOneSecondsOldMeansTheUpdaterIsGone(): void
     {
         $this->state->heartbeat = $this->secondsAgo(91);
