@@ -1706,7 +1706,7 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
 
       const marker = element.querySelector('.end-corner .top-marker')!;
-      expect(marker.nextElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
+      expect(marker.parentElement!.nextElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
     });
 
     it('keeps the corner slot in place without the button (#1945)', () => {
@@ -1715,7 +1715,7 @@ describe('EntryListComponent', () => {
 
       const marker = element.querySelector('.end-corner .top-marker')!;
       expect(element.querySelector('app-to-top-button')).toBeNull();
-      expect(marker.nextElementSibling!.classList).toContain('to-top-place');
+      expect(marker.parentElement!.nextElementSibling!.classList).toContain('to-top-place');
       expect(element.querySelector('.corner-actions')).toBeNull();
     });
 

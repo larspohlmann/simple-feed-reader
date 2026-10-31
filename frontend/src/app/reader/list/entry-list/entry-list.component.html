@@ -204,7 +204,7 @@
 @if (toTopShown || cornerLeading()) {
   <div class="end-corner">
     @if (cornerLeading(); as leading) {
-      <ng-container [ngTemplateOutlet]="leading" />
+      <span class="corner-leading"><ng-container [ngTemplateOutlet]="leading" /></span>
     }
     @if (toTopShown) {
       <app-to-top-button (activate)="scrollToTop()" />
