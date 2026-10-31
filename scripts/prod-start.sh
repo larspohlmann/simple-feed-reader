@@ -74,11 +74,7 @@ else
   fi
 fi
 
-http_port=$(env_prod_get WEB_HTTP_PORT); http_port=${http_port:-80}
-tls_port=$(env_prod_get WEB_TLS_PORT); tls_port=${tls_port:-443}
-if ! check_ports_free "${http_port}" "${tls_port}"; then
-  warn 'Both ports are published regardless of mode, so docker will fail to publish them while busy.'
-fi
+warn_if_prod_ports_busy
 
 offer_updater_if_undecided
 ensure_update_state_directory

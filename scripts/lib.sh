@@ -529,6 +529,17 @@ prod_compose() {
            --env-file .env.prod "$@" ) < /dev/null
 }
 
+# Inside an in-app update run (SFR_PROD_INTERNAL_HOST) the stack's own ports are in use by definition.
+warn_if_prod_ports_busy() {
+  [ -z "${SFR_PROD_INTERNAL_HOST:-}" ] || return 0
+  local http_port tls_port
+  http_port=$(env_prod_get WEB_HTTP_PORT); http_port=${http_port:-80}
+  tls_port=$(env_prod_get WEB_TLS_PORT); tls_port=${tls_port:-443}
+  if ! check_ports_free "${http_port}" "${tls_port}"; then
+    warn 'Both ports are published regardless of mode, so docker will fail to publish them while busy.'
+  fi
+}
+
 # Created here, not by docker: a bind mount docker creates is root-owned 0755. php (www-data) may only
 # write the request into inbox/; outbox/ is the updater's (the host user), so php can plant nothing there.
 ensure_update_state_directory() {
