@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.13] - 2026-10-31
+
+## What's Changed
+* fix(#1952): let the list's sidebar circle take its own taps by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1953
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.12...v1.6.13
+
 ## [v1.6.12] - 2026-10-31
 
 ## What's Changed
