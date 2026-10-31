@@ -506,14 +506,15 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(SourceFormat::MIXCLOUD_API, $this->feedsWithUrl($url)[0]->getSourceFormat());
     }
 
-    public function testAScrapedOutlineIsInvalidWhenScrapingIsOff(): void
+    public function testAScrapedOutlineIsInvalidEvenWhenScrapingIsOn(): void
     {
-        $user = $this->user('noscrape@example.com');
+        $user = $this->user('scrape@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $this->entityManager->flush();
         $scrapedUrl = 'https://page.example.com/news';
-        $goodUrl = 'https://ok.example.com/feed.xml';
         $opml = $this->opml(
             '<outline type="rss" text="Page" xmlUrl="' . $scrapedUrl . '" sourceFormat="scraped"/>'
-            . '<outline type="rss" text="Good" xmlUrl="' . $goodUrl . '"/>',
+            . '<outline type="rss" text="Good" xmlUrl="https://ok.example.com/feed.xml"/>',
         );
 
         $result = $this->importer()->import($user, $opml);
@@ -521,22 +522,6 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(1, $result->invalid);
         self::assertSame(1, $result->imported);
         self::assertSame([], $this->feedsWithUrl($scrapedUrl));
-    }
-
-    public function testAScrapedOutlineImportsWhenScrapingIsOn(): void
-    {
-        $user = $this->user('scrape@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $this->entityManager->flush();
-        $url = 'https://page.example.com/news';
-
-        $result = $this->importer()->import(
-            $user,
-            $this->opml('<outline type="rss" text="Page" xmlUrl="' . $url . '" sourceFormat="scraped"/>'),
-        );
-
-        self::assertSame(1, $result->imported);
-        self::assertSame(SourceFormat::SCRAPED, $this->feedsWithUrl($url)[0]->getSourceFormat());
     }
 
     private function storedTag(User $user, string $name, ?Tag $parent): Tag

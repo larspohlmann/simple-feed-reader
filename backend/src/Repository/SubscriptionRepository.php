@@ -49,13 +49,14 @@ final class SubscriptionRepository extends ServiceEntityRepository
 
     /**
      * What an OPML export carries: a private feed is read through an account the file does not hold, except an author
-     * feed, which follows one person a public RSS feed names too; a saved feed is this reader's own.
+     * feed, which follows one person a public RSS feed names too; a saved feed and a scraped page are this reader's
+     * own.
      *
      * @return list<Subscription>
      */
     public function findExportableForUserWithTags(int $userId): array
     {
-        return $this->withTagsExcluding($userId, SourceFormat::NOT_PROFILES);
+        return $this->withTagsExcluding($userId, [...SourceFormat::NOT_PROFILES, SourceFormat::SCRAPED]);
     }
 
     /**

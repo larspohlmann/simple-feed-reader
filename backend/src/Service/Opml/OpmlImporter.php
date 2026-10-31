@@ -6,8 +6,6 @@ namespace App\Service\Opml;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\Model\OpmlImportResultModel;
 use App\Service\Subscription\BulkSubscriber;
@@ -22,7 +20,6 @@ final readonly class OpmlImporter
     public function __construct(
         private OpmlBodyReader $bodyReader,
         private BulkSubscriber $subscriber,
-        private ScrapeFallbackPolicy $scrapeFallbackPolicy,
     ) {
     }
 
@@ -35,7 +32,7 @@ final readonly class OpmlImporter
         $body = $this->bodyReader->read($opml);
 
         $items = $this->collectFeeds($body, []);
-        $permitted = $this->withoutRefusedScrapes($user, $items);
+        $permitted = $this->withoutScraped($items);
         $result = $this->subscriber->subscribeAll($user, $permitted);
 
         return new OpmlImportResultModel(
@@ -86,12 +83,8 @@ final readonly class OpmlImporter
      *
      * @return list<BulkSubscribeItemModel>
      */
-    private function withoutRefusedScrapes(User $user, array $items): array
+    private function withoutScraped(array $items): array
     {
-        if ($this->scrapeFallbackPolicy->forUser($user) === ScrapeFallback::Enabled) {
-            return $items;
-        }
-
         return array_values(array_filter(
             $items,
             static fn (BulkSubscribeItemModel $item): bool => $item->sourceFormat !== SourceFormat::SCRAPED,
