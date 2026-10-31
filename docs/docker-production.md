@@ -375,7 +375,8 @@ terminal of an install that never answered it; without a terminal (an update
 started from the app, a cron job) it asks nothing and prints a hint. Turn the
 updater on at any time with `./scripts/prod-configure.sh`.
 
-The updater holds the Docker socket; see [security.md](security.md#self-update-updater).
+The updater does the same job as `./scripts/update.sh`, with the same access to Docker, and the app can only ask it
+for the latest release; [security.md](security.md#self-update-updater) has the details.
 
 Maintainers: the state files in `docker/updater/` are read across versions (an
 old run writes what a new watcher and backend read), so fields are only ever
