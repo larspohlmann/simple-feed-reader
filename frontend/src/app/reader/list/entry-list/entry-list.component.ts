@@ -160,6 +160,8 @@ export class EntryListComponent implements OnDestroy {
    *  puts its "Show sidebar" button here when the sidebar is collapsed; the list
    *  only owns the slot, not what fills it. */
   readonly headerLeading = input<TemplateRef<unknown> | null>(null);
+  /** Rendered left of the to-top circle, with it. Same arrangement as `headerLeading`. */
+  readonly cornerLeading = input<TemplateRef<unknown> | null>(null);
   /** The words the search engine actually matched, from
    *  `EntriesStore.matchedWords`. Empty outside a search, and also empty when
    *  the LIKE fallback (no engine installed) answered instead. */

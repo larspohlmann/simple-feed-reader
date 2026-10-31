@@ -385,6 +385,53 @@ describe('ReaderShellComponent', () => {
       expect(element.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
     });
 
+    describe('the list corner circle (#1943)', () => {
+      function scrollListDown(fixture: ComponentFixture<ReaderShellComponent>): void {
+        const list = fixture.debugElement.query(By.directive(EntryListComponent))
+          .componentInstance as EntryListComponent;
+        list.scrolling.onScroll({ target: { scrollTop: 900 } } as unknown as Event);
+        fixture.detectChanges();
+      }
+
+      const cornerButton = (fixture: ComponentFixture<ReaderShellComponent>) =>
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '.end-corner .corner-sidebar',
+        ) as HTMLButtonElement | null;
+
+      it('opens the drawer on a narrow layout', () => {
+        screen.isNarrow.set(true);
+        const fixture = boot();
+        scrollListDown(fixture);
+
+        cornerButton(fixture)!.click();
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance.sidebarOpen()).toBe(true);
+      });
+
+      it('shows a hidden sidebar again on a wide layout', () => {
+        const fixture = boot();
+        TestBed.inject(SidebarVisibilityService).hide();
+        fixture.detectChanges();
+        scrollListDown(fixture);
+
+        cornerButton(fixture)!.click();
+        fixture.detectChanges();
+
+        expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(false);
+      });
+
+      it('is absent on a wide layout while the sidebar shows', () => {
+        const fixture = boot();
+        scrollListDown(fixture);
+
+        expect(
+          (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
+        ).not.toBeNull();
+        expect(cornerButton(fixture)).toBeNull();
+      });
+    });
+
     it('never hides the body column on a narrow layout, where the drawer rules', () => {
       screen.isNarrow.set(true);
       const fixture = boot();

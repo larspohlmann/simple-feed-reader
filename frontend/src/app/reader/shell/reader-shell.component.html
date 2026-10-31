@@ -163,6 +163,7 @@
         [leadingActions]="listEditAction"
         [topBlock]="feedIntro"
         [headerLeading]="sidebarShow"
+        [cornerLeading]="sidebarCorner"
         (loadMore)="entries.loadMore()"
         (retry)="entries.retry()"
         (dismiss)="entries.dismissError()"
@@ -262,11 +263,24 @@
         type="button"
         [attr.aria-label]="'reader.showSidebar' | transloco"
         [attr.title]="'reader.showSidebar' | transloco"
-        (click)="sidebarVisibility.show()"
+        (click)="openSidebar()"
       >
         <app-icon name="left_panel_open" size="md" />
       </button>
     </span>
+  }
+</ng-template>
+
+<ng-template #sidebarCorner>
+  @if (sidebarOutOfView()) {
+    <button
+      class="corner-sidebar"
+      type="button"
+      [attr.aria-label]="'reader.showSidebar' | transloco"
+      (click)="openSidebar()"
+    >
+      <app-icon name="left_panel_open" size="dense" />
+    </button>
   }
 </ng-template>
 
