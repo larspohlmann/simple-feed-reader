@@ -223,18 +223,21 @@ describe('SelfUpdateComponent', () => {
     expect(updateStatus).toHaveBeenCalledTimes(2);
   });
 
-  it('gives up on a failing first read after one retry until the tab is shown again', () => {
+  it('keeps retrying a failing first read while the tab is visible and holds it while hidden', () => {
     updateStatus.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
     const fixture = mount();
 
     advancePoll(fixture);
     advancePoll(fixture);
-    advancePoll(fixture);
-    expect(updateStatus).toHaveBeenCalledTimes(2);
+    expect(updateStatus).toHaveBeenCalledTimes(3);
 
     setTab(fixture, 'hidden');
-    setTab(fixture, 'visible');
+    advancePoll(fixture);
+    advancePoll(fixture);
     expect(updateStatus).toHaveBeenCalledTimes(3);
+
+    setTab(fixture, 'visible');
+    expect(updateStatus).toHaveBeenCalledTimes(4);
   });
 
   it('holds a due poll while the tab is hidden and reads once it is shown', () => {

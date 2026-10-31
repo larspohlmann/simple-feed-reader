@@ -42,7 +42,6 @@ export class SelfUpdateComponent implements OnInit {
   readonly refusal = signal<string | null>(null);
   readonly starting = signal(false);
   private pollDue = false;
-  private failedFirstReads = 0;
 
   readonly inProgress = computed(() => {
     const phase = this.status()?.phase;
@@ -126,16 +125,8 @@ export class SelfUpdateComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (status) => this.apply(status),
-        error: () => this.retryOrWaitForTab(),
+        error: () => this.schedulePoll(),
       });
-  }
-
-  private retryOrWaitForTab(): void {
-    if (this.status() === null && ++this.failedFirstReads > 1) {
-      this.pollDue = true;
-      return;
-    }
-    this.schedulePoll();
   }
 
   private apply(status: SelfUpdateStatusDto): void {
