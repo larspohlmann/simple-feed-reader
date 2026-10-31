@@ -1,10 +1,7 @@
 @use '../../theme/corner-circle-button' as circle;
 
-/* Out of flow by default so it can hang in a corner; the consumer supplies
-   offsets, stacking order, and whether it pins to the viewport. That override
-   must come from the consumer's own stylesheet, which outranks this `:host`. */
+/* Positioning, offsets and stacking are the consumer's. */
 :host {
-  position: absolute;
   display: inline-flex;
 }
 

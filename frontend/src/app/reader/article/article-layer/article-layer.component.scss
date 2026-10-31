@@ -74,24 +74,28 @@
 }
 
 /* The corner buttons, pinned to the pane's corners, so they sit clear of the audio player. */
-app-to-top-button,
+.end-corner,
 .corner-actions {
   position: absolute;
   bottom: var(--space-5);
   z-index: 20;
-}
-
-app-to-top-button {
-  right: var(--space-5);
-}
-
-.corner-actions {
-  left: var(--space-5);
 
   @include circle.corner-group;
 }
 
-:host-context(.is-narrow) app-to-top-button,
+.end-corner {
+  right: var(--space-5);
+}
+
+.corner-back {
+  @include circle.corner-circle-button;
+}
+
+.corner-actions {
+  left: var(--space-5);
+}
+
+:host-context(.is-narrow) .end-corner,
 :host-context(.is-narrow) .corner-actions {
   @include circle.corner-toast-lift;
 }
