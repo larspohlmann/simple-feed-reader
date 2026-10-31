@@ -209,6 +209,24 @@ final class FileUpdateStateStoreTest extends TestCase
         }
     }
 
+    public function testSavingWritesNothingOutsideTheInbox(): void
+    {
+        mkdir($this->directory . '/inbox', recursive: true);
+        chmod($this->directory, 0o555);
+        if (is_writable($this->directory)) {
+            chmod($this->directory, 0o755);
+            self::markTestSkipped('root writes into a read-only directory.');
+        }
+
+        try {
+            $this->store->saveRequest($this->request());
+        } finally {
+            chmod($this->directory, 0o755);
+        }
+
+        self::assertSame('0123456789abcdef', $this->store->pendingRequestId());
+    }
+
     public function testSavingNeedsTheInboxNotJustTheStateDirectory(): void
     {
         mkdir($this->directory . '/outbox', recursive: true);
