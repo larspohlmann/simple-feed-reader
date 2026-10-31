@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlImporter;
 use App\Service\Subscription\SubscriptionService;
@@ -467,6 +468,42 @@ final class OpmlImporterTest extends DbTestCase
         $this->importer()->import($user, $opml);
 
         self::assertSame('Reading', $this->tagNamed($user, 'Long reads')->getParent()?->getName());
+    }
+
+    public function testADeclaredVerbatimFormatImportsAsThatFormat(): void
+    {
+        $user = $this->user('wpjson@example.com');
+        $url = 'https://blog.example.com/wp-json/wp/v2/posts';
+
+        $this->importer()->import(
+            $user,
+            $this->opml('<outline type="rss" text="Blog" xmlUrl="' . $url . '" sourceFormat="wp-json"/>'),
+        );
+
+        self::assertSame(SourceFormat::WP_JSON, $this->feedsWithUrl($url)[0]->getSourceFormat());
+    }
+
+    public function testADeclaredFormatThatIsNotVerbatimImportsAsXml(): void
+    {
+        $user = $this->user('social@example.com');
+        $url = 'https://social.example.com/feed';
+
+        $this->importer()->import(
+            $user,
+            $this->opml('<outline type="rss" text="S" xmlUrl="' . $url . '" sourceFormat="bluesky-api"/>'),
+        );
+
+        self::assertSame(SourceFormat::XML, $this->feedsWithUrl($url)[0]->getSourceFormat());
+    }
+
+    public function testACloudcastsUrlWithoutAFormatImportsAsMixcloud(): void
+    {
+        $user = $this->user('mixcloud@example.com');
+        $url = 'https://api.mixcloud.com/johndigweed/cloudcasts/';
+
+        $this->importer()->import($user, $this->opml('<outline type="rss" text="JD" xmlUrl="' . $url . '"/>'));
+
+        self::assertSame(SourceFormat::MIXCLOUD_API, $this->feedsWithUrl($url)[0]->getSourceFormat());
     }
 
     private function storedTag(User $user, string $name, ?Tag $parent): Tag

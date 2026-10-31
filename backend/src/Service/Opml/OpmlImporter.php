@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Opml;
 
 use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\Model\OpmlImportResultModel;
 use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Url\Support\MixcloudUrl;
 
 /** Imports OPML into subscriptions WITHOUT fetching anything, mapping its outline tree onto BulkSubscriber items. */
 final readonly class OpmlImporter
@@ -56,7 +58,11 @@ final readonly class OpmlImporter
 
             $xmlUrl = trim($child->getAttribute('xmlUrl'));
             if ($xmlUrl !== '') {
-                $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagPath: $groupPath);
+                $items[] = new BulkSubscribeItemModel(
+                    feedUrl: $xmlUrl,
+                    tagPath: $groupPath,
+                    sourceFormat: $this->sourceFormatOf($child, $xmlUrl),
+                );
                 continue;
             }
 
@@ -68,6 +74,16 @@ final readonly class OpmlImporter
         }
 
         return $items;
+    }
+
+    private function sourceFormatOf(\DOMElement $outline, string $xmlUrl): string
+    {
+        $declared = $outline->getAttribute('sourceFormat');
+        if (SourceFormat::isVerbatim($declared)) {
+            return $declared;
+        }
+
+        return MixcloudUrl::isCloudcastsUrl($xmlUrl) ? SourceFormat::MIXCLOUD_API : SourceFormat::XML;
     }
 
     private function groupName(\DOMElement $outline): ?string
