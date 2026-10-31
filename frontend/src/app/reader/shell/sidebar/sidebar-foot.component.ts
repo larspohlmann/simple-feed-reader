@@ -36,7 +36,7 @@ export class SidebarFootComponent {
   readonly version = buildVersion.version;
 
   private readonly versions = inject(VersionService);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   readonly screen = inject(LayoutService);
 
   /** Toggled by the Organise switch and read by the sidebar to hide the nav. */
@@ -48,8 +48,6 @@ export class SidebarFootComponent {
   readonly availableUpdate = computed(() =>
     this.versions.updateAvailable() ? this.versions.latest() : null,
   );
-
-  readonly isAdmin = computed(() => this.auth.isAdmin());
 
   /** Whole days left in the current trial, or null when the account has no
    *  active trial. Expired trials read as null here — the account is suspended

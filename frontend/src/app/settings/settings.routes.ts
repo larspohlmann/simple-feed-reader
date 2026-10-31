@@ -81,7 +81,6 @@ export const SETTINGS_ROUTES: Routes = [
             (module) => module.StatisticsSectionComponent,
           ),
       },
-      // #1947: About became admin-only; the old path forwards to what every user had there.
       { path: 'about', redirectTo: 'statistics', pathMatch: 'full' },
       {
         path: 'admin/users',
