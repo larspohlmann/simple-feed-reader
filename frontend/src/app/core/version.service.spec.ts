@@ -202,6 +202,18 @@ describe('VersionService', () => {
     ctrl.expectOne('https://api.test/api/version').flush(release);
   });
 
+  it('retries on a freshness-gated call after a failed load', () => {
+    service.load();
+    ctrl
+      .expectOne('https://api.test/api/version')
+      .flush(null, { status: 502, statusText: 'Bad Gateway' });
+
+    jest.setSystemTime(Date.now() + 60_000);
+    service.loadIfStale();
+
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+  });
+
   it('waits for the first load before checking on its own', () => {
     showTab();
     ctrl.expectNone('https://api.test/api/version');

@@ -71,7 +71,8 @@ export class VersionService {
   }
 
   loadIfStale(): void {
-    if (this.lastLoadedAt !== null && Date.now() - this.lastLoadedAt < RECHECK_AFTER_MS) return;
+    const fresh = this.lastLoadedAt !== null && Date.now() - this.lastLoadedAt < RECHECK_AFTER_MS;
+    if (fresh && !this.unavailable()) return;
     this.load();
   }
 }
