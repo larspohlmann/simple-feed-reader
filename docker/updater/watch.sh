@@ -22,7 +22,7 @@ remove_stopped_run_container() {
 # Paths after -v are host paths: the daemon resolves them, not this container.
 start_run() {
   local request_id=$1
-  : > "${STATE_DIR}/run.log"
+  : > "${OUTBOX_DIR}/run.log"
   write_status "${request_id}" running "$(now_iso)" '' ''
   remove_stopped_run_container
   docker run -d --rm --name "${RUN_CONTAINER}" \
@@ -32,19 +32,23 @@ start_run() {
     -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "${SFR_REPO_ROOT}:${SFR_REPO_ROOT}" \
-    -v "${SFR_REPO_ROOT}/.update-state:/state" \
+    -v "${SFR_REPO_ROOT}/.update-state/inbox:/state/inbox:ro" \
+    -v "${SFR_REPO_ROOT}/.update-state/outbox:/state/outbox" \
     --entrypoint sfr-updater-run "${UPDATER_IMAGE}" "${request_id}" >/dev/null
 }
 
 fail_vanished_run() {
-  local status_file="${STATE_DIR}/status.json"
+  local status_file="${OUTBOX_DIR}/status.json"
   [ "$(json_field "${status_file}" phase)" = running ] || return 0
   write_status "$(json_field "${status_file}" requestId)" failed \
     "$(json_field "${status_file}" startedAt)" "$(now_iso)" ''
 }
 
+# The id reaches status.json and docker run's argv; the backend only ever writes 16 hex digits.
+is_request_id() { [[ $1 =~ ^[0-9a-f]{16}$ ]]; }
+
 tick() {
-  date -u +%s | write_atomically "${STATE_DIR}/heartbeat"
+  date -u +%s | write_atomically "${OUTBOX_DIR}/heartbeat"
 
   local running_run
   if ! running_run=$(docker ps -q --filter "name=^${RUN_CONTAINER}$"); then
@@ -57,11 +61,15 @@ tick() {
   fail_vanished_run
 
   local request_id
-  if ! request_id=$(json_field "${STATE_DIR}/request.json" id); then
+  if ! request_id=$(json_field "${INBOX_DIR}/request.json" id); then
     warn 'request.json is unreadable; treating it as no request'
     return 0
   fi
-  if [ -z "${request_id}" ] || [ "${request_id}" = "$(json_field "${STATE_DIR}/status.json" requestId)" ]; then
+  if [ -z "${request_id}" ] || [ "${request_id}" = "$(json_field "${OUTBOX_DIR}/status.json" requestId)" ]; then
+    return 0
+  fi
+  if ! is_request_id "${request_id}"; then
+    warn 'ignoring request.json: its id is not 16 lowercase hex digits'
     return 0
   fi
   start_run "${request_id}" \

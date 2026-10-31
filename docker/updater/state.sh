@@ -1,7 +1,13 @@
 # shellcheck shell=bash
-# The state directory contract shared by watch.sh and run.sh (#1948).
-# The files are read across versions (an old run writes what a newer watcher or backend reads): only ever add fields.
+# The state directory contract shared by watch.sh, run.sh and the backend (#1948).
+# inbox/ (world-writable, read-only here) holds the app's request.json; outbox/ (the host user's, read-only
+# to php) holds heartbeat, status.json and run.log. The files are read across versions (an old run writes what
+# a newer watcher or backend reads): only ever add fields, and the status.json phases running|succeeded|failed
+# are frozen.
 STATE_DIR=${SFR_STATE_DIR:-/state}
+# shellcheck disable=SC2034 # read by watch.sh
+INBOX_DIR="${STATE_DIR}/inbox"
+OUTBOX_DIR="${STATE_DIR}/outbox"
 
 now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
@@ -12,9 +18,11 @@ json_field() {
 }
 
 write_atomically() {
-  local target=$1
-  cat > "${target}.tmp"
-  mv -f "${target}.tmp" "${target}"
+  local target=$1 temporary
+  temporary=$(mktemp "${OUTBOX_DIR}/.write.XXXXXX")
+  cat > "${temporary}"
+  chmod 0644 "${temporary}"
+  mv -f "${temporary}" "${target}"
 }
 
 write_status() {
@@ -25,5 +33,5 @@ write_status() {
       startedAt: (if $startedAt == "" then null else $startedAt end),
       finishedAt: (if $finishedAt == "" then null else $finishedAt end),
       exitCode: (if $exitCode == "" then null else ($exitCode | tonumber) end)}' \
-    | write_atomically "${STATE_DIR}/status.json"
+    | write_atomically "${OUTBOX_DIR}/status.json"
 }

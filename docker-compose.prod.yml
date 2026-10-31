@@ -196,7 +196,8 @@ services:
       # Logs and cache pools outlive the container; JWT keys outlive rebuilds.
       - php-var:/app/var
       - jwt-keys:/app/config/jwt
-      - ./.update-state:/app/update-state
+      - ./.update-state/inbox:/app/update-state/inbox
+      - ./.update-state/outbox:/app/update-state/outbox:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -290,7 +291,8 @@ services:
       HOME: /tmp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./.update-state:/state
+      - ./.update-state/inbox:/state/inbox:ro
+      - ./.update-state/outbox:/state/outbox
 
 volumes:
   mysql-data:

@@ -76,8 +76,8 @@ final class AdminUpdateControllerTest extends ApiTestCase
 
     public function testRequestingWhileARequestIsPendingIsAConflict(): void
     {
-        $this->writeState('heartbeat', (string) time());
-        $this->writeState('request.json', '{"id":"0123456789abcdef","requestedBy":"boss@example.com"}');
+        $this->writeState('outbox/heartbeat', (string) time());
+        $this->writeState('inbox/request.json', '{"id":"0123456789abcdef","requestedBy":"boss@example.com"}');
 
         $this->postAsAdmin();
 
@@ -88,7 +88,7 @@ final class AdminUpdateControllerTest extends ApiTestCase
     /** The test env reports no latest release (VersionControllerTest), so there is never an update to take. */
     public function testRequestingWithoutANewerReleaseIsAConflict(): void
     {
-        $this->writeState('heartbeat', (string) time());
+        $this->writeState('outbox/heartbeat', (string) time());
 
         $this->postAsAdmin();
 

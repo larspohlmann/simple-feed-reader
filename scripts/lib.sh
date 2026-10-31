@@ -529,11 +529,17 @@ prod_compose() {
            --env-file .env.prod "$@" ) < /dev/null
 }
 
-# Created here, not by docker: a bind mount docker creates is root-owned 0755,
-# and php (www-data) and the updater (the host user) both write into it.
+# Created here, not by docker: a bind mount docker creates is root-owned 0755. php (www-data) may only
+# write the request into inbox/; outbox/ is the updater's (the host user), so php can plant nothing there.
 ensure_update_state_directory() {
-  mkdir -p "${REPO_ROOT}/.update-state"
-  chmod 1777 "${REPO_ROOT}/.update-state"
+  local state="${REPO_ROOT}/.update-state"
+  if mkdir -p "${state}/inbox" "${state}/outbox" 2>/dev/null \
+    && chmod 0755 "${state}" "${state}/outbox" 2>/dev/null \
+    && chmod 1777 "${state}/inbox" 2>/dev/null; then
+    return 0
+  fi
+  warn "Could not prepare ${state} (another user, likely root, owns it); the in-app updater will report absent."
+  warn "Fix it with: sudo chown -R \"\$(id -u):\$(id -g)\" .update-state  (in ${REPO_ROOT}), then re-run this script."
 }
 
 # Derive the checked-out tree's release version and export it as the build args

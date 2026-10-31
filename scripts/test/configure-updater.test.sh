@@ -147,4 +147,25 @@ printf 'UPDATER_ENABLED=\n' > "${ENV_PROD_FILE}"
 use_updater > /dev/null 2>&1 || true
 assert_env UPDATER_ENABLED ''
 
+# --- 8. the state directory: a world-writable inbox, an outbox only the host user writes
+REPO_ROOT="${work}/install"
+mkdir -p "${REPO_ROOT}"
+ensure_update_state_directory
+mode() { stat -c %a "$1" 2>/dev/null || stat -f '%Mp%Lp' "$1" | sed 's/^0//'; }
+[ "$(mode "${REPO_ROOT}/.update-state")" = 755 ] || fail 'the state directory is 0755'
+[ "$(mode "${REPO_ROOT}/.update-state/inbox")" = 1777 ] || fail 'the inbox is world-writable and sticky'
+[ "$(mode "${REPO_ROOT}/.update-state/outbox")" = 755 ] || fail 'only the host user writes the outbox'
+
+if [ "$(id -u)" -ne 0 ]; then
+  rm -rf "${REPO_ROOT}/.update-state"
+  mkdir -m 0555 "${REPO_ROOT}/.update-state"
+  warnings=$(ensure_update_state_directory 2>&1) || fail 'a state directory owned by someone else never aborts the start'
+  chmod 0755 "${REPO_ROOT}/.update-state"
+  # shellcheck disable=SC2016 # the fix is printed for the operator to run, unexpanded
+  case "${warnings}" in
+    *'sudo chown -R "$(id -u):$(id -g)" .update-state'*) ;;
+    *) fail "a state directory owned by someone else names the chown fix, got: ${warnings}" ;;
+  esac
+fi
+
 printf 'ok: configure_updater\n'

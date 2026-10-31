@@ -15,6 +15,16 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 {
     private const int LOG_TAIL_BYTES = 16384;
 
+    private const string HEARTBEAT = 'outbox/heartbeat';
+
+    private const string STATUS = 'outbox/status.json';
+
+    private const string RUN_LOG = 'outbox/run.log';
+
+    private const string INBOX = 'inbox';
+
+    private const string REQUEST = self::INBOX . '/request.json';
+
     public function __construct(
         #[Autowire('%update_state_directory%')]
         private string $directory,
@@ -23,7 +33,7 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
     public function heartbeatAt(): ?\DateTimeImmutable
     {
-        $seconds = trim($this->contentsOrEmpty('heartbeat'));
+        $seconds = trim($this->contentsOrEmpty(self::HEARTBEAT));
         if (!ctype_digit($seconds)) {
             return null;
         }
@@ -33,12 +43,12 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
     public function pendingRequestId(): ?string
     {
-        return $this->decodedFile('request.json')?->requiredString('id');
+        return $this->decodedFile(self::REQUEST)?->requiredString('id');
     }
 
     public function lastRun(): ?UpdateRunModel
     {
-        $status = $this->decodedFile('status.json');
+        $status = $this->decodedFile(self::STATUS);
         if (null === $status) {
             return null;
         }
@@ -54,7 +64,7 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
     public function logTail(): string
     {
-        $path = $this->path('run.log');
+        $path = $this->path(self::RUN_LOG);
         $size = is_file($path) ? filesize($path) : false;
         if (false === $size) {
             return '';
@@ -65,15 +75,16 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
     public function saveRequest(UpdateRequestModel $request): void
     {
-        if (!is_writable($this->directory)) {
-            throw new UpdateRequestNotSavedException(sprintf('%s is not a writable directory.', $this->directory));
+        $inbox = $this->path(self::INBOX);
+        if (!is_writable($inbox)) {
+            throw new UpdateRequestNotSavedException(sprintf('%s is not a writable directory.', $inbox));
         }
 
-        $temporaryPath = $this->path('request.json.tmp');
+        $temporaryPath = $this->path(self::REQUEST . '.tmp');
         if (false === file_put_contents($temporaryPath, $request->toStateFileJson())) {
             throw new UpdateRequestNotSavedException(sprintf('%s could not be written.', $temporaryPath));
         }
-        if (!rename($temporaryPath, $this->path('request.json'))) {
+        if (!rename($temporaryPath, $this->path(self::REQUEST))) {
             throw new UpdateRequestNotSavedException(sprintf('%s could not be moved into place.', $temporaryPath));
         }
     }

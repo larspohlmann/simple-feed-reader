@@ -40,7 +40,7 @@ final class FileUpdateStateStoreTest extends TestCase
 
     public function testReadsTheHeartbeatAsAUtcInstant(): void
     {
-        $this->write('heartbeat', "1793440800\n");
+        $this->write('outbox/heartbeat', "1793440800\n");
 
         $heartbeat = $this->store->heartbeatAt();
 
@@ -50,21 +50,21 @@ final class FileUpdateStateStoreTest extends TestCase
 
     public function testAnEmptyHeartbeatIsNoHeartbeat(): void
     {
-        $this->write('heartbeat', '');
+        $this->write('outbox/heartbeat', '');
 
         self::assertNull($this->store->heartbeatAt());
     }
 
     public function testANonNumericHeartbeatIsNoHeartbeat(): void
     {
-        $this->write('heartbeat', 'abc');
+        $this->write('outbox/heartbeat', 'abc');
 
         self::assertNull($this->store->heartbeatAt());
     }
 
     public function testReadsTheLastRunAndIgnoresUnknownFields(): void
     {
-        $this->write('status.json', json_encode([
+        $this->write('outbox/status.json', json_encode([
             'requestId' => 'abc',
             'phase' => 'failed',
             'startedAt' => '2026-10-31T11:00:00+01:00',
@@ -85,7 +85,7 @@ final class FileUpdateStateStoreTest extends TestCase
 
     public function testARunningRunHasNoFinishOrExitCodeYet(): void
     {
-        $this->write('status.json', json_encode([
+        $this->write('outbox/status.json', json_encode([
             'requestId' => 'abc',
             'phase' => 'running',
             'startedAt' => '2026-10-31T10:00:00Z',
@@ -103,7 +103,7 @@ final class FileUpdateStateStoreTest extends TestCase
 
     public function testAnEmptyStartTimeIsNoStartTime(): void
     {
-        $this->write('status.json', '{"requestId":"abc","phase":"failed","startedAt":"","finishedAt":""}');
+        $this->write('outbox/status.json', '{"requestId":"abc","phase":"failed","startedAt":"","finishedAt":""}');
 
         $run = $this->store->lastRun();
 
@@ -115,7 +115,7 @@ final class FileUpdateStateStoreTest extends TestCase
     #[DataProvider('malformedStatusFiles')]
     public function testAStructurallyWrongStatusFileIsMalformed(string $contents): void
     {
-        $this->write('status.json', $contents);
+        $this->write('outbox/status.json', $contents);
 
         $this->expectException(MalformedUpdateStateException::class);
 
@@ -135,33 +135,33 @@ final class FileUpdateStateStoreTest extends TestCase
     public function testTheLogTailIsTheLastSixteenKibibytes(): void
     {
         $log = str_repeat('a', 24 * 1024) . str_repeat('b', 16 * 1024);
-        $this->write('run.log', $log);
+        $this->write('outbox/run.log', $log);
 
         self::assertSame(str_repeat('b', 16 * 1024), $this->store->logTail());
     }
 
     public function testAShortLogIsReadWhole(): void
     {
-        $this->write('run.log', "pulling images\n");
+        $this->write('outbox/run.log', "pulling images\n");
 
         self::assertSame("pulling images\n", $this->store->logTail());
     }
 
     public function testASavedRequestReadsBackAsPendingWithoutATempFileLeft(): void
     {
-        mkdir($this->directory);
+        mkdir($this->directory . '/inbox', recursive: true);
 
         $this->store->saveRequest($this->request());
 
         self::assertSame('0123456789abcdef', $this->store->pendingRequestId());
-        self::assertFileDoesNotExist($this->directory . '/request.json.tmp');
+        self::assertFileDoesNotExist($this->directory . '/inbox/request.json.tmp');
         self::assertSame(
             [
                 'id' => '0123456789abcdef',
                 'requestedBy' => 'boss@example.com',
                 'requestedAt' => '2026-10-31T10:00:00+00:00',
             ],
-            json_decode((string) file_get_contents($this->directory . '/request.json'), true),
+            json_decode((string) file_get_contents($this->directory . '/inbox/request.json'), true),
         );
     }
 
@@ -172,21 +172,44 @@ final class FileUpdateStateStoreTest extends TestCase
         $this->store->saveRequest($this->request());
     }
 
-    public function testSavingIntoAReadOnlyDirectoryFails(): void
+    public function testSavingIntoAReadOnlyInboxFails(): void
     {
-        mkdir($this->directory, 0o555);
-        if (is_writable($this->directory)) {
+        $inbox = $this->directory . '/inbox';
+        mkdir($inbox, 0o555, recursive: true);
+        if (is_writable($inbox)) {
             self::markTestSkipped('root writes into a read-only directory.');
         }
 
         try {
             $this->store->saveRequest($this->request());
-            self::fail('A read-only directory took the request.');
+            self::fail('A read-only inbox took the request.');
         } catch (UpdateRequestNotSavedException) {
-            self::assertFileDoesNotExist($this->directory . '/request.json');
+            self::assertFileDoesNotExist($inbox . '/request.json');
         } finally {
-            chmod($this->directory, 0o755);
+            chmod($inbox, 0o755);
         }
+    }
+
+    public function testSavingNeedsTheInboxNotJustTheStateDirectory(): void
+    {
+        mkdir($this->directory . '/outbox', recursive: true);
+
+        $this->expectException(UpdateRequestNotSavedException::class);
+
+        $this->store->saveRequest($this->request());
+    }
+
+    public function testTheRunIsReadFromTheOutboxAndTheRequestFromTheInbox(): void
+    {
+        $this->write('heartbeat', '1793440800');
+        $this->write('status.json', '{"requestId":"abc","phase":"failed"}');
+        $this->write('run.log', 'misplaced');
+        $this->write('outbox/request.json', '{"id":"0123456789abcdef"}');
+
+        self::assertNull($this->store->heartbeatAt());
+        self::assertNull($this->store->lastRun());
+        self::assertSame('', $this->store->logTail());
+        self::assertNull($this->store->pendingRequestId());
     }
 
     private function request(): UpdateRequestModel
