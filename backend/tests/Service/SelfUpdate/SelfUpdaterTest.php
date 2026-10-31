@@ -64,6 +64,13 @@ final class SelfUpdaterTest extends TestCase
         self::assertSame($this->state->lastRun, $status->lastRun);
     }
 
+    public function testARunWithoutARequestFileReportsItsOwnPhase(): void
+    {
+        $this->state->lastRun = $this->runOf('abc', SelfUpdatePhase::Failed);
+
+        self::assertSame(SelfUpdatePhase::Failed, $this->updater()->status()->phase);
+    }
+
     public function testARequestNoRunHasTakenUpYetIsRequested(): void
     {
         $this->state->pendingRequestId = 'def';
