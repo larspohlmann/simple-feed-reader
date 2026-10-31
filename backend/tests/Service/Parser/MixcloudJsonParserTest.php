@@ -134,7 +134,7 @@ final class MixcloudJsonParserTest extends TestCase
     public static function bodiesThatAreNoCloudcastsList(): iterable
     {
         yield 'an empty body' => ['   '];
-        yield 'text that is no JSON' => ['<html>'];
+        yield 'text that is no JSON' => ['not json at all'];
         yield 'a JSON null' => ['null'];
         yield 'a JSON list' => ['[]'];
         yield 'an API error' => ['{"error":{"type":"NotFound","message":"Not found"}}'];

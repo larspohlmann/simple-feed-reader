@@ -73,8 +73,8 @@ final class FeedBodyParserWiringTest extends KernelTestCase
 
     public function testWpJsonFormatResolvesToTheWordPressParser(): void
     {
-        $feed = new \App\Entity\Feed('https://site.example/wp-json/wp/v2/posts?per_page=50&_embed');
-        $feed->setSourceFormat(\App\Enum\SourceFormat::WP_JSON);
+        $feed = new Feed('https://site.example/wp-json/wp/v2/posts?per_page=50&_embed');
+        $feed->setSourceFormat(SourceFormat::WP_JSON);
 
         $body = '[{"id":1,"link":"https://site.example/p","title":{"rendered":"Post"},'
             . '"content":{"rendered":"<p>Body.</p>"},"date_gmt":"2026-08-20T10:00:00"}]';
