@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\SelfUpdateProblems;
+use App\Service\SelfUpdate\Exception\MalformedUpdateStateException;
 use App\Service\SelfUpdate\Exception\NoUpdateAvailableException;
 use App\Service\SelfUpdate\Exception\UpdateInProgressException;
+use App\Service\SelfUpdate\Exception\UpdateRequestNotSavedException;
 use App\Service\SelfUpdate\Exception\UpdaterUnavailableException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -38,6 +40,16 @@ final class SelfUpdateProblemsTest extends TestCase
             new NoUpdateAvailableException('latest'),
             'no_update_available',
             Response::HTTP_CONFLICT,
+        ];
+        yield 'unreadable state' => [
+            new MalformedUpdateStateException('status.json is not valid JSON.'),
+            'update_state_unreadable',
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+        ];
+        yield 'unsaved request' => [
+            new UpdateRequestNotSavedException('request.json.tmp could not be written.'),
+            'update_request_not_saved',
+            Response::HTTP_INTERNAL_SERVER_ERROR,
         ];
     }
 
