@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\SelfUpdate\UpdateStateStore;
 
 use App\Service\SelfUpdate\Exception\MalformedUpdateStateException;
+use App\Service\SelfUpdate\Exception\UpdateRequestNotSavedException;
 use App\Service\SelfUpdate\Model\SelfUpdatePhase;
 use App\Service\SelfUpdate\Model\UpdateRequestModel;
 use App\Service\SelfUpdate\UpdateStateStore\FileUpdateStateStore;
@@ -50,6 +51,13 @@ final class FileUpdateStateStoreTest extends TestCase
     public function testAnEmptyHeartbeatIsNoHeartbeat(): void
     {
         $this->write('heartbeat', '');
+
+        self::assertNull($this->store->heartbeatAt());
+    }
+
+    public function testANonNumericHeartbeatIsNoHeartbeat(): void
+    {
+        $this->write('heartbeat', 'abc');
 
         self::assertNull($this->store->heartbeatAt());
     }
@@ -143,11 +151,7 @@ final class FileUpdateStateStoreTest extends TestCase
     {
         mkdir($this->directory);
 
-        $this->store->saveRequest(new UpdateRequestModel(
-            '0123456789abcdef',
-            'boss@example.com',
-            new \DateTimeImmutable('2026-10-31 10:00:00'),
-        ));
+        $this->store->saveRequest($this->request());
 
         self::assertSame('0123456789abcdef', $this->store->pendingRequestId());
         self::assertFileDoesNotExist($this->directory . '/request.json.tmp');
@@ -158,6 +162,39 @@ final class FileUpdateStateStoreTest extends TestCase
                 'requestedAt' => '2026-10-31T10:00:00+00:00',
             ],
             json_decode((string) file_get_contents($this->directory . '/request.json'), true),
+        );
+    }
+
+    public function testSavingIntoAMissingDirectoryFails(): void
+    {
+        $this->expectException(UpdateRequestNotSavedException::class);
+
+        $this->store->saveRequest($this->request());
+    }
+
+    public function testSavingIntoAReadOnlyDirectoryFails(): void
+    {
+        mkdir($this->directory, 0o555);
+        if (is_writable($this->directory)) {
+            self::markTestSkipped('root writes into a read-only directory.');
+        }
+
+        try {
+            $this->store->saveRequest($this->request());
+            self::fail('A read-only directory took the request.');
+        } catch (UpdateRequestNotSavedException) {
+            self::assertFileDoesNotExist($this->directory . '/request.json');
+        } finally {
+            chmod($this->directory, 0o755);
+        }
+    }
+
+    private function request(): UpdateRequestModel
+    {
+        return new UpdateRequestModel(
+            '0123456789abcdef',
+            'boss@example.com',
+            new \DateTimeImmutable('2026-10-31 10:00:00'),
         );
     }
 

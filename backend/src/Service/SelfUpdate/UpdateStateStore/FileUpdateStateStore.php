@@ -65,7 +65,7 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
     public function saveRequest(UpdateRequestModel $request): void
     {
-        if (!is_dir($this->directory) || !is_writable($this->directory)) {
+        if (!is_writable($this->directory)) {
             throw new UpdateRequestNotSavedException(sprintf('%s is not a writable directory.', $this->directory));
         }
 
