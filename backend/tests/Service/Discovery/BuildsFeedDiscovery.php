@@ -7,6 +7,7 @@ namespace App\Tests\Service\Discovery;
 use App\Service\Discovery\BotChallengePage;
 use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
+use App\Service\Discovery\FeedOffer\MixcloudProfileFeed;
 use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
 use App\Service\Discovery\FeedOffer\WordPressRestProbe;
 use App\Service\Discovery\FeedOffer\YouTubeVideoChannelFeed;
@@ -56,7 +57,12 @@ trait BuildsFeedDiscovery
             new WellKnownFeedProbe($fetcher, $parser),
             new BotChallengePage(),
             $shareLinks,
-            [new WordPressRestProbe($fetcher), new SoundCloudProfileFeed(), new YouTubeVideoChannelFeed()],
+            [
+                new WordPressRestProbe($fetcher),
+                new SoundCloudProfileFeed(),
+                new YouTubeVideoChannelFeed(),
+                new MixcloudProfileFeed(),
+            ],
         );
     }
 

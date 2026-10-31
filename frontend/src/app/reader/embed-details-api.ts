@@ -32,10 +32,16 @@ export class EmbedDetailsApi {
 }
 
 function detailsPath(media: EmbedMedia): string | null {
-  if (media.kind === 'youtube') {
-    const videoId = youTubeVideoId(media.url);
-    return videoId === null ? null : `/api/youtube/videos/${videoId}`;
+  switch (media.kind) {
+    case 'youtube': {
+      const videoId = youTubeVideoId(media.url);
+      return videoId === null ? null : `/api/youtube/videos/${videoId}`;
+    }
+    case 'soundcloud': {
+      const trackId = soundCloudTrackId(media.url);
+      return trackId === null ? null : `/api/soundcloud/tracks/${trackId}`;
+    }
+    case 'mixcloud':
+      return null;
   }
-  const trackId = soundCloudTrackId(media.url);
-  return trackId === null ? null : `/api/soundcloud/tracks/${trackId}`;
 }

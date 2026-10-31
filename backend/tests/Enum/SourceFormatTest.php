@@ -26,4 +26,22 @@ final class SourceFormatTest extends TestCase
         yield 'wp-json' => [SourceFormat::WP_JSON, false];
         yield 'unknown' => ['bluesky', false];
     }
+
+    #[DataProvider('verbatimFormats')]
+    public function testOnlyTheOfferedSourcesAreVerbatim(?string $sourceFormat, bool $verbatim): void
+    {
+        self::assertSame($verbatim, SourceFormat::isVerbatim($sourceFormat));
+    }
+
+    /** @return iterable<string, array{?string, bool}> */
+    public static function verbatimFormats(): iterable
+    {
+        yield 'scraped' => [SourceFormat::SCRAPED, true];
+        yield 'wp-json' => [SourceFormat::WP_JSON, true];
+        yield 'mixcloud' => [SourceFormat::MIXCLOUD_API, true];
+        yield 'xml' => [SourceFormat::XML, false];
+        yield 'bluesky' => [SourceFormat::BLUESKY_API, false];
+        yield 'a discovery syntax' => ['rss', false];
+        yield 'none' => [null, false];
+    }
 }

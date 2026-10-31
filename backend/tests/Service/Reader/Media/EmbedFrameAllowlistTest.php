@@ -92,6 +92,7 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
         ];
         yield 'spotify track' => ['https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT', EmbedShape::Landscape];
         yield 'dailymotion' => ['https://www.dailymotion.com/video/x7tgad0_some-title-slug', EmbedShape::Landscape];
+        yield 'mixcloud show' => ['https://www.mixcloud.com/johndigweed/transitions-1154/', EmbedShape::Strip];
     }
 
     #[DataProvider('sourceUrls')]

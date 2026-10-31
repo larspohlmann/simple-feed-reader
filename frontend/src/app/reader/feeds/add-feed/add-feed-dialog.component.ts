@@ -31,6 +31,16 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
   ['too_large', 'failTooLarge'],
 ]);
 
+/** Formats whose candidate URL is the source itself: the backend stores it as offered. */
+const VERBATIM_FORMATS: ReadonlySet<string> = new Set(['scraped', 'wp-json', 'mixcloud-api']);
+
+const FORMAT_LABELS = new Map<string, string>([
+  ['rss', 'RSS'],
+  ['atom', 'Atom'],
+  ['wp-json', 'WordPress'],
+  ['mixcloud-api', 'Mixcloud'],
+]);
+
 /** Opens the dialog already searching for `url`. */
 export interface AddFeedDialogData {
   url: string;
@@ -126,9 +136,8 @@ export class AddFeedDialogComponent implements OnInit {
   /** Human label for a candidate's feed syntax; capitalizes any future value
    *  (e.g. a scraped/generated feed) rather than assuming only RSS/Atom. */
   formatLabel(format: string): string {
-    if (format === 'rss') return 'RSS';
-    if (format === 'atom') return 'Atom';
-    if (format === 'wp-json') return 'WordPress';
+    const label = FORMAT_LABELS.get(format);
+    if (label) return label;
     return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
   }
 
@@ -148,11 +157,9 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   pick(candidate: FeedCandidate): void {
-    this.subscribe(
-      candidate.url,
-      this.storedFormat(candidate),
-      candidate.format === 'wp-json' ? (candidate.title ?? undefined) : undefined,
-    );
+    const format = this.storedFormat(candidate);
+    const passesTitle = format !== undefined && format !== 'scraped';
+    this.subscribe(candidate.url, format, passesTitle ? (candidate.title ?? undefined) : undefined);
   }
 
   /** Expands or collapses a candidate's preview rows; expanding fetches the
@@ -166,13 +173,8 @@ export class AddFeedDialogComponent implements OnInit {
     this.ensurePreview(candidate);
   }
 
-  /** Formats the backend must persist verbatim (it cannot re-derive them by
-   *  parsing): scraped pages and WordPress REST endpoints. Others re-run
-   *  discovery, so they pass no format. */
   private storedFormat(candidate: FeedCandidate): string | undefined {
-    return candidate.format === 'scraped' || candidate.format === 'wp-json'
-      ? candidate.format
-      : undefined;
+    return VERBATIM_FORMATS.has(candidate.format) ? candidate.format : undefined;
   }
 
   private subscribe(url: string, format?: string, title?: string): void {

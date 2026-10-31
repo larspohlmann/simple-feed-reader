@@ -67,9 +67,14 @@ export class ArticleChapters {
   private embedPlayer(frame: HTMLIFrameElement, media: EmbedMedia): ChapterPlayer {
     const current = this.audio.current();
     if (current?.url === media.url) return this.audioPlayer(current);
-    return media.kind === 'youtube'
-      ? new YouTubeChapterPlayer(frame)
-      : new SoundCloudChapterPlayer(frame);
+    switch (media.kind) {
+      case 'youtube':
+        return new YouTubeChapterPlayer(frame);
+      case 'soundcloud':
+        return new SoundCloudChapterPlayer(frame);
+      case 'mixcloud':
+        throw new Error('A Mixcloud frame has no chapter player.');
+    }
   }
 
   private audioPlayer(track: AudioTrack): AudioChapterPlayer {

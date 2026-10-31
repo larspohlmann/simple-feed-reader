@@ -2,7 +2,7 @@ import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { injectIslands } from '../../../../testing/article-islands-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { WIDGET_URL } from '../../../../testing/embed-media-testing';
+import { MIXCLOUD_WIDGET_URL, WIDGET_URL } from '../../../../testing/embed-media-testing';
 import {
   deliverMessage,
   messagesOf,
@@ -254,6 +254,16 @@ describe('ArticleChapters', () => {
     it('finds every API video frame and SoundCloud widget in order', () => {
       const host = document.createElement('div');
       host.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk"></iframe>${EMBEDS_BODY}`;
+
+      expect(chapterFrames(host).map((frame) => frame.getAttribute('src'))).toEqual([
+        VIDEO_SRC,
+        WIDGET_SRC,
+      ]);
+    });
+
+    it('leaves a Mixcloud widget out, chapters are not offered for it', () => {
+      const host = document.createElement('div');
+      host.innerHTML = `<iframe src="${MIXCLOUD_WIDGET_URL}"></iframe>${EMBEDS_BODY}`;
 
       expect(chapterFrames(host).map((frame) => frame.getAttribute('src'))).toEqual([
         VIDEO_SRC,

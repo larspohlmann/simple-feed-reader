@@ -1,5 +1,6 @@
 import { FakeAudio } from '../../../../testing/fake-audio-element';
 import { FramePlayback } from './frame-playback';
+import { MixcloudPlayback } from './mixcloud-playback';
 import { playbackSlotFactory, providerPlayback } from './playback-slots';
 import { SoundCloudPlayback } from './soundcloud-playback';
 import { YouTubePlayback } from './youtube-playback';
@@ -46,6 +47,7 @@ describe('playbackSlotFactory', () => {
 
     expect(createSlot('youtube').element).toBe(playback);
     expect(createSlot('soundcloud').element).toBe(playback);
+    expect(createSlot('mixcloud').element).toBe(playback);
   });
 
   it('hands the frame factory the kind', () => {
@@ -82,6 +84,13 @@ describe('providerPlayback', () => {
     const playback = providerPlayback('youtube');
 
     expect(playback).toBeInstanceOf(YouTubePlayback);
+    playback.dispose();
+  });
+
+  it('plays Mixcloud through the Mixcloud adapter', () => {
+    const playback = providerPlayback('mixcloud');
+
+    expect(playback).toBeInstanceOf(MixcloudPlayback);
     playback.dispose();
   });
 

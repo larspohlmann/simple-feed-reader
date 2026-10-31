@@ -28,15 +28,24 @@ final readonly class FeedBodyParser
     /** @throws FeedParseException */
     public function parse(Feed $feed, string $body): ParsedFeedModel
     {
-        $format = $feed->getSourceFormat();
+        return $this->parseAs($feed->getSourceFormat(), $body, $feed->getUrl());
+    }
+
+    /**
+     * The body read as `$format`, for a caller with no feed row yet (the subscribe preview).
+     *
+     * @throws FeedParseException
+     */
+    public function parseAs(string $format, string $body, string $feedUrl): ParsedFeedModel
+    {
         if ($this->parsers->has($format)) {
-            return $this->resolve($format)->parse($body, $feed);
+            return $this->resolve($format)->parse($body, $feedUrl);
         }
 
         // A row whose format has no parser here (a newer deployment's, or a removed strategy's) is read as xml,
         // which is what every row meant before the seam existed.
         try {
-            return $this->resolve(SourceFormat::XML)->parse($body, $feed);
+            return $this->resolve(SourceFormat::XML)->parse($body, $feedUrl);
         } catch (FeedParseException $exception) {
             throw new FeedParseException(
                 sprintf('No parser for source format "%s"; tried xml: %s', $format, $exception->getMessage()),

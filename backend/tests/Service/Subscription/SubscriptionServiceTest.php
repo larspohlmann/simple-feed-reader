@@ -41,6 +41,7 @@ use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingSubscribeRoute;
 use App\Tests\Support\UserFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -523,5 +524,31 @@ final class SubscriptionServiceTest extends DbTestCase
 
         self::assertNotNull($outcome->subscription);
         self::assertSame([], $route->requests);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function publishedSources(): iterable
+    {
+        yield 'a WordPress REST endpoint' => [SourceFormat::WP_JSON, 'https://wp.example/wp-json/wp/v2/posts'];
+        yield 'a Mixcloud cloudcasts list' => [
+            SourceFormat::MIXCLOUD_API,
+            'https://api.mixcloud.com/johndigweed/cloudcasts/',
+        ];
+    }
+
+    /** Neither is a page scrape, so a user with scraping off (the default) subscribes them too. */
+    #[DataProvider('publishedSources')]
+    public function testAPublishedSourceIsStoredVerbatimWithItsTitleAndNoDiscovery(string $format, string $url): void
+    {
+        $user = $this->factory()->create($format . '-verbatim@example.com');
+
+        $outcome = $this->service($this->discoveryNeverAsked())
+            ->subscribe($user, $url, $format, [], 'Candidate Title');
+
+        self::assertNotNull($outcome->subscription);
+        $feed = $outcome->subscription->getFeed();
+        self::assertSame($url, $feed->getUrl());
+        self::assertSame($format, $feed->getSourceFormat());
+        self::assertSame('Candidate Title', $feed->getTitle());
     }
 }

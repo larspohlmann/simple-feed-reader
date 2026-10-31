@@ -1,4 +1,5 @@
 import { isAllowedEmbed } from '../media/media-embeds';
+import { MIXCLOUD_PLAYER_URL } from '../media/mixcloud-widget-protocol';
 import { SOUNDCLOUD_PLAYER_URL } from '../media/soundcloud-widget-protocol';
 import type { FrameKind } from './playback/playback-kind';
 
@@ -22,7 +23,11 @@ export function youTubeVideoId(url: string): string | null {
 }
 
 export function isSoundCloudPlayerUrl(url: string): boolean {
-  return url.startsWith(SOUNDCLOUD_PLAYER_URL) && isAllowedEmbed(url);
+  return isAllowedPlayerUrl(url, SOUNDCLOUD_PLAYER_URL);
+}
+
+export function isMixcloudPlayerUrl(url: string): boolean {
+  return isAllowedPlayerUrl(url, MIXCLOUD_PLAYER_URL);
 }
 
 export function soundCloudTrackId(playerUrl: string): string | null {
@@ -36,11 +41,16 @@ export function embedMediaOfUrl(url: string): EmbedMedia | null {
   const videoId = youTubeVideoId(url);
   if (videoId !== null) return youTubeEmbedMedia(videoId);
   if (isSoundCloudPlayerUrl(url)) return { kind: 'soundcloud', url, posterUrl: null };
+  if (isMixcloudPlayerUrl(url)) return { kind: 'mixcloud', url, posterUrl: null };
   return null;
 }
 
 export function embedMediaOfFrame(frame: HTMLIFrameElement): EmbedMedia | null {
   return embedMediaOfUrl(frame.getAttribute('src') ?? '');
+}
+
+function isAllowedPlayerUrl(url: string, playerUrl: string): boolean {
+  return url.startsWith(playerUrl) && isAllowedEmbed(url);
 }
 
 function youTubeEmbedMedia(videoId: string): EmbedMedia {

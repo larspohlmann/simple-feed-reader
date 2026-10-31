@@ -37,9 +37,10 @@ curated catalog gets a new account started.
   <img src="docs/screenshots/onboarding-light.webp" alt="Guided feed discovery from the curated catalog" width="49%">
 </p>
 
-Podcasts and SoundCloud feeds play in a playlist: episode artwork, previous and
-next, and a panel to reorder the queue. A podcast can also be added by pasting
-its share link from Apple Podcasts.
+Podcasts, SoundCloud feeds and Mixcloud shows play in a playlist, seekable like
+any episode: episode artwork, previous and next, and a panel to reorder the
+queue. A podcast can also be added by pasting its share link from Apple
+Podcasts.
 
 <p>
   <img src="docs/screenshots/mobile-podcast-player-light.webp" alt="The full-size audio player on a phone" width="24%">
@@ -89,6 +90,9 @@ More in the [screenshot gallery](docs/screenshots.md).
   show's.
 - Paste a SoundCloud profile link into "Add feed" and the reader offers that
   account's RSS feed.
+- Paste a Mixcloud profile link (e.g. `https://www.mixcloud.com/johndigweed/`)
+  into "Add feed" and the reader subscribes to its shows; they play and seek in
+  the playlist. Subscriber-exclusive shows are left out.
 - Paste a show or episode link copied from Apple Podcasts into "Add feed" and
   the reader subscribes to the show's RSS feed. Any of these work:
   - `https://podcasts.apple.com/us/podcast/99-invisible/id394775318`

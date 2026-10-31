@@ -2,7 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
-import { SOUND_MEDIA, VIDEO_ID, VIDEO_MEDIA } from '../../testing/embed-media-testing';
+import {
+  MIXCLOUD_MEDIA,
+  SOUND_MEDIA,
+  VIDEO_ID,
+  VIDEO_MEDIA,
+} from '../../testing/embed-media-testing';
 import type { TrackDetails } from './audio/audio-track';
 import { EmbedDetailsApi } from './embed-details-api';
 
@@ -51,6 +56,15 @@ describe('EmbedDetailsApi', () => {
     const request = controller.expectOne('https://api.test/api/soundcloud/tracks/123456789');
     expect(request.request.method).toBe('GET');
     request.flush({ title: 'A track', durationSeconds: null, chapters: [] });
+  });
+
+  it('asks nothing for a Mixcloud show, and completes', () => {
+    const completed = jest.fn();
+
+    api.detailsOf(MIXCLOUD_MEDIA).subscribe({ complete: completed });
+
+    controller.expectNone(() => true);
+    expect(completed).toHaveBeenCalled();
   });
 
   it('asks nothing for an embed without a track id, and completes', () => {

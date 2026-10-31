@@ -14,8 +14,8 @@ final readonly class SubscribeRequest
     public string $url;
 
     /**
-     * 'scraped' subscribes the page itself, without re-discovery. Not an enum on purpose: any other value, even one
-     * an old client or a new format sends, takes the discovery path instead of failing validation.
+     * A SourceFormat::VERBATIM value subscribes as that format, without re-discovery; any other value takes discovery.
+     * Not an enum on purpose, so an unknown value never fails validation.
      */
     #[Assert\Length(max: 20)]
     public ?string $format;

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Feed;
+use App\Enum\SourceFormat;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Refresh\FeedBodyParser;
 use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Tests\Support\ReadsFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -16,6 +18,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class FeedBodyParserWiringTest extends KernelTestCase
 {
+    use ReadsFixtures;
     use ScrapedFixtures;
 
     private function parser(): FeedBodyParser
@@ -70,8 +73,8 @@ final class FeedBodyParserWiringTest extends KernelTestCase
 
     public function testWpJsonFormatResolvesToTheWordPressParser(): void
     {
-        $feed = new \App\Entity\Feed('https://site.example/wp-json/wp/v2/posts?per_page=50&_embed');
-        $feed->setSourceFormat(\App\Enum\SourceFormat::WP_JSON);
+        $feed = new Feed('https://site.example/wp-json/wp/v2/posts?per_page=50&_embed');
+        $feed->setSourceFormat(SourceFormat::WP_JSON);
 
         $body = '[{"id":1,"link":"https://site.example/p","title":{"rendered":"Post"},'
             . '"content":{"rendered":"<p>Body.</p>"},"date_gmt":"2026-08-20T10:00:00"}]';
@@ -80,5 +83,16 @@ final class FeedBodyParserWiringTest extends KernelTestCase
 
         self::assertCount(1, $parsed->entries);
         self::assertSame('Post', $parsed->entries[0]->headline->text);
+    }
+
+    public function testMixcloudFormatResolvesToTheCloudcastsParser(): void
+    {
+        $feed = new Feed('https://api.mixcloud.com/johndigweed/cloudcasts/');
+        $feed->setSourceFormat(SourceFormat::MIXCLOUD_API);
+
+        $parsed = $this->parser()->parse($feed, $this->fixture('mixcloud/cloudcasts.json'));
+
+        self::assertSame('John Digweed', $parsed->title);
+        self::assertCount(2, $parsed->entries);
     }
 }

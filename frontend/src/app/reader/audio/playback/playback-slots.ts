@@ -1,5 +1,6 @@
 import { FramePlayback } from './frame-playback';
 import { hiddenPlaybackHost } from './hidden-frame';
+import { MixcloudPlayback } from './mixcloud-playback';
 import { PlaybackSlot } from './playback-element';
 import { FrameKind, PlaybackKind } from './playback-kind';
 import { SoundCloudPlayback } from './soundcloud-playback';
@@ -16,8 +17,14 @@ export function playbackSlotFactory(
 }
 
 export function providerPlayback(kind: FrameKind): FramePlayback {
-  if (kind === 'youtube') return new YouTubePlayback(hiddenPlaybackHost());
-  return new SoundCloudPlayback(hiddenPlaybackHost());
+  switch (kind) {
+    case 'youtube':
+      return new YouTubePlayback(hiddenPlaybackHost());
+    case 'soundcloud':
+      return new SoundCloudPlayback(hiddenPlaybackHost());
+    case 'mixcloud':
+      return new MixcloudPlayback(hiddenPlaybackHost());
+  }
 }
 
 function audioSlot(element: HTMLAudioElement): PlaybackSlot {

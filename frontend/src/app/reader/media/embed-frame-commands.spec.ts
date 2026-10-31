@@ -22,4 +22,20 @@ describe('pauseEmbedFrame', () => {
 
     expect(posted).toEqual([{ message: { method: 'pause' }, origin: 'https://w.soundcloud.com' }]);
   });
+
+  it('pauses a Mixcloud widget', () => {
+    const { frame, posted } = frameWithWindow();
+
+    pauseEmbedFrame(frame, 'mixcloud');
+
+    expect(posted).toEqual([
+      {
+        message: {
+          type: 'method',
+          data: { methodId: expect.any(Number), methodName: 'pause', args: [] },
+        },
+        origin: 'https://player-widget.mixcloud.com',
+      },
+    ]);
+  });
 });

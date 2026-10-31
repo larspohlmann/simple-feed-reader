@@ -19,6 +19,12 @@ final class SourceFormat
     /** WordPress REST posts endpoint (wp/v2/posts with `_fields`, never `_embed`): full-content JSON. */
     public const string WP_JSON = 'wp-json';
 
+    /** A Mixcloud user's shows, read through the public cloudcasts API (#1932). */
+    public const string MIXCLOUD_API = 'mixcloud-api';
+
+    /** The formats a discovery candidate is subscribed and previewed by as offered, without discovery again. */
+    public const array VERBATIM = [self::SCRAPED, self::WP_JSON, self::MIXCLOUD_API];
+
     /** A Bluesky timeline, list or custom feed, read through the account's session (#1599). */
     public const string BLUESKY_API = 'bluesky-api';
 
@@ -42,5 +48,11 @@ final class SourceFormat
     public static function isSaved(string $sourceFormat): bool
     {
         return self::SAVED === $sourceFormat;
+    }
+
+    /** @phpstan-assert-if-true value-of<self::VERBATIM> $sourceFormat */
+    public static function isVerbatim(?string $sourceFormat): bool
+    {
+        return \in_array($sourceFormat, self::VERBATIM, true);
     }
 }
