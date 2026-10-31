@@ -14,6 +14,14 @@ describe('decorateArticle', () => {
     document.body.innerHTML = '';
   });
 
+  it('links a bare URL in the text and opens it in a new tab', () => {
+    const link = decorated('<p>Archives: https://soundcloud.com/radiozora</p>').querySelector('a')!;
+
+    expect(link.getAttribute('href')).toBe('https://soundcloud.com/radiozora');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toBe('noopener noreferrer');
+  });
+
   it('puts the landscape embed the media step builds from a link inside a cinema box', () => {
     const host = decorated(YOUTUBE_LINK);
 
