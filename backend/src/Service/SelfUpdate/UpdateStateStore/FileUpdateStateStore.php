@@ -55,7 +55,7 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
 
         return new UpdateRunModel(
             $status->requiredString('requestId'),
-            $status->phase('phase'),
+            $status->runPhase('phase'),
             $status->dateOrNull('startedAt'),
             $status->dateOrNull('finishedAt'),
             $status->integerOrNull('exitCode'),

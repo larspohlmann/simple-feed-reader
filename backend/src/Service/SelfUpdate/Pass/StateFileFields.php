@@ -26,10 +26,10 @@ final readonly class StateFileFields
         return $value;
     }
 
-    public function phase(string $name): SelfUpdatePhase
+    public function runPhase(string $name): SelfUpdatePhase
     {
         $phase = SelfUpdatePhase::tryFrom($this->requiredString($name));
-        if (null === $phase) {
+        if (null === $phase || !$phase->isRecordedByARun()) {
             throw new MalformedUpdateStateException(sprintf('%s carries an unknown "%s".', $this->fileName, $name));
         }
 

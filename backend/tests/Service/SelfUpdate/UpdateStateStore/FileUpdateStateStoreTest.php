@@ -101,6 +101,22 @@ final class FileUpdateStateStoreTest extends TestCase
         self::assertNull($run->exitCode);
     }
 
+    #[DataProvider('phasesARunRecords')]
+    public function testReadsEveryPhaseARunRecords(string $recorded, SelfUpdatePhase $phase): void
+    {
+        $this->write('outbox/status.json', sprintf('{"requestId":"abc","phase":"%s"}', $recorded));
+
+        self::assertSame($phase, $this->store->lastRun()?->phase);
+    }
+
+    /** @return iterable<string, array{string, SelfUpdatePhase}> */
+    public static function phasesARunRecords(): iterable
+    {
+        yield 'running' => ['running', SelfUpdatePhase::Running];
+        yield 'succeeded' => ['succeeded', SelfUpdatePhase::Succeeded];
+        yield 'failed' => ['failed', SelfUpdatePhase::Failed];
+    }
+
     public function testAnEmptyStartTimeIsNoStartTime(): void
     {
         $this->write('outbox/status.json', '{"requestId":"abc","phase":"failed","startedAt":"","finishedAt":""}');
@@ -130,6 +146,8 @@ final class FileUpdateStateStoreTest extends TestCase
         yield 'no request id' => ['{"phase":"running"}'];
         yield 'an unknown phase' => ['{"requestId":"abc","phase":"sleeping"}'];
         yield 'an unreadable date' => ['{"requestId":"abc","phase":"running","startedAt":"soon"}'];
+        yield 'the idle phase only the backend derives' => ['{"requestId":"abc","phase":"idle"}'];
+        yield 'the requested phase only the backend derives' => ['{"requestId":"abc","phase":"requested"}'];
     }
 
     public function testTheLogTailIsTheLastSixteenKibibytes(): void

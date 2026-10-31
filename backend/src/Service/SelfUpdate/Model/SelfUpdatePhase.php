@@ -16,4 +16,9 @@ enum SelfUpdatePhase: string
     {
         return self::Requested === $this || self::Running === $this;
     }
+
+    public function isRecordedByARun(): bool
+    {
+        return self::Running === $this || self::Succeeded === $this || self::Failed === $this;
+    }
 }
