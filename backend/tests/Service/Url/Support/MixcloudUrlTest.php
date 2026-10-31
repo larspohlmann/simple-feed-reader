@@ -18,6 +18,7 @@ final class MixcloudUrlTest extends TestCase
         yield 'with a query' => ['https://www.mixcloud.com/johndigweed/?utm_source=x', 'johndigweed'];
         yield 'capitals kept' => ['https://www.mixcloud.com/NTSRadio/', 'NTSRadio'];
         yield 'the bare host' => ['https://mixcloud.com/johndigweed/', 'johndigweed'];
+        yield 'a capitalised site section' => ['https://www.mixcloud.com/Discover/', null];
         yield 'a mixed-case host' => ['https://www.MixCloud.com/johndigweed/', 'johndigweed'];
         yield 'a show page' => ['https://www.mixcloud.com/johndigweed/transitions-1154/', null];
         yield 'a site section' => ['https://www.mixcloud.com/discover/', null];
@@ -77,6 +78,8 @@ final class MixcloudUrlTest extends TestCase
         yield 'no trailing slash' => ['/johndigweed/transitions-1154', false];
         yield 'a profile' => ['/johndigweed/', false];
         yield 'a profile tab' => ['/johndigweed/favorites/', false];
+        yield 'a capitalised profile tab' => ['/johndigweed/Uploads/', false];
+        yield 'a capitalised site section' => ['/Discover/house/', false];
         yield 'a site section' => ['/discover/house/', false];
         yield 'a full url' => ['https://www.mixcloud.com/johndigweed/transitions-1154/', false];
         yield 'a space' => ['/johndigweed/two words/', false];

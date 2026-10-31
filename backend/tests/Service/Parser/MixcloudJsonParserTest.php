@@ -122,6 +122,23 @@ final class MixcloudJsonParserTest extends TestCase
         self::assertSame('/dj/b/', $entries[0]->guid);
     }
 
+    public function testTheFeedIsNamedAfterTheFirstShowsUser(): void
+    {
+        $body = '{"data":[{"key":"/a/one/","url":"https://www.mixcloud.com/a/one/","name":"One",'
+            . '"user":{"name":"Alpha","url":"https://www.mixcloud.com/a/"}},'
+            . '{"key":"/b/two/","url":"https://www.mixcloud.com/b/two/","name":"Two",'
+            . '"user":{"name":"Beta","url":"https://www.mixcloud.com/b/"}}]}';
+
+        self::assertSame('Alpha', $this->parse($body)->title);
+    }
+
+    public function testAVerticalTabAroundTheBodyIsTolerated(): void
+    {
+        $body = "\x0B" . '{"data":[]}' . "\x0B";
+
+        self::assertSame([], $this->parse($body)->entries);
+    }
+
     public function testAnEmptyListIsAnEmptyUntitledFeed(): void
     {
         $feed = $this->parse('{"data":[],"paging":{},"name":"Nobody\'s Cloudcasts"}');
