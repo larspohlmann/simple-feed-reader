@@ -7,6 +7,7 @@ interface ShareEntry {
   readonly icon?: string;
   readonly symbol?: string;
   readonly color?: string;
+  readonly external?: boolean;
 }
 
 /** An entry of public/share-targets/share-targets.json. */

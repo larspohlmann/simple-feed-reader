@@ -17,6 +17,7 @@ import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-conte
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { ResponseActions } from '../composer/response-actions.service';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AudioPlayerService } from '../../audio-player.service';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
@@ -200,6 +201,7 @@ describe('ReaderViewComponent', () => {
         { provide: PreviewProgress, useValue: { isLoading: () => true } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         { provide: ResponseActions, useValue: { respond: jest.fn(), delete: jest.fn() } },
+        { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
         {
           provide: CommentsService,
           useValue: { state: () => signal<CommentsState>({ status: 'idle' }), load: jest.fn() },

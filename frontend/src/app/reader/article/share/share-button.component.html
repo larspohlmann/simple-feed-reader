@@ -34,6 +34,20 @@
     role="menu"
     [attr.aria-label]="'reader.share.button' | transloco"
   >
+    @for (target of postTargets(); track target.network) {
+      <button
+        role="menuitem"
+        type="button"
+        [title]="postHint(target)"
+        (click)="post(target.network)"
+      >
+        <app-network-logo [network]="target.network" />
+        <span class="label">{{ 'reader.link.' + target.network | transloco }}</span>
+      </button>
+      @if ($last) {
+        <hr role="separator" />
+      }
+    }
     @for (target of targets; track $index) {
       @if (target.kind === 'divider') {
         <hr role="separator" />
@@ -44,7 +58,12 @@
           } @else {
             <app-icon [name]="target.symbol ?? glyph" size="sm" />
           }
-          {{ target.labelKey ? (target.labelKey | transloco) : target.label }}
+          <span class="label">{{
+            target.labelKey ? (target.labelKey | transloco) : target.label
+          }}</span>
+          @if (target.external) {
+            <app-icon class="external" name="open_in_new" size="sm" />
+          }
         </button>
       }
     }

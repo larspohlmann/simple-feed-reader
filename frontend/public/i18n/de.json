@@ -1503,7 +1503,10 @@
       "copyLink": "Link kopieren",
       "copied": "Link kopiert",
       "copyFailed": "Link konnte nicht kopiert werden",
-      "failed": "Link konnte nicht geteilt werden"
+      "failed": "Link konnte nicht geteilt werden",
+      "blueskyApp": "In der Bluesky-App öffnen",
+      "postAs": "als {{handle}}",
+      "pickAccount": "Konto im Editor wählen"
     },
     "replyForbidden": {
       "bluesky": "Antworten auf diesen Beitrag sind eingeschränkt",

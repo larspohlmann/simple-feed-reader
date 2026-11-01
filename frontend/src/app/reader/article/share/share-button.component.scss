@@ -18,3 +18,12 @@
 .menu button {
   white-space: nowrap;
 }
+
+.external {
+  margin-inline-start: auto;
+}
+
+.menu app-network-logo {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}

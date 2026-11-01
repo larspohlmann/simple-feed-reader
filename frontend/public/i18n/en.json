@@ -1503,7 +1503,10 @@
       "copyLink": "Copy link",
       "copied": "Link copied",
       "copyFailed": "Couldn't copy the link",
-      "failed": "Couldn't share the link"
+      "failed": "Couldn't share the link",
+      "blueskyApp": "Open in Bluesky app",
+      "postAs": "as {{handle}}",
+      "pickAccount": "Choose the account in the composer"
     },
     "replyForbidden": {
       "bluesky": "The author limits who can reply",

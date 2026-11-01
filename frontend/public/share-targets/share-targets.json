@@ -10,10 +10,11 @@
   { "kind": "divider" },
   {
     "kind": "link",
-    "label": "Bluesky",
+    "labelKey": "reader.share.blueskyApp",
     "icon": "bluesky.svg",
     "color": "#1185fe",
-    "url": "https://bsky.app/intent/compose?text={text}"
+    "url": "https://bsky.app/intent/compose?text={text}",
+    "external": true
   },
   {
     "kind": "link",
