@@ -9,6 +9,8 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final class MastodonAuthor
 {
+    private const string PROFILE_URL = '~^https://([a-z0-9.-]+)/(?:@|users/)([^/?#@]+)/?$~iD';
+
     public static function name(JsonNodeModel $account): ?string
     {
         return $account->string('display_name') ?? $account->string('acct');
@@ -32,6 +34,16 @@ final class MastodonAuthor
         $handle = self::handle($account);
 
         return null === $handle ? null : mb_strtolower($handle);
+    }
+
+    /** The identity of the account a profile URL names: its `/@user` or `/users/user` page on its own server. */
+    public static function identityOfProfileUrl(?string $profileUrl): ?string
+    {
+        if (null === $profileUrl || 1 !== preg_match(self::PROFILE_URL, $profileUrl, $match)) {
+            return null;
+        }
+
+        return mb_strtolower($match[2] . '@' . $match[1]);
     }
 
     public static function avatar(JsonNodeModel $account): ?string

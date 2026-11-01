@@ -31,8 +31,7 @@ final class SocialAccountRepository extends ServiceEntityRepository
     /** @return list<SocialAccount> */
     public function findAllForUser(User $user): array
     {
-        // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
-        return array_values($this->findBy(['user' => $user], ['network' => 'ASC', 'id' => 'ASC']));
+        return $this->findAllForUserId($user->requireId());
     }
 
     public function countForUser(User $user): int

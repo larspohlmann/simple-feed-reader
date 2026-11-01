@@ -79,14 +79,13 @@ final class ThreadPostRepository extends ServiceEntityRepository
             ->getScalarResult() !== [];
     }
 
-    /** @return list<string> the addresses of the entry's thread posts, the last one first */
+    /** @return list<?string> the addresses of the entry's thread posts, the last one first; null where one has none */
     public function urlsNewestFirst(Entry $entry): array
     {
-        /** @var list<string> $urls */
+        /** @var list<?string> $urls */
         $urls = $this->createQueryBuilder('post')
             ->select('post.url')
             ->andWhere('post.entry = :entry')
-            ->andWhere('post.url IS NOT NULL')
             ->setParameter('entry', $entry)
             ->orderBy('post.position', 'DESC')
             ->getQuery()

@@ -48,11 +48,9 @@ final readonly class OwnPostDeletion
     {
         $post = SocialPostAddress::ofOrRefuse($entry);
         $author = $this->authorOf($user, $entry, $post->network);
-        $postId = OwnPostIds::ofAddress($post, $author);
-        foreach ($this->replyIdsOf($entry, $author) as $replyId) {
-            $this->writing->delete($author, $replyId);
+        foreach ([...$this->replyIdsOf($entry, $author), OwnPostIds::ofAddress($post, $author)] as $postId) {
+            $deletion = $this->writing->delete($author, $postId);
         }
-        $deletion = $this->writing->delete($author, $postId);
         $this->localRemoval->remove($entry);
 
         return $deletion;
@@ -68,7 +66,10 @@ final readonly class OwnPostDeletion
     private function replyIdsOf(Entry $entry, SocialAccount $author): array
     {
         return array_map(
-            static fn (string $url): string => OwnPostIds::ofReplyUrl($url, $author),
+            static fn (?string $url): string => OwnPostIds::ofReplyUrl(
+                $url ?? throw new SocialPostRefusedException('A reply in the thread has no address.'),
+                $author,
+            ),
             $this->threadPosts->urlsNewestFirst($entry),
         );
     }

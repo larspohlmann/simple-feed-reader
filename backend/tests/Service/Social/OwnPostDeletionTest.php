@@ -84,6 +84,19 @@ final class OwnPostDeletionTest extends DbTestCase
         self::assertNull($this->entityManager->find(Entry::class, $postId));
     }
 
+    public function testAReplyAlreadyGoneStillLetsThePostAndItsEntryGo(): void
+    {
+        $post = $this->post('https://mastodon.example/@alice.rss', self::STATUS_URL);
+        $this->reply($post, 1, 'https://mastodon.example/@alice/121');
+        $postId = $post->requireId();
+        $this->mastodon->knowsGone('121');
+
+        self::assertSame(PostDeletion::Deleted, $this->deletion()->delete($this->owner, $post));
+        self::assertSame(['delete 121', 'delete 120'], $this->mastodon->calls);
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(Entry::class, $postId));
+    }
+
     public function testAFailedReplyStopsBeforeThePostAndKeepsTheEntry(): void
     {
         $post = $this->post('https://mastodon.example/@alice.rss', self::STATUS_URL);
@@ -127,6 +140,20 @@ final class OwnPostDeletionTest extends DbTestCase
         self::assertSame([], $this->mastodon->calls);
     }
 
+    public function testAReplyWithoutAnAddressRefusesTheWholeDeleteBeforeAnyCall(): void
+    {
+        $post = $this->post('https://mastodon.example/@alice.rss', self::STATUS_URL);
+        $this->reply($post, 1, 'https://mastodon.example/@alice/121');
+        $this->reply($post, 2, null);
+
+        $this->assertRefused(
+            fn () => $this->deletion()->delete($this->owner, $post),
+            SocialPostRefusedException::class,
+            'A thread with a reply that has no address must not be half-deleted.',
+        );
+        self::assertSame([], $this->mastodon->calls);
+    }
+
     private function deletion(): OwnPostDeletion
     {
         /** @var SocialAccountRepository $accounts */
@@ -163,7 +190,7 @@ final class OwnPostDeletionTest extends DbTestCase
         return $entry;
     }
 
-    private function reply(Entry $post, int $position, string $url): void
+    private function reply(Entry $post, int $position, ?string $url): void
     {
         $content = new ThreadPostContent($url, null, '<p>…</p>', []);
         $this->entityManager->persist(new ThreadPost($post, $position, $content));

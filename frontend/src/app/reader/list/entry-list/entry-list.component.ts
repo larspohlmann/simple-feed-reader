@@ -408,8 +408,7 @@ export class EntryListComponent implements OnDestroy {
   }
 
   /** Whether a single-entry magazine block is animating out of the list. A group
-   *  block never leaves as a unit — its leaving members drop out of the widget
-   *  (`groupMembersWithout`) — so it is never marked leaving. */
+   *  block never leaves as a unit, so it is never marked leaving. */
   isBlockLeaving(block: MagazineBlock): boolean {
     return block.kind !== 'group' && this.leavingIds().has(block.entry.id);
   }

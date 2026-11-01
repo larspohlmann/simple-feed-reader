@@ -16,11 +16,11 @@ final class DeletedPostTombstonesTest extends TestCase
         $clock = new MockClock('2026-11-01 12:00:00');
         $tombstones = new DeletedPostTombstones(new ArrayAdapter(), $clock);
 
-        $tombstones->bury(3, 'hash-a');
+        $tombstones->bury(3, ['hash-a', 'hash-c']);
         $clock->modify('+6 days');
-        $tombstones->bury(3, 'hash-b');
+        $tombstones->bury(3, ['hash-b']);
 
-        self::assertSame(['hash-a', 'hash-b'], $tombstones->buriedIn(3));
+        self::assertSame(['hash-a', 'hash-c', 'hash-b'], $tombstones->buriedIn(3));
         self::assertSame([], $tombstones->buriedIn(4));
         $clock->modify('+1 day');
         self::assertSame(['hash-b'], $tombstones->buriedIn(3));

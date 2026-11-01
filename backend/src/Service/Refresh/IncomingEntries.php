@@ -14,10 +14,7 @@ use App\Service\Social\DeletedPostTombstones;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\TimelineSelfThreads;
 
-/**
- * What a refresh does with a page's entries besides storing them:
- * deleted posts out, a timeline's threads, then each share.
- */
+/** What a refresh does with a page's entries besides storing them: deleted posts out, threads, each share. */
 final readonly class IncomingEntries
 {
     public function __construct(
@@ -29,6 +26,9 @@ final readonly class IncomingEntries
 
     public function withoutDeletedPosts(Feed $feed, IncomingFeedModel $incoming): IncomingFeedModel
     {
+        if (null === $feed->getNetwork()) {
+            return $incoming;
+        }
         $buried = array_flip($this->tombstones->buriedIn($feed->requireId()));
         if ([] === $buried) {
             return $incoming;

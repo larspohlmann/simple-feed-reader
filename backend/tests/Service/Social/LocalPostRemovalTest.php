@@ -30,6 +30,7 @@ final class LocalPostRemovalTest extends DbTestCase
     use SeedsUsers;
 
     private const string STATUS_URL = 'https://mastodon.example/@alice/120';
+    private const string STATUS_USERS_URL = 'https://mastodon.example/users/alice/statuses/120';
 
     private DeletedPostTombstones $tombstones;
     private RecordingSearchIndexWriter $index;
@@ -50,7 +51,7 @@ final class LocalPostRemovalTest extends DbTestCase
         $home = $this->feed('https://other.example/@reader.rss');
         $saved = $this->feed(SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
         $post = $this->copy($profile, self::STATUS_URL, 'hash-120');
-        $copy = $this->copy($home, 'https://mastodon.example/users/alice/statuses/120', 'hash-120');
+        $copy = $this->copy($home, self::STATUS_USERS_URL, 'hash-120');
         $savedCopy = $this->copy($saved, 'saved:120', 'hash-120');
         $other = $this->copy($profile, 'https://mastodon.example/@alice/121', 'hash-121');
         $this->entityManager->persist(new EntryState($user, $post));
@@ -75,6 +76,20 @@ final class LocalPostRemovalTest extends DbTestCase
         self::assertSame([[$ids[0], $ids[1]]], $this->index->forgets);
         self::assertNull(
             $this->countsCache->find(new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL)),
+        );
+    }
+
+    public function testTwoCopiesInOneFeedAreBothBuriedThere(): void
+    {
+        $feed = $this->feed('https://mastodon.example/@alice.rss');
+        $post = $this->copy($feed, self::STATUS_URL, 'hash-120');
+        $this->copy($feed, self::STATUS_USERS_URL, 'hash-120');
+
+        $this->removal()->remove($post);
+
+        self::assertSame(
+            [EntryGuid::hashOf(self::STATUS_URL), EntryGuid::hashOf(self::STATUS_USERS_URL)],
+            $this->tombstones->buriedIn($feed->requireId()),
         );
     }
 

@@ -21,8 +21,7 @@ export function blocksWithout(blocks: ListBlock[], hidden: ReadonlySet<number>):
 }
 
 /** `blocks` with the leaving ids taken out of group widgets only: a single-entry
- *  block animates out in its slot, but a group renders its rows itself, so a
- *  member leaving the list leaves the widget at once (#1972). */
+ *  block animates out in its slot, a group's member leaves its widget at once. */
 export function groupMembersWithout(
   blocks: ListBlock[],
   leaving: ReadonlySet<number>,

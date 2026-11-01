@@ -5,6 +5,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { EMPTY, Observable, catchError, filter, map, switchMap, tap } from 'rxjs';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemMessage } from '../../../core/problem';
+import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryCommentDto } from '../../entry-comment';
@@ -57,27 +58,20 @@ export class PostActions {
   delete(entryId: number, network: SocialNetworkName, comment: EntryCommentDto): void {
     const address = comment.post?.address;
     if (address === undefined) return;
-    this.confirm
-      .ask({
+    this.confirmedDelete(
+      {
         title: this.transloco.translate('reader.deleteReply.title'),
         message: this.transloco.translate('reader.deleteReply.message', {
           network: SOCIAL_NETWORK_NAMES[network],
         }),
         confirmLabel: this.transloco.translate('reader.deleteReply.confirm'),
         danger: true,
-      })
-      .pipe(
-        filter(Boolean),
-        switchMap(() => this.api.deleteReply(entryId, address)),
-      )
-      .subscribe({
-        next: () => {
-          this.comments.removeReply(entryId, address);
-          if (comment.depth === 0) this.counts.stepReplies(entryId, false);
-        },
-        error: (error: HttpErrorResponse) =>
-          this.toast.show({ message: problemMessage(parseProblem(error)) }),
-      });
+      },
+      () => this.api.deleteReply(entryId, address),
+    ).subscribe(() => {
+      this.comments.removeReply(entryId, address);
+      if (comment.depth === 0) this.counts.stepReplies(entryId, false);
+    });
   }
 
   /** Deletes the reader's own post after a confirm; emits once the post is gone here, nothing otherwise. */
@@ -85,29 +79,36 @@ export class PostActions {
     const network = entry.social?.network;
     if (network === undefined) return EMPTY;
     const params = { network: SOCIAL_NETWORK_NAMES[network] };
-    return this.confirm
-      .ask({
+    return this.confirmedDelete(
+      {
         title: this.deletePostTitle(entry.thread.length),
         message: this.transloco.translate('reader.deletePost.message', params),
         confirmLabel: this.transloco.translate('reader.deletePost.confirm'),
         danger: true,
-      })
-      .pipe(
-        filter(Boolean),
-        switchMap(() => this.api.deletePost(entry.id)),
-        tap(({ outcome }) => {
-          if (outcome === 'alreadyGone') {
-            this.toast.show({
-              message: this.transloco.translate('reader.deletePost.alreadyGone', params),
-            });
-          }
-        }),
-        map(() => undefined),
-        catchError((error: HttpErrorResponse) => {
-          this.toast.show({ message: problemMessage(parseProblem(error)) });
-          return EMPTY;
-        }),
-      );
+      },
+      () => this.api.deletePost(entry.id),
+    ).pipe(
+      tap(({ outcome }) => {
+        if (outcome === 'alreadyGone') {
+          this.toast.show({
+            message: this.transloco.translate('reader.deletePost.alreadyGone', params),
+          });
+        }
+      }),
+      map(() => undefined),
+    );
+  }
+
+  /** Runs `remove` once the reader confirms; a failure shows as a toast and emits nothing. */
+  private confirmedDelete<T>(question: ConfirmData, remove: () => Observable<T>): Observable<T> {
+    return this.confirm.ask(question).pipe(
+      filter(Boolean),
+      switchMap(remove),
+      catchError((error: HttpErrorResponse) => {
+        this.toast.show({ message: problemMessage(parseProblem(error)) });
+        return EMPTY;
+      }),
+    );
   }
 
   /** Opens the composer; it answers the published post, and nothing when closed. */

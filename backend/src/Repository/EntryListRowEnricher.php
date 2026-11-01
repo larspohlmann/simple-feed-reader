@@ -88,28 +88,41 @@ final readonly class EntryListRowEnricher
         if ([] === $postNetworks) {
             return [];
         }
-        $accounts = $this->socialAccounts->findAllForUserId($userId);
-        $accountNetworks = array_map(
-            static fn (SocialAccount $account): SocialNetwork => $account->getNetwork(),
-            $accounts,
-        );
+        $accountsByNetwork = self::accountsByNetwork($this->socialAccounts->findAllForUserId($userId));
         $likeable = array_filter(
             $postNetworks,
-            static fn (SocialNetwork $network): bool => \in_array($network, $accountNetworks, true),
+            static fn (SocialNetwork $network): bool => isset($accountsByNetwork[$network->value]),
         );
         $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($likeable));
 
         $states = [];
         foreach ($postNetworks as $entryId => $network) {
+            $networkAccounts = $accountsByNetwork[$network->value] ?? [];
+            $canLike = [] !== $networkAccounts;
             $states[$entryId] = new EntryListRowSocial(
                 $network,
                 isLiked: isset($likedIds[$entryId]),
-                canLike: isset($likeable[$entryId]),
-                isOwn: null !== PostAuthor::accountAmong($entries[$entryId], $accounts),
+                canLike: $canLike,
+                isOwn: $canLike && null !== PostAuthor::accountAmong($entries[$entryId], $networkAccounts),
             );
         }
 
         return $states;
+    }
+
+    /**
+     * @param list<SocialAccount> $accounts
+     *
+     * @return array<string, non-empty-list<SocialAccount>> by network value
+     */
+    private static function accountsByNetwork(array $accounts): array
+    {
+        $byNetwork = [];
+        foreach ($accounts as $account) {
+            $byNetwork[$account->getNetwork()->value][] = $account;
+        }
+
+        return $byNetwork;
     }
 
     /**

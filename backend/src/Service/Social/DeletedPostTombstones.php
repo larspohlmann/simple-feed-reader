@@ -21,10 +21,12 @@ final readonly class DeletedPostTombstones
     ) {
     }
 
-    public function bury(int $feedId, string $guidHash): void
+    /** @param list<string> $guidHashes */
+    public function bury(int $feedId, array $guidHashes): void
     {
         $item = $this->cache->getItem(self::keyOf($feedId));
-        $item->set([...$this->standing($item), $guidHash => $this->now() + self::KEPT_SECONDS]);
+        $until = array_fill_keys($guidHashes, $this->now() + self::KEPT_SECONDS);
+        $item->set([...$this->standing($item), ...$until]);
         $this->cache->save($item);
     }
 
