@@ -7,6 +7,7 @@ namespace App\Dto\Social;
 use App\Entity\Entry;
 use App\Service\Social\Model\ReplyDraftModel;
 use App\Service\Social\Model\ReplyTargetModel;
+use App\Service\Social\Support\MastodonVisibility;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ReplyRequest
@@ -15,7 +16,7 @@ final readonly class ReplyRequest
         #[Assert\NotBlank(normalizer: 'trim')]
         #[Assert\Length(max: 10000)]
         public string $text,
-        #[Assert\Choice(choices: ['public', 'unlisted', 'private', 'direct'])]
+        #[Assert\Choice(choices: MastodonVisibility::ALL)]
         public ?string $visibility = null,
         #[Assert\Length(max: 500)]
         public ?string $contentWarning = null,

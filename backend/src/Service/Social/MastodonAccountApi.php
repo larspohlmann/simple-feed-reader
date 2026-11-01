@@ -75,7 +75,14 @@ final readonly class MastodonAccountApi
      */
     public function writeAs(SocialAccount $account, ApiRequestModel $request, string $scope): ApiResponseModel
     {
-        return self::postAnswerAccepted($this->answer($account, $request), $scope);
+        $answer = $this->answer($account, $request);
+        if (Response::HTTP_UNPROCESSABLE_ENTITY === $answer->status) {
+            throw new SocialPostRefusedException(
+                JsonNodeModel::of($answer->json())->string('error') ?? 'Mastodon refused what was sent.',
+            );
+        }
+
+        return self::postAnswerAccepted($answer, $scope);
     }
 
     private function answer(SocialAccount $account, ApiRequestModel $request): ApiResponseModel
@@ -94,11 +101,6 @@ final readonly class MastodonAccountApi
     {
         if (Response::HTTP_NOT_FOUND === $answer->status) {
             throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
-        }
-        if (Response::HTTP_UNPROCESSABLE_ENTITY === $answer->status) {
-            throw new SocialPostRefusedException(
-                JsonNodeModel::of($answer->json())->string('error') ?? 'Mastodon refused what was sent.',
-            );
         }
         if (Response::HTTP_FORBIDDEN === $answer->status) {
             throw self::isOutsideScopes($answer)

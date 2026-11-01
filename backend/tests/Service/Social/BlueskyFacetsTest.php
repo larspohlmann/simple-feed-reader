@@ -49,6 +49,16 @@ final class BlueskyFacetsTest extends TestCase
         self::assertSame([], $this->facets($http)->of('@nobody.test and @down.test'));
     }
 
+    public function testAHandleIsAskedOnceAndAnUnreachableNetworkStopsTheAsking(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE . 'down.test' => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+        ]);
+
+        self::assertSame([], $this->facets($http)->of('@down.test @down.test @later.test'));
+        self::assertCount(1, $http->requests);
+    }
+
     public function testAPlainTextAsksNothing(): void
     {
         $http = new RoutedHttpClient([]);

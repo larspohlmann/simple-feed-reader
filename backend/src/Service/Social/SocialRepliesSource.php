@@ -87,19 +87,14 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         $page = $this->order->pageOf($this->threadOn($post->network)->repliesIn($post->address, $answer));
 
         return new CommentsPageModel(
-            OwnReplies::marked($page->comments, $this->ownIdentities($request->user, $post->network)),
+            OwnReplies::marked(
+                $page->comments,
+                $this->socialAccounts->findConnectedOnNetwork($request->user, $post->network),
+            ),
             $page->omitted,
         );
     }
 
-    /** @return list<string> */
-    private function ownIdentities(User $user, SocialNetwork $network): array
-    {
-        return array_map(
-            static fn (SocialAccount $account): string => mb_strtolower($account->getIdentity()),
-            $this->socialAccounts->findConnectedOnNetwork($user, $network),
-        );
-    }
 
     private function accountOrPublicThreadOf(
         ReplyThreadSourceInterface $thread,

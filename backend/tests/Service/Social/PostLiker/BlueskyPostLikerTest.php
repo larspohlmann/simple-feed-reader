@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\PostLiker;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -17,7 +15,6 @@ use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -59,10 +56,9 @@ final class BlueskyPostLikerTest extends TestCase
                 self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
                 self::CREATE_RECORD => self::json(['uri' => self::LIKE_URI]),
             ]);
-            $liker = new BlueskyPostLiker(new BlueskyRecords(
-                SocialApiWiring::blueskySessions($http->client()),
-                new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T19:30:00.007+13:00'))),
-            ));
+            $liker = new BlueskyPostLiker(
+                SocialApiWiring::blueskyRecords($http->client(), '2026-10-13T19:30:00.007+13:00'),
+            );
 
             $liker->like(self::post());
         } finally {
@@ -277,10 +273,7 @@ final class BlueskyPostLikerTest extends TestCase
 
     private function liker(RoutedHttpClient $http): BlueskyPostLiker
     {
-        return new BlueskyPostLiker(new BlueskyRecords(
-            SocialApiWiring::blueskySessions($http->client()),
-            new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00.123+02:00'))),
-        ));
+        return new BlueskyPostLiker(SocialApiWiring::blueskyRecords($http->client()));
     }
 
     private static function post(): SocialPostModel

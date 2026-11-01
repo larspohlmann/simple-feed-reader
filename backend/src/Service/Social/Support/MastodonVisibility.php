@@ -10,7 +10,8 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 final class MastodonVisibility
 {
     private const array REBLOGGABLE = ['public', 'unlisted'];
-    private const array FROM_OPEN_TO_CLOSED = ['public', 'unlisted', 'private', 'direct'];
+    /** Every visibility, from the most open to the most closed. */
+    public const array ALL = ['public', 'unlisted', 'private', 'direct'];
 
     private function __construct()
     {
@@ -29,11 +30,11 @@ final class MastodonVisibility
 
     private static function closedness(string $visibility): int
     {
-        return (int) array_search(self::known($visibility), self::FROM_OPEN_TO_CLOSED, true);
+        return (int) array_search(self::known($visibility), self::ALL, true);
     }
 
     private static function known(string $visibility): string
     {
-        return \in_array($visibility, self::FROM_OPEN_TO_CLOSED, true) ? $visibility : 'public';
+        return \in_array($visibility, self::ALL, true) ? $visibility : 'public';
     }
 }

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostReplier;
 
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\BlueskyFacets;
-use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialReplyTooLongException;
@@ -19,7 +17,6 @@ use App\Service\Social\PostReplier\BlueskyPostReplier;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class BlueskyPostReplierTest extends TestCase
@@ -155,10 +152,7 @@ final class BlueskyPostReplierTest extends TestCase
     private function replier(RoutedHttpClient $http): BlueskyPostReplier
     {
         return new BlueskyPostReplier(
-            new BlueskyRecords(
-                SocialApiWiring::blueskySessions($http->client()),
-                new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00.123+02:00'))),
-            ),
+            SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
         );
     }

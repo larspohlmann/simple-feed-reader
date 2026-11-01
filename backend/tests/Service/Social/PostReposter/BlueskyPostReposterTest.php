@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostReposter;
 
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialPostRefusedException;
@@ -14,7 +12,6 @@ use App\Service\Social\PostReposter\BlueskyPostReposter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -130,10 +127,7 @@ final class BlueskyPostReposterTest extends TestCase
 
     private function reposter(RoutedHttpClient $http): BlueskyPostReposter
     {
-        return new BlueskyPostReposter(new BlueskyRecords(
-            SocialApiWiring::blueskySessions($http->client()),
-            new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00.123+02:00'))),
-        ));
+        return new BlueskyPostReposter(SocialApiWiring::blueskyRecords($http->client()));
     }
 
     private static function post(): SocialPostModel

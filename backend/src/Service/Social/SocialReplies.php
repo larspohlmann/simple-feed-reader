@@ -23,7 +23,7 @@ use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PublishedReplyModel;
 use App\Service\Social\Model\ReplyDraftModel;
 use App\Service\Social\Model\ReplyTargetModel;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\SocialIdentity;
 use App\Service\Social\Support\SocialPostAddress;
 
 /** Publishes the user's replies and deletes the ones a connected account wrote. */
@@ -80,7 +80,7 @@ final readonly class SocialReplies
         $reply = SocialPostAddress::replyOrRefuse($entry, $address);
         foreach ($this->socialAccounts->findConnectedOnNetwork($user, $reply->network) as $account) {
             $post = $this->posts->findAs($account, $reply);
-            if (self::isWrittenBy($post, $account)) {
+            if (SocialIdentity::isAccount($post->replyContext->authorIdentity, $account)) {
                 $this->replying->delete($post);
                 $this->forgetWhatChanged($user, $entry);
 
@@ -89,13 +89,6 @@ final readonly class SocialReplies
         }
 
         throw new SocialPostRefusedException('No connected account wrote this reply.');
-    }
-
-    private static function isWrittenBy(SocialPostModel $post, SocialAccount $account): bool
-    {
-        $author = $post->replyContext->authorIdentity;
-
-        return null !== $author && mb_strtolower($author) === mb_strtolower($account->getIdentity());
     }
 
     private function forgetWhatChanged(User $user, Entry $entry): void

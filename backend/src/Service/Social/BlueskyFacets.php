@@ -37,9 +37,11 @@ final readonly class BlueskyFacets
     /** @return list<array{index: array{byteStart: int, byteEnd: int}, features: list<array<string, string>>}> */
     private function mentionsIn(string $text): array
     {
+        $spans = BlueskyTextSpans::mentions($text);
+        $dids = $this->didsOf(array_map(static fn (TextSpanModel $span): string => $span->value, $spans));
         $facets = [];
-        foreach (BlueskyTextSpans::mentions($text) as $span) {
-            $did = $this->didOrNull($span->value);
+        foreach ($spans as $span) {
+            $did = $dids[$span->value] ?? null;
             if (null !== $did) {
                 $facets[] = self::facet($span, ['did' => $did], 'mention');
             }
@@ -48,11 +50,32 @@ final readonly class BlueskyFacets
         return $facets;
     }
 
+    /**
+     * Each handle is asked once; once the network is unreachable the remaining handles stay unresolved.
+     *
+     * @param list<string> $handles
+     *
+     * @return array<string, string|null>
+     */
+    private function didsOf(array $handles): array
+    {
+        $dids = [];
+        try {
+            foreach (array_unique($handles) as $handle) {
+                $dids[$handle] = $this->didOrNull($handle);
+            }
+        } catch (SocialNetworkUnreachableException) {
+        }
+
+        return $dids;
+    }
+
+    /** @throws SocialNetworkUnreachableException */
     private function didOrNull(string $handle): ?string
     {
         try {
             return $this->identities->didOf($handle);
-        } catch (SocialAccountUnresolvableException | SocialNetworkUnreachableException) {
+        } catch (SocialAccountUnresolvableException) {
             return null;
         }
     }

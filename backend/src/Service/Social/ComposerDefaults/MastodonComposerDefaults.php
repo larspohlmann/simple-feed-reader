@@ -14,6 +14,7 @@ use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonVisibility;
+use App\Service\Social\Support\SocialIdentity;
 
 /** Mastodon's composer answers the author and the thread's starter, never less private than the post it answers. */
 final readonly class MastodonComposerDefaults implements ComposerDefaultsInterface
@@ -58,10 +59,9 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
      */
     private static function mentionsOf(SocialAccount $account, array $authors): array
     {
-        $own = mb_strtolower($account->getIdentity());
         $others = array_filter(
             array_map(static fn (?string $author): string => mb_strtolower($author ?? ''), $authors),
-            static fn (string $author): bool => '' !== $author && $own !== $author,
+            static fn (string $author): bool => '' !== $author && !SocialIdentity::isAccount($author, $account),
         );
 
         return array_values(array_map(static fn (string $author): string => '@' . $author, array_unique($others)));
