@@ -24,6 +24,12 @@ final readonly class EntryBatchInserter
     private const int ROWS_PER_STATEMENT = 500;
     private const int CARDS_PER_STATEMENT = 100;
 
+    private const array QUOTE_COLUMNS = [
+        'quoted_url', 'quoted_author_name', 'quoted_author_handle', 'quoted_author_avatar_url', 'quoted_posted_at',
+        'quoted_text', 'quoted_media', 'quoted_nested_url', 'quoted_nested_handle',
+        'quoted_link_card',
+    ];
+
     private const array COLUMNS = [
         'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
         'summary', 'content_html', 'image_url', 'image_url_hash', 'image_width', 'image_height', 'image_renditions',
@@ -31,9 +37,7 @@ final readonly class EntryBatchInserter
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
         'title_derived', 'share_kind', 'author_url', 'author_avatar_url',
-        'quoted_url', 'quoted_author_name', 'quoted_author_handle', 'quoted_author_avatar_url', 'quoted_posted_at',
-        'quoted_text', 'quoted_media', 'quoted_nested_url', 'quoted_nested_handle',
-        'quoted_link_card',
+        ...self::QUOTE_COLUMNS,
     ];
 
     public function __construct(
@@ -151,7 +155,7 @@ final readonly class EntryBatchInserter
     private static function quoteColumns(?QuotedPostContent $quote): array
     {
         if ($quote === null) {
-            return array_fill(0, 10, null);
+            return array_fill(0, \count(self::QUOTE_COLUMNS), null);
         }
 
         return [

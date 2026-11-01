@@ -6,11 +6,7 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { formatLongDateTime, relativeTimeNarrow } from '../format';
 import { mediumRatio } from '../entry-medium';
 import { PostMediaComponent } from '../media/post-media/post-media.component';
-import {
-  LinkCardComponent,
-  LinkCardLayout,
-  LinkCardReaderOpening,
-} from '../link-card/link-card.component';
+import { LinkCardComponent, LinkCardReaderOpening } from '../link-card/link-card.component';
 
 /** `block` sits in the magazine's quote share, clamped; `article` under a post in the reader, whole (#1612). */
 export type QuotedPostLayout = 'block' | 'article';
@@ -21,7 +17,12 @@ export type QuotedPostLayout = 'block' | 'article';
   imports: [AvatarComponent, LinkCardComponent, PostMediaComponent, TranslocoPipe],
   templateUrl: './quoted-post.component.html',
   styleUrl: './quoted-post.component.scss',
-  host: { '[class]': 'layout()' },
+  host: {
+    '[class]': 'layout()',
+    '(click)': '$event.stopPropagation()',
+    '(keydown.enter)': '$event.stopPropagation()',
+    '(keydown.space)': '$event.stopPropagation()',
+  },
 })
 export class QuotedPostComponent {
   readonly quote = input.required<QuotedPostDto>();
@@ -37,9 +38,6 @@ export class QuotedPostComponent {
       : relativeTimeNarrow(iso, lang);
   });
   protected readonly ratio = computed(() => mediumRatio(this.quote().media[0]));
-  protected readonly cardLayout = computed<LinkCardLayout>(() =>
-    this.layout() === 'article' ? 'article' : 'quote',
-  );
   protected readonly cardOpening = computed<LinkCardReaderOpening>(() =>
     this.layout() === 'article' ? 'layer' : 'alone',
   );

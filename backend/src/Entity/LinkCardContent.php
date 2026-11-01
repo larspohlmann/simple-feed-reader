@@ -40,10 +40,13 @@ final readonly class LinkCardContent
     /** @param array<string, mixed>|null $stored */
     public static function fromStoredOrNull(?array $stored): ?self
     {
+        if ($stored === null) {
+            return null;
+        }
         $url = $stored['url'] ?? null;
         $title = $stored['title'] ?? null;
         $siteName = $stored['siteName'] ?? null;
-        if ($stored === null || !\is_string($url) || !\is_string($title) || !\is_string($siteName)) {
+        if (!\is_string($url) || !\is_string($title) || !\is_string($siteName)) {
             return null;
         }
 

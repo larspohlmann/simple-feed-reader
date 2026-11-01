@@ -1990,23 +1990,25 @@ A failing rendition drops the `srcset` (`fallBackToSrc()`) so the browser retrie
 plain `src`; only a failing `src` hides the image.
 
 **A link card is one component** (#1502). `<app-link-card>` (`reader/link-card/`) renders a
-`LinkCardDto` in three layouts: `article`, under a post in the reader; `block`, in the
+`LinkCardDto` in two layouts: `article`, under a post in the reader, and `block`, in the
 magazine's link block, with the site line first and the image at `link-card.$image-ratio`
-(1.91:1); and `quote`, `block`'s type with the site line last, inside a quoted post (#1974). `_link-card-layout.scss` holds the frame both share with the `.link-card` that #1499
-writes into stored bodies. The chrome is `theme/_link-card.scss`'s `surface`, which the
-placeholder of a link share still being completed shares.
+(1.91:1). `siteLine` (`first` or `last`) overrides where the layout puts the site line; a
+quoted post's card sets `last` (#1974). `_link-card-layout.scss` holds the frame both share
+with the `.link-card` that #1499 writes into stored bodies. The chrome is
+`theme/_link-card.scss`'s `surface`, which the placeholder of a link share still being
+completed shares.
 A card with `openableInReader` carries an always-visible corner button (`--media-scrim`, `--on-media-scrim`; `--tap-target` on coarse pointers) that opens the page in the reader (#1664); comment cards leave it off.
 
 **A quoted post is one component** (#1612). `<app-quoted-post>` (`reader/quoted-post/`) renders a `QuotedPostDto` in
-two layouts: `block`, in the magazine's quoting block, clamped; `article`, under the post in the reader, whole, with the
-absolute time. The box opens the quoted post through a stretched link; videos and the "Quoting a post by @handle" line
-sit above it. A quoted link post's card (#1974) sits inside the box as an `<app-link-card>`, above the stretched link
-too: `article` in the reader, `quote` in the magazine (the block's type, but image, title, description, then site, as
-in the Bluesky app); it opens in the reader as a layer in the article and alone in the magazine. The quoted post's media
-and the media block's share `<app-post-media>` (`reader/media/post-media/`), whose grid lives in
+two layouts: `block`, in the magazine's quoting block, clamped; `article`, under the post in the reader, whole, with
+the absolute time. The box opens the quoted post through a stretched link; videos and the "Quoting a post by @handle"
+line sit above it. A quoted link post's card (#1974) sits inside the box as an `<app-link-card>`, above the stretched
+link too, in the quote's own layout with its site line last (image, title, description, then site, as in the Bluesky
+app); it opens in the reader as a layer in the article and alone in the magazine. The quoted post's media and the
+media block's share `<app-post-media>` (`reader/media/post-media/`), whose grid lives in
 `reader/media/_post-media-grid.scss`. A quote share's magazine height is computed per entry
-(`magazine-block-height.ts`), calibrated at 390px like `BLOCK_HEIGHT`. A quote share can also carry link cards; the reader
-view shows the quoted post first, then the cards.
+(`magazine-block-height.ts`), calibrated at 390px like `BLOCK_HEIGHT`. A quote share can also carry link cards; the
+reader view shows the quoted post first, then the cards.
 
 **The comments panel threads replies by indent** (#1616). Each comment sets `--depth` (capped at 5) and indents by
 `--depth × --space-4`, a reply carrying a 1px `--border-strong` thread line; below `bp.$bp-sm` the indent caps at two

@@ -138,7 +138,7 @@ final readonly class EntryLine
                 LineField::string($nested, 'url'),
                 LineField::stringOrNull($nested, 'handle'),
             ),
-            $card === null ? null : self::linkCardOf($card),
+            $card === null ? null : self::linkCardFrom($card),
         ));
     }
 
@@ -202,12 +202,18 @@ final readonly class EntryLine
      */
     private static function linkCardOf(array $card): ?LinkCardContent
     {
-        return StorableLinkCard::of(new LinkCardContent(
+        return StorableLinkCard::of(self::linkCardFrom($card));
+    }
+
+    /** @param array<string, mixed> $card */
+    private static function linkCardFrom(array $card): LinkCardContent
+    {
+        return new LinkCardContent(
             LineField::string($card, 'url'),
             LineField::string($card, 'title'),
             LineField::stringOrNull($card, 'description'),
             LineField::stringOrNull($card, 'imageUrl'),
             LineField::string($card, 'siteName'),
-        ));
+        );
     }
 }
