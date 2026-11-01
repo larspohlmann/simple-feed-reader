@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
+use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\ReplyContextModel;
 use App\Service\Social\Model\ReplyTargetModel;
@@ -75,6 +76,21 @@ final class ReplyComposerTest extends DbTestCase
         $this->composer()->contextFor($this->owner, new ReplyTargetModel($this->post(), self::REPLY_URI));
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testAThreadStarterTheAccountCannotFindLeavesItsAuthorOut(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $calls = &$this->mastodon->calls;
+        $this->mastodon->onResolve(static function () use (&$calls): void {
+            if (\count($calls) > 1) {
+                throw new SocialPostNotFoundException('The entry\'s post is gone.');
+            }
+        });
+
+        $context = $this->composer()->contextFor($this->owner, new ReplyTargetModel($this->post(), self::REPLY_URI));
+
+        self::assertSame(['110', 'no thread starter'], $context->defaults->mentions);
     }
 
     private function post(): Entry

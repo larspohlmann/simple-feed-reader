@@ -54,6 +54,25 @@ final class BlueskyTextSpansTest extends TestCase
         yield 'too long' => ['#' . str_repeat('a', 65)];
     }
 
+    public function testEverySpanOfAKindIsFound(): void
+    {
+        $text = '@ann.bsky.social @bob.bsky.social https://x.test/a https://x.test/b #one #two';
+
+        self::assertCount(2, BlueskyTextSpans::mentions($text));
+        self::assertCount(2, BlueskyTextSpans::links($text));
+        self::assertCount(2, BlueskyTextSpans::tags($text));
+    }
+
+    public function testATagMayRunToSixtyFourCharactersAndATooLongOneSkipsOnlyItself(): void
+    {
+        $longest = str_repeat('ä', 64);
+
+        self::assertSame([$longest, 'next'], array_map(
+            static fn (TextSpanModel $span): string => $span->value,
+            BlueskyTextSpans::tags(sprintf('#%s #%s #next', $longest, str_repeat('a', 65))),
+        ));
+    }
+
     public function testATagLosesTrailingPunctuationAndAcceptsTheFullWidthHash(): void
     {
         self::assertEquals(

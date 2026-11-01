@@ -19,6 +19,8 @@ final class FakeComposerDefaults implements ComposerDefaultsInterface
 
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
-        return new ComposerDefaultsModel(500, 'public', [$target->postId, $threadStarter()->postId]);
+        $threadStarterId = $threadStarter()->postId ?? 'no thread starter';
+
+        return new ComposerDefaultsModel(500, 'public', [$target->postId, $threadStarterId]);
     }
 }

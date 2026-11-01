@@ -74,6 +74,17 @@ final class MastodonPostReplierTest extends TestCase
         }
     }
 
+    public function testAnAnswerWithoutAUriIsAddressedByItsUrl(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => new MockResponse(
+            json_encode(['id' => '120', 'url' => self::REPLY_URL], \JSON_THROW_ON_ERROR),
+        )]);
+
+        $published = $this->replier($http)->publish(self::post(), new ReplyDraftModel('Hi'));
+
+        self::assertSame(self::REPLY_URL, $published->address);
+    }
+
     public function testAnAnswerWithoutAnAddressIsAnUnreachableNetwork(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => new MockResponse('{"id":"120"}')]);

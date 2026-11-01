@@ -59,6 +59,22 @@ final class BlueskyFacetsTest extends TestCase
         self::assertCount(1, $http->requests);
     }
 
+    public function testEveryMentionOfAHandleResolvesFromOneQuestion(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE . 'ann.bsky.social' => new MockResponse('{"did":"did:plc:ann"}'),
+            self::RESOLVE . 'bob.bsky.social' => new MockResponse('{"did":"did:plc:bob"}'),
+        ]);
+
+        $facets = $this->facets($http)->of('@ann.bsky.social @bob.bsky.social @ann.bsky.social');
+
+        self::assertSame(
+            ['did:plc:ann', 'did:plc:bob', 'did:plc:ann'],
+            array_map(static fn (array $facet): string => $facet['features'][0]['did'], $facets),
+        );
+        self::assertCount(2, $http->requests);
+    }
+
     public function testAPlainTextAsksNothing(): void
     {
         $http = new RoutedHttpClient([]);

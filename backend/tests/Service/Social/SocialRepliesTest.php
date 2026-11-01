@@ -16,6 +16,8 @@ use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\PublishedReplyModel;
 use App\Service\Social\Model\ReplyContextModel;
@@ -207,6 +209,59 @@ final class SocialRepliesTest extends DbTestCase
             'Only a reply a connected account wrote can be deleted.',
         );
         self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
+    }
+
+    public function testAnotherAccountDeletesItsReplyWhenTheFirstCannotReachIt(): void
+    {
+        SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(authorIdentity: 'bea@mastodon.example'));
+        $this->mastodon->onResolve(function (SocialAccount $account): void {
+            if ($account === $this->account) {
+                throw new SocialNetworkUnreachableException('The instance is down.');
+            }
+        });
+
+        $this->replies()->delete($this->owner, $this->post(), self::REPLY_URI);
+
+        self::assertSame(
+            ['resolve ' . self::REPLY_URI, 'resolve ' . self::REPLY_URI, 'delete 110'],
+            $this->mastodon->calls,
+        );
+    }
+
+    public function testAReplyNoAccountFindsAnyMoreCountsAsDeleted(): void
+    {
+        $entry = $this->post();
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 1, null));
+        $this->mastodon->onResolve(static function (): void {
+            throw new SocialPostNotFoundException('Gone.');
+        });
+
+        $this->replies()->delete($this->owner, $entry, self::REPLY_URI);
+
+        self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
+        self::assertNull($this->countsCache->find(self::address()));
+    }
+
+    public function testAnAccountThatCannotReachTheReplyOutranksOneThatDidNotWriteIt(): void
+    {
+        SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(authorIdentity: 'ann@hachyderm.io'));
+        $this->mastodon->onResolve(function (SocialAccount $account): void {
+            if ($account !== $this->account) {
+                throw new SocialNetworkUnreachableException('The instance is down.');
+            }
+        });
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->replies()->delete($this->owner, $this->post(), self::REPLY_URI);
     }
 
     public function testAnAccountThatNeedsReconnectingIsNotAskedToDelete(): void

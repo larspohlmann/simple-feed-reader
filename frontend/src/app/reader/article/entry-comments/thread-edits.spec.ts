@@ -41,4 +41,12 @@ describe('thread edits', () => {
     expect(shape(withoutReply(thread, 'b'))).toEqual(['a@0', 'a1@1']);
     expect(withoutReply(thread, 'gone')).toBe(thread);
   });
+
+  it('counts one reply less on the comment a removed reply answered', () => {
+    const nested = [commentAt('a', 0, 1), commentAt('a1', 1, 1), commentAt('a11', 2), commentAt('b', 0)];
+
+    const edited = withoutReply(nested, 'a11');
+
+    expect(edited.map((comment) => comment.post?.counts.replies)).toEqual([1, 0, 0]);
+  });
 });

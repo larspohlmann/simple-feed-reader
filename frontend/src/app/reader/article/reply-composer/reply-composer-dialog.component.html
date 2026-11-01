@@ -90,7 +90,7 @@
       <app-error-banner [message]="message" />
     }
 
-    <app-button footer (click)="ref.close()">{{ 'dialog.cancel' | transloco }}</app-button>
+    <app-button footer [disabled]="sending()" (click)="ref.close()">{{ 'dialog.cancel' | transloco }}</app-button>
     <app-button
       footer
       type="submit"

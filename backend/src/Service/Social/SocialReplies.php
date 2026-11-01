@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Entry;
-use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsLoader;
@@ -23,6 +22,8 @@ use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PublishedReplyModel;
 use App\Service\Social\Model\ReplyDraftModel;
 use App\Service\Social\Model\ReplyTargetModel;
+use App\Service\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialIdentity;
 use App\Service\Social\Support\SocialPostAddress;
 
@@ -68,7 +69,6 @@ final readonly class SocialReplies
     /**
      * @throws NotASocialPostException
      * @throws SocialAccountNeedsReconnectException
-     * @throws SocialPostNotFoundException
      * @throws SocialPostRefusedException when no connected account wrote the reply
      * @throws SocialTokenScopeMissingException
      * @throws SocialCredentialsRejectedException
@@ -77,18 +77,47 @@ final readonly class SocialReplies
      */
     public function delete(User $user, Entry $entry, string $address): void
     {
-        $reply = SocialPostAddress::replyOrRefuse($entry, $address);
-        foreach ($this->socialAccounts->findConnectedOnNetwork($user, $reply->network) as $account) {
-            $post = $this->posts->findAs($account, $reply);
-            if (SocialIdentity::isAccount($post->replyContext->authorIdentity, $account)) {
-                $this->replying->delete($post);
-                $this->forgetWhatChanged($user, $entry);
+        $ownReply = $this->ownReplyAt($user, SocialPostAddress::replyOrRefuse($entry, $address));
+        if (null !== $ownReply) {
+            $this->replying->delete($ownReply);
+        }
+        $this->forgetWhatChanged($user, $entry);
+    }
 
-                return;
+    /**
+     * Asks every connected account, as one may fail to see a reply another wrote.
+     *
+     * @return ?SocialPostModel null when no account finds the reply any more, so it is already deleted
+     */
+    private function ownReplyAt(User $user, SocialPostAddressModel $reply): ?SocialPostModel
+    {
+        $accounts = $this->socialAccounts->findConnectedOnNetwork($user, $reply->network);
+        $failure = null;
+        $writtenByAnother = [] === $accounts;
+        foreach ($accounts as $account) {
+            try {
+                $post = $this->posts->findAs($account, $reply);
+            } catch (SocialPostNotFoundException) {
+                continue;
+            } catch (
+                SocialAccountNeedsReconnectException
+                | SocialCredentialsRejectedException
+                | SocialNetworkUnreachableException $exception
+            ) {
+                $failure ??= $exception;
+                continue;
             }
+            if (SocialIdentity::isAccount($post->replyContext->authorIdentity, $account)) {
+                return $post;
+            }
+            $writtenByAnother = true;
         }
 
-        throw new SocialPostRefusedException('No connected account wrote this reply.');
+        return match (true) {
+            null !== $failure => throw $failure,
+            $writtenByAnother => throw new SocialPostRefusedException('No connected account wrote this reply.'),
+            default => null,
+        };
     }
 
     private function forgetWhatChanged(User $user, Entry $entry): void

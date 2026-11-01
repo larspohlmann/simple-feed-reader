@@ -13,27 +13,30 @@ export function withReply(
   const at = comments.findIndex((comment) => comment.post?.address === parentAddress);
   const parent = comments[at];
   if (parent?.post == null) return comments;
-  const answered = {
-    ...parent,
-    post: {
-      ...parent.post,
-      counts: { ...parent.post.counts, replies: parent.post.counts.replies + 1 },
-    },
-  };
   return [
     ...comments.slice(0, at),
-    answered,
+    withRepliesStepped(parent, 1),
     { ...reply, depth: parent.depth + 1 },
     ...comments.slice(at + 1),
   ];
 }
 
-/** The thread without the comment at `address` and the replies under it. */
+/** The thread without the comment at `address` and the replies under it; its parent counts one reply less. */
 export function withoutReply(comments: EntryCommentDto[], address: string): EntryCommentDto[] {
   const at = comments.findIndex((comment) => comment.post?.address === address);
   if (at === -1) return comments;
   const depth = comments[at].depth;
   const after = comments.slice(at + 1);
   const firstOutside = after.findIndex((comment) => comment.depth <= depth);
-  return [...comments.slice(0, at), ...(firstOutside === -1 ? [] : after.slice(firstOutside))];
+  const parentAt = comments.slice(0, at).findLastIndex((comment) => comment.depth < depth);
+  const before = comments
+    .slice(0, at)
+    .map((comment, index) => (index === parentAt ? withRepliesStepped(comment, -1) : comment));
+  return [...before, ...(firstOutside === -1 ? [] : after.slice(firstOutside))];
+}
+
+function withRepliesStepped(comment: EntryCommentDto, step: number): EntryCommentDto {
+  if (comment.post == null) return comment;
+  const replies = Math.max(0, comment.post.counts.replies + step);
+  return { ...comment, post: { ...comment.post, counts: { ...comment.post.counts, replies } } };
 }

@@ -56,6 +56,7 @@ type ContextState =
 
 /**
  * Writes a reply to a Bluesky or Mastodon post (#1964). Closing never asks: typed text is discarded.
+ * It stays open while a reply is on the wire, so the panel always learns what was published.
  * A failed send keeps the text and says why; a resend carries the key minted on open, so Mastodon
  * publishes the reply once.
  */
@@ -88,6 +89,7 @@ export class ReplyComposerDialogComponent {
   /** Null while the reply carries no content warning. */
   protected readonly contentWarning = signal<string | null>(null);
   private readonly accountId = signal<number | undefined>(undefined);
+  private visibilityChosen = false;
   private loading = Subscription.EMPTY;
   protected readonly sending = signal(false);
   protected readonly sendError = signal<string | null>(null);
@@ -144,6 +146,7 @@ export class ReplyComposerDialogComponent {
 
   protected chooseVisibility(event: Event): void {
     this.visibility.set(inputValue(event) as MastodonVisibility);
+    this.visibilityChosen = true;
   }
 
   protected toggleWarning(event: Event): void {
@@ -159,11 +162,13 @@ export class ReplyComposerDialogComponent {
     const context = this.context();
     if (!this.canSend() || context === null) return;
     this.sending.set(true);
+    this.ref.disableClose = true;
     this.sendError.set(null);
     this.api.reply(this.target.entryId, this.target.address, this.draftFor(context)).subscribe({
       next: (published) => this.ref.close(this.sentAs(published, context)),
       error: (error: HttpErrorResponse) => {
         this.sending.set(false);
+        this.ref.disableClose = false;
         this.sendError.set(problemMessage(parseProblem(error)));
       },
     });
@@ -171,7 +176,7 @@ export class ReplyComposerDialogComponent {
 
   private adopt(context: ComposerContextDto): void {
     this.state.set({ status: 'ready', context });
-    this.visibility.set(context.visibility);
+    if (!this.visibilityChosen) this.visibility.set(context.visibility);
     if (this.text() === '' && context.mentions.length > 0) {
       this.text.set(context.mentions.join(' ') + ' ');
     }

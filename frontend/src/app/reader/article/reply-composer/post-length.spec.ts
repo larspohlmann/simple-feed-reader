@@ -15,6 +15,10 @@ describe('postLength', () => {
     );
   });
 
+  it('counts a Mastodon mention of a remote account by its username alone', () => {
+    expect(postLength('@ann@hachyderm.io hi @bob', 'mastodon')).toBe('@ann hi @bob'.length);
+  });
+
   it('counts Mastodon text in code points, so an emoji is one', () => {
     expect(postLength('é😀', 'mastodon')).toBe(2);
   });

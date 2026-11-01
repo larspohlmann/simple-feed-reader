@@ -31,6 +31,9 @@ final class EntryReplyControllerTest extends ApiTestCase
     /** Must match framework.rate_limiter.social_writes.limit in rate_limiter.yaml. */
     private const int WRITE_BUDGET = 30;
 
+    /** Must match framework.rate_limiter.social_viewer.limit in rate_limiter.yaml. */
+    private const int VIEWER_BUDGET = 120;
+
     protected function setUp(): void
     {
         self::bootKernel();
@@ -204,6 +207,20 @@ final class EntryReplyControllerTest extends ApiTestCase
     {
         yield 'reply' => ['reply'];
         yield 'delete' => ['delete'];
+    }
+
+    public function testOpeningTheComposerDrawsOnTheViewerBudget(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'reply-composer-budget@example.test');
+        $entryId = $this->mastodonPostFor($user);
+        for ($attempt = 0; $attempt < self::VIEWER_BUDGET; ++$attempt) {
+            $client->request('GET', sprintf('/api/entries/%d/social/viewer', $entryId));
+        }
+
+        $client->request('GET', sprintf('/api/entries/%d/social/composer', $entryId));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
     }
 
     /** @param array<string, string> $body */

@@ -131,6 +131,21 @@ describe('ReplyComposerDialogComponent', () => {
       expect(api.composer).toHaveBeenLastCalledWith(7, REPLY, 5);
     });
 
+    it('keeps a visibility the user chose over the next account default', () => {
+      api.composer.mockReturnValue(of(context({ accounts })));
+      const fixture = mount();
+      const visibility = element(fixture).querySelector('#reply-visibility') as HTMLSelectElement;
+      visibility.value = 'private';
+      visibility.dispatchEvent(new Event('change'));
+      api.composer.mockReturnValue(of(context({ accounts, accountId: 5, visibility: 'public' })));
+      chooseSecond(fixture);
+      type(fixture, 'Hi');
+
+      submit(fixture);
+
+      expect(api.reply.mock.calls[0][2]).toMatchObject({ accountId: 5, visibility: 'private' });
+    });
+
     it('drops a context still on the wire when the composer closes', () => {
       api.composer.mockReturnValue(of(context({ accounts })));
       const fixture = mount();
@@ -215,6 +230,27 @@ describe('ReplyComposerDialogComponent', () => {
     submit(fixture);
 
     expect(api.reply).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays open while a reply is on the wire, and closable again once it fails', () => {
+    const pending = new Subject<PublishedReplyDto>();
+    api.reply.mockReturnValue(pending);
+    const fixture = mount();
+    const ref = TestBed.inject(DialogRef);
+    const cancel = () =>
+      Array.from(element(fixture).querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Cancel',
+      )!;
+    type(fixture, 'Once');
+
+    submit(fixture);
+
+    expect(ref.disableClose).toBe(true);
+    expect(cancel().disabled).toBe(true);
+    pending.error(new HttpErrorResponse({ status: 502 }));
+    fixture.detectChanges();
+    expect(ref.disableClose).toBe(false);
+    expect(cancel().disabled).toBe(false);
   });
 
   it('says so and sends nothing when the author takes no replies', () => {

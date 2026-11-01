@@ -56,18 +56,27 @@ final readonly class ReplyComposer
         );
     }
 
-    /** @return \Closure(): SocialPostModel */
+    /** @return \Closure(): ?SocialPostModel */
     private function threadStarterOf(ReplyTargetModel $target, SocialPostModel $post): \Closure
     {
         if (null === $target->address) {
             return static fn (): SocialPostModel => $post;
         }
 
-        $posts = $this->posts;
+        return fn (): ?SocialPostModel => $this->threadStarterOrNull($post, $target);
+    }
 
-        return static fn (): SocialPostModel => $posts->findAs(
-            $post->account,
-            SocialPostAddress::ofOrRefuse($target->entry),
-        );
+    private function threadStarterOrNull(SocialPostModel $post, ReplyTargetModel $target): ?SocialPostModel
+    {
+        try {
+            return $this->posts->findAs($post->account, SocialPostAddress::ofOrRefuse($target->entry));
+        } catch (
+            SocialPostNotFoundException
+            | SocialAccountNeedsReconnectException
+            | SocialCredentialsRejectedException
+            | SocialNetworkUnreachableException
+        ) {
+            return null;
+        }
     }
 }

@@ -16,7 +16,7 @@ interface ComposerDefaultsInterface
     /**
      * Never fails: what the network does not answer falls back to its documented default.
      *
-     * @param \Closure(): SocialPostModel $threadStarter the entry's own post, found only when a network asks for it
+     * @param \Closure(): ?SocialPostModel $threadStarter the entry's own post, found only when a network asks for it
      */
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel;
 }

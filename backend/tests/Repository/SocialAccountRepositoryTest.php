@@ -150,6 +150,7 @@ final class SocialAccountRepositoryTest extends DbTestCase
         $default = $this->accountConnectedAt('did:plc:default', '2026-10-05 10:00:00');
         $default->becomeDefault();
         $broken->markNeedsReconnect();
+        $this->persistAccount($this->stranger, SocialNetwork::Bluesky, 'did:plc:stranger');
         $this->entityManager->flush();
 
         self::assertSame(
