@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Version;
 
+use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
 use App\Service\Version\Model\LatestReleaseModel;
 use App\Service\Version\Model\ReleaseVersionModel;
+use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
+use App\Service\Version\VersionReporter;
 use App\Tests\Support\VersionReporters;
 use PHPUnit\Framework\TestCase;
 
@@ -57,5 +60,30 @@ final class VersionReporterTest extends TestCase
         )->report();
 
         self::assertFalse($report->updateAvailable);
+    }
+
+    public function testAFreshReportTakesTheRefreshedRelease(): void
+    {
+        $running = new class implements ReleaseVersionReaderInterface {
+            public function read(): ReleaseVersionModel
+            {
+                return new ReleaseVersionModel('v1.4.1', 'abc123', '');
+            }
+        };
+        $latest = new class implements LatestReleaseReaderInterface {
+            public function read(): ?LatestReleaseModel
+            {
+                return null;
+            }
+
+            public function refresh(): LatestReleaseModel
+            {
+                return new LatestReleaseModel('v1.4.2', 'https://example.test/notes');
+            }
+        };
+        $reporter = new VersionReporter($running, $latest);
+
+        self::assertFalse($reporter->report()->updateAvailable);
+        self::assertTrue($reporter->freshReport()->updateAvailable);
     }
 }

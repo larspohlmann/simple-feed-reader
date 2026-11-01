@@ -16,16 +16,26 @@ import { AdminApi } from '../../../admin/admin-api';
 import { SelfUpdateStatusDto } from '../../../admin/admin.models';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { isTabHidden, onTabVisibilityChange } from '../../../core/tab-visibility';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { VersionService } from '../../../core/version.service';
+import { formatLongDateTime } from '../../../reader/format';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { DisclosureComponent } from '../../../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
+import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 
 export const SELF_UPDATE_POLL_INTERVAL_MS = 10_000;
 
 @Component({
   selector: 'app-self-update',
-  imports: [ButtonComponent, ErrorBannerComponent, TranslocoPipe],
+  imports: [
+    ButtonComponent,
+    DisclosureComponent,
+    ErrorBannerComponent,
+    SpinnerComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './self-update.component.html',
   styleUrl: './self-update.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,12 +45,16 @@ export class SelfUpdateComponent implements OnInit {
   private readonly versions = inject(VersionService);
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly status = signal<SelfUpdateStatusDto | null>(null);
   readonly refusal = signal<string | null>(null);
   readonly starting = signal(false);
+  readonly checking = signal(false);
+  readonly checkOutcome = signal<'none' | 'succeeded' | 'failed'>('none');
+  readonly reconnecting = signal(false);
   private pollDue = false;
 
   readonly inProgress = computed(() => {
@@ -48,8 +62,18 @@ export class SelfUpdateComponent implements OnInit {
     return phase === 'requested' || phase === 'running';
   });
 
+  readonly finished = computed(() => {
+    const phase = this.status()?.phase;
+    return phase === 'succeeded' || phase === 'failed';
+  });
+
+  readonly finishedAt = computed(() => {
+    const finishedAt = this.status()?.finishedAt;
+    return finishedAt ? formatLongDateTime(finishedAt, this.language.lang()) : '';
+  });
+
   readonly offeredRelease = computed(() => {
-    if (this.status()?.updaterPresent !== true || this.inProgress()) return null;
+    if (this.status()?.updaterPresent !== true) return null;
     return this.versions.updateAvailable() ? this.versions.latest() : null;
   });
 
@@ -58,16 +82,9 @@ export class SelfUpdateComponent implements OnInit {
     return current !== null && !current.updaterPresent && current.phase === 'idle';
   });
 
-  readonly visible = computed(() => {
-    const current = this.status();
-    if (current === null) return false;
-    return (
-      !current.updaterPresent ||
-      current.phase !== 'idle' ||
-      this.offeredRelease() !== null ||
-      this.refusal() !== null
-    );
-  });
+  readonly upToDate = computed(
+    () => this.checkOutcome() === 'succeeded' && !this.versions.updateAvailable(),
+  );
 
   constructor() {
     onTabVisibilityChange((hidden) => {
@@ -106,6 +123,21 @@ export class SelfUpdateComponent implements OnInit {
       });
   }
 
+  checkNow(): void {
+    this.checking.set(true);
+    this.checkOutcome.set('none');
+    this.versions
+      .checkNow()
+      .pipe(
+        finalize(() => this.checking.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => this.checkOutcome.set('succeeded'),
+        error: () => this.checkOutcome.set('failed'),
+      });
+  }
+
   private rereadAfterRefusal(message: string): void {
     this.api
       .updateStatus()
@@ -125,13 +157,17 @@ export class SelfUpdateComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (status) => this.apply(status),
-        error: () => this.schedulePoll(),
+        error: () => {
+          this.reconnecting.set(this.inProgress());
+          this.schedulePoll();
+        },
       });
   }
 
   private apply(status: SelfUpdateStatusDto): void {
     const previousPhase = this.status()?.phase;
     this.status.set(status);
+    this.reconnecting.set(false);
     if (previousPhase !== undefined && previousPhase !== status.phase) {
       this.refusal.set(null);
       if (status.phase === 'succeeded') this.versions.load();

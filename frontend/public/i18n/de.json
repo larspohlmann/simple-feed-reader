@@ -505,7 +505,13 @@
         "succeeded": "Update abgeschlossen.",
         "failed": "Das Update ist fehlgeschlagen.",
         "failedWithCode": "Das Update ist fehlgeschlagen (Exit-Code {{code}}).",
-        "manual": "Führe ./scripts/update.sh auf dem Host aus, um zu aktualisieren. Für Updates von hier aus aktiviere sie mit ./scripts/prod-configure.sh."
+        "manual": "Führe ./scripts/update.sh auf dem Host aus, um zu aktualisieren. Für Updates von hier aus aktiviere sie mit ./scripts/prod-configure.sh.",
+        "lastUpdate": "Letztes Update",
+        "reconnecting": "Die App startet neu — das Log geht weiter, sobald sie wieder erreichbar ist.",
+        "checkNow": "Jetzt nach Updates suchen",
+        "checkFailed": "Die Suche nach Updates ist fehlgeschlagen.",
+        "upToDate": "Kein neueres Release gefunden.",
+        "lastUpdateAt": "Letztes Update · {{when}}"
       }
     },
     "reading": {
