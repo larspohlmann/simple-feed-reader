@@ -16,7 +16,7 @@ use App\Service\Ingest\Pass\EntryDeduplicator;
 use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Url\UrlNormalizer;
+use App\Service\Url\EntryUrlHash;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -37,7 +37,7 @@ final readonly class EntryIngestor
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EntryRepository $entries,
-        private UrlNormalizer $urlNormalizer,
+        private EntryUrlHash $urlHash,
         private EntryCategoryWriter $categoryWriter,
         private PlatformEntryRules $platformRules,
         private IngestedEntryFactory $entryFactory,
@@ -135,7 +135,11 @@ final readonly class EntryIngestor
 
     private function incoming(ParsedEntryModel $entry): IncomingEntryModel
     {
-        return new IncomingEntryModel($entry, self::guidHash($entry->guid), $this->urlNormalizer->hash($entry->url));
+        return new IncomingEntryModel(
+            $entry,
+            self::guidHash($entry->guid),
+            $this->urlHash->of($entry->guid, $entry->url),
+        );
     }
 
     /**
