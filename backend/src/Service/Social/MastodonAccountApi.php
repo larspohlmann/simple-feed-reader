@@ -60,7 +60,9 @@ final readonly class MastodonAccountApi
      */
     public function actOnPost(SocialAccount $account, string $path, string $scope): ApiResponseModel
     {
-        return $this->writeAs($account, ApiRequestModel::post($account->getServiceUrl() . $path), $scope);
+        $request = ApiRequestModel::post($account->getServiceUrl() . $path);
+
+        return self::postAnswerAccepted($this->answer($account, $request), $scope);
     }
 
     /**

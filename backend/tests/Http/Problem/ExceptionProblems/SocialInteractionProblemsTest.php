@@ -12,6 +12,7 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialReplyTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -40,6 +41,11 @@ final class SocialInteractionProblemsTest extends TestCase
         ];
         yield 'post gone' => [new SocialPostNotFoundException('x'), 'social_post_not_found', Response::HTTP_NOT_FOUND];
         yield 'post refused' => [new SocialPostRefusedException('x'), 'social_post_refused', Response::HTTP_CONFLICT];
+        yield 'reply too long' => [
+            new SocialReplyTooLongException('x'),
+            'social_reply_too_long',
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+        ];
         yield 'token scope missing' => [
             new SocialTokenScopeMissingException('x', 'read'),
             'social_token_scope_missing',
