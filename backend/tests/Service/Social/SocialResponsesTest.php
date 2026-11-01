@@ -201,19 +201,22 @@ final class SocialResponsesTest extends DbTestCase
         self::assertNull($this->countsCache->find(self::address()));
     }
 
-    public function testAQuoteOfAReplyQuotesThatReplyAndKeepsTheEntrysCounts(): void
+    public function testAQuoteOfAReplyQuotesThatReplyDropsTheCachedThreadAndKeepsTheEntrysCounts(): void
     {
         $entry = $this->post();
         $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, 2));
+        $this->comments->load($this->owner, $entry);
 
         $this->responses()->quote(
             $this->owner,
             new ResponseTargetModel($entry, self::REPLY_URI),
             new PostDraftModel('Read'),
         );
+        $this->comments->load($this->owner, $entry);
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'quote 110 Read'], $this->mastodon->calls);
         self::assertNotNull($this->countsCache->find(self::address()));
+        self::assertCount(2, $this->thread->fetches);
     }
 
     public function testAPostItsAuthorKeepsFromQuotesIsRefusedBeforeTheQuote(): void

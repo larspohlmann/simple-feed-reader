@@ -35,6 +35,18 @@ export function withoutReply(comments: EntryCommentDto[], address: string): Entr
   return [...before, ...(firstOutside === -1 ? [] : after.slice(firstOutside))];
 }
 
+/** The thread with one more quote counted on the comment at `address`, where its network counts quotes. */
+export function withQuoteCounted(comments: EntryCommentDto[], address: string): EntryCommentDto[] {
+  return comments.map((comment) => {
+    const post = comment.post;
+    if (post?.address !== address || post.counts.quotes === null) return comment;
+    return {
+      ...comment,
+      post: { ...post, counts: { ...post.counts, quotes: post.counts.quotes + 1 } },
+    };
+  });
+}
+
 function parentIndexOf(comments: EntryCommentDto[], at: number): number {
   for (let index = at - 1; index >= 0; index--) {
     if (comments[index].depth < comments[at].depth) return index;

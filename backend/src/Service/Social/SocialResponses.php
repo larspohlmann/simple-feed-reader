@@ -80,6 +80,8 @@ final readonly class SocialResponses
         $published = $this->writing->quote($this->allowedTarget($user, $target, ResponseKind::Quote), $draft);
         if (null === $target->address) {
             $this->countsCache->forgetEntry($target->entry);
+        } else {
+            $this->comments->forget($user, $target->entry);
         }
 
         return $published;

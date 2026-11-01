@@ -19,10 +19,16 @@ final class PostCounts
         return self::ofKeys($post, 'likeCount', 'repostCount', 'replyCount', $post->int('quoteCount'));
     }
 
-    /** The counts of a Mastodon `Status`; null when one of them is missing. */
+    /** The counts of a Mastodon `Status`; null when one of them is missing. Quotes count from 4.5 on. */
     public static function ofMastodonStatus(JsonNodeModel $status): ?SocialCountsModel
     {
-        return self::ofKeys($status, 'favourites_count', 'reblogs_count', 'replies_count', null);
+        return self::ofKeys(
+            $status,
+            'favourites_count',
+            'reblogs_count',
+            'replies_count',
+            $status->int('quotes_count'),
+        );
     }
 
     private static function ofKeys(

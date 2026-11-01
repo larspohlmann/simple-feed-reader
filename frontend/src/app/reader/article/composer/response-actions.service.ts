@@ -44,6 +44,7 @@ export class ResponseActions {
 
   private quoted(target: ComposeTarget, sent: SentPost): void {
     if (target.address === null) this.counts.stepQuotes(target.entryId);
+    else this.comments.countQuote(target.entryId, target.address);
     const url = sent.url;
     this.toast.show({
       message: this.transloco.translate('reader.quoteSent'),

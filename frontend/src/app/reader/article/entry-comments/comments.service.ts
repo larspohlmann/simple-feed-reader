@@ -6,7 +6,7 @@ import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
 import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi } from '../../social-post-api';
-import { withReply, withoutReply } from './thread-edits';
+import { withQuoteCounted, withReply, withoutReply } from './thread-edits';
 
 const CACHE_CAP = 50;
 const FRESH_MS = 60 * 60 * 1000;
@@ -108,6 +108,14 @@ export class CommentsService {
   removeReply(entryId: number, address: string): void {
     this.stateFor(entryId).update((state) =>
       state.status === 'ok' ? { ...state, comments: withoutReply(state.comments, address) } : state,
+    );
+  }
+
+  countQuote(entryId: number, address: string): void {
+    this.stateFor(entryId).update((state) =>
+      state.status === 'ok'
+        ? { ...state, comments: withQuoteCounted(state.comments, address) }
+        : state,
     );
   }
 

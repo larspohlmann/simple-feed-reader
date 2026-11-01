@@ -17,7 +17,7 @@ const ADDRESS = 'https://mastodon.example/users/alice/statuses/200';
 
 describe('ResponseActions', () => {
   let composer: { open: jest.Mock };
-  let comments: { insertReply: jest.Mock; removeReply: jest.Mock };
+  let comments: { insertReply: jest.Mock; removeReply: jest.Mock; countQuote: jest.Mock };
   let counts: { stepReplies: jest.Mock; stepQuotes: jest.Mock };
   let api: { deleteReply: jest.Mock };
   let confirm: { ask: jest.Mock };
@@ -42,7 +42,7 @@ describe('ResponseActions', () => {
 
   beforeEach(() => {
     composer = { open: jest.fn(() => of(sent)) };
-    comments = { insertReply: jest.fn(), removeReply: jest.fn() };
+    comments = { insertReply: jest.fn(), removeReply: jest.fn(), countQuote: jest.fn() };
     counts = { stepReplies: jest.fn(), stepQuotes: jest.fn() };
     api = { deleteReply: jest.fn(() => of(undefined)) };
     confirm = { ask: jest.fn(() => of(true)) };
@@ -95,10 +95,11 @@ describe('ResponseActions', () => {
     open.mockRestore();
   });
 
-  it('counts a quote of a reply nowhere and offers no link the network did not name', () => {
+  it('counts a quote of a reply on that reply and offers no link the network did not name', () => {
     actions.respond({ ...target, kind: 'quote', address: ADDRESS });
 
     expect(counts.stepQuotes).not.toHaveBeenCalled();
+    expect(comments.countQuote).toHaveBeenCalledWith(7, ADDRESS);
     expect(toast.show).toHaveBeenCalledWith({ message: 'Quote posted' });
   });
 
