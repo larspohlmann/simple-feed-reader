@@ -5,19 +5,39 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Entity\Entry;
+use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Service\Completion\ShareEnrichmentQueue;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Refresh\Model\IncomingFeedModel;
+use App\Service\Social\DeletedPostTombstones;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\TimelineSelfThreads;
 
-/** What a refresh does with a page's entries besides storing them: a timeline's threads, then each share. */
+/**
+ * What a refresh does with a page's entries besides storing them:
+ * deleted posts out, a timeline's threads, then each share.
+ */
 final readonly class IncomingEntries
 {
     public function __construct(
         private ShareEnrichmentQueue $enrichmentQueue,
         private TimelineSelfThreads $selfThreads,
+        private DeletedPostTombstones $tombstones,
     ) {
+    }
+
+    public function withoutDeletedPosts(Feed $feed, IncomingFeedModel $incoming): IncomingFeedModel
+    {
+        $buried = array_flip($this->tombstones->buriedIn($feed->requireId()));
+        if ([] === $buried) {
+            return $incoming;
+        }
+
+        return $incoming->withParsed($incoming->parsed->withEntries(array_values(array_filter(
+            $incoming->parsed->entries,
+            static fn (ParsedEntryModel $entry): bool => !isset($buried[EntryGuid::hashOf($entry->guid)]),
+        ))));
     }
 
     public function ofTimeline(Feed $feed, TimelinePageModel $page): IncomingFeedModel

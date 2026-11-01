@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
+use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\ShareEnrichment;
@@ -235,6 +236,23 @@ final class FeedOutcomePersisterTest extends DbTestCase
             ->flushingThrough($entityManager)
             ->loggingTo($this->logger)
             ->idle();
+    }
+
+    public function testAPostDeletedFromTheReaderIsNotStoredAgain(): void
+    {
+        $feed = $this->feed('https://one.example.com/feed');
+        $persisters = FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->loggingTo($this->logger);
+        $persisters->tombstones()->bury($feed->requireId(), EntryGuid::hashOf('one-2'));
+
+        $result = $persisters->idle()->persist(
+            $feed,
+            FetchOutcomeModel::succeeded(FetchResponseModel::fetched($feed->getUrl(), false, $this->rss(), null, null)),
+            $this->clock->now(),
+        );
+
+        self::assertSame(1, $result->entriesCreated);
+        self::assertNull($this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'one-2']));
     }
 
     private function feed(string $url): Feed

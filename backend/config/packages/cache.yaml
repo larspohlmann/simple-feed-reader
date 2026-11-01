@@ -114,10 +114,20 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 2592000
 
+            # Posts the reader deleted from their network (#1972), per feed, so a lagging profile feed or AppView
+            # cannot store one again. DeletedPostTombstones keeps each for seven days; this lifetime is the backstop.
+            social.deleted_posts.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 604800
+
 when@test:
     framework:
         cache:
             pools:
                 # Each test starts with no remembered verdict and no switch cursor, however the suite is ordered.
                 social.profile_visibility.cache:
+                    adapter: cache.adapter.array
+                # The suite's database starts empty every run while a filesystem pool would not: a stale tombstone
+                # would hide a recycled feed id's entries.
+                social.deleted_posts.cache:
                     adapter: cache.adapter.array
