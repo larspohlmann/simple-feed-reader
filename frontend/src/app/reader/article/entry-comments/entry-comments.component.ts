@@ -19,7 +19,8 @@ import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
+import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
+import { ReplyActions } from '../reply-composer/reply-actions.service';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
@@ -63,6 +64,7 @@ export class EntryCommentsComponent {
 
   private readonly service = inject(CommentsService);
   private readonly toast = inject(ToastService);
+  private readonly replies = inject(ReplyActions);
   private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
@@ -121,6 +123,24 @@ export class EntryCommentsComponent {
     );
   }
 
+  reply(network: SocialNetworkName, comment: EntryCommentDto, post: EntryCommentPostDto): void {
+    this.replies.reply(
+      {
+        entryId: this.entryId(),
+        network,
+        address: post.address,
+        authorName: comment.author,
+        authorHandle: comment.authorHandle,
+        excerpt: textOf(comment.html),
+      },
+      comment,
+    );
+  }
+
+  deleteReply(network: SocialNetworkName, comment: EntryCommentDto): void {
+    this.replies.delete(this.entryId(), network, comment);
+  }
+
   when(iso: string): string {
     return relativeTime(iso, this.language.lang());
   }
@@ -144,4 +164,8 @@ export class EntryCommentsComponent {
     );
     return () => clearInterval(ticker);
   }
+}
+
+function textOf(html: string): string {
+  return new DOMParser().parseFromString(html, 'text/html').body.textContent?.trim() ?? '';
 }

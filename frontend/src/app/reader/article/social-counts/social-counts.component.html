@@ -5,7 +5,9 @@
     [liked]="likeable() ? social.isLiked : null"
     [reposted]="viewer()?.isReposted ?? null"
     [canRepost]="viewer()?.canRepost ?? true"
+    [canReply]="viewer()?.canReply ?? null"
     (likeToggled)="actions.like(entry())"
     (repostToggled)="toggleRepost()"
+    (replyRequested)="reply(social.network)"
   />
 }

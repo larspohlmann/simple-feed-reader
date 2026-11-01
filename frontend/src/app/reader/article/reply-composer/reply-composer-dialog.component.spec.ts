@@ -129,7 +129,12 @@ describe('ReplyComposerDialogComponent', () => {
         idempotencyKey: expect.any(String),
       }),
     );
-    expect(close).toHaveBeenCalledWith({ address: 'https://x/1', url: null });
+    expect(close).toHaveBeenCalledWith({
+      address: 'https://x/1',
+      url: null,
+      text: '@ann@hachyderm.io Agreed',
+      authorHandle: '@alice@mastodon.example',
+    });
   });
 
   it('keeps the text after a failed send, says why, and resends with the same key', () => {

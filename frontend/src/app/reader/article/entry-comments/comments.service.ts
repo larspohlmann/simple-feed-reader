@@ -6,6 +6,7 @@ import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
 import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi } from '../../social-post-api';
+import { withReply, withoutReply } from './thread-edits';
 
 const CACHE_CAP = 50;
 const FRESH_MS = 60 * 60 * 1000;
@@ -93,6 +94,21 @@ export class CommentsService {
       show: (reposted) => state.update((current) => withRepost(current, address, reposted)),
       onError,
     });
+  }
+
+  /** Shows a reply the reader just published, until the next load brings it from the network. */
+  insertReply(entryId: number, parentAddress: string | null, reply: EntryCommentDto): void {
+    this.stateFor(entryId).update((state) =>
+      state.status === 'ok'
+        ? { ...state, comments: withReply(state.comments, parentAddress, reply) }
+        : state,
+    );
+  }
+
+  removeReply(entryId: number, address: string): void {
+    this.stateFor(entryId).update((state) =>
+      state.status === 'ok' ? { ...state, comments: withoutReply(state.comments, address) } : state,
+    );
   }
 
   private stateFor(id: number): WritableSignal<CommentsState> {

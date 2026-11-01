@@ -32,6 +32,12 @@ export interface ReplyTarget {
   excerpt: string;
 }
 
+/** What the composer published, with what the panel needs to show it before the network does. */
+export interface SentReply extends PublishedReplyDto {
+  text: string;
+  authorHandle: string | null;
+}
+
 type ContextState =
   | { status: 'loading' }
   | { status: 'ready'; context: ComposerContextDto }
@@ -58,7 +64,7 @@ type ContextState =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReplyComposerDialogComponent {
-  protected readonly ref = inject<DialogRef<PublishedReplyDto>>(DialogRef);
+  protected readonly ref = inject<DialogRef<SentReply>>(DialogRef);
   protected readonly target = inject<ReplyTarget>(DIALOG_DATA);
   private readonly api = inject(SocialPostApi);
   private readonly idempotencyKey = crypto.randomUUID();
@@ -131,7 +137,7 @@ export class ReplyComposerDialogComponent {
     this.sending.set(true);
     this.sendError.set(null);
     this.api.reply(this.target.entryId, this.target.address, this.draftFor(context)).subscribe({
-      next: (published) => this.ref.close(published),
+      next: (published) => this.ref.close(this.sentAs(published, context)),
       error: (error: HttpErrorResponse) => {
         this.sending.set(false);
         this.sendError.set(problemMessage(parseProblem(error)));
@@ -145,6 +151,11 @@ export class ReplyComposerDialogComponent {
     if (this.text() === '' && context.mentions.length > 0) {
       this.text.set(context.mentions.join(' ') + ' ');
     }
+  }
+
+  private sentAs(published: PublishedReplyDto, context: ComposerContextDto): SentReply {
+    const account = context.accounts.find((candidate) => candidate.id === context.accountId);
+    return { ...published, text: this.text(), authorHandle: account?.handle ?? null };
   }
 
   private draftFor(context: ComposerContextDto): ReplyDraftDto {

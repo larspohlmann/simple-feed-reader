@@ -9,6 +9,7 @@ import { EntrySocialDto, PostActionsView, SocialCountsDto } from '../../entry-so
 import { ToastService } from '../../../shared/toast/toast.service';
 import { Problem } from '../../../core/problem';
 import { EntryDto } from '../../models';
+import { ReplyActions } from '../reply-composer/reply-actions.service';
 import { SocialCountsComponent } from './social-counts.component';
 import { SocialCountsService, SocialCountsState } from './social-counts.service';
 
@@ -20,6 +21,7 @@ describe('SocialCountsComponent', () => {
   let service: { state: jest.Mock; load: jest.Mock; toggleRepost: jest.Mock };
   let toast: { show: jest.Mock };
   let actions: { like: jest.Mock };
+  let replies: { reply: jest.Mock };
   let language: { lang: WritableSignal<Lang> };
 
   beforeEach(() => {
@@ -31,6 +33,7 @@ describe('SocialCountsComponent', () => {
     };
     toast = { show: jest.fn() };
     actions = { like: jest.fn() };
+    replies = { reply: jest.fn() };
     language = { lang: signal<Lang>('en') };
     TestBed.configureTestingModule({
       imports: [SocialCountsComponent, provideTranslocoTesting()],
@@ -39,6 +42,7 @@ describe('SocialCountsComponent', () => {
         { provide: EntryActionHandler, useValue: actions },
         { provide: LanguageService, useValue: language },
         { provide: ToastService, useValue: toast },
+        { provide: ReplyActions, useValue: replies },
       ],
     });
     fixture = TestBed.createComponent(SocialCountsComponent);
@@ -200,6 +204,57 @@ describe('SocialCountsComponent', () => {
     expect(button.classList).toContain('on');
   });
 
+  describe('reply', () => {
+    const replyButton = (element: HTMLElement) =>
+      element.querySelector('button.reply') as HTMLButtonElement | null;
+
+    it('opens the composer for the post from the replies count', () => {
+      const entry = anEntry({
+        id: 1,
+        excerpt: 'Big news',
+        author: 'Bob',
+        social: { network: 'bluesky', isLiked: false, canLike: true },
+      });
+      show(entry);
+      const button = replyButton(
+        settle(loaded({}, false, { isReposted: false, canRepost: true, canReply: true })),
+      )!;
+
+      expect(button.getAttribute('aria-label')).toBe('Reply on Bluesky, 7 replies');
+      button.click();
+
+      expect(replies.reply).toHaveBeenCalledWith(
+        {
+          entryId: 1,
+          network: 'bluesky',
+          address: null,
+          authorName: 'Bob',
+          authorHandle: null,
+          excerpt: 'Big news',
+        },
+        null,
+      );
+    });
+
+    it('offers the reply disabled, with its reason, on a post the author closed', () => {
+      show(post());
+      const button = replyButton(
+        settle(loaded({}, false, { isReposted: false, canRepost: true, canReply: false })),
+      )!;
+      button.click();
+
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(button.title).toBe('The author limits who can reply');
+      expect(replies.reply).not.toHaveBeenCalled();
+    });
+
+    it('stays a plain count until the network says what the reader may do', () => {
+      show(post());
+
+      expect(replyButton(settle(loaded()))).toBeNull();
+    });
+  });
+
   describe('repost', () => {
     it('stays a plain count until the network says what the reader did', () => {
       show(post());
@@ -216,7 +271,7 @@ describe('SocialCountsComponent', () => {
       );
       const button = repostButton(element)!;
 
-      expect(labels(element)).toEqual(['7 replies', '2 quotes']);
+      expect(labels(element)).toEqual(['2 quotes']);
       expect(element.querySelector('.row')!.firstElementChild?.tagName).toBe('APP-REPOST-BUTTON');
       expect(button.querySelector('.number')?.textContent?.trim()).toBe('5');
       expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky, 5 reposts');

@@ -293,4 +293,16 @@ describe('SocialCountsService', () => {
     expect(service.state(1)()).toEqual({ status: 'idle' });
     expect(held()).toEqual({ status: 'loading' });
   });
+
+  it('steps the replies count for a reply the reader published or deleted, never below zero', () => {
+    service.load(post());
+    service.stepReplies(1, true);
+    expect(service.state(1)()).toMatchObject({ counts: { replies: 8 } });
+
+    service.stepReplies(1, false);
+    service.stepReplies(1, false);
+    expect(service.state(1)()).toMatchObject({ counts: { replies: 6 } });
+    service.stepReplies(2, true);
+    expect(service.state(2)()).toEqual({ status: 'idle' });
+  });
 });

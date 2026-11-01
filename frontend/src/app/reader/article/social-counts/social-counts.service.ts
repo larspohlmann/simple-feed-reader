@@ -78,6 +78,18 @@ export class SocialCountsService {
     });
   }
 
+  /** Counts a reply the reader published to the post, or one they deleted, before the network does. */
+  stepReplies(entryId: number, up: boolean): void {
+    this.stateFor(entryId).update((state) =>
+      state.status === 'ok'
+        ? {
+            ...state,
+            counts: { ...state.counts, replies: steppedCount(state.counts.replies, up) },
+          }
+        : state,
+    );
+  }
+
   private stateFor(id: number): WritableSignal<SocialCountsState> {
     const state = this.states.get(id) ?? signal<SocialCountsState>({ status: 'idle' });
     this.states.delete(id);

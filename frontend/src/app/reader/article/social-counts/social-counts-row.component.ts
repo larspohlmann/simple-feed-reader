@@ -16,8 +16,8 @@ interface ShownCount {
 }
 
 /**
- * A post's counters with its repost and like buttons; `liked` and `reposted` are null when the reader cannot act
- * on the post, which shows plain counts instead.
+ * A post's counters with its repost, reply and like buttons; `liked`, `reposted` and `canReply` are null when
+ * the reader cannot act on the post, which shows plain counts instead.
  */
 @Component({
   selector: 'app-social-counts-row',
@@ -32,8 +32,10 @@ export class SocialCountsRowComponent {
   readonly liked = input.required<boolean | null>();
   readonly reposted = input<boolean | null>(null);
   readonly canRepost = input(true);
+  readonly canReply = input<boolean | null>(null);
   readonly likeToggled = output<void>();
   readonly repostToggled = output<void>();
+  readonly replyRequested = output<void>();
 
   private readonly language = inject(LanguageService);
   private readonly compact = computed(
@@ -41,7 +43,14 @@ export class SocialCountsRowComponent {
   );
 
   protected readonly shown = computed(
-    () => this.liked() !== null || this.reposted() !== null || this.counts() !== null,
+    () =>
+      this.liked() !== null ||
+      this.reposted() !== null ||
+      this.canReply() !== null ||
+      this.counts() !== null,
+  );
+  protected readonly replyHintKey = computed(
+    () => `reader.${this.canReply() ? 'reply' : 'replyForbidden'}.${this.network()}`,
   );
   protected readonly likeKey = computed(
     () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
@@ -53,7 +62,9 @@ export class SocialCountsRowComponent {
     if (this.reposted() === null) {
       shown.push({ kind: this.repostKind(), icon: 'repeat', count: counts.reposts });
     }
-    shown.push({ kind: 'replies', icon: 'chat_bubble', count: counts.replies });
+    if (this.canReply() === null) {
+      shown.push({ kind: 'replies', icon: 'chat_bubble', count: counts.replies });
+    }
     if (counts.quotes !== null) {
       shown.push({ kind: 'quotes', icon: 'format_quote', count: counts.quotes });
     }

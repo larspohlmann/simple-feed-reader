@@ -14,6 +14,8 @@ import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handl
 import { SocialCountsDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialCountsRowComponent } from './social-counts-row.component';
+import { SocialNetworkName } from '../../../core/social-network';
+import { ReplyActions } from '../reply-composer/reply-actions.service';
 import { SocialCountsService } from './social-counts.service';
 
 @Component({
@@ -28,6 +30,7 @@ export class SocialCountsComponent {
   protected readonly actions = inject(EntryActionHandler);
   private readonly service = inject(SocialCountsService);
   private readonly toast = inject(ToastService);
+  private readonly replies = inject(ReplyActions);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly entryId = computed(() => this.entry().id);
   private readonly loaded = computed(() => {
@@ -55,6 +58,21 @@ export class SocialCountsComponent {
   protected toggleRepost(): void {
     this.service.toggleRepost(this.entry(), (problem) =>
       this.toast.show({ message: problemMessage(problem) }),
+    );
+  }
+
+  protected reply(network: SocialNetworkName): void {
+    const entry = this.entry();
+    this.replies.reply(
+      {
+        entryId: entry.id,
+        network,
+        address: null,
+        authorName: entry.poster?.name ?? entry.author,
+        authorHandle: null,
+        excerpt: entry.excerpt,
+      },
+      null,
     );
   }
 
