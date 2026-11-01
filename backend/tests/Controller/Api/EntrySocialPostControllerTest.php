@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
+use App\Entity\User;
+use App\Service\Social\PostWriter\BlueskyPostWriter;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
+use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -27,6 +32,8 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         . 'https%3A%2F%2Fmastodon.example%2Fusers%2Falice%2Fstatuses%2F200&resolve=true&type=statuses&limit=1';
     private const string QUOTE = 'https://mastodon.example/users/alice/statuses/201';
     private const string DELETE_REPLY = 'DELETE https://mastodon.example/api/v1/statuses/200';
+    private const string ARTICLE_URL = 'https://example.com/article?id=7';
+    private const string LINK_POST = 'https://mastodon.example/users/alice/statuses/202';
     private const string IDEMPOTENCY_KEY = '9b2f6c1e-4a7d-4c1b-8f3e-2d5a6b7c8d9e';
 
     /** Must match framework.rate_limiter.social_writes.limit in rate_limiter.yaml. */
@@ -246,6 +253,118 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertSame([self::SEARCH], $this->routesAsked());
     }
 
+    public function testTheLinkComposerStartsFromTheMastodonAccountsOwnDefaults(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":1000}}}'),
+            self::OWN_ACCOUNT => new MockResponse('{"id":"1","source":{"privacy":"unlisted"}}'),
+        ]);
+        $user = $this->signIn($client, 'link-composer-mastodon@example.test');
+        $account = $this->mastodonAccountOf($user);
+
+        $client->request('GET', $this->linkComposerPath($this->articleFor($user), 'mastodon'));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([
+            'accounts' => [['id' => $account->requireId(), 'handle' => '@alice@mastodon.example']],
+            'accountId' => $account->requireId(),
+            'canSend' => true,
+            'maxCharacters' => 1000,
+            'visibility' => 'unlisted',
+            'mentions' => [],
+        ], $this->payload($client));
+    }
+
+    public function testTheLinkComposerOnBlueskyStartsFromItsGraphemeLimit(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-composer-bluesky@example.test');
+        $account = SocialAccounts::blueskyOf($user);
+        $this->entityManager()->persist($account);
+        $this->entityManager()->flush();
+
+        $client->request('GET', $this->linkComposerPath($this->articleFor($user), 'bluesky'));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([
+            'accounts' => [['id' => $account->requireId(), 'handle' => $account->getHandle()]],
+            'accountId' => $account->requireId(),
+            'canSend' => true,
+            'maxCharacters' => BlueskyPostWriter::MAX_GRAPHEMES,
+            'visibility' => null,
+            'mentions' => [],
+        ], $this->payload($client));
+        self::assertSame([], $this->http->requests);
+    }
+
+    #[DataProvider('missingNetworks')]
+    public function testTheLinkComposerAndALinkPostNeedAKnownNetwork(string $query): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, sprintf('link-network-%s@example.test', md5($query)));
+        $this->mastodonAccountOf($user);
+        $entryId = $this->articleFor($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/social/link-composer%s', $entryId, $query));
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+
+        $this->send($client, 'POST', sprintf('/api/entries/%d/social/links%s', $entryId, $query), ['text' => 'Hi']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertSame([], $this->http->requests);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function missingNetworks(): iterable
+    {
+        yield 'no network' => [''];
+        yield 'unknown network' => ['?network=friendica'];
+    }
+
+    public function testALinkPostIsPublishedOnMastodonWithTheComposersChoices(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::STATUSES => new MockResponse(json_encode(
+                ['id' => '202', 'uri' => self::LINK_POST, 'url' => 'https://mastodon.example/@alice/202'],
+                \JSON_THROW_ON_ERROR,
+            )),
+        ]);
+        $user = $this->signIn($client, 'link-post@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send($client, 'POST', $this->linkPath($this->articleFor($user)), [
+            'text' => 'Worth reading ' . self::ARTICLE_URL,
+            'visibility' => 'unlisted',
+            'idempotencyKey' => self::IDEMPOTENCY_KEY,
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(
+            ['address' => self::LINK_POST, 'url' => 'https://mastodon.example/@alice/202'],
+            $this->payload($client),
+        );
+        self::assertSame([self::STATUSES], $this->routesAsked());
+        self::assertSame(
+            ['status' => 'Worth reading ' . self::ARTICLE_URL, 'visibility' => 'unlisted'],
+            json_decode($this->http->requests[0]['body'], true),
+        );
+        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[0]['headers']);
+    }
+
+    public function testAnotherUsersEntryCannotBeSharedAsALinkPost(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $entryId = $this->articleFor($this->factory()->create('link-stranger@example.test'));
+        $user = $this->signIn($client, 'link-own@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send($client, 'POST', $this->linkPath($entryId), ['text' => 'Hi']);
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+
+        $client->request('GET', $this->linkComposerPath($entryId, 'mastodon'));
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame([], $this->http->requests);
+    }
+
     #[DataProvider('writes')]
     public function testRepliesQuotesAndDeletesDrawOnTheWriteBudgetRepostsUse(string $method, string $path): void
     {
@@ -266,6 +385,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     {
         yield 'reply' => ['POST', '/api/entries/{id}/social/replies'];
         yield 'quote' => ['POST', '/api/entries/{id}/social/quotes'];
+        yield 'link post' => ['POST', '/api/entries/{id}/social/links?network=mastodon'];
         yield 'delete' => ['DELETE', '/api/entries/{id}/comments/reply?address=' . rawurlencode(self::REPLY)];
     }
 
@@ -287,6 +407,29 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     private function postReply(KernelBrowser $client, int $entryId, array $body): void
     {
         $this->send($client, 'POST', sprintf('/api/entries/%d/social/replies', $entryId), $body);
+    }
+
+    private function articleFor(User $user): int
+    {
+        $feed = (new NetworkFeedSubscriptions($this->entityManager()))
+            ->subscribe($user, NetworkFeedSubscriptions::PLAIN)
+            ->getFeed();
+        $published = new \DateTimeImmutable('2026-10-12T10:00:00Z');
+        $entry = new Entry($feed, 'tag:example.com,2026:7', self::ARTICLE_URL, 'An article', $published, $published);
+        $this->entityManager()->persist($entry);
+        $this->entityManager()->flush();
+
+        return $entry->requireId();
+    }
+
+    private function linkComposerPath(int $entryId, string $network): string
+    {
+        return sprintf('/api/entries/%d/social/link-composer?network=%s', $entryId, $network);
+    }
+
+    private function linkPath(int $entryId): string
+    {
+        return sprintf('/api/entries/%d/social/links?network=mastodon', $entryId);
     }
 
     private function quotePath(int $entryId): string

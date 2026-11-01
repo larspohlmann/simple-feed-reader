@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Entity\Entry;
+use App\Enum\SocialNetwork;
+use App\Service\Social\Model\LinkPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Support\MastodonVisibility;
@@ -44,5 +46,10 @@ final readonly class PostDraftRequest
     public function toTarget(Entry $entry, ?string $address): ResponseTargetModel
     {
         return new ResponseTargetModel($entry, $address, $this->accountId);
+    }
+
+    public function toLinkPost(SocialNetwork $network): LinkPostModel
+    {
+        return new LinkPostModel($network, $this->accountId, $this->toDraft());
     }
 }
