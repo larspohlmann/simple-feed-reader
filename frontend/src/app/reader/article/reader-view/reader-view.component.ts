@@ -60,6 +60,7 @@ import { ListenLauncher } from '../../audio/listen-launcher';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 import { ShareButtonComponent } from '../share/share-button.component';
+import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-actions.component';
 @Component({
   selector: 'app-reader-view',
   imports: [
@@ -88,6 +89,7 @@ import { ShareButtonComponent } from '../share/share-button.component';
     ArticleContentComponent,
     ArticleLayerComponent,
     ShareButtonComponent,
+    ArticleCornerActionsComponent,
   ],
   providers: [
     ArticleScrollRestore,

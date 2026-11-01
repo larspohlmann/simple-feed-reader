@@ -56,10 +56,17 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     public function testTheComposerStartsFromTheInstancesLimitTheStricterVisibilityAndTheAuthor(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::SEARCH => self::statuses(['id' => '110', 'visibility' => 'public', 'account' => [
-                'acct' => 'Gargron@mastodon.social',
-                'url' => 'https://mastodon.social/@Gargron',
-            ]]),
+            self::SEARCH => self::statuses([
+                'id' => '110',
+                'visibility' => 'public',
+                'account' => [
+                    'display_name' => 'Eugen',
+                    'acct' => 'Gargron@mastodon.social',
+                    'url' => 'https://mastodon.social/@Gargron',
+                ],
+                'content' => '<p>Hello <b>world</b></p>',
+                'card' => ['url' => 'https://example.org/story', 'title' => 'The story', 'provider_name' => 'Example'],
+            ]),
             self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":1000}}}'),
             self::OWN_ACCOUNT => new MockResponse('{"id":"1","source":{"privacy":"unlisted"}}'),
         ]);
@@ -75,7 +82,21 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
-            'mentions' => ['@gargron@mastodon.social'],
+            'kind' => 'reply',
+            'text' => '@gargron@mastodon.social ',
+            'target' => [
+                'kind' => 'post',
+                'authorName' => 'Eugen',
+                'authorHandle' => '@Gargron@mastodon.social',
+                'excerpt' => 'Hello world',
+                'card' => [
+                    'url' => 'https://example.org/story',
+                    'title' => 'The story',
+                    'description' => null,
+                    'imageUrl' => null,
+                    'siteName' => 'Example',
+                ],
+            ],
         ], $this->payload($client));
     }
 
@@ -94,7 +115,8 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client);
         self::assertTrue($payload['canSend']);
-        self::assertSame([], $payload['mentions']);
+        self::assertSame('quote', $payload['kind']);
+        self::assertSame('', $payload['text']);
 
         $client->request('GET', sprintf('/api/entries/%d/social/composer?kind=boost', $entryId));
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
@@ -269,18 +291,25 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         yield 'delete' => ['DELETE', '/api/entries/{id}/comments/reply?address=' . rawurlencode(self::REPLY)];
     }
 
-    public function testOpeningTheComposerDrawsOnTheViewerBudget(): void
+    #[DataProvider('composers')]
+    public function testOpeningAComposerDrawsOnTheViewerBudget(string $path): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
-        $user = $this->signIn($client, 'reply-composer-budget@example.test');
+        $user = $this->signIn($client, sprintf('composer-budget-%s@example.test', md5($path)));
         $entryId = $this->mastodonPostFor($user);
         for ($attempt = 0; $attempt < self::VIEWER_BUDGET; ++$attempt) {
             $client->request('GET', sprintf('/api/entries/%d/social/viewer', $entryId));
         }
 
-        $client->request('GET', sprintf('/api/entries/%d/social/composer', $entryId));
+        $client->request('GET', str_replace('{id}', (string) $entryId, $path));
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function composers(): iterable
+    {
+        yield 'response composer' => ['/api/entries/{id}/social/composer'];
     }
 
     /** @param array<string, string> $body */

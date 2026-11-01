@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\PostWriter;
 
+use App\Entity\SocialAccount;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -42,6 +43,16 @@ interface PostWriterInterface
      * @throws SocialNetworkUnreachableException
      */
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel;
+
+    /**
+     * @throws SocialPostTooLongException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialTokenScopeMissingException
+     * @throws SocialPostRefusedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel;
 
     /**
      * A post the network no longer has counts as deleted.

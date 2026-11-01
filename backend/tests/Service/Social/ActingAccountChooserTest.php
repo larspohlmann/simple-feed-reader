@@ -144,6 +144,6 @@ final class ActingAccountChooserTest extends DbTestCase
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
 
-        return new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts);
+        return SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
     }
 }

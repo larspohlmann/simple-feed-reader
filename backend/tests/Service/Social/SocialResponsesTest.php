@@ -6,38 +6,46 @@ namespace App\Tests\Service\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
+use App\Service\Social\ComposerContexts;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ComposerKind;
+use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\PostWriting;
 use App\Service\Social\ResponseTargetFinder;
-use App\Service\Social\SocialAccountForUser;
+use App\Service\Social\SharedPageCards;
 use App\Service\Social\SocialCountsCache;
 use App\Service\Social\SocialPostFinder;
 use App\Service\Social\SocialResponses;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeCommentsSource;
+use App\Tests\Support\FakeComposerDefaults;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StubPageCardReader;
+use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -72,6 +80,110 @@ final class SocialResponsesTest extends DbTestCase
         $this->countsCache = new SocialCountsCache(new ArrayAdapter());
         $this->owner = $this->user('social-replies@example.test');
         $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+    }
+
+    public function testTheComposerAnswersAsTheActingAccountAmongTheConnectedOnes(): void
+    {
+        $first = $this->account;
+        $default = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $default->becomeDefault();
+        $broken = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'cid@mastodon.example'),
+        );
+        $broken->markNeedsReconnect();
+        $this->entityManager->flush();
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Reply,
+        );
+
+        self::assertSame([$default, $first], $context->accounts);
+        self::assertSame($default, $context->account);
+        self::assertFalse($context->canSend);
+        self::assertEquals(new ComposerDefaultsModel(500, 'public', ['110', '110']), $context->defaults);
+        self::assertSame(ComposerKind::Reply, $context->kind);
+        self::assertSame('110 110 ', $context->text);
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testTheComposerShowsThePostItAnswersWithTheLinkCardItCarries(): void
+    {
+        $preview = new PostPreviewModel(
+            'Eugen',
+            '@Gargron@mastodon.social',
+            'Hello',
+            new LinkCardContent('https://example.org/story', 'The story', null, null, 'Example'),
+        );
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Quote,
+        );
+
+        self::assertSame($preview, $context->target);
+    }
+
+    public function testAReplyInTheThreadAlsoLooksUpTheEntrysPostAsItsStarter(): void
+    {
+
+        $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
+        );
+
+        self::assertSame(['resolve ' . self::REPLY_URI, 'resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testAThreadStarterTheAccountCannotFindLeavesItsAuthorOut(): void
+    {
+        $calls = &$this->mastodon->calls;
+        $this->mastodon->onResolve(static function () use (&$calls): void {
+            if (\count($calls) > 1) {
+                throw new SocialPostNotFoundException('The entry\'s post is gone.');
+            }
+        });
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
+        );
+
+        self::assertSame(['110', 'no thread starter'], $context->defaults->mentions);
+    }
+
+    public function testAQuoteMaySendOnlyWhereTheAuthorAllowsQuotes(): void
+    {
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+        $target = new ResponseTargetModel($this->post());
+
+        self::assertFalse($this->responses()->contextFor($this->owner, $target, ResponseKind::Quote)->canSend);
+        self::assertTrue($this->responses()->contextFor($this->owner, $target, ResponseKind::Reply)->canSend);
+    }
+
+    public function testAQuoteOfAReplyStartsWithNoMentionsAndNeverLooksUpTheThreadStarter(): void
+    {
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Quote,
+        );
+
+        self::assertSame([], $context->defaults->mentions);
+        self::assertSame(ComposerKind::Quote, $context->kind);
+        self::assertSame('', $context->text);
+        self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
     }
 
     public function testAReplyAnswersTheEntrysPostAsTheActingAccount(): void
@@ -353,11 +465,17 @@ final class SocialResponsesTest extends DbTestCase
         $guard = new ActingAccountGuard($this->entityManager);
         $mastodon = $this->mastodon;
         $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
-        $chooser = new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts);
+        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
         $posts = new SocialPostFinder($chooser, $guard, $network);
 
         return new SocialResponses(
-            new ResponseTargetFinder($posts, $chooser, new SocialAccountForUser($accounts)),
+            new ResponseTargetFinder($posts, $chooser),
+            new ComposerContexts(
+                $accounts,
+                $posts,
+                new SharedPageCards(new StubPageCardReader(), new NullLogger()),
+                new ServiceLocator(['mastodon' => static fn (): FakeComposerDefaults => new FakeComposerDefaults()]),
+            ),
             $posts,
             new PostWriting($guard, $network),
             $accounts,

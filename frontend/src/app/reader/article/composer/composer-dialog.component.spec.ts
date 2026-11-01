@@ -3,38 +3,69 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ComposerContextDto, PublishedPostDto } from '../../entry-social';
+import {
+  ComposerCardDto,
+  ComposerContextDto,
+  LinkComposerSubjectDto,
+  LinkTargetDto,
+  PostComposerSubjectDto,
+  PostTargetDto,
+  PublishedPostDto,
+  ResponseTargetDto,
+} from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
-import { ComposerDialogComponent, ComposeTarget } from './composer-dialog.component';
+import { ComposerDialogComponent } from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
+const QUOTED: PostComposerSubjectDto = {
+  kind: 'post',
+  authorName: 'Ann',
+  authorHandle: '@ann@hachyderm.io',
+  excerpt: 'What do you think?',
+  card: null,
+};
+const STORY_CARD: ComposerCardDto = {
+  url: 'https://example.com/story',
+  title: 'A long read',
+  description: null,
+  imageUrl: 'https://example.com/lead.jpg',
+  siteName: 'example.com',
+};
+const STORY: LinkComposerSubjectDto = { kind: 'link', card: STORY_CARD };
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
   let api: { composer: jest.Mock; send: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
+    kind: 'reply',
     accounts: [{ id: 4, handle: '@alice@mastodon.example' }],
     accountId: 4,
     canSend: true,
     maxCharacters: 500,
     visibility: 'unlisted',
-    mentions: ['@ann@hachyderm.io'],
+    text: '@ann@hachyderm.io ',
+    target: QUOTED,
     ...overrides,
   });
 
-  const target = (overrides: Partial<ComposeTarget> = {}): ComposeTarget => ({
+  const target = (overrides: Partial<ResponseTargetDto> = {}): ResponseTargetDto => ({
     kind: 'reply',
     entryId: 7,
     network: 'mastodon',
     address: REPLY,
-    authorName: 'Ann',
-    authorHandle: '@ann@hachyderm.io',
-    excerpt: 'What do you think?',
     ...overrides,
   });
 
-  function mount(replyTarget = target()) {
+  const article = (overrides: Partial<LinkTargetDto> = {}): LinkTargetDto => ({
+    kind: 'link',
+    network: 'mastodon',
+    url: 'https://example.com/story',
+    title: 'A long read',
+    ...overrides,
+  });
+
+  function mount(replyTarget: PostTargetDto = target()) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -73,14 +104,16 @@ describe('ComposerDialogComponent', () => {
     };
   });
 
-  it('shows the post it answers and starts the text with the mentions', () => {
+  it('shows the post it answers and starts the text where the server says', () => {
     const fixture = mount();
 
     expect(api.composer).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'reply', entryId: 7, address: REPLY }),
       undefined,
     );
-    expect(element(fixture).querySelector('.target')!.textContent).toContain('What do you think?');
+    const answered = element(fixture).querySelector('.target')!;
+    expect(answered.querySelector('.handle')!.textContent).toContain('@ann@hachyderm.io');
+    expect(answered.querySelector('.excerpt')!.textContent).toContain('What do you think?');
     expect(textArea(fixture).value).toBe('@ann@hachyderm.io ');
   });
 
@@ -88,6 +121,19 @@ describe('ComposerDialogComponent', () => {
     const fixture = mount();
 
     expect(document.activeElement).toBe(textArea(fixture));
+  });
+
+  it('clears the text and puts the cursor back, and cannot clear an empty text', () => {
+    const fixture = mount();
+    const clear = () => element(fixture).querySelector('.clear button') as HTMLButtonElement;
+    textArea(fixture).blur();
+
+    clear().click();
+    fixture.detectChanges();
+
+    expect(textArea(fixture).value).toBe('');
+    expect(document.activeElement).toBe(textArea(fixture));
+    expect(clear().disabled).toBe(true);
   });
 
   it('offers the account choice only with more than one account, keeping the text on a change', () => {
@@ -171,7 +217,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('sends only a text that is there and fits the limit', () => {
-    api.composer.mockReturnValue(of(context({ mentions: [], maxCharacters: 5 })));
+    api.composer.mockReturnValue(of(context({ text: '', maxCharacters: 5 })));
     const fixture = mount();
 
     expect(sendButton(fixture).disabled).toBe(true);
@@ -202,6 +248,9 @@ describe('ComposerDialogComponent', () => {
       url: null,
       text: '@ann@hachyderm.io Agreed',
       authorHandle: '@alice@mastodon.example',
+      kind: 'reply',
+      network: 'mastodon',
+      target: QUOTED,
     });
   });
 
@@ -271,7 +320,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('writes a quote under its own heading and sends it as a quote', () => {
-    api.composer.mockReturnValue(of(context({ mentions: [] })));
+    api.composer.mockReturnValue(of(context({ kind: 'quote', text: '' })));
     const fixture = mount(target({ kind: 'quote' }));
     type(fixture, 'Worth reading');
 
@@ -291,7 +340,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('says so and sends nothing when the author keeps the post from quotes', () => {
-    api.composer.mockReturnValue(of(context({ canSend: false })));
+    api.composer.mockReturnValue(of(context({ kind: 'quote', canSend: false, text: '' })));
     const fixture = mount(target({ kind: 'quote' }));
 
     expect(element(fixture).textContent).toContain('You can’t quote this post');
@@ -315,10 +364,186 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('shows Bluesky no visibility choice', () => {
-    api.composer.mockReturnValue(of(context({ visibility: null, mentions: [] })));
+    api.composer.mockReturnValue(of(context({ visibility: null, text: '' })));
     const fixture = mount(target({ network: 'bluesky' }));
 
     expect(element(fixture).querySelector('#reply-visibility')).toBeNull();
     expect(element(fixture).querySelector('.warns')).toBeNull();
+  });
+
+  describe('for a link post', () => {
+    const accounts = [
+      { id: 4, handle: '@alice@mastodon.example' },
+      { id: 5, handle: '@bea@mastodon.example' },
+    ];
+
+    const linkContext = (overrides: Partial<ComposerContextDto> = {}) =>
+      context({
+        kind: 'link',
+        text: 'A long read\n\nhttps://example.com/story',
+        target: STORY,
+        ...overrides,
+      });
+    const quoteContext = (overrides: Partial<ComposerContextDto> = {}) =>
+      linkContext({ kind: 'quote', text: '', target: QUOTED, ...overrides });
+
+    beforeEach(() => api.composer.mockReturnValue(of(linkContext())));
+
+    it('shows the page card and the starting text once the context arrives', () => {
+      const slow = new Subject<ComposerContextDto>();
+      api.composer.mockReturnValue(slow);
+      const fixture = mount(article());
+      expect(element(fixture).querySelector('.article')).toBeNull();
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Post on Mastodon');
+
+      slow.next(linkContext());
+      fixture.detectChanges();
+
+      const card = element(fixture).querySelector('.article')!;
+      expect(card.querySelector('.title')!.textContent).toContain('A long read');
+      expect(card.querySelector('.site')!.textContent).toContain('example.com');
+      expect(card.querySelector('img')!.getAttribute('src')).toBe('https://example.com/lead.jpg');
+      expect(element(fixture).querySelector('.target')).toBeNull();
+      expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
+      expect(api.composer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'link',
+          network: 'mastodon',
+          url: 'https://example.com/story',
+          title: 'A long read',
+        }),
+        undefined,
+      );
+    });
+
+    it('shows a post on its own network as the quote it becomes, with an empty text', () => {
+      api.composer.mockReturnValue(of(quoteContext()));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+
+      const quoted = element(fixture).querySelector('.target')!;
+      expect(quoted.querySelector('.name')!.textContent).toContain('Ann');
+      expect(quoted.querySelector('.handle')!.textContent).toContain('@ann@hachyderm.io');
+      expect(quoted.querySelector('.excerpt')!.textContent).toContain('What do you think?');
+      expect(element(fixture).querySelector('.article')).toBeNull();
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Quote on Mastodon');
+      expect(sendButton(fixture).textContent?.trim()).toBe('Quote');
+      expect(textArea(fixture).value).toBe('');
+    });
+
+    it('shows the link card the quoted post carries below its text', () => {
+      const card = {
+        url: 'https://www.politico.com/news/bill',
+        title: 'Senate passes the bill',
+        description: null,
+        imageUrl: 'https://cdn.bsky.app/img/thumb.jpg',
+        siteName: 'politico.com',
+      };
+      api.composer.mockReturnValue(of(quoteContext({ target: { ...QUOTED, card } })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+
+      const quotedCard = element(fixture).querySelector('.target .article')!;
+      expect(quotedCard.querySelector('.title')!.textContent).toContain('Senate passes the bill');
+      expect(quotedCard.querySelector('.site')!.textContent).toContain('politico.com');
+      expect(quotedCard.querySelector('img')!.getAttribute('src')).toContain('thumb.jpg');
+    });
+
+    it('sends the quote of a post on its own network to the link endpoint, closing with it shown', () => {
+      api.composer.mockReturnValue(of(quoteContext()));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+      type(fixture, 'Look');
+
+      submit(fixture);
+
+      expect(api.send).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'link', url: 'https://mastodon.social/@ann/110' }),
+        expect.objectContaining({ text: 'Look' }),
+      );
+      expect(close).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'quote', network: 'mastodon', target: QUOTED }),
+      );
+    });
+
+    it('shows a card without an image or site when the page has none', () => {
+      api.composer.mockReturnValue(
+        of(
+          linkContext({
+            target: { kind: 'link', card: { ...STORY_CARD, imageUrl: null, siteName: '' } },
+          }),
+        ),
+      );
+      const fixture = mount(article());
+
+      expect(element(fixture).querySelector('.article img')).toBeNull();
+      expect(element(fixture).querySelector('.article .site')).toBeNull();
+    });
+
+    it('says so when the post it becomes a quote of takes no quotes', () => {
+      api.composer.mockReturnValue(of(quoteContext({ canSend: false })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+
+      expect(element(fixture).textContent).toContain('You can’t quote this post');
+      expect(sendButton(fixture).disabled).toBe(true);
+    });
+
+    it('uses the starting text once, keeping what the reader wrote over an account switch', () => {
+      api.composer.mockReturnValue(of(linkContext({ accounts })));
+      const fixture = mount(article());
+      type(fixture, '');
+      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(api.composer).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: 'link', network: 'mastodon' }),
+        5,
+      );
+      expect(textArea(fixture).value).toBe('');
+    });
+
+    it('keeps the quote heading while an account switch reloads the context', () => {
+      api.composer.mockReturnValue(of(quoteContext({ accounts })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+      api.composer.mockReturnValue(new Subject<ComposerContextDto>());
+      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Quote on Mastodon');
+    });
+
+    it('keeps what the reader wrote when a later context quotes', () => {
+      api.composer.mockReturnValue(of(linkContext({ accounts })));
+      const fixture = mount(article());
+      type(fixture, 'Mine');
+      api.composer.mockReturnValue(of(quoteContext({ accounts })));
+      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(textArea(fixture).value).toBe('Mine');
+    });
+
+    it('sends the post as a link post', () => {
+      api.composer.mockReturnValue(of(linkContext({ visibility: null, text: 'A long read' })));
+      const fixture = mount(article({ network: 'bluesky' }));
+
+      expect(sendButton(fixture).textContent?.trim()).toBe('Post');
+      submit(fixture);
+
+      expect(api.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'link',
+          network: 'bluesky',
+          url: 'https://example.com/story',
+        }),
+        expect.objectContaining({ text: 'A long read', accountId: 4 }),
+      );
+      expect(close).toHaveBeenCalledWith(
+        expect.objectContaining({ address: 'https://x/1', kind: 'link', target: STORY }),
+      );
+    });
   });
 });

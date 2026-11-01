@@ -11,11 +11,11 @@ import {
 import { problemMessage } from '../../../core/problem';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { ResponseKind, SocialCountsDto, likeableSocial } from '../../entry-social';
+import { SocialCountsDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialCountsRowComponent } from './social-counts-row.component';
 import { SocialNetworkName } from '../../../core/social-network';
-import { ResponseActions } from '../composer/response-actions.service';
+import { PostActions } from '../composer/post-actions.service';
 import { SocialCountsService } from './social-counts.service';
 
 @Component({
@@ -30,7 +30,7 @@ export class SocialCountsComponent {
   protected readonly actions = inject(EntryActionHandler);
   private readonly service = inject(SocialCountsService);
   private readonly toast = inject(ToastService);
-  private readonly responses = inject(ResponseActions);
+  private readonly responses = inject(PostActions);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly entryId = computed(() => this.entry().id);
   private readonly loaded = computed(() => {
@@ -61,17 +61,12 @@ export class SocialCountsComponent {
     );
   }
 
-  protected respond(kind: ResponseKind, network: SocialNetworkName): void {
-    const entry = this.entry();
-    this.responses.respond({
-      kind,
-      entryId: entry.id,
-      network,
-      address: null,
-      authorName: entry.poster?.name ?? entry.author,
-      authorHandle: null,
-      excerpt: entry.excerpt,
-    });
+  protected reply(network: SocialNetworkName): void {
+    this.responses.reply(this.entry().id, network, null);
+  }
+
+  protected quote(network: SocialNetworkName): void {
+    this.responses.quote(this.entry().id, network, null);
   }
 
   reload(): void {

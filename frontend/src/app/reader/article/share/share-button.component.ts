@@ -2,12 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  computed,
   effect,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -19,16 +21,50 @@ import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { MaskedLogoComponent } from '../../../shared/masked-logo/masked-logo.component';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
+import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { stepMenuFocus } from '../../../shared/menu-keys';
+import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { PostActions } from '../composer/post-actions.service';
 import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareLogoUrl, shareUrl } from './share-targets';
 import { stripTracking } from './tracking-params';
 
-const POSITIONS: ConnectedPosition[] = [
-  { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
-  { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
-];
+/** Where the trigger sits: in the article toolbar, or as a disc in the article's bottom-left corner. */
+export type ShareButtonAppearance = 'toolbar' | 'corner';
+
+const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
+  toolbar: [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
+  ],
+  corner: [
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
+  ],
+};
+
+type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
+
+/**
+ * One entry of the menu and of the sheet, under the id the sheet answers with. A post names the network the URL
+ * goes to, and its hint who the post goes out as, or that the composer asks.
+ */
+type ShareItem =
+  | {
+      readonly kind: 'post';
+      readonly id: string;
+      readonly network: SocialNetworkName;
+      readonly hint: string;
+    }
+  | { readonly kind: 'divider'; readonly id: string }
+  | { readonly kind: 'target'; readonly id: string; readonly target: ConfiguredTarget };
+
+function configuredItem(target: ShareTarget, index: number): ShareItem {
+  const id = String(index);
+  return target.kind === 'divider' ? { kind: 'divider', id } : { kind: 'target', id, target };
+}
 
 @Component({
   selector: 'app-share-button',
@@ -37,6 +73,7 @@ const POSITIONS: ConnectedPosition[] = [
     IconComponent,
     ListActionDirective,
     MaskedLogoComponent,
+    NetworkLogoComponent,
     CdkConnectedOverlay,
     CdkOverlayOrigin,
     CdkTrapFocus,
@@ -48,24 +85,45 @@ const POSITIONS: ConnectedPosition[] = [
 export class ShareButtonComponent {
   readonly url = input.required<string>();
   readonly title = input('');
+  readonly appearance = input<ShareButtonAppearance>('toolbar');
 
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
   private readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly postActions = inject(PostActions);
 
   protected readonly glyph = SHARE_GLYPH;
-  protected readonly positions = POSITIONS;
-  protected readonly targets = SHARE_TARGETS;
+  protected readonly positions = computed(() => POSITIONS[this.appearance()]);
   protected readonly logoUrl = shareLogoUrl;
   protected readonly open = signal(false);
-
-  private readonly targetsById = new Map(
-    this.targets.flatMap((target, index) =>
-      target.kind === 'divider' ? [] : [[String(index), target] as const],
-    ),
-  );
+  protected readonly origin = viewChild.required(CdkOverlayOrigin);
+  private readonly activeLang = toSignal(this.i18n.langChanges$, {
+    initialValue: this.i18n.getActiveLang(),
+  });
+  private readonly postItems = computed((): ShareItem[] => {
+    // translate() is one-shot: reading the language re-resolves the hints on a switch.
+    this.activeLang();
+    const connected = this.subscriptions
+      .socialAccounts()
+      .filter((account) => account.status === 'connected');
+    return SOCIAL_NETWORKS.flatMap((network): ShareItem[] => {
+      const handles = connected
+        .filter((account) => account.network === network)
+        .map((account) => account.handle);
+      if (handles.length === 0) return [];
+      return [{ kind: 'post', id: `post-${network}`, network, hint: this.postHint(handles) }];
+    });
+  });
+  protected readonly items = computed((): ShareItem[] => {
+    const posts = this.postItems();
+    const divider: ShareItem[] =
+      posts.length === 0 ? [] : [{ kind: 'divider', id: 'post-divider' }];
+    return [...posts, ...divider, ...SHARE_TARGETS.map(configuredItem)];
+  });
+  private readonly itemsById = computed(() => new Map(this.items().map((item) => [item.id, item])));
 
   constructor() {
     effect(() => {
@@ -80,7 +138,7 @@ export class ShareButtonComponent {
   }
 
   /** Runs inside the click, so Safari still sees the gesture that share and clipboard need. */
-  protected choose(target: Exclude<ShareTarget, { kind: 'divider' }>): void {
+  protected choose(target: ConfiguredTarget): void {
     this.open.set(false);
     const url = stripTracking(this.url());
     if (target.kind === 'system') this.shareThroughSystem(url);
@@ -88,25 +146,51 @@ export class ShareButtonComponent {
     if (target.kind === 'link') this.visit(shareUrl(target.url, url, this.title()));
   }
 
+  protected post(network: SocialNetworkName): void {
+    this.open.set(false);
+    this.postActions.postLink(network, stripTracking(this.url()), this.title());
+  }
+
+  protected closed(): void {
+    this.open.set(false);
+    (this.origin().elementRef.nativeElement as HTMLElement).focus();
+  }
+
   protected step(event: KeyboardEvent): void {
     const menu = (event.target as Element).closest('[role="menu"]');
     if (menu !== null) stepMenuFocus(event, menu);
+  }
+
+  private postHint(handles: readonly string[]): string {
+    return handles.length === 1
+      ? this.i18n.translate('reader.share.postAs', { handle: handles[0] })
+      : this.i18n.translate('reader.share.pickAccount');
   }
 
   private openSheet(): void {
     this.sheet
       .open({
         title: this.i18n.translate('reader.share.button'),
-        actions: this.targets.map((target, index) => this.sheetItem(target, index)),
+        actions: this.items().map((item) => this.sheetItem(item)),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => this.chooseById(choice));
   }
 
-  private sheetItem(target: ShareTarget, index: number): ActionSheetItem {
-    if (target.kind === 'divider') return ACTION_SHEET_DIVIDER;
+  private sheetItem(item: ShareItem): ActionSheetItem {
+    if (item.kind === 'divider') return ACTION_SHEET_DIVIDER;
+    if (item.kind === 'post') {
+      const network = item.network;
+      return {
+        id: item.id,
+        label: this.i18n.translate(`reader.link.${network}`),
+        hint: item.hint,
+        logo: { url: shareLogoUrl(`${network}.svg`), color: `var(--brand-${network})` },
+      };
+    }
+    const target = item.target;
     return {
-      id: String(index),
+      id: item.id,
       label: target.labelKey ? this.i18n.translate(target.labelKey) : (target.label ?? ''),
       symbol: target.icon ? undefined : (target.symbol ?? this.glyph),
       logo: target.icon ? { url: shareLogoUrl(target.icon), color: target.color } : undefined,
@@ -114,8 +198,9 @@ export class ShareButtonComponent {
   }
 
   private chooseById(choice: string | undefined): void {
-    const target = choice === undefined ? undefined : this.targetsById.get(choice);
-    if (target !== undefined) this.choose(target);
+    const item = choice === undefined ? undefined : this.itemsById().get(choice);
+    if (item?.kind === 'post') this.post(item.network);
+    if (item?.kind === 'target') this.choose(item.target);
   }
 
   private shareThroughSystem(url: string): void {
@@ -134,7 +219,7 @@ export class ShareButtonComponent {
 
   /** mailto: hands off to another program; a new tab for it would stay blank. */
   private visit(address: string): void {
-    if (/^https?:/i.test(address)) window.open(address, '_blank', 'noopener,noreferrer');
+    if (/^https?:/i.test(address)) openExternal(address);
     else window.location.assign(address);
   }
 

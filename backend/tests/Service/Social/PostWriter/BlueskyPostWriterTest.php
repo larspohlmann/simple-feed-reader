@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostWriter;
 
+use App\Entity\LinkCardContent;
+use App\Service\Image\ImageResizer\ImageResizerInterface;
+use App\Service\LinkCard\Model\PageCardModel;
+use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Social\BlueskyFacets;
+use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
@@ -14,9 +19,12 @@ use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
+use App\Service\Social\SharedPageCards;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use App\Tests\Support\StubGuardedImageDownloader;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class BlueskyPostWriterTest extends TestCase
@@ -27,6 +35,7 @@ final class BlueskyPostWriterTest extends TestCase
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string CREATE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.createRecord';
     private const string DELETE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.deleteRecord';
+    private const string ARTICLE_URL = 'https://example.com/article';
 
     public function testAReplyToATopLevelPostNamesThePostAsRootAndParent(): void
     {
@@ -121,6 +130,43 @@ final class BlueskyPostWriterTest extends TestCase
         $this->writer(new RoutedHttpClient([]))->quote(self::post(), new PostDraftModel(str_repeat('a', 301)));
     }
 
+    public function testASharedLinkIsAPostWithTheLinksCardAndAnswersNothing(): void
+    {
+        $http = $this->creating();
+
+        $published = $this->writer($http)->share(
+            SocialApiWiring::blueskyAccount(),
+            self::ARTICLE_URL,
+            new PostDraftModel('Read this #news https://example.com/article', language: 'en'),
+        );
+
+        $record = self::recordSent($http);
+        self::assertSame('Read this #news https://example.com/article', $record['text']);
+        self::assertSame([
+            '$type' => 'app.bsky.embed.external',
+            'external' => [
+                'uri' => 'https://example.com/article',
+                'title' => 'An article',
+                'description' => 'A summary',
+            ],
+        ], $record['embed']);
+        self::assertSame(['en'], $record['langs']);
+        self::assertIsArray($record['facets']);
+        self::assertArrayNotHasKey('reply', $record);
+        self::assertSame(self::REPLY_URI, $published->address);
+    }
+
+    public function testATooLongSharedLinkIsRefusedBeforeItsPageIsRead(): void
+    {
+        $pageCards = $this->createMock(PageCardReaderInterface::class);
+        $pageCards->expects($this->never())->method('read');
+
+        $this->expectException(SocialPostTooLongException::class);
+
+        $this->writerReadingPagesWith(new RoutedHttpClient([]), $pageCards)
+            ->share(SocialApiWiring::blueskyAccount(), self::ARTICLE_URL, new PostDraftModel(str_repeat('a', 301)));
+    }
+
     public function testAnAnswerWithoutTheNewPostsUriIsAnUnreachableNetwork(): void
     {
         $http = new RoutedHttpClient([
@@ -180,9 +226,29 @@ final class BlueskyPostWriterTest extends TestCase
 
     private function writer(RoutedHttpClient $http): BlueskyPostWriter
     {
+        $pageCards = $this->createStub(PageCardReaderInterface::class);
+        $pageCards->method('read')->willReturn(new PageCardModel(
+            new LinkCardContent(self::ARTICLE_URL, 'An article', 'A summary', null, 'example.com'),
+            null,
+        ));
+
+        return $this->writerReadingPagesWith($http, $pageCards);
+    }
+
+    private function writerReadingPagesWith(
+        RoutedHttpClient $http,
+        PageCardReaderInterface $pageCards,
+    ): BlueskyPostWriter {
         return new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
+            new BlueskyExternalEmbeds(
+                new SharedPageCards($pageCards, new NullLogger()),
+                new StubGuardedImageDownloader(),
+                $this->createStub(ImageResizerInterface::class),
+                SocialApiWiring::blueskySessions($http->client()),
+                new NullLogger(),
+            ),
         );
     }
 

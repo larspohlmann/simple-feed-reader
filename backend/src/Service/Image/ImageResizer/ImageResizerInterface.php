@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\DigestImageResizer;
+namespace App\Service\Image\ImageResizer;
 
-interface DigestImageResizerInterface
+interface ImageResizerInterface
 {
     /** Scale-and-centre-crop to exactly $width×$height, re-encoded as JPEG. */
     public function coverJpeg(string $sourceBytes, int $width, int $height): string;

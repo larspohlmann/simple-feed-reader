@@ -1,8 +1,15 @@
+@use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/glass-rim';
 @use '../../../theme/menu-items';
 
 :host {
   display: contents;
+}
+
+.corner-share {
+  --corner-button-tone: var(--text-muted);
+
+  @include circle.corner-circle-button;
 }
 
 .menu {
@@ -17,4 +24,13 @@
 
 .menu button {
   white-space: nowrap;
+}
+
+.external {
+  margin-inline-start: auto;
+}
+
+.menu app-network-logo {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }

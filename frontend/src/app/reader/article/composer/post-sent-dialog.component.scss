@@ -1,0 +1,18 @@
+:host {
+  display: contents;
+
+  --panel-w: 520px;
+}
+
+.account {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.text {
+  margin: 0 0 var(--space-4);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

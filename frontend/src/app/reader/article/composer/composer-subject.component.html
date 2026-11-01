@@ -1,0 +1,40 @@
+@if (post(); as shown) {
+  <blockquote class="target">
+    <p class="author">
+      @if (shown.authorName) {
+        <span class="name">{{ shown.authorName }}</span>
+      }
+      @if (shown.authorHandle) {
+        <span class="handle">{{ shown.authorHandle }}</span>
+      }
+    </p>
+    <p class="excerpt">{{ shown.excerpt }}</p>
+    <ng-container [ngTemplateOutlet]="compactCard" />
+  </blockquote>
+} @else {
+  <ng-container [ngTemplateOutlet]="compactCard" />
+}
+
+<ng-template #compactCard>
+  @if (subject().card; as card) {
+    <div class="article">
+      @if (card.imageUrl && !imageFailed()) {
+        <img
+          appProxiedImage
+          class="thumb"
+          [src]="card.imageUrl"
+          alt=""
+          decoding="async"
+          referrerpolicy="no-referrer"
+          (imageFailed)="imageFailed.set(true)"
+        />
+      }
+      <div class="article-text">
+        <p class="title">{{ card.title }}</p>
+        @if (card.siteName) {
+          <p class="site">{{ card.siteName }}</p>
+        }
+      </div>
+    </div>
+  }
+</ng-template>

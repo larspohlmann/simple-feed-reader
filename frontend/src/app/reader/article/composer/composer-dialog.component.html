@@ -1,20 +1,8 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
-  <app-overlay-panel fillOnMobile [heading]="headingKey | transloco">
-    <blockquote class="target">
-      <p class="author">
-        @if (target.authorName) {
-          <span class="name">{{ target.authorName }}</span>
-        }
-        @if (target.authorHandle) {
-          <span class="handle">{{ target.authorHandle }}</span>
-        }
-      </p>
-      <p class="excerpt">{{ target.excerpt }}</p>
-    </blockquote>
-
+  <app-overlay-panel fillOnMobile [heading]="headingKey() | transloco">
     @if (state().status === 'loading') {
-      <app-skeleton [label]="copy + '.loading' | transloco" [rows]="2" />
+      <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
     }
     @if (loadError(); as message) {
       <app-error-banner
@@ -25,12 +13,14 @@
     }
 
     @if (context(); as context) {
-      @if (!context.canSend) {
-        <app-error-banner [message]="forbiddenKey | transloco" />
+      <app-composer-subject [subject]="context.target" />
+
+      @if (forbiddenKey(); as key) {
+        <app-error-banner [message]="key | transloco" />
       }
 
       @if (context.accounts.length > 1) {
-        <app-field [label]="copy + '.account' | transloco">
+        <app-field [label]="copy() + '.account' | transloco">
           <select id="reply-account" (change)="chooseAccount($event)">
             @for (account of context.accounts; track account.id) {
               <option [value]="account.id" [selected]="account.id === context.accountId">
@@ -41,7 +31,7 @@
         </app-field>
       }
 
-      <app-field [label]="copy + '.text' | transloco">
+      <app-field [label]="copy() + '.text' | transloco">
         <textarea
           #textField
           id="reply-text"
@@ -51,9 +41,20 @@
           (input)="write($event)"
         ></textarea>
       </app-field>
-      <p class="counter" [class.over]="over()" aria-live="polite">
-        {{ 'reader.composer.counter' | transloco: { used: used(), max: context.maxCharacters } }}
-      </p>
+      <div class="text-tools">
+        <app-button
+          class="clear"
+          variant="ghost"
+          size="sm"
+          [disabled]="text() === '' || sending()"
+          (click)="clear()"
+        >
+          {{ 'reader.composer.clear' | transloco }}
+        </app-button>
+        <p class="counter" [class.over]="over()" aria-live="polite">
+          {{ 'reader.composer.counter' | transloco: { used: used(), max: context.maxCharacters } }}
+        </p>
+      </div>
 
       @if (visibility(); as current) {
         <app-field [label]="'reader.composer.visibility' | transloco">
@@ -100,7 +101,7 @@
       [loading]="sending()"
       [disabled]="!canSend()"
     >
-      {{ copy + '.send' | transloco }}
+      {{ copy() + '.send' | transloco }}
     </app-button>
   </app-overlay-panel>
 </form>

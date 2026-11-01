@@ -40,15 +40,30 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         $account = $target->account;
 
         return new ComposerDefaultsModel(
-            $this->answerOf($account, self::INSTANCE)->node('configuration')->node('statuses')->int('max_characters')
-                ?? self::DEFAULT_MAX_CHARACTERS,
+            $this->maxCharactersOf($account),
             MastodonVisibility::stricterOf(
                 $target->responseContext->visibility ?? self::DEFAULT_VISIBILITY,
-                $this->answerOf($account, self::OWN_ACCOUNT)->node('source')->string('privacy')
-                    ?? self::DEFAULT_VISIBILITY,
+                $this->privacyOf($account),
             ),
             self::mentionsOf($target, $threadStarter),
         );
+    }
+
+    public function forAccount(SocialAccount $account): ComposerDefaultsModel
+    {
+        return new ComposerDefaultsModel($this->maxCharactersOf($account), $this->privacyOf($account));
+    }
+
+    private function maxCharactersOf(SocialAccount $account): int
+    {
+        return $this->answerOf($account, self::INSTANCE)->node('configuration')->node('statuses')->int('max_characters')
+            ?? self::DEFAULT_MAX_CHARACTERS;
+    }
+
+    private function privacyOf(SocialAccount $account): string
+    {
+        return $this->answerOf($account, self::OWN_ACCOUNT)->node('source')->string('privacy')
+            ?? self::DEFAULT_VISIBILITY;
     }
 
     /**

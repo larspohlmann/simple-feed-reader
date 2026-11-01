@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\ComposerDefaults;
 
+use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -17,6 +18,11 @@ final readonly class BlueskyComposerDefaults implements ComposerDefaultsInterfac
     }
 
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
+    {
+        return $this->forAccount($target->account);
+    }
+
+    public function forAccount(SocialAccount $account): ComposerDefaultsModel
     {
         return new ComposerDefaultsModel(BlueskyPostWriter::MAX_GRAPHEMES);
     }

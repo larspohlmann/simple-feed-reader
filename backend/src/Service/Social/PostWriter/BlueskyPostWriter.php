@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Social\PostWriter;
 
+use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Social\BlueskyFacets;
+use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
-use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\BlueskyStrongRef;
@@ -24,6 +26,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     public function __construct(
         private BlueskyRecords $records,
         private BlueskyFacets $facets,
+        private BlueskyExternalEmbeds $externalEmbeds,
     ) {
     }
 
@@ -34,15 +37,22 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
 
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($target, $draft, ['reply' => self::replyRefsOf($target)]);
+        return $this->published($target->account, $draft, ['reply' => self::replyRefsOf($target)]);
     }
 
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($target, $draft, ['embed' => [
+        return $this->published($target->account, $draft, ['embed' => [
             '$type' => self::QUOTE_EMBED,
             'record' => BlueskyStrongRef::of($target),
         ]]);
+    }
+
+    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
+    {
+        self::assertFits($draft);
+
+        return $this->published($account, $draft, ['embed' => $this->externalEmbeds->embedOf($account, $url)]);
     }
 
     public function delete(SocialPostModel $ownPost): void
@@ -55,14 +65,12 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         $this->records->delete($ownPost->account, BlueskyRecords::POST_COLLECTION, $recordKey);
     }
 
-    /** @param array<string, mixed> $attachment how the post hangs on its target: a reply's refs or a quote's embed */
-    private function published(SocialPostModel $target, PostDraftModel $draft, array $attachment): PublishedPostModel
+    /** @param array<string, mixed> $attachment */
+    private function published(SocialAccount $account, PostDraftModel $draft, array $attachment): PublishedPostModel
     {
-        if ((int) grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
-            throw new SocialPostTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));
-        }
+        self::assertFits($draft);
 
-        $uri = $this->records->createPost($target->account, [
+        $uri = $this->records->createPost($account, [
             'text' => $draft->text,
             ...$attachment,
             ...$this->facetsOf($draft->text),
@@ -70,6 +78,14 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         ]);
 
         return new PublishedPostModel($uri, AtPostUri::webUrl($uri));
+    }
+
+    /** @throws SocialPostTooLongException */
+    private static function assertFits(PostDraftModel $draft): void
+    {
+        if (grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
+            throw new SocialPostTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));
+        }
     }
 
     /** @return array{root: array{uri: string, cid: ?string}, parent: array{uri: string, cid: ?string}} */

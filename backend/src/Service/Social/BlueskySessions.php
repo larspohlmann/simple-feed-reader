@@ -98,6 +98,19 @@ final readonly class BlueskySessions
     }
 
     /**
+     * @throws SocialPostRefusedException on a 400 that is not a stale session
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function uploadAs(SocialAccount $account, string $path, string $bytes, string $contentType): ApiResponseModel
+    {
+        $request = ApiRequestModel::postBytes($account->getServiceUrl() . $path, $bytes, $contentType);
+
+        return self::actionAccepted($this->sendRetryingStale($account, $request));
+    }
+
+    /**
      * @throws SocialCredentialsRejectedException when the session is refused even after the retry
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException on any other answer but a 2xx

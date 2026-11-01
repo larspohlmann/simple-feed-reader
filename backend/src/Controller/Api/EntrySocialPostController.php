@@ -12,7 +12,6 @@ use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
-use App\Service\Social\PostComposer;
 use App\Service\Social\SocialResponses;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,7 +26,6 @@ final readonly class EntrySocialPostController
 {
     public function __construct(
         private EntryListRepository $entryList,
-        private PostComposer $composer,
         private SocialResponses $responses,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialViewerLimiter,
@@ -53,7 +51,7 @@ final readonly class EntrySocialPostController
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
         $target = new ResponseTargetModel($entry, $address, $accountId);
-        $context = $this->composer->contextFor($user, $target, $kind);
+        $context = $this->responses->contextFor($user, $target, $kind);
 
         return new JsonResponse(ComposerContextJson::of($context));
     }

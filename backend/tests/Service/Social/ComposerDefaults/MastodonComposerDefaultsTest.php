@@ -62,6 +62,25 @@ final class MastodonComposerDefaultsTest extends TestCase
         self::assertEquals(new ComposerDefaultsModel(500, 'public', []), $defaults);
     }
 
+    public function testAnAccountsOwnPostStartsFromTheInstanceLimitAndTheAccountsPrivacyWithoutMentions(): void
+    {
+        $defaults = $this->defaults($this->answering(1000, 'unlisted'))->forAccount(SocialAccounts::mastodon());
+
+        self::assertEquals(new ComposerDefaultsModel(1000, 'unlisted', []), $defaults);
+    }
+
+    public function testAnAccountsOwnPostFallsBackToMastodonsDefaultsWhenNeitherCallAnswers(): void
+    {
+        $http = new RoutedHttpClient([
+            self::INSTANCE => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+            self::OWN_ACCOUNT => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+        ]);
+
+        $defaults = $this->defaults($http)->forAccount(SocialAccounts::mastodon());
+
+        self::assertEquals(new ComposerDefaultsModel(500, 'public', []), $defaults);
+    }
+
     private function answering(int $maxCharacters, string $privacy): RoutedHttpClient
     {
         return new RoutedHttpClient([

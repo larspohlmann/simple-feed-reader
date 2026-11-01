@@ -19,6 +19,7 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Model\ComposerContextModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\ResponseKind;
@@ -28,17 +29,37 @@ use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialIdentity;
 use App\Service\Social\Support\SocialPostAddress;
 
-/** Publishes the user's replies and quotes, and deletes the replies a connected account wrote. */
+/** Opens the composer for the user's replies and quotes, publishes them, and deletes the replies an account wrote. */
 final readonly class SocialResponses
 {
     public function __construct(
         private ResponseTargetFinder $targets,
+        private ComposerContexts $contexts,
         private SocialPostFinder $posts,
         private PostWriting $writing,
         private SocialAccountRepository $socialAccounts,
         private SocialCountsCache $countsCache,
         private CommentsLoader $comments,
     ) {
+    }
+
+    /**
+     * @throws NotASocialPostException
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNotFoundException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function contextFor(User $user, ResponseTargetModel $target, ResponseKind $kind): ComposerContextModel
+    {
+        $post = $this->targets->find($user, $target);
+
+        return match ($kind) {
+            ResponseKind::Reply => $this->contexts->ofReply($post, $target),
+            ResponseKind::Quote => $this->contexts->ofQuote($post),
+        };
     }
 
     /**

@@ -9,7 +9,7 @@
     [canQuote]="viewer()?.canQuote ?? null"
     (likeToggled)="actions.like(entry())"
     (repostToggled)="toggleRepost()"
-    (replyRequested)="respond('reply', social.network)"
-    (quoteRequested)="respond('quote', social.network)"
+    (replyRequested)="reply(social.network)"
+    (quoteRequested)="quote(social.network)"
   />
 }

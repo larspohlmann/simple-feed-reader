@@ -1503,7 +1503,10 @@
       "copyLink": "Link kopieren",
       "copied": "Link kopiert",
       "copyFailed": "Link konnte nicht kopiert werden",
-      "failed": "Link konnte nicht geteilt werden"
+      "failed": "Link konnte nicht geteilt werden",
+      "blueskyApp": "In der Bluesky-App öffnen",
+      "postAs": "als {{handle}}",
+      "pickAccount": "Konto im Editor wählen"
     },
     "replyForbidden": {
       "bluesky": "Antworten auf diesen Beitrag sind eingeschränkt",
@@ -1515,6 +1518,7 @@
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
+      "clear": "Text löschen",
       "visibility": "Sichtbarkeit",
       "visibilities": {
         "public": "Öffentlich",
@@ -1535,6 +1539,12 @@
         "account": "Zitieren als",
         "text": "Dein Kommentar",
         "send": "Zitieren"
+      },
+      "link": {
+        "loading": "Beitrag wird vorbereitet",
+        "account": "Posten als",
+        "text": "Dein Beitrag",
+        "send": "Posten"
       }
     },
     "deleteReply": {
@@ -1551,8 +1561,22 @@
       "bluesky": "Die Autorin oder der Autor erlaubt keine Zitate dieses Beitrags",
       "mastodon": "Diesen Beitrag kannst du nicht zitieren"
     },
-    "quoteSent": "Zitat veröffentlicht",
-    "openQuote": "Öffnen"
+    "link": {
+      "bluesky": "Auf Bluesky posten",
+      "mastodon": "Auf Mastodon posten"
+    },
+    "posted": {
+      "link": {
+        "bluesky": "Auf Bluesky veröffentlicht",
+        "mastodon": "Auf Mastodon veröffentlicht"
+      },
+      "quote": {
+        "bluesky": "Zitat auf Bluesky veröffentlicht",
+        "mastodon": "Zitat auf Mastodon veröffentlicht"
+      },
+      "as": "Als {{ handle }}",
+      "open": "Beitrag öffnen"
+    }
   },
   "common": {
     "save": "Speichern",

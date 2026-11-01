@@ -1,5 +1,6 @@
 import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -17,6 +18,9 @@ import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { PostActions } from '../composer/post-actions.service';
+import { ShareButtonComponent } from '../share/share-button.component';
 
 const FIRST_LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
 const SECOND_LINK: SignedUrl = { url: 'https://news.test/second', token: A_READER_TOKEN };
@@ -56,6 +60,8 @@ describe('LinkReaderComponent', () => {
         { provide: ReaderRouteState, useValue: routeState },
         { provide: ReaderContentService, useValue: { load: loadTarget, reload: reloadTarget } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
+        { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
+        { provide: PostActions, useValue: {} },
         NO_EMBED_DETAILS,
         {
           provide: ImageProxyService,
@@ -98,6 +104,14 @@ describe('LinkReaderComponent', () => {
     expect(element.querySelector('.meta')!.textContent).toContain('news.test');
     expect(element.querySelector('app-loading-overlay.shown')).not.toBeNull();
     expect(element.querySelector('article')!.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('shares the opened link', () => {
+    const fixture = mount(aLinkCard({ url: 'https://news.test/story' }));
+
+    const share = fixture.debugElement.query(By.directive(ShareButtonComponent))
+      .componentInstance as ShareButtonComponent;
+    expect(share.url()).toBe('https://news.test/story');
   });
 
   it('renders the extracted page', () => {

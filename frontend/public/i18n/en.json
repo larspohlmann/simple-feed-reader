@@ -1503,7 +1503,10 @@
       "copyLink": "Copy link",
       "copied": "Link copied",
       "copyFailed": "Couldn't copy the link",
-      "failed": "Couldn't share the link"
+      "failed": "Couldn't share the link",
+      "blueskyApp": "Open in Bluesky app",
+      "postAs": "as {{handle}}",
+      "pickAccount": "Choose the account in the composer"
     },
     "replyForbidden": {
       "bluesky": "The author limits who can reply",
@@ -1515,6 +1518,7 @@
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
+      "clear": "Clear text",
       "visibility": "Visibility",
       "visibilities": {
         "public": "Public",
@@ -1535,6 +1539,12 @@
         "account": "Quote as",
         "text": "Your comment",
         "send": "Quote"
+      },
+      "link": {
+        "loading": "Getting the post ready",
+        "account": "Post as",
+        "text": "Your post",
+        "send": "Post"
       }
     },
     "deleteReply": {
@@ -1551,8 +1561,22 @@
       "bluesky": "The author doesn’t allow quotes of this post",
       "mastodon": "You can’t quote this post"
     },
-    "quoteSent": "Quote posted",
-    "openQuote": "Open"
+    "link": {
+      "bluesky": "Post on Bluesky",
+      "mastodon": "Post on Mastodon"
+    },
+    "posted": {
+      "link": {
+        "bluesky": "Posted on Bluesky",
+        "mastodon": "Posted on Mastodon"
+      },
+      "quote": {
+        "bluesky": "Quote posted on Bluesky",
+        "mastodon": "Quote posted on Mastodon"
+      },
+      "as": "As {{ handle }}",
+      "open": "Open post"
+    }
   },
   "common": {
     "save": "Save",

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Digest\DigestImageEmbedder;
 
 use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\Exception\ImageProcessingException;
 use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\Image\Model\DownloadedImageModel;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedder;
-use App\Service\Mail\Digest\DigestImageResizer\DigestImageResizerInterface;
-use App\Service\Mail\Digest\Exception\ImageProcessingException;
 use App\Service\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Mail\Digest\Model\DigestPageGroupModel;
@@ -53,7 +53,7 @@ final class DigestImageEmbedderTest extends TestCase
         $downloader->method('download')->willReturnCallback(
             static fn (string $url): DownloadedImageModel => new DownloadedImageModel($url, 'RAW', 'image/png'),
         );
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
         $resizer->method('containPng')->willReturn('PNG');
 
@@ -80,7 +80,7 @@ final class DigestImageEmbedderTest extends TestCase
                 return new DownloadedImageModel($url, 'RAW', 'image/png');
             },
         );
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
         $resizer->method('containPng')->willReturn('PNG');
 
@@ -109,7 +109,7 @@ final class DigestImageEmbedderTest extends TestCase
                 return new DownloadedImageModel($url, 'RAW', 'image/png');
             },
         );
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
         $resizer->method('containPng')->willReturn('PNG');
 
@@ -125,7 +125,7 @@ final class DigestImageEmbedderTest extends TestCase
     {
         $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
         $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/png'));
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
@@ -141,7 +141,7 @@ final class DigestImageEmbedderTest extends TestCase
     {
         $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
         $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/jpeg'));
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
@@ -157,7 +157,7 @@ final class DigestImageEmbedderTest extends TestCase
     {
         $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
         $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/jpeg'));
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
@@ -174,7 +174,7 @@ final class DigestImageEmbedderTest extends TestCase
     {
         $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
         $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/png'));
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
@@ -192,7 +192,7 @@ final class DigestImageEmbedderTest extends TestCase
         $url = 'https://cdn/1.jpg';
         $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
         $downloader->method('download')->willReturn(new DownloadedImageModel($url, 'RAW', 'image/jpeg'));
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
 
         $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
@@ -205,7 +205,7 @@ final class DigestImageEmbedderTest extends TestCase
     {
         $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
         $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/jpeg'));
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willThrowException(new ImageProcessingException('broken image'));
 
         $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
@@ -219,7 +219,7 @@ final class DigestImageEmbedderTest extends TestCase
     {
         $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
         $downloader->method('download')->willThrowException(new GuardedImageUnavailableException('boom'));
-        $resizer = $this->createStub(DigestImageResizerInterface::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())->method('debug')->with(
             self::anything(),

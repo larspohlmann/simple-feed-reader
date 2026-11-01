@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\Exception;
+namespace App\Service\Image\Exception;
 
 final class ImageProcessingException extends \RuntimeException
 {

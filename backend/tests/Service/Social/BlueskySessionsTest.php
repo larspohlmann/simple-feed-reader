@@ -29,6 +29,8 @@ final class BlueskySessionsTest extends TestCase
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string CREATE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.createRecord';
     private const string CREATE_RECORD_PATH = '/xrpc/com.atproto.repo.createRecord';
+    private const string UPLOAD_BLOB = 'POST https://pds.example.test/xrpc/com.atproto.repo.uploadBlob';
+    private const string UPLOAD_BLOB_PATH = '/xrpc/com.atproto.repo.uploadBlob';
     private const string LIKE_URI = '{"uri":"at://did:plc:alice/app.bsky.feed.like/3l"}';
 
     public function testASecondPollReusesTheCachedSession(): void
@@ -147,6 +149,58 @@ final class BlueskySessionsTest extends TestCase
         self::assertSame(self::LIKE_URI, $answer->body);
         self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
         self::assertSame(['repo' => 'did:plc:alice'], json_decode($http->requests[1]['body'], true));
+    }
+
+    public function testAnUploadCarriesTheRawBytesTheTokenAndTheContentType(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::UPLOAD_BLOB => new MockResponse('{"blob":{}}'),
+        ]);
+
+        $answer = SocialApiWiring::blueskySessions($http->client())
+            ->uploadAs(SocialApiWiring::blueskyAccount(), self::UPLOAD_BLOB_PATH, 'raw-bytes', 'image/jpeg');
+
+        self::assertTrue($answer->isSuccessful());
+        self::assertSame('raw-bytes', $http->requests[1]['body']);
+        self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
+        self::assertContains('Content-Type: image/jpeg', $http->requests[1]['headers']);
+    }
+
+    public function testAnUploadWithAnExpiredTokenIsSentOnceMoreWithAFreshSession(): void
+    {
+        $cache = new ArrayAdapter();
+        $account = SocialApiWiring::blueskyAccount();
+        SocialApiWiring::blueskySessionCache($cache)->remember(
+            $account,
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
+        );
+        $http = new MockHttpClient([
+            new MockResponse('{"error":"ExpiredToken"}', ['http_code' => Response::HTTP_BAD_REQUEST]),
+            SocialApiWiring::blueskySessionAnswer('jwt-2'),
+            new MockResponse('{"blob":{}}'),
+        ]);
+
+        $answer = SocialApiWiring::blueskySessions($http, $cache)
+            ->uploadAs($account, self::UPLOAD_BLOB_PATH, 'raw-bytes', 'image/jpeg');
+
+        self::assertTrue($answer->isSuccessful());
+        self::assertSame(3, $http->getRequestsCount());
+    }
+
+    public function testAnUploadTheNetworkRefusesIsARefusedPost(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::UPLOAD_BLOB => new MockResponse('{"error":"BlobTooLarge"}', [
+                'http_code' => Response::HTTP_BAD_REQUEST,
+            ]),
+        ]);
+
+        $this->expectException(SocialPostRefusedException::class);
+
+        SocialApiWiring::blueskySessions($http->client())
+            ->uploadAs(SocialApiWiring::blueskyAccount(), self::UPLOAD_BLOB_PATH, 'raw-bytes', 'image/jpeg');
     }
 
     public function testAPostWithAnExpiredTokenIsSentOnceMoreWithAFreshSession(): void

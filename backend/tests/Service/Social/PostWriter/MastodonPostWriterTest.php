@@ -65,6 +65,29 @@ final class MastodonPostWriterTest extends TestCase
         self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
     }
 
+    public function testASharedLinkIsAStatusOfTheDraftAloneAnsweringAndQuotingNothing(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $published = $this->writer($http)->share(
+            SocialAccounts::mastodon(),
+            'https://example.com/article',
+            new PostDraftModel(
+                'Read this https://example.com/article',
+                visibility: 'unlisted',
+                language: 'de',
+                idempotencyKey: 'key-3',
+            ),
+        );
+
+        self::assertSame(
+            ['status' => 'Read this https://example.com/article', 'visibility' => 'unlisted', 'language' => 'de'],
+            json_decode($http->requests[0]['body'], true),
+        );
+        self::assertContains('Idempotency-Key: key-3', $http->requests[0]['headers']);
+        self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
+    }
+
     public function testAQuoteTheAuthorsPolicyRefusesIsARefusedPost(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => new MockResponse(

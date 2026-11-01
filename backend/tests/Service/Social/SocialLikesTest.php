@@ -14,7 +14,6 @@ use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\NotASocialPostException;
@@ -397,7 +396,7 @@ final class SocialLikesTest extends DbTestCase
         return new SocialLikes(
             $this->likeRepository(),
             new SocialPostFinder(
-                new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
+                SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
                 $guard,
                 new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
             ),

@@ -44,6 +44,17 @@ final class SocialPostAddress
         return $reply ?? throw new NotASocialPostException('The reply is no post on the entry\'s network.');
     }
 
+    /** The post a shared URL names: a Bluesky post's web or AT address, or a status address of a Mastodon server. */
+    public static function ofUrl(string $url): ?SocialPostAddressModel
+    {
+        $blueskyPost = AtPostUri::matches($url) ? $url : AtPostUri::ofWebUrl($url);
+        if (null !== $blueskyPost) {
+            return new SocialPostAddressModel(SocialNetwork::Bluesky, $blueskyPost);
+        }
+
+        return null === MastodonStatusAddress::ofOrNull($url) ? null : self::mastodonStatus($url);
+    }
+
     private static function blueskyPost(string $guid): ?SocialPostAddressModel
     {
         return AtPostUri::matches($guid) ? new SocialPostAddressModel(SocialNetwork::Bluesky, $guid) : null;

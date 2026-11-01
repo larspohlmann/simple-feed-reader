@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of, throwError } from 'rxjs';
+import { Dialog } from '@angular/cdk/dialog';
+import { Observable, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
@@ -9,30 +10,31 @@ import { EntryCommentDto } from '../../entry-comment';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { ComposeTarget, SentPost } from './composer-dialog.component';
-import { PostComposer } from './post-composer.service';
-import { ResponseActions } from './response-actions.service';
+import { SentPost } from './composed-post';
+import { ComposerDialogComponent } from './composer-dialog.component';
+import { PostActions } from './post-actions.service';
+import { PostSentDialogComponent } from './post-sent-dialog.component';
 
 const ADDRESS = 'https://mastodon.example/users/alice/statuses/200';
 
-describe('ResponseActions', () => {
-  let composer: { open: jest.Mock };
+describe('PostActions', () => {
+  let composed: Observable<SentPost | undefined>;
   let comments: { insertReply: jest.Mock; removeReply: jest.Mock; countQuote: jest.Mock };
   let counts: { stepReplies: jest.Mock; stepQuotes: jest.Mock };
   let api: { deleteReply: jest.Mock };
   let confirm: { ask: jest.Mock };
   let toast: { show: jest.Mock };
-  let actions: ResponseActions;
+  let dialog: { open: jest.Mock };
+  let actions: PostActions;
 
-  const sent: SentPost = { address: 'https://x/9', url: null, text: 'Hi', authorHandle: '@a' };
-  const target: ComposeTarget = {
+  const sent: SentPost = {
+    address: 'https://x/9',
+    url: null,
     kind: 'reply',
-    entryId: 7,
     network: 'mastodon',
-    address: null,
-    authorName: null,
-    authorHandle: null,
-    excerpt: '',
+    text: 'Hi',
+    authorHandle: '@a',
+    target: { kind: 'post', authorName: 'Ann', authorHandle: '@ann', excerpt: 'Hi', card: null },
   };
   const comment = (depth: number): EntryCommentDto =>
     anEntryComment({
@@ -40,75 +42,137 @@ describe('ResponseActions', () => {
       post: aCommentPost({ address: ADDRESS, isOwn: true }),
     });
 
+  const sentOverlays = () =>
+    dialog.open.mock.calls.filter(([component]) => component === PostSentDialogComponent);
+
   beforeEach(() => {
-    composer = { open: jest.fn(() => of(sent)) };
+    composed = of(sent);
     comments = { insertReply: jest.fn(), removeReply: jest.fn(), countQuote: jest.fn() };
     counts = { stepReplies: jest.fn(), stepQuotes: jest.fn() };
     api = { deleteReply: jest.fn(() => of(undefined)) };
     confirm = { ask: jest.fn(() => of(true)) };
     toast = { show: jest.fn() };
+    dialog = {
+      open: jest.fn((component: unknown) => ({
+        closed: component === ComposerDialogComponent ? composed : of(undefined),
+      })),
+    };
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
-        { provide: PostComposer, useValue: composer },
         { provide: CommentsService, useValue: comments },
         { provide: SocialCountsService, useValue: counts },
         { provide: SocialPostApi, useValue: api },
         { provide: ConfirmService, useValue: confirm },
         { provide: ToastService, useValue: toast },
+        { provide: Dialog, useValue: dialog },
       ],
     });
-    actions = TestBed.inject(ResponseActions);
+    actions = TestBed.inject(PostActions);
+  });
+
+  it('opens the composer as an app dialog for the reply', () => {
+    actions.reply(7, 'mastodon', null);
+
+    expect(dialog.open).toHaveBeenCalledWith(ComposerDialogComponent, {
+      panelClass: 'app-dialog',
+      data: { kind: 'reply', entryId: 7, network: 'mastodon', address: null },
+    });
   });
 
   it('shows a reply to the post at once and counts it on the post', () => {
-    actions.respond(target);
+    actions.reply(7, 'mastodon', null);
 
-    expect(composer.open).toHaveBeenCalledWith(target);
     expect(comments.insertReply).toHaveBeenCalledWith(
       7,
       null,
       expect.objectContaining({ authorHandle: '@a' }),
     );
     expect(counts.stepReplies).toHaveBeenCalledWith(7, true);
+    expect(sentOverlays()).toEqual([]);
   });
 
   it('shows a reply to a comment under it, which counts it there, not on the post', () => {
-    actions.respond({ ...target, address: ADDRESS });
+    actions.reply(7, 'mastodon', ADDRESS);
 
     expect(comments.insertReply).toHaveBeenCalledWith(7, ADDRESS, expect.anything());
     expect(counts.stepReplies).not.toHaveBeenCalled();
   });
 
-  it('counts a quote of the post there and offers to open it, leaving the thread alone', () => {
-    composer.open.mockReturnValue(of({ ...sent, url: 'https://x.test/@a/9' }));
-    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+  it('counts a quote of the post there and shows what was posted, leaving the thread alone', () => {
+    const posted: SentPost = { ...sent, url: 'https://x.test/@a/9', kind: 'quote' };
+    composed = of(posted);
 
-    actions.respond({ ...target, kind: 'quote' });
+    actions.quote(7, 'mastodon', null);
 
+    expect(dialog.open).toHaveBeenCalledWith(
+      ComposerDialogComponent,
+      expect.objectContaining({ data: expect.objectContaining({ kind: 'quote' }) }),
+    );
     expect(comments.insertReply).not.toHaveBeenCalled();
     expect(counts.stepQuotes).toHaveBeenCalledWith(7);
-    const shown = toast.show.mock.calls[0][0];
-    expect(shown).toMatchObject({ message: 'Quote posted', actionLabel: 'Open' });
-    shown.action();
-    expect(open).toHaveBeenCalledWith('https://x.test/@a/9', '_blank', 'noopener');
-    open.mockRestore();
+    expect(dialog.open).toHaveBeenCalledWith(
+      PostSentDialogComponent,
+      expect.objectContaining({ data: posted }),
+    );
   });
 
-  it('counts a quote of a reply on that reply and offers no link the network did not name', () => {
-    actions.respond({ ...target, kind: 'quote', address: ADDRESS });
+  it('counts a quote of a reply on that reply', () => {
+    actions.quote(7, 'mastodon', ADDRESS);
 
     expect(counts.stepQuotes).not.toHaveBeenCalled();
     expect(comments.countQuote).toHaveBeenCalledWith(7, ADDRESS);
-    expect(toast.show).toHaveBeenCalledWith({ message: 'Quote posted' });
+    expect(sentOverlays()).toHaveLength(1);
+  });
+
+  it('shows a link post as posted, leaving the counts and the thread alone', () => {
+    const posted: SentPost = {
+      ...sent,
+      kind: 'link',
+      network: 'bluesky',
+      target: {
+        kind: 'link',
+        card: {
+          url: 'https://example.com/story',
+          title: 'A story',
+          description: null,
+          imageUrl: null,
+          siteName: 'example.com',
+        },
+      },
+    };
+    composed = of(posted);
+
+    actions.postLink('bluesky', 'https://example.com/story', 'A story');
+
+    expect(dialog.open).toHaveBeenCalledWith(
+      ComposerDialogComponent,
+      expect.objectContaining({
+        data: {
+          kind: 'link',
+          network: 'bluesky',
+          url: 'https://example.com/story',
+          title: 'A story',
+        },
+      }),
+    );
+    expect(comments.insertReply).not.toHaveBeenCalled();
+    expect(comments.countQuote).not.toHaveBeenCalled();
+    expect(counts.stepReplies).not.toHaveBeenCalled();
+    expect(counts.stepQuotes).not.toHaveBeenCalled();
+    expect(dialog.open).toHaveBeenCalledWith(
+      PostSentDialogComponent,
+      expect.objectContaining({ data: posted }),
+    );
   });
 
   it('changes nothing when the composer closes without sending', () => {
-    composer.open.mockReturnValue(of(undefined));
+    composed = of(undefined);
 
-    actions.respond(target);
+    actions.reply(7, 'mastodon', null);
 
     expect(comments.insertReply).not.toHaveBeenCalled();
+    expect(sentOverlays()).toEqual([]);
   });
 
   it('deletes a reply only after the reader confirms, then drops it and its count', () => {

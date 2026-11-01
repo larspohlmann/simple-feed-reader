@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostResolver;
 
+use App\Entity\LinkCardContent;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\PostResolver\BlueskyPostResolver;
@@ -23,6 +25,9 @@ final class BlueskyPostResolverTest extends TestCase
     private const string LIKE_URI = 'at://did:plc:alice/app.bsky.feed.like/3lk2';
     private const string REPOST_URI = 'at://did:plc:alice/app.bsky.feed.repost/3rp1';
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
+    private const string HANDLE_POST_URI = 'at://bob.test/app.bsky.feed.post/3abc';
+    private const string RESOLVE_HANDLE = 'GET https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle'
+        . '?handle=bob.test';
     private const string GET_POSTS = 'GET https://pds.example.test/xrpc/app.bsky.feed.getPosts?uris='
         . 'at%3A%2F%2Fdid%3Aplc%3Abob%2Fapp.bsky.feed.post%2F3abc';
 
@@ -64,6 +69,100 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertFalse($context->canReply);
         self::assertFalse($context->canQuote);
         self::assertNull($context->visibility);
+    }
+
+    public function testAPostIsPreviewedByItsAuthorAndText(): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.test', 'displayName' => 'Bob'],
+            'record' => ['text' => 'Hello world'],
+        ]]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertEquals(new PostPreviewModel('Bob', '@bob.test', 'Hello world'), $context->preview);
+    }
+
+    /** @param array<string, mixed> $embed */
+    #[DataProvider('linkCardEmbeds')]
+    public function testAPostIsPreviewedWithTheLinkCardItsEmbedShows(array $embed): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'record' => ['text' => 'Senate passes the bill'],
+            'embed' => $embed,
+        ]]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertEquals(
+            new LinkCardContent(
+                'https://www.politico.com/news/bill',
+                'Senate passes the bill',
+                'After a long night',
+                'https://cdn.bsky.app/img/thumb.jpg',
+                'politico.com',
+            ),
+            $context->preview->card,
+        );
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function linkCardEmbeds(): iterable
+    {
+        $external = [
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => 'https://www.politico.com/news/bill',
+                'title' => 'Senate passes the bill',
+                'description' => 'After a long night',
+                'thumb' => 'https://cdn.bsky.app/img/thumb.jpg',
+            ],
+        ];
+
+        yield 'an external embed' => [$external];
+        yield 'a quote with an external embed as its media' => [[
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'record' => ['record' => ['uri' => 'at://did:plc:carol/app.bsky.feed.post/3q']],
+            'media' => $external,
+        ]];
+    }
+
+    /** @param array<string, mixed> $embed */
+    #[DataProvider('cardlessEmbeds')]
+    public function testAPostWhoseEmbedShowsNoLinkCardIsPreviewedWithoutOne(array $embed): void
+    {
+        $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid', 'embed' => $embed]]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertNull($context->preview->card);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function cardlessEmbeds(): iterable
+    {
+        yield 'images' => [['$type' => 'app.bsky.embed.images#view', 'images' => []]];
+        yield 'an external embed without a title' => [[
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://www.politico.com/news/bill'],
+        ]];
+        yield 'a quote with images' => [[
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'media' => ['$type' => 'app.bsky.embed.images#view', 'images' => []],
+        ]];
+    }
+
+    public function testAPostWithoutAuthorOrTextIsPreviewedEmpty(): void
+    {
+        $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertEquals(new PostPreviewModel(), $context->preview);
     }
 
     public function testATopLevelPostIsItsOwnThreadRootAndTakesReplies(): void
@@ -213,6 +312,30 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertSame($like, $post->existingLikeId);
     }
 
+    public function testAPostNamedByItsAuthorsHandleIsAskedForAndKeptByTheAuthorsDid(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_HANDLE => self::json(['did' => 'did:plc:bob']),
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::GET_POSTS => self::json(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]),
+        ]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::HANDLE_POST_URI);
+
+        self::assertSame(self::POST_URI, $post->postId);
+    }
+
+    public function testAPostNamedByAHandleNoAccountHasIsNotFound(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_HANDLE => self::json(['error' => 'InvalidRequest'], Response::HTTP_BAD_REQUEST),
+        ]);
+
+        $this->expectException(SocialPostNotFoundException::class);
+
+        $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::HANDLE_POST_URI);
+    }
+
     public function testAPostBlueskyNoLongerHasIsNotFound(): void
     {
         $this->expectException(SocialPostNotFoundException::class);
@@ -262,7 +385,10 @@ final class BlueskyPostResolverTest extends TestCase
 
     private function resolver(RoutedHttpClient $http): BlueskyPostResolver
     {
-        return new BlueskyPostResolver(SocialApiWiring::blueskySessions($http->client()));
+        return new BlueskyPostResolver(
+            SocialApiWiring::blueskySessions($http->client()),
+            SocialApiWiring::blueskyIdentityResolver($http->client()),
+        );
     }
 
     /** @param array<mixed> $body */

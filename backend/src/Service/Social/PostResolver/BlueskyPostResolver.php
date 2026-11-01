@@ -4,25 +4,36 @@ declare(strict_types=1);
 
 namespace App\Service\Social\PostResolver;
 
+use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Bluesky\Support\BlueskyActorKey;
+use App\Service\Bluesky\Support\BlueskyExternalCard;
+use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\BlueskySessions;
+use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\BlueskyAuthor;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\PostCounts;
 
 final readonly class BlueskyPostResolver implements PostResolverInterface
 {
     private const string GET_POSTS = '/xrpc/app.bsky.feed.getPosts?uris=';
+    private const string EXTERNAL = 'app.bsky.embed.external#view';
+    private const string RECORD_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
 
-    public function __construct(private BlueskySessions $sessions)
-    {
+    public function __construct(
+        private BlueskySessions $sessions,
+        private BlueskyIdentityResolver $identities,
+    ) {
     }
 
     public static function network(): string
@@ -32,7 +43,8 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
 
     public function resolve(SocialAccount $account, string $address): SocialPostModel
     {
-        $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_POSTS . rawurlencode($address)));
+        $postUri = $this->byDid($address);
+        $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_POSTS . rawurlencode($postUri)));
         $answerNode = JsonNodeModel::of($answer->json());
         if ([] === $answerNode->nodes('posts')) {
             throw new SocialPostNotFoundException('The post is no longer on Bluesky.');
@@ -40,10 +52,30 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         $post = $answerNode->first('posts');
         $contentId = $post->string('cid')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered a post without a content id.');
-        $resolved = SocialPostModel::onBluesky($account, $address, $contentId)
+        $resolved = SocialPostModel::onBluesky($account, $postUri, $contentId)
             ->withCounts(PostCounts::ofBlueskyPost($post));
 
         return self::withViewer($resolved, $post->node('viewer'))->inResponseContext(self::responseContextOf($post));
+    }
+
+    /**
+     * getPosts finds no post whose AT URI names its author by handle, as a bsky.app address may.
+     *
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkUnreachableException
+     */
+    private function byDid(string $address): string
+    {
+        $authority = AtPostUri::authorityOf($address);
+        if (null === $authority || BlueskyActorKey::isDid($authority)) {
+            return $address;
+        }
+
+        try {
+            return AtPostUri::withAuthority($address, $this->identities->didOf($authority));
+        } catch (SocialAccountUnresolvableException $exception) {
+            throw new SocialPostNotFoundException($exception->getMessage(), previous: $exception);
+        }
     }
 
     private static function responseContextOf(JsonNodeModel $post): ResponseContextModel
@@ -53,7 +85,30 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
             threadRoot: self::referenceOrNull($post->node('record')->node('reply')->node('root')),
             canReply: !$post->node('viewer')->isTrue('replyDisabled'),
             canQuote: !$post->node('viewer')->isTrue('embeddingDisabled'),
+            preview: self::previewOf($post),
         );
+    }
+
+    private static function previewOf(JsonNodeModel $post): PostPreviewModel
+    {
+        $author = $post->node('author');
+        $handle = $author->string('handle');
+
+        return new PostPreviewModel(
+            BlueskyAuthor::name($author),
+            null === $handle ? null : '@' . $handle,
+            $post->node('record')->text('text') ?? '',
+            self::linkCardOf($post->node('embed')),
+        );
+    }
+
+    private static function linkCardOf(JsonNodeModel $embed): ?LinkCardContent
+    {
+        return match ($embed->type()) {
+            self::EXTERNAL => BlueskyExternalCard::of($embed->node('external')),
+            self::RECORD_WITH_MEDIA => self::linkCardOf($embed->node('media')),
+            default => null,
+        };
     }
 
     private static function referenceOrNull(JsonNodeModel $reference): ?PostReferenceModel

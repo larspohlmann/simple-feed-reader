@@ -140,6 +140,13 @@ final class FakeMastodonNetwork implements
         return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }
 
+    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
+    {
+        $this->record('share ' . $url . ' ' . $draft->text);
+
+        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
+    }
+
     public function delete(SocialPostModel $ownPost): void
     {
         $this->record('delete ' . $ownPost->postId);

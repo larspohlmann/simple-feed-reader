@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\DigestImageResizer;
+namespace App\Service\Image\ImageResizer;
 
-use App\Service\Mail\Digest\Exception\ImageProcessingException;
+use App\Service\Image\Exception\ImageProcessingException;
 
 /**
- * Rasterises a fetched image to a fixed digest thumbnail (cover-crop JPEG) or
- * favicon (contained PNG) with GD. The source is bounded before decode so a
+ * Rasterises a fetched image to a fixed size, as a cover-crop JPEG or a
+ * contained PNG, with GD. The source is bounded before decode so a
  * small-bytes / huge-pixels image cannot exhaust the memory limit.
  */
-final readonly class GdImageResizer implements DigestImageResizerInterface
+final readonly class GdImageResizer implements ImageResizerInterface
 {
     public function __construct(private int $maxSourcePixels = 25_000_000)
     {

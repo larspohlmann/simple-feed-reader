@@ -1,0 +1,9 @@
+@use '../../../theme/corner-circle-button' as circle;
+
+:host {
+  display: contents;
+}
+
+.corner-flag {
+  @include circle.corner-circle-toggle;
+}
