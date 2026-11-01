@@ -4,6 +4,7 @@ import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
+import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
@@ -41,6 +42,7 @@ export interface StateSaveOutcome {
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
+  private readonly socialPosts = inject(SocialPostApi);
 
   private readonly rawEntries = accountSignal<EntryDto[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
@@ -207,7 +209,7 @@ export class EntriesStore {
   setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
     const social = likeableSocial(entry);
     if (!social || this.likeInFlight(entry.id)) return;
-    const request$ = isLiked ? this.api.like(entry.id) : this.api.unlike(entry.id);
+    const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
     this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });

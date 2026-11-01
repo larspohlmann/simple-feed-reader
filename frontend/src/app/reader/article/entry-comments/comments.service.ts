@@ -5,6 +5,7 @@ import { onIdentityChange } from '../../../core/auth/session-identity';
 import { Problem, parseProblem } from '../../../core/problem';
 import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { ReaderApi } from '../../reader-api';
+import { SocialPostApi } from '../../social-post-api';
 
 const CACHE_CAP = 50;
 const FRESH_MS = 60 * 60 * 1000;
@@ -23,11 +24,21 @@ export type CommentsState =
   | { status: 'throttled'; retryAt: number }
   | { status: 'failed'; failedAt: number };
 
+/** A flag on one comment set at once and put back if what `send` sends fails. */
+interface OptimisticChange {
+  key: string;
+  send: () => Observable<unknown>;
+  to: boolean;
+  apply: (state: CommentsState, value: boolean) => CommentsState;
+  onError: (problem: Problem) => void;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
   private readonly api = inject(ReaderApi);
+  private readonly socialPosts = inject(SocialPostApi);
   private readonly states = new Map<number, WritableSignal<CommentsState>>();
-  private readonly likesInFlight = new Set<string>();
+  private readonly actionsInFlight = new Set<string>();
   private generation = 0;
 
   constructor() {
@@ -57,20 +68,54 @@ export class CommentsService {
   ): void {
     const { address } = post;
     const isLiked = !post.isLiked;
-    const key = `${entryId} ${address}`;
-    if (this.likesInFlight.has(key)) return;
-    const state = this.stateFor(entryId);
-    const request$ = isLiked
-      ? this.api.likeComment(entryId, address)
-      : this.api.unlikeComment(entryId, address);
-    this.likesInFlight.add(key);
-    state.update((current) => withLike(current, address, isLiked));
-    request$.pipe(finalize(() => this.likesInFlight.delete(key))).subscribe({
-      error: (error: HttpErrorResponse) => {
-        state.update((current) => withLike(current, address, !isLiked));
-        onError(parseProblem(error));
-      },
+    this.optimistic(entryId, {
+      key: `like ${address}`,
+      send: () =>
+        isLiked
+          ? this.socialPosts.likeComment(entryId, address)
+          : this.socialPosts.unlikeComment(entryId, address),
+      to: isLiked,
+      apply: (state, liked) => withLike(state, address, liked),
+      onError,
     });
+  }
+
+  /** Optimistic repost of one comment; dropped while one is on the wire or the network forbids it. */
+  toggleRepost(
+    entryId: number,
+    post: EntryCommentPostDto,
+    onError: (problem: Problem) => void,
+  ): void {
+    if (!post.canRepost) return;
+    const { address } = post;
+    const isReposted = !post.isReposted;
+    this.optimistic(entryId, {
+      key: `repost ${address}`,
+      send: () =>
+        isReposted
+          ? this.socialPosts.repostComment(entryId, address)
+          : this.socialPosts.unrepostComment(entryId, address),
+      to: isReposted,
+      apply: (state, reposted) => withRepost(state, address, reposted),
+      onError,
+    });
+  }
+
+  private optimistic(entryId: number, change: OptimisticChange): void {
+    const key = `${entryId} ${change.key}`;
+    if (this.actionsInFlight.has(key)) return;
+    const state = this.stateFor(entryId);
+    this.actionsInFlight.add(key);
+    state.update((current) => change.apply(current, change.to));
+    change
+      .send()
+      .pipe(finalize(() => this.actionsInFlight.delete(key)))
+      .subscribe({
+        error: (error: HttpErrorResponse) => {
+          state.update((current) => change.apply(current, !change.to));
+          change.onError(parseProblem(error));
+        },
+      });
   }
 
   private stateFor(id: number): WritableSignal<CommentsState> {
@@ -93,7 +138,7 @@ export class CommentsService {
   private clear(): void {
     this.generation++;
     this.states.clear();
-    this.likesInFlight.clear();
+    this.actionsInFlight.clear();
   }
 }
 
@@ -131,12 +176,41 @@ function settled(response: CommentsResponse): CommentsState {
 
 /** The state with the comment at `address` liked or not, its like count following. */
 function withLike(state: CommentsState, address: string, isLiked: boolean): CommentsState {
+  return withPost(state, address, (post) =>
+    post.isLiked === isLiked
+      ? post
+      : { ...post, isLiked, counts: { ...post.counts, likes: moved(post.counts.likes, isLiked) } },
+  );
+}
+
+/** The state with the comment at `address` reposted or not, its repost count following. */
+function withRepost(state: CommentsState, address: string, isReposted: boolean): CommentsState {
+  return withPost(state, address, (post) =>
+    post.isReposted === isReposted
+      ? post
+      : {
+          ...post,
+          isReposted,
+          counts: { ...post.counts, reposts: moved(post.counts.reposts, isReposted) },
+        },
+  );
+}
+
+function withPost(
+  state: CommentsState,
+  address: string,
+  change: (post: EntryCommentPostDto) => EntryCommentPostDto,
+): CommentsState {
   if (state.status !== 'ok') return state;
   const comments = state.comments.map((comment) => {
     const post = comment.post;
-    if (post?.address !== address || post.isLiked === isLiked) return comment;
-    const likes = Math.max(0, post.counts.likes + (isLiked ? 1 : -1));
-    return { ...comment, post: { ...post, isLiked, counts: { ...post.counts, likes } } };
+    if (post?.address !== address) return comment;
+    const changed = change(post);
+    return changed === post ? comment : { ...comment, post: changed };
   });
   return { ...state, comments };
+}
+
+function moved(count: number, up: boolean): number {
+  return Math.max(0, count + (up ? 1 : -1));
 }

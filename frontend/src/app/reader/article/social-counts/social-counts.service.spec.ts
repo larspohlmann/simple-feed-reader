@@ -3,15 +3,15 @@ import { Subject, of, throwError } from 'rxjs';
 import { TokenStore } from '../../../core/auth/token.store';
 import { SocialCountsDto, SocialViewerDto } from '../../entry-social';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ReaderApi } from '../../reader-api';
+import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
 import { anEntry } from '../../../../testing/entry-testing';
 import { SocialCountsService } from './social-counts.service';
 
 describe('SocialCountsService', () => {
   let api: {
-    socialCounts: jest.Mock;
-    socialViewer: jest.Mock;
+    counts: jest.Mock;
+    viewer: jest.Mock;
     repost: jest.Mock;
     unrepost: jest.Mock;
   };
@@ -34,15 +34,15 @@ describe('SocialCountsService', () => {
     jest.setSystemTime(new Date('2026-10-13T12:00:00Z'));
     localStorage.clear();
     api = {
-      socialCounts: jest.fn(() => of(counts)),
-      socialViewer: jest.fn(() => of(viewer())),
+      counts: jest.fn(() => of(counts)),
+      viewer: jest.fn(() => of(viewer())),
       repost: jest.fn(() => of({ isReposted: true })),
       unrepost: jest.fn(() => of({ isReposted: false })),
     };
     entries = { adoptLike: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
-        { provide: ReaderApi, useValue: api },
+        { provide: SocialPostApi, useValue: api },
         { provide: EntriesStore, useValue: entries },
       ],
     });
@@ -55,14 +55,14 @@ describe('SocialCountsService', () => {
 
   it('starts idle and asks nothing until a row is seen', () => {
     expect(service.state(1)()).toEqual({ status: 'idle' });
-    expect(api.socialCounts).not.toHaveBeenCalled();
+    expect(api.counts).not.toHaveBeenCalled();
   });
 
   it('loads once and serves the counts for two minutes', () => {
     service.load(post());
     service.load(post());
 
-    expect(api.socialCounts).toHaveBeenCalledTimes(1);
+    expect(api.counts).toHaveBeenCalledTimes(1);
     expect(service.state(1)()).toEqual({
       status: 'ok',
       counts,
@@ -76,16 +76,16 @@ describe('SocialCountsService', () => {
     service.load(post());
     service.reload(post());
 
-    expect(api.socialCounts).toHaveBeenNthCalledWith(1, 1);
-    expect(api.socialCounts).toHaveBeenNthCalledWith(2, 1, true);
+    expect(api.counts).toHaveBeenNthCalledWith(1, 1);
+    expect(api.counts).toHaveBeenNthCalledWith(2, 1, true);
   });
 
   it('ignores a reload while counts are loading', () => {
-    api.socialCounts.mockReturnValue(new Subject<SocialCountsDto>());
+    api.counts.mockReturnValue(new Subject<SocialCountsDto>());
     service.load(post());
     service.reload(post());
 
-    expect(api.socialCounts).toHaveBeenCalledTimes(1);
+    expect(api.counts).toHaveBeenCalledTimes(1);
   });
 
   it('asks again once two minutes have passed', () => {
@@ -93,21 +93,21 @@ describe('SocialCountsService', () => {
     jest.setSystemTime(new Date('2026-10-13T12:02:00Z'));
     service.load(post());
 
-    expect(api.socialCounts).toHaveBeenCalledTimes(2);
+    expect(api.counts).toHaveBeenCalledTimes(2);
   });
 
   it('asks the network for the like alongside the counts and adopts it', () => {
-    api.socialViewer.mockReturnValue(of(viewer({ isLiked: true })));
+    api.viewer.mockReturnValue(of(viewer({ isLiked: true })));
 
     service.load(post(1, false));
 
-    expect(api.socialViewer).toHaveBeenCalledWith(1);
+    expect(api.viewer).toHaveBeenCalledWith(1);
     expect(entries.adoptLike).toHaveBeenCalledWith(1, { from: false, to: true });
     expect(service.state(1)()).toMatchObject({ status: 'ok', counts, likedAtLoad: true });
   });
 
   it('counts from the entry when the like state cannot be had', () => {
-    api.socialViewer.mockReturnValue(throwError(() => new Error('rate limited')));
+    api.viewer.mockReturnValue(throwError(() => new Error('rate limited')));
 
     service.load(post(1, true));
 
@@ -120,7 +120,7 @@ describe('SocialCountsService', () => {
       anEntry({ id: 3, social: { network: 'mastodon', isLiked: false, canLike: false } }),
     );
 
-    expect(api.socialViewer).not.toHaveBeenCalled();
+    expect(api.viewer).not.toHaveBeenCalled();
     expect(service.state(3)()).toMatchObject({ status: 'ok', likedAtLoad: false, repost: null });
   });
 
@@ -128,12 +128,12 @@ describe('SocialCountsService', () => {
     service.load(post());
     service.reload(post());
 
-    expect(api.socialViewer).toHaveBeenCalledTimes(2);
+    expect(api.viewer).toHaveBeenCalledTimes(2);
   });
 
   it('adopts no late like once another account signs in', () => {
     const late = new Subject<SocialViewerDto>();
-    api.socialViewer.mockReturnValue(late);
+    api.viewer.mockReturnValue(late);
     service.load(post(1));
 
     tokens.set('account-b.jwt');
@@ -145,7 +145,7 @@ describe('SocialCountsService', () => {
   });
 
   it('keeps the repost the network reports and whether it allows one', () => {
-    api.socialViewer.mockReturnValue(of(viewer({ isReposted: true, canRepost: false })));
+    api.viewer.mockReturnValue(of(viewer({ isReposted: true, canRepost: false })));
 
     service.load(post());
 
@@ -193,7 +193,9 @@ describe('SocialCountsService', () => {
         counts: { reposts: 5 },
         repost: { isReposted: false },
       });
-      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ type: 'social_post_refused' }));
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'social_post_refused' }),
+      );
     });
 
     it('ignores a toggle while the last one is on the wire', () => {
@@ -208,7 +210,7 @@ describe('SocialCountsService', () => {
     });
 
     it('does nothing on a post the network keeps from reposts', () => {
-      api.socialViewer.mockReturnValue(of(viewer({ canRepost: false })));
+      api.viewer.mockReturnValue(of(viewer({ canRepost: false })));
       service.load(post());
 
       service.toggleRepost(post(), onError);
@@ -217,7 +219,7 @@ describe('SocialCountsService', () => {
     });
 
     it('does nothing before the viewer state is known', () => {
-      api.socialViewer.mockReturnValue(throwError(() => new Error('offline')));
+      api.viewer.mockReturnValue(throwError(() => new Error('offline')));
       service.load(post());
 
       service.toggleRepost(post(), onError);
@@ -227,7 +229,7 @@ describe('SocialCountsService', () => {
   });
 
   it('maps any error to failed', () => {
-    api.socialCounts.mockReturnValue(throwError(() => new Error('offline')));
+    api.counts.mockReturnValue(throwError(() => new Error('offline')));
     service.load(post());
 
     expect(service.state(1)()).toEqual({
@@ -237,23 +239,23 @@ describe('SocialCountsService', () => {
   });
 
   it('retries a failed load only once a minute has passed', () => {
-    api.socialCounts.mockReturnValue(throwError(() => new Error('offline')));
+    api.counts.mockReturnValue(throwError(() => new Error('offline')));
     service.load(post());
     jest.setSystemTime(new Date('2026-10-13T12:00:59Z'));
     service.load(post());
-    expect(api.socialCounts).toHaveBeenCalledTimes(1);
+    expect(api.counts).toHaveBeenCalledTimes(1);
 
     jest.setSystemTime(new Date('2026-10-13T12:01:00Z'));
     service.load(post());
-    expect(api.socialCounts).toHaveBeenCalledTimes(2);
+    expect(api.counts).toHaveBeenCalledTimes(2);
   });
 
   it('ignores a second load while one is in flight', () => {
-    api.socialCounts.mockReturnValue(new Subject<SocialCountsDto>());
+    api.counts.mockReturnValue(new Subject<SocialCountsDto>());
     service.load(post());
     service.load(post());
 
-    expect(api.socialCounts).toHaveBeenCalledTimes(1);
+    expect(api.counts).toHaveBeenCalledTimes(1);
     expect(service.state(1)()).toEqual({ status: 'loading' });
   });
 
@@ -269,7 +271,7 @@ describe('SocialCountsService', () => {
   ])('forgets every count, and drops a late %s, once another account signs in', (_, settle) => {
     const late = new Subject<SocialCountsDto>();
     service.load(post(1));
-    api.socialCounts.mockReturnValue(late);
+    api.counts.mockReturnValue(late);
     service.load(post(2));
     const held = service.state(2);
 

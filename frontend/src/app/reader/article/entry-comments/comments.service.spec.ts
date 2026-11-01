@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError, Subject } from 'rxjs';
 import { CommentsService } from './comments.service';
 import { ReaderApi } from '../../reader-api';
+import { SocialPostApi } from '../../social-post-api';
 import { CommentsResponse, EntryCommentPostDto } from '../../entry-comment';
 import { anEntryComment } from '../../../../testing/entry-testing';
 
@@ -21,7 +22,12 @@ describe('CommentsService', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-09-24T12:00:00Z'));
     api = { comments: jest.fn(() => of(ok)) };
-    TestBed.configureTestingModule({ providers: [{ provide: ReaderApi, useValue: api }] });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ReaderApi, useValue: api },
+        { provide: SocialPostApi, useValue: api },
+      ],
+    });
     service = TestBed.inject(CommentsService);
   });
 
@@ -33,6 +39,8 @@ describe('CommentsService', () => {
       address,
       counts: { likes: 4, reposts: 0, replies: 1, quotes: 0 },
       isLiked: false,
+      isReposted: false,
+      canRepost: true,
     };
     let likes: { likeComment: jest.Mock; unlikeComment: jest.Mock };
     let answer: Subject<{ isLiked: boolean }>;
@@ -96,6 +104,84 @@ describe('CommentsService', () => {
 
       const state = service.state(1)();
       expect(state.status === 'ok' && state.comments[1].post).toBeNull();
+    });
+  });
+
+  describe('toggleRepost', () => {
+    const address = 'https://hachyderm.io/users/ann/statuses/200';
+    const post: EntryCommentPostDto = {
+      address,
+      counts: { likes: 4, reposts: 2, replies: 1, quotes: null },
+      isLiked: true,
+      isReposted: false,
+      canRepost: true,
+    };
+    let reposts: { repostComment: jest.Mock; unrepostComment: jest.Mock };
+    let answer: Subject<{ isReposted: boolean }>;
+    let onError: jest.Mock;
+
+    beforeEach(() => {
+      answer = new Subject();
+      reposts = { repostComment: jest.fn(() => answer), unrepostComment: jest.fn(() => answer) };
+      Object.assign(api, reposts);
+      api.comments.mockReturnValue(of({ ...ok, comments: [anEntryComment({ post })] }));
+      onError = jest.fn();
+      service.load(1);
+    });
+
+    const shownPost = () => {
+      const state = service.state(1)();
+      return state.status === 'ok' ? state.comments[0].post : undefined;
+    };
+
+    it('reposts the comment at once and counts the repost', () => {
+      service.toggleRepost(1, post, onError);
+
+      expect(reposts.repostComment).toHaveBeenCalledWith(1, address);
+      expect(shownPost()).toEqual({
+        ...post,
+        isReposted: true,
+        counts: { ...post.counts, reposts: 3 },
+      });
+    });
+
+    it('undoes a repost through the unrepost call', () => {
+      service.toggleRepost(1, { ...post, isReposted: true }, onError);
+
+      expect(reposts.unrepostComment).toHaveBeenCalledWith(1, address);
+    });
+
+    it('puts the repost back and reports the problem when the call fails', () => {
+      service.toggleRepost(1, post, onError);
+
+      answer.error(new HttpErrorResponse({ status: 409, error: { title: 'Refused' } }));
+
+      expect(shownPost()).toEqual(post);
+      expect(onError).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a second toggle while the first is on the wire', () => {
+      service.toggleRepost(1, post, onError);
+      service.toggleRepost(1, { ...post, isReposted: true }, onError);
+
+      expect(reposts.unrepostComment).not.toHaveBeenCalled();
+    });
+
+    it('lets a like through while a repost of the same comment is on the wire', () => {
+      const likeComment = jest.fn(() => new Subject());
+      Object.assign(api, { likeComment, unlikeComment: jest.fn() });
+      service.toggleRepost(1, post, onError);
+
+      service.toggleLike(1, { ...post, isLiked: false }, onError);
+
+      expect(likeComment).toHaveBeenCalledWith(1, address);
+    });
+
+    it('does nothing on a comment the network keeps from reposts', () => {
+      service.toggleRepost(1, { ...post, canRepost: false }, onError);
+
+      expect(reposts.repostComment).not.toHaveBeenCalled();
+      expect(shownPost()).toEqual(post);
     });
   });
 

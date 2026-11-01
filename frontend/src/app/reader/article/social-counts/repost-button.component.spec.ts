@@ -27,18 +27,32 @@ describe('RepostButtonComponent', () => {
     fixture.componentInstance.toggled.subscribe(toggled);
   });
 
-  afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((node) => node.remove()));
+  afterEach(() =>
+    document.querySelectorAll('.cdk-overlay-container').forEach((node) => node.remove()),
+  );
 
   function show(
-    inputs: Partial<{ network: string; countText: string | null; reposted: boolean; canRepost: boolean }> = {},
+    inputs: Partial<{
+      network: string;
+      countText: string | null;
+      reposted: boolean;
+      canRepost: boolean;
+    }> = {},
   ): HTMLButtonElement {
-    const settled = { network: 'bluesky', countText: '5', reposted: false, canRepost: true, ...inputs };
+    const settled = {
+      network: 'bluesky',
+      countText: '5',
+      reposted: false,
+      canRepost: true,
+      ...inputs,
+    };
     for (const [name, value] of Object.entries(settled)) fixture.componentRef.setInput(name, value);
     fixture.detectChanges();
     return fixture.nativeElement.querySelector('button.repost');
   }
 
-  const menuItems = () => Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+  const menuItems = () =>
+    Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
   const labelOf = (item: HTMLElement) =>
     item.textContent?.replace(item.querySelector('app-icon')?.textContent ?? '', '').trim();
 

@@ -24,6 +24,8 @@ export interface EntryCommentPostDto {
   address: string;
   counts: SocialCountsDto;
   isLiked: boolean;
+  isReposted: boolean;
+  canRepost: boolean;
 }
 
 export type CommentsResponse =

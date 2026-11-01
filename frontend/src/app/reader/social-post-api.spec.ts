@@ -1,0 +1,109 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../core/api';
+import { SocialPostApi } from './social-post-api';
+
+const REPLY = 'https://hachyderm.io/@ann/200';
+
+describe('SocialPostApi', () => {
+  let api: SocialPostApi;
+  let ctrl: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+      ],
+    });
+    api = TestBed.inject(SocialPostApi);
+    ctrl = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => ctrl.verify());
+
+  it('GETs the live counts of a post (#1615)', () => {
+    let received: unknown;
+    api.counts(7).subscribe((counts) => (received = counts));
+
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/social');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({ likes: 3, reposts: 1, replies: 0, quotes: null });
+
+    expect(received).toEqual({ likes: 3, reposts: 1, replies: 0, quotes: null });
+  });
+
+  it('GETs refreshed counts with ?refresh=1', () => {
+    api.counts(7, true).subscribe();
+
+    ctrl.expectOne('https://api.test/api/entries/7/social?refresh=1').flush({});
+  });
+
+  it('GETs what the reader did to the post', () => {
+    let received: unknown;
+    api.viewer(7).subscribe((viewer) => (received = viewer));
+
+    const viewer = { isLiked: true, isReposted: false, canRepost: true };
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/social/viewer');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush(viewer);
+
+    expect(received).toEqual(viewer);
+  });
+
+  it('PUTs a like and DELETEs it again', () => {
+    api.like(3).subscribe();
+    const like = ctrl.expectOne('https://api.test/api/entries/3/like');
+    expect(like.request.method).toBe('PUT');
+    like.flush({ isLiked: true });
+
+    api.unlike(3).subscribe();
+    const unlike = ctrl.expectOne('https://api.test/api/entries/3/like');
+    expect(unlike.request.method).toBe('DELETE');
+    unlike.flush({ isLiked: false });
+  });
+
+  it('PUTs a repost and DELETEs it again', () => {
+    api.repost(3).subscribe();
+    const repost = ctrl.expectOne('https://api.test/api/entries/3/repost');
+    expect(repost.request.method).toBe('PUT');
+    repost.flush({ isReposted: true });
+
+    api.unrepost(3).subscribe();
+    const unrepost = ctrl.expectOne('https://api.test/api/entries/3/repost');
+    expect(unrepost.request.method).toBe('DELETE');
+    unrepost.flush({ isReposted: false });
+  });
+
+  it.each([
+    { name: 'likes', method: 'PUT', path: 'comments/like', call: () => api.likeComment(3, REPLY) },
+    {
+      name: 'unlikes',
+      method: 'DELETE',
+      path: 'comments/like',
+      call: () => api.unlikeComment(3, REPLY),
+    },
+    {
+      name: 'reposts',
+      method: 'PUT',
+      path: 'comments/repost',
+      call: () => api.repostComment(3, REPLY),
+    },
+    {
+      name: 'unreposts',
+      method: 'DELETE',
+      path: 'comments/repost',
+      call: () => api.unrepostComment(3, REPLY),
+    },
+  ])('$name the reply named by its address', ({ method, path, call }) => {
+    const request: Observable<unknown> = call();
+    request.subscribe();
+
+    const testRequest = ctrl.expectOne(`https://api.test/api/entries/3/${path}?address=${REPLY}`);
+    expect(testRequest.request.method).toBe(method);
+    testRequest.flush({});
+  });
+});

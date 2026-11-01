@@ -5,7 +5,7 @@ import { onIdentityChange } from '../../../core/auth/session-identity';
 import { Problem, parseProblem } from '../../../core/problem';
 import { RepostView, SocialCountsDto, SocialViewerDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
-import { ReaderApi } from '../../reader-api';
+import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
 
 const CACHE_CAP = 50;
@@ -34,7 +34,7 @@ type LoadedCounts = Extract<SocialCountsState, { status: 'ok' }>;
 
 @Injectable({ providedIn: 'root' })
 export class SocialCountsService {
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SocialPostApi);
   private readonly entries = inject(EntriesStore);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
   private readonly repostsInFlight = new Set<number>();
@@ -50,13 +50,13 @@ export class SocialCountsService {
 
   load(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
-    if (isStale(state())) this.fetch(entry, state, this.api.socialCounts(entry.id));
+    if (isStale(state())) this.fetch(entry, state, this.api.counts(entry.id));
   }
 
   reload(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
     if (state().status === 'loading') return;
-    this.fetch(entry, state, this.api.socialCounts(entry.id, true));
+    this.fetch(entry, state, this.api.counts(entry.id, true));
   }
 
   /** Optimistic repost of the entry's post; dropped while one is on the wire or the network forbids it. */
@@ -116,7 +116,7 @@ export class SocialCountsService {
   /** What the network says the reader did to the post; null when it cannot say. */
   private networkViewer(entry: CountedEntry): Observable<SocialViewerDto | null> {
     if (!likeableSocial({ social: entry.social })) return of(null);
-    return this.api.socialViewer(entry.id).pipe(catchError(() => of(null)));
+    return this.api.viewer(entry.id).pipe(catchError(() => of(null)));
   }
 
   private clear(): void {
@@ -141,7 +141,8 @@ function isStale(state: SocialCountsState): boolean {
 
 /** The loaded state with the reader's repost set, the reposts count following. */
 function withRepost(state: SocialCountsState, isReposted: boolean): SocialCountsState {
-  if (state.status !== 'ok' || !state.repost || state.repost.isReposted === isReposted) return state;
+  if (state.status !== 'ok' || !state.repost || state.repost.isReposted === isReposted)
+    return state;
   const reposts = Math.max(0, state.counts.reposts + (isReposted ? 1 : -1));
   const loaded: LoadedCounts = {
     ...state,

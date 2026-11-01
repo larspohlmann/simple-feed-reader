@@ -223,7 +223,9 @@ describe('SocialCountsComponent', () => {
 
     it('marks a reposted post', () => {
       show(post({ network: 'mastodon' }));
-      const button = repostButton(settle(loaded({}, false, { isReposted: true, canRepost: true })))!;
+      const button = repostButton(
+        settle(loaded({}, false, { isReposted: true, canRepost: true })),
+      )!;
 
       expect(button.getAttribute('aria-label')).toBe('Undo boost on Mastodon');
       expect(button.classList).toContain('on');

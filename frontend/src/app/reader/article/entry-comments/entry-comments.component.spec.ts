@@ -21,7 +21,13 @@ const navigation = { layer: jest.fn() };
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
-  let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock; toggleLike: jest.Mock };
+  let service: {
+    state: jest.Mock;
+    load: jest.Mock;
+    reload: jest.Mock;
+    toggleLike: jest.Mock;
+    toggleRepost: jest.Mock;
+  };
 
   beforeEach(() => {
     states = new Map();
@@ -30,6 +36,7 @@ describe('EntryCommentsComponent', () => {
       load: jest.fn(),
       reload: jest.fn(),
       toggleLike: jest.fn(),
+      toggleRepost: jest.fn(),
     };
     navigation.layer.mockReset();
     TestBed.configureTestingModule({
@@ -80,6 +87,8 @@ describe('EntryCommentsComponent', () => {
       address: 'at://did:plc:ann/app.bsky.feed.post/2',
       counts: { likes: 4, reposts: 1, replies: 2, quotes: 0 },
       isLiked: false,
+      isReposted: false,
+      canRepost: true,
     };
     const likeButton = (element: HTMLElement) =>
       element.querySelector('.comment button.like') as HTMLButtonElement | null;
@@ -88,8 +97,21 @@ describe('EntryCommentsComponent', () => {
       showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
       const element = settleComments([anEntryComment({ post })]);
 
-      expect(element.querySelectorAll('.comment .count')).toHaveLength(3);
+      expect(element.querySelectorAll('.comment .count')).toHaveLength(2);
+      expect(element.querySelector('.comment button.repost .number')?.textContent?.trim()).toBe(
+        '1',
+      );
       expect(likeButton(element)?.querySelector('.number')?.textContent?.trim()).toBe('4');
+    });
+
+    it('reposts the comment through the service from its repost menu', () => {
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
+      const element = settleComments([anEntryComment({ post })]);
+      (element.querySelector('.comment button.repost') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (document.querySelector('[role="menuitem"]') as HTMLButtonElement).click();
+
+      expect(service.toggleRepost).toHaveBeenCalledWith(5, post, expect.any(Function));
     });
 
     it('likes the comment through the service', () => {

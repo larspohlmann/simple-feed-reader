@@ -523,23 +523,6 @@ describe('ReaderApi', () => {
     testRequest.flush({ status: 'failed' });
   });
 
-  it('GETs refreshed counts with ?refresh=1', () => {
-    api.socialCounts(7, true).subscribe();
-
-    ctrl.expectOne('https://api.test/api/entries/7/social?refresh=1').flush({});
-  });
-
-  it('GETs the live counts of a post (#1615)', () => {
-    let received: unknown;
-    api.socialCounts(7).subscribe((counts) => (received = counts));
-
-    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/social');
-    expect(testRequest.request.method).toBe('GET');
-    testRequest.flush({ likes: 3, reposts: 1, replies: 0, quotes: null });
-
-    expect(received).toEqual({ likes: 3, reposts: 1, replies: 0, quotes: null });
-  });
-
   it('POSTs a feed preview request', () => {
     api.previewFeed('https://f').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/feeds/preview');
@@ -614,17 +597,5 @@ describe('ReaderApi', () => {
       streamedChars: 0,
       forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
     });
-  });
-
-  it('PUTs a like and DELETEs it again', () => {
-    api.like(3).subscribe();
-    const like = ctrl.expectOne('https://api.test/api/entries/3/like');
-    expect(like.request.method).toBe('PUT');
-    like.flush({ isLiked: true });
-
-    api.unlike(3).subscribe();
-    const unlike = ctrl.expectOne('https://api.test/api/entries/3/like');
-    expect(unlike.request.method).toBe('DELETE');
-    unlike.flush({ isLiked: false });
   });
 });
