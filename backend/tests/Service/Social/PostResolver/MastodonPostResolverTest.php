@@ -37,6 +37,8 @@ final class MastodonPostResolverTest extends TestCase
         self::assertSame('109876', $post->postId);
         self::assertNull($post->contentId);
         self::assertNull($post->existingLikeId);
+        self::assertNull($post->existingRepostId);
+        self::assertTrue($post->canRepost);
         self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
         self::assertNull($post->counts);
     }
@@ -62,6 +64,36 @@ final class MastodonPostResolverTest extends TestCase
         $post = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL);
 
         self::assertSame('109876', $post->existingLikeId);
+    }
+
+    public function testAStatusTheAccountBoostedIsAlreadyRepostedAsItsStatusId(): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876', 'reblogged' => true]])]);
+
+        $post = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL);
+
+        self::assertSame('109876', $post->existingRepostId);
+    }
+
+    #[DataProvider('visibilities')]
+    public function testOnlyAPublicOrUnlistedStatusCanBeBoosted(string $visibility, bool $canRepost): void
+    {
+        $http = new RoutedHttpClient([
+            self::SEARCH => self::statuses([['id' => '109876', 'visibility' => $visibility]]),
+        ]);
+
+        $post = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL);
+
+        self::assertSame($canRepost, $post->canRepost);
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function visibilities(): iterable
+    {
+        yield 'public' => ['public', true];
+        yield 'unlisted' => ['unlisted', true];
+        yield 'private' => ['private', false];
+        yield 'direct' => ['direct', false];
     }
 
     public function testAnAddressCannotInjectSearchParameters(): void

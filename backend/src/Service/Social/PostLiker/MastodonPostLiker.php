@@ -10,6 +10,7 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\MastodonStatusAction;
 
 final readonly class MastodonPostLiker implements PostLikerInterface
 {
@@ -26,7 +27,7 @@ final readonly class MastodonPostLiker implements PostLikerInterface
 
     public function like(SocialPostModel $post): SocialLikeResultModel
     {
-        $this->actOnStatus($post->account, self::statusAction($post->postId, 'favourite'));
+        $this->actOnStatus($post->account, MastodonStatusAction::path($post->postId, 'favourite'));
 
         return new SocialLikeResultModel($post->postId);
     }
@@ -34,7 +35,7 @@ final readonly class MastodonPostLiker implements PostLikerInterface
     public function unlike(SocialAccount $account, string $likeId): void
     {
         try {
-            $this->actOnStatus($account, self::statusAction($likeId, 'unfavourite'));
+            $this->actOnStatus($account, MastodonStatusAction::path($likeId, 'unfavourite'));
         } catch (SocialPostNotFoundException) {
         }
     }
@@ -42,10 +43,5 @@ final readonly class MastodonPostLiker implements PostLikerInterface
     private function actOnStatus(SocialAccount $account, string $path): void
     {
         $this->mastodon->actOnPost($account, $path, self::FAVOURITES_SCOPE);
-    }
-
-    private static function statusAction(string $statusId, string $action): string
-    {
-        return '/api/v1/statuses/' . rawurlencode($statusId) . '/' . $action;
     }
 }

@@ -39,8 +39,16 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
             ?? throw new SocialNetworkUnreachableException('Bluesky answered a post without a content id.');
         $resolved = SocialPostModel::onBluesky($account, $address, $contentId)
             ->withCounts(PostCounts::ofBlueskyPost($post));
-        $likeId = BlueskyRecordUri::likeOrNull($post->node('viewer')->string('like'));
 
-        return null === $likeId ? $resolved : $resolved->alreadyLikedAs($likeId);
+        return self::withViewer($resolved, $post->node('viewer'));
+    }
+
+    private static function withViewer(SocialPostModel $resolved, JsonNodeModel $viewer): SocialPostModel
+    {
+        $likeId = BlueskyRecordUri::likeOrNull($viewer->string('like'));
+        $repostId = BlueskyRecordUri::repostOrNull($viewer->string('repost'));
+        $liked = null === $likeId ? $resolved : $resolved->alreadyLikedAs($likeId);
+
+        return null === $repostId ? $liked : $liked->alreadyRepostedAs($repostId);
     }
 }

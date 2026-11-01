@@ -1,9 +1,11 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, catchError, forkJoin, map, of } from 'rxjs';
+import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { EntryLikeDto, SocialCountsDto, likeableSocial } from '../../entry-social';
+import { Problem } from '../../../core/problem';
+import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
+import { RepostView, SocialCountsDto, SocialViewerDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
-import { ReaderApi } from '../../reader-api';
+import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
 
 const CACHE_CAP = 50;
@@ -12,18 +14,28 @@ const FAILED_RETRY_MS = 60 * 1000;
 
 export type CountedEntry = Pick<EntryDto, 'id' | 'social'>;
 
-/** `likedAtLoad`: whether the loaded counts include the reader's like; the shown likes count from it. */
+/**
+ * `likedAtLoad`: whether the loaded counts include the reader's like; the shown likes count from it.
+ * `repost`: null when the network could not say, or the reader has no account on it.
+ */
 export type SocialCountsState =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'ok'; counts: SocialCountsDto; likedAtLoad: boolean; loadedAt: number }
+  | {
+      status: 'ok';
+      counts: SocialCountsDto;
+      likedAtLoad: boolean;
+      repost: RepostView | null;
+      loadedAt: number;
+    }
   | { status: 'failed'; failedAt: number };
 
 @Injectable({ providedIn: 'root' })
 export class SocialCountsService {
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SocialPostApi);
   private readonly entries = inject(EntriesStore);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
+  private readonly toggles = new OptimisticToggles();
   private generation = 0;
 
   constructor() {
@@ -36,13 +48,29 @@ export class SocialCountsService {
 
   load(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
-    if (isStale(state())) this.fetch(entry, state, this.api.socialCounts(entry.id));
+    if (isStale(state())) this.fetch(entry, state, this.api.counts(entry.id));
   }
 
+  /** A reload waits out a repost on the wire, whose answer the reloaded counts might not include yet. */
   reload(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
-    if (state().status === 'loading') return;
-    this.fetch(entry, state, this.api.socialCounts(entry.id, true));
+    if (state().status === 'loading' || this.toggles.isBusy(entry.id)) return;
+    this.fetch(entry, state, this.api.counts(entry.id, true));
+  }
+
+  /** Optimistic repost of the entry's post; dropped while one is on the wire or the network forbids it. */
+  toggleRepost(entry: CountedEntry, onError: (problem: Problem) => void): void {
+    const state = this.stateFor(entry.id);
+    const current = state();
+    if (current.status !== 'ok' || !current.repost?.canRepost) return;
+    const isReposted = !current.repost.isReposted;
+    this.toggles.run(entry.id, {
+      key: 'repost',
+      send: () => (isReposted ? this.api.repost(entry.id) : this.api.unrepost(entry.id)),
+      to: isReposted,
+      show: (reposted) => state.update((loaded) => withRepost(loaded, reposted)),
+      onError,
+    });
   }
 
   private stateFor(id: number): WritableSignal<SocialCountsState> {
@@ -62,15 +90,16 @@ export class SocialCountsService {
     const generation = this.generation;
     const likedBefore = entry.social?.isLiked ?? false;
     state.set({ status: 'loading' });
-    forkJoin([counts$, this.networkLike(entry)]).subscribe({
-      next: ([counts, networkLike]) => {
+    forkJoin([counts$, this.networkViewer(entry)]).subscribe({
+      next: ([counts, viewer]) => {
         if (generation !== this.generation) return;
-        if (networkLike !== null)
-          this.entries.adoptLike(entry.id, { from: likedBefore, to: networkLike });
+        if (viewer !== null)
+          this.entries.adoptLike(entry.id, { from: likedBefore, to: viewer.isLiked });
         state.set({
           status: 'ok',
           counts,
-          likedAtLoad: networkLike ?? likedBefore,
+          likedAtLoad: viewer?.isLiked ?? likedBefore,
+          repost: viewer && { isReposted: viewer.isReposted, canRepost: viewer.canRepost },
           loadedAt: Date.now(),
         });
       },
@@ -80,18 +109,16 @@ export class SocialCountsService {
     });
   }
 
-  /** Whether the network says the reader liked the post; null when it cannot say. */
-  private networkLike(entry: CountedEntry): Observable<boolean | null> {
+  /** What the network says the reader did to the post; null when it cannot say. */
+  private networkViewer(entry: CountedEntry): Observable<SocialViewerDto | null> {
     if (!likeableSocial({ social: entry.social })) return of(null);
-    return this.api.likeState(entry.id).pipe(
-      map((like: EntryLikeDto) => like.isLiked),
-      catchError(() => of(null)),
-    );
+    return this.api.viewer(entry.id).pipe(catchError(() => of(null)));
   }
 
   private clear(): void {
     this.generation++;
     this.states.clear();
+    this.toggles.clear();
   }
 }
 
@@ -106,4 +133,15 @@ function isStale(state: SocialCountsState): boolean {
     default:
       return false;
   }
+}
+
+/** The loaded state with the reader's repost set, the reposts count following. */
+function withRepost(state: SocialCountsState, isReposted: boolean): SocialCountsState {
+  if (state.status !== 'ok' || !state.repost || state.repost.isReposted === isReposted)
+    return state;
+  return {
+    ...state,
+    counts: { ...state.counts, reposts: steppedCount(state.counts.reposts, isReposted) },
+    repost: { ...state.repost, isReposted },
+  };
 }

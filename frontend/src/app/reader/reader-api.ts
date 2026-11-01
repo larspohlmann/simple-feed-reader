@@ -6,9 +6,9 @@ import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
+import { refreshParams } from './refresh-params';
 import { SignedUrl } from './query/link-param';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
-import { EntryLikeDto, SocialCountsDto } from './entry-social';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import { CommentsResponse } from './entry-comment';
 import {
@@ -116,30 +116,6 @@ export class ReaderApi {
     return this.http.patch<{ state: EntryStateDto }>(`${this.base}/api/entries/${id}/state`, patch);
   }
 
-  likeState(id: number): Observable<EntryLikeDto> {
-    return this.http.get<EntryLikeDto>(`${this.base}/api/entries/${id}/like`);
-  }
-
-  like(id: number): Observable<EntryLikeDto> {
-    return this.http.put<EntryLikeDto>(`${this.base}/api/entries/${id}/like`, null);
-  }
-
-  unlike(id: number): Observable<EntryLikeDto> {
-    return this.http.delete<EntryLikeDto>(`${this.base}/api/entries/${id}/like`);
-  }
-
-  likeComment(entryId: number, address: string): Observable<EntryLikeDto> {
-    return this.http.put<EntryLikeDto>(`${this.base}/api/entries/${entryId}/comments/like`, null, {
-      params: { address },
-    });
-  }
-
-  unlikeComment(entryId: number, address: string): Observable<EntryLikeDto> {
-    return this.http.delete<EntryLikeDto>(`${this.base}/api/entries/${entryId}/comments/like`, {
-      params: { address },
-    });
-  }
-
   markRead(target: ScopedMarkReadTarget, until: string): Observable<void> {
     return this.http.post<void>(`${this.base}/api/entries/mark-read`, { ...target, until });
   }
@@ -191,12 +167,6 @@ export class ReaderApi {
 
   comments(entryId: number, refresh = false): Observable<CommentsResponse> {
     return this.http.get<CommentsResponse>(`${this.base}/api/entries/${entryId}/comments`, {
-      params: refreshParams(refresh),
-    });
-  }
-
-  socialCounts(entryId: number, refresh = false): Observable<SocialCountsDto> {
-    return this.http.get<SocialCountsDto>(`${this.base}/api/entries/${entryId}/social`, {
       params: refreshParams(refresh),
     });
   }
@@ -375,8 +345,4 @@ export class ReaderApi {
   purgeRecommendations(): Observable<RecommendationRunReport> {
     return this.http.delete<RecommendationRunReport>(`${this.base}/api/recommendations/runs`);
   }
-}
-
-function refreshParams(refresh: boolean): Record<string, string> {
-  return refresh ? { refresh: '1' } : {};
 }

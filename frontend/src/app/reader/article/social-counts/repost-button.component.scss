@@ -1,0 +1,32 @@
+@use '../../../theme/glass-rim';
+@use '../../../theme/menu-items';
+@use '../../../theme/pill-toggle';
+
+:host {
+  display: contents;
+}
+
+.repost {
+  @include pill-toggle.pill-toggle;
+}
+
+.repost[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+}
+
+.menu {
+  @include glass-rim.filled(var(--surface-2));
+  @include menu-items.menu-items;
+
+  border-radius: var(--radius);
+  padding-block: var(--space-1);
+}
+
+.menu button {
+  white-space: nowrap;
+}

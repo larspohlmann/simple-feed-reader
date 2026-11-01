@@ -371,7 +371,7 @@
       "appPasswordHint": "Lege in Bluesky unter Einstellungen → Datenschutz und Sicherheit → App-Passwörter ein App-Passwort an. Es sieht aus wie xxxx-xxxx-xxxx-xxxx; dein Konto-Passwort wird abgelehnt.",
       "instanceUrl": "Instanz",
       "accessToken": "Zugriffstoken",
-      "accessTokenHint": "Lege unter Einstellungen → Entwicklung → Neue Anwendung ein Token mit den Berechtigungen read und write:favourites an und kopiere „Dein Zugriffstoken“.",
+      "accessTokenHint": "Lege unter Einstellungen → Entwicklung → Neue Anwendung ein Token mit den Berechtigungen read, write:favourites und write:statuses an und kopiere „Dein Zugriffstoken“.",
       "connect": "Verbinden",
       "connected": "Konto verbunden",
       "default": "Standard",
@@ -1341,6 +1341,22 @@
     "unlike": {
       "bluesky": "Like auf Bluesky zurücknehmen",
       "mastodon": "Like auf Mastodon zurücknehmen"
+    },
+    "repost": {
+      "bluesky": "Auf Bluesky reposten",
+      "mastodon": "Auf Mastodon boosten"
+    },
+    "unrepost": {
+      "bluesky": "Repost auf Bluesky zurücknehmen",
+      "mastodon": "Boost auf Mastodon zurücknehmen"
+    },
+    "repostMenu": {
+      "bluesky": "Reposten",
+      "mastodon": "Boosten"
+    },
+    "repostForbidden": {
+      "bluesky": "Dieser Beitrag kann nicht repostet werden",
+      "mastodon": "Die Sichtbarkeit dieses Beitrags erlaubt keine Boosts"
     },
     "keep": "Merken",
     "toggleRead": "Gelesen umschalten",

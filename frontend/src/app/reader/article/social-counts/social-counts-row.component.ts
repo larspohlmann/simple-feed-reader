@@ -5,6 +5,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { SocialNetworkName } from '../../../core/social-network';
 import { SocialCountsDto } from '../../entry-social';
+import { RepostButtonComponent } from './repost-button.component';
 
 type CountKind = 'likes' | 'reposts' | 'boosts' | 'replies' | 'quotes';
 
@@ -14,10 +15,13 @@ interface ShownCount {
   count: number;
 }
 
-/** A post's counters and its like button; `liked` is null when the reader cannot like the post. */
+/**
+ * A post's counters with its repost and like buttons; `liked` and `reposted` are null when the reader cannot act
+ * on the post, which shows plain counts instead.
+ */
 @Component({
   selector: 'app-social-counts-row',
-  imports: [IconComponent, TranslocoPipe],
+  imports: [IconComponent, TranslocoPipe, RepostButtonComponent],
   templateUrl: './social-counts-row.component.html',
   styleUrl: './social-counts-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,25 +30,30 @@ export class SocialCountsRowComponent {
   readonly network = input.required<SocialNetworkName>();
   readonly counts = input.required<SocialCountsDto | null>();
   readonly liked = input.required<boolean | null>();
+  readonly reposted = input<boolean | null>(null);
+  readonly canRepost = input(true);
   readonly likeToggled = output<void>();
+  readonly repostToggled = output<void>();
 
   private readonly language = inject(LanguageService);
   private readonly compact = computed(
     () => new Intl.NumberFormat(this.language.lang(), { notation: 'compact' }),
   );
 
-  protected readonly shown = computed(() => this.liked() !== null || this.counts() !== null);
+  protected readonly shown = computed(
+    () => this.liked() !== null || this.reposted() !== null || this.counts() !== null,
+  );
   protected readonly likeKey = computed(
     () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
   );
   protected readonly shownCounts = computed<ShownCount[]>(() => {
     const counts = this.counts();
     if (!counts) return [];
-    const repostKind: CountKind = this.network() === 'mastodon' ? 'boosts' : 'reposts';
-    const shown: ShownCount[] = [
-      { kind: repostKind, icon: 'repeat', count: counts.reposts },
-      { kind: 'replies', icon: 'chat_bubble', count: counts.replies },
-    ];
+    const shown: ShownCount[] = [];
+    if (this.reposted() === null) {
+      shown.push({ kind: this.repostKind(), icon: 'repeat', count: counts.reposts });
+    }
+    shown.push({ kind: 'replies', icon: 'chat_bubble', count: counts.replies });
     if (counts.quotes !== null) {
       shown.push({ kind: 'quotes', icon: 'format_quote', count: counts.quotes });
     }
@@ -52,6 +61,9 @@ export class SocialCountsRowComponent {
     return shown;
   });
 
+  protected readonly repostKind = computed<CountKind>(() =>
+    this.network() === 'mastodon' ? 'boosts' : 'reposts',
+  );
   protected format(count: number): string {
     return this.compact().format(count);
   }

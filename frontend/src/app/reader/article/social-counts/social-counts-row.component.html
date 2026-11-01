@@ -1,5 +1,21 @@
 @if (shown()) {
   <div class="row">
+    @let isReposted = reposted();
+    @if (isReposted !== null) {
+      @let reposts = counts()?.reposts ?? null;
+      <app-repost-button
+        [network]="network()"
+        [countText]="reposts === null ? null : format(reposts)"
+        [countLabel]="
+          reposts === null
+            ? null
+            : (labelKey(repostKind(), reposts) | transloco: { count: reposts })
+        "
+        [reposted]="isReposted"
+        [canRepost]="canRepost()"
+        (toggled)="repostToggled.emit()"
+      />
+    }
     @for (shownCount of shownCounts(); track shownCount.kind) {
       @let label =
         labelKey(shownCount.kind, shownCount.count) | transloco: { count: shownCount.count };

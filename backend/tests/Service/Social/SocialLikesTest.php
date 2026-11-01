@@ -246,7 +246,7 @@ final class SocialLikesTest extends DbTestCase
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $this->mastodon->knowsTheLike('2041');
 
-        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+        self::assertNotNull($this->likes()->syncFromNetwork($this->owner, $entry)->existingLikeId);
 
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
         $like = $this->storedLikeOf($entry);
@@ -261,7 +261,7 @@ final class SocialLikesTest extends DbTestCase
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $this->storeLike($entry, $account, '110');
 
-        self::assertFalse($this->likes()->syncFromNetwork($this->owner, $entry));
+        self::assertNull($this->likes()->syncFromNetwork($this->owner, $entry)->existingLikeId);
 
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
         self::assertNull($this->likeRepository()->findOneFor($this->owner, $entry));
@@ -272,7 +272,7 @@ final class SocialLikesTest extends DbTestCase
         $this->mastodonAccount();
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
 
-        self::assertFalse($this->likes()->syncFromNetwork($this->owner, $entry));
+        self::assertNull($this->likes()->syncFromNetwork($this->owner, $entry)->existingLikeId);
 
         self::assertSame(0, $this->likeRepository()->count([]));
     }
@@ -284,7 +284,7 @@ final class SocialLikesTest extends DbTestCase
         $this->storeLike($entry, $account, '110');
         $this->mastodon->knowsTheLike();
 
-        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+        self::assertNotNull($this->likes()->syncFromNetwork($this->owner, $entry)->existingLikeId);
 
         self::assertEquals(new \DateTimeImmutable('2026-10-13 10:00:00'), $this->storedLikeOf($entry)->getLikedAt());
     }
@@ -296,7 +296,7 @@ final class SocialLikesTest extends DbTestCase
         $this->storeLike($entry, $account, '97');
         $this->mastodon->knowsTheLike('2041');
 
-        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+        self::assertNotNull($this->likes()->syncFromNetwork($this->owner, $entry)->existingLikeId);
 
         $like = $this->storedLikeOf($entry);
         self::assertSame('2041', $like->getRemoteId());
@@ -315,7 +315,7 @@ final class SocialLikesTest extends DbTestCase
         $this->storeLike($entry, $other, '110');
         $this->mastodon->knowsTheLike();
 
-        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+        self::assertNotNull($this->likes()->syncFromNetwork($this->owner, $entry)->existingLikeId);
 
         self::assertSame($acting->requireId(), $this->storedLikeOf($entry)->getSocialAccount()->requireId());
     }
@@ -343,7 +343,7 @@ final class SocialLikesTest extends DbTestCase
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $this->mastodon->onResolve(fn () => $this->storeLike($entry, $account, '110'));
 
-        self::assertFalse($this->likes()->syncFromNetwork($this->owner, $entry));
+        self::assertNull($this->likes()->syncFromNetwork($this->owner, $entry)->existingLikeId);
 
         self::assertSame('110', $this->storedLikeOf($entry)->getRemoteId());
     }

@@ -22,17 +22,7 @@ final readonly class EntryLikeController
         private SocialLikes $socialLikes,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialLikeLimiter,
-        private RateLimiterFactoryInterface $socialLikeStateLimiter,
     ) {
-    }
-
-    #[Route('/{id}/like', name: 'api_entries_like_state', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function state(int $id, #[CurrentUser] User $user): JsonResponse
-    {
-        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
-        $this->rateLimitGuard->enforceForUser($this->socialLikeStateLimiter, $user);
-
-        return new JsonResponse(SocialLikeJson::of($this->socialLikes->syncFromNetwork($user, $entry)));
     }
 
     #[Route('/{id}/like', name: 'api_entries_like', methods: ['PUT'], requirements: ['id' => '\d+'])]

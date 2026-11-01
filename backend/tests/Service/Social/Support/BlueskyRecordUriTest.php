@@ -58,6 +58,27 @@ final class BlueskyRecordUriTest extends TestCase
         ];
         yield 'no record' => ['at://did:plc:bob/app.bsky.feed.post/3l1', null];
         yield 'a like' => ['at://did:plc:bob/app.bsky.feed.like/3l1', null];
+        yield 'a repost' => ['at://did:plc:bob/app.bsky.feed.repost/3l1', null];
+    }
+
+    #[DataProvider('reposts')]
+    public function testOnlyARepostRecordIsARepost(?string $uri, ?string $repost): void
+    {
+        self::assertSame($repost, BlueskyRecordUri::repostOrNull($uri));
+    }
+
+    /** @return iterable<string, array{?string, ?string}> */
+    public static function reposts(): iterable
+    {
+        $repost = 'at://did:plc:alice/app.bsky.feed.repost/3rp1';
+        yield 'a repost' => [$repost, $repost];
+        yield 'a like' => ['at://did:plc:alice/app.bsky.feed.like/3rp1', null];
+        yield 'an empty record key' => ['at://did:plc:alice/app.bsky.feed.repost/', null];
+        yield 'over 512 characters' => [
+            'at://did:plc:alice/app.bsky.feed.repost/' . str_repeat('a', 480),
+            null,
+        ];
+        yield 'nothing' => [null, null];
     }
 
     #[DataProvider('likes')]
@@ -94,6 +115,7 @@ final class BlueskyRecordUriTest extends TestCase
     {
         yield 'a like' => ['at://did:plc:alice/app.bsky.feed.like/3lk2', '3lk2'];
         yield 'a list' => ['at://did:plc:alice/app.bsky.graph.list/3l1', '3l1'];
+        yield 'a repost' => ['at://did:plc:alice/app.bsky.feed.repost/3rp1', '3rp1'];
         yield 'a post' => ['at://did:plc:alice/app.bsky.feed.post/3lk2', null];
         yield 'no uri' => ['3lk2', null];
     }

@@ -94,7 +94,10 @@
                   [network]="social.network"
                   [counts]="post.counts"
                   [liked]="likeable() ? post.isLiked : null"
+                  [reposted]="likeable() ? post.isReposted : null"
+                  [canRepost]="post.canRepost"
                   (likeToggled)="toggleLike(post)"
+                  (repostToggled)="toggleRepost(post)"
                 />
               }
             </li>

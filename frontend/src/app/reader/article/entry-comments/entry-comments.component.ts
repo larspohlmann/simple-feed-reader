@@ -115,6 +115,12 @@ export class EntryCommentsComponent {
     );
   }
 
+  toggleRepost(post: EntryCommentPostDto): void {
+    this.service.toggleRepost(this.entryId(), post, (problem) =>
+      this.toast.show({ message: problemMessage(problem) }),
+    );
+  }
+
   when(iso: string): string {
     return relativeTime(iso, this.language.lang());
   }

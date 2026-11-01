@@ -419,7 +419,7 @@ describe('SocialSectionComponent', () => {
 
     const row = byTestId(fixture, 'social-mastodon-token')?.closest('app-settings-row');
     expect(row?.textContent).toContain('Preferences → Development → New application');
-    expect(row?.textContent).toContain('write:favourites');
+    expect(row?.textContent).toContain('write:favourites and write:statuses');
     expect(byTestId(fixture, 'social-mastodon-link')).toBeNull();
 
     type(fixture, 'social-mastodon-instance', 'https://example.social/');

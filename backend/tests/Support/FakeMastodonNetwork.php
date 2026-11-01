@@ -10,10 +10,11 @@ use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\PostLikerInterface;
+use App\Service\Social\PostReposter\PostReposterInterface;
 use App\Service\Social\PostResolver\PostResolverInterface;
 
 /** A Mastodon that resolves every address to status 110, records each call and can be told to fail. */
-final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInterface
+final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInterface, PostReposterInterface
 {
     public const string STATUS_ID = '110';
 
@@ -25,6 +26,10 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
     private ?SocialCountsModel $counts = null;
 
     private ?string $existingLikeId = null;
+
+    private ?string $existingRepostId = null;
+
+    private bool $canRepost = true;
 
     private ?\Closure $resolveHook = null;
 
@@ -48,6 +53,16 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
         $this->existingLikeId = $likeId;
     }
 
+    public function knowsTheRepost(string $repostId = self::STATUS_ID): void
+    {
+        $this->existingRepostId = $repostId;
+    }
+
+    public function forbidsReposting(): void
+    {
+        $this->canRepost = false;
+    }
+
     public function onResolve(\Closure $hook): void
     {
         $this->resolveHook = $hook;
@@ -60,8 +75,10 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
             ($this->resolveHook)();
         }
         $post = SocialPostModel::onMastodon($account, self::STATUS_ID)->withCounts($this->counts);
+        $liked = null === $this->existingLikeId ? $post : $post->alreadyLikedAs($this->existingLikeId);
+        $reposted = null === $this->existingRepostId ? $liked : $liked->alreadyRepostedAs($this->existingRepostId);
 
-        return null === $this->existingLikeId ? $post : $post->alreadyLikedAs($this->existingLikeId);
+        return $this->canRepost ? $reposted : $reposted->notRepostable();
     }
 
     public function like(SocialPostModel $post): SocialLikeResultModel
@@ -74,6 +91,16 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
     public function unlike(SocialAccount $account, string $likeId): void
     {
         $this->record('unlike ' . $likeId);
+    }
+
+    public function repost(SocialPostModel $post): void
+    {
+        $this->record('repost ' . $post->postId);
+    }
+
+    public function unrepost(SocialAccount $account, string $repostId): void
+    {
+        $this->record('unrepost ' . $repostId);
     }
 
     private function record(string $call): void

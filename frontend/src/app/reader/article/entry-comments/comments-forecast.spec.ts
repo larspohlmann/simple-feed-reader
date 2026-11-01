@@ -27,6 +27,7 @@ const countsOf = (replies: number): SocialCountsState => ({
   status: 'ok',
   counts: { likes: 0, reposts: 0, replies, quotes: 0 },
   likedAtLoad: false,
+  repost: null,
   loadedAt: 0,
 });
 

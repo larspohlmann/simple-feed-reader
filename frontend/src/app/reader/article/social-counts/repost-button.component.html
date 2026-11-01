@@ -1,0 +1,46 @@
+<button
+  type="button"
+  class="repost"
+  [class.on]="reposted()"
+  [attr.aria-haspopup]="popup()"
+  [attr.aria-expanded]="open()"
+  [attr.aria-disabled]="canRepost() ? null : 'true'"
+  [attr.title]="hintKey() | transloco"
+  [attr.aria-label]="(hintKey() | transloco) + (countLabel() ? ', ' + countLabel() : '')"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  #button
+  (click)="press()"
+>
+  <app-icon name="repeat" size="sm" [fill]="reposted()" />
+  @if (countText(); as text) {
+    <span class="number">{{ text }}</span>
+  }
+</button>
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="open()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  [cdkConnectedOverlayDisposeOnNavigation]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="open.set(false)"
+  (overlayKeydown)="step($event)"
+  (detach)="open.set(false); button.focus()"
+>
+  <div
+    class="menu"
+    cdkTrapFocus
+    cdkTrapFocusAutoCapture
+    role="menu"
+    [attr.aria-label]="'reader.repostMenu.' + network() | transloco"
+  >
+    <button role="menuitem" type="button" (click)="choose()">
+      <app-icon name="repeat" size="sm" />
+      {{ actionKey() | transloco }}
+    </button>
+  </div>
+</ng-template>

@@ -124,6 +124,13 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per user: every repost, reply, quote or delete acts in public as the user on their network account.
+        social_writes:
+            policy: 'sliding_window'
+            limit: 30
+            interval: '10 minutes'
+            cache_pool: cache.rate_limiter
+
         # Per user: opening a social post asks for its counts. The two-minute cache answers most opens; a miss costs
         # one public read, or two or three on the user's own account when the public one fails.
         social_counts:
@@ -140,8 +147,8 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per user: opening a social post asks the user's own account whether they liked it there, one or two calls.
-        social_like_state:
+        # Per user: opening a social post asks the user's own account what they did to it there, one or two calls.
+        social_viewer:
             policy: 'sliding_window'
             limit: 120
             interval: '5 minutes'

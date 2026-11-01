@@ -5,7 +5,9 @@ import { anEntry } from '../../../../testing/entry-testing';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { Lang } from '../../../core/i18n/language';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { EntrySocialDto, SocialCountsDto } from '../../entry-social';
+import { EntrySocialDto, RepostView, SocialCountsDto } from '../../entry-social';
+import { ToastService } from '../../../shared/toast/toast.service';
+import { Problem } from '../../../core/problem';
 import { EntryDto } from '../../models';
 import { SocialCountsComponent } from './social-counts.component';
 import { SocialCountsService, SocialCountsState } from './social-counts.service';
@@ -15,13 +17,19 @@ const COUNTS: SocialCountsDto = { likes: 41, reposts: 5, replies: 7, quotes: 2 }
 describe('SocialCountsComponent', () => {
   let fixture: ComponentFixture<SocialCountsComponent>;
   let states: Map<number, WritableSignal<SocialCountsState>>;
-  let service: { state: jest.Mock; load: jest.Mock };
+  let service: { state: jest.Mock; load: jest.Mock; toggleRepost: jest.Mock };
+  let toast: { show: jest.Mock };
   let actions: { like: jest.Mock };
   let language: { lang: WritableSignal<Lang> };
 
   beforeEach(() => {
     states = new Map();
-    service = { state: jest.fn((id: number) => stateOf(id)), load: jest.fn() };
+    service = {
+      state: jest.fn((id: number) => stateOf(id)),
+      load: jest.fn(),
+      toggleRepost: jest.fn(),
+    };
+    toast = { show: jest.fn() };
     actions = { like: jest.fn() };
     language = { lang: signal<Lang>('en') };
     TestBed.configureTestingModule({
@@ -30,6 +38,7 @@ describe('SocialCountsComponent', () => {
         { provide: SocialCountsService, useValue: service },
         { provide: EntryActionHandler, useValue: actions },
         { provide: LanguageService, useValue: language },
+        { provide: ToastService, useValue: toast },
       ],
     });
     fixture = TestBed.createComponent(SocialCountsComponent);
@@ -49,10 +58,12 @@ describe('SocialCountsComponent', () => {
   const loaded = (
     counts: Partial<SocialCountsDto> = {},
     likedAtLoad = false,
+    repost: RepostView | null = null,
   ): SocialCountsState => ({
     status: 'ok',
     counts: { ...COUNTS, ...counts },
     likedAtLoad,
+    repost,
     loadedAt: 0,
   });
 
@@ -72,6 +83,8 @@ describe('SocialCountsComponent', () => {
     Array.from(element.querySelectorAll('.count')).map((count) => count.getAttribute('aria-label'));
   const likeButton = (element: HTMLElement) =>
     element.querySelector('button.like') as HTMLButtonElement | null;
+  const repostButton = (element: HTMLElement) =>
+    element.querySelector('app-repost-button button.repost') as HTMLButtonElement | null;
   const likeNumber = (element: HTMLElement) =>
     likeButton(element)?.querySelector('.number')?.textContent?.trim() ?? null;
 
@@ -185,5 +198,54 @@ describe('SocialCountsComponent', () => {
     expect(button.getAttribute('aria-label')).toBe('Unlike on Mastodon');
     expect(button.getAttribute('aria-pressed')).toBe('true');
     expect(button.classList).toContain('on');
+  });
+
+  describe('repost', () => {
+    it('stays a plain count until the network says what the reader did', () => {
+      show(post());
+      const element = settle(loaded());
+
+      expect(repostButton(element)).toBeNull();
+      expect(labels(element)[0]).toBe('5 reposts');
+    });
+
+    it('turns the repost count into the first button once the network answers', () => {
+      show(post());
+      const element = settle(loaded({}, false, { isReposted: false, canRepost: true }));
+      const button = repostButton(element)!;
+
+      expect(labels(element)).toEqual(['7 replies', '2 quotes']);
+      expect(element.querySelector('.row')!.firstElementChild?.tagName).toBe('APP-REPOST-BUTTON');
+      expect(button.querySelector('.number')?.textContent?.trim()).toBe('5');
+      expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky, 5 reposts');
+      expect(button.classList).not.toContain('on');
+    });
+
+    it('marks a reposted post', () => {
+      show(post({ network: 'mastodon' }));
+      const button = repostButton(
+        settle(loaded({}, false, { isReposted: true, canRepost: true })),
+      )!;
+
+      expect(button.getAttribute('aria-label')).toBe('Undo boost on Mastodon, 5 boosts');
+      expect(button.classList).toContain('on');
+    });
+
+    it('reposts through the counts service and toasts what the network refused', () => {
+      const entry = post();
+      show(entry);
+      const element = settle(loaded({}, false, { isReposted: false, canRepost: true }));
+      repostButton(element)!.click();
+      fixture.detectChanges();
+
+      const item = document.querySelector('[role="menuitem"]') as HTMLButtonElement;
+      expect(item.textContent).toContain('Repost on Bluesky');
+      item.click();
+
+      expect(service.toggleRepost).toHaveBeenCalledWith(entry, expect.any(Function));
+      const onError = service.toggleRepost.mock.calls[0][1] as (problem: Problem) => void;
+      onError({ status: 409, type: 'social_post_refused', title: 'Refused', detail: 'No boosts' });
+      expect(toast.show).toHaveBeenCalledWith({ message: 'No boosts' });
+    });
   });
 });
