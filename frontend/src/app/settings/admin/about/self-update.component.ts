@@ -17,6 +17,7 @@ import { SelfUpdateStatusDto } from '../../../admin/admin.models';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { isTabHidden, onTabVisibilityChange } from '../../../core/tab-visibility';
 import { LanguageService } from '../../../core/i18n/language.service';
+import { PAGE_RELOAD } from '../../../core/page-reload';
 import { VersionService } from '../../../core/version.service';
 import { formatLongDateTime } from '../../../reader/format';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -46,6 +47,7 @@ export class SelfUpdateComponent implements OnInit {
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
+  private readonly reloadPage = inject(PAGE_RELOAD);
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -170,7 +172,7 @@ export class SelfUpdateComponent implements OnInit {
     this.reconnecting.set(false);
     if (previousPhase !== undefined && previousPhase !== status.phase) {
       this.refusal.set(null);
-      if (status.phase === 'succeeded') this.versions.load();
+      if (status.phase === 'succeeded') this.reloadPage();
     }
     this.schedulePoll();
   }
