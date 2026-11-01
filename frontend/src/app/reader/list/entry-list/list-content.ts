@@ -15,7 +15,7 @@ import { EntryDto } from '../../models';
 import { Selection, isSingleStreamView } from '../../query/query';
 import { isPrivateFeed, isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
-import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
+import { blocksWithout, groupMembersWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
 
 export interface ListContentOptions {
   readonly entries: Signal<EntryDto[]>;
@@ -110,7 +110,12 @@ export class ListContent {
     this.hiddenAboveIds.set(new Set());
   });
 
-  readonly visibleBlocks = computed(() => blocksWithout(this.blocks(), this.hiddenAboveIds()));
+  readonly visibleBlocks = computed(() =>
+    groupMembersWithout(
+      blocksWithout(this.blocks(), this.hiddenAboveIds()),
+      this.options.leavingIds(),
+    ),
+  );
   readonly visibleRunGroups = computed(() =>
     runGroupsWithout(this.runGroups(), this.hiddenAboveIds()),
   );

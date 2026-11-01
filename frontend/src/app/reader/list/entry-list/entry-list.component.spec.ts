@@ -14,6 +14,7 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { MagazineBlock } from '../magazine/magazine-block';
+import { SourceGroupComponent } from '../magazine/source-group.component';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
@@ -1425,6 +1426,30 @@ describe('EntryListComponent', () => {
     }).nativeElement as HTMLElement;
     expect(element.querySelector('app-source-group')).not.toBeNull();
     expect(element.querySelector('.rows.magazine')).not.toBeNull();
+  });
+
+  it('takes a leaving row out of its source group, so a deleted post leaves the widget (#1972)', () => {
+    const lead = [1, 2, 3, 4, 5, 6].map((id) =>
+      entry(id, { subscriptionId: id, source: `lead${id}` }),
+    );
+    const run = [11, 12, 13, 14, 15, 16, 17, 18].map((id) =>
+      entry(id, { subscriptionId: 99, source: 'Burst' }),
+    );
+    const tail = [21, 22, 23, 24, 25, 26, 27].map((id) =>
+      entry(id, { subscriptionId: id, source: `tail${id}` }),
+    );
+    const fixture = mount({
+      layout: 'magazine',
+      entries: [...lead, ...run, ...tail],
+      leavingIds: new Set([15]),
+    });
+
+    const group = fixture.debugElement.query(By.directive(SourceGroupComponent))
+      .componentInstance as SourceGroupComponent;
+    const groupIds = group.entries().map(({ id }) => id);
+
+    expect(groupIds).toContain(14);
+    expect(groupIds).not.toContain(15);
   });
 
   it('renders flat rows when layout is list', () => {

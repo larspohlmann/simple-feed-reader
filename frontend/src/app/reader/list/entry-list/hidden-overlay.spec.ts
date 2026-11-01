@@ -1,4 +1,4 @@
-import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
+import { blocksWithout, groupMembersWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
 import { RunGroup } from '../for-you-runs';
 import { EntryDto } from '../../models';
 
@@ -33,6 +33,33 @@ describe('blocksWithout', () => {
     const blocks = [header('t1'), compact(1), header('t2'), compact(2)];
     expect(blocksWithout(blocks, new Set([1]))).toEqual([header('t2'), compact(2)]);
     expect(blocksWithout(blocks, new Set([2]))).toEqual([header('t1'), compact(1)]);
+  });
+});
+
+describe('groupMembersWithout (#1972)', () => {
+  const group = (ids: number[]): ListBlock => ({
+    kind: 'group',
+    subscriptionId: 1,
+    source: 'a',
+    entries: ids.map(entry),
+    previewCount: 1,
+  });
+
+  it('returns the input itself when nothing is leaving', () => {
+    const blocks = [group([1, 2])];
+    expect(groupMembersWithout(blocks, new Set())).toBe(blocks);
+  });
+
+  it('takes a leaving member out of its group and keeps a leaving single block for its animation', () => {
+    expect(groupMembersWithout([compact(1), group([2, 3])], new Set([1, 2]))).toEqual([
+      compact(1),
+      group([3]),
+    ]);
+  });
+
+  it('drops a group, and then its run divider, once every member is leaving', () => {
+    const blocks = [header('t1'), group([1, 2]), header('t2'), compact(3)];
+    expect(groupMembersWithout(blocks, new Set([1, 2]))).toEqual([header('t2'), compact(3)]);
   });
 });
 

@@ -253,6 +253,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
 
     actions.deletePost(anEntry({ id: 7 }));
 
+    expect(actions.leavingIds().has(7)).toBe(true);
     expect(navigate).toHaveBeenCalledWith(
       [],
       expect.objectContaining({ queryParams: { entry: null, link: null } }),

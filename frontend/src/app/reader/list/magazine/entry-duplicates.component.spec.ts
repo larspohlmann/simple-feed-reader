@@ -15,6 +15,7 @@ const entryActions = {
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
+  deletePost: jest.fn(),
 };
 
 beforeEach(() => {
@@ -108,6 +109,22 @@ it('closes the popover once the copy is opened', () => {
   fixture.detectChanges();
 
   expect(opened).toHaveBeenCalledWith(dup);
+  expect(overlay.querySelector('.dup-popover')).toBeNull();
+});
+
+it("deletes the row's post from a copy and closes the popover (#1972)", () => {
+  const own = { network: 'bluesky', isLiked: false, canLike: true, isOwn: true } as const;
+  const dup = entry({ id: 2, title: 'Copy', social: own });
+  const row = entry({ id: 1, social: own, duplicates: [dup] });
+  const fixture = mount(row);
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  (overlay.querySelector('.dup-popover [aria-label="Delete post"]') as HTMLElement).click();
+  fixture.detectChanges();
+
+  expect(entryActions.deletePost).toHaveBeenCalledWith(row);
   expect(overlay.querySelector('.dup-popover')).toBeNull();
 });
 
