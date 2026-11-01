@@ -43,7 +43,12 @@ describe('thread edits', () => {
   });
 
   it('counts one reply less on the comment a removed reply answered', () => {
-    const nested = [commentAt('a', 0, 1), commentAt('a1', 1, 1), commentAt('a11', 2), commentAt('b', 0)];
+    const nested = [
+      commentAt('a', 0, 1),
+      commentAt('a1', 1, 1),
+      commentAt('a11', 2),
+      commentAt('b', 0),
+    ];
 
     const edited = withoutReply(nested, 'a11');
 

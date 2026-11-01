@@ -28,11 +28,18 @@ export function withoutReply(comments: EntryCommentDto[], address: string): Entr
   const depth = comments[at].depth;
   const after = comments.slice(at + 1);
   const firstOutside = after.findIndex((comment) => comment.depth <= depth);
-  const parentAt = comments.slice(0, at).findLastIndex((comment) => comment.depth < depth);
+  const parentAt = parentIndexOf(comments, at);
   const before = comments
     .slice(0, at)
     .map((comment, index) => (index === parentAt ? withRepliesStepped(comment, -1) : comment));
   return [...before, ...(firstOutside === -1 ? [] : after.slice(firstOutside))];
+}
+
+function parentIndexOf(comments: EntryCommentDto[], at: number): number {
+  for (let index = at - 1; index >= 0; index--) {
+    if (comments[index].depth < comments[at].depth) return index;
+  }
+  return -1;
 }
 
 function withRepliesStepped(comment: EntryCommentDto, step: number): EntryCommentDto {
