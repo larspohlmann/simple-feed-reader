@@ -311,6 +311,20 @@ final class EntryListRowEnricherTest extends DbTestCase
         );
     }
 
+    public function testMyOwnPostSaysSoWhenIHaveAnAccountOnEachNetwork(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $ownFeed = new Feed('https://mastodon.example/@alice.rss');
+        $this->entityManager->persist($ownFeed);
+        $own = $this->postOn($ownFeed, 'https://mastodon.example/@alice/1');
+
+        self::assertEquals(
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, true, isOwn: true),
+            $this->enrich([$this->row($own)])[0]->enrichment->social,
+        );
+    }
+
     public function testAnotherUsersLikeNeverShowsAsLiked(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
