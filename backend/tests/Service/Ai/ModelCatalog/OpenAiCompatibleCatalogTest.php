@@ -18,6 +18,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class OpenAiCompatibleCatalogTest extends TestCase
 {
+    private const string ANTHROPIC_VERSION_HEADER = 'anthropic-version: 2023-06-01';
+
     private function credentials(): ProviderCredentialsModel
     {
         return ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
@@ -255,9 +257,85 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         self::assertContains('Accept: application/json', $this->headersSentFor($this->credentials()));
     }
 
-    public function testItSendsTheAnthropicVersionHeader(): void
+    /** OpenRouter answers an authenticated request carrying the header with its 20-model Anthropic listing (#1957). */
+    public function testAnAnsweredListingCarriesNoAnthropicVersion(): void
     {
-        self::assertContains('anthropic-version: 2023-06-01', $this->headersSentFor($this->credentials()));
+        $requests = $this->requestsAnswering(new MockResponse('{"data":[{"id":"gpt-4o"}]}'));
+
+        self::assertCount(1, $requests);
+        self::assertNotContains(self::ANTHROPIC_VERSION_HEADER, $requests[0]);
+    }
+
+    public function testAListingRefusedWithoutAVersionIsRetriedWithIt(): void
+    {
+        $requests = $this->requestsAnswering(
+            new MockResponse('{"error":"anthropic-version: header is required"}', ['http_code' => 400]),
+            new MockResponse('{"data":[{"id":"claude-haiku-5-5"}]}'),
+        );
+
+        self::assertCount(2, $requests);
+        self::assertContains(self::ANTHROPIC_VERSION_HEADER, $requests[1]);
+    }
+
+    public function testTheRetryReturnsTheProvidersModels(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('{}', ['http_code' => 400]),
+            new MockResponse('{"data":[{"id":"claude-haiku-5-5"}]}'),
+        ]);
+
+        $models = (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
+
+        self::assertSame(['claude-haiku-5-5'], $this->ids($models));
+    }
+
+    public function testARetryThatIsRefusedAgainIsUnreachable(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('{}', ['http_code' => 400]),
+            new MockResponse('{}', ['http_code' => 400]),
+        ]);
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider answered with status 400.');
+        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
+    }
+
+    public function testARejectedKeyIsNotRetried(): void
+    {
+        $requests = [];
+        $client = new MockHttpClient(
+            static function (string $method, string $url, array $options) use (&$requests): MockResponse {
+                $requests[] = $options['headers'] ?? [];
+
+                return new MockResponse('{"error":"nope"}', ['http_code' => 401]);
+            },
+        );
+
+        try {
+            (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
+            self::fail(CredentialsRejectedException::class . ' was not thrown.');
+        } catch (CredentialsRejectedException) {
+            self::assertCount(1, $requests);
+        }
+    }
+
+    /** @return list<array<int, string>> the headers of each request, in order */
+    private function requestsAnswering(MockResponse ...$responses): array
+    {
+        $requests = [];
+        $client = new MockHttpClient(
+            static function (string $method, string $url, array $options) use (&$requests, &$responses): MockResponse {
+                $requests[] = $options['headers'] ?? [];
+
+                return array_shift($responses) ?? new MockResponse('', ['http_code' => 500]);
+            },
+        );
+
+        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
+
+        /** @var list<array<int, string>> $requests */
+        return $requests;
     }
 
     /** @return array<int, string> */
