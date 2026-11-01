@@ -12,11 +12,12 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\SocialIdentity;
 
-/** Mastodon's composer answers the author and the thread's starter, never less private than the post it answers. */
+/** A Mastodon reply names the author and the thread's starter; no post is less private than the one it responds to. */
 final readonly class MastodonComposerDefaults implements ComposerDefaultsInterface
 {
     private const string INSTANCE = '/api/v2/instance';
@@ -35,10 +36,12 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         return SocialNetwork::Mastodon->value;
     }
 
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
-    {
+    public function defaultsFor(
+        SocialPostModel $target,
+        ResponseKind $kind,
+        \Closure $threadStarter,
+    ): ComposerDefaultsModel {
         $account = $target->account;
-        $authors = [$target->responseContext->authorIdentity, $threadStarter()?->responseContext->authorIdentity];
 
         return new ComposerDefaultsModel(
             $this->answerOf($account, self::INSTANCE)->node('configuration')->node('statuses')->int('max_characters')
@@ -48,17 +51,19 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
                 $this->answerOf($account, self::OWN_ACCOUNT)->node('source')->string('privacy')
                     ?? self::DEFAULT_VISIBILITY,
             ),
-            self::mentionsOf($account, $authors),
+            ResponseKind::Reply === $kind ? self::mentionsOf($target, $threadStarter) : [],
         );
     }
 
     /**
-     * @param list<?string> $authors
+     * @param \Closure(): ?SocialPostModel $threadStarter
      *
      * @return list<string>
      */
-    private static function mentionsOf(SocialAccount $account, array $authors): array
+    private static function mentionsOf(SocialPostModel $target, \Closure $threadStarter): array
     {
+        $account = $target->account;
+        $authors = [$target->responseContext->authorIdentity, $threadStarter()?->responseContext->authorIdentity];
         $others = array_filter(
             array_map(static fn (?string $author): string => mb_strtolower($author ?? ''), $authors),
             static fn (string $author): bool => '' !== $author && !SocialIdentity::isAccount($author, $account),

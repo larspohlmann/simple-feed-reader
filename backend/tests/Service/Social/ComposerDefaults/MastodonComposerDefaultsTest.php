@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\ComposerDefaults;
 
 use App\Service\Social\ComposerDefaults\MastodonComposerDefaults;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Tests\Support\RoutedHttpClient;
@@ -26,7 +27,11 @@ final class MastodonComposerDefaultsTest extends TestCase
         $target = self::post(new ResponseContextModel('ann@hachyderm.io', visibility: 'unlisted'));
         $starter = self::post(new ResponseContextModel('Gargron@mastodon.social', visibility: 'public'));
 
-        $defaults = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $starter);
+        $defaults = $this->defaults($http)->defaultsFor(
+            $target,
+            ResponseKind::Reply,
+            static fn (): SocialPostModel => $starter,
+        );
 
         self::assertEquals(
             new ComposerDefaultsModel(1000, 'private', ['@ann@hachyderm.io', '@gargron@mastodon.social']),
@@ -41,12 +46,34 @@ final class MastodonComposerDefaultsTest extends TestCase
         $starter = self::post(new ResponseContextModel('ann@hachyderm.io'));
         $again = self::post(new ResponseContextModel('ann@hachyderm.io'));
 
-        $first = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $starter);
-        $second = $this->defaults($http)->defaultsFor($again, static fn (): SocialPostModel => $again);
+        $first = $this->defaults($http)->defaultsFor(
+            $target,
+            ResponseKind::Reply,
+            static fn (): SocialPostModel => $starter,
+        );
+        $second = $this->defaults($http)->defaultsFor(
+            $again,
+            ResponseKind::Reply,
+            static fn (): SocialPostModel => $again,
+        );
 
         self::assertSame(['@ann@hachyderm.io'], $first->mentions);
         self::assertSame('direct', $first->visibility);
         self::assertSame(['@ann@hachyderm.io'], $second->mentions);
+    }
+
+    public function testAQuoteMentionsNobodyAndNeverLooksUpTheThreadStarter(): void
+    {
+        $http = $this->answering(500, 'public');
+        $target = self::post(new ResponseContextModel('ann@hachyderm.io', visibility: 'private'));
+
+        $defaults = $this->defaults($http)->defaultsFor(
+            $target,
+            ResponseKind::Quote,
+            static fn (): SocialPostModel => self::fail('A quote names no thread starter.'),
+        );
+
+        self::assertEquals(new ComposerDefaultsModel(500, 'private', []), $defaults);
     }
 
     public function testAnInstanceThatDoesNotAnswerFallsBackToMastodonsDefaults(): void
@@ -57,7 +84,11 @@ final class MastodonComposerDefaultsTest extends TestCase
         ]);
         $target = self::post(new ResponseContextModel());
 
-        $defaults = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $target);
+        $defaults = $this->defaults($http)->defaultsFor(
+            $target,
+            ResponseKind::Reply,
+            static fn (): SocialPostModel => $target,
+        );
 
         self::assertEquals(new ComposerDefaultsModel(500, 'public', []), $defaults);
     }

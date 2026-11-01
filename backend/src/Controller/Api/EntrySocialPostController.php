@@ -10,6 +10,7 @@ use App\Http\ComposerContextJson;
 use App\Http\PublishedPostJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\PostComposer;
 use App\Service\Social\SocialQuotes;
@@ -47,11 +48,14 @@ final readonly class EntrySocialPostController
         #[CurrentUser] User $user,
         #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?string $address = null,
         #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?int $accountId = null,
+        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)]
+        ResponseKind $kind = ResponseKind::Reply,
     ): JsonResponse {
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
-        $context = $this->composer->contextFor($user, new ResponseTargetModel($entry, $address, $accountId));
+        $target = new ResponseTargetModel($entry, $address, $accountId);
+        $context = $this->composer->contextFor($user, $target, $kind);
 
         return new JsonResponse(ComposerContextJson::of($context));
     }

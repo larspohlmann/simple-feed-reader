@@ -72,11 +72,32 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertSame([
             'accounts' => [['id' => $account->requireId(), 'handle' => '@alice@mastodon.example']],
             'accountId' => $account->requireId(),
-            'canReply' => true,
+            'canSend' => true,
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
             'mentions' => ['@gargron@mastodon.social'],
         ], $this->payload($client));
+    }
+
+    public function testTheComposerForAQuoteMentionsNobodyAndAnUnknownKindIsABadRequest(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'manual']]),
+            self::INSTANCE => new MockResponse('{}'),
+            self::OWN_ACCOUNT => new MockResponse('{}'),
+        ]);
+        $user = $this->signIn($client, 'composer-quote@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/social/composer?kind=quote', $entryId));
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertTrue($payload['canSend']);
+        self::assertSame([], $payload['mentions']);
+
+        $client->request('GET', sprintf('/api/entries/%d/social/composer?kind=boost', $entryId));
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
     }
 
     public function testAReplyIsPublishedOnceWithTheComposersKey(): void

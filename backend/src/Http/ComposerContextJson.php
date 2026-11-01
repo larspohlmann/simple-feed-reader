@@ -13,7 +13,7 @@ final class ComposerContextJson
      * @return array{
      *     accounts: list<array{id: int, handle: string}>,
      *     accountId: int,
-     *     canReply: bool,
+     *     canSend: bool,
      *     maxCharacters: int,
      *     visibility: string|null,
      *     mentions: list<string>,
@@ -30,7 +30,7 @@ final class ComposerContextJson
                 $context->accounts,
             ),
             'accountId' => $context->account->requireId(),
-            'canReply' => $context->canReply,
+            'canSend' => $context->canSend,
             'maxCharacters' => $context->defaults->maxCharacters,
             'visibility' => $context->defaults->visibility,
             'mentions' => $context->defaults->mentions,

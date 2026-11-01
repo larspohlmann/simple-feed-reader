@@ -15,6 +15,7 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerContextModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialPostAddress;
@@ -41,7 +42,7 @@ final readonly class PostComposer
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkUnreachableException
      */
-    public function contextFor(User $user, ResponseTargetModel $target): ComposerContextModel
+    public function contextFor(User $user, ResponseTargetModel $target, ResponseKind $kind): ComposerContextModel
     {
         $post = $this->targets->find($user, $target);
         $network = $post->account->getNetwork();
@@ -51,8 +52,11 @@ final readonly class PostComposer
         return new ComposerContextModel(
             $this->socialAccounts->findConnectedOnNetwork($user, $network),
             $post->account,
-            $post->responseContext->canReply,
-            $defaults->defaultsFor($post, $this->threadStarterOf($target, $post)),
+            match ($kind) {
+                ResponseKind::Reply => $post->responseContext->canReply,
+                ResponseKind::Quote => $post->responseContext->canQuote,
+            },
+            $defaults->defaultsFor($post, $kind, $this->threadStarterOf($target, $post)),
         );
     }
 

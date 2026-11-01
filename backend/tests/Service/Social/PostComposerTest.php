@@ -13,6 +13,7 @@ use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\PostComposer;
@@ -60,11 +61,15 @@ final class PostComposerTest extends DbTestCase
         $this->entityManager->flush();
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
 
-        $context = $this->composer()->contextFor($this->owner, new ResponseTargetModel($this->post()));
+        $context = $this->composer()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Reply,
+        );
 
         self::assertSame([$default, $first], $context->accounts);
         self::assertSame($default, $context->account);
-        self::assertFalse($context->canReply);
+        self::assertFalse($context->canSend);
         self::assertEquals(new ComposerDefaultsModel(500, 'public', ['110', '110']), $context->defaults);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
     }
@@ -73,7 +78,11 @@ final class PostComposerTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $this->composer()->contextFor($this->owner, new ResponseTargetModel($this->post(), self::REPLY_URI));
+        $this->composer()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
+        );
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'resolve ' . self::STATUS_URL], $this->mastodon->calls);
     }
@@ -88,9 +97,23 @@ final class PostComposerTest extends DbTestCase
             }
         });
 
-        $context = $this->composer()->contextFor($this->owner, new ResponseTargetModel($this->post(), self::REPLY_URI));
+        $context = $this->composer()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
+        );
 
         self::assertSame(['110', 'no thread starter'], $context->defaults->mentions);
+    }
+
+    public function testAQuoteMaySendOnlyWhereTheAuthorAllowsQuotes(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+        $target = new ResponseTargetModel($this->post());
+
+        self::assertFalse($this->composer()->contextFor($this->owner, $target, ResponseKind::Quote)->canSend);
+        self::assertTrue($this->composer()->contextFor($this->owner, $target, ResponseKind::Reply)->canSend);
     }
 
     private function post(): Entry

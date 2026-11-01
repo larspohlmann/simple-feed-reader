@@ -7,6 +7,7 @@ namespace App\Tests\Support;
 use App\Enum\SocialNetwork;
 use App\Service\Social\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\SocialPostModel;
 
 /** Asks for the thread's starter every time and mentions the post ids it was given. */
@@ -17,8 +18,11 @@ final class FakeComposerDefaults implements ComposerDefaultsInterface
         return SocialNetwork::Mastodon->value;
     }
 
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
-    {
+    public function defaultsFor(
+        SocialPostModel $target,
+        ResponseKind $kind,
+        \Closure $threadStarter,
+    ): ComposerDefaultsModel {
         $threadStarterId = $threadStarter()->postId ?? 'no thread starter';
 
         return new ComposerDefaultsModel(500, 'public', [$target->postId, $threadStarterId]);
