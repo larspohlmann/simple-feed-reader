@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.14] - 2026-11-01
+
+## What's Changed
+* fix(#1954): collapse a Bluesky post's timeline and RSS copies by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1955
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.13...v1.6.14
+
 ## [v1.6.13] - 2026-10-31
 
 ## What's Changed
