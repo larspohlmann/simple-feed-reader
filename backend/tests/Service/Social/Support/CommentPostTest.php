@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Support;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Comments\Model\CommentCountsModel;
 use App\Service\Comments\Model\CommentPostModel;
+use App\Service\Comments\Model\CommentViewerModel;
 use App\Service\Social\Support\CommentPost;
 use PHPUnit\Framework\TestCase;
 
@@ -20,21 +21,35 @@ final class CommentPostTest extends TestCase
     public function testABlueskyReplyIsItsUriWithItsCounts(): void
     {
         self::assertEquals(
-            new CommentPostModel(self::POST_URI, new CommentCountsModel(5, 1, 2, 3), false),
+            new CommentPostModel(self::POST_URI, new CommentCountsModel(5, 1, 2, 3), self::untouched()),
             CommentPost::ofBlueskyPost(self::blueskyPost([])),
         );
     }
 
     public function testABlueskyReplyTheViewerLikedReadsAsLiked(): void
     {
-        self::assertTrue(CommentPost::ofBlueskyPost(self::blueskyPost(['like' => self::LIKE_URI]))?->isLiked);
+        self::assertTrue(CommentPost::ofBlueskyPost(self::blueskyPost(['like' => self::LIKE_URI]))?->viewer->isLiked);
     }
 
     public function testAViewerLikeThatIsNoLikeRecordDoesNotCount(): void
     {
         $repost = 'at://did:plc:viewer/app.bsky.feed.repost/3';
 
-        self::assertFalse(CommentPost::ofBlueskyPost(self::blueskyPost(['like' => $repost]))?->isLiked);
+        self::assertFalse(CommentPost::ofBlueskyPost(self::blueskyPost(['like' => $repost]))?->viewer->isLiked);
+    }
+
+    public function testABlueskyReplyTheViewerRepostedReadsAsReposted(): void
+    {
+        $repost = 'at://did:plc:viewer/app.bsky.feed.repost/3';
+
+        self::assertTrue(CommentPost::ofBlueskyPost(self::blueskyPost(['repost' => $repost]))?->viewer->isReposted);
+    }
+
+    public function testAViewerRepostThatIsNoRepostRecordDoesNotCount(): void
+    {
+        $post = CommentPost::ofBlueskyPost(self::blueskyPost(['repost' => self::LIKE_URI]));
+
+        self::assertFalse($post?->viewer->isReposted);
     }
 
     public function testABlueskyReplyWithoutAPostUriIsNoPost(): void
@@ -50,7 +65,7 @@ final class CommentPostTest extends TestCase
     public function testAMastodonReplyIsItsUriWithItsCountsAndNoQuotes(): void
     {
         self::assertEquals(
-            new CommentPostModel(self::STATUS_URI, new CommentCountsModel(7, 2, 1, null), false),
+            new CommentPostModel(self::STATUS_URI, new CommentCountsModel(7, 2, 1, null), self::untouched()),
             CommentPost::ofMastodonStatus(self::mastodonStatus(['uri' => self::STATUS_URI, 'url' => self::STATUS_URL])),
         );
     }
@@ -66,12 +81,31 @@ final class CommentPostTest extends TestCase
     {
         $status = self::mastodonStatus(['uri' => self::STATUS_URI, 'favourited' => true]);
 
-        self::assertTrue(CommentPost::ofMastodonStatus($status)?->isLiked);
+        self::assertTrue(CommentPost::ofMastodonStatus($status)?->viewer->isLiked);
+    }
+
+    public function testABoostedMastodonReplyReadsAsReposted(): void
+    {
+        $status = self::mastodonStatus(['uri' => self::STATUS_URI, 'reblogged' => true]);
+
+        self::assertTrue(CommentPost::ofMastodonStatus($status)?->viewer->isReposted);
+    }
+
+    public function testAPrivateMastodonReplyCannotBeBoosted(): void
+    {
+        $status = self::mastodonStatus(['uri' => self::STATUS_URI, 'visibility' => 'private']);
+
+        self::assertFalse(CommentPost::ofMastodonStatus($status)?->viewer->canRepost);
     }
 
     public function testAMastodonReplyWithoutAnAddressIsNoPost(): void
     {
         self::assertNull(CommentPost::ofMastodonStatus(self::mastodonStatus([])));
+    }
+
+    private static function untouched(): CommentViewerModel
+    {
+        return new CommentViewerModel(false, false, true);
     }
 
     /** @param array<string, string> $viewer */

@@ -51,13 +51,23 @@ final readonly class CommentsJson
         ];
     }
 
-    /** @return array{address: string, counts: array{likes: int, reposts: int, replies: int, quotes: int|null}, isLiked: bool} */
+    /**
+     * @return array{
+     *     address: string,
+     *     counts: array{likes: int, reposts: int, replies: int, quotes: int|null},
+     *     isLiked: bool,
+     *     isReposted: bool,
+     *     canRepost: bool,
+     * }
+     */
     private static function post(CommentPostModel $post): array
     {
         return [
             'address' => $post->address,
             'counts' => SocialCountsJson::ofReply($post->counts),
-            'isLiked' => $post->isLiked,
+            'isLiked' => $post->viewer->isLiked,
+            'isReposted' => $post->viewer->isReposted,
+            'canRepost' => $post->viewer->canRepost,
         ];
     }
 }

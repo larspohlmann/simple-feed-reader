@@ -261,7 +261,7 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertNotNull($post);
         self::assertSame('at://did:plc:ann/app.bsky.feed.post/reply', $post->address);
         self::assertSame(3, $post->counts->likes);
-        self::assertTrue($post->isLiked);
+        self::assertTrue($post->viewer->isLiked);
     }
 
     public function testAnAnswerWithoutAThreadIsUnavailable(): void

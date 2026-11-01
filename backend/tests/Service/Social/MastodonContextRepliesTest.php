@@ -61,7 +61,7 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertNotNull($post);
         self::assertSame('https://example.social/users/someone/statuses/300', $post->address);
         self::assertSame(4, $post->counts->likes);
-        self::assertTrue($post->isLiked);
+        self::assertTrue($post->viewer->isLiked);
     }
 
     public function testANonPublicReplyGoesWithItsAnswers(): void

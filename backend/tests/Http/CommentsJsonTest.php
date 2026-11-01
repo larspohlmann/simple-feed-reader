@@ -13,6 +13,7 @@ use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentCountsModel;
 use App\Service\Comments\Model\CommentEmbedsModel;
 use App\Service\Comments\Model\CommentPostModel;
+use App\Service\Comments\Model\CommentViewerModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\EntryCommentModel;
@@ -43,7 +44,11 @@ final class CommentsJsonTest extends TestCase
             false,
             new CommentEmbedsModel([$medium], $card, $quote),
             2,
-            new CommentPostModel('at://did:plc:ann/app.bsky.feed.post/2', new CommentCountsModel(5, 1, 2, 0), true),
+            new CommentPostModel(
+                'at://did:plc:ann/app.bsky.feed.post/2',
+                new CommentCountsModel(5, 1, 2, 0),
+                new CommentViewerModel(true, true, false),
+            ),
         );
 
         $json = JsonMappers::commentsJson()->one(CommentsResultModel::ok(
@@ -78,6 +83,8 @@ final class CommentsJsonTest extends TestCase
                 'address' => 'at://did:plc:ann/app.bsky.feed.post/2',
                 'counts' => ['likes' => 5, 'reposts' => 1, 'replies' => 2, 'quotes' => 0],
                 'isLiked' => true,
+                'isReposted' => true,
+                'canRepost' => false,
             ],
         ], self::firstComment($json));
     }
