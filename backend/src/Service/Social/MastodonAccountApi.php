@@ -60,8 +60,19 @@ final readonly class MastodonAccountApi
      */
     public function actOnPost(SocialAccount $account, string $path, string $scope): ApiResponseModel
     {
-        $request = ApiRequestModel::post($account->getServiceUrl() . $path);
+        return $this->writeAs($account, ApiRequestModel::post($account->getServiceUrl() . $path), $scope);
+    }
 
+    /**
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException only on a 401; a 403 concerns the post or the token's scope
+     * @throws SocialTokenScopeMissingException naming $scope
+     * @throws SocialPostRefusedException carrying Mastodon's reason when it rejects what was sent
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function writeAs(SocialAccount $account, ApiRequestModel $request, string $scope): ApiResponseModel
+    {
         return self::postAnswerAccepted($this->answer($account, $request), $scope);
     }
 
@@ -81,6 +92,11 @@ final readonly class MastodonAccountApi
     {
         if (Response::HTTP_NOT_FOUND === $answer->status) {
             throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
+        }
+        if (Response::HTTP_UNPROCESSABLE_ENTITY === $answer->status) {
+            throw new SocialPostRefusedException(
+                JsonNodeModel::of($answer->json())->string('error') ?? 'Mastodon refused what was sent.',
+            );
         }
         if (Response::HTTP_FORBIDDEN === $answer->status) {
             throw self::isOutsideScopes($answer)

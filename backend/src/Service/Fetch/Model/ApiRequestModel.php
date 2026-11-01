@@ -30,6 +30,12 @@ final readonly class ApiRequestModel
         return new self('POST', $url, $headers, null);
     }
 
+    /** @param array<string, string> $headers */
+    public static function delete(string $url, array $headers = []): self
+    {
+        return new self('DELETE', $url, $headers, null);
+    }
+
     /**
      * @param array<string, mixed>  $json
      * @param array<string, string> $headers
