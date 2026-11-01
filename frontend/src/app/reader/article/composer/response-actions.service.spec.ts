@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Dialog } from '@angular/cdk/dialog';
 import { of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
@@ -11,6 +12,7 @@ import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { LinkComposeTarget, ResponseComposeTarget, SentPost } from './composer-dialog.component';
 import { PostComposer } from './post-composer.service';
+import { PostSentDialogComponent } from './post-sent-dialog.component';
 import { ResponseActions } from './response-actions.service';
 
 const ADDRESS = 'https://mastodon.example/users/alice/statuses/200';
@@ -22,6 +24,7 @@ describe('ResponseActions', () => {
   let api: { deleteReply: jest.Mock };
   let confirm: { ask: jest.Mock };
   let toast: { show: jest.Mock };
+  let dialog: { open: jest.Mock };
   let actions: ResponseActions;
 
   const sent: SentPost = { address: 'https://x/9', url: null, text: 'Hi', authorHandle: '@a' };
@@ -47,6 +50,7 @@ describe('ResponseActions', () => {
     api = { deleteReply: jest.fn(() => of(undefined)) };
     confirm = { ask: jest.fn(() => of(true)) };
     toast = { show: jest.fn() };
+    dialog = { open: jest.fn() };
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -56,6 +60,7 @@ describe('ResponseActions', () => {
         { provide: SocialPostApi, useValue: api },
         { provide: ConfirmService, useValue: confirm },
         { provide: ToastService, useValue: toast },
+        { provide: Dialog, useValue: dialog },
       ],
     });
     actions = TestBed.inject(ResponseActions);
@@ -71,6 +76,7 @@ describe('ResponseActions', () => {
       expect.objectContaining({ authorHandle: '@a' }),
     );
     expect(counts.stepReplies).toHaveBeenCalledWith(7, true);
+    expect(dialog.open).not.toHaveBeenCalled();
   });
 
   it('shows a reply to a comment under it, which counts it there, not on the post', () => {
@@ -80,30 +86,30 @@ describe('ResponseActions', () => {
     expect(counts.stepReplies).not.toHaveBeenCalled();
   });
 
-  it('counts a quote of the post there and offers to open it, leaving the thread alone', () => {
-    composer.open.mockReturnValue(of({ ...sent, url: 'https://x.test/@a/9' }));
-    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+  it('counts a quote of the post there and shows what was posted, leaving the thread alone', () => {
+    const quote: ResponseComposeTarget = { ...target, kind: 'quote' };
+    const posted = { ...sent, url: 'https://x.test/@a/9' };
+    composer.open.mockReturnValue(of(posted));
 
-    actions.respond({ ...target, kind: 'quote' });
+    actions.respond(quote);
 
     expect(comments.insertReply).not.toHaveBeenCalled();
     expect(counts.stepQuotes).toHaveBeenCalledWith(7);
-    const shown = toast.show.mock.calls[0][0];
-    expect(shown).toMatchObject({ message: 'Quote posted', actionLabel: 'Open' });
-    shown.action();
-    expect(open).toHaveBeenCalledWith('https://x.test/@a/9', '_blank', 'noopener');
-    open.mockRestore();
+    expect(dialog.open).toHaveBeenCalledWith(
+      PostSentDialogComponent,
+      expect.objectContaining({ data: { target: quote, sent: posted } }),
+    );
   });
 
-  it('counts a quote of a reply on that reply and offers no link the network did not name', () => {
+  it('counts a quote of a reply on that reply', () => {
     actions.respond({ ...target, kind: 'quote', address: ADDRESS });
 
     expect(counts.stepQuotes).not.toHaveBeenCalled();
     expect(comments.countQuote).toHaveBeenCalledWith(7, ADDRESS);
-    expect(toast.show).toHaveBeenCalledWith({ message: 'Quote posted' });
+    expect(dialog.open).toHaveBeenCalledTimes(1);
   });
 
-  it('offers to open a link post, leaving the counts and the thread alone', () => {
+  it('shows a link post as posted, leaving the counts and the thread alone', () => {
     const link: LinkComposeTarget = {
       kind: 'link',
       network: 'bluesky',
@@ -113,8 +119,6 @@ describe('ResponseActions', () => {
       imageUrl: null,
       prefill: 'A story',
     };
-    composer.open.mockReturnValue(of({ ...sent, url: 'https://bsky.app/profile/a/post/9' }));
-    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
 
     actions.respond(link);
 
@@ -123,11 +127,10 @@ describe('ResponseActions', () => {
     expect(comments.countQuote).not.toHaveBeenCalled();
     expect(counts.stepReplies).not.toHaveBeenCalled();
     expect(counts.stepQuotes).not.toHaveBeenCalled();
-    const shown = toast.show.mock.calls[0][0];
-    expect(shown).toMatchObject({ message: 'Link posted', actionLabel: 'Open' });
-    shown.action();
-    expect(open).toHaveBeenCalledWith('https://bsky.app/profile/a/post/9', '_blank', 'noopener');
-    open.mockRestore();
+    expect(dialog.open).toHaveBeenCalledWith(
+      PostSentDialogComponent,
+      expect.objectContaining({ data: { target: link, sent } }),
+    );
   });
 
   it('changes nothing when the composer closes without sending', () => {
@@ -136,6 +139,7 @@ describe('ResponseActions', () => {
     actions.respond(target);
 
     expect(comments.insertReply).not.toHaveBeenCalled();
+    expect(dialog.open).not.toHaveBeenCalled();
   });
 
   it('deletes a reply only after the reader confirms, then drops it and its count', () => {

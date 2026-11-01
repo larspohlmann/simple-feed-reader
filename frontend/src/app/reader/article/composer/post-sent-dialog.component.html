@@ -1,0 +1,16 @@
+<app-overlay-panel fillOnMobile [heading]="headingKey | transloco" cdkTrapFocus>
+  @if (posted.sent.authorHandle; as handle) {
+    <p class="account">{{ 'reader.posted.as' | transloco: { handle } }}</p>
+  }
+  <p class="text">{{ posted.sent.text }}</p>
+  <app-compose-target [target]="posted.target" />
+
+  <app-button footer variant="ghost" [focusInitial]="!posted.sent.url" (click)="ref.close()">
+    {{ 'dialog.close' | transloco }}
+  </app-button>
+  @if (posted.sent.url; as url) {
+    <app-button footer focusInitial variant="primary" (click)="open(url)">
+      {{ 'reader.posted.open' | transloco }}
+    </app-button>
+  }
+</app-overlay-panel>

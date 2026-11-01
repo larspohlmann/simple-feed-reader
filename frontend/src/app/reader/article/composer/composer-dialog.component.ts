@@ -22,7 +22,6 @@ import { FieldComponent } from '../../../shared/field/field.component';
 import { inputValue } from '../../../shared/input-value';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { randomUuid } from '../../../shared/random-uuid';
-import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
   ComposerContextDto,
@@ -34,6 +33,7 @@ import {
   ResponseTargetDto,
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
+import { ComposeTargetComponent } from './compose-target.component';
 import { postLength } from './post-length';
 
 /** The post a reply or quote responds to, as the composer shows it above the text. */
@@ -77,10 +77,10 @@ type ContextState =
   imports: [
     A11yModule,
     ButtonComponent,
+    ComposeTargetComponent,
     ErrorBannerComponent,
     FieldComponent,
     OverlayPanelComponent,
-    ProxiedImageDirective,
     SkeletonComponent,
     TranslocoPipe,
   ],
@@ -95,17 +95,15 @@ export class ComposerDialogComponent {
   private readonly idempotencyKey = randomUuid();
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
-  protected readonly response = this.target.kind === 'link' ? null : this.target;
   protected readonly article = this.target.kind === 'link' ? this.target : null;
-  protected readonly imageFailed = signal(false);
   protected readonly visibilities = MASTODON_VISIBILITIES;
   /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = `reader.composer.${this.target.kind}`;
   protected readonly headingKey = `reader.${this.target.kind}.${this.target.network}`;
   protected readonly forbiddenKey =
-    this.response === null
+    this.target.kind === 'link'
       ? null
-      : `reader.${this.response.kind}Forbidden.${this.response.network}`;
+      : `reader.${this.target.kind}Forbidden.${this.target.network}`;
   protected readonly state = signal<ContextState>({ status: 'loading' });
   protected readonly text = signal(this.article?.prefill ?? '');
   protected readonly visibility = signal<MastodonVisibility | null>(null);

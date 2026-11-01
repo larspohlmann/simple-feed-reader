@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { filter, switchMap } from 'rxjs';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
@@ -12,12 +13,13 @@ import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { ComposeTarget, ResponseComposeTarget, SentPost } from './composer-dialog.component';
 import { PostComposer } from './post-composer.service';
+import { PostSent, PostSentDialogComponent } from './post-sent-dialog.component';
 import { sentComment } from './sent-comment';
 
 /**
  * Replying, quoting, posting a link and deleting a reply, reflected in the comments panel and the counts row at
  * once: the network takes a while to count or thread a change, and the cached copies wait for the next load. A quote
- * or a link post lands outside the thread, so a toast offers to open it on the network.
+ * or a link post lands outside the thread, so an overlay shows what went out and offers to open it.
  */
 @Injectable({ providedIn: 'root' })
 export class ResponseActions {
@@ -26,13 +28,14 @@ export class ResponseActions {
   private readonly counts = inject(SocialCountsService);
   private readonly api = inject(SocialPostApi);
   private readonly confirm = inject(ConfirmService);
+  private readonly dialog = inject(Dialog);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
 
   respond(target: ComposeTarget): void {
     this.composer.open(target).subscribe((sent) => {
       if (sent === undefined) return;
-      if (target.kind === 'link') this.announce('reader.linkPosted', sent.url);
+      if (target.kind === 'link') this.announce(target, sent);
       else if (target.kind === 'quote') this.quoted(target, sent);
       else this.replied(target, sent);
     });
@@ -46,18 +49,13 @@ export class ResponseActions {
   private quoted(target: ResponseComposeTarget, sent: SentPost): void {
     if (target.address === null) this.counts.stepQuotes(target.entryId);
     else this.comments.countQuote(target.entryId, target.address);
-    this.announce('reader.quoteSent', sent.url);
+    this.announce(target, sent);
   }
 
-  private announce(messageKey: string, url: string | null): void {
-    this.toast.show({
-      message: this.transloco.translate(messageKey),
-      ...(url === null
-        ? {}
-        : {
-            actionLabel: this.transloco.translate('reader.openPost'),
-            action: () => window.open(url, '_blank', 'noopener'),
-          }),
+  private announce(target: ComposeTarget, sent: SentPost): void {
+    this.dialog.open<void, PostSent>(PostSentDialogComponent, {
+      panelClass: 'app-dialog',
+      data: { target, sent },
     });
   }
 

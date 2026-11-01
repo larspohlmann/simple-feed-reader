@@ -1565,9 +1565,18 @@
       "bluesky": "Auf Bluesky posten",
       "mastodon": "Auf Mastodon posten"
     },
-    "quoteSent": "Zitat veröffentlicht",
-    "linkPosted": "Link veröffentlicht",
-    "openPost": "Öffnen"
+    "posted": {
+      "link": {
+        "bluesky": "Auf Bluesky veröffentlicht",
+        "mastodon": "Auf Mastodon veröffentlicht"
+      },
+      "quote": {
+        "bluesky": "Zitat auf Bluesky veröffentlicht",
+        "mastodon": "Zitat auf Mastodon veröffentlicht"
+      },
+      "as": "Als {{ handle }}",
+      "open": "Beitrag öffnen"
+    }
   },
   "common": {
     "save": "Speichern",

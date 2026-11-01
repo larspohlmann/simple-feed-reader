@@ -1,40 +1,7 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
   <app-overlay-panel fillOnMobile [heading]="headingKey | transloco">
-    @if (article; as card) {
-      <div class="article">
-        @if (card.imageUrl && !imageFailed()) {
-          <img
-            appProxiedImage
-            class="thumb"
-            [src]="card.imageUrl"
-            alt=""
-            decoding="async"
-            referrerpolicy="no-referrer"
-            (imageFailed)="imageFailed.set(true)"
-          />
-        }
-        <div class="article-text">
-          <p class="title">{{ card.title }}</p>
-          @if (card.site) {
-            <p class="site">{{ card.site }}</p>
-          }
-        </div>
-      </div>
-    }
-    @if (response; as post) {
-      <blockquote class="target">
-        <p class="author">
-          @if (post.authorName) {
-            <span class="name">{{ post.authorName }}</span>
-          }
-          @if (post.authorHandle) {
-            <span class="handle">{{ post.authorHandle }}</span>
-          }
-        </p>
-        <p class="excerpt">{{ post.excerpt }}</p>
-      </blockquote>
-    }
+    <app-compose-target [target]="target" />
 
     @if (state().status === 'loading') {
       <app-skeleton [label]="copy + '.loading' | transloco" [rows]="2" />

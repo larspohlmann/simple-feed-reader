@@ -1,5 +1,3 @@
-@use '../../../theme/glass-rim';
-
 // The frame is app-overlay-panel's; `display: contents` on host and form
 // removes the boxes CDK can't centre/stretch, as in passkey-name-dialog.
 :host {
@@ -10,81 +8,6 @@
 
 form {
   display: contents;
-}
-
-.article {
-  @include glass-rim.filled(var(--surface-1));
-
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-  margin: 0 0 var(--space-4);
-  padding: var(--space-2);
-  border-radius: var(--radius-lg);
-  font-size: var(--fs-sm);
-}
-
-.thumb {
-  flex: none;
-  width: var(--space-7);
-  height: var(--space-7);
-  border-radius: var(--radius-sm);
-  object-fit: cover;
-}
-
-.article-text {
-  min-width: 0;
-}
-
-.title {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--text-primary);
-  font-weight: 600;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.site {
-  margin: var(--space-1) 0 0;
-  overflow: hidden;
-  color: var(--text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.target {
-  margin: 0 0 var(--space-4);
-  padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--text-muted);
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-}
-
-.author {
-  display: flex;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-1);
-}
-
-.name {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.handle {
-  color: var(--text-muted);
-}
-
-.excerpt {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
 }
 
 textarea {
