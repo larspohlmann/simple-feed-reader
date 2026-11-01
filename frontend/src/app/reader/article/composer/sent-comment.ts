@@ -1,5 +1,5 @@
 import { EntryCommentDto } from '../../entry-comment';
-import { SentPost } from './composer-dialog.component';
+import { SentPost } from './composed-post';
 
 /** The reader's reply as the panel shows it until the network's thread includes it. */
 export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto {

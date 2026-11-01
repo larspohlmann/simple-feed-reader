@@ -18,6 +18,7 @@ use App\Service\Social\Model\ComposerContextModel;
 use App\Service\Social\Model\LinkPostModel;
 use App\Service\Social\Model\LinkTargetModel;
 use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Url\UrlNormalizer;
 
 final readonly class LinkPosts
@@ -27,7 +28,6 @@ final readonly class LinkPosts
         private UrlNormalizer $urls,
         private PostWriting $writing,
         private SharedPostQuoteFinder $quotes,
-        private SharedPageCards $pageCards,
         private ComposerContexts $contexts,
     ) {
     }
@@ -46,7 +46,7 @@ final readonly class LinkPosts
         $quoted = $this->quotes->quotableAt($account, $url);
 
         return null === $quoted
-            ? $this->contexts->ofLink($account, $this->pageCards->cardOf($url))
+            ? $this->contexts->ofLink($account, new SharedLinkModel($url, $target->title))
             : $this->contexts->ofQuote($quoted);
     }
 

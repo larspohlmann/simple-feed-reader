@@ -82,7 +82,9 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
-            'mentions' => ['@gargron@mastodon.social'],
+            'kind' => 'reply',
+            'network' => 'mastodon',
+            'text' => '@gargron@mastodon.social ',
             'target' => [
                 'kind' => 'post',
                 'authorName' => 'Eugen',
@@ -114,7 +116,8 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client);
         self::assertTrue($payload['canSend']);
-        self::assertSame([], $payload['mentions']);
+        self::assertSame('quote', $payload['kind']);
+        self::assertSame('', $payload['text']);
 
         $client->request('GET', sprintf('/api/entries/%d/social/composer?kind=boost', $entryId));
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);

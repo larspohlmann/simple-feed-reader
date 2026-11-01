@@ -1,23 +1,22 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { ComposerTargetDto } from '../../entry-social';
+import { ComposerSubjectDto } from '../../entry-social';
 
 /** What a post answers, quotes or shares: the post with the link card it carries, or the shared page's card. */
 @Component({
-  selector: 'app-compose-target',
+  selector: 'app-composer-subject',
   imports: [NgTemplateOutlet, ProxiedImageDirective],
-  templateUrl: './compose-target.component.html',
-  styleUrl: './compose-target.component.scss',
+  templateUrl: './composer-subject.component.html',
+  styleUrl: './composer-subject.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ComposeTargetComponent {
-  readonly target = input.required<ComposerTargetDto>();
+export class ComposerSubjectComponent {
+  readonly subject = input.required<ComposerSubjectDto>();
 
   protected readonly post = computed(() => {
-    const target = this.target();
-    return target.kind === 'post' ? target : null;
+    const subject = this.subject();
+    return subject.kind === 'post' ? subject : null;
   });
-  protected readonly card = computed(() => this.target().card);
   protected readonly imageFailed = signal(false);
 }

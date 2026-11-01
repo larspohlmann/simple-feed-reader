@@ -3,9 +3,10 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
+import { openExternal } from '../../../shared/open-external';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
-import { ComposeTargetComponent } from './compose-target.component';
-import { SentPost } from './composer-dialog.component';
+import { SentPost } from './composed-post';
+import { ComposerSubjectComponent } from './composer-subject.component';
 
 /** Shows a just-published link post or quote as it went out, with a way to open it on the network. */
 @Component({
@@ -13,7 +14,7 @@ import { SentPost } from './composer-dialog.component';
   imports: [
     A11yModule,
     ButtonComponent,
-    ComposeTargetComponent,
+    ComposerSubjectComponent,
     OverlayPanelComponent,
     TranslocoPipe,
   ],
@@ -27,7 +28,7 @@ export class PostSentDialogComponent {
   protected readonly headingKey = `reader.posted.${this.posted.kind}.${this.posted.network}`;
 
   protected open(url: string): void {
-    window.open(url, '_blank', 'noopener');
+    openExternal(url);
     this.ref.close();
   }
 }

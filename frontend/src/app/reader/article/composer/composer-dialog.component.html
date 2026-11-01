@@ -13,10 +13,10 @@
     }
 
     @if (context(); as context) {
-      <app-compose-target [target]="context.target" />
+      <app-composer-subject [subject]="context.target" />
 
-      @if (!context.canSend && forbiddenKey !== null) {
-        <app-error-banner [message]="forbiddenKey | transloco" />
+      @if (forbiddenKey(); as key) {
+        <app-error-banner [message]="key | transloco" />
       }
 
       @if (context.accounts.length > 1) {

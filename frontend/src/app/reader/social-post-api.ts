@@ -114,7 +114,9 @@ export class SocialPostApi {
 }
 
 function composerParams(target: PostTargetDto): Record<string, string> {
-  if (target.kind === 'link') return { network: target.network, url: target.url };
+  if (target.kind === 'link') {
+    return { network: target.network, url: target.url, title: target.title };
+  }
   return { kind: target.kind, ...addressParam(target.address) };
 }
 

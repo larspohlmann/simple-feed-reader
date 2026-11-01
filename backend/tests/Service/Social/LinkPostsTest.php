@@ -22,6 +22,7 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\LinkPosts;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ComposerKind;
 use App\Service\Social\Model\LinkPostModel;
 use App\Service\Social\Model\LinkTargetModel;
 use App\Service\Social\Model\PostDraftModel;
@@ -100,6 +101,17 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame([], $this->mastodon->calls);
     }
 
+    public function testTheLinkComposerStartsWithTheTitleAndTheNormalisedAddress(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::ARTICLE_URL . '&utm_source=x', 'A story');
+
+        $context = $this->linkPosts()->contextFor($this->owner, $target);
+
+        self::assertSame(ComposerKind::Link, $context->kind);
+        self::assertSame("A story\n\n" . self::ARTICLE_URL, $context->text);
+    }
+
     public function testTheComposerShowsTheCardOfThePageTheLinkPostShares(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
@@ -162,7 +174,8 @@ final class LinkPostsTest extends DbTestCase
         $context = $this->linkPosts()->contextFor($this->owner, self::target(null, self::STATUS_URL));
 
         self::assertSame($preview, $context->target);
-        self::assertSame([], $context->defaults->mentions);
+        self::assertSame(ComposerKind::Quote, $context->kind);
+        self::assertSame('', $context->text);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
         self::assertSame([], $this->pages->readUrls());
     }
@@ -383,8 +396,7 @@ final class LinkPostsTest extends DbTestCase
             new UrlNormalizer(),
             new PostWriting($guard, $writers),
             new SharedPostQuoteFinder($posts),
-            new SharedPageCards($pageCards, new NullLogger()),
-            new ComposerContexts($accounts, $posts, $defaults),
+            new ComposerContexts($accounts, $posts, new SharedPageCards($pageCards, new NullLogger()), $defaults),
         );
     }
 }

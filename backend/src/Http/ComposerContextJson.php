@@ -26,7 +26,9 @@ final class ComposerContextJson
      *     canSend: bool,
      *     maxCharacters: int,
      *     visibility: string|null,
-     *     mentions: list<string>,
+     *     kind: 'reply'|'quote'|'link',
+     *     network: 'bluesky'|'mastodon',
+     *     text: string,
      *     target: PostTargetRow|LinkTargetRow,
      * }
      */
@@ -44,7 +46,9 @@ final class ComposerContextJson
             'canSend' => $context->canSend,
             'maxCharacters' => $context->defaults->maxCharacters,
             'visibility' => $context->defaults->visibility,
-            'mentions' => $context->defaults->mentions,
+            'kind' => $context->kind->value,
+            'network' => $context->account->getNetwork()->value,
+            'text' => $context->text,
             'target' => $context->target instanceof PostPreviewModel
                 ? self::postOf($context->target)
                 : self::linkOf($context->target),

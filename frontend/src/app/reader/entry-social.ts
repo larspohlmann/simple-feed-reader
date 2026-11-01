@@ -34,7 +34,7 @@ export type PostActionsView = Omit<SocialViewerDto, 'isLiked'>;
 export type ComposerCardDto = Omit<LinkCardDto, 'readerToken'>;
 
 /** The post a reply or quote answers, or a link post quotes: who wrote it, how it starts, and the card it carries. */
-export interface PostComposerTargetDto {
+export interface PostComposerSubjectDto {
   kind: 'post';
   authorName: string | null;
   authorHandle: string | null;
@@ -43,45 +43,54 @@ export interface PostComposerTargetDto {
 }
 
 /** The page a link post shares, by its own card, else by its host. */
-export interface LinkComposerTargetDto {
+export interface LinkComposerSubjectDto {
   kind: 'link';
   card: ComposerCardDto;
 }
 
 /** What the composer shows above the text: what the post answers, quotes or shares. */
-export type ComposerTargetDto = PostComposerTargetDto | LinkComposerTargetDto;
+export type ComposerSubjectDto = PostComposerSubjectDto | LinkComposerSubjectDto;
+
+/** What the composer writes about its target post. */
+export type ResponseKind = 'reply' | 'quote';
+
+/** What the composer sends: a link post that names a post on its network quotes it. */
+export type ComposerKind = ResponseKind | 'link';
 
 /**
- * The answer of `GET /api/entries/{id}/social/composer` and `GET /api/social/link-composer`: what the post answers,
- * quotes or shares, whether the author lets the reader reply or quote, as asked, as whom, and where the text starts.
- * `visibility` is null on Bluesky. A link post whose URL names a post on the account's network quotes it, so its
- * `target` is that post.
+ * The answer of `GET /api/entries/{id}/social/composer` and `GET /api/social/link-composer`: what the composer
+ * sends and shows, whether the author lets the reader reply or quote, as asked, as whom, and where the text starts.
+ * `visibility` is null on Bluesky.
  */
 export interface ComposerContextDto {
+  kind: ComposerKind;
+  network: SocialNetworkName;
   accounts: { id: number; handle: string }[];
   accountId: number;
   canSend: boolean;
   maxCharacters: number;
   visibility: MastodonVisibility | null;
-  mentions: string[];
-  target: ComposerTargetDto;
+  text: string;
+  target: ComposerSubjectDto;
 }
 
-/** What the composer writes about its target post. */
-export type ResponseKind = 'reply' | 'quote';
-
-/** A reply or quote of the entry's own post, or of a reply in its thread named by `address`. */
+/**
+ * A reply or quote of the entry's own post, or of a reply in its thread named by `address`; `network` names the
+ * composer before the server answers.
+ */
 export interface ResponseTargetDto {
   kind: ResponseKind;
   entryId: number;
+  network: SocialNetworkName;
   address: string | null;
 }
 
-/** A post of a URL the reader shares, on a network the reader has an account on. */
+/** A post of a URL the reader shares, by the title it goes by, on a network the reader has an account on. */
 export interface LinkTargetDto {
   kind: 'link';
   network: SocialNetworkName;
   url: string;
+  title: string;
 }
 
 /** What the composer writes: a response to a post, or a post of a shared URL. */

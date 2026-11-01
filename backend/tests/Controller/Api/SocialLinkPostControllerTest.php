@@ -76,7 +76,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'link-composer-mastodon@example.test');
         $account = $this->mastodonAccountOf($user);
 
-        $client->request('GET', self::LINK_COMPOSER . 'mastodon');
+        $client->request('GET', self::LINK_COMPOSER . 'mastodon&title=The+article');
 
         self::assertResponseIsSuccessful();
         self::assertSame([
@@ -85,7 +85,9 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
-            'mentions' => [],
+            'kind' => 'link',
+            'network' => 'mastodon',
+            'text' => "The article\n\nhttps://example.com/article",
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
     }
@@ -98,7 +100,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $this->entityManager()->persist($account);
         $this->entityManager()->flush();
 
-        $client->request('GET', self::LINK_COMPOSER . 'bluesky');
+        $client->request('GET', self::LINK_COMPOSER . 'bluesky&title=The+article');
 
         self::assertResponseIsSuccessful();
         self::assertSame([
@@ -107,7 +109,9 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => BlueskyPostWriter::MAX_GRAPHEMES,
             'visibility' => null,
-            'mentions' => [],
+            'kind' => 'link',
+            'network' => 'bluesky',
+            'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
         self::assertSame([], $this->http->requests);
@@ -196,15 +200,18 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     }
 
     /** @return iterable<string, array{string}> */
-    public static function unsharableComposerUrls(): iterable
+    public static function invalidComposerQueries(): iterable
     {
         yield 'no url' => [''];
         yield 'no url at all' => ['&url=not+a+link'];
         yield 'a host without tld' => ['&url=https%3A%2F%2Fintranet%2Fpage'];
+        yield 'a too long title' => [
+            '&url=https%3A%2F%2Fexample.com%2Farticle&title=' . str_repeat('a', LinkCardContent::TITLE_MAX + 1),
+        ];
     }
 
-    #[DataProvider('unsharableComposerUrls')]
-    public function testTheLinkComposerNeedsASharableUrl(string $query): void
+    #[DataProvider('invalidComposerQueries')]
+    public function testTheLinkComposerNeedsASharableUrlAndAFittingTitle(string $query): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, sprintf('link-composer-url-%s@example.test', md5($query)));

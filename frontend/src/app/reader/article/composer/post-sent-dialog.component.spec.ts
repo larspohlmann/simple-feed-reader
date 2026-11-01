@@ -1,14 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkComposerTargetDto, PostComposerTargetDto } from '../../entry-social';
-import { SentPost } from './composer-dialog.component';
+import { LinkComposerSubjectDto, PostComposerSubjectDto } from '../../entry-social';
+import { SentPost } from './composed-post';
 import { PostSentDialogComponent } from './post-sent-dialog.component';
 
 describe('PostSentDialogComponent', () => {
   const close = jest.fn();
 
-  const story: LinkComposerTargetDto = {
+  const story: LinkComposerSubjectDto = {
     kind: 'link',
     card: {
       url: 'https://example.com/story',
@@ -18,7 +18,7 @@ describe('PostSentDialogComponent', () => {
       siteName: 'example.com',
     },
   };
-  const quoted: PostComposerTargetDto = {
+  const quoted: PostComposerSubjectDto = {
     kind: 'post',
     authorName: 'Ann',
     authorHandle: '@ann@hachyderm.io',
@@ -114,7 +114,7 @@ describe('PostSentDialogComponent', () => {
     expect(open).toHaveBeenCalledWith(
       'https://bsky.app/profile/alice.test/post/9',
       '_blank',
-      'noopener',
+      'noopener,noreferrer',
     );
     open.mockRestore();
   });

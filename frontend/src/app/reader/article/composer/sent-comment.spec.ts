@@ -1,4 +1,4 @@
-import { SentPost } from './composer-dialog.component';
+import { SentPost } from './composed-post';
 import { sentComment } from './sent-comment';
 
 describe('sentComment', () => {

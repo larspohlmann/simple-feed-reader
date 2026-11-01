@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\ComposerDefaults\ComposerDefaultsInterface;
@@ -14,9 +13,12 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerContextModel;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ComposerKind;
 use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
+use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\ComposerStartingText;
 use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
@@ -26,6 +28,7 @@ final readonly class ComposerContexts
     public function __construct(
         private SocialAccountRepository $socialAccounts,
         private SocialPostFinder $posts,
+        private SharedPageCards $pageCards,
         #[AutowireLocator('app.social_composer_defaults', defaultIndexMethod: 'network')]
         private ContainerInterface $defaults,
     ) {
@@ -55,14 +58,16 @@ final readonly class ComposerContexts
         return $this->contextOf($post, ResponseKind::Quote, $defaults);
     }
 
-    public function ofLink(SocialAccount $account, LinkCardContent $card): ComposerContextModel
+    public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
         return new ComposerContextModel(
             $this->connectedBeside($account),
             $account,
             canSend: true,
             defaults: $this->defaultsOn($account)->forAccount($account),
-            target: $card,
+            target: $this->pageCards->cardOf($link->url),
+            kind: ComposerKind::Link,
+            text: ComposerStartingText::sharing($account->getNetwork(), $link),
         );
     }
 
@@ -77,6 +82,8 @@ final readonly class ComposerContexts
             $post->responseContext->allows($kind),
             $defaults,
             $post->responseContext->preview,
+            ComposerKind::from($kind->value),
+            ComposerStartingText::mentioning($defaults->mentions),
         );
     }
 

@@ -1,4 +1,4 @@
-@use '../../../theme/glass-rim';
+@use '../../../theme/link-card';
 
 :host {
   display: block;
@@ -6,13 +6,12 @@
 }
 
 .article {
-  @include glass-rim.filled(var(--surface-1));
+  @include link-card.surface;
 
   display: flex;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-2);
-  border-radius: var(--radius-lg);
   font-size: var(--fs-sm);
 }
 

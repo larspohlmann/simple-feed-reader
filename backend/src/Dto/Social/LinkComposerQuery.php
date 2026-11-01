@@ -19,11 +19,13 @@ final readonly class LinkComposerQuery
         public string $url,
         #[Assert\Positive]
         public ?int $accountId = null,
+        #[Assert\Length(max: LinkCardContent::TITLE_MAX)]
+        public string $title = '',
     ) {
     }
 
     public function toLinkTarget(): LinkTargetModel
     {
-        return new LinkTargetModel($this->network, $this->accountId, $this->url);
+        return new LinkTargetModel($this->network, $this->accountId, $this->url, $this->title);
     }
 }

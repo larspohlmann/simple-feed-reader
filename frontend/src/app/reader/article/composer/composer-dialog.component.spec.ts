@@ -6,20 +6,18 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import {
   ComposerCardDto,
   ComposerContextDto,
-  LinkComposerTargetDto,
-  PostComposerTargetDto,
+  LinkComposerSubjectDto,
+  LinkTargetDto,
+  PostComposerSubjectDto,
+  PostTargetDto,
   PublishedPostDto,
+  ResponseTargetDto,
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
-import {
-  ComposerDialogComponent,
-  ComposeTarget,
-  LinkComposeTarget,
-  ResponseComposeTarget,
-} from './composer-dialog.component';
+import { ComposerDialogComponent } from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
-const QUOTED: PostComposerTargetDto = {
+const QUOTED: PostComposerSubjectDto = {
   kind: 'post',
   authorName: 'Ann',
   authorHandle: '@ann@hachyderm.io',
@@ -33,24 +31,26 @@ const STORY_CARD: ComposerCardDto = {
   imageUrl: 'https://example.com/lead.jpg',
   siteName: 'example.com',
 };
-const STORY: LinkComposerTargetDto = { kind: 'link', card: STORY_CARD };
+const STORY: LinkComposerSubjectDto = { kind: 'link', card: STORY_CARD };
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
   let api: { composer: jest.Mock; send: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
+    kind: 'reply',
+    network: 'mastodon',
     accounts: [{ id: 4, handle: '@alice@mastodon.example' }],
     accountId: 4,
     canSend: true,
     maxCharacters: 500,
     visibility: 'unlisted',
-    mentions: ['@ann@hachyderm.io'],
+    text: '@ann@hachyderm.io ',
     target: QUOTED,
     ...overrides,
   });
 
-  const target = (overrides: Partial<ResponseComposeTarget> = {}): ResponseComposeTarget => ({
+  const target = (overrides: Partial<ResponseTargetDto> = {}): ResponseTargetDto => ({
     kind: 'reply',
     entryId: 7,
     network: 'mastodon',
@@ -58,15 +58,15 @@ describe('ComposerDialogComponent', () => {
     ...overrides,
   });
 
-  const article = (overrides: Partial<LinkComposeTarget> = {}): LinkComposeTarget => ({
+  const article = (overrides: Partial<LinkTargetDto> = {}): LinkTargetDto => ({
     kind: 'link',
     network: 'mastodon',
     url: 'https://example.com/story',
-    prefill: 'A long read\n\nhttps://example.com/story',
+    title: 'A long read',
     ...overrides,
   });
 
-  function mount(replyTarget: ComposeTarget = target()) {
+  function mount(replyTarget: PostTargetDto = target()) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -105,7 +105,7 @@ describe('ComposerDialogComponent', () => {
     };
   });
 
-  it('shows the post it answers and starts the text with the mentions', () => {
+  it('shows the post it answers and starts the text where the server says', () => {
     const fixture = mount();
 
     expect(api.composer).toHaveBeenCalledWith(
@@ -218,7 +218,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('sends only a text that is there and fits the limit', () => {
-    api.composer.mockReturnValue(of(context({ mentions: [], maxCharacters: 5 })));
+    api.composer.mockReturnValue(of(context({ text: '', maxCharacters: 5 })));
     const fixture = mount();
 
     expect(sendButton(fixture).disabled).toBe(true);
@@ -313,7 +313,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('says so and sends nothing when the author takes no replies', () => {
-    api.composer.mockReturnValue(of(context({ canSend: false })));
+    api.composer.mockReturnValue(of(context({ canSend: false, network: 'bluesky' })));
     const fixture = mount(target({ network: 'bluesky' }));
 
     expect(element(fixture).textContent).toContain('The author limits who can reply');
@@ -321,7 +321,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('writes a quote under its own heading and sends it as a quote', () => {
-    api.composer.mockReturnValue(of(context({ mentions: [] })));
+    api.composer.mockReturnValue(of(context({ kind: 'quote', text: '' })));
     const fixture = mount(target({ kind: 'quote' }));
     type(fixture, 'Worth reading');
 
@@ -341,7 +341,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('says so and sends nothing when the author keeps the post from quotes', () => {
-    api.composer.mockReturnValue(of(context({ canSend: false })));
+    api.composer.mockReturnValue(of(context({ kind: 'quote', canSend: false, text: '' })));
     const fixture = mount(target({ kind: 'quote' }));
 
     expect(element(fixture).textContent).toContain('You can’t quote this post');
@@ -365,7 +365,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('shows Bluesky no visibility choice', () => {
-    api.composer.mockReturnValue(of(context({ visibility: null, mentions: [] })));
+    api.composer.mockReturnValue(of(context({ network: 'bluesky', visibility: null, text: '' })));
     const fixture = mount(target({ network: 'bluesky' }));
 
     expect(element(fixture).querySelector('#reply-visibility')).toBeNull();
@@ -379,32 +379,46 @@ describe('ComposerDialogComponent', () => {
     ];
 
     const linkContext = (overrides: Partial<ComposerContextDto> = {}) =>
-      context({ mentions: [], target: STORY, ...overrides });
+      context({
+        kind: 'link',
+        text: 'A long read\n\nhttps://example.com/story',
+        target: STORY,
+        ...overrides,
+      });
+    const quoteContext = (overrides: Partial<ComposerContextDto> = {}) =>
+      linkContext({ kind: 'quote', text: '', target: QUOTED, ...overrides });
 
     beforeEach(() => api.composer.mockReturnValue(of(linkContext())));
 
-    it('shows the page card the server read and starts the text with the prefill', () => {
+    it('shows the page card and the starting text once the context arrives', () => {
+      const slow = new Subject<ComposerContextDto>();
+      api.composer.mockReturnValue(slow);
       const fixture = mount(article());
+      expect(element(fixture).querySelector('.article')).toBeNull();
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Post on Mastodon');
+
+      slow.next(linkContext());
+      fixture.detectChanges();
 
       const card = element(fixture).querySelector('.article')!;
       expect(card.querySelector('.title')!.textContent).toContain('A long read');
       expect(card.querySelector('.site')!.textContent).toContain('example.com');
       expect(card.querySelector('img')!.getAttribute('src')).toBe('https://example.com/lead.jpg');
       expect(element(fixture).querySelector('.target')).toBeNull();
-      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Post on Mastodon');
       expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
       expect(api.composer).toHaveBeenCalledWith(
         expect.objectContaining({
           kind: 'link',
           network: 'mastodon',
           url: 'https://example.com/story',
+          title: 'A long read',
         }),
         undefined,
       );
     });
 
     it('shows a post on its own network as the quote it becomes, with an empty text', () => {
-      api.composer.mockReturnValue(of(linkContext({ target: QUOTED })));
+      api.composer.mockReturnValue(of(quoteContext()));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       const quoted = element(fixture).querySelector('.target')!;
@@ -425,7 +439,7 @@ describe('ComposerDialogComponent', () => {
         imageUrl: 'https://cdn.bsky.app/img/thumb.jpg',
         siteName: 'politico.com',
       };
-      api.composer.mockReturnValue(of(linkContext({ target: { ...QUOTED, card } })));
+      api.composer.mockReturnValue(of(quoteContext({ target: { ...QUOTED, card } })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       const quotedCard = element(fixture).querySelector('.target .article')!;
@@ -435,7 +449,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('sends the quote of a post on its own network to the link endpoint, closing with it shown', () => {
-      api.composer.mockReturnValue(of(linkContext({ target: QUOTED })));
+      api.composer.mockReturnValue(of(quoteContext()));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
       type(fixture, 'Look');
 
@@ -464,7 +478,15 @@ describe('ComposerDialogComponent', () => {
       expect(element(fixture).querySelector('.article .site')).toBeNull();
     });
 
-    it('uses the prefill once, keeping what the reader wrote over an account switch', () => {
+    it('says so when the post it becomes a quote of takes no quotes', () => {
+      api.composer.mockReturnValue(of(quoteContext({ canSend: false })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+
+      expect(element(fixture).textContent).toContain('You can’t quote this post');
+      expect(sendButton(fixture).disabled).toBe(true);
+    });
+
+    it('uses the starting text once, keeping what the reader wrote over an account switch', () => {
       api.composer.mockReturnValue(of(linkContext({ accounts })));
       const fixture = mount(article());
       type(fixture, '');
@@ -480,26 +502,11 @@ describe('ComposerDialogComponent', () => {
       expect(textArea(fixture).value).toBe('');
     });
 
-    it('shows the card and starts the text with the prefill once the context arrives', () => {
-      const slow = new Subject<ComposerContextDto>();
-      api.composer.mockReturnValue(slow);
-      const fixture = mount(article());
-      expect(element(fixture).querySelector('.article')).toBeNull();
-
-      slow.next(linkContext());
-      fixture.detectChanges();
-
-      expect(element(fixture).querySelector('.article .title')!.textContent).toContain(
-        'A long read',
-      );
-      expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
-    });
-
     it('keeps what the reader wrote when a later context quotes', () => {
       api.composer.mockReturnValue(of(linkContext({ accounts })));
       const fixture = mount(article());
       type(fixture, 'Mine');
-      api.composer.mockReturnValue(of(linkContext({ accounts, target: QUOTED })));
+      api.composer.mockReturnValue(of(quoteContext({ accounts })));
       const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
       select.value = '5';
       select.dispatchEvent(new Event('change'));
@@ -509,7 +516,10 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('sends the post as a link post', () => {
-      const fixture = mount(article({ network: 'bluesky', prefill: 'A long read' }));
+      api.composer.mockReturnValue(
+        of(linkContext({ network: 'bluesky', visibility: null, text: 'A long read' })),
+      );
+      const fixture = mount(article({ network: 'bluesky' }));
 
       expect(sendButton(fixture).textContent?.trim()).toBe('Post');
       submit(fixture);

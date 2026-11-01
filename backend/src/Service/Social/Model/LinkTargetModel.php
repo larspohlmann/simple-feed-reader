@@ -6,13 +6,14 @@ namespace App\Service\Social\Model;
 
 use App\Enum\SocialNetwork;
 
-/** A URL to share on a network, by the chosen account or the network's default one. */
+/** A URL to share on a network, by the chosen account or the network's default one, and the title it goes by. */
 final readonly class LinkTargetModel
 {
     public function __construct(
         public SocialNetwork $network,
         public ?int $accountId,
         public string $url,
+        public string $title = '',
     ) {
     }
 }

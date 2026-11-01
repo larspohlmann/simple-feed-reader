@@ -16,7 +16,7 @@
 }
 
 <ng-template #compactCard>
-  @if (card(); as card) {
+  @if (subject().card; as card) {
     <div class="article">
       @if (card.imageUrl && !imageFailed()) {
         <img

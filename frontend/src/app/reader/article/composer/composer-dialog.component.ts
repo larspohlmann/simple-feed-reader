@@ -14,7 +14,6 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Subscription } from 'rxjs';
-import { SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
@@ -25,39 +24,16 @@ import { randomUuid } from '../../../shared/random-uuid';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
   ComposerContextDto,
-  ComposerTargetDto,
   MASTODON_VISIBILITIES,
   MastodonVisibility,
   PublishedPostDto,
-  LinkTargetDto,
   PostDraftDto,
-  ResponseKind,
-  ResponseTargetDto,
+  PostTargetDto,
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
-import { ComposeTargetComponent } from './compose-target.component';
+import { SentPost } from './composed-post';
+import { ComposerSubjectComponent } from './composer-subject.component';
 import { postLength } from './post-length';
-
-/** A reply to or quote of a post on the network the composer writes to. */
-export type ResponseComposeTarget = ResponseTargetDto & { network: SocialNetworkName };
-
-/** A post of a shared URL, and where its text starts unless it quotes a post. */
-export type LinkComposeTarget = LinkTargetDto & { prefill: string };
-
-/** Where the composer sends, and what it was asked to write; what it shows comes from the server. */
-export type ComposeTarget = ResponseComposeTarget | LinkComposeTarget;
-
-/** What the composer sends: a link post that names a post on its network quotes it. */
-export type SentKind = ResponseKind | 'link';
-
-/** What the composer published, with what the panel and the sent overlay need to show it before the network does. */
-export interface SentPost extends PublishedPostDto {
-  kind: SentKind;
-  network: SocialNetworkName;
-  text: string;
-  authorHandle: string | null;
-  target: ComposerTargetDto;
-}
 
 type ContextState =
   | { status: 'loading' }
@@ -76,7 +52,7 @@ type ContextState =
   imports: [
     A11yModule,
     ButtonComponent,
-    ComposeTargetComponent,
+    ComposerSubjectComponent,
     ErrorBannerComponent,
     FieldComponent,
     OverlayPanelComponent,
@@ -89,19 +65,14 @@ type ContextState =
 })
 export class ComposerDialogComponent {
   protected readonly ref = inject<DialogRef<SentPost>>(DialogRef);
-  protected readonly target = inject<ComposeTarget>(DIALOG_DATA);
+  protected readonly target = inject<PostTargetDto>(DIALOG_DATA);
   private readonly api = inject(SocialPostApi);
   private readonly idempotencyKey = randomUuid();
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
   protected readonly visibilities = MASTODON_VISIBILITIES;
-  protected readonly forbiddenKey =
-    this.target.kind === 'link'
-      ? null
-      : `reader.${this.target.kind}Forbidden.${this.target.network}`;
   protected readonly state = signal<ContextState>({ status: 'loading' });
   protected readonly text = signal('');
-  /** Once the reader writes or clears the text, a later context no longer sets where it starts. */
   private textTouched = false;
   protected readonly visibility = signal<MastodonVisibility | null>(null);
   /** Null while the reply carries no content warning. */
@@ -120,9 +91,11 @@ export class ComposerDialogComponent {
     const state = this.state();
     return state.status === 'failed' ? state.message : null;
   });
-  protected readonly kind = computed<SentKind>(() => {
-    if (this.target.kind !== 'link') return this.target.kind;
-    return this.context()?.target.kind === 'post' ? 'quote' : 'link';
+  private readonly kind = computed(() => this.context()?.kind ?? this.target.kind);
+  protected readonly forbiddenKey = computed(() => {
+    const context = this.context();
+    if (context === null || context.canSend || context.kind === 'link') return null;
+    return `reader.${context.kind}Forbidden.${context.network}`;
   });
   /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = computed(() => `reader.composer.${this.kind()}`);
@@ -207,23 +180,15 @@ export class ComposerDialogComponent {
   private adopt(context: ComposerContextDto): void {
     this.state.set({ status: 'ready', context });
     if (!this.visibilityChosen) this.visibility.set(context.visibility);
-    if (!this.textTouched) this.text.set(this.startingText(context));
-  }
-
-  /** A quote carries the link it was shared by, so a link post that quotes starts empty. */
-  private startingText(context: ComposerContextDto): string {
-    if (this.target.kind !== 'link') {
-      return context.mentions.length > 0 ? context.mentions.join(' ') + ' ' : '';
-    }
-    return context.target.kind === 'post' ? '' : this.target.prefill;
+    if (!this.textTouched) this.text.set(context.text);
   }
 
   private sentAs(published: PublishedPostDto, context: ComposerContextDto): SentPost {
     const account = context.accounts.find((candidate) => candidate.id === context.accountId);
     return {
       ...published,
-      kind: this.kind(),
-      network: this.target.network,
+      kind: context.kind,
+      network: context.network,
       text: this.text(),
       authorHandle: account?.handle ?? null,
       target: context.target,

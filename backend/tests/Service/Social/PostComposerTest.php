@@ -14,12 +14,14 @@ use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\ComposerContexts;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\ComposerKind;
 use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\PostComposer;
 use App\Service\Social\ResponseTargetFinder;
+use App\Service\Social\SharedPageCards;
 use App\Service\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeComposerDefaults;
@@ -27,6 +29,8 @@ use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StubPageCardReader;
+use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class PostComposerTest extends DbTestCase
@@ -72,6 +76,8 @@ final class PostComposerTest extends DbTestCase
         self::assertSame($default, $context->account);
         self::assertFalse($context->canSend);
         self::assertEquals(new ComposerDefaultsModel(500, 'public', ['110', '110']), $context->defaults);
+        self::assertSame(ComposerKind::Reply, $context->kind);
+        self::assertSame('110 110 ', $context->text);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
     }
 
@@ -148,6 +154,8 @@ final class PostComposerTest extends DbTestCase
         );
 
         self::assertSame([], $context->defaults->mentions);
+        self::assertSame(ComposerKind::Quote, $context->kind);
+        self::assertSame('', $context->text);
         self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
     }
 
@@ -177,6 +185,7 @@ final class PostComposerTest extends DbTestCase
             new ComposerContexts(
                 $accounts,
                 $posts,
+                new SharedPageCards(new StubPageCardReader(), new NullLogger()),
                 new ServiceLocator(['mastodon' => static fn (): FakeComposerDefaults => new FakeComposerDefaults()]),
             ),
         );
