@@ -8,7 +8,7 @@ import {
   EntryRepostDto,
   PublishedPostDto,
   PostDraftDto,
-  ResponseTargetDto,
+  PostTargetDto,
   SocialCountsDto,
   SocialViewerDto,
 } from './entry-social';
@@ -70,27 +70,19 @@ export class SocialPostApi {
     });
   }
 
-  composer(
-    { kind, entryId, address }: ResponseTargetDto,
-    accountId?: number,
-  ): Observable<ComposerContextDto> {
-    return this.http.get<ComposerContextDto>(this.entryPath(entryId, 'social/composer'), {
+  composer(target: PostTargetDto, accountId?: number): Observable<ComposerContextDto> {
+    const path = target.kind === 'link' ? 'social/link-composer' : 'social/composer';
+    return this.http.get<ComposerContextDto>(this.entryPath(target.entryId, path), {
       params: {
-        kind,
-        ...(address === null ? {} : { address }),
+        ...composerParams(target),
         ...(accountId === undefined ? {} : { accountId }),
       },
     });
   }
 
-  send(
-    { kind, entryId, address }: ResponseTargetDto,
-    draft: PostDraftDto,
-  ): Observable<PublishedPostDto> {
-    const path = kind === 'quote' ? 'social/quotes' : 'social/replies';
-    return this.http.post<PublishedPostDto>(this.entryPath(entryId, path), draft, {
-      params: address === null ? {} : { address },
-    });
+  send(target: PostTargetDto, draft: PostDraftDto): Observable<PublishedPostDto> {
+    const path = this.entryPath(target.entryId, sendPath(target));
+    return this.http.post<PublishedPostDto>(path, draft, { params: sendParams(target) });
   }
 
   deleteReply(entryId: number, address: string): Observable<void> {
@@ -102,4 +94,28 @@ export class SocialPostApi {
   private entryPath(entryId: number, action: string): string {
     return `${this.base}/api/entries/${entryId}/${action}`;
   }
+}
+
+function composerParams(target: PostTargetDto): Record<string, string> {
+  if (target.kind === 'link') return { network: target.network };
+  return { kind: target.kind, ...addressParam(target.address) };
+}
+
+function sendPath(target: PostTargetDto): string {
+  switch (target.kind) {
+    case 'link':
+      return 'social/links';
+    case 'quote':
+      return 'social/quotes';
+    case 'reply':
+      return 'social/replies';
+  }
+}
+
+function sendParams(target: PostTargetDto): Record<string, string> {
+  return target.kind === 'link' ? { network: target.network } : addressParam(target.address);
+}
+
+function addressParam(address: string | null): Record<string, string> {
+  return address === null ? {} : { address };
 }

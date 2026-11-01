@@ -1535,6 +1535,12 @@
         "account": "Zitieren als",
         "text": "Dein Kommentar",
         "send": "Zitieren"
+      },
+      "link": {
+        "loading": "Beitrag wird vorbereitet",
+        "account": "Posten als",
+        "text": "Dein Beitrag",
+        "send": "Posten"
       }
     },
     "deleteReply": {
@@ -1551,8 +1557,13 @@
       "bluesky": "Die Autorin oder der Autor erlaubt keine Zitate dieses Beitrags",
       "mastodon": "Diesen Beitrag kannst du nicht zitieren"
     },
+    "link": {
+      "bluesky": "Auf Bluesky posten",
+      "mastodon": "Auf Mastodon posten"
+    },
     "quoteSent": "Zitat veröffentlicht",
-    "openQuote": "Öffnen"
+    "linkPosted": "Link veröffentlicht",
+    "openPost": "Öffnen"
   },
   "common": {
     "save": "Speichern",

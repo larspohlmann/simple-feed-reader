@@ -52,10 +52,20 @@ export interface ResponseTargetDto {
   address: string | null;
 }
 
+/** A post of the entry's own link on a network the reader has an account on. */
+export interface LinkTargetDto {
+  kind: 'link';
+  entryId: number;
+  network: SocialNetworkName;
+}
+
+/** What the composer writes: a response to a post, or a post of the entry's link. */
+export type PostTargetDto = ResponseTargetDto | LinkTargetDto;
+
 export const MASTODON_VISIBILITIES = ['public', 'unlisted', 'private', 'direct'] as const;
 export type MastodonVisibility = (typeof MASTODON_VISIBILITIES)[number];
 
-/** The body of `POST /api/entries/{id}/social/replies`; the Mastodon-only fields are ignored on Bluesky. */
+/** The body of every composer `POST` (`social/replies`, `social/quotes`, `social/links`); the Mastodon-only fields are ignored on Bluesky. */
 export interface PostDraftDto {
   text: string;
   accountId: number;

@@ -157,6 +157,29 @@ describe('SocialPostApi', () => {
     ctrl.expectOne(`https://api.test/api/entries/7/social/replies?address=${REPLY}`).flush({});
   });
 
+  it('GETs the composer context for a link post on a network, on a chosen account', () => {
+    api.composer({ kind: 'link', entryId: 7, network: 'bluesky' }).subscribe();
+    expect(
+      ctrl.expectOne('https://api.test/api/entries/7/social/link-composer?network=bluesky').request
+        .method,
+    ).toBe('GET');
+
+    api.composer({ kind: 'link', entryId: 7, network: 'mastodon' }, 4).subscribe();
+    ctrl
+      .expectOne('https://api.test/api/entries/7/social/link-composer?network=mastodon&accountId=4')
+      .flush({});
+  });
+
+  it('POSTs a link post on the network it names', () => {
+    const draft = { text: 'Read this', accountId: 4, language: 'en', idempotencyKey: 'k-3' };
+    api.send({ kind: 'link', entryId: 7, network: 'mastodon' }, draft).subscribe();
+
+    const toPost = ctrl.expectOne('https://api.test/api/entries/7/social/links?network=mastodon');
+    expect(toPost.request.method).toBe('POST');
+    expect(toPost.request.body).toEqual(draft);
+    toPost.flush({ address: 'https://x/1', url: null });
+  });
+
   it('DELETEs an own reply by its address', () => {
     api.deleteReply(7, REPLY).subscribe();
 

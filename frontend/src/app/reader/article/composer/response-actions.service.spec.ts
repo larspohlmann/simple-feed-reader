@@ -9,7 +9,7 @@ import { EntryCommentDto } from '../../entry-comment';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { ComposeTarget, SentPost } from './composer-dialog.component';
+import { LinkComposeTarget, ResponseComposeTarget, SentPost } from './composer-dialog.component';
 import { PostComposer } from './post-composer.service';
 import { ResponseActions } from './response-actions.service';
 
@@ -25,7 +25,7 @@ describe('ResponseActions', () => {
   let actions: ResponseActions;
 
   const sent: SentPost = { address: 'https://x/9', url: null, text: 'Hi', authorHandle: '@a' };
-  const target: ComposeTarget = {
+  const target: ResponseComposeTarget = {
     kind: 'reply',
     entryId: 7,
     network: 'mastodon',
@@ -101,6 +101,33 @@ describe('ResponseActions', () => {
     expect(counts.stepQuotes).not.toHaveBeenCalled();
     expect(comments.countQuote).toHaveBeenCalledWith(7, ADDRESS);
     expect(toast.show).toHaveBeenCalledWith({ message: 'Quote posted' });
+  });
+
+  it('offers to open a link post, leaving the counts and the thread alone', () => {
+    const link: LinkComposeTarget = {
+      kind: 'link',
+      entryId: 7,
+      network: 'bluesky',
+      title: 'A story',
+      site: null,
+      imageUrl: null,
+      prefill: 'A story',
+    };
+    composer.open.mockReturnValue(of({ ...sent, url: 'https://bsky.app/profile/a/post/9' }));
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+    actions.respond(link);
+
+    expect(composer.open).toHaveBeenCalledWith(link);
+    expect(comments.insertReply).not.toHaveBeenCalled();
+    expect(comments.countQuote).not.toHaveBeenCalled();
+    expect(counts.stepReplies).not.toHaveBeenCalled();
+    expect(counts.stepQuotes).not.toHaveBeenCalled();
+    const shown = toast.show.mock.calls[0][0];
+    expect(shown).toMatchObject({ message: 'Link posted', actionLabel: 'Open' });
+    shown.action();
+    expect(open).toHaveBeenCalledWith('https://bsky.app/profile/a/post/9', '_blank', 'noopener');
+    open.mockRestore();
   });
 
   it('changes nothing when the composer closes without sending', () => {

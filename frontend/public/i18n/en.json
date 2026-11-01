@@ -1535,6 +1535,12 @@
         "account": "Quote as",
         "text": "Your comment",
         "send": "Quote"
+      },
+      "link": {
+        "loading": "Getting the post ready",
+        "account": "Post as",
+        "text": "Your post",
+        "send": "Post"
       }
     },
     "deleteReply": {
@@ -1551,8 +1557,13 @@
       "bluesky": "The author doesn’t allow quotes of this post",
       "mastodon": "You can’t quote this post"
     },
+    "link": {
+      "bluesky": "Post on Bluesky",
+      "mastodon": "Post on Mastodon"
+    },
     "quoteSent": "Quote posted",
-    "openQuote": "Open"
+    "linkPosted": "Link posted",
+    "openPost": "Open"
   },
   "common": {
     "save": "Save",

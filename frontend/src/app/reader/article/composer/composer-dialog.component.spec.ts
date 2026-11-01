@@ -5,7 +5,12 @@ import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ComposerContextDto, PublishedPostDto } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
-import { ComposerDialogComponent, ComposeTarget } from './composer-dialog.component';
+import {
+  ComposerDialogComponent,
+  ComposeTarget,
+  LinkComposeTarget,
+  ResponseComposeTarget,
+} from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
 
@@ -23,7 +28,7 @@ describe('ComposerDialogComponent', () => {
     ...overrides,
   });
 
-  const target = (overrides: Partial<ComposeTarget> = {}): ComposeTarget => ({
+  const target = (overrides: Partial<ResponseComposeTarget> = {}): ResponseComposeTarget => ({
     kind: 'reply',
     entryId: 7,
     network: 'mastodon',
@@ -34,7 +39,18 @@ describe('ComposerDialogComponent', () => {
     ...overrides,
   });
 
-  function mount(replyTarget = target()) {
+  const article = (overrides: Partial<LinkComposeTarget> = {}): LinkComposeTarget => ({
+    kind: 'link',
+    entryId: 7,
+    network: 'mastodon',
+    title: 'A long read',
+    site: 'example.com',
+    imageUrl: 'https://example.com/lead.jpg',
+    prefill: 'A long read\n\nhttps://example.com/story',
+    ...overrides,
+  });
+
+  function mount(replyTarget: ComposeTarget = target()) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -320,5 +336,66 @@ describe('ComposerDialogComponent', () => {
 
     expect(element(fixture).querySelector('#reply-visibility')).toBeNull();
     expect(element(fixture).querySelector('.warns')).toBeNull();
+  });
+
+  describe('for a link post', () => {
+    const accounts = [
+      { id: 4, handle: '@alice@mastodon.example' },
+      { id: 5, handle: '@bea@mastodon.example' },
+    ];
+
+    beforeEach(() => api.composer.mockReturnValue(of(context({ mentions: [] }))));
+
+    it('shows the article as a card and starts the text with the prefill', () => {
+      const fixture = mount(article());
+
+      const card = element(fixture).querySelector('.article')!;
+      expect(card.querySelector('.title')!.textContent).toContain('A long read');
+      expect(card.querySelector('.site')!.textContent).toContain('example.com');
+      expect(card.querySelector('img')!.getAttribute('src')).toBe('https://example.com/lead.jpg');
+      expect(element(fixture).querySelector('.target')).toBeNull();
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Post on Mastodon');
+      expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
+      expect(api.composer).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'link', entryId: 7, network: 'mastodon' }),
+        undefined,
+      );
+    });
+
+    it('shows a card without an image or site when the article has none', () => {
+      const fixture = mount(article({ imageUrl: null, site: null }));
+
+      expect(element(fixture).querySelector('.article img')).toBeNull();
+      expect(element(fixture).querySelector('.article .site')).toBeNull();
+    });
+
+    it('uses the prefill once, keeping what the reader wrote over an account switch', () => {
+      api.composer.mockReturnValue(of(context({ accounts, mentions: [] })));
+      const fixture = mount(article());
+      type(fixture, '');
+      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(api.composer).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: 'link', network: 'mastodon' }),
+        5,
+      );
+      expect(textArea(fixture).value).toBe('');
+    });
+
+    it('sends the post as a link post', () => {
+      const fixture = mount(article({ network: 'bluesky', prefill: 'A long read' }));
+
+      expect(sendButton(fixture).textContent?.trim()).toBe('Post');
+      submit(fixture);
+
+      expect(api.send).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'link', entryId: 7, network: 'bluesky' }),
+        expect.objectContaining({ text: 'A long read', accountId: 4 }),
+      );
+      expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/1' }));
+    });
   });
 });

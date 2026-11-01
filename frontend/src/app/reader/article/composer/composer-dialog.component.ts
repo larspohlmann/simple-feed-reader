@@ -22,12 +22,14 @@ import { FieldComponent } from '../../../shared/field/field.component';
 import { inputValue } from '../../../shared/input-value';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { randomUuid } from '../../../shared/random-uuid';
+import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
   ComposerContextDto,
   MASTODON_VISIBILITIES,
   MastodonVisibility,
   PublishedPostDto,
+  LinkTargetDto,
   PostDraftDto,
   ResponseTargetDto,
 } from '../../entry-social';
@@ -35,12 +37,22 @@ import { SocialPostApi } from '../../social-post-api';
 import { postLength } from './post-length';
 
 /** The post a reply or quote responds to, as the composer shows it above the text. */
-export interface ComposeTarget extends ResponseTargetDto {
+export interface ResponseComposeTarget extends ResponseTargetDto {
   network: SocialNetworkName;
   authorName: string | null;
   authorHandle: string | null;
   excerpt: string;
 }
+
+/** The article a link post shares, as the composer shows it above the text, and where the text starts. */
+export interface LinkComposeTarget extends LinkTargetDto {
+  title: string;
+  site: string | null;
+  imageUrl: string | null;
+  prefill: string;
+}
+
+export type ComposeTarget = ResponseComposeTarget | LinkComposeTarget;
 
 /** What the composer published, with what the panel needs to show it before the network does. */
 export interface SentPost extends PublishedPostDto {
@@ -54,7 +66,8 @@ type ContextState =
   | { status: 'failed'; message: string };
 
 /**
- * Writes a reply to, or a quote of, a Bluesky or Mastodon post. Closing never asks: typed text is discarded.
+ * Writes a reply to, or a quote of, a Bluesky or Mastodon post, or a post of the entry's link.
+ * Closing never asks: typed text is discarded.
  * It stays open while a post is on the wire, so the reader always learns what was published.
  * A failed send keeps the text and says why; a resend carries the key minted on open, so Mastodon
  * publishes the post once.
@@ -67,6 +80,7 @@ type ContextState =
     ErrorBannerComponent,
     FieldComponent,
     OverlayPanelComponent,
+    ProxiedImageDirective,
     SkeletonComponent,
     TranslocoPipe,
   ],
@@ -81,13 +95,16 @@ export class ComposerDialogComponent {
   private readonly idempotencyKey = randomUuid();
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
+  protected readonly response = this.target.kind === 'link' ? null : this.target;
+  protected readonly article = this.target.kind === 'link' ? this.target : null;
+  protected readonly imageFailed = signal(false);
   protected readonly visibilities = MASTODON_VISIBILITIES;
-  /** Where the words that differ between a reply and a quote live. */
+  /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = `reader.composer.${this.target.kind}`;
   protected readonly headingKey = `reader.${this.target.kind}.${this.target.network}`;
   protected readonly forbiddenKey = `reader.${this.target.kind}Forbidden.${this.target.network}`;
   protected readonly state = signal<ContextState>({ status: 'loading' });
-  protected readonly text = signal('');
+  protected readonly text = signal(this.article?.prefill ?? '');
   protected readonly visibility = signal<MastodonVisibility | null>(null);
   /** Null while the reply carries no content warning. */
   protected readonly contentWarning = signal<string | null>(null);

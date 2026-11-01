@@ -10,14 +10,14 @@ import { EntryCommentDto } from '../../entry-comment';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { ComposeTarget, SentPost } from './composer-dialog.component';
+import { ComposeTarget, ResponseComposeTarget, SentPost } from './composer-dialog.component';
 import { PostComposer } from './post-composer.service';
 import { sentComment } from './sent-comment';
 
 /**
- * Replying, quoting and deleting a reply, reflected in the comments panel and the counts row at once: the network
- * takes a while to count or thread a change, and the cached copies wait for the next load. A quote lands outside
- * the thread, so a toast offers to open it on the network.
+ * Replying, quoting, posting a link and deleting a reply, reflected in the comments panel and the counts row at
+ * once: the network takes a while to count or thread a change, and the cached copies wait for the next load. A quote
+ * or a link post lands outside the thread, so a toast offers to open it on the network.
  */
 @Injectable({ providedIn: 'root' })
 export class ResponseActions {
@@ -32,26 +32,34 @@ export class ResponseActions {
   respond(target: ComposeTarget): void {
     this.composer.open(target).subscribe((sent) => {
       if (sent === undefined) return;
-      if (target.kind === 'quote') this.quoted(target, sent);
+      if (target.kind === 'link') this.linked(sent);
+      else if (target.kind === 'quote') this.quoted(target, sent);
       else this.replied(target, sent);
     });
   }
 
-  private replied(target: ComposeTarget, sent: SentPost): void {
+  private replied(target: ResponseComposeTarget, sent: SentPost): void {
     this.comments.insertReply(target.entryId, target.address, sentComment(sent, new Date()));
     if (target.address === null) this.counts.stepReplies(target.entryId, true);
   }
 
-  private quoted(target: ComposeTarget, sent: SentPost): void {
+  private quoted(target: ResponseComposeTarget, sent: SentPost): void {
     if (target.address === null) this.counts.stepQuotes(target.entryId);
     else this.comments.countQuote(target.entryId, target.address);
-    const url = sent.url;
+    this.announce('reader.quoteSent', sent.url);
+  }
+
+  private linked(sent: SentPost): void {
+    this.announce('reader.linkPosted', sent.url);
+  }
+
+  private announce(messageKey: string, url: string | null): void {
     this.toast.show({
-      message: this.transloco.translate('reader.quoteSent'),
+      message: this.transloco.translate(messageKey),
       ...(url === null
         ? {}
         : {
-            actionLabel: this.transloco.translate('reader.openQuote'),
+            actionLabel: this.transloco.translate('reader.openPost'),
             action: () => window.open(url, '_blank', 'noopener'),
           }),
     });
