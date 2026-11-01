@@ -61,9 +61,13 @@ export class RepostButtonComponent {
     () => `reader.${this.reposted() ? 'unrepost' : 'repost'}.${this.network()}`,
   );
   protected readonly opens = computed(() => this.canRepost() || this.canQuote());
-  protected readonly hintKey = computed(() =>
-    this.opens() ? this.actionKey() : `reader.repostForbidden.${this.network()}`,
-  );
+  /** Named for the repost while it is allowed, for the menu while only quoting is, for the refusal otherwise. */
+  protected readonly hintKey = computed(() => {
+    if (this.canRepost()) return this.actionKey();
+    return this.canQuote()
+      ? `reader.repostMenu.${this.network()}`
+      : `reader.repostForbidden.${this.network()}`;
+  });
 
   protected press(): void {
     if (!this.opens()) return;
@@ -88,6 +92,10 @@ export class RepostButtonComponent {
     if (menu !== null) stepMenuFocus(event, menu);
   }
 
+  private refusal(allowed: boolean, reasonKey: string): { disabled: boolean; hint?: string } {
+    return allowed ? { disabled: false } : { disabled: true, hint: this.i18n.translate(reasonKey) };
+  }
+
   private openSheet(): void {
     this.sheet
       .open({
@@ -97,13 +105,13 @@ export class RepostButtonComponent {
             id: TOGGLE,
             label: this.i18n.translate(this.actionKey()),
             symbol: 'repeat',
-            disabled: !this.canRepost(),
+            ...this.refusal(this.canRepost(), `reader.repostForbidden.${this.network()}`),
           },
           {
             id: QUOTE,
             label: this.i18n.translate(`reader.quote.${this.network()}`),
             symbol: 'format_quote',
-            disabled: !this.canQuote(),
+            ...this.refusal(this.canQuote(), `reader.quoteForbidden.${this.network()}`),
           },
         ],
       })

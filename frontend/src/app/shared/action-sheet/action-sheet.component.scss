@@ -53,6 +53,16 @@ nav button {
   border-radius: var(--radius);
 }
 
+.labelled {
+  display: flex;
+  flex-direction: column;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
 nav button.danger {
   color: var(--danger);
 }

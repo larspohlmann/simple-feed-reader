@@ -15,7 +15,14 @@
         } @else if (item.symbol) {
           <app-icon [name]="item.symbol" size="sm" />
         }
-        {{ item.label }}
+        @if (item.hint) {
+          <span class="labelled">
+            <span>{{ item.label }}</span>
+            <span class="hint">{{ item.hint }}</span>
+          </span>
+        } @else {
+          {{ item.label }}
+        }
       </button>
     }
   }

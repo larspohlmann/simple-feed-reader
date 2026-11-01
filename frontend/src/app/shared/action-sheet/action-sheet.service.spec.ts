@@ -54,6 +54,16 @@ describe('ActionSheet', () => {
     expect((items()[0] as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('says under a disabled action why it is unavailable', () => {
+    open({
+      title: 'Post',
+      actions: [{ id: 'quote', label: 'Quote', disabled: true, hint: 'Quotes are off' }],
+    }).subscribe();
+
+    expect(items()[0].querySelector('.hint')?.textContent?.trim()).toBe('Quotes are off');
+    expect(items()[0].textContent).toContain('Quote');
+  });
+
   it('resolves with the chosen action id', (done) => {
     open().subscribe((choice) => {
       expect(choice).toBe('delete');

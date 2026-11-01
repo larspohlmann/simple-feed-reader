@@ -130,7 +130,9 @@ describe('RepostButtonComponent', () => {
   });
 
   it('keeps a refused repost in the menu, dimmed with its reason, and still quotes', () => {
-    show({ network: 'mastodon', canRepost: false }).click();
+    const button = show({ network: 'mastodon', canRepost: false });
+    expect(button.getAttribute('aria-label')).toBe('Boost or quote, 5 reposts');
+    button.click();
     fixture.detectChanges();
     const [repost, quote] = menuItems();
 
@@ -154,14 +156,15 @@ describe('RepostButtonComponent', () => {
     expect(quoteRequested).not.toHaveBeenCalled();
   });
 
-  it('dims both refused actions on the action sheet', () => {
+  it('dims a refused action on the action sheet and says why under it', () => {
     isCoarse.set(true);
     sheet.open.mockReturnValue(of(undefined));
     show({ canRepost: false }).click();
 
-    expect(
-      sheet.open.mock.calls[0][0].actions.map((action: { disabled: boolean }) => action.disabled),
-    ).toEqual([true, false]);
+    const [repost, quote] = sheet.open.mock.calls[0][0].actions;
+    expect(repost).toMatchObject({ disabled: true, hint: "This post can't be reposted" });
+    expect(quote).toEqual(expect.objectContaining({ disabled: false }));
+    expect(quote.hint).toBeUndefined();
   });
 
   it('emits nothing when the sheet is dismissed', () => {
