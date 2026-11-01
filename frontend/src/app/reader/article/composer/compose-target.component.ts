@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import type { ComposeTarget } from './composer-dialog.component';
+import type { ShownTarget } from './composer-dialog.component';
 
 /** What a post responds to or shares: the quoted post, or the article's compact card. */
 @Component({
@@ -11,7 +11,7 @@ import type { ComposeTarget } from './composer-dialog.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ComposeTargetComponent {
-  readonly target = input.required<ComposeTarget>();
+  readonly target = input.required<ShownTarget>();
 
   protected readonly article = computed(() => {
     const target = this.target();

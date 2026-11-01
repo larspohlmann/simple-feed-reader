@@ -7,6 +7,7 @@ namespace App\Dto\Social;
 use App\Entity\LinkCardContent;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Model\LinkPostModel;
+use App\Service\Social\Model\LinkTargetModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Support\MastodonVisibility;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -36,7 +37,7 @@ final readonly class LinkPostRequest
 
     public function toLinkPost(SocialNetwork $network): LinkPostModel
     {
-        return new LinkPostModel($network, $this->accountId, $this->url, new PostDraftModel(
+        return new LinkPostModel(new LinkTargetModel($network, $this->accountId, $this->url), new PostDraftModel(
             $this->text,
             $this->visibility,
             $this->contentWarning,

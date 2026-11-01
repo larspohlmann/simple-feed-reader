@@ -76,6 +76,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
             'mentions' => ['@gargron@mastodon.social'],
+            'quote' => null,
         ], $this->payload($client));
     }
 

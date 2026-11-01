@@ -11,9 +11,11 @@ use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\BlueskyAuthor;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\PostCounts;
 
@@ -53,6 +55,19 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
             threadRoot: self::referenceOrNull($post->node('record')->node('reply')->node('root')),
             canReply: !$post->node('viewer')->isTrue('replyDisabled'),
             canQuote: !$post->node('viewer')->isTrue('embeddingDisabled'),
+            preview: self::previewOf($post),
+        );
+    }
+
+    private static function previewOf(JsonNodeModel $post): PostPreviewModel
+    {
+        $author = $post->node('author');
+        $handle = $author->string('handle');
+
+        return new PostPreviewModel(
+            BlueskyAuthor::name($author),
+            null === $handle ? null : '@' . $handle,
+            $post->node('record')->text('text') ?? '',
         );
     }
 

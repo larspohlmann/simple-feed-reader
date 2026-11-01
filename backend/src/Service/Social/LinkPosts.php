@@ -21,6 +21,7 @@ use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\ComposerContextModel;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\LinkPostModel;
+use App\Service\Social\Model\LinkTargetModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Url\UrlNormalizer;
 use Psr\Container\ContainerInterface;
@@ -33,27 +34,39 @@ final readonly class LinkPosts
         private SocialAccountForUser $accountsForUser,
         private UrlNormalizer $urls,
         private PostWriting $writing,
+        private SharedPostQuotes $quotes,
         #[AutowireLocator('app.social_composer_defaults', defaultIndexMethod: 'network')]
         private ContainerInterface $defaults,
     ) {
     }
 
     /**
+     * @throws SocialPostRefusedException when the URL is no link to share
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNotFoundException
      * @throws SocialAccountNeedsReconnectException
+     * @throws SocialCredentialsRejectedException
      */
-    public function contextFor(User $user, SocialNetwork $network, ?int $accountId): ComposerContextModel
+    public function contextFor(User $user, LinkTargetModel $target): ComposerContextModel
     {
-        $connected = $this->socialAccounts->findConnectedOnNetwork($user, $network);
-        $account = null === $accountId
-            ? ($connected[0] ?? throw self::noAccountOn($network))
-            : $this->accountsForUser->requireConnectedOn($user, $accountId, $network);
+        $url = $this->sharable($target->url);
+        $connected = $this->socialAccounts->findConnectedOnNetwork($user, $target->network);
+        $account = null === $target->accountId
+            ? ($connected[0] ?? throw self::noAccountOn($target->network))
+            : $this->accountsForUser->requireConnectedOn($user, $target->accountId, $target->network);
 
-        return new ComposerContextModel($connected, $account, canSend: true, defaults: $this->defaultsOf($account));
+        return new ComposerContextModel(
+            $connected,
+            $account,
+            canSend: true,
+            defaults: $this->defaultsOf($account),
+            quote: $this->quotes->quotableAt($account, $url)?->responseContext->preview,
+        );
     }
 
     /**
+     * Quotes the post the URL names on the network it goes to, else shares the URL as a link.
+     *
      * @throws SocialPostRefusedException when the URL is no link to share
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNotFoundException
@@ -66,11 +79,13 @@ final readonly class LinkPosts
      */
     public function share(User $user, LinkPostModel $post): PublishedPostModel
     {
-        $url = $this->urls->normalize($post->url)
-            ?? throw new SocialPostRefusedException('This is no link to share.');
-        $account = $this->actingAccount($user, $post->network, $post->accountId);
+        $url = $this->sharable($post->target->url);
+        $account = $this->actingAccount($user, $post->target);
+        $quoted = $this->quotes->quotableAt($account, $url);
 
-        return $this->writing->share($account, $url, $post->draft);
+        return null === $quoted
+            ? $this->writing->share($account, $url, $post->draft)
+            : $this->writing->quote($quoted, $post->draft);
     }
 
     /**
@@ -78,13 +93,20 @@ final readonly class LinkPosts
      * @throws SocialAccountNotFoundException
      * @throws SocialAccountNeedsReconnectException
      */
-    private function actingAccount(User $user, SocialNetwork $network, ?int $accountId): SocialAccount
+    private function actingAccount(User $user, LinkTargetModel $target): SocialAccount
     {
-        if (null !== $accountId) {
-            return $this->accountsForUser->requireConnectedOn($user, $accountId, $network);
+        if (null !== $target->accountId) {
+            return $this->accountsForUser->requireConnectedOn($user, $target->accountId, $target->network);
         }
 
-        return $this->socialAccounts->findReadyActingOnNetwork($user, $network) ?? throw self::noAccountOn($network);
+        return $this->socialAccounts->findReadyActingOnNetwork($user, $target->network)
+            ?? throw self::noAccountOn($target->network);
+    }
+
+    /** @throws SocialPostRefusedException */
+    private function sharable(string $url): string
+    {
+        return $this->urls->normalize($url) ?? throw new SocialPostRefusedException('This is no link to share.');
     }
 
     private static function noAccountOn(SocialNetwork $network): NoSocialAccountForNetworkException

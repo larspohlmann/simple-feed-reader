@@ -18,6 +18,7 @@ final readonly class ResponseContextModel
         public ?string $visibility = null,
         public bool $canReply = true,
         public bool $canQuote = true,
+        public PostPreviewModel $preview = new PostPreviewModel(),
     ) {
     }
 

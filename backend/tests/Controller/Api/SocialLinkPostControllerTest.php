@@ -23,10 +23,15 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     private const string INSTANCE = 'GET https://mastodon.example/api/v2/instance';
     private const string OWN_ACCOUNT = 'GET https://mastodon.example/api/v1/accounts/verify_credentials';
     private const string STATUSES = 'POST https://mastodon.example/api/v1/statuses';
-    private const string LINK_COMPOSER = '/api/social/link-composer?network=';
+    private const string LINK_COMPOSER = '/api/social/link-composer?url=https%3A%2F%2Fexample.com%2Farticle&network=';
+    private const string STATUS_SEARCH = 'GET https://mastodon.example/api/v2/search?q='
+        . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
     private const string LINKS = '/api/social/links?network=';
     private const string ARTICLE_URL = 'https://example.com/article?id=7';
     private const string LINK_POST = 'https://mastodon.example/users/alice/statuses/202';
+    private const string LINK_POST_URL = 'https://mastodon.example/@alice/202';
+    private const string STATUS_COMPOSER = '/api/social/link-composer?network=mastodon'
+        . '&url=https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110';
     private const string IDEMPOTENCY_KEY = '9b2f6c1e-4a7d-4c1b-8f3e-2d5a6b7c8d9e';
 
     /** Must match framework.rate_limiter.social_writes.limit in rate_limiter.yaml. */
@@ -74,6 +79,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
             'mentions' => [],
+            'quote' => null,
         ], $this->payload($client));
     }
 
@@ -95,6 +101,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'maxCharacters' => BlueskyPostWriter::MAX_GRAPHEMES,
             'visibility' => null,
             'mentions' => [],
+            'quote' => null,
         ], $this->payload($client));
         self::assertSame([], $this->http->requests);
     }
@@ -106,10 +113,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, sprintf('link-network-%s@example.test', md5($query)));
         $this->mastodonAccountOf($user);
 
-        $client->request('GET', '/api/social/link-composer' . $query);
-        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        $client->request('GET', '/api/social/link-composer?url=' . rawurlencode(self::ARTICLE_URL) . $query);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $this->send($client, '/api/social/links' . $query, ['url' => self::ARTICLE_URL, 'text' => 'Hi']);
+        $this->send($client, '/api/social/links?' . $query, ['url' => self::ARTICLE_URL, 'text' => 'Hi']);
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
         self::assertSame([], $this->http->requests);
     }
@@ -118,7 +125,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     public static function missingNetworks(): iterable
     {
         yield 'no network' => [''];
-        yield 'unknown network' => ['?network=friendica'];
+        yield 'unknown network' => ['&network=friendica'];
     }
 
     public function testALinkPostIsPublishedOnMastodonWithTheComposersChoices(): void
@@ -181,6 +188,112 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         yield 'blank text' => [['url' => self::ARTICLE_URL, 'text' => '   ']];
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function unsharableComposerUrls(): iterable
+    {
+        yield 'no url' => [''];
+        yield 'no url at all' => ['&url=not+a+link'];
+        yield 'a host without tld' => ['&url=https%3A%2F%2Fintranet%2Fpage'];
+    }
+
+    #[DataProvider('unsharableComposerUrls')]
+    public function testTheLinkComposerNeedsASharableUrl(string $query): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, sprintf('link-composer-url-%s@example.test', md5($query)));
+        $this->mastodonAccountOf($user);
+
+        $client->request('GET', '/api/social/link-composer?network=mastodon' . $query);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame([], $this->http->requests);
+    }
+
+    public function testTheLinkComposerForAStatusOnTheAccountsNetworkShowsTheStatusItQuotes(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{}'),
+            self::OWN_ACCOUNT => new MockResponse('{}'),
+            self::STATUS_SEARCH => self::statuses(self::quotableStatus()),
+        ]);
+        $user = $this->signIn($client, 'link-composer-quote@example.test');
+        $this->mastodonAccountOf($user);
+
+        $client->request('GET', self::STATUS_COMPOSER);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['authorName' => 'Eugen', 'authorHandle' => '@Gargron@mastodon.social', 'excerpt' => 'Hello world'],
+            $this->payload($client)['quote'],
+        );
+    }
+
+    public function testAStatusSharedOnItsOwnNetworkIsQuoted(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::STATUS_SEARCH => self::statuses(self::quotableStatus()),
+            self::STATUSES => self::published(),
+        ]);
+        $user = $this->signIn($client, 'link-quote@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send($client, self::LINKS . 'mastodon', ['url' => self::MASTODON_POST_URL, 'text' => 'Look']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(['address' => self::LINK_POST, 'url' => self::LINK_POST_URL], $this->payload($client));
+        self::assertSame([self::STATUS_SEARCH, self::STATUSES], $this->routesAsked());
+        self::assertSame(
+            ['status' => 'Look', 'quoted_status_id' => '110'],
+            json_decode($this->http->requests[1]['body'], true),
+        );
+    }
+
+    /** @return iterable<string, array{MockResponse}> */
+    public static function unquotableStatuses(): iterable
+    {
+        yield 'the author forbids quoting' => [self::statuses(['id' => '110'])];
+        yield 'the instance cannot find it' => [new MockResponse('{"statuses":[]}')];
+        yield 'the instance is down' => [new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY])];
+    }
+
+    #[DataProvider('unquotableStatuses')]
+    public function testAStatusThatCannotBeQuotedIsSharedAsALink(MockResponse $search): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::STATUS_SEARCH => $search,
+            self::STATUSES => self::published(),
+        ]);
+        $user = $this->signIn($client, sprintf('link-unquotable-%s@example.test', spl_object_id($search)));
+        $this->mastodonAccountOf($user);
+
+        $this->send($client, self::LINKS . 'mastodon', ['url' => self::MASTODON_POST_URL, 'text' => 'Look']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame([self::STATUS_SEARCH, self::STATUSES], $this->routesAsked());
+        self::assertSame(['status' => 'Look'], json_decode($this->http->requests[1]['body'], true));
+    }
+
+    public function testABlueskyPostSharedOnMastodonIsALinkPostAndItsComposerQuotesNothing(): void
+    {
+        $blueskyPost = 'https://bsky.app/profile/bob.test/post/3abc';
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{}'),
+            self::OWN_ACCOUNT => new MockResponse('{}'),
+            self::STATUSES => self::published(),
+        ]);
+        $user = $this->signIn($client, 'link-cross-network@example.test');
+        $this->mastodonAccountOf($user);
+
+        $client->request('GET', '/api/social/link-composer?network=mastodon&url=' . rawurlencode($blueskyPost));
+        self::assertNull($this->payload($client)['quote']);
+
+        $this->send($client, self::LINKS . 'mastodon', ['url' => $blueskyPost, 'text' => 'Look']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame([self::INSTANCE, self::OWN_ACCOUNT, self::STATUSES], $this->routesAsked());
+        self::assertSame(['status' => 'Look'], json_decode($this->http->requests[2]['body'], true));
+    }
+
     public function testALinkPostDrawsOnTheWriteBudget(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
@@ -205,6 +318,35 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client->request('GET', self::LINK_COMPOSER . 'mastodon');
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    /** @return array<string, mixed> */
+    private static function quotableStatus(): array
+    {
+        return [
+            'id' => '110',
+            'quote_approval' => ['current_user' => 'automatic'],
+            'account' => [
+                'display_name' => 'Eugen',
+                'acct' => 'Gargron@mastodon.social',
+                'url' => 'https://mastodon.social/@Gargron',
+            ],
+            'content' => '<p>Hello <b>world</b></p>',
+        ];
+    }
+
+    /** @param array<string, mixed> $status */
+    private static function statuses(array $status): MockResponse
+    {
+        return new MockResponse(json_encode(['statuses' => [$status]], \JSON_THROW_ON_ERROR));
+    }
+
+    private static function published(): MockResponse
+    {
+        return new MockResponse(json_encode(
+            ['id' => '202', 'uri' => self::LINK_POST, 'url' => self::LINK_POST_URL],
+            \JSON_THROW_ON_ERROR,
+        ));
     }
 
     /** @param array<string, string> $body */

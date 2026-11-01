@@ -1,10 +1,10 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
-  <app-overlay-panel fillOnMobile [heading]="headingKey | transloco">
-    <app-compose-target [target]="target" />
+  <app-overlay-panel fillOnMobile [heading]="headingKey() | transloco">
+    <app-compose-target [target]="shown()" />
 
     @if (state().status === 'loading') {
-      <app-skeleton [label]="copy + '.loading' | transloco" [rows]="2" />
+      <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
     }
     @if (loadError(); as message) {
       <app-error-banner
@@ -20,7 +20,7 @@
       }
 
       @if (context.accounts.length > 1) {
-        <app-field [label]="copy + '.account' | transloco">
+        <app-field [label]="copy() + '.account' | transloco">
           <select id="reply-account" (change)="chooseAccount($event)">
             @for (account of context.accounts; track account.id) {
               <option [value]="account.id" [selected]="account.id === context.accountId">
@@ -31,7 +31,7 @@
         </app-field>
       }
 
-      <app-field [label]="copy + '.text' | transloco">
+      <app-field [label]="copy() + '.text' | transloco">
         <textarea
           #textField
           id="reply-text"
@@ -101,7 +101,7 @@
       [loading]="sending()"
       [disabled]="!canSend()"
     >
-      {{ copy + '.send' | transloco }}
+      {{ copy() + '.send' | transloco }}
     </app-button>
   </app-overlay-panel>
 </form>

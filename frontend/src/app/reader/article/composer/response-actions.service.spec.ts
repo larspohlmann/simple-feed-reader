@@ -27,7 +27,6 @@ describe('ResponseActions', () => {
   let dialog: { open: jest.Mock };
   let actions: ResponseActions;
 
-  const sent: SentPost = { address: 'https://x/9', url: null, text: 'Hi', authorHandle: '@a' };
   const target: ResponseComposeTarget = {
     kind: 'reply',
     entryId: 7,
@@ -36,6 +35,13 @@ describe('ResponseActions', () => {
     authorName: null,
     authorHandle: null,
     excerpt: '',
+  };
+  const sent: SentPost = {
+    address: 'https://x/9',
+    url: null,
+    text: 'Hi',
+    authorHandle: '@a',
+    shown: target,
   };
   const comment = (depth: number): EntryCommentDto =>
     anEntryComment({
@@ -88,7 +94,7 @@ describe('ResponseActions', () => {
 
   it('counts a quote of the post there and shows what was posted, leaving the thread alone', () => {
     const quote: ResponseComposeTarget = { ...target, kind: 'quote' };
-    const posted = { ...sent, url: 'https://x.test/@a/9' };
+    const posted: SentPost = { ...sent, url: 'https://x.test/@a/9', shown: quote };
     composer.open.mockReturnValue(of(posted));
 
     actions.respond(quote);
@@ -97,7 +103,7 @@ describe('ResponseActions', () => {
     expect(counts.stepQuotes).toHaveBeenCalledWith(7);
     expect(dialog.open).toHaveBeenCalledWith(
       PostSentDialogComponent,
-      expect.objectContaining({ data: { target: quote, sent: posted } }),
+      expect.objectContaining({ data: posted }),
     );
   });
 
@@ -120,6 +126,9 @@ describe('ResponseActions', () => {
       prefill: 'A story',
     };
 
+    const posted: SentPost = { ...sent, shown: link };
+    composer.open.mockReturnValue(of(posted));
+
     actions.respond(link);
 
     expect(composer.open).toHaveBeenCalledWith(link);
@@ -129,7 +138,7 @@ describe('ResponseActions', () => {
     expect(counts.stepQuotes).not.toHaveBeenCalled();
     expect(dialog.open).toHaveBeenCalledWith(
       PostSentDialogComponent,
-      expect.objectContaining({ data: { target: link, sent } }),
+      expect.objectContaining({ data: posted }),
     );
   });
 

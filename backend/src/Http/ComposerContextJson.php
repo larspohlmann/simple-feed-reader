@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Model\ComposerContextModel;
+use App\Service\Social\Model\PostPreviewModel;
 
 final class ComposerContextJson
 {
@@ -17,6 +18,7 @@ final class ComposerContextJson
      *     maxCharacters: int,
      *     visibility: string|null,
      *     mentions: list<string>,
+     *     quote: array{authorName: string|null, authorHandle: string|null, excerpt: string}|null,
      * }
      */
     public static function of(ComposerContextModel $context): array
@@ -34,6 +36,17 @@ final class ComposerContextJson
             'maxCharacters' => $context->defaults->maxCharacters,
             'visibility' => $context->defaults->visibility,
             'mentions' => $context->defaults->mentions,
+            'quote' => null === $context->quote ? null : self::previewOf($context->quote),
+        ];
+    }
+
+    /** @return array{authorName: string|null, authorHandle: string|null, excerpt: string} */
+    private static function previewOf(PostPreviewModel $preview): array
+    {
+        return [
+            'authorName' => $preview->authorName,
+            'authorHandle' => $preview->authorHandle,
+            'excerpt' => $preview->excerpt,
         ];
     }
 }

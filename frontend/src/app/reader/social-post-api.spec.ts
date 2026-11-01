@@ -158,16 +158,21 @@ describe('SocialPostApi', () => {
     ctrl.expectOne(`https://api.test/api/entries/7/social/replies?address=${REPLY}`).flush({});
   });
 
-  it('GETs the composer context for a link post on a network, on a chosen account', () => {
+  it('GETs the composer context for the shared URL on a network, on a chosen account', () => {
+    const composerPath = 'https://api.test/api/social/link-composer';
     api.composer({ kind: 'link', network: 'bluesky', url: SHARED_URL }).subscribe();
-    expect(
-      ctrl.expectOne('https://api.test/api/social/link-composer?network=bluesky').request.method,
-    ).toBe('GET');
+    const bluesky = ctrl.expectOne((request) => request.url === composerPath);
+    expect(bluesky.request.method).toBe('GET');
+    expect(bluesky.request.params.get('network')).toBe('bluesky');
+    expect(bluesky.request.params.get('url')).toBe(SHARED_URL);
+    expect(bluesky.request.params.has('accountId')).toBe(false);
+    bluesky.flush({});
 
     api.composer({ kind: 'link', network: 'mastodon', url: SHARED_URL }, 4).subscribe();
-    ctrl
-      .expectOne('https://api.test/api/social/link-composer?network=mastodon&accountId=4')
-      .flush({});
+    const mastodon = ctrl.expectOne((request) => request.url === composerPath);
+    expect(mastodon.request.params.get('network')).toBe('mastodon');
+    expect(mastodon.request.params.get('accountId')).toBe('4');
+    mastodon.flush({});
   });
 
   it('POSTs a link post of the shared URL on the network it names', () => {

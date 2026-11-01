@@ -9,6 +9,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\PostResolver\MastodonPostResolver;
 use App\Tests\Support\RoutedHttpClient;
@@ -100,6 +101,28 @@ final class MastodonPostResolverTest extends TestCase
     {
         yield 'local' => [['acct' => 'Alice', 'url' => 'https://mastodon.example/@Alice'], 'alice@mastodon.example'];
         yield 'remote' => [['acct' => 'ann@hachyderm.io', 'url' => 'https://hachyderm.io/@ann'], 'ann@hachyderm.io'];
+    }
+
+    public function testAStatusIsPreviewedByItsAuthorAndPlainText(): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([[
+            'id' => '109876',
+            'account' => ['display_name' => 'Ann', 'acct' => 'ann@hachyderm.io', 'url' => 'https://hachyderm.io/@ann'],
+            'content' => '<p>Hello <b>world</b></p><p>&amp; more</p>',
+        ]])]);
+
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+
+        self::assertEquals(new PostPreviewModel('Ann', '@ann@hachyderm.io', 'Hello world & more'), $context->preview);
+    }
+
+    public function testAStatusWithoutAuthorOrContentIsPreviewedEmpty(): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876']])]);
+
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+
+        self::assertEquals(new PostPreviewModel(), $context->preview);
     }
 
     public function testAStatusWithoutAccountVisibilityOrQuoteApprovalNamesNeitherAndTakesNoQuote(): void

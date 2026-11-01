@@ -5,13 +5,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { ComposeTargetComponent } from './compose-target.component';
-import { ComposeTarget, SentPost } from './composer-dialog.component';
-
-/** A post published outside the thread, and what it shared or quoted. */
-export interface PostSent {
-  target: ComposeTarget;
-  sent: SentPost;
-}
+import { SentPost } from './composer-dialog.component';
 
 /** Shows a just-published link post or quote as it went out, with a way to open it on the network. */
 @Component({
@@ -29,8 +23,8 @@ export interface PostSent {
 })
 export class PostSentDialogComponent {
   protected readonly ref = inject(DialogRef);
-  protected readonly posted = inject<PostSent>(DIALOG_DATA);
-  protected readonly headingKey = `reader.posted.${this.posted.target.kind}.${this.posted.target.network}`;
+  protected readonly posted = inject<SentPost>(DIALOG_DATA);
+  protected readonly headingKey = `reader.posted.${this.posted.shown.kind}.${this.posted.shown.network}`;
 
   protected open(url: string): void {
     window.open(url, '_blank', 'noopener');

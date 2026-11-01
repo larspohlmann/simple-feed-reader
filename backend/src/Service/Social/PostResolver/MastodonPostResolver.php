@@ -10,12 +10,14 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonAuthor;
 use App\Service\Social\Support\MastodonQuoting;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\PostCounts;
+use App\Service\Text\Support\PlainText;
 
 /** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */
 final readonly class MastodonPostResolver implements PostResolverInterface
@@ -53,6 +55,19 @@ final readonly class MastodonPostResolver implements PostResolverInterface
             authorIdentity: MastodonAuthor::identity($status->node('account')),
             visibility: $status->string('visibility'),
             canQuote: MastodonQuoting::allows($status),
+            preview: self::previewOf($status),
+        );
+    }
+
+    private static function previewOf(JsonNodeModel $status): PostPreviewModel
+    {
+        $author = $status->node('account');
+        $handle = MastodonAuthor::handle($author);
+
+        return new PostPreviewModel(
+            MastodonAuthor::name($author),
+            null === $handle ? null : '@' . $handle,
+            PlainText::fromHtmlBlocks($status->string('content')) ?? '',
         );
     }
 

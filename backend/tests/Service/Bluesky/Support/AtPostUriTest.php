@@ -57,4 +57,37 @@ final class AtPostUriTest extends TestCase
         yield 'a web url' => ['https://bsky.app/profile/ann.test/post/3k', null];
         yield 'another record kind' => ['at://ann.test/app.bsky.feed.repost/3k', null];
     }
+
+    #[DataProvider('webUrls')]
+    public function testAPostsWebUrlNamesItsPostByTheAuthorityItShows(string $url, ?string $uri): void
+    {
+        self::assertSame($uri, AtPostUri::ofWebUrl($url));
+    }
+
+    /** @return iterable<string, array{string, string|null}> */
+    public static function webUrls(): iterable
+    {
+        yield 'by handle' => ['https://bsky.app/profile/ann.test/post/3k', 'at://ann.test/app.bsky.feed.post/3k'];
+        yield 'by did' => [
+            'https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3mxhdhodv222n',
+            self::POST,
+        ];
+        yield 'with a trailing slash and query' => [
+            'https://www.bsky.app/profile/ann.test/post/3k/?ref=share',
+            'at://ann.test/app.bsky.feed.post/3k',
+        ];
+        yield 'a post\'s likes page' => ['https://bsky.app/profile/ann.test/post/3k/liked-by', null];
+        yield 'a profile' => ['https://bsky.app/profile/ann.test', null];
+        yield 'another host' => ['https://bsky.example/profile/ann.test/post/3k', null];
+        yield 'an at uri' => [self::POST, null];
+    }
+
+    public function testAPostCanBeNamedByAnotherAuthority(): void
+    {
+        self::assertSame(
+            'at://did:plc:ann/app.bsky.feed.post/3k',
+            AtPostUri::withAuthority('at://ann.test/app.bsky.feed.post/3k', 'did:plc:ann'),
+        );
+        self::assertSame('https://ann.test/3k', AtPostUri::withAuthority('https://ann.test/3k', 'did:plc:ann'));
+    }
 }

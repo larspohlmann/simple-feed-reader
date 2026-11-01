@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model;
 
-use App\Enum\SocialNetwork;
-
-/** A URL posted on its own, by the chosen account or the network's default one. */
+/** A URL posted on its own, or as a quote when it names a post on the network it goes to. */
 final readonly class LinkPostModel
 {
     public function __construct(
-        public SocialNetwork $network,
-        public ?int $accountId,
-        public string $url,
+        public LinkTargetModel $target,
         public PostDraftModel $draft,
     ) {
     }

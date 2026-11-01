@@ -150,6 +150,35 @@ final class SocialPostAddressTest extends TestCase
         yield 'an at-uri under a mastodon post' => [SocialNetwork::Mastodon, self::POST_URI];
     }
 
+    #[DataProvider('sharedUrls')]
+    public function testASharedUrlNamesThePostItShows(string $url, ?SocialPostAddressModel $expected): void
+    {
+        self::assertEquals($expected, SocialPostAddress::ofUrl($url));
+    }
+
+    /** @return iterable<string, array{string, SocialPostAddressModel|null}> */
+    public static function sharedUrls(): iterable
+    {
+        yield 'a bluesky web url' => [
+            'https://bsky.app/profile/bob.test/post/3abc',
+            new SocialPostAddressModel(SocialNetwork::Bluesky, 'at://bob.test/app.bsky.feed.post/3abc'),
+        ];
+        yield 'a bluesky at uri' => [
+            self::POST_URI,
+            new SocialPostAddressModel(SocialNetwork::Bluesky, self::POST_URI),
+        ];
+        yield 'a mastodon status url' => [
+            self::STATUS_URL,
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
+        ];
+        yield 'a mastodon status uri' => [
+            self::STATUS_URI,
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URI),
+        ];
+        yield 'an article' => ['https://news.example/article?id=7', null];
+        yield 'a mastodon profile' => ['https://mastodon.social/@Gargron', null];
+    }
+
     private static function postOn(SocialNetwork $network): Entry
     {
         $feed = new Feed('https://social.example/feed');

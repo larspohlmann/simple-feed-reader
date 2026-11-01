@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ComposerContextDto, PublishedPostDto } from '../../entry-social';
+import { ComposerContextDto, PublishedPostDto, QuotedPostDto } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
 import {
   ComposerDialogComponent,
@@ -13,6 +13,11 @@ import {
 } from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
+const QUOTED: QuotedPostDto = {
+  authorName: 'Ann',
+  authorHandle: '@ann@hachyderm.io',
+  excerpt: 'What do you think?',
+};
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
@@ -25,6 +30,7 @@ describe('ComposerDialogComponent', () => {
     maxCharacters: 500,
     visibility: 'unlisted',
     mentions: ['@ann@hachyderm.io'],
+    quote: null,
     ...overrides,
   });
 
@@ -231,6 +237,7 @@ describe('ComposerDialogComponent', () => {
       url: null,
       text: '@ann@hachyderm.io Agreed',
       authorHandle: '@alice@mastodon.example',
+      shown: target(),
     });
   });
 
@@ -379,6 +386,36 @@ describe('ComposerDialogComponent', () => {
       );
     });
 
+    it('shows a post on its own network as the quote it becomes, with an empty text', () => {
+      api.composer.mockReturnValue(of(context({ mentions: [], quote: QUOTED })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+
+      const quoted = element(fixture).querySelector('.target')!;
+      expect(quoted.querySelector('.name')!.textContent).toContain('Ann');
+      expect(quoted.querySelector('.handle')!.textContent).toContain('@ann@hachyderm.io');
+      expect(quoted.querySelector('.excerpt')!.textContent).toContain('What do you think?');
+      expect(element(fixture).querySelector('.article')).toBeNull();
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Quote on Mastodon');
+      expect(sendButton(fixture).textContent?.trim()).toBe('Quote');
+      expect(textArea(fixture).value).toBe('');
+    });
+
+    it('sends the quote of a post on its own network to the link endpoint, closing with it shown', () => {
+      api.composer.mockReturnValue(of(context({ mentions: [], quote: QUOTED })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+      type(fixture, 'Look');
+
+      submit(fixture);
+
+      expect(api.send).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'link', url: 'https://mastodon.social/@ann/110' }),
+        expect.objectContaining({ text: 'Look' }),
+      );
+      expect(close).toHaveBeenCalledWith(
+        expect.objectContaining({ shown: { ...QUOTED, kind: 'quote', network: 'mastodon' } }),
+      );
+    });
+
     it('shows a card without an image or site when the article has none', () => {
       const fixture = mount(article({ imageUrl: null, site: '' }));
 
@@ -400,6 +437,30 @@ describe('ComposerDialogComponent', () => {
         5,
       );
       expect(textArea(fixture).value).toBe('');
+    });
+
+    it('starts the text with the prefill once the context arrives', () => {
+      const slow = new Subject<ComposerContextDto>();
+      api.composer.mockReturnValue(slow);
+      const fixture = mount(article());
+
+      slow.next(context({ mentions: [] }));
+      fixture.detectChanges();
+
+      expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
+    });
+
+    it('keeps what the reader wrote when a later context quotes', () => {
+      api.composer.mockReturnValue(of(context({ accounts, mentions: [] })));
+      const fixture = mount(article());
+      type(fixture, 'Mine');
+      api.composer.mockReturnValue(of(context({ accounts, mentions: [], quote: QUOTED })));
+      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(textArea(fixture).value).toBe('Mine');
     });
 
     it('sends the post as a link post', () => {

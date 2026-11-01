@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkComposeTarget, ResponseComposeTarget, SentPost } from './composer-dialog.component';
-import { PostSent, PostSentDialogComponent } from './post-sent-dialog.component';
+import { LinkComposeTarget, ShownPost, SentPost } from './composer-dialog.component';
+import { PostSentDialogComponent } from './post-sent-dialog.component';
 
 describe('PostSentDialogComponent', () => {
   const close = jest.fn();
@@ -16,11 +16,9 @@ describe('PostSentDialogComponent', () => {
     imageUrl: 'https://example.com/lead.jpg',
     prefill: '',
   };
-  const quote: ResponseComposeTarget = {
+  const quote: ShownPost = {
     kind: 'quote',
-    entryId: 7,
     network: 'mastodon',
-    address: null,
     authorName: 'Ann',
     authorHandle: '@ann@hachyderm.io',
     excerpt: 'What do you think?',
@@ -30,10 +28,11 @@ describe('PostSentDialogComponent', () => {
     url: 'https://bsky.app/profile/alice.test/post/9',
     text: 'Worth a read\nhttps://example.com/story',
     authorHandle: '@alice.test',
+    shown: link,
     ...overrides,
   });
 
-  function mount(posted: PostSent): HTMLElement {
+  function mount(posted: SentPost): HTMLElement {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -54,7 +53,7 @@ describe('PostSentDialogComponent', () => {
   afterEach(() => close.mockReset());
 
   it('shows a link post as sent, the account it went out as, and the article card', () => {
-    const element = mount({ target: link, sent: sent() });
+    const element = mount(sent());
 
     expect(element.querySelector('h1, h2')?.textContent).toContain('Posted on Bluesky');
     expect(element.querySelector('.account')?.textContent).toContain('As @alice.test');
@@ -69,14 +68,14 @@ describe('PostSentDialogComponent', () => {
   });
 
   it('offers no Open button when the network named no link', () => {
-    const element = mount({ target: link, sent: sent({ url: null }) });
+    const element = mount(sent({ url: null }));
 
     expect(buttonLabelled(element, 'Open post')).toBeUndefined();
     expect(buttonLabelled(element, 'Close')).toBeDefined();
   });
 
   it('shows a quote with the post it quoted', () => {
-    const element = mount({ target: quote, sent: sent() });
+    const element = mount(sent({ shown: quote }));
 
     expect(element.querySelector('h1, h2')?.textContent).toContain('Quote posted on Mastodon');
     const quoted = element.querySelector('.target')!;
@@ -87,7 +86,7 @@ describe('PostSentDialogComponent', () => {
 
   it('opens the post on the network in a new tab', () => {
     const open = jest.spyOn(window, 'open').mockImplementation(() => null);
-    const element = mount({ target: link, sent: sent() });
+    const element = mount(sent());
 
     buttonLabelled(element, 'Open post')!.click();
 
@@ -100,7 +99,7 @@ describe('PostSentDialogComponent', () => {
   });
 
   it('closes on Close', () => {
-    const element = mount({ target: link, sent: sent() });
+    const element = mount(sent());
 
     buttonLabelled(element, 'Close')!.click();
 

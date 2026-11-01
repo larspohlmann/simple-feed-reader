@@ -29,9 +29,17 @@ export interface EntryRepostDto {
 /** What the reader can do to the post beyond liking it, and has done. */
 export type PostActionsView = Omit<SocialViewerDto, 'isLiked'>;
 
+/** A post as the composer shows it above the text: who wrote it and how it starts. */
+export interface QuotedPostDto {
+  authorName: string | null;
+  authorHandle: string | null;
+  excerpt: string;
+}
+
 /**
- * The answer of `GET /api/entries/{id}/social/composer`: whether the author lets the reader reply or quote, as
- * asked, as whom, and where the text starts. `visibility` is null on Bluesky.
+ * The answer of `GET /api/entries/{id}/social/composer` and `GET /api/social/link-composer`: whether the author lets
+ * the reader reply or quote, as asked, as whom, and where the text starts. `visibility` is null on Bluesky; `quote`
+ * is the post a link post quotes instead, when its URL names one on the account's network, else null.
  */
 export interface ComposerContextDto {
   accounts: { id: number; handle: string }[];
@@ -40,6 +48,7 @@ export interface ComposerContextDto {
   maxCharacters: number;
   visibility: MastodonVisibility | null;
   mentions: string[];
+  quote: QuotedPostDto | null;
 }
 
 /** What the composer writes about its target post. */

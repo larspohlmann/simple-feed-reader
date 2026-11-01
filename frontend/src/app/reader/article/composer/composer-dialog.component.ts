@@ -30,6 +30,8 @@ import {
   PublishedPostDto,
   LinkTargetDto,
   PostDraftDto,
+  QuotedPostDto,
+  ResponseKind,
   ResponseTargetDto,
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
@@ -37,11 +39,8 @@ import { ComposeTargetComponent } from './compose-target.component';
 import { postLength } from './post-length';
 
 /** The post a reply or quote responds to, as the composer shows it above the text. */
-export interface ResponseComposeTarget extends ResponseTargetDto {
+export interface ResponseComposeTarget extends ResponseTargetDto, QuotedPostDto {
   network: SocialNetworkName;
-  authorName: string | null;
-  authorHandle: string | null;
-  excerpt: string;
 }
 
 /** The page a link post shares, as the composer shows it above the text, and where the text starts. */
@@ -54,10 +53,17 @@ export type LinkComposeTarget = LinkTargetDto & {
 
 export type ComposeTarget = ResponseComposeTarget | LinkComposeTarget;
 
-/** What the composer published, with what the panel needs to show it before the network does. */
+/** A post the composer answers or quotes, as it shows it. */
+export type ShownPost = QuotedPostDto & { kind: ResponseKind; network: SocialNetworkName };
+
+/** What the composer shows above the text: a link post that names a post on its network shows it as a quote. */
+export type ShownTarget = ShownPost | LinkComposeTarget;
+
+/** What the composer published, with what the panel and the sent overlay need to show it before the network does. */
 export interface SentPost extends PublishedPostDto {
   text: string;
   authorHandle: string | null;
+  shown: ShownTarget;
 }
 
 type ContextState =
@@ -95,17 +101,15 @@ export class ComposerDialogComponent {
   private readonly idempotencyKey = randomUuid();
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
-  protected readonly article = this.target.kind === 'link' ? this.target : null;
   protected readonly visibilities = MASTODON_VISIBILITIES;
-  /** Where the words that differ between a reply, a quote and a link post live. */
-  protected readonly copy = `reader.composer.${this.target.kind}`;
-  protected readonly headingKey = `reader.${this.target.kind}.${this.target.network}`;
   protected readonly forbiddenKey =
     this.target.kind === 'link'
       ? null
       : `reader.${this.target.kind}Forbidden.${this.target.network}`;
   protected readonly state = signal<ContextState>({ status: 'loading' });
-  protected readonly text = signal(this.article?.prefill ?? '');
+  protected readonly text = signal('');
+  /** Once the reader writes or clears the text, a later context no longer sets where it starts. */
+  private textTouched = false;
   protected readonly visibility = signal<MastodonVisibility | null>(null);
   /** Null while the reply carries no content warning. */
   protected readonly contentWarning = signal<string | null>(null);
@@ -123,6 +127,16 @@ export class ComposerDialogComponent {
     const state = this.state();
     return state.status === 'failed' ? state.message : null;
   });
+  protected readonly shown = computed<ShownTarget>(() => {
+    const quote = this.context()?.quote ?? null;
+    if (this.target.kind !== 'link' || quote === null) return this.target;
+    return { ...quote, kind: 'quote', network: this.target.network };
+  });
+  /** Where the words that differ between a reply, a quote and a link post live. */
+  protected readonly copy = computed(() => `reader.composer.${this.shown().kind}`);
+  protected readonly headingKey = computed(
+    () => `reader.${this.shown().kind}.${this.target.network}`,
+  );
   protected readonly used = computed(() => postLength(this.text(), this.target.network));
   protected readonly over = computed(() => {
     const max = this.context()?.maxCharacters;
@@ -160,10 +174,12 @@ export class ComposerDialogComponent {
   }
 
   protected write(event: Event): void {
+    this.textTouched = true;
     this.text.set(inputValue(event));
   }
 
   protected clear(): void {
+    this.textTouched = true;
     this.text.set('');
     this.textField()?.nativeElement.focus();
   }
@@ -201,14 +217,23 @@ export class ComposerDialogComponent {
   private adopt(context: ComposerContextDto): void {
     this.state.set({ status: 'ready', context });
     if (!this.visibilityChosen) this.visibility.set(context.visibility);
-    if (this.text() === '' && context.mentions.length > 0) {
-      this.text.set(context.mentions.join(' ') + ' ');
-    }
+    if (!this.textTouched) this.text.set(this.startingText(context));
+  }
+
+  /** A quote carries the link it was shared by, so a link post that quotes starts empty. */
+  private startingText(context: ComposerContextDto): string {
+    if (this.target.kind === 'link') return context.quote === null ? this.target.prefill : '';
+    return context.mentions.length > 0 ? context.mentions.join(' ') + ' ' : '';
   }
 
   private sentAs(published: PublishedPostDto, context: ComposerContextDto): SentPost {
     const account = context.accounts.find((candidate) => candidate.id === context.accountId);
-    return { ...published, text: this.text(), authorHandle: account?.handle ?? null };
+    return {
+      ...published,
+      text: this.text(),
+      authorHandle: account?.handle ?? null,
+      shown: this.shown(),
+    };
   }
 
   private draftFor(context: ComposerContextDto): PostDraftDto {

@@ -13,7 +13,7 @@ import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { ComposeTarget, ResponseComposeTarget, SentPost } from './composer-dialog.component';
 import { PostComposer } from './post-composer.service';
-import { PostSent, PostSentDialogComponent } from './post-sent-dialog.component';
+import { PostSentDialogComponent } from './post-sent-dialog.component';
 import { sentComment } from './sent-comment';
 
 /**
@@ -35,7 +35,7 @@ export class ResponseActions {
   respond(target: ComposeTarget): void {
     this.composer.open(target).subscribe((sent) => {
       if (sent === undefined) return;
-      if (target.kind === 'link') this.announce(target, sent);
+      if (target.kind === 'link') this.announce(sent);
       else if (target.kind === 'quote') this.quoted(target, sent);
       else this.replied(target, sent);
     });
@@ -49,13 +49,13 @@ export class ResponseActions {
   private quoted(target: ResponseComposeTarget, sent: SentPost): void {
     if (target.address === null) this.counts.stepQuotes(target.entryId);
     else this.comments.countQuote(target.entryId, target.address);
-    this.announce(target, sent);
+    this.announce(sent);
   }
 
-  private announce(target: ComposeTarget, sent: SentPost): void {
-    this.dialog.open<void, PostSent>(PostSentDialogComponent, {
+  private announce(sent: SentPost): void {
+    this.dialog.open<void, SentPost>(PostSentDialogComponent, {
       panelClass: 'app-dialog',
-      data: { target, sent },
+      data: sent,
     });
   }
 

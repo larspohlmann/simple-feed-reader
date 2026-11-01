@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\PostResolver;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\PostResolver\BlueskyPostResolver;
@@ -64,6 +65,29 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertFalse($context->canReply);
         self::assertFalse($context->canQuote);
         self::assertNull($context->visibility);
+    }
+
+    public function testAPostIsPreviewedByItsAuthorAndText(): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.test', 'displayName' => 'Bob'],
+            'record' => ['text' => 'Hello world'],
+        ]]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertEquals(new PostPreviewModel('Bob', '@bob.test', 'Hello world'), $context->preview);
+    }
+
+    public function testAPostWithoutAuthorOrTextIsPreviewedEmpty(): void
+    {
+        $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertEquals(new PostPreviewModel(), $context->preview);
     }
 
     public function testATopLevelPostIsItsOwnThreadRootAndTakesReplies(): void
