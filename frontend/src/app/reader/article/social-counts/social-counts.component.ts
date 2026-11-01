@@ -36,7 +36,7 @@ export class SocialCountsComponent {
   });
 
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
-  protected readonly repost = computed(() => this.loaded()?.repost ?? null);
+  protected readonly viewer = computed(() => this.loaded()?.actions ?? null);
   /** The loaded counts with the likes moved by a like given or taken back since they loaded. */
   protected readonly counts = computed<SocialCountsDto | null>(() => {
     const loaded = this.loaded();

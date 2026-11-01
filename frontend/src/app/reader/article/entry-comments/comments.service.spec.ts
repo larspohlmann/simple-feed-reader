@@ -41,6 +41,8 @@ describe('CommentsService', () => {
       isLiked: false,
       isReposted: false,
       canRepost: true,
+      canReply: true,
+      isOwn: false,
     };
     let likes: { likeComment: jest.Mock; unlikeComment: jest.Mock };
     let answer: Subject<{ isLiked: boolean }>;
@@ -115,6 +117,8 @@ describe('CommentsService', () => {
       isLiked: true,
       isReposted: false,
       canRepost: true,
+      canReply: true,
+      isOwn: false,
     };
     let reposts: { repostComment: jest.Mock; unrepostComment: jest.Mock };
     let answer: Subject<{ isReposted: boolean }>;

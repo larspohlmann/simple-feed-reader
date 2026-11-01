@@ -89,6 +89,8 @@ describe('EntryCommentsComponent', () => {
       isLiked: false,
       isReposted: false,
       canRepost: true,
+      canReply: true,
+      isOwn: false,
     };
     const likeButton = (element: HTMLElement) =>
       element.querySelector('.comment button.like') as HTMLButtonElement | null;

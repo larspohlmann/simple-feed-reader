@@ -3,8 +3,8 @@
     [network]="social.network"
     [counts]="counts()"
     [liked]="likeable() ? social.isLiked : null"
-    [reposted]="repost()?.isReposted ?? null"
-    [canRepost]="repost()?.canRepost ?? true"
+    [reposted]="viewer()?.isReposted ?? null"
+    [canRepost]="viewer()?.canRepost ?? true"
     (likeToggled)="actions.like(entry())"
     (repostToggled)="toggleRepost()"
   />

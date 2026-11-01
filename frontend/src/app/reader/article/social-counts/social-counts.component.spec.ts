@@ -5,7 +5,7 @@ import { anEntry } from '../../../../testing/entry-testing';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { Lang } from '../../../core/i18n/language';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { EntrySocialDto, RepostView, SocialCountsDto } from '../../entry-social';
+import { EntrySocialDto, PostActionsView, SocialCountsDto } from '../../entry-social';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { Problem } from '../../../core/problem';
 import { EntryDto } from '../../models';
@@ -58,12 +58,12 @@ describe('SocialCountsComponent', () => {
   const loaded = (
     counts: Partial<SocialCountsDto> = {},
     likedAtLoad = false,
-    repost: RepostView | null = null,
+    actions: PostActionsView | null = null,
   ): SocialCountsState => ({
     status: 'ok',
     counts: { ...COUNTS, ...counts },
     likedAtLoad,
-    repost,
+    actions,
     loadedAt: 0,
   });
 
@@ -211,7 +211,9 @@ describe('SocialCountsComponent', () => {
 
     it('turns the repost count into the first button once the network answers', () => {
       show(post());
-      const element = settle(loaded({}, false, { isReposted: false, canRepost: true }));
+      const element = settle(
+        loaded({}, false, { isReposted: false, canRepost: true, canReply: true }),
+      );
       const button = repostButton(element)!;
 
       expect(labels(element)).toEqual(['7 replies', '2 quotes']);
@@ -224,7 +226,7 @@ describe('SocialCountsComponent', () => {
     it('marks a reposted post', () => {
       show(post({ network: 'mastodon' }));
       const button = repostButton(
-        settle(loaded({}, false, { isReposted: true, canRepost: true })),
+        settle(loaded({}, false, { isReposted: true, canRepost: true, canReply: true })),
       )!;
 
       expect(button.getAttribute('aria-label')).toBe('Undo boost on Mastodon, 5 boosts');
@@ -234,7 +236,9 @@ describe('SocialCountsComponent', () => {
     it('reposts through the counts service and toasts what the network refused', () => {
       const entry = post();
       show(entry);
-      const element = settle(loaded({}, false, { isReposted: false, canRepost: true }));
+      const element = settle(
+        loaded({}, false, { isReposted: false, canRepost: true, canReply: true }),
+      );
       repostButton(element)!.click();
       fixture.detectChanges();
 

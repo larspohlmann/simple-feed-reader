@@ -2,7 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
-import { EntryLikeDto, EntryRepostDto, SocialCountsDto, SocialViewerDto } from './entry-social';
+import {
+  ComposerContextDto,
+  EntryLikeDto,
+  EntryRepostDto,
+  PublishedReplyDto,
+  ReplyDraftDto,
+  SocialCountsDto,
+  SocialViewerDto,
+} from './entry-social';
 import { refreshParams } from './refresh-params';
 
 /** What the reader sees of and does to an entry's network post, and to the replies in its thread. */
@@ -61,7 +69,43 @@ export class SocialPostApi {
     });
   }
 
+  /** `address` names a reply in the thread; without it the composer answers the entry's own post. */
+  composer(
+    entryId: number,
+    target: { address?: string; accountId?: number } = {},
+  ): Observable<ComposerContextDto> {
+    return this.http.get<ComposerContextDto>(this.entryPath(entryId, 'social/composer'), {
+      params: definedParams(target),
+    });
+  }
+
+  reply(
+    entryId: number,
+    address: string | null,
+    draft: ReplyDraftDto,
+  ): Observable<PublishedReplyDto> {
+    return this.http.post<PublishedReplyDto>(this.entryPath(entryId, 'social/replies'), draft, {
+      params: address === null ? {} : { address },
+    });
+  }
+
+  deleteReply(entryId: number, address: string): Observable<void> {
+    return this.http.delete<void>(this.entryPath(entryId, 'comments/reply'), {
+      params: { address },
+    });
+  }
+
   private entryPath(entryId: number, action: string): string {
     return `${this.base}/api/entries/${entryId}/${action}`;
   }
+}
+
+function definedParams(
+  values: Record<string, string | number | undefined>,
+): Record<string, string | number> {
+  return Object.fromEntries(
+    Object.entries(values).filter(
+      (pair): pair is [string, string | number] => pair[1] !== undefined,
+    ),
+  );
 }

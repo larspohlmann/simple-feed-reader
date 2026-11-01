@@ -17,6 +17,7 @@ export interface SocialViewerDto {
   isLiked: boolean;
   isReposted: boolean;
   canRepost: boolean;
+  canReply: boolean;
 }
 
 /** The answer of `PUT`/`DELETE /api/entries/{id}/repost` and of a reply's repost. */
@@ -24,7 +25,40 @@ export interface EntryRepostDto {
   isReposted: boolean;
 }
 
-export type RepostView = Omit<SocialViewerDto, 'isLiked'>;
+/** What the reader can do to the post beyond liking it, and has done. */
+export type PostActionsView = Omit<SocialViewerDto, 'isLiked'>;
+
+/**
+ * The answer of `GET /api/entries/{id}/social/composer`: who may answer the post, as whom, and where the text
+ * starts. `visibility` is null on Bluesky.
+ */
+export interface ComposerContextDto {
+  accounts: { id: number; handle: string }[];
+  accountId: number;
+  canReply: boolean;
+  maxCharacters: number;
+  visibility: MastodonVisibility | null;
+  mentions: string[];
+}
+
+export const MASTODON_VISIBILITIES = ['public', 'unlisted', 'private', 'direct'] as const;
+export type MastodonVisibility = (typeof MASTODON_VISIBILITIES)[number];
+
+/** The body of `POST /api/entries/{id}/social/replies`; the Mastodon-only fields are ignored on Bluesky. */
+export interface ReplyDraftDto {
+  text: string;
+  accountId: number;
+  language: string | null;
+  idempotencyKey: string;
+  visibility?: MastodonVisibility;
+  contentWarning?: string;
+}
+
+/** A reply the network took: its address in the thread and where a browser shows it. */
+export interface PublishedReplyDto {
+  address: string;
+  url: string | null;
+}
 
 /** The answer of `GET /api/entries/{id}/social`; `quotes` is null on Mastodon. */
 export interface SocialCountsDto {
