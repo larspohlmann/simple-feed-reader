@@ -27,4 +27,17 @@ final class DeletedPostTombstonesTest extends TestCase
         $clock->modify('+6 days');
         self::assertSame([], $tombstones->buriedIn(3));
     }
+
+    public function testAStoredEntryWithoutAnExpiryIsNoTombstone(): void
+    {
+        $clock = new MockClock('2026-11-01 12:00:00');
+        $cache = new ArrayAdapter();
+        $stored = $cache->getItem('deleted_posts.3');
+        $tomorrow = $clock->now()->modify('+1 day')->getTimestamp();
+        $cache->save($stored->set(['hash-a' => 'next week', 'hash-b' => $tomorrow]));
+
+        $tombstones = new DeletedPostTombstones($cache, $clock);
+
+        self::assertSame(['hash-b'], $tombstones->buriedIn(3));
+    }
 }
