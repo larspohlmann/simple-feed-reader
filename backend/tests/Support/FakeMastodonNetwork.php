@@ -11,6 +11,7 @@ use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialLikeResultModel;
+use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\PostLikerInterface;
 use App\Service\Social\PostWriter\PostWriterInterface;
@@ -136,6 +137,13 @@ final class FakeMastodonNetwork implements
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         $this->record('quote ' . $target->postId . ' ' . $draft->text);
+
+        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
+    }
+
+    public function share(SocialAccount $account, SharedLinkModel $link, PostDraftModel $draft): PublishedPostModel
+    {
+        $this->record('share ' . $link->url . ' ' . $draft->text);
 
         return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }

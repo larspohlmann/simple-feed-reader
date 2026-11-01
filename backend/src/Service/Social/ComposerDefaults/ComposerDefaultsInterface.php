@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\ComposerDefaults;
 
+use App\Entity\SocialAccount;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -19,4 +20,7 @@ interface ComposerDefaultsInterface
      * @param \Closure(): ?SocialPostModel $threadStarter the entry's own post, found only when a network asks for it
      */
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel;
+
+    /** Never fails, like defaultsFor(): the defaults of a post the account writes on its own, mentioning no one. */
+    public function forAccount(SocialAccount $account): ComposerDefaultsModel;
 }

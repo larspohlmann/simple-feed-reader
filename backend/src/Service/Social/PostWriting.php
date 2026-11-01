@@ -7,6 +7,7 @@ namespace App\Service\Social;
 use App\Entity\SocialAccount;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\PostWriterInterface;
 use Psr\Container\ContainerInterface;
@@ -23,12 +24,26 @@ final readonly class PostWriting
 
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->publishAs($target, static fn (PostWriterInterface $writer) => $writer->reply($target, $draft));
+        return $this->publishAs(
+            $target->account,
+            static fn (PostWriterInterface $writer) => $writer->reply($target, $draft),
+        );
     }
 
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->publishAs($target, static fn (PostWriterInterface $writer) => $writer->quote($target, $draft));
+        return $this->publishAs(
+            $target->account,
+            static fn (PostWriterInterface $writer) => $writer->quote($target, $draft),
+        );
+    }
+
+    public function share(SocialAccount $account, SharedLinkModel $link, PostDraftModel $draft): PublishedPostModel
+    {
+        return $this->publishAs(
+            $account,
+            static fn (PostWriterInterface $writer) => $writer->share($account, $link, $draft),
+        );
     }
 
     public function delete(SocialPostModel $ownPost): void
@@ -40,11 +55,11 @@ final readonly class PostWriting
     }
 
     /** @param \Closure(PostWriterInterface): PublishedPostModel $publish */
-    private function publishAs(SocialPostModel $target, \Closure $publish): PublishedPostModel
+    private function publishAs(SocialAccount $account, \Closure $publish): PublishedPostModel
     {
-        $writer = $this->writerOf($target->account);
+        $writer = $this->writerOf($account);
 
-        return $this->guard->actAs($target->account, static fn (): PublishedPostModel => $publish($writer));
+        return $this->guard->actAs($account, static fn (): PublishedPostModel => $publish($writer));
     }
 
     private function writerOf(SocialAccount $account): PostWriterInterface

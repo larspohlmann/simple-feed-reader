@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Model\ComposerDefaultsModel;
@@ -22,5 +23,10 @@ final class FakeComposerDefaults implements ComposerDefaultsInterface
         $threadStarterId = $threadStarter()->postId ?? 'no thread starter';
 
         return new ComposerDefaultsModel(500, 'public', [$target->postId, $threadStarterId]);
+    }
+
+    public function forAccount(SocialAccount $account): ComposerDefaultsModel
+    {
+        return new ComposerDefaultsModel(500, 'public');
     }
 }

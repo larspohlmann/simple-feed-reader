@@ -9,6 +9,7 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\MastodonPostWriter;
 use App\Tests\Support\RoutedHttpClient;
@@ -62,6 +63,29 @@ final class MastodonPostWriterTest extends TestCase
             json_decode($http->requests[0]['body'], true),
         );
         self::assertContains('Idempotency-Key: key-2', $http->requests[0]['headers']);
+        self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
+    }
+
+    public function testASharedLinkIsAStatusOfTheDraftAloneAnsweringAndQuotingNothing(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $published = $this->writer($http)->share(
+            SocialAccounts::mastodon(),
+            new SharedLinkModel('https://example.com/article', 'An article', 'A summary', null),
+            new PostDraftModel(
+                'Read this https://example.com/article',
+                visibility: 'unlisted',
+                language: 'de',
+                idempotencyKey: 'key-3',
+            ),
+        );
+
+        self::assertSame(
+            ['status' => 'Read this https://example.com/article', 'visibility' => 'unlisted', 'language' => 'de'],
+            json_decode($http->requests[0]['body'], true),
+        );
+        self::assertContains('Idempotency-Key: key-3', $http->requests[0]['headers']);
         self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
     }
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostWriter;
 
+use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\Social\BlueskyFacets;
+use App\Service\Social\BlueskyLinkCards;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
@@ -12,11 +14,14 @@ use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use App\Tests\Support\StubGuardedImageDownloader;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class BlueskyPostWriterTest extends TestCase
@@ -121,6 +126,40 @@ final class BlueskyPostWriterTest extends TestCase
         $this->writer(new RoutedHttpClient([]))->quote(self::post(), new PostDraftModel(str_repeat('a', 301)));
     }
 
+    public function testASharedLinkIsAPostWithTheLinksCardAndAnswersNothing(): void
+    {
+        $http = $this->creating();
+
+        $published = $this->writer($http)->share(
+            SocialApiWiring::blueskyAccount(),
+            self::link(),
+            new PostDraftModel('Read this #news https://example.com/article', language: 'en'),
+        );
+
+        $record = self::recordSent($http);
+        self::assertSame('Read this #news https://example.com/article', $record['text']);
+        self::assertSame([
+            '$type' => 'app.bsky.embed.external',
+            'external' => [
+                'uri' => 'https://example.com/article',
+                'title' => 'An article',
+                'description' => 'A summary',
+            ],
+        ], $record['embed']);
+        self::assertSame(['en'], $record['langs']);
+        self::assertIsArray($record['facets']);
+        self::assertArrayNotHasKey('reply', $record);
+        self::assertSame(self::REPLY_URI, $published->address);
+    }
+
+    public function testASharedLinkHoldsThreeHundredGraphemesToo(): void
+    {
+        $this->expectException(SocialPostTooLongException::class);
+
+        $this->writer(new RoutedHttpClient([]))
+            ->share(SocialApiWiring::blueskyAccount(), self::link(), new PostDraftModel(str_repeat('a', 301)));
+    }
+
     public function testAnAnswerWithoutTheNewPostsUriIsAnUnreachableNetwork(): void
     {
         $http = new RoutedHttpClient([
@@ -183,7 +222,18 @@ final class BlueskyPostWriterTest extends TestCase
         return new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
+            new BlueskyLinkCards(
+                new StubGuardedImageDownloader(),
+                $this->createStub(ImageResizerInterface::class),
+                SocialApiWiring::blueskySessions($http->client()),
+                new NullLogger(),
+            ),
         );
+    }
+
+    private static function link(): SharedLinkModel
+    {
+        return new SharedLinkModel('https://example.com/article', 'An article', 'A summary', null);
     }
 
     private static function post(): SocialPostModel
