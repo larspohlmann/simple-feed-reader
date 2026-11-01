@@ -139,6 +139,8 @@ final class BlueskyLinkCardsTest extends TestCase
     {
         yield 'a refused upload' => [Response::HTTP_BAD_REQUEST];
         yield 'an unreachable network' => [Response::HTTP_SERVICE_UNAVAILABLE];
+        yield 'a missing endpoint' => [Response::HTTP_NOT_FOUND];
+        yield 'a throttled network' => [Response::HTTP_TOO_MANY_REQUESTS];
     }
 
     #[DataProvider('uploadFailures')]

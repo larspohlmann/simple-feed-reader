@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Image\Exception\GuardedImageRejectedException;
 use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Image\Exception\ImageProcessingException;
 use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\SharedLinkModel;
 use Psr\Log\LoggerInterface;
@@ -53,10 +53,10 @@ final readonly class BlueskyLinkCards
         try {
             $blob = $this->uploaded($account, $link->imageUrl);
         } catch (
-            GuardedImageRejectedException
-            | GuardedImageUnavailableException
+            GuardedImageUnavailableException
             | ImageProcessingException
             | SocialNetworkUnreachableException
+            | SocialPostNotFoundException
             | SocialPostRefusedException $exception
         ) {
             $this->logger->debug('The link card goes out without a thumbnail.', [

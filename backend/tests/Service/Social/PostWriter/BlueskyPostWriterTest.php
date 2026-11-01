@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostWriter;
 
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\Social\BlueskyFacets;
 use App\Service\Social\BlueskyLinkCards;
@@ -152,12 +153,16 @@ final class BlueskyPostWriterTest extends TestCase
         self::assertSame(self::REPLY_URI, $published->address);
     }
 
-    public function testASharedLinkHoldsThreeHundredGraphemesToo(): void
+    public function testATooLongSharedLinkIsRefusedBeforeItsImageIsFetched(): void
     {
+        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
+        $downloader->expects($this->never())->method('download');
+        $link = new SharedLinkModel('https://example.com/article', 'An article', null, 'https://example.com/lead.jpg');
+
         $this->expectException(SocialPostTooLongException::class);
 
-        $this->writer(new RoutedHttpClient([]))
-            ->share(SocialApiWiring::blueskyAccount(), self::link(), new PostDraftModel(str_repeat('a', 301)));
+        $this->writerDownloadingWith(new RoutedHttpClient([]), $downloader)
+            ->share(SocialApiWiring::blueskyAccount(), $link, new PostDraftModel(str_repeat('a', 301)));
     }
 
     public function testAnAnswerWithoutTheNewPostsUriIsAnUnreachableNetwork(): void
@@ -219,11 +224,18 @@ final class BlueskyPostWriterTest extends TestCase
 
     private function writer(RoutedHttpClient $http): BlueskyPostWriter
     {
+        return $this->writerDownloadingWith($http, new StubGuardedImageDownloader());
+    }
+
+    private function writerDownloadingWith(
+        RoutedHttpClient $http,
+        GuardedImageDownloaderInterface $downloader,
+    ): BlueskyPostWriter {
         return new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
             new BlueskyLinkCards(
-                new StubGuardedImageDownloader(),
+                $downloader,
                 $this->createStub(ImageResizerInterface::class),
                 SocialApiWiring::blueskySessions($http->client()),
                 new NullLogger(),

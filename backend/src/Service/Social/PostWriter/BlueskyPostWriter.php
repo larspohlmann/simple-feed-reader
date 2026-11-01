@@ -38,12 +38,14 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
 
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($target->account, $draft, ['reply' => self::replyRefsOf($target)]);
+        return $this->published($target->account, $draft, static fn (): array => [
+            'reply' => self::replyRefsOf($target),
+        ]);
     }
 
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($target->account, $draft, ['embed' => [
+        return $this->published($target->account, $draft, static fn (): array => ['embed' => [
             '$type' => self::QUOTE_EMBED,
             'record' => BlueskyStrongRef::of($target),
         ]]);
@@ -51,7 +53,9 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
 
     public function share(SocialAccount $account, SharedLinkModel $link, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($account, $draft, ['embed' => $this->linkCards->cardOf($account, $link)]);
+        return $this->published($account, $draft, fn (): array => [
+            'embed' => $this->linkCards->cardOf($account, $link),
+        ]);
     }
 
     public function delete(SocialPostModel $ownPost): void
@@ -64,8 +68,8 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         $this->records->delete($ownPost->account, BlueskyRecords::POST_COLLECTION, $recordKey);
     }
 
-    /** @param array<string, mixed> $attachment a reply's refs, or the embed of a quote or a link */
-    private function published(SocialAccount $account, PostDraftModel $draft, array $attachment): PublishedPostModel
+    /** @param \Closure(): array<string, mixed> $attachment built only once the draft fits: a link card uploads */
+    private function published(SocialAccount $account, PostDraftModel $draft, \Closure $attachment): PublishedPostModel
     {
         if ((int) grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
             throw new SocialPostTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));
@@ -73,7 +77,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
 
         $uri = $this->records->createPost($account, [
             'text' => $draft->text,
-            ...$attachment,
+            ...$attachment(),
             ...$this->facetsOf($draft->text),
             ...(null === $draft->language ? [] : ['langs' => [$draft->language]]),
         ]);
