@@ -17,7 +17,7 @@ use App\Service\Social\Support\BlueskyRecordUri;
 
 final readonly class BlueskyPostReplier implements PostReplierInterface
 {
-    private const int MAX_GRAPHEMES = 300;
+    public const int MAX_GRAPHEMES = 300;
 
     public function __construct(
         private BlueskyRecords $records,

@@ -93,7 +93,7 @@ final class FakeMastodonNetwork implements
     {
         $this->record('resolve ' . $address);
         if (null !== $this->resolveHook) {
-            ($this->resolveHook)();
+            ($this->resolveHook)($account);
         }
         $post = SocialPostModel::onMastodon($account, self::STATUS_ID)
             ->withCounts($this->counts)

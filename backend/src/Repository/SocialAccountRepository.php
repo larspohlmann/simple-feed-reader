@@ -52,6 +52,16 @@ final class SocialAccountRepository extends ServiceEntityRepository
         return array_values($this->findBy(['user' => $user, 'network' => $network], ['id' => 'ASC']));
     }
 
+    /** @return list<SocialAccount> the default first, then by the age of the connection */
+    public function findConnectedOnNetwork(User $user, SocialNetwork $network): array
+    {
+        // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
+        return array_values($this->findBy(
+            ['user' => $user, 'network' => $network, 'status' => SocialAccountStatus::Connected],
+            self::ACTING_ORDER,
+        ));
+    }
+
     /** @return list<SocialNetwork> each network the user has an account on, once */
     public function networksOf(int $userId): array
     {
