@@ -6,17 +6,26 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Model\PublishedReplyModel;
+use App\Service\Social\Model\ReplyContextModel;
+use App\Service\Social\Model\ReplyDraftModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\PostLikerInterface;
+use App\Service\Social\PostReplier\PostReplierInterface;
 use App\Service\Social\PostReposter\PostReposterInterface;
 use App\Service\Social\PostResolver\PostResolverInterface;
 
 /** A Mastodon that resolves every address to status 110, records each call and can be told to fail. */
-final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInterface, PostReposterInterface
+final class FakeMastodonNetwork implements
+    PostResolverInterface,
+    PostLikerInterface,
+    PostReposterInterface,
+    PostReplierInterface
 {
     public const string STATUS_ID = '110';
+    public const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/120';
 
     /** @var list<string> */
     public array $calls = [];
@@ -32,6 +41,13 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
     private bool $canRepost = true;
 
     private ?\Closure $resolveHook = null;
+
+    private ReplyContextModel $replyContext;
+
+    public function __construct()
+    {
+        $this->replyContext = new ReplyContextModel();
+    }
 
     public static function network(): string
     {
@@ -63,6 +79,11 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
         $this->canRepost = false;
     }
 
+    public function knowsTheReplyContext(ReplyContextModel $replyContext): void
+    {
+        $this->replyContext = $replyContext;
+    }
+
     public function onResolve(\Closure $hook): void
     {
         $this->resolveHook = $hook;
@@ -74,7 +95,9 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
         if (null !== $this->resolveHook) {
             ($this->resolveHook)();
         }
-        $post = SocialPostModel::onMastodon($account, self::STATUS_ID)->withCounts($this->counts);
+        $post = SocialPostModel::onMastodon($account, self::STATUS_ID)
+            ->withCounts($this->counts)
+            ->inReplyContext($this->replyContext);
         $liked = null === $this->existingLikeId ? $post : $post->alreadyLikedAs($this->existingLikeId);
         $reposted = null === $this->existingRepostId ? $liked : $liked->alreadyRepostedAs($this->existingRepostId);
 
@@ -101,6 +124,18 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
     public function unrepost(SocialAccount $account, string $repostId): void
     {
         $this->record('unrepost ' . $repostId);
+    }
+
+    public function publish(SocialPostModel $target, ReplyDraftModel $draft): PublishedReplyModel
+    {
+        $this->record('reply ' . $target->postId . ' ' . $draft->text);
+
+        return new PublishedReplyModel(self::REPLY_URI, self::REPLY_URI);
+    }
+
+    public function delete(SocialPostModel $ownPost): void
+    {
+        $this->record('delete ' . $ownPost->postId);
     }
 
     private function record(string $call): void

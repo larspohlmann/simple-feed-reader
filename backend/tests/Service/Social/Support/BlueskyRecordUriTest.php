@@ -56,7 +56,7 @@ final class BlueskyRecordUriTest extends TestCase
             'at://did:plc:bob/app.bsky.feed.generator/news',
             'https://bsky.app/profile/did:plc:bob/feed/news',
         ];
-        yield 'no record' => ['at://did:plc:bob/app.bsky.feed.post/3l1', null];
+        yield 'a post' => ['at://did:plc:bob/app.bsky.feed.post/3l1', null];
         yield 'a like' => ['at://did:plc:bob/app.bsky.feed.like/3l1', null];
         yield 'a repost' => ['at://did:plc:bob/app.bsky.feed.repost/3l1', null];
     }
@@ -104,6 +104,21 @@ final class BlueskyRecordUriTest extends TestCase
         yield 'nothing' => [null, null];
     }
 
+    #[DataProvider('posts')]
+    public function testOnlyAPostRecordIsAPost(?string $uri, ?string $post): void
+    {
+        self::assertSame($post, BlueskyRecordUri::postOrNull($uri));
+    }
+
+    /** @return iterable<string, array{?string, ?string}> */
+    public static function posts(): iterable
+    {
+        $post = 'at://did:plc:alice/app.bsky.feed.post/3p1';
+        yield 'a post' => [$post, $post];
+        yield 'a repost' => ['at://did:plc:alice/app.bsky.feed.repost/3p1', null];
+        yield 'no uri' => [null, null];
+    }
+
     #[DataProvider('recordKeys')]
     public function testTheRecordKeyIsTheLastSegmentOfAKnownRecord(string $uri, ?string $recordKey): void
     {
@@ -116,7 +131,8 @@ final class BlueskyRecordUriTest extends TestCase
         yield 'a like' => ['at://did:plc:alice/app.bsky.feed.like/3lk2', '3lk2'];
         yield 'a list' => ['at://did:plc:alice/app.bsky.graph.list/3l1', '3l1'];
         yield 'a repost' => ['at://did:plc:alice/app.bsky.feed.repost/3rp1', '3rp1'];
-        yield 'a post' => ['at://did:plc:alice/app.bsky.feed.post/3lk2', null];
+        yield 'a post' => ['at://did:plc:alice/app.bsky.feed.post/3lk2', '3lk2'];
+        yield 'an unknown collection' => ['at://did:plc:alice/app.bsky.feed.threadgate/3lk2', null];
         yield 'no uri' => ['3lk2', null];
     }
 

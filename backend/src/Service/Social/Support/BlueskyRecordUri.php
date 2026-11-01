@@ -13,6 +13,7 @@ final class BlueskyRecordUri
     private const string FEED_GENERATOR = 'app.bsky.feed.generator';
     private const string LIKE = 'app.bsky.feed.like';
     private const string REPOST = 'app.bsky.feed.repost';
+    private const string POST = 'app.bsky.feed.post';
     private const string RECORD_KEY = '[A-Za-z0-9._~:-]{1,512}';
     private const int MAX_RECORD_LENGTH = 512;
 
@@ -35,6 +36,11 @@ final class BlueskyRecordUri
     public static function repostOrNull(?string $uri): ?string
     {
         return self::ofCollection($uri, self::REPOST);
+    }
+
+    public static function postOrNull(?string $uri): ?string
+    {
+        return self::ofCollection($uri, self::POST);
     }
 
     public static function recordKeyOf(string $uri): ?string
@@ -77,7 +83,7 @@ final class BlueskyRecordUri
 
     private static function isKnownCollection(string $collection): bool
     {
-        return \in_array($collection, [self::LIST, self::FEED_GENERATOR, self::LIKE, self::REPOST], true);
+        return \in_array($collection, [self::LIST, self::FEED_GENERATOR, self::LIKE, self::REPOST, self::POST], true);
     }
 
     private function __construct()

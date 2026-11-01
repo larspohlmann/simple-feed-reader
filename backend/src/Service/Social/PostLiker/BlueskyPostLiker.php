@@ -39,7 +39,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
 
     public function unlike(SocialAccount $account, string $likeId): void
     {
-        $recordKey = BlueskyRecordUri::recordKeyOf($likeId)
+        $recordKey = BlueskyRecordUri::recordKeyOf(BlueskyRecordUri::likeOrNull($likeId) ?? '')
             ?? throw new SocialPostRefusedException('The like to take back is no Bluesky like record.');
         $this->records->delete($account, self::LIKE_COLLECTION, $recordKey);
     }
