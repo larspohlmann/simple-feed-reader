@@ -291,6 +291,26 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertNull($rows[1]->enrichment->discussion);
     }
 
+    public function testMyOwnPostSaysSoAndSomeoneElsesDoesNot(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $ownFeed = new Feed('https://mastodon.example/@alice.rss');
+        $this->entityManager->persist($ownFeed);
+        $own = $this->postOn($ownFeed, 'https://mastodon.example/@alice/1');
+        $foreign = $this->postOn($this->mastodonFeed(), self::POST . '7');
+
+        $rows = $this->enrich([$this->row($own), $this->row($foreign)]);
+
+        self::assertEquals(
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, true, isOwn: true),
+            $rows[0]->enrichment->social,
+        );
+        self::assertEquals(
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, true),
+            $rows[1]->enrichment->social,
+        );
+    }
+
     public function testAnotherUsersLikeNeverShowsAsLiked(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));

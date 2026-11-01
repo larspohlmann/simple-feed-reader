@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\SocialAccount;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Comments\Support\SubstackPostAddress;
+use App\Service\Social\Support\PostAuthor;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
@@ -86,7 +88,11 @@ final readonly class EntryListRowEnricher
         if ([] === $postNetworks) {
             return [];
         }
-        $accountNetworks = $this->socialAccounts->networksOf($userId);
+        $accounts = $this->socialAccounts->findAllForUserId($userId);
+        $accountNetworks = array_map(
+            static fn (SocialAccount $account): SocialNetwork => $account->getNetwork(),
+            $accounts,
+        );
         $likeable = array_filter(
             $postNetworks,
             static fn (SocialNetwork $network): bool => \in_array($network, $accountNetworks, true),
@@ -99,6 +105,7 @@ final readonly class EntryListRowEnricher
                 $network,
                 isLiked: isset($likedIds[$entryId]),
                 canLike: isset($likeable[$entryId]),
+                isOwn: null !== PostAuthor::accountAmong($entries[$entryId], $accounts),
             );
         }
 

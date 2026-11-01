@@ -81,27 +81,21 @@ final class SocialAccountRepositoryTest extends DbTestCase
         self::assertSame(3, $this->repository()->countForUser($this->owner));
     }
 
-    public function testNetworksOfNamesEachNetworkOfTheUserOnce(): void
-    {
-        $this->persistAccount($this->owner, SocialNetwork::Bluesky, 'did:plc:one');
-        $this->persistAccount($this->owner, SocialNetwork::Bluesky, 'did:plc:two');
-        $this->persistAccount($this->stranger, SocialNetwork::Mastodon, 'bob@mastodon.example');
-        $this->entityManager->flush();
-
-        self::assertSame([SocialNetwork::Bluesky], $this->repository()->networksOf($this->owner->requireId()));
-        self::assertSame([], $this->repository()->networksOf($this->stranger->requireId() + 1000));
-    }
-
-    public function testNetworksOfListsEveryNetworkInOrder(): void
+    public function testFindAllForUserIdListsOnlyThatUsersAccountsByNetworkThenAge(): void
     {
         $this->persistAccount($this->owner, SocialNetwork::Mastodon, 'alice@mastodon.example');
         $this->persistAccount($this->owner, SocialNetwork::Bluesky, 'did:plc:one');
+        $this->persistAccount($this->stranger, SocialNetwork::Bluesky, 'did:plc:stranger');
         $this->entityManager->flush();
 
         self::assertSame(
-            [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
-            $this->repository()->networksOf($this->owner->requireId()),
+            ['did:plc:one', 'alice@mastodon.example'],
+            array_map(
+                static fn (SocialAccount $account): string => $account->getIdentity(),
+                $this->repository()->findAllForUserId($this->owner->requireId()),
+            ),
         );
+        self::assertSame([], $this->repository()->findAllForUserId($this->stranger->requireId() + 1000));
     }
 
     public function testTheDefaultAccountActsBeforeAnOlderOne(): void

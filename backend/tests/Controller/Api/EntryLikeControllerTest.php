@@ -63,7 +63,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertSame([self::SEARCH, self::FAVOURITE], $this->routesAsked());
         self::assertSame(1, $this->likeRows());
         self::assertSame(
-            ['network' => 'mastodon', 'isLiked' => true, 'canLike' => true],
+            ['network' => 'mastodon', 'isLiked' => true, 'canLike' => true, 'isOwn' => false],
             $this->socialOf($client, $entryId),
         );
     }
@@ -104,7 +104,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertSame([self::SEARCH, self::FAVOURITE, self::UNFAVOURITE], $this->routesAsked());
         self::assertSame(0, $this->likeRows());
         self::assertSame(
-            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => true],
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => true, 'isOwn' => false],
             $this->socialOf($client, $entryId),
         );
     }
@@ -151,7 +151,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_CONFLICT);
         self::assertSame('social_account_missing', $this->payload($client)['type']);
         self::assertSame(
-            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false],
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false, 'isOwn' => false],
             $this->socialOf($client, $entryId),
         );
     }
@@ -305,7 +305,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         $social = $entry['social'];
         self::assertTrue(null === $social || is_array($social));
 
-        /** @var array{network: string, isLiked: bool, canLike: bool}|null $social */
+        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool}|null $social */
         return $social;
     }
 
