@@ -73,6 +73,8 @@ services:
             tags: ['app.slideshow_recognizer']
         App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface:
             tags: ['app.platform_entry_rule']
+        App\Service\Url\EntryIdentityUrl\EntryIdentityUrlInterface:
+            tags: ['app.entry_identity_url']
         App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface:
             tags: ['app.share_link_feed']
         App\Service\Discovery\FeedOffer\FeedOfferInterface:
