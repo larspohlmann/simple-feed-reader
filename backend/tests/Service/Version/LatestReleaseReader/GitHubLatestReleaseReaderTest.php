@@ -135,11 +135,53 @@ final class GitHubLatestReleaseReaderTest extends TestCase
         self::assertSame(2, $client->getRequestsCount());
     }
 
-    private static function release(): MockResponse
+    public function testRefreshingReadsGitHubDespiteACachedRelease(): void
+    {
+        $client = new MockHttpClient([self::release('v1.4.2'), self::release('v1.4.3')]);
+        $reader = $this->reader($client);
+
+        $reader->read();
+        $refreshed = $reader->refresh();
+
+        self::assertSame('v1.4.3', $refreshed?->version);
+        self::assertSame('v1.4.3', $reader->read()?->version);
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    public function testAFailedRefreshKeepsTheCachedRelease(): void
+    {
+        $client = new MockHttpClient([self::release('v1.4.2'), new MockResponse('', ['error' => 'network down'])]);
+        $reader = $this->reader($client);
+
+        $reader->read();
+
+        self::assertSame('v1.4.2', $reader->refresh()?->version);
+        self::assertSame('v1.4.2', $reader->read()?->version);
+    }
+
+    public function testAFailedRefreshWithNothingCachedIsRetriedOnlyAfterFiveMinutes(): void
+    {
+        $client = new MockHttpClient([new MockResponse('', ['error' => 'network down']), self::release('v1.4.2')]);
+        $reader = $this->reader($client);
+
+        self::assertNull($reader->refresh());
+        self::assertNull($reader->read());
+        self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testRefreshingDoesNotReachGitHubWhenNoRepositoryIsConfigured(): void
+    {
+        $client = new MockHttpClient();
+
+        self::assertNull($this->reader($client, gitHubRepository: '')->refresh());
+        self::assertSame(0, $client->getRequestsCount());
+    }
+
+    private static function release(string $tag = 'v1.4.2'): MockResponse
     {
         return new MockResponse((string) json_encode([
-            'tag_name' => 'v1.4.2',
-            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
+            'tag_name' => $tag,
+            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/' . $tag,
         ]));
     }
 

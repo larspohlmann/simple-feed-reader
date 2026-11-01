@@ -34,6 +34,11 @@ final readonly class VersionReporters
             {
                 return $this->latest;
             }
+
+            public function refresh(): ?LatestReleaseModel
+            {
+                return $this->latest;
+            }
         };
 
         return new VersionReporter($releaseReader, $latestReader);

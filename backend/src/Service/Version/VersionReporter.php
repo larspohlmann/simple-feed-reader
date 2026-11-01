@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Version;
 
 use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
+use App\Service\Version\Model\LatestReleaseModel;
 use App\Service\Version\Model\SemanticVersionModel;
 use App\Service\Version\Model\VersionReportModel;
 use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
@@ -19,9 +20,17 @@ final readonly class VersionReporter
 
     public function report(): VersionReportModel
     {
-        $running = $this->releaseVersionReader->read();
-        $latest = $this->latestReleaseReader->read();
+        return $this->reportAgainst($this->latestReleaseReader->read());
+    }
 
+    public function freshReport(): VersionReportModel
+    {
+        return $this->reportAgainst($this->latestReleaseReader->refresh());
+    }
+
+    private function reportAgainst(?LatestReleaseModel $latest): VersionReportModel
+    {
+        $running = $this->releaseVersionReader->read();
         $updateAvailable = null !== $latest
             && SemanticVersionModel::isUpgrade($running->version, $latest->version);
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Version\LatestReleaseReader;
 
 use App\Service\Version\Model\LatestReleaseModel;
+use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -41,12 +42,36 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
 
         $item = $this->githubReleaseCache->getItem(self::CACHE_KEY);
         if ($item->isHit()) {
-            $cached = $item->get();
+            return self::cachedRelease($item);
+        }
 
-            return $cached instanceof LatestReleaseModel ? $cached : null;
+        return $this->remember($item, $this->fetch());
+    }
+
+    public function refresh(): ?LatestReleaseModel
+    {
+        if ('' === $this->gitHubRepository) {
+            return null;
         }
 
         $latest = $this->fetch();
+        $item = $this->githubReleaseCache->getItem(self::CACHE_KEY);
+        if (null === $latest && $item->isHit()) {
+            return self::cachedRelease($item);
+        }
+
+        return $this->remember($item, $latest);
+    }
+
+    private static function cachedRelease(CacheItemInterface $item): ?LatestReleaseModel
+    {
+        $cached = $item->get();
+
+        return $cached instanceof LatestReleaseModel ? $cached : null;
+    }
+
+    private function remember(CacheItemInterface $item, ?LatestReleaseModel $latest): ?LatestReleaseModel
+    {
         $item->set($latest);
         $item->expiresAfter(null === $latest ? self::FAILURE_TTL_SECONDS : self::RELEASE_TTL_SECONDS);
         $this->githubReleaseCache->save($item);
