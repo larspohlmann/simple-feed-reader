@@ -11,12 +11,12 @@ const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
-  let api: { composer: jest.Mock; reply: jest.Mock };
+  let api: { composer: jest.Mock; reply: jest.Mock; quote: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
     accounts: [{ id: 4, handle: '@alice@mastodon.example' }],
     accountId: 4,
-    canReply: true,
+    canSend: true,
     maxCharacters: 500,
     visibility: 'unlisted',
     mentions: ['@ann@hachyderm.io'],
@@ -24,6 +24,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   const target = (overrides: Partial<ComposeTarget> = {}): ComposeTarget => ({
+    kind: 'reply',
     entryId: 7,
     network: 'mastodon',
     address: REPLY,
@@ -69,13 +70,17 @@ describe('ComposerDialogComponent', () => {
     api = {
       composer: jest.fn(() => of(context())),
       reply: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
+      quote: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/2', url: null })),
     };
   });
 
   it('shows the post it answers and starts the text with the mentions', () => {
     const fixture = mount();
 
-    expect(api.composer).toHaveBeenCalledWith(7, REPLY, undefined);
+    expect(api.composer).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'reply', entryId: 7, address: REPLY }),
+      undefined,
+    );
     expect(element(fixture).querySelector('.target')!.textContent).toContain('What do you think?');
     expect(textArea(fixture).value).toBe('@ann@hachyderm.io ');
   });
@@ -103,7 +108,10 @@ describe('ComposerDialogComponent', () => {
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    expect(api.composer).toHaveBeenLastCalledWith(7, REPLY, 5);
+    expect(api.composer).toHaveBeenLastCalledWith(
+      expect.objectContaining({ entryId: 7, address: REPLY }),
+      5,
+    );
     expect(textArea(fixture).value).toBe('Kept');
   });
 
@@ -128,7 +136,10 @@ describe('ComposerDialogComponent', () => {
 
       (element(fixture).querySelector('app-error-banner button') as HTMLButtonElement).click();
 
-      expect(api.composer).toHaveBeenLastCalledWith(7, REPLY, 5);
+      expect(api.composer).toHaveBeenLastCalledWith(
+        expect.objectContaining({ entryId: 7, address: REPLY }),
+        5,
+      );
     });
 
     it('keeps a visibility the user chose over the next account default', () => {
@@ -254,10 +265,40 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('says so and sends nothing when the author takes no replies', () => {
-    api.composer.mockReturnValue(of(context({ canReply: false })));
+    api.composer.mockReturnValue(of(context({ canSend: false })));
     const fixture = mount(target({ network: 'bluesky' }));
 
     expect(element(fixture).textContent).toContain('The author limits who can reply');
+    expect(sendButton(fixture).disabled).toBe(true);
+  });
+
+  it('writes a quote under its own heading and sends it as a quote', () => {
+    api.composer.mockReturnValue(of(context({ mentions: [] })));
+    const fixture = mount(target({ kind: 'quote' }));
+    type(fixture, 'Worth reading');
+
+    expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Quote on Mastodon');
+    expect(sendButton(fixture).textContent?.trim()).toBe('Quote');
+    expect(api.composer).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'quote', entryId: 7, address: REPLY }),
+      undefined,
+    );
+    submit(fixture);
+
+    expect(api.quote).toHaveBeenCalledWith(
+      7,
+      REPLY,
+      expect.objectContaining({ text: 'Worth reading' }),
+    );
+    expect(api.reply).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/2' }));
+  });
+
+  it('says so and sends nothing when the author keeps the post from quotes', () => {
+    api.composer.mockReturnValue(of(context({ canSend: false })));
+    const fixture = mount(target({ kind: 'quote' }));
+
+    expect(element(fixture).textContent).toContain('You can’t quote this post');
     expect(sendButton(fixture).disabled).toBe(true);
   });
 

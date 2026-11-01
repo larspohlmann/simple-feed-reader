@@ -90,6 +90,15 @@ export class SocialCountsService {
     );
   }
 
+  /** A quotes count the network leaves out (Mastodon's) stays out. */
+  stepQuotes(entryId: number): void {
+    this.stateFor(entryId).update((state) =>
+      state.status === 'ok' && state.counts.quotes !== null
+        ? { ...state, counts: { ...state.counts, quotes: state.counts.quotes + 1 } }
+        : state,
+    );
+  }
+
   private stateFor(id: number): WritableSignal<SocialCountsState> {
     const state = this.states.get(id) ?? signal<SocialCountsState>({ status: 'idle' });
     this.states.delete(id);
@@ -120,6 +129,7 @@ export class SocialCountsService {
             isReposted: viewer.isReposted,
             canRepost: viewer.canRepost,
             canReply: viewer.canReply,
+            canQuote: viewer.canQuote,
           },
           loadedAt: Date.now(),
         });

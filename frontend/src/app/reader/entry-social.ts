@@ -18,6 +18,7 @@ export interface SocialViewerDto {
   isReposted: boolean;
   canRepost: boolean;
   canReply: boolean;
+  canQuote: boolean;
 }
 
 /** The answer of `PUT`/`DELETE /api/entries/{id}/repost` and of a reply's repost. */
@@ -29,16 +30,26 @@ export interface EntryRepostDto {
 export type PostActionsView = Omit<SocialViewerDto, 'isLiked'>;
 
 /**
- * The answer of `GET /api/entries/{id}/social/composer`: who may answer the post, as whom, and where the text
- * starts. `visibility` is null on Bluesky.
+ * The answer of `GET /api/entries/{id}/social/composer`: whether the author lets the reader reply or quote, as
+ * asked, as whom, and where the text starts. `visibility` is null on Bluesky.
  */
 export interface ComposerContextDto {
   accounts: { id: number; handle: string }[];
   accountId: number;
-  canReply: boolean;
+  canSend: boolean;
   maxCharacters: number;
   visibility: MastodonVisibility | null;
   mentions: string[];
+}
+
+/** What the composer writes about its target post. */
+export type ResponseKind = 'reply' | 'quote';
+
+/** A reply or quote of the entry's own post, or of a reply in its thread named by `address`. */
+export interface ResponseTargetDto {
+  kind: ResponseKind;
+  entryId: number;
+  address: string | null;
 }
 
 export const MASTODON_VISIBILITIES = ['public', 'unlisted', 'private', 'direct'] as const;

@@ -1,8 +1,8 @@
 import { EntryCommentDto } from '../../entry-comment';
-import { SentReply } from './composer-dialog.component';
+import { SentPost } from './composer-dialog.component';
 
 /** The reader's reply as the panel shows it until the network's thread includes it. */
-export function sentComment(sent: SentReply, publishedAt: Date): EntryCommentDto {
+export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto {
   return {
     author: null,
     authorHandle: sent.authorHandle,
@@ -23,6 +23,7 @@ export function sentComment(sent: SentReply, publishedAt: Date): EntryCommentDto
       isReposted: false,
       canRepost: true,
       canReply: true,
+      canQuote: true,
       isOwn: true,
     },
   };

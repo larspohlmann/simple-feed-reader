@@ -13,7 +13,9 @@
         "
         [reposted]="isReposted"
         [canRepost]="canRepost()"
+        [canQuote]="canQuote()"
         (toggled)="repostToggled.emit()"
+        (quoteRequested)="quoteRequested.emit()"
       />
     }
     @let replyGate = canReply();

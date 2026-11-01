@@ -46,7 +46,13 @@ describe('SocialPostApi', () => {
     let received: unknown;
     api.viewer(7).subscribe((viewer) => (received = viewer));
 
-    const viewer = { isLiked: true, isReposted: false, canRepost: true, canReply: true };
+    const viewer = {
+      isLiked: true,
+      isReposted: false,
+      canRepost: true,
+      canReply: true,
+      canQuote: true,
+    };
     const testRequest = ctrl.expectOne('https://api.test/api/entries/7/social/viewer');
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush(viewer);
@@ -107,16 +113,31 @@ describe('SocialPostApi', () => {
     testRequest.flush({});
   });
 
-  it('GETs the composer context for the post or a reply on a chosen account', () => {
-    api.composer(7, null).subscribe();
-    expect(ctrl.expectOne('https://api.test/api/entries/7/social/composer').request.method).toBe(
-      'GET',
-    );
+  it('GETs the composer context for a reply or quote of the post or a reply, on a chosen account', () => {
+    api.composer({ kind: 'reply', entryId: 7, address: null }).subscribe();
+    expect(
+      ctrl.expectOne('https://api.test/api/entries/7/social/composer?kind=reply').request.method,
+    ).toBe('GET');
 
-    api.composer(7, REPLY, 4).subscribe();
+    api.composer({ kind: 'quote', entryId: 7, address: REPLY }, 4).subscribe();
     ctrl
-      .expectOne(`https://api.test/api/entries/7/social/composer?address=${REPLY}&accountId=4`)
+      .expectOne(
+        `https://api.test/api/entries/7/social/composer?kind=quote&address=${REPLY}&accountId=4`,
+      )
       .flush({});
+  });
+
+  it('POSTs a quote of the post, or of a reply named by its address', () => {
+    const draft = { text: 'Look', accountId: 4, language: 'en', idempotencyKey: 'k-2' };
+    api.quote(7, null, draft).subscribe();
+
+    const toPost = ctrl.expectOne('https://api.test/api/entries/7/social/quotes');
+    expect(toPost.request.method).toBe('POST');
+    expect(toPost.request.body).toEqual(draft);
+    toPost.flush({ address: 'at://x', url: null });
+
+    api.quote(7, REPLY, draft).subscribe();
+    ctrl.expectOne(`https://api.test/api/entries/7/social/quotes?address=${REPLY}`).flush({});
   });
 
   it('POSTs a reply to the post, or to a reply named by its address', () => {

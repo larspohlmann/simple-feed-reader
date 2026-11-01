@@ -109,9 +109,11 @@
                   [reposted]="likeable() ? post.isReposted : null"
                   [canRepost]="post.canRepost"
                   [canReply]="likeable() ? post.canReply : null"
+                  [canQuote]="post.canQuote"
                   (likeToggled)="toggleLike(post)"
                   (repostToggled)="toggleRepost(post)"
-                  (replyRequested)="reply(social.network, c, post)"
+                  (replyRequested)="respond('reply', c, post)"
+                  (quoteRequested)="respond('quote', c, post)"
                 />
               }
             </li>

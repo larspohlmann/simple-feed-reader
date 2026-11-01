@@ -10,6 +10,7 @@ describe('PostComposer', () => {
     const dialog = { open: jest.fn(() => ({ closed: of(published) })) };
     TestBed.configureTestingModule({ providers: [{ provide: Dialog, useValue: dialog }] });
     const target: ComposeTarget = {
+      kind: 'reply',
       entryId: 7,
       network: 'bluesky',
       address: null,

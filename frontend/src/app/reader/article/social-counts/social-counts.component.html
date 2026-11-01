@@ -6,8 +6,10 @@
     [reposted]="viewer()?.isReposted ?? null"
     [canRepost]="viewer()?.canRepost ?? true"
     [canReply]="viewer()?.canReply ?? null"
+    [canQuote]="viewer()?.canQuote ?? true"
     (likeToggled)="actions.like(entry())"
     (repostToggled)="toggleRepost()"
-    (replyRequested)="reply(social.network)"
+    (replyRequested)="respond('reply', social.network)"
+    (quoteRequested)="respond('quote', social.network)"
   />
 }

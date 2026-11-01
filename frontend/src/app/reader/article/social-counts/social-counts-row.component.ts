@@ -33,9 +33,11 @@ export class SocialCountsRowComponent {
   readonly reposted = input<boolean | null>(null);
   readonly canRepost = input(true);
   readonly canReply = input<boolean | null>(null);
+  readonly canQuote = input(true);
   readonly likeToggled = output<void>();
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
+  readonly quoteRequested = output<void>();
 
   private readonly language = inject(LanguageService);
   private readonly compact = computed(

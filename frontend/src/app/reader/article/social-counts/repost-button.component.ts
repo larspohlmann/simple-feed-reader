@@ -24,8 +24,12 @@ const POSITIONS: ConnectedPosition[] = [
 ];
 
 const TOGGLE = 'toggle';
+const QUOTE = 'quote';
 
-/** A post's repost count as a button that opens the Repost menu; a refused repost stays visible, disabled. */
+/**
+ * A post's repost count as a button that opens the Repost / Quote menu; an action the network refuses stays in the
+ * menu, disabled with its reason, and the button itself is disabled only when it refuses both.
+ */
 @Component({
   selector: 'app-repost-button',
   imports: [TranslocoPipe, IconComponent, CdkConnectedOverlay, CdkOverlayOrigin, CdkTrapFocus],
@@ -41,7 +45,9 @@ export class RepostButtonComponent {
   readonly countLabel = input.required<string | null>();
   readonly reposted = input.required<boolean>();
   readonly canRepost = input.required<boolean>();
+  readonly canQuote = input.required<boolean>();
   readonly toggled = output<void>();
+  readonly quoteRequested = output<void>();
 
   private readonly i18n = inject(TranslocoService);
   private readonly screen = inject(LayoutService);
@@ -54,19 +60,27 @@ export class RepostButtonComponent {
   protected readonly actionKey = computed(
     () => `reader.${this.reposted() ? 'unrepost' : 'repost'}.${this.network()}`,
   );
+  protected readonly opens = computed(() => this.canRepost() || this.canQuote());
   protected readonly hintKey = computed(() =>
-    this.canRepost() ? this.actionKey() : `reader.repostForbidden.${this.network()}`,
+    this.opens() ? this.actionKey() : `reader.repostForbidden.${this.network()}`,
   );
 
   protected press(): void {
-    if (!this.canRepost()) return;
+    if (!this.opens()) return;
     if (this.screen.isCoarse()) this.openSheet();
     else this.open.update((open) => !open);
   }
 
   protected choose(): void {
+    if (!this.canRepost()) return;
     this.open.set(false);
     this.toggled.emit();
+  }
+
+  protected quote(): void {
+    if (!this.canQuote()) return;
+    this.open.set(false);
+    this.quoteRequested.emit();
   }
 
   protected step(event: KeyboardEvent): void {
@@ -78,11 +92,25 @@ export class RepostButtonComponent {
     this.sheet
       .open({
         title: this.i18n.translate(`reader.repostMenu.${this.network()}`),
-        actions: [{ id: TOGGLE, label: this.i18n.translate(this.actionKey()), symbol: 'repeat' }],
+        actions: [
+          {
+            id: TOGGLE,
+            label: this.i18n.translate(this.actionKey()),
+            symbol: 'repeat',
+            disabled: !this.canRepost(),
+          },
+          {
+            id: QUOTE,
+            label: this.i18n.translate(`reader.quote.${this.network()}`),
+            symbol: 'format_quote',
+            disabled: !this.canQuote(),
+          },
+        ],
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === TOGGLE) this.toggled.emit();
+        if (choice === QUOTE) this.quoteRequested.emit();
       });
   }
 }

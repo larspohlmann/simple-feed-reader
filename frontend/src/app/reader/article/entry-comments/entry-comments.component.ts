@@ -20,12 +20,12 @@ import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.com
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
-import { ReplyActions } from '../composer/reply-actions.service';
+import { ResponseActions } from '../composer/response-actions.service';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
 import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
-import { likeableSocial } from '../../entry-social';
+import { ResponseKind, likeableSocial } from '../../entry-social';
 import { mediumRatio } from '../../entry-medium';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
@@ -65,7 +65,7 @@ export class EntryCommentsComponent {
 
   private readonly service = inject(CommentsService);
   private readonly toast = inject(ToastService);
-  private readonly replies = inject(ReplyActions);
+  private readonly responses = inject(ResponseActions);
   private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
@@ -124,8 +124,11 @@ export class EntryCommentsComponent {
     );
   }
 
-  reply(network: SocialNetworkName, comment: EntryCommentDto, post: EntryCommentPostDto): void {
-    this.replies.reply({
+  respond(kind: ResponseKind, comment: EntryCommentDto, post: EntryCommentPostDto): void {
+    const network = this.entry().social?.network;
+    if (network === undefined) return;
+    this.responses.respond({
+      kind,
       entryId: this.entryId(),
       network,
       address: post.address,
@@ -136,7 +139,7 @@ export class EntryCommentsComponent {
   }
 
   deleteReply(network: SocialNetworkName, comment: EntryCommentDto): void {
-    this.replies.delete(this.entryId(), network, comment);
+    this.responses.delete(this.entryId(), network, comment);
   }
 
   when(iso: string): string {

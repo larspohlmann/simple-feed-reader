@@ -1351,8 +1351,8 @@
       "mastodon": "Boost auf Mastodon zurücknehmen"
     },
     "repostMenu": {
-      "bluesky": "Reposten",
-      "mastodon": "Boosten"
+      "bluesky": "Reposten oder zitieren",
+      "mastodon": "Boosten oder zitieren"
     },
     "repostForbidden": {
       "bluesky": "Dieser Beitrag kann nicht repostet werden",
@@ -1514,9 +1514,6 @@
       "mastodon": "Auf Mastodon antworten"
     },
     "composer": {
-      "loading": "Antwort wird vorbereitet",
-      "account": "Antworten als",
-      "text": "Deine Antwort",
       "counter": "{{ used }} / {{ max }}",
       "visibility": "Sichtbarkeit",
       "visibilities": {
@@ -1527,14 +1524,35 @@
       },
       "addWarning": "Inhaltswarnung hinzufügen",
       "warning": "Inhaltswarnung",
-      "send": "Antworten"
+      "reply": {
+        "loading": "Antwort wird vorbereitet",
+        "account": "Antworten als",
+        "text": "Deine Antwort",
+        "send": "Antworten"
+      },
+      "quote": {
+        "loading": "Zitat wird vorbereitet",
+        "account": "Zitieren als",
+        "text": "Dein Kommentar",
+        "send": "Zitieren"
+      }
     },
     "deleteReply": {
       "action": "Antwort löschen",
       "title": "Diese Antwort löschen?",
       "message": "Sie wird auch auf {{ network }} gelöscht.",
       "confirm": "Löschen"
-    }
+    },
+    "quote": {
+      "bluesky": "Auf Bluesky zitieren",
+      "mastodon": "Auf Mastodon zitieren"
+    },
+    "quoteForbidden": {
+      "bluesky": "Die Autorin oder der Autor erlaubt keine Zitate dieses Beitrags",
+      "mastodon": "Diesen Beitrag kannst du nicht zitieren"
+    },
+    "quoteSent": "Zitat veröffentlicht",
+    "openQuote": "Öffnen"
   },
   "common": {
     "save": "Speichern",

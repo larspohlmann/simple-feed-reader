@@ -9,23 +9,24 @@ import { EntryCommentDto } from '../../entry-comment';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { ComposeTarget, SentReply } from './composer-dialog.component';
+import { ComposeTarget, SentPost } from './composer-dialog.component';
 import { PostComposer } from './post-composer.service';
-import { ReplyActions } from './reply-actions.service';
+import { ResponseActions } from './response-actions.service';
 
 const ADDRESS = 'https://mastodon.example/users/alice/statuses/200';
 
-describe('ReplyActions', () => {
+describe('ResponseActions', () => {
   let composer: { open: jest.Mock };
   let comments: { insertReply: jest.Mock; removeReply: jest.Mock };
-  let counts: { stepReplies: jest.Mock };
+  let counts: { stepReplies: jest.Mock; stepQuotes: jest.Mock };
   let api: { deleteReply: jest.Mock };
   let confirm: { ask: jest.Mock };
   let toast: { show: jest.Mock };
-  let actions: ReplyActions;
+  let actions: ResponseActions;
 
-  const sent: SentReply = { address: 'https://x/9', url: null, text: 'Hi', authorHandle: '@a' };
+  const sent: SentPost = { address: 'https://x/9', url: null, text: 'Hi', authorHandle: '@a' };
   const target: ComposeTarget = {
+    kind: 'reply',
     entryId: 7,
     network: 'mastodon',
     address: null,
@@ -42,7 +43,7 @@ describe('ReplyActions', () => {
   beforeEach(() => {
     composer = { open: jest.fn(() => of(sent)) };
     comments = { insertReply: jest.fn(), removeReply: jest.fn() };
-    counts = { stepReplies: jest.fn() };
+    counts = { stepReplies: jest.fn(), stepQuotes: jest.fn() };
     api = { deleteReply: jest.fn(() => of(undefined)) };
     confirm = { ask: jest.fn(() => of(true)) };
     toast = { show: jest.fn() };
@@ -57,11 +58,11 @@ describe('ReplyActions', () => {
         { provide: ToastService, useValue: toast },
       ],
     });
-    actions = TestBed.inject(ReplyActions);
+    actions = TestBed.inject(ResponseActions);
   });
 
   it('shows a reply to the post at once and counts it on the post', () => {
-    actions.reply(target);
+    actions.respond(target);
 
     expect(composer.open).toHaveBeenCalledWith(target);
     expect(comments.insertReply).toHaveBeenCalledWith(
@@ -73,16 +74,38 @@ describe('ReplyActions', () => {
   });
 
   it('shows a reply to a comment under it, which counts it there, not on the post', () => {
-    actions.reply({ ...target, address: ADDRESS });
+    actions.respond({ ...target, address: ADDRESS });
 
     expect(comments.insertReply).toHaveBeenCalledWith(7, ADDRESS, expect.anything());
     expect(counts.stepReplies).not.toHaveBeenCalled();
   });
 
+  it('counts a quote of the post there and offers to open it, leaving the thread alone', () => {
+    composer.open.mockReturnValue(of({ ...sent, url: 'https://x.test/@a/9' }));
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+    actions.respond({ ...target, kind: 'quote' });
+
+    expect(comments.insertReply).not.toHaveBeenCalled();
+    expect(counts.stepQuotes).toHaveBeenCalledWith(7);
+    const shown = toast.show.mock.calls[0][0];
+    expect(shown).toMatchObject({ message: 'Quote posted', actionLabel: 'Open' });
+    shown.action();
+    expect(open).toHaveBeenCalledWith('https://x.test/@a/9', '_blank', 'noopener');
+    open.mockRestore();
+  });
+
+  it('counts a quote of a reply nowhere and offers no link the network did not name', () => {
+    actions.respond({ ...target, kind: 'quote', address: ADDRESS });
+
+    expect(counts.stepQuotes).not.toHaveBeenCalled();
+    expect(toast.show).toHaveBeenCalledWith({ message: 'Quote posted' });
+  });
+
   it('changes nothing when the composer closes without sending', () => {
     composer.open.mockReturnValue(of(undefined));
 
-    actions.reply(target);
+    actions.respond(target);
 
     expect(comments.insertReply).not.toHaveBeenCalled();
   });
