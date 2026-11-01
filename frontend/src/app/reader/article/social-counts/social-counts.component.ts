@@ -71,6 +71,7 @@ export class SocialCountsComponent {
       authorName: entry.poster?.name ?? entry.author,
       authorHandle: null,
       excerpt: entry.excerpt,
+      card: null,
     });
   }
 

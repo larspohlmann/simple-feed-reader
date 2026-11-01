@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostResolver;
 
+use App\Entity\LinkCardContent;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
@@ -114,6 +115,34 @@ final class MastodonPostResolverTest extends TestCase
         $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
 
         self::assertEquals(new PostPreviewModel('Ann', '@ann@hachyderm.io', 'Hello world & more'), $context->preview);
+    }
+
+    public function testAStatusIsPreviewedWithItsLinkCard(): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([[
+            'id' => '109876',
+            'content' => '<p>Senate passes the bill</p>',
+            'card' => [
+                'url' => 'https://www.politico.com/news/bill',
+                'title' => 'Senate passes the bill',
+                'description' => 'After a long night',
+                'image' => 'https://files.mastodon.example/cards/bill.jpg',
+                'provider_name' => 'POLITICO',
+            ],
+        ]])]);
+
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+
+        self::assertEquals(
+            new LinkCardContent(
+                'https://www.politico.com/news/bill',
+                'Senate passes the bill',
+                'After a long night',
+                'https://files.mastodon.example/cards/bill.jpg',
+                'POLITICO',
+            ),
+            $context->preview->card,
+        );
     }
 
     public function testAStatusWithoutAuthorOrContentIsPreviewedEmpty(): void

@@ -14,6 +14,7 @@ use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonAuthor;
+use App\Service\Social\Support\MastodonCard;
 use App\Service\Social\Support\MastodonQuoting;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\PostCounts;
@@ -68,6 +69,7 @@ final readonly class MastodonPostResolver implements PostResolverInterface
             MastodonAuthor::name($author),
             null === $handle ? null : '@' . $handle,
             PlainText::fromHtmlBlocks($status->string('content')) ?? '',
+            MastodonCard::of($status->node('card')),
         );
     }
 

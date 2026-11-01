@@ -135,6 +135,7 @@ export class EntryCommentsComponent {
       authorName: comment.author,
       authorHandle: comment.authorHandle,
       excerpt: textOf(comment.html),
+      card: null,
     });
   }
 

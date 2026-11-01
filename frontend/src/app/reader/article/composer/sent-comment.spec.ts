@@ -13,6 +13,7 @@ describe('sentComment', () => {
       authorName: null,
       authorHandle: null,
       excerpt: '',
+      card: null,
     },
   };
 

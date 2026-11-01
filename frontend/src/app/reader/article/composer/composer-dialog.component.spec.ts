@@ -17,6 +17,7 @@ const QUOTED: QuotedPostDto = {
   authorName: 'Ann',
   authorHandle: '@ann@hachyderm.io',
   excerpt: 'What do you think?',
+  card: null,
 };
 
 describe('ComposerDialogComponent', () => {
@@ -42,6 +43,7 @@ describe('ComposerDialogComponent', () => {
     authorName: 'Ann',
     authorHandle: '@ann@hachyderm.io',
     excerpt: 'What do you think?',
+    card: null,
     ...overrides,
   });
 
@@ -398,6 +400,23 @@ describe('ComposerDialogComponent', () => {
       expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Quote on Mastodon');
       expect(sendButton(fixture).textContent?.trim()).toBe('Quote');
       expect(textArea(fixture).value).toBe('');
+    });
+
+    it('shows the link card the quoted post carries below its text', () => {
+      const card = {
+        url: 'https://www.politico.com/news/bill',
+        title: 'Senate passes the bill',
+        description: null,
+        imageUrl: 'https://cdn.bsky.app/img/thumb.jpg',
+        siteName: 'politico.com',
+      };
+      api.composer.mockReturnValue(of(context({ mentions: [], quote: { ...QUOTED, card } })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+
+      const quotedCard = element(fixture).querySelector('.target .article')!;
+      expect(quotedCard.querySelector('.title')!.textContent).toContain('Senate passes the bill');
+      expect(quotedCard.querySelector('.site')!.textContent).toContain('politico.com');
+      expect(quotedCard.querySelector('img')!.getAttribute('src')).toContain('thumb.jpg');
     });
 
     it('sends the quote of a post on its own network to the link endpoint, closing with it shown', () => {

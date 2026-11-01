@@ -233,6 +233,7 @@ describe('SocialCountsComponent', () => {
         authorName: 'Bob',
         authorHandle: null,
         excerpt: 'Big news',
+        card: null,
       });
     });
 

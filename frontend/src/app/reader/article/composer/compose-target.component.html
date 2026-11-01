@@ -1,24 +1,3 @@
-@if (article(); as card) {
-  <div class="article">
-    @if (card.imageUrl && !imageFailed()) {
-      <img
-        appProxiedImage
-        class="thumb"
-        [src]="card.imageUrl"
-        alt=""
-        decoding="async"
-        referrerpolicy="no-referrer"
-        (imageFailed)="imageFailed.set(true)"
-      />
-    }
-    <div class="article-text">
-      <p class="title">{{ card.title }}</p>
-      @if (card.site) {
-        <p class="site">{{ card.site }}</p>
-      }
-    </div>
-  </div>
-}
 @if (response(); as post) {
   <blockquote class="target">
     <p class="author">
@@ -30,5 +9,32 @@
       }
     </p>
     <p class="excerpt">{{ post.excerpt }}</p>
+    <ng-container [ngTemplateOutlet]="compactCard" />
   </blockquote>
+} @else {
+  <ng-container [ngTemplateOutlet]="compactCard" />
 }
+
+<ng-template #compactCard>
+  @if (card(); as card) {
+    <div class="article">
+      @if (card.imageUrl && !imageFailed()) {
+        <img
+          appProxiedImage
+          class="thumb"
+          [src]="card.imageUrl"
+          alt=""
+          decoding="async"
+          referrerpolicy="no-referrer"
+          (imageFailed)="imageFailed.set(true)"
+        />
+      }
+      <div class="article-text">
+        <p class="title">{{ card.title }}</p>
+        @if (card.site) {
+          <p class="site">{{ card.site }}</p>
+        }
+      </div>
+    </div>
+  }
+</ng-template>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostResolver;
 
+use App\Entity\LinkCardContent;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
@@ -79,6 +80,77 @@ final class BlueskyPostResolverTest extends TestCase
         $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
 
         self::assertEquals(new PostPreviewModel('Bob', '@bob.test', 'Hello world'), $context->preview);
+    }
+
+    /** @param array<string, mixed> $embed */
+    #[DataProvider('linkCardEmbeds')]
+    public function testAPostIsPreviewedWithTheLinkCardItsEmbedShows(array $embed): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'record' => ['text' => 'Senate passes the bill'],
+            'embed' => $embed,
+        ]]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertEquals(
+            new LinkCardContent(
+                'https://www.politico.com/news/bill',
+                'Senate passes the bill',
+                'After a long night',
+                'https://cdn.bsky.app/img/thumb.jpg',
+                'politico.com',
+            ),
+            $context->preview->card,
+        );
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function linkCardEmbeds(): iterable
+    {
+        $external = [
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => 'https://www.politico.com/news/bill',
+                'title' => 'Senate passes the bill',
+                'description' => 'After a long night',
+                'thumb' => 'https://cdn.bsky.app/img/thumb.jpg',
+            ],
+        ];
+
+        yield 'an external embed' => [$external];
+        yield 'a quote with an external embed as its media' => [[
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'record' => ['record' => ['uri' => 'at://did:plc:carol/app.bsky.feed.post/3q']],
+            'media' => $external,
+        ]];
+    }
+
+    /** @param array<string, mixed> $embed */
+    #[DataProvider('cardlessEmbeds')]
+    public function testAPostWhoseEmbedShowsNoLinkCardIsPreviewedWithoutOne(array $embed): void
+    {
+        $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid', 'embed' => $embed]]]);
+
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+
+        self::assertNull($context->preview->card);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function cardlessEmbeds(): iterable
+    {
+        yield 'images' => [['$type' => 'app.bsky.embed.images#view', 'images' => []]];
+        yield 'an external embed without a title' => [[
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://www.politico.com/news/bill'],
+        ]];
+        yield 'a quote with images' => [[
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'media' => ['$type' => 'app.bsky.embed.images#view', 'images' => []],
+        ]];
     }
 
     public function testAPostWithoutAuthorOrTextIsPreviewedEmpty(): void

@@ -175,6 +175,7 @@ describe('EntryCommentsComponent', () => {
         authorName: 'Ann',
         authorHandle: '@ann.bsky.social',
         excerpt: 'Is it true?',
+        card: null,
       });
     });
 

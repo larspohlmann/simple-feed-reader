@@ -22,6 +22,7 @@ describe('PostSentDialogComponent', () => {
     authorName: 'Ann',
     authorHandle: '@ann@hachyderm.io',
     excerpt: 'What do you think?',
+    card: null,
   };
   const sent = (overrides: Partial<SentPost> = {}): SentPost => ({
     address: 'at://did:plc:a/app.bsky.feed.post/9',
@@ -82,6 +83,21 @@ describe('PostSentDialogComponent', () => {
     expect(quoted.textContent).toContain('Ann');
     expect(quoted.textContent).toContain('What do you think?');
     expect(element.querySelector('.article')).toBeNull();
+  });
+
+  it('shows the link card of the post it quoted', () => {
+    const card = {
+      url: 'https://www.politico.com/news/bill',
+      title: 'Senate passes the bill',
+      description: null,
+      imageUrl: null,
+      siteName: 'politico.com',
+    };
+    const element = mount(sent({ shown: { ...quote, card } }));
+
+    expect(element.querySelector('.target .article .title')!.textContent).toContain(
+      'Senate passes the bill',
+    );
   });
 
   it('opens the post on the network in a new tab', () => {

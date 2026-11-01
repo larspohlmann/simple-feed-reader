@@ -1,4 +1,5 @@
 import { SocialNetworkName } from '../core/social-network';
+import { LinkCardDto } from './link-card/link-card';
 
 /** `canLike`: the reader has an account on the post's network (#1615). */
 export interface EntrySocialDto {
@@ -29,11 +30,15 @@ export interface EntryRepostDto {
 /** What the reader can do to the post beyond liking it, and has done. */
 export type PostActionsView = Omit<SocialViewerDto, 'isLiked'>;
 
-/** A post as the composer shows it above the text: who wrote it and how it starts. */
+/** The link card a post carries, as the composer shows it below the post's text. */
+export type QuotedLinkCardDto = Omit<LinkCardDto, 'readerToken'>;
+
+/** A post as the composer shows it above the text: who wrote it, how it starts, and the link card it carries. */
 export interface QuotedPostDto {
   authorName: string | null;
   authorHandle: string | null;
   excerpt: string;
+  card: QuotedLinkCardDto | null;
 }
 
 /**

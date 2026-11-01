@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model;
 
-/** A post as the composer shows it above the text: who wrote it and how it starts. */
+use App\Entity\LinkCardContent;
+
+/** A post as the composer shows it above the text: who wrote it, how it starts, and the link card it carries. */
 final readonly class PostPreviewModel
 {
     /** @param string|null $authorHandle the handle with its leading "@" */
@@ -12,6 +14,7 @@ final readonly class PostPreviewModel
         public ?string $authorName = null,
         public ?string $authorHandle = null,
         public string $excerpt = '',
+        public ?LinkCardContent $card = null,
     ) {
     }
 }

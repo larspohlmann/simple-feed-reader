@@ -17,6 +17,7 @@ describe('PostComposer', () => {
       authorName: null,
       authorHandle: '@ann.bsky.social',
       excerpt: 'Hi',
+      card: null,
     };
     let received: unknown;
 

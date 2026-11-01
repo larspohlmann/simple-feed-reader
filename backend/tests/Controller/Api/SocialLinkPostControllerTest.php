@@ -214,7 +214,11 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::INSTANCE => new MockResponse('{}'),
             self::OWN_ACCOUNT => new MockResponse('{}'),
-            self::STATUS_SEARCH => self::statuses(self::quotableStatus()),
+            self::STATUS_SEARCH => self::statuses([...self::quotableStatus(), 'card' => [
+                'url' => 'https://example.org/story',
+                'title' => 'The story',
+                'provider_name' => 'Example',
+            ]]),
         ]);
         $user = $this->signIn($client, 'link-composer-quote@example.test');
         $this->mastodonAccountOf($user);
@@ -223,7 +227,18 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['authorName' => 'Eugen', 'authorHandle' => '@Gargron@mastodon.social', 'excerpt' => 'Hello world'],
+            [
+                'authorName' => 'Eugen',
+                'authorHandle' => '@Gargron@mastodon.social',
+                'excerpt' => 'Hello world',
+                'card' => [
+                    'url' => 'https://example.org/story',
+                    'title' => 'The story',
+                    'description' => null,
+                    'imageUrl' => null,
+                    'siteName' => 'Example',
+                ],
+            ],
             $this->payload($client)['quote'],
         );
     }

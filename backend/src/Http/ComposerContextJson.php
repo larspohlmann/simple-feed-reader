@@ -8,6 +8,13 @@ use App\Entity\SocialAccount;
 use App\Service\Social\Model\ComposerContextModel;
 use App\Service\Social\Model\PostPreviewModel;
 
+/**
+ * @phpstan-import-type LinkCardFields from LinkCardJson
+ *
+ * @phpstan-type QuoteRow array{
+ *     authorName: string|null, authorHandle: string|null, excerpt: string, card: LinkCardFields|null
+ * }
+ */
 final class ComposerContextJson
 {
     /**
@@ -18,7 +25,7 @@ final class ComposerContextJson
      *     maxCharacters: int,
      *     visibility: string|null,
      *     mentions: list<string>,
-     *     quote: array{authorName: string|null, authorHandle: string|null, excerpt: string}|null,
+     *     quote: QuoteRow|null,
      * }
      */
     public static function of(ComposerContextModel $context): array
@@ -40,13 +47,14 @@ final class ComposerContextJson
         ];
     }
 
-    /** @return array{authorName: string|null, authorHandle: string|null, excerpt: string} */
+    /** @return QuoteRow */
     private static function previewOf(PostPreviewModel $preview): array
     {
         return [
             'authorName' => $preview->authorName,
             'authorHandle' => $preview->authorHandle,
             'excerpt' => $preview->excerpt,
+            'card' => null === $preview->card ? null : LinkCardJson::fieldsOf($preview->card),
         ];
     }
 }

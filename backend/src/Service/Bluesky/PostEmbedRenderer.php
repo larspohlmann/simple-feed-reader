@@ -4,18 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Bluesky;
 
-use App\Entity\LinkCardContent;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
-use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Bluesky\Support\BlueskyEmbedMedia;
+use App\Service\Bluesky\Support\BlueskyExternalCard;
 use App\Service\Bluesky\Support\QuotedViewRecord;
-use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Text\Support\HtmlEscape;
 use App\Service\Url\Support\AbsoluteHttpUrl;
-use App\Service\Url\Support\HttpsImageUrl;
 
 final readonly class PostEmbedRenderer
 {
@@ -109,18 +106,18 @@ final readonly class PostEmbedRenderer
         if ($url === null) {
             return null;
         }
-        $title = $external->string('title');
-        if ($title === null) {
+        if ($external->string('title') === null) {
             return RenderedEmbedModel::uncarded($url);
         }
-        $thumbnail = HttpsImageUrl::orNull($external->string('thumb'));
-        $card = StorableLinkCard::of(
-            new LinkCardContent($url, $title, $external->string('description'), $thumbnail, HostKey::forUrl($url)),
-        );
+        $card = BlueskyExternalCard::of($external);
+        if ($card === null) {
+            return null;
+        }
 
-        return $card === null
-            ? null
-            : RenderedEmbedModel::card($card, $thumbnail === null ? null : new DeclaredImageModel($thumbnail));
+        return RenderedEmbedModel::card(
+            $card,
+            $card->imageUrl === null ? null : new DeclaredImageModel($card->imageUrl),
+        );
     }
 
     private function quote(JsonNodeModel $record): ?RenderedEmbedModel

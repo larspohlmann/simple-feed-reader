@@ -35,6 +35,7 @@ describe('ResponseActions', () => {
     authorName: null,
     authorHandle: null,
     excerpt: '',
+    card: null,
   };
   const sent: SentPost = {
     address: 'https://x/9',
