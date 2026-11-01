@@ -11,6 +11,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\PostCounts;
 
 /** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */
@@ -40,6 +41,14 @@ final readonly class MastodonPostResolver implements PostResolverInterface
 
         $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(PostCounts::ofMastodonStatus($status));
 
-        return $status->isTrue('favourited') ? $post->alreadyLikedAs($statusId) : $post;
+        return self::withViewer($post, $status, $statusId);
+    }
+
+    private static function withViewer(SocialPostModel $post, JsonNodeModel $status, string $statusId): SocialPostModel
+    {
+        $liked = $status->isTrue('favourited') ? $post->alreadyLikedAs($statusId) : $post;
+        $reposted = $status->isTrue('reblogged') ? $liked->alreadyRepostedAs($statusId) : $liked;
+
+        return MastodonVisibility::allowsReblog($status) ? $reposted : $reposted->notRepostable();
     }
 }

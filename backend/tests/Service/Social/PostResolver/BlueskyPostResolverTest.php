@@ -20,6 +20,7 @@ final class BlueskyPostResolverTest extends TestCase
 {
     private const string POST_URI = 'at://did:plc:bob/app.bsky.feed.post/3abc';
     private const string LIKE_URI = 'at://did:plc:alice/app.bsky.feed.like/3lk2';
+    private const string REPOST_URI = 'at://did:plc:alice/app.bsky.feed.repost/3rp1';
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string GET_POSTS = 'GET https://pds.example.test/xrpc/app.bsky.feed.getPosts?uris='
         . 'at%3A%2F%2Fdid%3Aplc%3Abob%2Fapp.bsky.feed.post%2F3abc';
@@ -84,6 +85,34 @@ final class BlueskyPostResolverTest extends TestCase
 
         self::assertSame(self::LIKE_URI, $post->existingLikeId);
         self::assertSame('bafy-cid', $post->contentId);
+    }
+
+    public function testARepostTheAccountAlreadyMadeIsCarried(): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'viewer' => ['like' => self::LIKE_URI, 'repost' => self::REPOST_URI],
+        ]]]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI);
+
+        self::assertSame(self::REPOST_URI, $post->existingRepostId);
+        self::assertSame(self::LIKE_URI, $post->existingLikeId);
+        self::assertTrue($post->canRepost);
+    }
+
+    public function testALikeUriIsNoRepost(): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'viewer' => ['repost' => self::LIKE_URI],
+        ]]]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI);
+
+        self::assertNull($post->existingRepostId);
     }
 
     #[DataProvider('malformedLikeIds')]
