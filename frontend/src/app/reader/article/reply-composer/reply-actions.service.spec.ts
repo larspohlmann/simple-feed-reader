@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { anEntryComment } from '../../../../testing/entry-testing';
+import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryCommentDto } from '../../entry-comment';
@@ -36,15 +36,7 @@ describe('ReplyActions', () => {
   const comment = (depth: number): EntryCommentDto =>
     anEntryComment({
       depth,
-      post: {
-        address: ADDRESS,
-        counts: { likes: 0, reposts: 0, replies: 0, quotes: null },
-        isLiked: false,
-        isReposted: false,
-        canRepost: true,
-        canReply: true,
-        isOwn: true,
-      },
+      post: aCommentPost({ address: ADDRESS, isOwn: true }),
     });
 
   beforeEach(() => {
@@ -69,7 +61,7 @@ describe('ReplyActions', () => {
   });
 
   it('shows a reply to the post at once and counts it on the post', () => {
-    actions.reply(target, null);
+    actions.reply(target);
 
     expect(composer.open).toHaveBeenCalledWith(target);
     expect(comments.insertReply).toHaveBeenCalledWith(
@@ -81,7 +73,7 @@ describe('ReplyActions', () => {
   });
 
   it('shows a reply to a comment under it, which counts it there, not on the post', () => {
-    actions.reply({ ...target, address: ADDRESS }, comment(0));
+    actions.reply({ ...target, address: ADDRESS });
 
     expect(comments.insertReply).toHaveBeenCalledWith(7, ADDRESS, expect.anything());
     expect(counts.stepReplies).not.toHaveBeenCalled();
@@ -90,7 +82,7 @@ describe('ReplyActions', () => {
   it('changes nothing when the composer closes without sending', () => {
     composer.open.mockReturnValue(of(undefined));
 
-    actions.reply(target, null);
+    actions.reply(target);
 
     expect(comments.insertReply).not.toHaveBeenCalled();
   });

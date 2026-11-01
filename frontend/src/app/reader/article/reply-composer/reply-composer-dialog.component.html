@@ -1,9 +1,6 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
-  <app-overlay-panel
-    fillOnMobile
-    [heading]="'reader.composer.heading.' + target.network | transloco"
-  >
+  <app-overlay-panel fillOnMobile [heading]="'reader.reply.' + target.network | transloco">
     <blockquote class="target">
       <p class="author">
         @if (target.authorName) {
@@ -58,7 +55,7 @@
         {{ 'reader.composer.counter' | transloco: { used: used(), max: context.maxCharacters } }}
       </p>
 
-      @if (target.network === 'mastodon' && visibility(); as current) {
+      @if (visibility(); as current) {
         <app-field [label]="'reader.composer.visibility' | transloco">
           <select id="reply-visibility" (change)="chooseVisibility($event)">
             @for (option of visibilities; track option) {
@@ -69,10 +66,14 @@
           </select>
         </app-field>
         <label class="warns">
-          <input type="checkbox" [checked]="warns()" (change)="toggleWarning($event)" />
+          <input
+            type="checkbox"
+            [checked]="contentWarning() !== null"
+            (change)="toggleWarning($event)"
+          />
           {{ 'reader.composer.addWarning' | transloco }}
         </label>
-        @if (warns()) {
+        @if (contentWarning() !== null) {
           <app-field [label]="'reader.composer.warning' | transloco">
             <input
               id="reply-warning"

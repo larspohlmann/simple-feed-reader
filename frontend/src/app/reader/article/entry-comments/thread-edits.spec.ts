@@ -1,4 +1,4 @@
-import { anEntryComment } from '../../../../testing/entry-testing';
+import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
 import { EntryCommentDto } from '../../entry-comment';
 import { withReply, withoutReply } from './thread-edits';
 
@@ -6,15 +6,7 @@ const commentAt = (address: string, depth: number, replies = 0): EntryCommentDto
   anEntryComment({
     html: address,
     depth,
-    post: {
-      address,
-      counts: { likes: 0, reposts: 0, replies, quotes: null },
-      isLiked: false,
-      isReposted: false,
-      canRepost: true,
-      canReply: true,
-      isOwn: false,
-    },
+    post: aCommentPost({ address, counts: { likes: 0, reposts: 0, replies, quotes: null } }),
   });
 
 const shape = (comments: EntryCommentDto[]) =>

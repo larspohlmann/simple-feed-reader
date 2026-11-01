@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -12,6 +13,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { Subscription } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -83,8 +85,10 @@ export class ReplyComposerDialogComponent {
   protected readonly state = signal<ContextState>({ status: 'loading' });
   protected readonly text = signal('');
   protected readonly visibility = signal<MastodonVisibility | null>(null);
-  protected readonly warns = signal(false);
-  protected readonly contentWarning = signal('');
+  /** Null while the reply carries no content warning. */
+  protected readonly contentWarning = signal<string | null>(null);
+  private readonly accountId = signal<number | undefined>(undefined);
+  private loading = Subscription.EMPTY;
   protected readonly sending = signal(false);
   protected readonly sendError = signal<string | null>(null);
 
@@ -97,7 +101,10 @@ export class ReplyComposerDialogComponent {
     return state.status === 'failed' ? state.message : null;
   });
   protected readonly used = computed(() => postLength(this.text(), this.target.network));
-  protected readonly over = computed(() => this.used() > (this.context()?.maxCharacters ?? 0));
+  protected readonly over = computed(() => {
+    const max = this.context()?.maxCharacters;
+    return max !== undefined && this.used() > max;
+  });
   protected readonly canSend = computed(
     () =>
       this.context()?.canReply === true &&
@@ -107,23 +114,28 @@ export class ReplyComposerDialogComponent {
   );
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.loading.unsubscribe());
     this.load();
     // The field appears only once the context loads, after the focus trap placed its initial focus.
     effect(() => this.textField()?.nativeElement.focus());
   }
 
-  protected load(accountId?: number): void {
+  /** A newer load drops the one still on the wire, so a slow answer never replaces a later choice. */
+  protected load(): void {
+    this.loading.unsubscribe();
     this.state.set({ status: 'loading' });
-    const address = this.target.address ?? undefined;
-    this.api.composer(this.target.entryId, { address, accountId }).subscribe({
-      next: (context) => this.adopt(context),
-      error: (error: HttpErrorResponse) =>
-        this.state.set({ status: 'failed', message: problemMessage(parseProblem(error)) }),
-    });
+    this.loading = this.api
+      .composer(this.target.entryId, this.target.address, this.accountId())
+      .subscribe({
+        next: (context) => this.adopt(context),
+        error: (error: HttpErrorResponse) =>
+          this.state.set({ status: 'failed', message: problemMessage(parseProblem(error)) }),
+      });
   }
 
   protected chooseAccount(event: Event): void {
-    this.load(Number(inputValue(event)));
+    this.accountId.set(Number(inputValue(event)));
+    this.load();
   }
 
   protected write(event: Event): void {
@@ -135,7 +147,7 @@ export class ReplyComposerDialogComponent {
   }
 
   protected toggleWarning(event: Event): void {
-    this.warns.set((event.target as HTMLInputElement).checked);
+    this.contentWarning.set((event.target as HTMLInputElement).checked ? '' : null);
   }
 
   protected writeWarning(event: Event): void {
@@ -172,7 +184,7 @@ export class ReplyComposerDialogComponent {
 
   private draftFor(context: ComposerContextDto): ReplyDraftDto {
     const visibility = this.visibility();
-    const warning = this.warns() ? this.contentWarning().trim() : '';
+    const warning = this.contentWarning()?.trim() ?? '';
     return {
       text: this.text(),
       accountId: context.accountId,

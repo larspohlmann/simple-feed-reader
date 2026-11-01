@@ -28,13 +28,11 @@ export class ReplyActions {
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
 
-  /** `parent` is the comment answered; null answers the entry's own post. */
-  reply(target: ReplyTarget, parent: EntryCommentDto | null): void {
+  reply(target: ReplyTarget): void {
     this.composer.open(target).subscribe((sent) => {
       if (sent === undefined) return;
-      const parentAddress = parent?.post?.address ?? null;
-      this.comments.insertReply(target.entryId, parentAddress, sentComment(sent, new Date()));
-      if (parentAddress === null) this.counts.stepReplies(target.entryId, true);
+      this.comments.insertReply(target.entryId, target.address, sentComment(sent, new Date()));
+      if (target.address === null) this.counts.stepReplies(target.entryId, true);
     });
   }
 

@@ -108,12 +108,12 @@ describe('SocialPostApi', () => {
   });
 
   it('GETs the composer context for the post or a reply on a chosen account', () => {
-    api.composer(7).subscribe();
+    api.composer(7, null).subscribe();
     expect(ctrl.expectOne('https://api.test/api/entries/7/social/composer').request.method).toBe(
       'GET',
     );
 
-    api.composer(7, { address: REPLY, accountId: 4 }).subscribe();
+    api.composer(7, REPLY, 4).subscribe();
     ctrl
       .expectOne(`https://api.test/api/entries/7/social/composer?address=${REPLY}&accountId=4`)
       .flush({});

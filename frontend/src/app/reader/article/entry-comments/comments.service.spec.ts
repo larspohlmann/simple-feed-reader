@@ -5,7 +5,7 @@ import { CommentsService, CommentsState } from './comments.service';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsResponse, EntryCommentPostDto } from '../../entry-comment';
-import { anEntryComment } from '../../../../testing/entry-testing';
+import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
 
 describe('CommentsService', () => {
   let api: { comments: jest.Mock };
@@ -326,15 +326,7 @@ describe('CommentsService', () => {
       service.load(1);
       const reply = anEntryComment({
         html: 'mine',
-        post: {
-          address: 'at://mine',
-          counts: { likes: 0, reposts: 0, replies: 0, quotes: null },
-          isLiked: false,
-          isReposted: false,
-          canRepost: true,
-          canReply: true,
-          isOwn: true,
-        },
+        post: aCommentPost({ address: 'at://mine', isOwn: true }),
       });
 
       service.insertReply(1, null, reply);

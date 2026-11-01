@@ -75,7 +75,7 @@ describe('ReplyComposerDialogComponent', () => {
   it('shows the post it answers and starts the text with the mentions', () => {
     const fixture = mount();
 
-    expect(api.composer).toHaveBeenCalledWith(7, { address: REPLY, accountId: undefined });
+    expect(api.composer).toHaveBeenCalledWith(7, REPLY, undefined);
     expect(element(fixture).querySelector('.target')!.textContent).toContain('What do you think?');
     expect(textArea(fixture).value).toBe('@ann@hachyderm.io ');
   });
@@ -103,8 +103,46 @@ describe('ReplyComposerDialogComponent', () => {
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    expect(api.composer).toHaveBeenLastCalledWith(7, { address: REPLY, accountId: 5 });
+    expect(api.composer).toHaveBeenLastCalledWith(7, REPLY, 5);
     expect(textArea(fixture).value).toBe('Kept');
+  });
+
+  describe('on a chosen account', () => {
+    const accounts = [
+      { id: 4, handle: '@alice@mastodon.example' },
+      { id: 5, handle: '@bea@mastodon.example' },
+    ];
+
+    function chooseSecond(fixture: ReturnType<typeof mount>): void {
+      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    }
+
+    it('retries there after a failed load', () => {
+      api.composer.mockReturnValue(of(context({ accounts })));
+      const fixture = mount();
+      api.composer.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 502 })));
+      chooseSecond(fixture);
+
+      (element(fixture).querySelector('app-error-banner button') as HTMLButtonElement).click();
+
+      expect(api.composer).toHaveBeenLastCalledWith(7, REPLY, 5);
+    });
+
+    it('drops a context still on the wire when the composer closes', () => {
+      api.composer.mockReturnValue(of(context({ accounts })));
+      const fixture = mount();
+      const slow = new Subject<ComposerContextDto>();
+      api.composer.mockReturnValueOnce(slow);
+      chooseSecond(fixture);
+      expect(slow.observed).toBe(true);
+
+      fixture.destroy();
+
+      expect(slow.observed).toBe(false);
+    });
   });
 
   it('sends only a text that is there and fits the limit', () => {

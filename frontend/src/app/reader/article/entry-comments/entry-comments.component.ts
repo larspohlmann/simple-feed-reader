@@ -32,6 +32,7 @@ import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
 import { ToastService } from '../../../shared/toast/toast.service';
+import { textOf } from '../../../shared/text-of';
 import { problemMessage } from '../../../core/problem';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
@@ -124,17 +125,14 @@ export class EntryCommentsComponent {
   }
 
   reply(network: SocialNetworkName, comment: EntryCommentDto, post: EntryCommentPostDto): void {
-    this.replies.reply(
-      {
-        entryId: this.entryId(),
-        network,
-        address: post.address,
-        authorName: comment.author,
-        authorHandle: comment.authorHandle,
-        excerpt: textOf(comment.html),
-      },
-      comment,
-    );
+    this.replies.reply({
+      entryId: this.entryId(),
+      network,
+      address: post.address,
+      authorName: comment.author,
+      authorHandle: comment.authorHandle,
+      excerpt: textOf(comment.html),
+    });
   }
 
   deleteReply(network: SocialNetworkName, comment: EntryCommentDto): void {
@@ -164,8 +162,4 @@ export class EntryCommentsComponent {
     );
     return () => clearInterval(ticker);
   }
-}
-
-function textOf(html: string): string {
-  return new DOMParser().parseFromString(html, 'text/html').body.textContent?.trim() ?? '';
 }

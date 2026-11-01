@@ -29,8 +29,3 @@
 .reply {
   @include pill-toggle.pill-toggle;
 }
-
-.reply[aria-disabled='true'] {
-  cursor: default;
-  opacity: 0.7;
-}

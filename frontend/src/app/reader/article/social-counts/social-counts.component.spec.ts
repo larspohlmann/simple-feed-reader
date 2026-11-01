@@ -223,17 +223,14 @@ describe('SocialCountsComponent', () => {
       expect(button.getAttribute('aria-label')).toBe('Reply on Bluesky, 7 replies');
       button.click();
 
-      expect(replies.reply).toHaveBeenCalledWith(
-        {
-          entryId: 1,
-          network: 'bluesky',
-          address: null,
-          authorName: 'Bob',
-          authorHandle: null,
-          excerpt: 'Big news',
-        },
-        null,
-      );
+      expect(replies.reply).toHaveBeenCalledWith({
+        entryId: 1,
+        network: 'bluesky',
+        address: null,
+        authorName: 'Bob',
+        authorHandle: null,
+        excerpt: 'Big news',
+      });
     });
 
     it('offers the reply disabled, with its reason, on a post the author closed', () => {

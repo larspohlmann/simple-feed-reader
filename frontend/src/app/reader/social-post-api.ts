@@ -69,13 +69,17 @@ export class SocialPostApi {
     });
   }
 
-  /** `address` names a reply in the thread; without it the composer answers the entry's own post. */
+  /** `address` names a reply in the thread; null answers the entry's own post. */
   composer(
     entryId: number,
-    target: { address?: string; accountId?: number } = {},
+    address: string | null,
+    accountId?: number,
   ): Observable<ComposerContextDto> {
     return this.http.get<ComposerContextDto>(this.entryPath(entryId, 'social/composer'), {
-      params: definedParams(target),
+      params: {
+        ...(address === null ? {} : { address }),
+        ...(accountId === undefined ? {} : { accountId }),
+      },
     });
   }
 
@@ -98,14 +102,4 @@ export class SocialPostApi {
   private entryPath(entryId: number, action: string): string {
     return `${this.base}/api/entries/${entryId}/${action}`;
   }
-}
-
-function definedParams(
-  values: Record<string, string | number | undefined>,
-): Record<string, string | number> {
-  return Object.fromEntries(
-    Object.entries(values).filter(
-      (pair): pair is [string, string | number] => pair[1] !== undefined,
-    ),
-  );
 }

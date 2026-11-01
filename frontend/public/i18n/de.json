@@ -1514,10 +1514,6 @@
       "mastodon": "Auf Mastodon antworten"
     },
     "composer": {
-      "heading": {
-        "bluesky": "Auf Bluesky antworten",
-        "mastodon": "Auf Mastodon antworten"
-      },
       "loading": "Antwort wird vorbereitet",
       "account": "Antworten als",
       "text": "Deine Antwort",

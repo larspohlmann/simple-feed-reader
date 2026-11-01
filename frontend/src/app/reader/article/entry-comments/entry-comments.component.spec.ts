@@ -148,17 +148,14 @@ describe('EntryCommentsComponent', () => {
         settleComments([comment]).querySelector('.comment button.reply') as HTMLButtonElement
       ).click();
 
-      expect(replies.reply).toHaveBeenCalledWith(
-        {
-          entryId: 5,
-          network: 'bluesky',
-          address: post.address,
-          authorName: 'Ann',
-          authorHandle: '@ann.bsky.social',
-          excerpt: 'Is it true?',
-        },
-        comment,
-      );
+      expect(replies.reply).toHaveBeenCalledWith({
+        entryId: 5,
+        network: 'bluesky',
+        address: post.address,
+        authorName: 'Ann',
+        authorHandle: '@ann.bsky.social',
+        excerpt: 'Is it true?',
+      });
     });
 
     it('offers to delete only a reply the reader wrote', () => {

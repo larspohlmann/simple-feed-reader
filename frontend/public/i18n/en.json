@@ -1514,10 +1514,6 @@
       "mastodon": "Reply on Mastodon"
     },
     "composer": {
-      "heading": {
-        "bluesky": "Reply on Bluesky",
-        "mastodon": "Reply on Mastodon"
-      },
       "loading": "Getting the reply ready",
       "account": "Reply as",
       "text": "Your reply",
