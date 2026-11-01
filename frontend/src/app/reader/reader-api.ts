@@ -8,7 +8,7 @@ import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gat
 import { PAGE_SIZE } from './list/paging';
 import { SignedUrl } from './query/link-param';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
-import { EntryLikeDto, SocialCountsDto } from './entry-social';
+import { EntryLikeDto, EntryRepostDto, SocialCountsDto, SocialViewerDto } from './entry-social';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import { CommentsResponse } from './entry-comment';
 import {
@@ -116,8 +116,30 @@ export class ReaderApi {
     return this.http.patch<{ state: EntryStateDto }>(`${this.base}/api/entries/${id}/state`, patch);
   }
 
-  likeState(id: number): Observable<EntryLikeDto> {
-    return this.http.get<EntryLikeDto>(`${this.base}/api/entries/${id}/like`);
+  socialViewer(id: number): Observable<SocialViewerDto> {
+    return this.http.get<SocialViewerDto>(`${this.base}/api/entries/${id}/social/viewer`);
+  }
+
+  repost(id: number): Observable<EntryRepostDto> {
+    return this.http.put<EntryRepostDto>(`${this.base}/api/entries/${id}/repost`, null);
+  }
+
+  unrepost(id: number): Observable<EntryRepostDto> {
+    return this.http.delete<EntryRepostDto>(`${this.base}/api/entries/${id}/repost`);
+  }
+
+  repostComment(entryId: number, address: string): Observable<EntryRepostDto> {
+    return this.http.put<EntryRepostDto>(
+      `${this.base}/api/entries/${entryId}/comments/repost`,
+      null,
+      { params: { address } },
+    );
+  }
+
+  unrepostComment(entryId: number, address: string): Observable<EntryRepostDto> {
+    return this.http.delete<EntryRepostDto>(`${this.base}/api/entries/${entryId}/comments/repost`, {
+      params: { address },
+    });
   }
 
   like(id: number): Observable<EntryLikeDto> {

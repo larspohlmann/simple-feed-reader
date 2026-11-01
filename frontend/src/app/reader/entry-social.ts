@@ -7,9 +7,26 @@ export interface EntrySocialDto {
   canLike: boolean;
 }
 
-/** The answer of `GET`/`PUT`/`DELETE /api/entries/{id}/like`. */
+/** The answer of `PUT`/`DELETE /api/entries/{id}/like`. */
 export interface EntryLikeDto {
   isLiked: boolean;
+}
+
+/** The answer of `GET /api/entries/{id}/social/viewer`: what the reader has done to the post on its network. */
+export interface SocialViewerDto {
+  isLiked: boolean;
+  isReposted: boolean;
+  canRepost: boolean;
+}
+
+/** The answer of `PUT`/`DELETE /api/entries/{id}/repost` and of a reply's repost. */
+export interface EntryRepostDto {
+  isReposted: boolean;
+}
+
+export interface RepostView {
+  isReposted: boolean;
+  canRepost: boolean;
 }
 
 /** The answer of `GET /api/entries/{id}/social`; `quotes` is null on Mastodon. */

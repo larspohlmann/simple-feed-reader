@@ -848,6 +848,7 @@ describe('ReaderViewComponent', () => {
               status: 'ok',
               counts: { likes: 0, reposts: 0, replies: 10, quotes: 0 },
               likedAtLoad: false,
+              repost: null,
               loadedAt: 0,
             }),
           load: jest.fn(),
