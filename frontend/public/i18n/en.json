@@ -505,7 +505,13 @@
         "succeeded": "Update finished.",
         "failed": "The update failed.",
         "failedWithCode": "The update failed (exit code {{code}}).",
-        "manual": "Run ./scripts/update.sh on the host to update. To update from here, enable it with ./scripts/prod-configure.sh."
+        "manual": "Run ./scripts/update.sh on the host to update. To update from here, enable it with ./scripts/prod-configure.sh.",
+        "lastUpdate": "Last update",
+        "reconnecting": "The app is restarting — the log continues once it is back.",
+        "checkNow": "Check for updates now",
+        "checkFailed": "Could not check for updates.",
+        "upToDate": "No newer release found.",
+        "lastUpdateAt": "Last update · {{when}}"
       }
     },
     "reading": {

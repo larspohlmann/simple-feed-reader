@@ -64,6 +64,37 @@ describe('VersionService', () => {
     expect(service.unavailable()).toBe(true);
   });
 
+  it('asks the server to check upstream again and takes its answer', () => {
+    let done = false;
+    service.checkNow().subscribe(() => (done = true));
+    const request = ctrl.expectOne('https://api.test/api/admin/version/check');
+    expect(request.request.method).toBe('POST');
+    request.flush({
+      ...release,
+      latest: { version: 'v0.6.0', notesUrl: 'https://example.test/notes' },
+      updateAvailable: true,
+    });
+
+    expect(done).toBe(true);
+    expect(service.updateAvailable()).toBe(true);
+    expect(service.latest()?.version).toBe('v0.6.0');
+  });
+
+  it('keeps what it knew when the check fails', () => {
+    service.load();
+    ctrl.expectOne('https://api.test/api/version').flush({ ...release, updateAvailable: true });
+
+    let failed = false;
+    service.checkNow().subscribe({ error: () => (failed = true) });
+    ctrl
+      .expectOne('https://api.test/api/admin/version/check')
+      .flush(null, { status: 502, statusText: 'Bad Gateway' });
+
+    expect(failed).toBe(true);
+    expect(service.apiVersion()).toEqual({ ...release, updateAvailable: true });
+    expect(service.updateAvailable()).toBe(true);
+  });
+
   it('re-checks on every load, because the server can be redeployed under a loaded bundle', () => {
     service.load();
     ctrl.expectOne('https://api.test/api/version').flush(release);

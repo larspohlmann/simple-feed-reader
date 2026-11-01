@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, NgZone, inject, signal } from '@angular/core';
+import { Observable, map, tap } from 'rxjs';
 import { API_BASE_URL } from './api';
 import { onTabVisibilityChange } from './tab-visibility';
 
@@ -55,12 +56,7 @@ export class VersionService {
   load(): void {
     this.lastLoadedAt = Date.now();
     this.http.get<VersionPayload>(`${this.base}/api/version`).subscribe({
-      next: (payload) => {
-        this.apiVersion.set(payload);
-        this.unavailable.set(false);
-        this.latest.set(payload.latest ?? null);
-        this.updateAvailable.set(payload.updateAvailable ?? false);
-      },
+      next: (payload) => this.apply(payload),
       error: () => {
         this.apiVersion.set(null);
         this.unavailable.set(true);
@@ -70,9 +66,27 @@ export class VersionService {
     });
   }
 
+  /** Admin only: the server drops its cached upstream release and asks GitHub again. */
+  checkNow(): Observable<void> {
+    return this.http.post<VersionPayload>(`${this.base}/api/admin/version/check`, {}).pipe(
+      tap((payload) => {
+        this.lastLoadedAt = Date.now();
+        this.apply(payload);
+      }),
+      map(() => undefined),
+    );
+  }
+
   loadIfStale(): void {
     const fresh = this.lastLoadedAt !== null && Date.now() - this.lastLoadedAt < RECHECK_AFTER_MS;
     if (fresh && !this.unavailable()) return;
     this.load();
+  }
+
+  private apply(payload: VersionPayload): void {
+    this.apiVersion.set(payload);
+    this.unavailable.set(false);
+    this.latest.set(payload.latest ?? null);
+    this.updateAvailable.set(payload.updateAvailable ?? false);
   }
 }

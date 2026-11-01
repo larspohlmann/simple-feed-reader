@@ -1,31 +1,66 @@
-@if (visible() && status(); as current) {
+@if (status(); as current) {
   <div class="self-update">
     @if (showsManualHint()) {
       <p class="manual">{{ 'settings.about.update.manual' | transloco }}</p>
-    } @else {
-      @if (current.phase === 'failed' && current.exitCode !== null) {
-        <p class="phase failed">
-          {{ 'settings.about.update.failedWithCode' | transloco: { code: current.exitCode } }}
-        </p>
-      } @else if (current.phase !== 'idle') {
-        <p class="phase" [class.failed]="current.phase === 'failed'">
-          {{ 'settings.about.update.' + current.phase | transloco }}
+    } @else if (inProgress()) {
+      <p class="phase">{{ 'settings.about.update.' + current.phase | transloco }}</p>
+      @if (reconnecting()) {
+        <p class="phase reconnecting">
+          <app-spinner [size]="14" />
+          {{ 'settings.about.update.reconnecting' | transloco }}
         </p>
       }
-
-      @if (current.phase !== 'idle' && current.log !== '') {
+      @if (current.log !== '') {
         <pre class="log">{{ current.log }}</pre>
       }
-
-      @if (refusal(); as message) {
-        <app-error-banner [message]="message" />
+    } @else if (finished()) {
+      @if (current.phase === 'failed') {
+        <p class="phase failed">
+          @if (current.exitCode !== null) {
+            {{ 'settings.about.update.failedWithCode' | transloco: { code: current.exitCode } }}
+          } @else {
+            {{ 'settings.about.update.failed' | transloco }}
+          }
+        </p>
       }
+      <app-disclosure
+        class="last-update"
+        [label]="
+          finishedAt()
+            ? ('settings.about.update.lastUpdateAt' | transloco: { when: finishedAt() })
+            : ('settings.about.update.lastUpdate' | transloco)
+        "
+      >
+        @if (current.phase === 'succeeded') {
+          <p class="phase">{{ 'settings.about.update.succeeded' | transloco }}</p>
+        }
+        @if (current.log !== '') {
+          <pre class="log">{{ current.log }}</pre>
+        }
+      </app-disclosure>
+    }
 
-      @if (offeredRelease(); as release) {
-        <app-button variant="primary" [loading]="starting()" (click)="startUpdate()">
-          {{ 'settings.about.update.button' | transloco: { version: release.version } }}
+    @if (refusal(); as message) {
+      <app-error-banner [message]="message" />
+    }
+
+    @if (!inProgress()) {
+      <div class="actions">
+        @if (offeredRelease(); as release) {
+          <app-button variant="primary" [loading]="starting()" (click)="startUpdate()">
+            {{ 'settings.about.update.button' | transloco: { version: release.version } }}
+          </app-button>
+        }
+        <app-button class="check" [loading]="checking()" (click)="checkNow()">
+          {{ 'settings.about.update.checkNow' | transloco }}
         </app-button>
-      }
+      </div>
+    }
+
+    @if (checkOutcome() === 'failed') {
+      <p class="phase failed">{{ 'settings.about.update.checkFailed' | transloco }}</p>
+    } @else if (upToDate()) {
+      <p class="phase up-to-date">{{ 'settings.about.update.upToDate' | transloco }}</p>
     }
   </div>
 }

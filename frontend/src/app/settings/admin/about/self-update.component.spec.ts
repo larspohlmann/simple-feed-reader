@@ -29,6 +29,7 @@ describe('SelfUpdateComponent', () => {
   const requestUpdate = jest.fn<Observable<SelfUpdateStatusDto>, []>();
   const ask = jest.fn<Observable<boolean>, [unknown]>();
   const load = jest.fn();
+  const checkNow = jest.fn<Observable<void>, []>();
   const updateAvailable = signal(false);
   const latest = signal<LatestRelease | null>(null);
 
@@ -38,7 +39,7 @@ describe('SelfUpdateComponent', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         { provide: AdminApi, useValue: { updateStatus, requestUpdate } },
-        { provide: VersionService, useValue: { load, updateAvailable, latest } },
+        { provide: VersionService, useValue: { load, checkNow, updateAvailable, latest } },
         { provide: ConfirmService, useValue: { ask } },
       ],
     });
@@ -51,8 +52,20 @@ describe('SelfUpdateComponent', () => {
     return fixture.nativeElement;
   }
 
+  function buttonLabelled(
+    fixture: ComponentFixture<SelfUpdateComponent>,
+    label: string,
+  ): HTMLButtonElement | null {
+    const buttons = Array.from(element(fixture).querySelectorAll('button'));
+    return buttons.find((candidate) => candidate.textContent?.includes(label)) ?? null;
+  }
+
   function button(fixture: ComponentFixture<SelfUpdateComponent>): HTMLButtonElement | null {
-    return element(fixture).querySelector('button');
+    return buttonLabelled(fixture, 'Update to');
+  }
+
+  function checkButton(fixture: ComponentFixture<SelfUpdateComponent>): HTMLButtonElement | null {
+    return buttonLabelled(fixture, 'Check for updates now');
   }
 
   function offerUpdate(): void {
@@ -87,6 +100,7 @@ describe('SelfUpdateComponent', () => {
     requestUpdate.mockReset();
     ask.mockReset();
     load.mockReset();
+    checkNow.mockReset();
     updateAvailable.set(false);
     latest.set(null);
   });
@@ -166,13 +180,123 @@ describe('SelfUpdateComponent', () => {
     expect(requestUpdate).not.toHaveBeenCalled();
   });
 
-  it('renders nothing when the install is current', () => {
+  it('offers only the check when the install is current', () => {
     updateStatus.mockReturnValue(of(status('idle')));
     const fixture = mount();
 
     expect(updateStatus).toHaveBeenCalledTimes(1);
-    expect(element(fixture).querySelector('.self-update')).toBeNull();
-    expect(element(fixture).textContent?.trim()).toBe('');
+    expect(button(fixture)).toBeNull();
+    expect(checkButton(fixture)).not.toBeNull();
+    expect(element(fixture).querySelector('.phase')).toBeNull();
+  });
+
+  it('checks upstream on demand and says when nothing newer exists', () => {
+    updateStatus.mockReturnValue(of(status('idle')));
+    checkNow.mockReturnValue(of(undefined));
+    const fixture = mount();
+    expect(element(fixture).querySelector('.up-to-date')).toBeNull();
+
+    checkButton(fixture)?.click();
+    fixture.detectChanges();
+
+    expect(checkNow).toHaveBeenCalledTimes(1);
+    expect(element(fixture).querySelector('.up-to-date')?.textContent).toContain(
+      'No newer release found.',
+    );
+  });
+
+  it('offers the release a check turns up', () => {
+    updateStatus.mockReturnValue(of(status('idle')));
+    checkNow.mockImplementation(() => {
+      offerUpdate();
+      return of(undefined);
+    });
+    const fixture = mount();
+
+    checkButton(fixture)?.click();
+    fixture.detectChanges();
+
+    expect(button(fixture)?.textContent).toContain('Update to v9.9.9');
+    expect(element(fixture).querySelector('.up-to-date')).toBeNull();
+  });
+
+  it('says so when the check fails', () => {
+    updateStatus.mockReturnValue(of(status('idle')));
+    checkNow.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+    const fixture = mount();
+
+    checkButton(fixture)?.click();
+    fixture.detectChanges();
+
+    expect(element(fixture).querySelector('.phase.failed')?.textContent).toContain(
+      'Could not check for updates.',
+    );
+    expect(element(fixture).querySelector('.up-to-date')).toBeNull();
+  });
+
+  it('offers the check without an updater too', () => {
+    updateStatus.mockReturnValue(of(status('idle', { updaterPresent: false })));
+    const fixture = mount();
+
+    expect(checkButton(fixture)).not.toBeNull();
+  });
+
+  it('folds a finished update behind a closed last-update toggle', () => {
+    updateStatus.mockReturnValue(
+      of(status('succeeded', { finishedAt: '2026-11-01T14:02:00Z', log: 'Pulled images' })),
+    );
+    const fixture = mount();
+
+    const details = element(fixture).querySelector('.last-update details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(details.querySelector('summary')?.textContent).toContain('Last update · ');
+    expect(details.querySelector('summary')?.textContent).toContain('2026');
+    expect(details.querySelector('pre.log')?.textContent).toContain('Pulled images');
+  });
+
+  it('keeps a failure in view while folding its log away', () => {
+    updateStatus.mockReturnValue(of(status('failed', { exitCode: 3, log: 'build failed' })));
+    const fixture = mount();
+
+    const failure = element(fixture).querySelector('.phase.failed');
+    expect(failure?.closest('details')).toBeNull();
+    expect(element(fixture).querySelector('.last-update pre.log')?.textContent).toContain(
+      'build failed',
+    );
+  });
+
+  it('keeps the log of a running update open and hides the check', () => {
+    updateStatus.mockReturnValue(of(status('running', { log: 'Pulling images' })));
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('pre.log')?.closest('details')).toBeNull();
+    expect(checkButton(fixture)).toBeNull();
+  });
+
+  it('says the app is restarting while an update has it unreachable', () => {
+    updateStatus
+      .mockReturnValueOnce(of(status('running', { log: 'Updating the production stack' })))
+      .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 502 })))
+      .mockReturnValue(of(status('running', { log: 'Updating the production stack' })));
+    const fixture = mount();
+    expect(element(fixture).querySelector('.reconnecting')).toBeNull();
+
+    advancePoll(fixture);
+    expect(element(fixture).querySelector('.reconnecting')?.textContent).toContain(
+      'The app is restarting',
+    );
+
+    advancePoll(fixture);
+    expect(element(fixture).querySelector('.reconnecting')).toBeNull();
+  });
+
+  it('does not claim a restart when no update is under way', () => {
+    updateStatus
+      .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 502 })))
+      .mockReturnValue(of(status('idle')));
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('.reconnecting')).toBeNull();
   });
 
   it('asks only once while a start is under way', () => {
