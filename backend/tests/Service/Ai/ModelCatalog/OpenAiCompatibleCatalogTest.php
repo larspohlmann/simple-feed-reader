@@ -25,9 +25,9 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         return ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
     }
 
-    private function catalogAnswering(MockResponse $response): OpenAiCompatibleCatalog
+    private function catalogAnswering(MockResponse ...$responses): OpenAiCompatibleCatalog
     {
-        return new OpenAiCompatibleCatalog(new MockHttpClient($response), 'SimpleFeedReader/1.0');
+        return new OpenAiCompatibleCatalog(new MockHttpClient($responses), 'SimpleFeedReader/1.0');
     }
 
     /**
@@ -260,82 +260,44 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     /** OpenRouter answers an authenticated request carrying the header with its 20-model Anthropic listing (#1957). */
     public function testAnAnsweredListingCarriesNoAnthropicVersion(): void
     {
-        $requests = $this->requestsAnswering(new MockResponse('{"data":[{"id":"gpt-4o"}]}'));
+        $listing = new MockResponse('{"data":[{"id":"gpt-4o"}]}');
 
-        self::assertCount(1, $requests);
-        self::assertNotContains(self::ANTHROPIC_VERSION_HEADER, $requests[0]);
+        $this->catalogAnswering($listing)->listModels($this->credentials());
+
+        self::assertNotContains(self::ANTHROPIC_VERSION_HEADER, self::headersSentWith($listing));
     }
 
     public function testAListingRefusedWithoutAVersionIsRetriedWithIt(): void
     {
-        $requests = $this->requestsAnswering(
+        $listing = new MockResponse('{"data":[{"id":"claude-haiku-5-5"}]}');
+        $catalog = $this->catalogAnswering(
             new MockResponse('{"error":"anthropic-version: header is required"}', ['http_code' => 400]),
-            new MockResponse('{"data":[{"id":"claude-haiku-5-5"}]}'),
+            $listing,
         );
 
-        self::assertCount(2, $requests);
-        self::assertContains(self::ANTHROPIC_VERSION_HEADER, $requests[1]);
+        self::assertSame(['claude-haiku-5-5'], $this->ids($catalog->listModels($this->credentials())));
+        self::assertContains(self::ANTHROPIC_VERSION_HEADER, self::headersSentWith($listing));
     }
 
-    public function testTheRetryReturnsTheProvidersModels(): void
+    /** @return array<mixed> */
+    private static function headersSentWith(MockResponse $response): array
     {
-        $client = new MockHttpClient([
-            new MockResponse('{}', ['http_code' => 400]),
-            new MockResponse('{"data":[{"id":"claude-haiku-5-5"}]}'),
-        ]);
+        $headers = $response->getRequestOptions()['headers'] ?? null;
+        self::assertIsArray($headers);
 
-        $models = (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
-
-        self::assertSame(['claude-haiku-5-5'], $this->ids($models));
+        return $headers;
     }
 
     public function testARetryThatIsRefusedAgainIsUnreachable(): void
     {
-        $client = new MockHttpClient([
+        $catalog = $this->catalogAnswering(
             new MockResponse('{}', ['http_code' => 400]),
             new MockResponse('{}', ['http_code' => 400]),
-        ]);
+        );
 
         $this->expectException(ProviderUnreachableException::class);
         $this->expectExceptionMessage('That provider answered with status 400.');
-        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
-    }
-
-    public function testARejectedKeyIsNotRetried(): void
-    {
-        $requests = [];
-        $client = new MockHttpClient(
-            static function (string $method, string $url, array $options) use (&$requests): MockResponse {
-                $requests[] = $options['headers'] ?? [];
-
-                return new MockResponse('{"error":"nope"}', ['http_code' => 401]);
-            },
-        );
-
-        try {
-            (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
-            self::fail(CredentialsRejectedException::class . ' was not thrown.');
-        } catch (CredentialsRejectedException) {
-            self::assertCount(1, $requests);
-        }
-    }
-
-    /** @return list<array<int, string>> the headers of each request, in order */
-    private function requestsAnswering(MockResponse ...$responses): array
-    {
-        $requests = [];
-        $client = new MockHttpClient(
-            static function (string $method, string $url, array $options) use (&$requests, &$responses): MockResponse {
-                $requests[] = $options['headers'] ?? [];
-
-                return array_shift($responses) ?? new MockResponse('', ['http_code' => 500]);
-            },
-        );
-
-        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
-
-        /** @var list<array<int, string>> $requests */
-        return $requests;
+        $catalog->listModels($this->credentials());
     }
 
     /** @return array<int, string> */

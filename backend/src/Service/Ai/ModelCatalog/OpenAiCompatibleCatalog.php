@@ -29,7 +29,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     private const int MAXIMUM_RESPONSE_BYTES = 4 * 1024 * 1024;
     private const string TEXT_OUTPUT = 'text';
     // Retry only: Anthropic refuses its listing without it; OpenRouter shrinks its listing to 20 models with it.
-    private const array ANTHROPIC_VERSION = ['anthropic-version' => '2023-06-01'];
+    private const array ANTHROPIC_VERSION_HEADER = ['anthropic-version' => '2023-06-01'];
     private const array SCORING_OUTPUTS = [
         'decisions' => ScoringProtocol::SystemOne,
         'rerank' => ScoringProtocol::Rerank,
@@ -62,9 +62,9 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     private function readBody(ProviderCredentialsModel $credentials): string
     {
         try {
-            $response = $this->request($credentials, []);
+            $response = $this->request($credentials);
             if (Response::HTTP_BAD_REQUEST === $response->getStatusCode()) {
-                $response = $this->request($credentials, self::ANTHROPIC_VERSION);
+                $response = $this->request($credentials, self::ANTHROPIC_VERSION_HEADER);
             }
             $status = $response->getStatusCode();
 
@@ -82,8 +82,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
         }
     }
 
-    /** @param array<string, string> $versionHeaders */
-    private function request(ProviderCredentialsModel $credentials, array $versionHeaders): ResponseInterface
+    /** @param array<string, string> $extraHeaders */
+    private function request(ProviderCredentialsModel $credentials, array $extraHeaders = []): ResponseInterface
     {
         return $this->httpClient->request('GET', $credentials->baseUrl . '/models?output_modalities=all', [
             'headers' => [
@@ -91,7 +91,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
                 // No transparent compression, so the wire cap below also bounds the decompressed body.
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
-                ...$versionHeaders,
+                ...$extraHeaders,
                 ...$credentials->authorizationHeaders(),
             ],
             'timeout' => self::TIMEOUT_SECONDS,
