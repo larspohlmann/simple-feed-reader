@@ -111,14 +111,14 @@ export class SocialPostApi {
 
 function targetParams(target: PostTargetDto): Record<string, string> {
   if (target.kind === 'link') {
-    return { network: target.network, url: target.url, title: target.title };
+    return { network: target.network, url: target.url };
   }
   return addressParam(target.address);
 }
 
 function composerParams(target: PostTargetDto): Record<string, string> {
   return target.kind === 'link'
-    ? targetParams(target)
+    ? { ...targetParams(target), title: target.title }
     : { kind: target.kind, ...targetParams(target) };
 }
 

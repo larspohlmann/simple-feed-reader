@@ -83,7 +83,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     /** @throws SocialPostTooLongException */
     private static function assertFits(PostDraftModel $draft): void
     {
-        if ((int) grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
+        if (grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
             throw new SocialPostTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));
         }
     }

@@ -116,6 +116,19 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
+    public function testTheLinkComposerStartsFromALongTitleClipped(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-composer-long-title@example.test');
+        $this->entityManager()->persist(SocialAccounts::blueskyOf($user));
+        $this->entityManager()->flush();
+
+        $client->request('GET', self::LINK_COMPOSER . 'bluesky&title=' . rawurlencode(str_repeat('ä', 1000)));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(str_repeat('ä', LinkCardContent::TITLE_MAX), $this->payload($client)['text']);
+    }
+
     public function testTheLinkComposerWritesAsTheAccountTheReaderChose(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
@@ -217,13 +230,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         yield 'no url' => [''];
         yield 'no url at all' => ['&url=not+a+link'];
         yield 'a host without tld' => ['&url=https%3A%2F%2Fintranet%2Fpage'];
-        yield 'a too long title' => [
-            '&url=https%3A%2F%2Fexample.com%2Farticle&title=' . str_repeat('a', LinkCardContent::TITLE_MAX + 1),
-        ];
     }
 
     #[DataProvider('invalidComposerQueries')]
-    public function testTheLinkComposerNeedsASharableUrlAndAFittingTitle(string $query): void
+    public function testTheLinkComposerNeedsASharableUrl(string $query): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, sprintf('link-composer-url-%s@example.test', md5($query)));

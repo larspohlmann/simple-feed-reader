@@ -6,6 +6,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -24,6 +25,7 @@ import { randomUuid } from '../../../shared/random-uuid';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
   ComposerContextDto,
+  ComposerKind,
   MASTODON_VISIBILITIES,
   MastodonVisibility,
   PublishedPostDto,
@@ -90,7 +92,10 @@ export class ComposerDialogComponent {
     const state = this.state();
     return state.status === 'failed' ? state.message : null;
   });
-  private readonly kind = computed(() => this.context()?.kind ?? this.target.kind);
+  private readonly kind = linkedSignal<ComposerContextDto | null, ComposerKind>({
+    source: this.context,
+    computation: (context, previous) => context?.kind ?? previous?.value ?? this.target.kind,
+  });
   protected readonly forbiddenKey = computed(() => {
     const context = this.context();
     if (context === null || context.canSend || context.kind === 'link') return null;

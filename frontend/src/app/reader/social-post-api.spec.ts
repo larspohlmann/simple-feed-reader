@@ -188,7 +188,7 @@ describe('SocialPostApi', () => {
     expect(toPost.request.method).toBe('POST');
     expect(toPost.request.params.get('network')).toBe('mastodon');
     expect(toPost.request.params.get('url')).toBe(SHARED_URL);
-    expect(toPost.request.params.get('title')).toBe('A story');
+    expect(toPost.request.params.has('title')).toBe(false);
     expect(toPost.request.body).toEqual(draft);
     toPost.flush({ address: 'https://x/1', url: null });
   });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Url;
 
 use App\Service\Url\UrlNormalizer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class UrlNormalizerTest extends TestCase
@@ -66,6 +67,32 @@ final class UrlNormalizerTest extends TestCase
             'https://example.com/story',
             $this->normalizer->normalize('https://example.com/story#section-3'),
         );
+    }
+
+    public function testTheSharedAddressDropsTrackingButKeepsTheFragment(): void
+    {
+        self::assertSame(
+            'https://example.com/page#comment-5',
+            $this->normalizer->withoutTracking('https://example.com/page?utm_source=x#comment-5'),
+        );
+    }
+
+    public function testTheSharedAddressWithoutFragmentEndsWithItsPath(): void
+    {
+        self::assertSame('https://example.com/page', $this->normalizer->withoutTracking('https://example.com/page'));
+    }
+
+    #[DataProvider('noAddresses')]
+    public function testNoAddressIsNoSharedAddress(?string $url): void
+    {
+        self::assertNull($this->normalizer->withoutTracking($url));
+    }
+
+    /** @return iterable<string, array{?string}> */
+    public static function noAddresses(): iterable
+    {
+        yield 'null' => [null];
+        yield 'a fragment without address' => ['#comment-5'];
     }
 
     public function testLowercasesSchemeAndHostButNotThePath(): void

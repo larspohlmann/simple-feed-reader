@@ -49,6 +49,19 @@ final class SharedPageCardsTest extends TestCase
         self::assertEquals(new LinkCardContent($address, 'example.com', null, null, 'example.com'), $card);
     }
 
+    public function testAHostTooLongToStoreAsTheSiteNameIsClipped(): void
+    {
+        $host = str_repeat('a', LinkCardContent::SITE_NAME_MAX) . '.example';
+        $address = 'https://' . $host . '/article';
+
+        $card = $this->cardsReading(new PageCardModel(null, null))->cardOf($address);
+
+        self::assertEquals(
+            new LinkCardContent($address, $host, null, null, substr($host, 0, LinkCardContent::SITE_NAME_MAX)),
+            $card,
+        );
+    }
+
     public function testAnAddressWithoutHostIsTitledWithItself(): void
     {
         $address = 'mailto:someone';

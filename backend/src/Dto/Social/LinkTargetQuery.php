@@ -17,13 +17,17 @@ final readonly class LinkTargetQuery
         #[Assert\Url(requireTld: true)]
         #[Assert\Length(max: LinkCardContent::URL_MAX)]
         public string $url,
-        #[Assert\Length(max: LinkCardContent::TITLE_MAX)]
         public string $title = '',
     ) {
     }
 
     public function toLinkTarget(?int $accountId): LinkTargetModel
     {
-        return new LinkTargetModel($this->network, $accountId, $this->url, $this->title);
+        return new LinkTargetModel(
+            $this->network,
+            $accountId,
+            $this->url,
+            mb_substr($this->title, 0, LinkCardContent::TITLE_MAX),
+        );
     }
 }

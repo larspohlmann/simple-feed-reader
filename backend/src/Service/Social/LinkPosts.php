@@ -93,6 +93,6 @@ final readonly class LinkPosts
     /** @throws SocialPostRefusedException */
     private function sharable(string $url): string
     {
-        return $this->urls->normalize($url) ?? throw new SocialPostRefusedException('This is no link to share.');
+        return $this->urls->withoutTracking($url) ?? throw new SocialPostRefusedException('This is no link to share.');
     }
 }

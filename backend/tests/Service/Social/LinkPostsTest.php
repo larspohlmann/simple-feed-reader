@@ -111,6 +111,18 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame("A story\n\n" . self::ARTICLE_URL, $context->text);
     }
 
+    public function testTheSharedAddressKeepsItsFragment(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $page = 'https://news.example/page';
+        $target = new LinkTargetModel(SocialNetwork::Mastodon, null, $page . '?utm_source=x#comment-5', 'A story');
+
+        $context = $this->linkPosts()->contextFor($this->owner, $target);
+
+        self::assertSame("A story\n\n" . $page . '#comment-5', $context->text);
+        self::assertSame([$page . '#comment-5'], $this->pages->readUrls());
+    }
+
     public function testTheComposerShowsTheCardOfThePageTheLinkPostShares(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));

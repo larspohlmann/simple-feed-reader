@@ -33,6 +33,15 @@ final readonly class UrlNormalizer
         return $canonical;
     }
 
+    /** The address as a reader shares it: tracking parameters drop, the fragment stays. */
+    public function withoutTracking(?string $url): ?string
+    {
+        $normalized = $this->normalize($url);
+        $fragment = parse_url((string) $url, \PHP_URL_FRAGMENT);
+
+        return null === $normalized || !is_string($fragment) ? $normalized : $normalized . '#' . $fragment;
+    }
+
     /** Every writer of an article's identity hashes here: a divergence of one byte silently stops dedupe. */
     public function hash(?string $url): ?string
     {

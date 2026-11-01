@@ -501,6 +501,18 @@ describe('ComposerDialogComponent', () => {
       expect(textArea(fixture).value).toBe('');
     });
 
+    it('keeps the quote heading while an account switch reloads the context', () => {
+      api.composer.mockReturnValue(of(quoteContext({ accounts })));
+      const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
+      api.composer.mockReturnValue(new Subject<ComposerContextDto>());
+      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Quote on Mastodon');
+    });
+
     it('keeps what the reader wrote when a later context quotes', () => {
       api.composer.mockReturnValue(of(linkContext({ accounts })));
       const fixture = mount(article());
