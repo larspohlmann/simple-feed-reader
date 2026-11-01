@@ -11,9 +11,11 @@ use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialPostAddress;
 
@@ -34,7 +36,9 @@ final readonly class SocialReposts
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialPostNotFoundException
      * @throws SocialPostRefusedException
+     * @throws SocialTokenScopeMissingException
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function repost(User $user, Entry $entry): void
@@ -48,7 +52,10 @@ final readonly class SocialReposts
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialPostNotFoundException
+     * @throws SocialPostRefusedException
+     * @throws SocialTokenScopeMissingException
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function unrepost(User $user, Entry $entry): void
@@ -63,7 +70,9 @@ final readonly class SocialReposts
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialPostNotFoundException
      * @throws SocialPostRefusedException
+     * @throws SocialTokenScopeMissingException
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function repostReply(User $user, Entry $entry, string $address): void
@@ -77,7 +86,10 @@ final readonly class SocialReposts
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialPostNotFoundException
+     * @throws SocialPostRefusedException
+     * @throws SocialTokenScopeMissingException
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function unrepostReply(User $user, Entry $entry, string $address): void

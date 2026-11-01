@@ -35,6 +35,7 @@ describe('RepostButtonComponent', () => {
     inputs: Partial<{
       network: string;
       countText: string | null;
+      countLabel: string | null;
       reposted: boolean;
       canRepost: boolean;
     }> = {},
@@ -42,6 +43,7 @@ describe('RepostButtonComponent', () => {
     const settled = {
       network: 'bluesky',
       countText: '5',
+      countLabel: '5 reposts',
       reposted: false,
       canRepost: true,
       ...inputs,
@@ -61,6 +63,7 @@ describe('RepostButtonComponent', () => {
 
     expect(button.querySelector('.number')?.textContent?.trim()).toBe('5');
     expect(button.getAttribute('aria-haspopup')).toBe('menu');
+    expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky, 5 reposts');
     expect(button.getAttribute('aria-expanded')).toBe('false');
   });
 
@@ -89,7 +92,9 @@ describe('RepostButtonComponent', () => {
 
   it('opens the action sheet on a touch screen', () => {
     isCoarse.set(true);
-    show().click();
+    const button = show();
+    expect(button.getAttribute('aria-haspopup')).toBe('dialog');
+    button.click();
 
     expect(sheet.open).toHaveBeenCalledWith({
       title: 'Repost',
@@ -123,6 +128,6 @@ describe('RepostButtonComponent', () => {
     const button = show({ reposted: true });
 
     expect(button.classList).toContain('on');
-    expect(button.getAttribute('aria-label')).toBe('Undo repost on Bluesky');
+    expect(button.getAttribute('aria-label')).toBe('Undo repost on Bluesky, 5 reposts');
   });
 });

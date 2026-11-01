@@ -21,7 +21,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
     private const string FAVOURITE = 'POST https://mastodon.example/api/v1/statuses/110/favourite';
 
-    /** Must match framework.rate_limiter.social_like_state.limit in rate_limiter.yaml. */
+    /** Must match framework.rate_limiter.social_viewer.limit in rate_limiter.yaml. */
     private const int VIEWER_BUDGET = 120;
 
     protected function setUp(): void

@@ -177,6 +177,14 @@ describe('CommentsService', () => {
       expect(likeComment).toHaveBeenCalledWith(1, address);
     });
 
+    it('holds a reload back until the repost settles', () => {
+      service.toggleRepost(1, post, onError);
+
+      service.reload(1);
+
+      expect(api.comments).toHaveBeenCalledTimes(1);
+    });
+
     it('does nothing on a comment the network keeps from reposts', () => {
       service.toggleRepost(1, { ...post, canRepost: false }, onError);
 

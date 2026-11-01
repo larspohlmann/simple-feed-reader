@@ -53,9 +53,10 @@ export class SocialCountsService {
     if (isStale(state())) this.fetch(entry, state, this.api.counts(entry.id));
   }
 
+  /** A reload waits out a repost on the wire, whose answer the reloaded counts might not include yet. */
   reload(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
-    if (state().status === 'loading') return;
+    if (state().status === 'loading' || this.repostsInFlight.has(entry.id)) return;
     this.fetch(entry, state, this.api.counts(entry.id, true));
   }
 

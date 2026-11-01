@@ -2,11 +2,11 @@
   type="button"
   class="repost"
   [class.on]="reposted()"
-  aria-haspopup="menu"
+  [attr.aria-haspopup]="popup()"
   [attr.aria-expanded]="open()"
   [attr.aria-disabled]="canRepost() ? null : 'true'"
   [attr.title]="hintKey() | transloco"
-  [attr.aria-label]="hintKey() | transloco"
+  [attr.aria-label]="(hintKey() | transloco) + (countLabel() ? ', ' + countLabel() : '')"
   cdkOverlayOrigin
   #origin="cdkOverlayOrigin"
   #button

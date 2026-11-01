@@ -37,6 +37,8 @@ export class RepostButtonComponent {
   readonly network = input.required<SocialNetworkName>();
   /** The repost count, already formatted for the reader's language; null before the counts load. */
   readonly countText = input.required<string | null>();
+  /** The repost count as words, which the spoken label carries because it replaces the visible number. */
+  readonly countLabel = input.required<string | null>();
   readonly reposted = input.required<boolean>();
   readonly canRepost = input.required<boolean>();
   readonly toggled = output<void>();
@@ -47,6 +49,7 @@ export class RepostButtonComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly positions = POSITIONS;
+  protected readonly popup = computed(() => (this.screen.isCoarse() ? 'dialog' : 'menu'));
   protected readonly open = signal(false);
   protected readonly actionKey = computed(
     () => `reader.${this.reposted() ? 'unrepost' : 'repost'}.${this.network()}`,

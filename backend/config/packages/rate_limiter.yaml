@@ -147,8 +147,8 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per user: opening a social post asks the user's own account whether they liked it there, one or two calls.
-        social_like_state:
+        # Per user: opening a social post asks the user's own account what they did to it there, one or two calls.
+        social_viewer:
             policy: 'sliding_window'
             limit: 120
             interval: '5 minutes'

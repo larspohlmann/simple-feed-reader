@@ -49,10 +49,9 @@ export class SocialCountsRowComponent {
   protected readonly shownCounts = computed<ShownCount[]>(() => {
     const counts = this.counts();
     if (!counts) return [];
-    const repostKind: CountKind = this.network() === 'mastodon' ? 'boosts' : 'reposts';
     const shown: ShownCount[] = [];
     if (this.reposted() === null) {
-      shown.push({ kind: repostKind, icon: 'repeat', count: counts.reposts });
+      shown.push({ kind: this.repostKind(), icon: 'repeat', count: counts.reposts });
     }
     shown.push({ kind: 'replies', icon: 'chat_bubble', count: counts.replies });
     if (counts.quotes !== null) {
@@ -62,11 +61,9 @@ export class SocialCountsRowComponent {
     return shown;
   });
 
-  protected readonly repostCountText = computed(() => {
-    const reposts = this.counts()?.reposts;
-    return reposts === undefined ? null : this.format(reposts);
-  });
-
+  protected readonly repostKind = computed<CountKind>(() =>
+    this.network() === 'mastodon' ? 'boosts' : 'reposts',
+  );
   protected format(count: number): string {
     return this.compact().format(count);
   }

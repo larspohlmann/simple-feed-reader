@@ -54,9 +54,10 @@ export class CommentsService {
     if (isStale(state())) this.fetch(state, this.api.comments(id));
   }
 
+  /** A reload waits out a like or repost on the wire, whose answer the reloaded thread might not include yet. */
   reload(id: number): void {
     const state = this.stateFor(id);
-    if (state().status === 'loading') return;
+    if (state().status === 'loading' || this.hasActionInFlight(id)) return;
     this.fetch(state, this.api.comments(id, true));
   }
 
@@ -99,6 +100,10 @@ export class CommentsService {
       apply: (state, reposted) => withRepost(state, address, reposted),
       onError,
     });
+  }
+
+  private hasActionInFlight(entryId: number): boolean {
+    return [...this.actionsInFlight].some((key) => key.startsWith(`${entryId} `));
   }
 
   private optimistic(entryId: number, change: OptimisticChange): void {

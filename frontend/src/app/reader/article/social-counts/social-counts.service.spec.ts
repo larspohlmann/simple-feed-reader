@@ -209,6 +209,16 @@ describe('SocialCountsService', () => {
       expect(api.unrepost).not.toHaveBeenCalled();
     });
 
+    it('holds a reload back until the repost settles', () => {
+      api.repost.mockReturnValue(new Subject());
+      service.load(post());
+      service.toggleRepost(post(), onError);
+
+      service.reload(post());
+
+      expect(api.counts).toHaveBeenCalledTimes(1);
+    });
+
     it('does nothing on a post the network keeps from reposts', () => {
       api.viewer.mockReturnValue(of(viewer({ canRepost: false })));
       service.load(post());

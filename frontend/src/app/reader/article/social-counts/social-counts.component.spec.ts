@@ -217,7 +217,7 @@ describe('SocialCountsComponent', () => {
       expect(labels(element)).toEqual(['7 replies', '2 quotes']);
       expect(element.querySelector('.row')!.firstElementChild?.tagName).toBe('APP-REPOST-BUTTON');
       expect(button.querySelector('.number')?.textContent?.trim()).toBe('5');
-      expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky');
+      expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky, 5 reposts');
       expect(button.classList).not.toContain('on');
     });
 
@@ -227,7 +227,7 @@ describe('SocialCountsComponent', () => {
         settle(loaded({}, false, { isReposted: true, canRepost: true })),
       )!;
 
-      expect(button.getAttribute('aria-label')).toBe('Undo boost on Mastodon');
+      expect(button.getAttribute('aria-label')).toBe('Undo boost on Mastodon, 5 boosts');
       expect(button.classList).toContain('on');
     });
 

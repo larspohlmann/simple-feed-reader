@@ -21,7 +21,7 @@ final readonly class EntrySocialViewerController
         private EntryListRepository $entryList,
         private SocialLikes $socialLikes,
         private RateLimitGuard $rateLimitGuard,
-        private RateLimiterFactoryInterface $socialLikeStateLimiter,
+        private RateLimiterFactoryInterface $socialViewerLimiter,
     ) {
     }
 
@@ -34,7 +34,7 @@ final readonly class EntrySocialViewerController
     public function viewer(int $id, #[CurrentUser] User $user): JsonResponse
     {
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
-        $this->rateLimitGuard->enforceForUser($this->socialLikeStateLimiter, $user);
+        $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
         return new JsonResponse(SocialViewerJson::of($this->socialLikes->syncFromNetwork($user, $entry)));
     }
