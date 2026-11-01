@@ -34,7 +34,7 @@
   @if (post.linkCard; as card) {
     <app-link-card
       [card]="card"
-      [layout]="layout()"
+      [layout]="cardLayout()"
       [opensInReader]="cardOpening()"
       (click)="$event.stopPropagation()"
       (keydown.enter)="$event.stopPropagation()"

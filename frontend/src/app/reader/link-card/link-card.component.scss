@@ -17,7 +17,8 @@
   line-height: 1.75;
 }
 
-:host(.block) {
+:host(.block),
+:host(.quote) {
   @include link-card-layout.block-type;
 }
 

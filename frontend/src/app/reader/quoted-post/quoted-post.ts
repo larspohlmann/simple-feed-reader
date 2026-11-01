@@ -12,6 +12,5 @@ export interface QuotedPostDto {
   media: EntryMediumDto[];
   /** The quoted post's own quote, shown as one line; its handle is unknown when the network answered it shallow. */
   nestedQuote: { url: string; handle: string | null } | null;
-  /** The quoted post's own link card (#1974). */
   linkCard: LinkCardDto | null;
 }

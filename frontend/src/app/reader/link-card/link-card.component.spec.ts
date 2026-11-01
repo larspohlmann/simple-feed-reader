@@ -38,6 +38,14 @@ describe('LinkCardComponent', () => {
     expect(partsOf(element)).toEqual(['IMG', 'SMALL', 'STRONG', 'SPAN']);
   });
 
+  it('keeps the site last in the quote layout, the block’s type otherwise', () => {
+    const element = mount('quote');
+
+    expect(element.classList).toContain('quote');
+    expect(element.classList).not.toContain('block');
+    expect(partsOf(element)).toEqual(['IMG', 'STRONG', 'SPAN', 'SMALL']);
+  });
+
   describe('open in reader', () => {
     const navigation = { layer: jest.fn(), openAlone: jest.fn() };
 

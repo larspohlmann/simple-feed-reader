@@ -17,7 +17,7 @@
   @if (card().description) {
     <span>{{ card().description }}</span>
   }
-  @if (layout() === 'article') {
+  @if (layout() !== 'block') {
     <small>{{ card().siteName }}</small>
   }
 </a>

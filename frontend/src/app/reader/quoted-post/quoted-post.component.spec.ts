@@ -85,8 +85,8 @@ describe('QuotedPostComponent', () => {
     expect(card.querySelector('a')!.getAttribute('href')).toBe('https://news.test/story');
   });
 
-  it('puts the card in the block layout in the magazine', () => {
-    expect(query(mount({ linkCard: aLinkCard() }), 'app-link-card')!.classList).toContain('block');
+  it('puts the card in the quote layout in the magazine', () => {
+    expect(query(mount({ linkCard: aLinkCard() }), 'app-link-card')!.classList).toContain('quote');
   });
 
   it('opens the card’s page without reaching a parent click', () => {
@@ -100,6 +100,21 @@ describe('QuotedPostComponent', () => {
 
     expect(link.target).toBe('_blank');
     expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'Enter', key: 'Enter' },
+    { name: 'Space', key: ' ' },
+  ])('keeps $name on the card from reaching a parent', ({ key }) => {
+    const fixture = mount({ linkCard: aLinkCard() });
+    const parentKeydown = jest.fn();
+    (fixture.nativeElement as HTMLElement).addEventListener('keydown', parentKeydown);
+
+    query(fixture, 'app-link-card a')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key, bubbles: true }),
+    );
+
+    expect(parentKeydown).not.toHaveBeenCalled();
   });
 
   it('renders no card without one', () => {

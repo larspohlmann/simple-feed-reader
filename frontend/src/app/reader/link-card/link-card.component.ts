@@ -5,8 +5,11 @@ import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.
 import { LinkReaderNavigation } from '../shell/link-reader-navigation.service';
 import { LinkCardDto } from './link-card';
 
-/** `article` reads like #1499's card in a post's body; `block` is the magazine's, site line first. */
-export type LinkCardLayout = 'article' | 'block';
+/**
+ * `article` reads like #1499's card in a post's body; `block` is the magazine's, site line first;
+ * `quote` is the magazine's inside a quoted post, site line last as in the Bluesky app (#1974).
+ */
+export type LinkCardLayout = 'article' | 'block' | 'quote';
 
 /** `layer` opens the card's page over the open post; `alone` opens it in place of the list's post. */
 export type LinkCardReaderOpening = 'layer' | 'alone';
@@ -21,6 +24,7 @@ export type LinkCardReaderOpening = 'layer' | 'alone';
     class: 'link-card',
     '[class.article]': "layout() === 'article'",
     '[class.block]': "layout() === 'block'",
+    '[class.quote]': "layout() === 'quote'",
     '[class.openable]': 'openable()',
   },
 })
