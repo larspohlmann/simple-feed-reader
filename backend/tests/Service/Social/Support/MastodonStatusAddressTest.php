@@ -46,6 +46,15 @@ final class MastodonStatusAddressTest extends TestCase
         self::assertNull(MastodonStatusAddress::ofOrNull($address));
     }
 
+    #[DataProvider('statusAddresses')]
+    public function testAStatusAddressNamesTheUriItsInstanceGivesTheStatus(string $address): void
+    {
+        self::assertSame(
+            'https://mastodon.social/users/Gargron/statuses/110',
+            MastodonStatusAddress::ofOrNull($address)?->uri(),
+        );
+    }
+
     #[DataProvider('authorPrefixes')]
     public function testAStatusAddressNamesItsAuthorsProfilePrefix(string $address, string $prefix): void
     {

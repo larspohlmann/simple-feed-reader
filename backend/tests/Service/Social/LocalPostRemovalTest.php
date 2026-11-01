@@ -31,6 +31,7 @@ final class LocalPostRemovalTest extends DbTestCase
 
     private const string STATUS_URL = 'https://mastodon.example/@alice/120';
     private const string STATUS_USERS_URL = 'https://mastodon.example/users/alice/statuses/120';
+    private const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/121';
 
     private DeletedPostTombstones $tombstones;
     private RecordingSearchIndexWriter $index;
@@ -62,7 +63,7 @@ final class LocalPostRemovalTest extends DbTestCase
             new SocialCountsModel(1, 0, 0, null),
         );
 
-        $this->removal()->remove($post);
+        $this->removal()->remove($post, []);
 
         $this->entityManager->clear();
         self::assertSame(
@@ -85,12 +86,32 @@ final class LocalPostRemovalTest extends DbTestCase
         $post = $this->copy($feed, self::STATUS_URL, 'hash-120');
         $this->copy($feed, self::STATUS_USERS_URL, 'hash-120');
 
-        $this->removal()->remove($post);
+        $this->removal()->remove($post, []);
 
         self::assertSame(
             [EntryGuid::hashOf(self::STATUS_URL), EntryGuid::hashOf(self::STATUS_USERS_URL)],
             $this->tombstones->buriedIn($feed->requireId()),
         );
+    }
+
+    public function testTheRepliesAreBuriedInEveryFeedThePostWasButTheSavedOne(): void
+    {
+        $user = $this->user('local-removal-replies@example.test');
+        $profile = $this->feed('https://mastodon.example/@alice.rss');
+        $home = $this->feed('https://other.example/@reader.rss');
+        $saved = $this->feed(SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
+        $post = $this->copy($profile, self::STATUS_URL, 'hash-120');
+        $this->copy($home, self::STATUS_USERS_URL, 'hash-120');
+        $this->copy($saved, 'saved:120', 'hash-120');
+
+        $this->removal()->remove($post, [self::REPLY_URI]);
+
+        $reply = EntryGuid::hashOf(self::REPLY_URI);
+        $profileBuried = $this->tombstones->buriedIn($profile->requireId());
+        $homeBuried = $this->tombstones->buriedIn($home->requireId());
+        self::assertSame([EntryGuid::hashOf(self::STATUS_URL), $reply], $profileBuried);
+        self::assertSame([EntryGuid::hashOf(self::STATUS_USERS_URL), $reply], $homeBuried);
+        self::assertSame([], $this->tombstones->buriedIn($saved->requireId()));
     }
 
     public function testAPostWithoutAUrlHashTakesOnlyItself(): void
@@ -100,7 +121,7 @@ final class LocalPostRemovalTest extends DbTestCase
         $twin = $this->copy($feed, 'https://mastodon.example/@alice/122', null);
         $twinId = $twin->requireId();
 
-        $this->removal()->remove($post);
+        $this->removal()->remove($post, []);
 
         $this->entityManager->clear();
         self::assertNotNull($this->entityManager->find(Entry::class, $twinId));

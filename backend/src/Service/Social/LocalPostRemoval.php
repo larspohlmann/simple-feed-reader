@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Entry;
+use App\Entity\EntryGuid;
 use App\Repository\PostRemovalRepository;
 use App\Repository\StoredPostCopy;
 use App\Service\Search\EntryIndexer;
 
-/** Removes a post its network no longer has: every stored copy, each kept from being stored again for a while. */
+/** Removes a post its network no longer has: every stored copy, each kept with its replies from being stored again. */
 final readonly class LocalPostRemoval
 {
     public function __construct(
@@ -20,11 +21,13 @@ final readonly class LocalPostRemoval
     ) {
     }
 
-    public function remove(Entry $entry): void
+    /** @param list<string> $replyGuids the guids the post's deleted thread replies may come back under */
+    public function remove(Entry $entry, array $replyGuids): void
     {
         $copies = $this->removals->copiesOf($entry);
+        $replyHashes = array_map(EntryGuid::hashOf(...), $replyGuids);
         foreach (self::guidHashesByFeed($copies) as $feedId => $guidHashes) {
-            $this->tombstones->bury($feedId, $guidHashes);
+            $this->tombstones->bury($feedId, [...$guidHashes, ...$replyHashes]);
         }
         $this->countsCache->forgetEntry($entry);
         $entryIds = array_map(static fn (StoredPostCopy $copy): int => $copy->entryId, $copies);

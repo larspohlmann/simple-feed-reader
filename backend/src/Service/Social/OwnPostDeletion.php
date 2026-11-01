@@ -19,6 +19,7 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Support\OwnPostIds;
+use App\Service\Social\Support\OwnReplyGuids;
 use App\Service\Social\Support\PostAuthor;
 use App\Service\Social\Support\SocialPostAddress;
 
@@ -48,10 +49,13 @@ final readonly class OwnPostDeletion
     {
         $post = SocialPostAddress::ofOrRefuse($entry);
         $author = $this->authorOf($user, $entry, $post->network);
-        foreach ([...$this->replyIdsOf($entry, $author), OwnPostIds::ofAddress($post, $author)] as $postId) {
+        $replyUrls = $this->replyUrlsOf($entry);
+        $postIds = [...self::replyIdsOf($replyUrls, $author), OwnPostIds::ofAddress($post, $author)];
+        $replyGuids = self::replyGuidsOf($replyUrls, $author);
+        foreach ($postIds as $postId) {
             $deletion = $this->writing->delete($author, $postId);
         }
-        $this->localRemoval->remove($entry);
+        $this->localRemoval->remove($entry, $replyGuids);
 
         return $deletion;
     }
@@ -63,14 +67,35 @@ final readonly class OwnPostDeletion
     }
 
     /** @return list<string> */
-    private function replyIdsOf(Entry $entry, SocialAccount $author): array
+    private function replyUrlsOf(Entry $entry): array
     {
         return array_map(
-            static fn (?string $url): string => OwnPostIds::ofReplyUrl(
-                $url ?? throw new SocialPostRefusedException('A reply in the thread has no address.'),
-                $author,
-            ),
+            static fn (?string $url): string => $url
+                ?? throw new SocialPostRefusedException('A reply in the thread has no address.'),
             $this->threadPosts->urlsNewestFirst($entry),
         );
+    }
+
+    /**
+     * @param list<string> $replyUrls
+     *
+     * @return list<string>
+     */
+    private static function replyIdsOf(array $replyUrls, SocialAccount $author): array
+    {
+        return array_map(static fn (string $url): string => OwnPostIds::ofReplyUrl($url, $author), $replyUrls);
+    }
+
+    /**
+     * @param list<string> $replyUrls
+     *
+     * @return list<string>
+     */
+    private static function replyGuidsOf(array $replyUrls, SocialAccount $author): array
+    {
+        return array_merge(...array_map(
+            static fn (string $url): array => OwnReplyGuids::ofUrl($url, $author),
+            $replyUrls,
+        ));
     }
 }

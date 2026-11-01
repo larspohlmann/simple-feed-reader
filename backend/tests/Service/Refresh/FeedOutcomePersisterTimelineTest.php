@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
+use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Entity\ThreadPost;
@@ -190,6 +191,22 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         self::assertSame(0, $this->entityManager->getRepository(ThreadPost::class)->count());
     }
 
+    public function testALaggingPageServingADeletedReplyWithoutItsRootStoresNothing(): void
+    {
+        $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
+        $persisters = $this->persisters();
+        $persisters->tombstones()->bury($feed->requireId(), [EntryGuid::hashOf(self::REPLY_ONE)]);
+
+        $result = $this->enriching($persisters)->storeTimeline(
+            $feed,
+            self::page([self::item(self::REPLY_ONE, self::ROOT, self::ROOT)]),
+            $this->clock->now(),
+        );
+
+        self::assertSame(0, $result->entriesCreated);
+        self::assertSame([], $this->guidsOf($feed));
+    }
+
     public function testASelfReplyAlreadyStoredAsAnEntryIsLeftAlone(): void
     {
         $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
@@ -252,7 +269,11 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
 
     private function persister(): FeedOutcomePersister
     {
-        $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
+        return $this->enriching($this->persisters());
+    }
+
+    private function persisters(): FeedOutcomePersisters
+    {
         $selfThreads = SelfThreadEnrichers::build(
             $this->entityManager,
             $this->clock,
@@ -261,7 +282,14 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         );
 
         return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
-            ->foldingWith($selfThreads)
+            ->foldingWith($selfThreads);
+    }
+
+    private function enriching(FeedOutcomePersisters $persisters): FeedOutcomePersister
+    {
+        $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
+
+        return $persisters
             ->enrichingWith(PostEnrichers::build(
                 $this->entityManager,
                 $this->clock,
