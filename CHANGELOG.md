@@ -10,6 +10,16 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.15] - 2026-11-01
+
+## What's Changed
+* Self-update: reload the updating tab once the update succeeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1961
+* fix(#1957): send anthropic-version only when the model listing is refused by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1958
+* Self-update: fold the finished log, show restarts, check for updates now by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1959
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.14...v1.6.15
+
 ## [v1.6.14] - 2026-11-01
 
 ## What's Changed
