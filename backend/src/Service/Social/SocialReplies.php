@@ -60,7 +60,7 @@ final readonly class SocialReplies
             throw new SocialPostRefusedException('The author does not take replies on this post.');
         }
 
-        $published = $this->writing->publish($post, $draft);
+        $published = $this->writing->reply($post, $draft);
         $this->forgetWhatChanged($user, $target->entry);
 
         return $published;

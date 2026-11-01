@@ -30,7 +30,18 @@ interface PostWriterInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function publish(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel;
+    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel;
+
+    /**
+     * @throws SocialPostTooLongException
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialTokenScopeMissingException
+     * @throws SocialPostRefusedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel;
 
     /**
      * A post the network no longer has counts as deleted.

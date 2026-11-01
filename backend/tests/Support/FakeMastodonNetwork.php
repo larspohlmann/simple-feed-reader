@@ -126,9 +126,16 @@ final class FakeMastodonNetwork implements
         $this->record('unrepost ' . $repostId);
     }
 
-    public function publish(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         $this->record('reply ' . $target->postId . ' ' . $draft->text);
+
+        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
+    }
+
+    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    {
+        $this->record('quote ' . $target->postId . ' ' . $draft->text);
 
         return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }

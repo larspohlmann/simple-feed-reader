@@ -32,7 +32,7 @@ final class BlueskyPostWriterTest extends TestCase
     {
         $http = $this->creating();
 
-        $published = $this->replier($http)->publish(self::post(), new PostDraftModel('Thanks #news', language: 'de'));
+        $published = $this->writer($http)->reply(self::post(), new PostDraftModel('Thanks #news', language: 'de'));
 
         self::assertSame([
             'repo' => 'did:plc:alice',
@@ -65,7 +65,7 @@ final class BlueskyPostWriterTest extends TestCase
             new ResponseContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
         );
 
-        $this->replier($http)->publish($post, new PostDraftModel('Yes'));
+        $this->writer($http)->reply($post, new PostDraftModel('Yes'));
 
         $record = self::recordSent($http);
         self::assertSame([
@@ -81,15 +81,44 @@ final class BlueskyPostWriterTest extends TestCase
         $http = $this->creating();
         $family = '👨‍👩‍👧';
 
-        $this->replier($http)->publish(self::post(), new PostDraftModel(str_repeat($family, 300)));
+        $this->writer($http)->reply(self::post(), new PostDraftModel(str_repeat($family, 300)));
 
         $this->expectException(SocialPostTooLongException::class);
 
         try {
-            $this->replier($http)->publish(self::post(), new PostDraftModel(str_repeat($family, 301)));
+            $this->writer($http)->reply(self::post(), new PostDraftModel(str_repeat($family, 301)));
         } finally {
             self::assertCount(2, $http->requests);
         }
+    }
+
+    public function testAQuoteEmbedsThePostItQuotesAndAnswersNothing(): void
+    {
+        $http = $this->creating();
+        $post = self::post()->inResponseContext(
+            new ResponseContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
+        );
+
+        $published = $this->writer($http)->quote($post, new PostDraftModel('Look #news', language: 'en'));
+
+        $record = self::recordSent($http);
+        self::assertSame(
+            ['$type' => 'app.bsky.embed.record', 'record' => ['uri' => self::POST_URI, 'cid' => 'bafy-post']],
+            $record['embed'],
+        );
+        self::assertArrayNotHasKey('reply', $record);
+        self::assertSame('Look #news', $record['text']);
+        self::assertSame(['en'], $record['langs']);
+        self::assertIsArray($record['facets']);
+        self::assertCount(1, $record['facets']);
+        self::assertSame(self::REPLY_URI, $published->address);
+    }
+
+    public function testAQuoteHoldsThreeHundredGraphemesToo(): void
+    {
+        $this->expectException(SocialPostTooLongException::class);
+
+        $this->writer(new RoutedHttpClient([]))->quote(self::post(), new PostDraftModel(str_repeat('a', 301)));
     }
 
     public function testAnAnswerWithoutTheNewPostsUriIsAnUnreachableNetwork(): void
@@ -101,7 +130,7 @@ final class BlueskyPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
     }
 
     public function testDeletingAReplyDeletesItsPostRecord(): void
@@ -112,7 +141,7 @@ final class BlueskyPostWriterTest extends TestCase
         ]);
         $own = SocialPostModel::onBluesky(SocialApiWiring::blueskyAccount(), self::REPLY_URI, 'bafy-rep');
 
-        $this->replier($http)->delete($own);
+        $this->writer($http)->delete($own);
 
         self::assertSame(
             ['repo' => 'did:plc:alice', 'collection' => 'app.bsky.feed.post', 'rkey' => '3rep'],
@@ -126,7 +155,7 @@ final class BlueskyPostWriterTest extends TestCase
 
         $this->expectException(SocialPostRefusedException::class);
 
-        $this->replier(new RoutedHttpClient([]))->delete($own);
+        $this->writer(new RoutedHttpClient([]))->delete($own);
     }
 
     /** @return array<mixed> */
@@ -149,7 +178,7 @@ final class BlueskyPostWriterTest extends TestCase
         ]);
     }
 
-    private function replier(RoutedHttpClient $http): BlueskyPostWriter
+    private function writer(RoutedHttpClient $http): BlueskyPostWriter
     {
         return new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($http->client()),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\PostWriter;
 
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
@@ -27,7 +28,7 @@ final class MastodonPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $published = $this->replier($http)->publish(self::post(), new PostDraftModel(
+        $published = $this->writer($http)->reply(self::post(), new PostDraftModel(
             '@ann Thanks',
             visibility: 'unlisted',
             contentWarning: 'spoilers',
@@ -46,11 +47,41 @@ final class MastodonPostWriterTest extends TestCase
         self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
     }
 
+    public function testAQuoteIsAStatusQuotingTheTargetWithTheComposersChoices(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $published = $this->writer($http)->quote(self::post(), new PostDraftModel(
+            'Worth reading',
+            visibility: 'unlisted',
+            idempotencyKey: 'key-2',
+        ));
+
+        self::assertSame(
+            ['status' => 'Worth reading', 'quoted_status_id' => '110', 'visibility' => 'unlisted'],
+            json_decode($http->requests[0]['body'], true),
+        );
+        self::assertContains('Idempotency-Key: key-2', $http->requests[0]['headers']);
+        self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
+    }
+
+    public function testAQuoteTheAuthorsPolicyRefusesIsARefusedPost(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => new MockResponse(
+            '{"error":"Validation failed: Quoted status is not allowed"}',
+            ['http_code' => Response::HTTP_UNPROCESSABLE_ENTITY],
+        )]);
+
+        $this->expectException(SocialPostRefusedException::class);
+
+        $this->writer($http)->quote(self::post(), new PostDraftModel('Hi'));
+    }
+
     public function testChoicesTheComposerLeftOpenAreNotSent(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $this->replier($http)->publish(self::post(), new PostDraftModel('Hi', contentWarning: ''));
+        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi', contentWarning: ''));
 
         self::assertSame(['status' => 'Hi', 'in_reply_to_id' => '110'], json_decode($http->requests[0]['body'], true));
         self::assertEmpty(array_filter(
@@ -67,7 +98,7 @@ final class MastodonPostWriterTest extends TestCase
         )]);
 
         try {
-            $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
+            $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
             self::fail('A token without the scope cannot reply.');
         } catch (SocialTokenScopeMissingException $exception) {
             self::assertSame('write:statuses', $exception->missingScope);
@@ -80,7 +111,7 @@ final class MastodonPostWriterTest extends TestCase
             json_encode(['id' => '120', 'url' => self::REPLY_URL], \JSON_THROW_ON_ERROR),
         )]);
 
-        $published = $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
+        $published = $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
 
         self::assertSame(self::REPLY_URL, $published->address);
     }
@@ -91,7 +122,7 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
     }
 
     public function testDeletingAReplyDeletesItsStatusAndAGoneOneCountsAsDeleted(): void
@@ -104,13 +135,13 @@ final class MastodonPostWriterTest extends TestCase
             ),
         ]);
 
-        $this->replier($http)->delete(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '120'));
-        $this->replier($http)->delete(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '121'));
+        $this->writer($http)->delete(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '120'));
+        $this->writer($http)->delete(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '121'));
 
         self::assertCount(2, $http->requests);
     }
 
-    private function replier(RoutedHttpClient $http): MastodonPostWriter
+    private function writer(RoutedHttpClient $http): MastodonPostWriter
     {
         return new MastodonPostWriter(SocialApiWiring::mastodonAccountApi($http->client()));
     }

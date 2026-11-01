@@ -25,6 +25,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     private const string REPLY = 'https://mastodon.example/users/alice/statuses/200';
     private const string REPLY_SEARCH = 'GET https://mastodon.example/api/v2/search?q='
         . 'https%3A%2F%2Fmastodon.example%2Fusers%2Falice%2Fstatuses%2F200&resolve=true&type=statuses&limit=1';
+    private const string QUOTE = 'https://mastodon.example/users/alice/statuses/201';
     private const string DELETE_REPLY = 'DELETE https://mastodon.example/api/v1/statuses/200';
     private const string IDEMPOTENCY_KEY = '9b2f6c1e-4a7d-4c1b-8f3e-2d5a6b7c8d9e';
 
@@ -183,30 +184,68 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
+    public function testAQuoteQuotesThePostWithTheComposersChoices(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::STATUSES => new MockResponse(json_encode(
+                ['id' => '201', 'uri' => self::QUOTE, 'url' => 'https://mastodon.example/@alice/201'],
+                \JSON_THROW_ON_ERROR,
+            )),
+        ]);
+        $user = $this->signIn($client, 'quote-post@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send($client, 'POST', $this->quotePath($this->mastodonPostFor($user)), [
+            'text' => 'Worth reading',
+            'idempotencyKey' => self::IDEMPOTENCY_KEY,
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(
+            ['address' => self::QUOTE, 'url' => 'https://mastodon.example/@alice/201'],
+            $this->payload($client),
+        );
+        self::assertSame(
+            ['status' => 'Worth reading', 'quoted_status_id' => '110'],
+            json_decode($this->http->requests[1]['body'], true),
+        );
+        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[1]['headers']);
+    }
+
+    public function testAPostOnAnInstanceBeforeQuotesIsRefusedWithoutAWrite(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::SEARCH => self::statuses(['id' => '110'])]);
+        $user = $this->signIn($client, 'quote-refused@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send($client, 'POST', $this->quotePath($this->mastodonPostFor($user)), ['text' => 'Hi']);
+
+        $this->assertRejected($client, Response::HTTP_CONFLICT);
+        self::assertSame([self::SEARCH], $this->routesAsked());
+    }
+
     #[DataProvider('writes')]
-    public function testRepliesAndDeletesDrawOnTheWriteBudgetRepostsUse(string $write): void
+    public function testRepliesQuotesAndDeletesDrawOnTheWriteBudgetRepostsUse(string $method, string $path): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
-        $user = $this->signIn($client, sprintf('reply-budget-%s@example.test', $write));
+        $user = $this->signIn($client, sprintf('reply-budget-%s@example.test', md5($method . $path)));
         $entryId = $this->mastodonPostFor($user);
         for ($attempt = 0; $attempt < self::WRITE_BUDGET; ++$attempt) {
             $client->request('DELETE', sprintf('/api/entries/%d/repost', $entryId));
         }
 
-        if ('reply' === $write) {
-            $this->postReply($client, $entryId, ['text' => 'Hi']);
-        } else {
-            $client->request('DELETE', $this->deletePath($entryId));
-        }
+        $this->send($client, $method, str_replace('{id}', (string) $entryId, $path), ['text' => 'Hi']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
     }
 
-    /** @return iterable<string, array{string}> */
+    /** @return iterable<string, array{string, string}> */
     public static function writes(): iterable
     {
-        yield 'reply' => ['reply'];
-        yield 'delete' => ['delete'];
+        yield 'reply' => ['POST', '/api/entries/{id}/social/replies'];
+        yield 'quote' => ['POST', '/api/entries/{id}/social/quotes'];
+        yield 'delete' => ['DELETE', '/api/entries/{id}/comments/reply?address=' . rawurlencode(self::REPLY)];
     }
 
     public function testOpeningTheComposerDrawsOnTheViewerBudget(): void
@@ -226,9 +265,20 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     /** @param array<string, string> $body */
     private function postReply(KernelBrowser $client, int $entryId, array $body): void
     {
+        $this->send($client, 'POST', sprintf('/api/entries/%d/social/replies', $entryId), $body);
+    }
+
+    private function quotePath(int $entryId): string
+    {
+        return sprintf('/api/entries/%d/social/quotes', $entryId);
+    }
+
+    /** @param array<string, string> $body */
+    private function send(KernelBrowser $client, string $method, string $path, array $body): void
+    {
         $client->request(
-            'POST',
-            sprintf('/api/entries/%d/social/replies', $entryId),
+            $method,
+            $path,
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );

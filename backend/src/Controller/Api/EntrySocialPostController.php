@@ -12,6 +12,7 @@ use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\PostComposer;
+use App\Service\Social\SocialQuotes;
 use App\Service\Social\SocialReplies;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,7 @@ final readonly class EntrySocialPostController
         private EntryListRepository $entryList,
         private PostComposer $composer,
         private SocialReplies $replies,
+        private SocialQuotes $quotes,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialViewerLimiter,
         private RateLimiterFactoryInterface $socialWritesLimiter,
@@ -65,6 +67,21 @@ final readonly class EntrySocialPostController
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
         $published = $this->replies->reply($user, $request->toTarget($entry, $address), $request->toDraft());
+
+        return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
+    }
+
+    #[Route('/{id}/social/quotes', name: 'api_entries_social_quote', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function quote(
+        int $id,
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] PostDraftRequest $request,
+        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?string $address = null,
+    ): JsonResponse {
+        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
+        $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
+
+        $published = $this->quotes->quote($user, $request->toTarget($entry, $address), $request->toDraft());
 
         return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
     }
