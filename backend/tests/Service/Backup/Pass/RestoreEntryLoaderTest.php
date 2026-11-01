@@ -16,6 +16,8 @@ use App\Service\Backup\Pass\RestoreFeedTargets;
 use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Service\Bluesky\BlueskyEntryIdentityUrl;
+use App\Service\Url\EntryUrlHash;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
@@ -101,7 +103,10 @@ final class RestoreEntryLoaderTest extends TestCase
             $this->createStub(EntityManagerInterface::class),
             $entries,
             $this->createStub(RestoreEntryStatesInterface::class),
-            new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
+            new EntryBatchInserter(
+                $this->createStub(Connection::class),
+                new EntryUrlHash(new UrlNormalizer(), [new BlueskyEntryIdentityUrl()]),
+            ),
             EntryIndexers::with(new RecordingSearchIndexWriter()),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),

@@ -11,7 +11,7 @@ use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Url\UrlNormalizer;
+use App\Service\Url\EntryUrlHash;
 use Doctrine\DBAL\Connection;
 
 /**
@@ -37,7 +37,7 @@ final readonly class EntryBatchInserter
 
     public function __construct(
         private Connection $connection,
-        private UrlNormalizer $urlNormalizer,
+        private EntryUrlHash $urlHash,
     ) {
     }
 
@@ -128,7 +128,7 @@ final readonly class EntryBatchInserter
     {
         return [
             $feedId, $line->guid, $line->guidHash, $line->url,
-            $this->urlNormalizer->hash($line->url), $line->title,
+            $this->urlHash->of($line->guid, $line->url), $line->title,
             $line->author, $line->summary, $line->contentHtml, $line->imageUrl,
             $line->imageUrl === null ? null : EntryImage::hashOf($line->imageUrl),
             $line->imageWidth, $line->imageHeight, self::encodeList($line->imageRenditions),

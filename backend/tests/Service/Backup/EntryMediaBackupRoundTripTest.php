@@ -15,6 +15,8 @@ use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Bluesky\BlueskyEntryIdentityUrl;
+use App\Service\Url\EntryUrlHash;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -63,8 +65,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $targetId = $target->getId();
         self::assertNotNull($targetId);
 
-        (new EntryBatchInserter($this->entityManager->getConnection(), new UrlNormalizer()))
-            ->insert($targetId, [EntryLine::fromLine($entryLine)]);
+        $this->inserter()->insert($targetId, [EntryLine::fromLine($entryLine)]);
 
         $this->entityManager->clear();
         $restoredFeed = $this->entityManager
@@ -117,8 +118,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $this->entityManager->flush();
         $targetId = $target->requireId();
 
-        (new EntryBatchInserter($this->entityManager->getConnection(), new UrlNormalizer()))
-            ->insert($targetId, [EntryLine::fromLine($entryLine)]);
+        $this->inserter()->insert($targetId, [EntryLine::fromLine($entryLine)]);
 
         $this->entityManager->clear();
         $restored = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $targetId]);
@@ -171,8 +171,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $this->entityManager->flush();
         $targetId = $target->requireId();
 
-        (new EntryBatchInserter($this->entityManager->getConnection(), new UrlNormalizer()))
-            ->insert($targetId, array_map(EntryLine::fromLine(...), array_values($lines)));
+        $this->inserter()->insert($targetId, array_map(EntryLine::fromLine(...), array_values($lines)));
 
         $this->entityManager->clear();
         $restoredByGuid = [];
@@ -231,5 +230,13 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
         return (new UserFactory($this->entityManager, $hasher))->create($email, locale: 'de');
+    }
+
+    private function inserter(): EntryBatchInserter
+    {
+        return new EntryBatchInserter(
+            $this->entityManager->getConnection(),
+            new EntryUrlHash(new UrlNormalizer(), [new BlueskyEntryIdentityUrl()]),
+        );
     }
 }

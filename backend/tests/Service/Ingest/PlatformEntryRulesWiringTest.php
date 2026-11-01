@@ -106,4 +106,37 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         self::assertSame('<p>a masterclass in alt text</p>', $entry->getContentHtml());
         self::assertSame('a masterclass in alt text', $entry->getSummary());
     }
+
+    public function testTheContainersIngestorHashesABlueskyRssPostLikeItsTimelineCopy(): void
+    {
+        $ingestor = self::getContainer()->get(EntryIngestor::class);
+        self::assertInstanceOf(EntryIngestor::class, $ingestor);
+        $feed = new Feed('https://bsky.app/profile/did:plc:xjc7mkotpenvhh6ffewkdpyn/rss');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+        $post = new ParsedEntryModel(
+            'at://did:plc:xjc7mkotpenvhh6ffewkdpyn/app.bsky.feed.post/3mz7vexdd5c2n',
+            'https://bsky.app/profile/meidastouch.com/post/3mz7vexdd5c2n',
+            Headline::derived('NEWS'),
+            null,
+            null,
+            '<p>NEWS</p>',
+            null,
+        );
+
+        $ingestor->ingest(
+            $feed,
+            new ParsedFeedModel('Feed', null, null, null, [$post]),
+            new FeedIngestContext(new \DateTimeImmutable('2026-11-01T12:00:00Z'), null),
+        );
+        $this->entityManager->flush();
+
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        self::assertSame('https://bsky.app/profile/meidastouch.com/post/3mz7vexdd5c2n', $entry->getUrl());
+        self::assertSame(
+            hash('sha256', 'https://bsky.app/profile/did:plc:xjc7mkotpenvhh6ffewkdpyn/post/3mz7vexdd5c2n'),
+            $entry->getUrlHash(),
+        );
+    }
 }

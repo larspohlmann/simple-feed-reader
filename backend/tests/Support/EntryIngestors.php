@@ -8,6 +8,7 @@ use App\Entity\Category;
 use App\Entity\Entry;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
+use App\Service\Bluesky\BlueskyEntryIdentityUrl;
 use App\Service\Category\CategoryNormalizer;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryImageWriter;
@@ -16,8 +17,9 @@ use App\Service\Ingest\EntryTranscriptWriter;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Social\ProfileFeedTitle;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Social\ProfileFeedTitle;
+use App\Service\Url\EntryUrlHash;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -44,7 +46,7 @@ final class EntryIngestors
         return new EntryIngestor(
             $entityManager,
             $entryRepository,
-            new UrlNormalizer(),
+            new EntryUrlHash(new UrlNormalizer(), [new BlueskyEntryIdentityUrl()]),
             new EntryCategoryWriter($entityManager, $categoryRepository, new CategoryNormalizer()),
             $platformRules,
             new IngestedEntryFactory(new EntrySanitizer(new TrailingBlankRemover()), $imageWriter),
