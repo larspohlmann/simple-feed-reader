@@ -22,7 +22,6 @@ final readonly class ResponseTargetFinder
     public function __construct(
         private SocialPostFinder $posts,
         private ActingAccountChooser $actingAccounts,
-        private SocialAccountForUser $chosenAccounts,
     ) {
     }
 
@@ -40,7 +39,7 @@ final readonly class ResponseTargetFinder
         $address = self::addressOf($target);
         $account = null === $target->accountId
             ? $this->actingAccounts->accountFor($user, $target->entry, $address->network)
-            : $this->chosenAccounts->requireConnectedOn($user, $target->accountId, $address->network);
+            : $this->actingAccounts->chosenOrDefault($user, $target->accountId, $address->network);
 
         return $this->posts->findAs($account, $address);
     }

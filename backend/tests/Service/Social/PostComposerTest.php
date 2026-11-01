@@ -10,8 +10,8 @@ use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
+use App\Service\Social\ComposerContexts;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\PostPreviewModel;
@@ -20,7 +20,6 @@ use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\PostComposer;
 use App\Service\Social\ResponseTargetFinder;
-use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeComposerDefaults;
@@ -170,14 +169,16 @@ final class PostComposerTest extends DbTestCase
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
         $mastodon = $this->mastodon;
         $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
-        $chooser = new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts);
+        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
         $posts = new SocialPostFinder($chooser, new ActingAccountGuard($this->entityManager), $network);
 
         return new PostComposer(
-            new ResponseTargetFinder($posts, $chooser, new SocialAccountForUser($accounts)),
-            $posts,
-            $accounts,
-            new ServiceLocator(['mastodon' => static fn (): FakeComposerDefaults => new FakeComposerDefaults()]),
+            new ResponseTargetFinder($posts, $chooser),
+            new ComposerContexts(
+                $accounts,
+                $posts,
+                new ServiceLocator(['mastodon' => static fn (): FakeComposerDefaults => new FakeComposerDefaults()]),
+            ),
         );
     }
 }

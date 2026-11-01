@@ -16,7 +16,6 @@ use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -150,7 +149,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
 
         return new SocialPostFinder(
-            new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
+            SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
             new ActingAccountGuard($this->entityManager),
             new ServiceLocator(['bluesky' => static fn (): PostResolverInterface => $resolver]),
         );

@@ -11,10 +11,10 @@ use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
+use App\Service\Social\ComposerContexts;
 use App\Service\Social\BlueskyFacets;
-use App\Service\Social\BlueskyLinkCards;
+use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -32,8 +32,7 @@ use App\Service\Social\PostResolver\BlueskyPostResolver;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
 use App\Service\Social\PostWriting;
 use App\Service\Social\SharedPageCards;
-use App\Service\Social\SharedPostQuotes;
-use App\Service\Social\SocialAccountForUser;
+use App\Service\Social\SharedPostQuoteFinder;
 use App\Service\Social\SocialPostFinder;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
@@ -163,6 +162,7 @@ final class LinkPostsTest extends DbTestCase
         $context = $this->linkPosts()->contextFor($this->owner, self::target(null, self::STATUS_URL));
 
         self::assertSame($preview, $context->target);
+        self::assertSame([], $context->defaults->mentions);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
         self::assertSame([], $this->pages->readUrls());
     }
@@ -336,17 +336,20 @@ final class LinkPostsTest extends DbTestCase
         $mastodon = $this->mastodon;
         $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
 
-        return $this->linkPostsOver($network, $network, new RoutedHttpClient([]), $this->pages);
+        return $this->linkPostsOver($network, $network, $this->pages);
     }
 
     private function blueskyLinkPosts(RoutedHttpClient $http, PageCardReaderInterface $pageCards): LinkPosts
     {
         $client = $http->client();
-        $resolver = new BlueskyPostResolver(SocialApiWiring::blueskySessions($client));
+        $resolver = new BlueskyPostResolver(
+            SocialApiWiring::blueskySessions($client),
+            SocialApiWiring::blueskyIdentityResolver($client),
+        );
         $writer = new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($client),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($client)),
-            new BlueskyLinkCards(
+            new BlueskyExternalEmbeds(
                 new SharedPageCards($pageCards, new NullLogger()),
                 new StubGuardedImageDownloader(),
                 $this->createStub(ImageResizerInterface::class),
@@ -358,7 +361,6 @@ final class LinkPostsTest extends DbTestCase
         return $this->linkPostsOver(
             new ServiceLocator(['bluesky' => static fn (): BlueskyPostResolver => $resolver]),
             new ServiceLocator(['bluesky' => static fn (): BlueskyPostWriter => $writer]),
-            $http,
             $pageCards,
         );
     }
@@ -366,29 +368,23 @@ final class LinkPostsTest extends DbTestCase
     private function linkPostsOver(
         ContainerInterface $resolvers,
         ContainerInterface $writers,
-        RoutedHttpClient $http,
         PageCardReaderInterface $pageCards,
     ): LinkPosts {
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
         $guard = new ActingAccountGuard($this->entityManager);
-        $defaults = static fn (): FakeComposerDefaults => new FakeComposerDefaults();
+        $fakeDefaults = static fn (): FakeComposerDefaults => new FakeComposerDefaults();
+        $defaults = new ServiceLocator(['mastodon' => $fakeDefaults, 'bluesky' => $fakeDefaults]);
+        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
+        $posts = new SocialPostFinder($chooser, $guard, $resolvers);
 
         return new LinkPosts(
-            $accounts,
-            new SocialAccountForUser($accounts),
+            $chooser,
             new UrlNormalizer(),
             new PostWriting($guard, $writers),
-            new SharedPostQuotes(
-                new SocialPostFinder(
-                    new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
-                    $guard,
-                    $resolvers,
-                ),
-                SocialApiWiring::blueskyIdentityResolver($http->client()),
-            ),
+            new SharedPostQuoteFinder($posts),
             new SharedPageCards($pageCards, new NullLogger()),
-            new ServiceLocator(['mastodon' => $defaults, 'bluesky' => $defaults]),
+            new ComposerContexts($accounts, $posts, $defaults),
         );
     }
 }

@@ -21,6 +21,6 @@ interface ComposerDefaultsInterface
      */
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel;
 
-    /** Never fails, like defaultsFor(): the defaults of a post the account writes on its own, mentioning no one. */
+    /** The defaults of a post the account writes on its own, mentioning no one. */
     public function forAccount(SocialAccount $account): ComposerDefaultsModel;
 }

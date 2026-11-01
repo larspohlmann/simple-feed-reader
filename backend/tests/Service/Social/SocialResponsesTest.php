@@ -12,7 +12,6 @@ use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
@@ -27,7 +26,6 @@ use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\PostWriting;
 use App\Service\Social\ResponseTargetFinder;
-use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialCountsCache;
 use App\Service\Social\SocialPostFinder;
 use App\Service\Social\SocialResponses;
@@ -353,11 +351,11 @@ final class SocialResponsesTest extends DbTestCase
         $guard = new ActingAccountGuard($this->entityManager);
         $mastodon = $this->mastodon;
         $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
-        $chooser = new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts);
+        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
         $posts = new SocialPostFinder($chooser, $guard, $network);
 
         return new SocialResponses(
-            new ResponseTargetFinder($posts, $chooser, new SocialAccountForUser($accounts)),
+            new ResponseTargetFinder($posts, $chooser),
             $posts,
             new PostWriting($guard, $network),
             $accounts,

@@ -12,7 +12,7 @@ use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Social\BlueskyLinkCards;
+use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\SharedPageCards;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RoutedHttpClient;
@@ -24,7 +24,7 @@ use Psr\Log\LogLevel;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-final class BlueskyLinkCardsTest extends TestCase
+final class BlueskyExternalEmbedsTest extends TestCase
 {
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string UPLOAD_BLOB = 'POST https://pds.example.test/xrpc/com.atproto.repo.uploadBlob';
@@ -56,7 +56,7 @@ final class BlueskyLinkCardsTest extends TestCase
         $resizer->expects($this->once())->method('coverJpeg')
             ->with('original-bytes', 1200, 630)->willReturn('jpeg-bytes');
 
-        $card = $this->cards($http, $resizer)->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $resizer)->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertSame([
             '$type' => 'app.bsky.embed.external',
@@ -66,7 +66,7 @@ final class BlueskyLinkCardsTest extends TestCase
                 'description' => 'A summary',
                 'thumb' => self::BLOB,
             ],
-        ], $card);
+        ], $embed);
         self::assertSame('jpeg-bytes', $http->requests[1]['body']);
         self::assertContains('Content-Type: image/jpeg', $http->requests[1]['headers']);
     }
@@ -76,20 +76,20 @@ final class BlueskyLinkCardsTest extends TestCase
         $this->page = self::pageDeclaring(null, self::IMAGE_URL);
         $http = $this->uploading(new MockResponse(json_encode(['blob' => self::BLOB], \JSON_THROW_ON_ERROR)));
 
-        $card = $this->cards($http, $this->resizer())->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $this->resizer())->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
 
-        self::assertSame('', self::externalOf($card)['description']);
+        self::assertSame('', self::externalOf($embed)['description']);
     }
 
     public function testAPageWithoutImageDownloadsNothingAndHasNoThumbnail(): void
     {
         $this->page = self::pageDeclaring('A summary', null);
 
-        $card = $this->cardsNeverDownloading()->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embedsNeverDownloading()->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertSame(
             ['uri' => self::URL, 'title' => 'An article', 'description' => 'A summary'],
-            self::externalOf($card),
+            self::externalOf($embed),
         );
     }
 
@@ -97,9 +97,9 @@ final class BlueskyLinkCardsTest extends TestCase
     {
         $http = $this->uploading(new MockResponse('{}'));
 
-        $card = $this->cards($http, $this->resizer())->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $this->resizer())->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
 
-        self::assertArrayNotHasKey('thumb', self::externalOf($card));
+        self::assertArrayNotHasKey('thumb', self::externalOf($embed));
     }
 
     /** @return iterable<string, array{\Throwable}> */
@@ -114,10 +114,10 @@ final class BlueskyLinkCardsTest extends TestCase
     {
         $this->downloader->willFail(self::IMAGE_URL, $failure);
 
-        $card = $this->cards(new RoutedHttpClient([]), $this->resizer())
-            ->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds(new RoutedHttpClient([]), $this->resizer())
+            ->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
 
-        self::assertArrayNotHasKey('thumb', self::externalOf($card));
+        self::assertArrayNotHasKey('thumb', self::externalOf($embed));
         $this->assertLoggedAtDebug();
     }
 
@@ -126,10 +126,10 @@ final class BlueskyLinkCardsTest extends TestCase
         $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('coverJpeg')->willThrowException(new ImageProcessingException('not an image'));
 
-        $card = $this->cards(new RoutedHttpClient([]), $resizer)
-            ->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds(new RoutedHttpClient([]), $resizer)
+            ->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
 
-        self::assertArrayNotHasKey('thumb', self::externalOf($card));
+        self::assertArrayNotHasKey('thumb', self::externalOf($embed));
         $this->assertLoggedAtDebug();
         self::assertSame(
             ['image' => self::IMAGE_URL, 'reason' => 'not an image'],
@@ -151,9 +151,9 @@ final class BlueskyLinkCardsTest extends TestCase
     {
         $http = $this->uploading(new MockResponse('{"error":"BlobTooLarge"}', ['http_code' => $status]));
 
-        $card = $this->cards($http, $this->resizer())->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $this->resizer())->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
 
-        self::assertArrayNotHasKey('thumb', self::externalOf($card));
+        self::assertArrayNotHasKey('thumb', self::externalOf($embed));
         $this->assertLoggedAtDebug();
     }
 
@@ -164,15 +164,15 @@ final class BlueskyLinkCardsTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $card
+     * @param array<string, mixed> $embed
      *
      * @return array<mixed>
      */
-    private static function externalOf(array $card): array
+    private static function externalOf(array $embed): array
     {
-        self::assertIsArray($card['external']);
+        self::assertIsArray($embed['external']);
 
-        return $card['external'];
+        return $embed['external'];
     }
 
     private function uploading(MockResponse $answer): RoutedHttpClient
@@ -191,29 +191,29 @@ final class BlueskyLinkCardsTest extends TestCase
         return $resizer;
     }
 
-    private function cards(RoutedHttpClient $http, ImageResizerInterface $resizer): BlueskyLinkCards
+    private function embeds(RoutedHttpClient $http, ImageResizerInterface $resizer): BlueskyExternalEmbeds
     {
         $pageCards = $this->createStub(PageCardReaderInterface::class);
         $pageCards->method('read')->willReturn($this->page);
 
-        return $this->cardsReading($pageCards, $this->downloader, $http, $resizer);
+        return $this->embedsReading($pageCards, $this->downloader, $http, $resizer);
     }
 
-    private function cardsNeverDownloading(): BlueskyLinkCards
+    private function embedsNeverDownloading(): BlueskyExternalEmbeds
     {
         $pageCards = $this->createStub(PageCardReaderInterface::class);
         $pageCards->method('read')->willReturn($this->page);
 
-        return $this->cardsReading($pageCards, $this->neverDownloading(), new RoutedHttpClient([]), $this->resizer());
+        return $this->embedsReading($pageCards, $this->neverDownloading(), new RoutedHttpClient([]), $this->resizer());
     }
 
-    private function cardsReading(
+    private function embedsReading(
         PageCardReaderInterface $pageCards,
         GuardedImageDownloaderInterface $downloader,
         RoutedHttpClient $http,
         ImageResizerInterface $resizer,
-    ): BlueskyLinkCards {
-        return new BlueskyLinkCards(
+    ): BlueskyExternalEmbeds {
+        return new BlueskyExternalEmbeds(
             new SharedPageCards($pageCards, $this->logger),
             $downloader,
             $resizer,

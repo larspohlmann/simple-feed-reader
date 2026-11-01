@@ -12,7 +12,6 @@ use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -218,7 +217,7 @@ final class SocialRepostsTest extends DbTestCase
 
         return new SocialReposts(
             new SocialPostFinder(
-                new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
+                SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
                 $guard,
                 $network,
             ),

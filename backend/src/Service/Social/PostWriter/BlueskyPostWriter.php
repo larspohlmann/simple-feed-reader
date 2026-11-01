@@ -8,7 +8,7 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Social\BlueskyFacets;
-use App\Service\Social\BlueskyLinkCards;
+use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
@@ -26,7 +26,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     public function __construct(
         private BlueskyRecords $records,
         private BlueskyFacets $facets,
-        private BlueskyLinkCards $linkCards,
+        private BlueskyExternalEmbeds $externalEmbeds,
     ) {
     }
 
@@ -52,7 +52,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     {
         self::assertFits($draft);
 
-        return $this->published($account, $draft, ['embed' => $this->linkCards->cardOf($account, $url)]);
+        return $this->published($account, $draft, ['embed' => $this->externalEmbeds->embedOf($account, $url)]);
     }
 
     public function delete(SocialPostModel $ownPost): void

@@ -12,15 +12,35 @@ use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialFeedRepository;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Support\SocialFeedClassifier;
 
-/** Which of the user's accounts acts on an entry's post: a private feed's own account, else the network's default. */
+/** Which of the user's accounts acts: the one chosen, else a private feed's own account or the network's default. */
 final readonly class ActingAccountChooser
 {
     public function __construct(
         private SocialFeedRepository $socialFeeds,
         private SocialAccountRepository $socialAccounts,
+        private SocialAccountForUser $chosenAccounts,
     ) {
+    }
+
+    /**
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNotFoundException when the chosen account is not the user's, or on another network
+     * @throws SocialAccountNeedsReconnectException
+     */
+    public function chosenOrDefault(User $user, ?int $accountId, SocialNetwork $network): SocialAccount
+    {
+        if (null !== $accountId) {
+            return $this->chosenAccounts->requireConnectedOn($user, $accountId, $network);
+        }
+
+        return $this->socialAccounts->findReadyActingOnNetwork($user, $network)
+            ?? throw new NoSocialAccountForNetworkException(
+                sprintf('No %s account is connected.', $network->displayName()),
+            );
     }
 
     /** @throws NoSocialAccountForNetworkException */

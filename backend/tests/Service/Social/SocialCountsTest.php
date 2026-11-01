@@ -10,7 +10,6 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\PostNotPubliclyCountableException;
@@ -226,7 +225,7 @@ final class SocialCountsTest extends DbTestCase
         return new SocialCounts(
             $this->cache,
             new SocialPostFinder(
-                new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
+                SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
                 new ActingAccountGuard($this->entityManager),
                 new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
             ),

@@ -6,8 +6,11 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
+use App\Repository\SocialAccountRepository;
 use App\Repository\SocialFeedRepository;
+use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\PrivateFeeds;
+use App\Service\Social\SocialAccountForUser;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Assert;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -21,6 +24,15 @@ final class SocialFeeds
         $repository = $entityManager->getRepository(SocialFeed::class);
 
         return $repository;
+    }
+
+    public static function actingAccountChooser(
+        EntityManagerInterface $entityManager,
+        SocialAccountRepository $accounts,
+    ): ActingAccountChooser {
+        $chosenAccounts = new SocialAccountForUser($accounts);
+
+        return new ActingAccountChooser(self::repository($entityManager), $accounts, $chosenAccounts);
     }
 
     public static function persisted(EntityManagerInterface $entityManager, SocialFeed $socialFeed): SocialFeed

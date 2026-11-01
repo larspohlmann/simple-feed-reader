@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Entity\SocialAccount;
 use App\Entity\User;
-use App\Enum\SocialNetwork;
-use App\Repository\SocialAccountRepository;
-use App\Service\Social\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
@@ -19,25 +15,20 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\ComposerContextModel;
-use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\LinkPostModel;
 use App\Service\Social\Model\LinkTargetModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Url\UrlNormalizer;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
 final readonly class LinkPosts
 {
     public function __construct(
-        private SocialAccountRepository $socialAccounts,
-        private SocialAccountForUser $accountsForUser,
+        private ActingAccountChooser $actingAccounts,
         private UrlNormalizer $urls,
         private PostWriting $writing,
-        private SharedPostQuotes $quotes,
+        private SharedPostQuoteFinder $quotes,
         private SharedPageCards $pageCards,
-        #[AutowireLocator('app.social_composer_defaults', defaultIndexMethod: 'network')]
-        private ContainerInterface $defaults,
+        private ComposerContexts $contexts,
     ) {
     }
 
@@ -51,19 +42,12 @@ final readonly class LinkPosts
     public function contextFor(User $user, LinkTargetModel $target): ComposerContextModel
     {
         $url = $this->sharable($target->url);
-        $connected = $this->socialAccounts->findConnectedOnNetwork($user, $target->network);
-        $account = null === $target->accountId
-            ? ($connected[0] ?? throw self::noAccountOn($target->network))
-            : $this->accountsForUser->requireConnectedOn($user, $target->accountId, $target->network);
+        $account = $this->actingAccounts->chosenOrDefault($user, $target->accountId, $target->network);
+        $quoted = $this->quotes->quotableAt($account, $url);
 
-        return new ComposerContextModel(
-            $connected,
-            $account,
-            canSend: true,
-            defaults: $this->defaultsOf($account),
-            target: $this->quotes->quotableAt($account, $url)?->responseContext->preview
-                ?? $this->pageCards->cardOf($url),
-        );
+        return null === $quoted
+            ? $this->contexts->ofLink($account, $this->pageCards->cardOf($url))
+            : $this->contexts->ofQuote($quoted);
     }
 
     /**
@@ -82,7 +66,7 @@ final readonly class LinkPosts
     public function share(User $user, LinkPostModel $post): PublishedPostModel
     {
         $url = $this->sharable($post->target->url);
-        $account = $this->actingAccount($user, $post->target);
+        $account = $this->actingAccounts->chosenOrDefault($user, $post->target->accountId, $post->target->network);
         $quoted = $this->quotes->quotableAt($account, $url);
 
         return null === $quoted
@@ -90,39 +74,9 @@ final readonly class LinkPosts
             : $this->writing->quote($quoted, $post->draft);
     }
 
-    /**
-     * @throws NoSocialAccountForNetworkException
-     * @throws SocialAccountNotFoundException
-     * @throws SocialAccountNeedsReconnectException
-     */
-    private function actingAccount(User $user, LinkTargetModel $target): SocialAccount
-    {
-        if (null !== $target->accountId) {
-            return $this->accountsForUser->requireConnectedOn($user, $target->accountId, $target->network);
-        }
-
-        return $this->socialAccounts->findReadyActingOnNetwork($user, $target->network)
-            ?? throw self::noAccountOn($target->network);
-    }
-
     /** @throws SocialPostRefusedException */
     private function sharable(string $url): string
     {
         return $this->urls->normalize($url) ?? throw new SocialPostRefusedException('This is no link to share.');
-    }
-
-    private static function noAccountOn(SocialNetwork $network): NoSocialAccountForNetworkException
-    {
-        return new NoSocialAccountForNetworkException(
-            sprintf('No %s account is connected to post this link.', $network->displayName()),
-        );
-    }
-
-    private function defaultsOf(SocialAccount $account): ComposerDefaultsModel
-    {
-        $defaults = $this->defaults->get($account->getNetwork()->value);
-        \assert($defaults instanceof ComposerDefaultsInterface);
-
-        return $defaults->forAccount($account);
     }
 }

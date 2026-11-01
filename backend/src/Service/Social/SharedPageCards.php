@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\LinkCardContent;
+use App\Service\Fetch\Support\HostKey;
 use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Reader\Exception\PageFetchException;
 use Psr\Log\LoggerInterface;
 
@@ -34,9 +36,9 @@ final readonly class SharedPageCards
 
     private static function hostCardOf(string $url): LinkCardContent
     {
-        $host = parse_url($url, \PHP_URL_HOST);
-        $title = \is_string($host) && '' !== $host ? $host : $url;
+        $host = HostKey::forUrl($url);
+        $card = new LinkCardContent($url, $host, null, null, $host);
 
-        return new LinkCardContent($url, $title, null, null, $title);
+        return StorableLinkCard::of($card) ?? $card;
     }
 }

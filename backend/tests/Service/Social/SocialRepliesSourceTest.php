@@ -23,7 +23,6 @@ use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -423,7 +422,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         self::assertInstanceOf(RateLimiterFactoryInterface::class, $limiter);
 
         return new SocialRepliesSource(
-            new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
+            SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
             new ActingAccountGuard($this->entityManager),
             new ServiceLocator(['mastodon' => static fn (): FakeReplyThreadSource => $threads]),
             $order,

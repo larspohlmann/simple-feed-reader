@@ -40,6 +40,15 @@ final class SharedPageCardsTest extends TestCase
         self::assertSame([], $this->logger->records);
     }
 
+    public function testTheHostTitleDropsCaseAndALeadingWwwLikeEveryOtherCard(): void
+    {
+        $address = 'https://WWW.Example.com/article';
+
+        $card = $this->cardsReading(new PageCardModel(null, null))->cardOf($address);
+
+        self::assertEquals(new LinkCardContent($address, 'example.com', null, null, 'example.com'), $card);
+    }
+
     public function testAnAddressWithoutHostIsTitledWithItself(): void
     {
         $address = 'mailto:someone';

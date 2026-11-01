@@ -9,7 +9,7 @@ use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Social\BlueskyFacets;
-use App\Service\Social\BlueskyLinkCards;
+use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
@@ -242,7 +242,7 @@ final class BlueskyPostWriterTest extends TestCase
         return new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
-            new BlueskyLinkCards(
+            new BlueskyExternalEmbeds(
                 new SharedPageCards($pageCards, new NullLogger()),
                 new StubGuardedImageDownloader(),
                 $this->createStub(ImageResizerInterface::class),

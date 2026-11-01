@@ -102,22 +102,16 @@ final readonly class PostEmbedRenderer
 
     private function linkCard(JsonNodeModel $external): ?RenderedEmbedModel
     {
-        $url = AbsoluteHttpUrl::orNull($external->string('uri'));
-        if ($url === null) {
-            return null;
-        }
-        if ($external->string('title') === null) {
-            return RenderedEmbedModel::uncarded($url);
-        }
         $card = BlueskyExternalCard::of($external);
-        if ($card === null) {
-            return null;
+        if ($card !== null) {
+            return RenderedEmbedModel::card(
+                $card,
+                $card->imageUrl === null ? null : new DeclaredImageModel($card->imageUrl),
+            );
         }
+        $url = AbsoluteHttpUrl::orNull($external->string('uri'));
 
-        return RenderedEmbedModel::card(
-            $card,
-            $card->imageUrl === null ? null : new DeclaredImageModel($card->imageUrl),
-        );
+        return $url === null || $external->string('title') !== null ? null : RenderedEmbedModel::uncarded($url);
     }
 
     private function quote(JsonNodeModel $record): ?RenderedEmbedModel

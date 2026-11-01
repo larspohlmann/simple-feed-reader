@@ -15,7 +15,7 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use Psr\Log\LoggerInterface;
 
 /** The external embed a Bluesky link post carries, read from the page; a thumbnail that cannot be made is left out. */
-final readonly class BlueskyLinkCards
+final readonly class BlueskyExternalEmbeds
 {
     private const string EXTERNAL_EMBED = 'app.bsky.embed.external';
     private const string UPLOAD_BLOB = '/xrpc/com.atproto.repo.uploadBlob';
@@ -33,7 +33,7 @@ final readonly class BlueskyLinkCards
     }
 
     /** @return array<string, mixed> */
-    public function cardOf(SocialAccount $account, string $url): array
+    public function embedOf(SocialAccount $account, string $url): array
     {
         $card = $this->pageCards->cardOf($url);
 

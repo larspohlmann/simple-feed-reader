@@ -25,6 +25,9 @@ final class BlueskyPostResolverTest extends TestCase
     private const string LIKE_URI = 'at://did:plc:alice/app.bsky.feed.like/3lk2';
     private const string REPOST_URI = 'at://did:plc:alice/app.bsky.feed.repost/3rp1';
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
+    private const string HANDLE_POST_URI = 'at://bob.test/app.bsky.feed.post/3abc';
+    private const string RESOLVE_HANDLE = 'GET https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle'
+        . '?handle=bob.test';
     private const string GET_POSTS = 'GET https://pds.example.test/xrpc/app.bsky.feed.getPosts?uris='
         . 'at%3A%2F%2Fdid%3Aplc%3Abob%2Fapp.bsky.feed.post%2F3abc';
 
@@ -309,6 +312,30 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertSame($like, $post->existingLikeId);
     }
 
+    public function testAPostNamedByItsAuthorsHandleIsAskedForAndKeptByTheAuthorsDid(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_HANDLE => self::json(['did' => 'did:plc:bob']),
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::GET_POSTS => self::json(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]),
+        ]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::HANDLE_POST_URI);
+
+        self::assertSame(self::POST_URI, $post->postId);
+    }
+
+    public function testAPostNamedByAHandleNoAccountHasIsNotFound(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_HANDLE => self::json(['error' => 'InvalidRequest'], Response::HTTP_BAD_REQUEST),
+        ]);
+
+        $this->expectException(SocialPostNotFoundException::class);
+
+        $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::HANDLE_POST_URI);
+    }
+
     public function testAPostBlueskyNoLongerHasIsNotFound(): void
     {
         $this->expectException(SocialPostNotFoundException::class);
@@ -358,7 +385,10 @@ final class BlueskyPostResolverTest extends TestCase
 
     private function resolver(RoutedHttpClient $http): BlueskyPostResolver
     {
-        return new BlueskyPostResolver(SocialApiWiring::blueskySessions($http->client()));
+        return new BlueskyPostResolver(
+            SocialApiWiring::blueskySessions($http->client()),
+            SocialApiWiring::blueskyIdentityResolver($http->client()),
+        );
     }
 
     /** @param array<mixed> $body */

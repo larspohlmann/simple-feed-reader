@@ -11,7 +11,6 @@ use App\Entity\User;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
-use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -176,7 +175,7 @@ final class SocialCommentLikesTest extends DbTestCase
 
         return new SocialCommentLikes(
             new SocialPostFinder(
-                new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
+                SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
                 $guard,
                 $network,
             ),
