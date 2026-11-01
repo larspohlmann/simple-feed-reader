@@ -10,6 +10,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Social\BlueskyApiClient;
+use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\BlueskySessionCache;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\BlueskySessions;
@@ -33,6 +34,7 @@ final class SocialApiWiring
     public const string RSS_HOST = 'news.example';
 
     private const string BLUESKY_HOST = 'pds.example.test';
+    private const string APP_VIEW_HOST = 'public.api.bsky.app';
     private const string MASTODON_HOST = 'mastodon.example';
     private const string OTHER_MASTODON_HOST = 'other.example';
     private const string ORIGIN_MASTODON_HOST = 'mastodon.social';
@@ -57,6 +59,13 @@ final class SocialApiWiring
     public static function blueskySessionCache(ArrayAdapter $cache): BlueskySessionCache
     {
         return new BlueskySessionCache($cache, new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))));
+    }
+
+    public static function blueskyIdentityResolver(HttpClientInterface $http): BlueskyIdentityResolver
+    {
+        return new BlueskyIdentityResolver(
+            new BlueskyApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::APP_VIEW_HOST))),
+        );
     }
 
     public static function mastodonApiClient(HttpClientInterface $http): MastodonApiClient
