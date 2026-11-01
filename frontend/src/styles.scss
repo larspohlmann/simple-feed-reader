@@ -18,6 +18,14 @@
 // app-overlay-panel's, and the prebuilt CSS already shrink-wraps and centres
 // it (discover, the one full-screen phone surface, is a route, not a pane).
 
+// A CDK pane shrinks to its content, so a full-screen phone sheet with short
+// content came out narrow (#1964); the pane's wrapper is the viewport.
+@media (width <= bp.$bp-sm) {
+  .cdk-overlay-pane:has(.panel.fill-mobile) {
+    width: 100%;
+  }
+}
+
 // WebKit leaves a dialog's initial focus on the container; a ring there outlines the whole sheet.
 cdk-dialog-container {
   outline: none;
