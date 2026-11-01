@@ -33,6 +33,7 @@ final readonly class EntryBatchInserter
         'title_derived', 'share_kind', 'author_url', 'author_avatar_url',
         'quoted_url', 'quoted_author_name', 'quoted_author_handle', 'quoted_author_avatar_url', 'quoted_posted_at',
         'quoted_text', 'quoted_media', 'quoted_nested_url', 'quoted_nested_handle',
+        'quoted_link_card',
     ];
 
     public function __construct(
@@ -150,7 +151,7 @@ final readonly class EntryBatchInserter
     private static function quoteColumns(?QuotedPostContent $quote): array
     {
         if ($quote === null) {
-            return array_fill(0, 9, null);
+            return array_fill(0, 10, null);
         }
 
         return [
@@ -158,6 +159,7 @@ final readonly class EntryBatchInserter
             self::storageDate($quote->postedAt), $quote->text,
             self::encodeList(EntryMedia::toJsonList($quote->media)),
             $quote->nestedQuote?->url, $quote->nestedQuote?->handle,
+            $quote->linkCard === null ? null : json_encode($quote->linkCard->toStored(), \JSON_THROW_ON_ERROR),
         ];
     }
 

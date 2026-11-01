@@ -540,6 +540,7 @@ final class AccountRestorerTest extends DbTestCase
                 'share.quotedPost.url', 'share.quotedPost.authorName', 'share.quotedPost.authorHandle',
                 'share.quotedPost.authorAvatarUrl', 'share.quotedPost.postedAt', 'share.quotedPost.text',
                 'share.quotedPost.media', 'share.quotedPost.nestedUrl', 'share.quotedPost.nestedHandle',
+                'share.quotedPost.linkCard',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
