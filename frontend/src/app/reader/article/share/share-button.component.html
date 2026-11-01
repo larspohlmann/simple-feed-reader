@@ -50,14 +50,9 @@
     @for (item of items(); track item.id) {
       @switch (item.kind) {
         @case ('post') {
-          <button
-            role="menuitem"
-            type="button"
-            [title]="item.post.hint"
-            (click)="post(item.post.network)"
-          >
-            <app-network-logo [network]="item.post.network" />
-            <span class="label">{{ 'reader.link.' + item.post.network | transloco }}</span>
+          <button role="menuitem" type="button" [title]="item.hint" (click)="post(item.network)">
+            <app-network-logo [network]="item.network" />
+            <span class="label">{{ 'reader.link.' + item.network | transloco }}</span>
           </button>
         }
         @case ('divider') {

@@ -34,15 +34,8 @@ final readonly class ComposerContexts
     ) {
     }
 
-    public function ofResponse(
-        SocialPostModel $post,
-        ResponseTargetModel $target,
-        ResponseKind $kind,
-    ): ComposerContextModel {
-        if (ResponseKind::Quote === $kind) {
-            return $this->ofQuote($post);
-        }
-
+    public function ofReply(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
+    {
         $defaults = $this->defaultsOn($post->account)->defaultsFor($post, $this->threadStarterOf($target, $post));
 
         return $this->contextOf($post, ResponseKind::Reply, $defaults);

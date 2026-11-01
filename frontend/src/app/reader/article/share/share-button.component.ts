@@ -45,17 +45,19 @@ const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
   ],
 };
 
-/** A network the URL can be posted to, and who the post goes out as, or that the composer asks. */
-interface PostNetworkItem {
-  readonly network: SocialNetworkName;
-  readonly hint: string;
-}
-
 type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
 
-/** One entry of the menu and of the sheet, under the id the sheet answers with. */
+/**
+ * One entry of the menu and of the sheet, under the id the sheet answers with. A post names the network the URL
+ * goes to, and its hint who the post goes out as, or that the composer asks.
+ */
 type ShareItem =
-  | { readonly kind: 'post'; readonly id: string; readonly post: PostNetworkItem }
+  | {
+      readonly kind: 'post';
+      readonly id: string;
+      readonly network: SocialNetworkName;
+      readonly hint: string;
+    }
   | { readonly kind: 'divider'; readonly id: string }
   | { readonly kind: 'target'; readonly id: string; readonly target: ConfiguredTarget };
 
@@ -112,8 +114,7 @@ export class ShareButtonComponent {
         .filter((account) => account.network === network)
         .map((account) => account.handle);
       if (handles.length === 0) return [];
-      const post = { network, hint: this.postHint(handles) };
-      return [{ kind: 'post', id: `post-${network}`, post }];
+      return [{ kind: 'post', id: `post-${network}`, network, hint: this.postHint(handles) }];
     });
   });
   protected readonly items = computed((): ShareItem[] => {
@@ -179,11 +180,11 @@ export class ShareButtonComponent {
   private sheetItem(item: ShareItem): ActionSheetItem {
     if (item.kind === 'divider') return ACTION_SHEET_DIVIDER;
     if (item.kind === 'post') {
-      const network = item.post.network;
+      const network = item.network;
       return {
         id: item.id,
         label: this.i18n.translate(`reader.link.${network}`),
-        hint: item.post.hint,
+        hint: item.hint,
         logo: { url: shareLogoUrl(`${network}.svg`), color: `var(--brand-${network})` },
       };
     }
@@ -198,7 +199,7 @@ export class ShareButtonComponent {
 
   private chooseById(choice: string | undefined): void {
     const item = choice === undefined ? undefined : this.itemsById().get(choice);
-    if (item?.kind === 'post') this.post(item.post.network);
+    if (item?.kind === 'post') this.post(item.network);
     if (item?.kind === 'target') this.choose(item.target);
   }
 

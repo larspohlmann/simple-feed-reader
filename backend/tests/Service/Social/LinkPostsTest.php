@@ -23,7 +23,6 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\LinkPosts;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\ComposerKind;
-use App\Service\Social\Model\LinkPostModel;
 use App\Service\Social\Model\LinkTargetModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\PostPreviewModel;
@@ -154,7 +153,8 @@ final class LinkPostsTest extends DbTestCase
 
         $published = $this->linkPosts()->share(
             $this->owner,
-            self::post(null, self::ARTICLE_URL . '&utm_source=x', 'Worth reading'),
+            self::target(null, self::ARTICLE_URL . '&utm_source=x'),
+            new PostDraftModel('Worth reading'),
         );
 
         self::assertSame(['share ' . self::ARTICLE_URL . ' Worth reading'], $this->mastodon->calls);
@@ -195,7 +195,11 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $published = $this->linkPosts()->share($this->owner, self::post(null, self::STATUS_URL, 'Look'));
+        $published = $this->linkPosts()->share(
+            $this->owner,
+            self::target(null, self::STATUS_URL),
+            new PostDraftModel('Look'),
+        );
 
         self::assertSame(
             ['resolve ' . self::STATUS_URL, 'quote ' . FakeMastodonNetwork::STATUS_ID . ' Look'],
@@ -212,7 +216,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
 
-        $this->linkPosts()->share($this->owner, self::post(null, self::STATUS_URL, 'Look'));
+        $this->linkPosts()->share($this->owner, self::target(null, self::STATUS_URL), new PostDraftModel('Look'));
 
         self::assertSame(
             ['resolve ' . self::STATUS_URL, 'share ' . self::STATUS_URL . ' Look'],
@@ -233,7 +237,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $this->mastodon->onResolve(static fn () => throw $failure);
 
-        $this->linkPosts()->share($this->owner, self::post(null, self::STATUS_URL, 'Look'));
+        $this->linkPosts()->share($this->owner, self::target(null, self::STATUS_URL), new PostDraftModel('Look'));
 
         self::assertSame(
             ['resolve ' . self::STATUS_URL, 'share ' . self::STATUS_URL . ' Look'],
@@ -245,7 +249,7 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $this->linkPosts()->share($this->owner, self::post(null, self::BLUESKY_POST_URL, 'Look'));
+        $this->linkPosts()->share($this->owner, self::target(null, self::BLUESKY_POST_URL), new PostDraftModel('Look'));
 
         self::assertSame(['share ' . self::BLUESKY_POST_URL . ' Look'], $this->mastodon->calls);
     }
@@ -268,10 +272,8 @@ final class LinkPostsTest extends DbTestCase
 
         $this->blueskyLinkPosts($http, $pageCards)->share(
             $this->owner,
-            new LinkPostModel(
-                new LinkTargetModel(SocialNetwork::Bluesky, null, self::BLUESKY_POST_URL),
-                new PostDraftModel('Look'),
-            ),
+            new LinkTargetModel(SocialNetwork::Bluesky, null, self::BLUESKY_POST_URL),
+            new PostDraftModel('Look'),
         );
 
         $lastRequest = end($http->requests);
@@ -297,7 +299,11 @@ final class LinkPostsTest extends DbTestCase
 
         foreach ([$bluesky, $foreign] as $account) {
             $this->assertRefused(
-                fn (): mixed => $this->linkPosts()->share($this->owner, self::post($account->requireId())),
+                fn (): mixed => $this->linkPosts()->share(
+                    $this->owner,
+                    self::target($account->requireId()),
+                    self::draft(),
+                ),
                 SocialAccountNotFoundException::class,
                 'Only an account of the user on the asked network can post the link.',
             );
@@ -327,7 +333,11 @@ final class LinkPostsTest extends DbTestCase
         $missingAccountId = 999999;
 
         $this->assertRefused(
-            fn (): mixed => $this->linkPosts()->share($this->owner, self::post($missingAccountId, $url)),
+            fn (): mixed => $this->linkPosts()->share(
+                $this->owner,
+                self::target($missingAccountId, $url),
+                self::draft(),
+            ),
             SocialPostRefusedException::class,
             'An address that is no link is refused before the account is looked for.',
         );
@@ -339,9 +349,9 @@ final class LinkPostsTest extends DbTestCase
         return new LinkTargetModel(SocialNetwork::Mastodon, $accountId, $url);
     }
 
-    private static function post(?int $accountId, string $url = self::ARTICLE_URL, string $text = 'Hi'): LinkPostModel
+    private static function draft(): PostDraftModel
     {
-        return new LinkPostModel(self::target($accountId, $url), new PostDraftModel($text));
+        return new PostDraftModel('Hi');
     }
 
     private function linkPosts(): LinkPosts

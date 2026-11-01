@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Dto\Social\LinkComposerQuery;
-use App\Dto\Social\LinkPostRequest;
+use App\Dto\Social\LinkTargetQuery;
+use App\Dto\Social\PostDraftRequest;
 use App\Entity\User;
-use App\Enum\SocialNetwork;
 use App\Http\ComposerContextJson;
 use App\Http\PublishedPostJson;
 use App\Service\RateLimit\RateLimitGuard;
@@ -35,11 +34,12 @@ final readonly class SocialLinkPostController
     #[Route('/link-composer', name: 'api_social_link_composer', methods: ['GET'])]
     public function linkComposer(
         #[CurrentUser] User $user,
-        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)] LinkComposerQuery $query,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)] LinkTargetQuery $query,
+        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?int $accountId = null,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
-        $context = $this->links->contextFor($user, $query->toLinkTarget());
+        $context = $this->links->contextFor($user, $query->toLinkTarget($accountId));
 
         return new JsonResponse(ComposerContextJson::of($context));
     }
@@ -47,12 +47,12 @@ final readonly class SocialLinkPostController
     #[Route('/links', name: 'api_social_link', methods: ['POST'])]
     public function link(
         #[CurrentUser] User $user,
-        #[MapRequestPayload] LinkPostRequest $request,
-        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] SocialNetwork $network,
+        #[MapRequestPayload] PostDraftRequest $request,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)] LinkTargetQuery $query,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
-        $published = $this->links->share($user, $request->toLinkPost($network));
+        $published = $this->links->share($user, $query->toLinkTarget($request->accountId), $request->toDraft());
 
         return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
     }

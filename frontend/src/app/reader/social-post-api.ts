@@ -87,15 +87,11 @@ export class SocialPostApi {
   }
 
   send(target: PostTargetDto, draft: PostDraftDto): Observable<PublishedPostDto> {
-    if (target.kind === 'link') {
-      return this.http.post<PublishedPostDto>(
-        this.socialPath('links'),
-        { ...draft, url: target.url },
-        { params: { network: target.network } },
-      );
-    }
-    const path = this.entryPath(target.entryId, `social/${RESPONSE_PATHS[target.kind]}`);
-    return this.http.post<PublishedPostDto>(path, draft, { params: addressParam(target.address) });
+    const path =
+      target.kind === 'link'
+        ? this.socialPath('links')
+        : this.entryPath(target.entryId, `social/${RESPONSE_PATHS[target.kind]}`);
+    return this.http.post<PublishedPostDto>(path, draft, { params: targetParams(target) });
   }
 
   deleteReply(entryId: number, address: string): Observable<void> {
@@ -113,11 +109,17 @@ export class SocialPostApi {
   }
 }
 
-function composerParams(target: PostTargetDto): Record<string, string> {
+function targetParams(target: PostTargetDto): Record<string, string> {
   if (target.kind === 'link') {
     return { network: target.network, url: target.url, title: target.title };
   }
-  return { kind: target.kind, ...addressParam(target.address) };
+  return addressParam(target.address);
+}
+
+function composerParams(target: PostTargetDto): Record<string, string> {
+  return target.kind === 'link'
+    ? targetParams(target)
+    : { kind: target.kind, ...targetParams(target) };
 }
 
 function addressParam(address: string | null): Record<string, string> {

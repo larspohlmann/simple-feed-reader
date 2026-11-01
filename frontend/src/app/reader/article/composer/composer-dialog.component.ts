@@ -75,7 +75,6 @@ export class ComposerDialogComponent {
   protected readonly text = signal('');
   private textTouched = false;
   protected readonly visibility = signal<MastodonVisibility | null>(null);
-  /** Null while the reply carries no content warning. */
   protected readonly contentWarning = signal<string | null>(null);
   private readonly accountId = signal<number | undefined>(undefined);
   private visibilityChosen = false;
@@ -95,7 +94,7 @@ export class ComposerDialogComponent {
   protected readonly forbiddenKey = computed(() => {
     const context = this.context();
     if (context === null || context.canSend || context.kind === 'link') return null;
-    return `reader.${context.kind}Forbidden.${context.network}`;
+    return `reader.${context.kind}Forbidden.${this.target.network}`;
   });
   /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = computed(() => `reader.composer.${this.kind()}`);
@@ -188,7 +187,7 @@ export class ComposerDialogComponent {
     return {
       ...published,
       kind: context.kind,
-      network: context.network,
+      network: this.target.network,
       text: this.text(),
       authorHandle: account?.handle ?? null,
       target: context.target,

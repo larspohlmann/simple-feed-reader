@@ -83,7 +83,6 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
             'kind' => 'reply',
-            'network' => 'mastodon',
             'text' => '@gargron@mastodon.social ',
             'target' => [
                 'kind' => 'post',

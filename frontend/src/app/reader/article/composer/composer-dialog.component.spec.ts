@@ -39,7 +39,6 @@ describe('ComposerDialogComponent', () => {
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
     kind: 'reply',
-    network: 'mastodon',
     accounts: [{ id: 4, handle: '@alice@mastodon.example' }],
     accountId: 4,
     canSend: true,
@@ -313,7 +312,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('says so and sends nothing when the author takes no replies', () => {
-    api.composer.mockReturnValue(of(context({ canSend: false, network: 'bluesky' })));
+    api.composer.mockReturnValue(of(context({ canSend: false })));
     const fixture = mount(target({ network: 'bluesky' }));
 
     expect(element(fixture).textContent).toContain('The author limits who can reply');
@@ -365,7 +364,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('shows Bluesky no visibility choice', () => {
-    api.composer.mockReturnValue(of(context({ network: 'bluesky', visibility: null, text: '' })));
+    api.composer.mockReturnValue(of(context({ visibility: null, text: '' })));
     const fixture = mount(target({ network: 'bluesky' }));
 
     expect(element(fixture).querySelector('#reply-visibility')).toBeNull();
@@ -516,9 +515,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('sends the post as a link post', () => {
-      api.composer.mockReturnValue(
-        of(linkContext({ network: 'bluesky', visibility: null, text: 'A long read' })),
-      );
+      api.composer.mockReturnValue(of(linkContext({ visibility: null, text: 'A long read' })));
       const fixture = mount(article({ network: 'bluesky' }));
 
       expect(sendButton(fixture).textContent?.trim()).toBe('Post');

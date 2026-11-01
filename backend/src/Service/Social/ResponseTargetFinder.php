@@ -37,11 +37,8 @@ final readonly class ResponseTargetFinder
     public function find(User $user, ResponseTargetModel $target): SocialPostModel
     {
         $address = self::addressOf($target);
-        $account = null === $target->accountId
-            ? $this->actingAccounts->accountFor($user, $target->entry, $address->network)
-            : $this->actingAccounts->chosenOrDefault($user, $target->accountId, $address->network);
 
-        return $this->posts->findAs($account, $address);
+        return $this->posts->findAs($this->actingAccounts->forResponse($user, $target, $address->network), $address);
     }
 
     private static function addressOf(ResponseTargetModel $target): SocialPostAddressModel

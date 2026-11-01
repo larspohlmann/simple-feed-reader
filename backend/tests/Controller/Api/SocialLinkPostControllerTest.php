@@ -27,6 +27,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     private const string STATUS_SEARCH = 'GET https://mastodon.example/api/v2/search?q='
         . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
     private const string LINKS = '/api/social/links?network=';
+    private const string MASTODON_LINKS = '/api/social/links?network=mastodon&url=';
     private const string ARTICLE_URL = 'https://example.com/article?id=7';
     private const string LINK_POST = 'https://mastodon.example/users/alice/statuses/202';
     private const string LINK_POST_URL = 'https://mastodon.example/@alice/202';
@@ -86,7 +87,6 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
             'kind' => 'link',
-            'network' => 'mastodon',
             'text' => "The article\n\nhttps://example.com/article",
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
@@ -110,11 +110,25 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'maxCharacters' => BlueskyPostWriter::MAX_GRAPHEMES,
             'visibility' => null,
             'kind' => 'link',
-            'network' => 'bluesky',
             'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
         self::assertSame([], $this->http->requests);
+    }
+
+    public function testTheLinkComposerWritesAsTheAccountTheReaderChose(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-composer-chosen@example.test');
+        $this->entityManager()->persist(SocialAccounts::blueskyOf($user));
+        $chosen = SocialAccounts::secondBlueskyOf($user);
+        $this->entityManager()->persist($chosen);
+        $this->entityManager()->flush();
+
+        $client->request('GET', self::LINK_COMPOSER . 'bluesky&accountId=' . $chosen->requireId());
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($chosen->requireId(), $this->payload($client)['accountId']);
     }
 
     #[DataProvider('missingNetworks')]
@@ -127,8 +141,8 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client->request('GET', '/api/social/link-composer?url=' . rawurlencode(self::ARTICLE_URL) . $query);
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $this->send($client, '/api/social/links?' . $query, ['url' => self::ARTICLE_URL, 'text' => 'Hi']);
-        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        $this->send($client, '/api/social/links?url=' . rawurlencode(self::ARTICLE_URL) . $query, ['text' => 'Hi']);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame([], $this->http->requests);
     }
 
@@ -150,8 +164,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'link-post@example.test');
         $this->mastodonAccountOf($user);
 
-        $this->send($client, self::LINKS . 'mastodon', [
-            'url' => self::ARTICLE_URL,
+        $this->send($client, self::MASTODON_LINKS . rawurlencode(self::ARTICLE_URL), [
             'text' => 'Worth reading ' . self::ARTICLE_URL,
             'visibility' => 'unlisted',
             'idempotencyKey' => self::IDEMPOTENCY_KEY,
@@ -170,33 +183,32 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[0]['headers']);
     }
 
-    /** @param array<string, string> $body */
     #[DataProvider('invalidLinkPosts')]
-    public function testALinkPostWithoutASharableUrlIsRejectedBeforeAnyCall(array $body): void
+    public function testALinkPostWithoutASharableUrlIsRejectedBeforeAnyCall(string $query, string $text): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
-        $user = $this->signIn($client, 'link-invalid-' . md5((string) json_encode($body)) . '@example.test');
+        $user = $this->signIn($client, 'link-invalid-' . md5($query . $text) . '@example.test');
         $this->mastodonAccountOf($user);
 
-        $this->send($client, self::LINKS . 'mastodon', $body);
+        $this->send($client, self::LINKS . 'mastodon' . $query, ['text' => $text]);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame([], $this->http->requests);
     }
 
-    /** @return iterable<string, array{array<string, string>}> */
+    /** @return iterable<string, array{string, string}> */
     public static function invalidLinkPosts(): iterable
     {
-        yield 'no url' => [['text' => 'Hi']];
-        yield 'a blank url' => [['url' => '', 'text' => 'Hi']];
-        yield 'no url at all' => [['url' => 'not a link', 'text' => 'Hi']];
-        yield 'no http url' => [['url' => 'ftp://example.com/file', 'text' => 'Hi']];
-        yield 'a host without tld' => [['url' => 'https://intranet/page', 'text' => 'Hi']];
-        yield 'a too long url' => [[
-            'url' => 'https://example.com/' . str_repeat('a', LinkCardContent::URL_MAX),
-            'text' => 'Hi',
-        ]];
-        yield 'blank text' => [['url' => self::ARTICLE_URL, 'text' => '   ']];
+        yield 'no url' => ['', 'Hi'];
+        yield 'a blank url' => ['&url=', 'Hi'];
+        yield 'no url at all' => ['&url=not+a+link', 'Hi'];
+        yield 'no http url' => ['&url=' . rawurlencode('ftp://example.com/file'), 'Hi'];
+        yield 'a host without tld' => ['&url=' . rawurlencode('https://intranet/page'), 'Hi'];
+        yield 'a too long url' => [
+            '&url=' . rawurlencode('https://example.com/' . str_repeat('a', LinkCardContent::URL_MAX)),
+            'Hi',
+        ];
+        yield 'blank text' => ['&url=' . rawurlencode(self::ARTICLE_URL), '   '];
     }
 
     /** @return iterable<string, array{string}> */
@@ -267,7 +279,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'link-quote@example.test');
         $this->mastodonAccountOf($user);
 
-        $this->send($client, self::LINKS . 'mastodon', ['url' => self::MASTODON_POST_URL, 'text' => 'Look']);
+        $this->send($client, self::MASTODON_LINKS . rawurlencode(self::MASTODON_POST_URL), ['text' => 'Look']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame(['address' => self::LINK_POST, 'url' => self::LINK_POST_URL], $this->payload($client));
@@ -296,7 +308,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, sprintf('link-unquotable-%s@example.test', spl_object_id($search)));
         $this->mastodonAccountOf($user);
 
-        $this->send($client, self::LINKS . 'mastodon', ['url' => self::MASTODON_POST_URL, 'text' => 'Look']);
+        $this->send($client, self::MASTODON_LINKS . rawurlencode(self::MASTODON_POST_URL), ['text' => 'Look']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame([self::STATUS_SEARCH, self::STATUSES], $this->routesAsked());
@@ -319,7 +331,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertIsArray($target);
         self::assertSame('link', $target['kind']);
 
-        $this->send($client, self::LINKS . 'mastodon', ['url' => $blueskyPost, 'text' => 'Look']);
+        $this->send($client, self::MASTODON_LINKS . rawurlencode($blueskyPost), ['text' => 'Look']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame([self::INSTANCE, self::OWN_ACCOUNT, self::STATUSES], $this->routesAsked());
@@ -331,10 +343,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $this->signIn($client, 'link-write-budget@example.test');
         for ($attempt = 0; $attempt < self::WRITE_BUDGET; ++$attempt) {
-            $this->send($client, self::LINKS . 'mastodon', ['url' => self::ARTICLE_URL, 'text' => 'Hi']);
+            $this->send($client, self::MASTODON_LINKS . rawurlencode(self::ARTICLE_URL), ['text' => 'Hi']);
         }
 
-        $this->send($client, self::LINKS . 'mastodon', ['url' => self::ARTICLE_URL, 'text' => 'Hi']);
+        $this->send($client, self::MASTODON_LINKS . rawurlencode(self::ARTICLE_URL), ['text' => 'Hi']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
     }
