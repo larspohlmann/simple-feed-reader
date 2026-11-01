@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
@@ -23,12 +22,10 @@ use App\Service\Social\Model\ComposerContextModel;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\LinkPostModel;
 use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Support\SharedLink;
 use App\Service\Url\UrlNormalizer;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-/** Not ActingAccountChooser: a private feed's account is on its own network, whatever network the user asked for. */
 final readonly class LinkPosts
 {
     public function __construct(
@@ -42,14 +39,12 @@ final readonly class LinkPosts
     }
 
     /**
-     * @throws SocialPostRefusedException when the entry has no link
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNotFoundException
      * @throws SocialAccountNeedsReconnectException
      */
-    public function contextFor(User $user, Entry $entry, SocialNetwork $network, ?int $accountId): ComposerContextModel
+    public function contextFor(User $user, SocialNetwork $network, ?int $accountId): ComposerContextModel
     {
-        $this->requireLink($entry);
         $connected = $this->socialAccounts->findConnectedOnNetwork($user, $network);
         $account = null === $accountId
             ? ($connected[0] ?? throw self::noAccountOn($network))
@@ -59,7 +54,7 @@ final readonly class LinkPosts
     }
 
     /**
-     * @throws SocialPostRefusedException when the entry has no link
+     * @throws SocialPostRefusedException when the URL is no link to share
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNotFoundException
      * @throws SocialAccountNeedsReconnectException
@@ -69,19 +64,13 @@ final readonly class LinkPosts
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function share(User $user, Entry $entry, LinkPostModel $post): PublishedPostModel
+    public function share(User $user, LinkPostModel $post): PublishedPostModel
     {
-        $link = SharedLink::of($entry, $this->requireLink($entry));
+        $url = $this->urls->normalize($post->url)
+            ?? throw new SocialPostRefusedException('This is no link to share.');
         $account = $this->actingAccount($user, $post->network, $post->accountId);
 
-        return $this->writing->share($account, $link, $post->draft);
-    }
-
-    /** @throws SocialPostRefusedException */
-    private function requireLink(Entry $entry): string
-    {
-        return $this->urls->normalize($entry->getUrl())
-            ?? throw new SocialPostRefusedException('This entry has no link to share.');
+        return $this->writing->share($account, $url, $post->draft);
     }
 
     /**

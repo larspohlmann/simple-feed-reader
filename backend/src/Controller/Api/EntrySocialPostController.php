@@ -6,12 +6,10 @@ namespace App\Controller\Api;
 
 use App\Dto\Social\PostDraftRequest;
 use App\Entity\User;
-use App\Enum\SocialNetwork;
 use App\Http\ComposerContextJson;
 use App\Http\PublishedPostJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Social\LinkPosts;
 use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\PostComposer;
@@ -31,7 +29,6 @@ final readonly class EntrySocialPostController
         private EntryListRepository $entryList,
         private PostComposer $composer,
         private SocialResponses $responses,
-        private LinkPosts $links,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialViewerLimiter,
         private RateLimiterFactoryInterface $socialWritesLimiter,
@@ -87,41 +84,6 @@ final readonly class EntrySocialPostController
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
         $published = $this->responses->quote($user, $request->toTarget($entry, $address), $request->toDraft());
-
-        return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
-    }
-
-    #[Route(
-        '/{id}/social/link-composer',
-        name: 'api_entries_social_link_composer',
-        methods: ['GET'],
-        requirements: ['id' => '\d+'],
-    )]
-    public function linkComposer(
-        int $id,
-        #[CurrentUser] User $user,
-        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] SocialNetwork $network,
-        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?int $accountId = null,
-    ): JsonResponse {
-        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
-        $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
-
-        $context = $this->links->contextFor($user, $entry, $network, $accountId);
-
-        return new JsonResponse(ComposerContextJson::of($context));
-    }
-
-    #[Route('/{id}/social/links', name: 'api_entries_social_link', methods: ['POST'], requirements: ['id' => '\d+'])]
-    public function link(
-        int $id,
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] PostDraftRequest $request,
-        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] SocialNetwork $network,
-    ): JsonResponse {
-        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
-        $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
-
-        $published = $this->links->share($user, $entry, $request->toLinkPost($network));
 
         return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
     }

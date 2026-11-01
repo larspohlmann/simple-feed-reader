@@ -9,7 +9,6 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\MastodonPostWriter;
 use App\Tests\Support\RoutedHttpClient;
@@ -72,7 +71,7 @@ final class MastodonPostWriterTest extends TestCase
 
         $published = $this->writer($http)->share(
             SocialAccounts::mastodon(),
-            new SharedLinkModel('https://example.com/article', 'An article', 'A summary', null),
+            'https://example.com/article',
             new PostDraftModel(
                 'Read this https://example.com/article',
                 visibility: 'unlisted',

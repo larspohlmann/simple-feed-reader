@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostWriter;
 
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Entity\LinkCardContent;
 use App\Service\Image\ImageResizer\ImageResizerInterface;
+use App\Service\LinkCard\Model\PageCardModel;
+use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Social\BlueskyFacets;
 use App\Service\Social\BlueskyLinkCards;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -15,7 +17,6 @@ use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
 use App\Tests\Support\RoutedHttpClient;
@@ -33,6 +34,7 @@ final class BlueskyPostWriterTest extends TestCase
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string CREATE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.createRecord';
     private const string DELETE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.deleteRecord';
+    private const string ARTICLE_URL = 'https://example.com/article';
 
     public function testAReplyToATopLevelPostNamesThePostAsRootAndParent(): void
     {
@@ -133,7 +135,7 @@ final class BlueskyPostWriterTest extends TestCase
 
         $published = $this->writer($http)->share(
             SocialApiWiring::blueskyAccount(),
-            self::link(),
+            self::ARTICLE_URL,
             new PostDraftModel('Read this #news https://example.com/article', language: 'en'),
         );
 
@@ -153,16 +155,15 @@ final class BlueskyPostWriterTest extends TestCase
         self::assertSame(self::REPLY_URI, $published->address);
     }
 
-    public function testATooLongSharedLinkIsRefusedBeforeItsImageIsFetched(): void
+    public function testATooLongSharedLinkIsRefusedBeforeItsPageIsRead(): void
     {
-        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
-        $downloader->expects($this->never())->method('download');
-        $link = new SharedLinkModel('https://example.com/article', 'An article', null, 'https://example.com/lead.jpg');
+        $pageCards = $this->createMock(PageCardReaderInterface::class);
+        $pageCards->expects($this->never())->method('read');
 
         $this->expectException(SocialPostTooLongException::class);
 
-        $this->writerDownloadingWith(new RoutedHttpClient([]), $downloader)
-            ->share(SocialApiWiring::blueskyAccount(), $link, new PostDraftModel(str_repeat('a', 301)));
+        $this->writerReadingPagesWith(new RoutedHttpClient([]), $pageCards)
+            ->share(SocialApiWiring::blueskyAccount(), self::ARTICLE_URL, new PostDraftModel(str_repeat('a', 301)));
     }
 
     public function testAnAnswerWithoutTheNewPostsUriIsAnUnreachableNetwork(): void
@@ -224,28 +225,30 @@ final class BlueskyPostWriterTest extends TestCase
 
     private function writer(RoutedHttpClient $http): BlueskyPostWriter
     {
-        return $this->writerDownloadingWith($http, new StubGuardedImageDownloader());
+        $pageCards = $this->createStub(PageCardReaderInterface::class);
+        $pageCards->method('read')->willReturn(new PageCardModel(
+            new LinkCardContent(self::ARTICLE_URL, 'An article', 'A summary', null, 'example.com'),
+            null,
+        ));
+
+        return $this->writerReadingPagesWith($http, $pageCards);
     }
 
-    private function writerDownloadingWith(
+    private function writerReadingPagesWith(
         RoutedHttpClient $http,
-        GuardedImageDownloaderInterface $downloader,
+        PageCardReaderInterface $pageCards,
     ): BlueskyPostWriter {
         return new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
             new BlueskyLinkCards(
-                $downloader,
+                $pageCards,
+                new StubGuardedImageDownloader(),
                 $this->createStub(ImageResizerInterface::class),
                 SocialApiWiring::blueskySessions($http->client()),
                 new NullLogger(),
             ),
         );
-    }
-
-    private static function link(): SharedLinkModel
-    {
-        return new SharedLinkModel('https://example.com/article', 'An article', 'A summary', null);
     }
 
     private static function post(): SocialPostModel

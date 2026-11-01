@@ -7,7 +7,6 @@ namespace App\Service\Social;
 use App\Entity\SocialAccount;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\PostWriterInterface;
 use Psr\Container\ContainerInterface;
@@ -38,11 +37,11 @@ final readonly class PostWriting
         );
     }
 
-    public function share(SocialAccount $account, SharedLinkModel $link, PostDraftModel $draft): PublishedPostModel
+    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
         return $this->publishAs(
             $account,
-            static fn (PostWriterInterface $writer) => $writer->share($account, $link, $draft),
+            static fn (PostWriterInterface $writer) => $writer->share($account, $url, $draft),
         );
     }
 

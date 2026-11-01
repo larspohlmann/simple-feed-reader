@@ -14,7 +14,6 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\BlueskyStrongRef;
@@ -49,11 +48,11 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         ]]);
     }
 
-    public function share(SocialAccount $account, SharedLinkModel $link, PostDraftModel $draft): PublishedPostModel
+    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
         self::assertFits($draft);
 
-        return $this->published($account, $draft, ['embed' => $this->linkCards->cardOf($account, $link)]);
+        return $this->published($account, $draft, ['embed' => $this->linkCards->cardOf($account, $url)]);
     }
 
     public function delete(SocialPostModel $ownPost): void

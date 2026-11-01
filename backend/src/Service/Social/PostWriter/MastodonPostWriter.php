@@ -13,7 +13,6 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
@@ -41,7 +40,7 @@ final readonly class MastodonPostWriter implements PostWriterInterface
         return $this->published($target->account, $draft, ['quoted_status_id' => $target->postId]);
     }
 
-    public function share(SocialAccount $account, SharedLinkModel $link, PostDraftModel $draft): PublishedPostModel
+    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
         return $this->published($account, $draft, []);
     }

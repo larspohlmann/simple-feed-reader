@@ -14,7 +14,6 @@ use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -53,7 +52,7 @@ interface PostWriterInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function share(SocialAccount $account, SharedLinkModel $link, PostDraftModel $draft): PublishedPostModel;
+    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel;
 
     /**
      * A post the network no longer has counts as deleted.

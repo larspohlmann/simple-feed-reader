@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
-use App\Entity\Entry;
-use App\Entity\Feed;
 use App\Entity\SocialAccount;
-use App\Entity\SocialFeed;
 use App\Entity\User;
-use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\ActingAccountGuard;
@@ -31,6 +27,7 @@ use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class LinkPostsTest extends DbTestCase
@@ -61,7 +58,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->owner));
         $this->entityManager->flush();
 
-        $context = $this->linkPosts()->contextFor($this->owner, $this->article(), SocialNetwork::Mastodon, null);
+        $context = $this->linkPosts()->contextFor($this->owner, SocialNetwork::Mastodon, null);
 
         self::assertSame([$default, $first], $context->accounts);
         self::assertSame($default, $context->account);
@@ -78,25 +75,18 @@ final class LinkPostsTest extends DbTestCase
             SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
         );
 
-        $context = $this->linkPosts()->contextFor(
-            $this->owner,
-            $this->article(),
-            SocialNetwork::Mastodon,
-            $chosen->requireId(),
-        );
+        $context = $this->linkPosts()->contextFor($this->owner, SocialNetwork::Mastodon, $chosen->requireId());
 
         self::assertSame($chosen, $context->account);
     }
 
-    public function testALinkPostSharesTheNormalisedArticleAddressAsTheDefaultAccount(): void
+    public function testALinkPostSharesTheNormalisedAddressAsTheDefaultAccount(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
-        $entry = $this->article(self::ARTICLE_URL . '&utm_source=x');
 
         $published = $this->linkPosts()->share(
             $this->owner,
-            $entry,
-            new LinkPostModel(SocialNetwork::Mastodon, null, new PostDraftModel('Worth reading')),
+            self::post(null, self::ARTICLE_URL . '&utm_source=x', 'Worth reading'),
         );
 
         self::assertSame(['share ' . self::ARTICLE_URL . ' Worth reading'], $this->mastodon->calls);
@@ -114,15 +104,10 @@ final class LinkPostsTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonOf($this->user('someone-else@example.test')),
         );
-        $entry = $this->article();
 
         foreach ([$bluesky, $foreign] as $account) {
             $this->assertRefused(
-                fn (): mixed => $this->linkPosts()->share(
-                    $this->owner,
-                    $entry,
-                    new LinkPostModel(SocialNetwork::Mastodon, $account->requireId(), new PostDraftModel('Hi')),
-                ),
+                fn (): mixed => $this->linkPosts()->share($this->owner, self::post($account->requireId())),
                 SocialAccountNotFoundException::class,
                 'Only an account of the user on the asked network can post the link.',
             );
@@ -136,92 +121,32 @@ final class LinkPostsTest extends DbTestCase
 
         $this->expectException(NoSocialAccountForNetworkException::class);
 
-        $this->linkPosts()->contextFor($this->owner, $this->article(), SocialNetwork::Mastodon, null);
+        $this->linkPosts()->contextFor($this->owner, SocialNetwork::Mastodon, null);
     }
 
-    public function testAnEntryWithoutALinkIsRefusedBeforeAnyAccountIsLookedUp(): void
+    /** @return iterable<string, array{string}> */
+    public static function noLinks(): iterable
     {
-        $entry = $this->article(null);
+        yield 'a blank address' => [''];
+        yield 'no address at all' => ['not a url'];
+    }
+
+    #[DataProvider('noLinks')]
+    public function testAnAddressTheNormaliserRejectsIsRefusedBeforeAnyAccountIsLookedUp(string $url): void
+    {
         $missingAccountId = 999999;
 
         $this->assertRefused(
-            fn (): mixed => $this->linkPosts()->contextFor(
-                $this->owner,
-                $entry,
-                SocialNetwork::Mastodon,
-                $missingAccountId,
-            ),
+            fn (): mixed => $this->linkPosts()->share($this->owner, self::post($missingAccountId, $url)),
             SocialPostRefusedException::class,
-            'The composer for an entry without a link refuses before it looks for the account.',
-        );
-        $this->assertRefused(
-            fn (): mixed => $this->linkPosts()->share(
-                $this->owner,
-                $entry,
-                new LinkPostModel(SocialNetwork::Mastodon, $missingAccountId, new PostDraftModel('Hi')),
-            ),
-            SocialPostRefusedException::class,
-            'An entry without a link is refused before the account is looked for.',
+            'An address that is no link is refused before the account is looked for.',
         );
         self::assertSame([], $this->mastodon->calls);
     }
 
-    public function testAnAddressTheNormaliserRejectsCountsAsNoLink(): void
+    private static function post(?int $accountId, string $url = self::ARTICLE_URL, string $text = 'Hi'): LinkPostModel
     {
-        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
-
-        $this->expectException(SocialPostRefusedException::class);
-
-        $this->linkPosts()->share(
-            $this->owner,
-            $this->article('not a url'),
-            new LinkPostModel(SocialNetwork::Mastodon, null, new PostDraftModel('Hi')),
-        );
-    }
-
-    public function testAPrivateFeedsEntryIsPostedAsTheAskedNetworksDefaultNotTheFeedsAccount(): void
-    {
-        $mastodon = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
-        $bluesky = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->owner));
-        $entry = $this->entryOn($this->privateFeedOf($bluesky), self::ARTICLE_URL);
-
-        $context = $this->linkPosts()->contextFor($this->owner, $entry, SocialNetwork::Mastodon, null);
-        $this->linkPosts()->share(
-            $this->owner,
-            $entry,
-            new LinkPostModel(SocialNetwork::Mastodon, null, new PostDraftModel('Hi')),
-        );
-
-        self::assertSame($mastodon, $context->account);
-        self::assertSame(['share ' . self::ARTICLE_URL . ' Hi'], $this->mastodon->calls);
-    }
-
-    private function article(?string $url = self::ARTICLE_URL): Entry
-    {
-        $feed = new Feed('https://news.example/feed.xml');
-
-        return $this->entryOn($feed, $url);
-    }
-
-    private function privateFeedOf(SocialAccount $account): Feed
-    {
-        $feed = new Feed('social:bluesky:' . $account->requireId() . ':home');
-        $this->entityManager->persist($feed);
-        $this->entityManager->persist(new SocialFeed($account, $feed, SocialFeedKind::Home, ''));
-        $this->entityManager->flush();
-
-        return $feed;
-    }
-
-    private function entryOn(Feed $feed, ?string $url): Entry
-    {
-        $this->entityManager->persist($feed);
-        $now = new \DateTimeImmutable('2026-11-01 10:00:00');
-        $entry = new Entry($feed, 'tag:news.example,2026:7', $url, 'An article', $now, $now);
-        $this->entityManager->persist($entry);
-        $this->entityManager->flush();
-
-        return $entry;
+        return new LinkPostModel(SocialNetwork::Mastodon, $accountId, $url, new PostDraftModel($text));
     }
 
     private function linkPosts(): LinkPosts

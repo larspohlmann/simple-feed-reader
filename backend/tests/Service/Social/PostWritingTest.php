@@ -8,7 +8,6 @@ use App\Entity\SocialAccount;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\PostWriting;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeMastodonNetwork;
@@ -38,7 +37,7 @@ final class PostWritingTest extends DbTestCase
 
     public function testALinkIsSharedByTheAccountsNetwork(): void
     {
-        $published = $this->writing()->share($this->account, self::link(), new PostDraftModel('Read this'));
+        $published = $this->writing()->share($this->account, self::URL, new PostDraftModel('Read this'));
 
         self::assertSame(['share ' . self::URL . ' Read this'], $this->mastodon->calls);
         self::assertSame(FakeMastodonNetwork::REPLY_URI, $published->address);
@@ -49,7 +48,7 @@ final class PostWritingTest extends DbTestCase
         $this->account->markNeedsReconnect();
 
         try {
-            $this->writing()->share($this->account, self::link(), new PostDraftModel('Read this'));
+            $this->writing()->share($this->account, self::URL, new PostDraftModel('Read this'));
             self::fail('An account that needs reconnecting must not share.');
         } catch (SocialAccountNeedsReconnectException) {
             self::assertSame([], $this->mastodon->calls);
@@ -64,10 +63,5 @@ final class PostWritingTest extends DbTestCase
             new ActingAccountGuard($this->entityManager),
             new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
         );
-    }
-
-    private static function link(): SharedLinkModel
-    {
-        return new SharedLinkModel(self::URL, 'An article', null, null);
     }
 }
