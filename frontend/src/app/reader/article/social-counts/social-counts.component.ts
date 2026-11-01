@@ -15,7 +15,7 @@ import { SocialCountsDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialCountsRowComponent } from './social-counts-row.component';
 import { SocialNetworkName } from '../../../core/social-network';
-import { ReplyActions } from '../reply-composer/reply-actions.service';
+import { ReplyActions } from '../composer/reply-actions.service';
 import { SocialCountsService } from './social-counts.service';
 
 @Component({

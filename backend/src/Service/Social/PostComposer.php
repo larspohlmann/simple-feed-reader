@@ -15,16 +15,16 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerContextModel;
-use App\Service\Social\Model\ReplyTargetModel;
+use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-final readonly class ReplyComposer
+final readonly class PostComposer
 {
     public function __construct(
-        private ReplyTargetFinder $targets,
+        private ResponseTargetFinder $targets,
         private SocialPostFinder $posts,
         private SocialAccountRepository $socialAccounts,
         #[AutowireLocator('app.social_composer_defaults', defaultIndexMethod: 'network')]
@@ -41,7 +41,7 @@ final readonly class ReplyComposer
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkUnreachableException
      */
-    public function contextFor(User $user, ReplyTargetModel $target): ComposerContextModel
+    public function contextFor(User $user, ResponseTargetModel $target): ComposerContextModel
     {
         $post = $this->targets->find($user, $target);
         $network = $post->account->getNetwork();
@@ -51,13 +51,13 @@ final readonly class ReplyComposer
         return new ComposerContextModel(
             $this->socialAccounts->findConnectedOnNetwork($user, $network),
             $post->account,
-            $post->replyContext->canReply,
+            $post->responseContext->canReply,
             $defaults->defaultsFor($post, $this->threadStarterOf($target, $post)),
         );
     }
 
     /** @return \Closure(): ?SocialPostModel */
-    private function threadStarterOf(ReplyTargetModel $target, SocialPostModel $post): \Closure
+    private function threadStarterOf(ResponseTargetModel $target, SocialPostModel $post): \Closure
     {
         if (null === $target->address) {
             return static fn (): SocialPostModel => $post;
@@ -66,7 +66,7 @@ final readonly class ReplyComposer
         return fn (): ?SocialPostModel => $this->threadStarterOrNull($post, $target);
     }
 
-    private function threadStarterOrNull(SocialPostModel $post, ReplyTargetModel $target): ?SocialPostModel
+    private function threadStarterOrNull(SocialPostModel $post, ResponseTargetModel $target): ?SocialPostModel
     {
         try {
             return $this->posts->findAs($post->account, SocialPostAddress::ofOrRefuse($target->entry));

@@ -9,8 +9,8 @@ import { EntryCommentDto } from '../../entry-comment';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { ReplyTarget, SentReply } from './reply-composer-dialog.component';
-import { ReplyComposer } from './reply-composer.service';
+import { ComposeTarget, SentReply } from './composer-dialog.component';
+import { PostComposer } from './post-composer.service';
 import { ReplyActions } from './reply-actions.service';
 
 const ADDRESS = 'https://mastodon.example/users/alice/statuses/200';
@@ -25,7 +25,7 @@ describe('ReplyActions', () => {
   let actions: ReplyActions;
 
   const sent: SentReply = { address: 'https://x/9', url: null, text: 'Hi', authorHandle: '@a' };
-  const target: ReplyTarget = {
+  const target: ComposeTarget = {
     entryId: 7,
     network: 'mastodon',
     address: null,
@@ -49,7 +49,7 @@ describe('ReplyActions', () => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
-        { provide: ReplyComposer, useValue: composer },
+        { provide: PostComposer, useValue: composer },
         { provide: CommentsService, useValue: comments },
         { provide: SocialCountsService, useValue: counts },
         { provide: SocialPostApi, useValue: api },

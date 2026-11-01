@@ -6,8 +6,8 @@ import {
   ComposerContextDto,
   EntryLikeDto,
   EntryRepostDto,
-  PublishedReplyDto,
-  ReplyDraftDto,
+  PublishedPostDto,
+  PostDraftDto,
   SocialCountsDto,
   SocialViewerDto,
 } from './entry-social';
@@ -86,9 +86,9 @@ export class SocialPostApi {
   reply(
     entryId: number,
     address: string | null,
-    draft: ReplyDraftDto,
-  ): Observable<PublishedReplyDto> {
-    return this.http.post<PublishedReplyDto>(this.entryPath(entryId, 'social/replies'), draft, {
+    draft: PostDraftDto,
+  ): Observable<PublishedPostDto> {
+    return this.http.post<PublishedPostDto>(this.entryPath(entryId, 'social/replies'), draft, {
       params: address === null ? {} : { address },
     });
   }

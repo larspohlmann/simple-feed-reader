@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Model;
 
 /** What the user wrote in the composer; the Mastodon-only parts are ignored on Bluesky. */
-final readonly class ReplyDraftModel
+final readonly class PostDraftModel
 {
     /**
      * @noinspection AutowireWrongClass Built with new, never autowired

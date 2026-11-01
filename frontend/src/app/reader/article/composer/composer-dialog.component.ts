@@ -27,14 +27,14 @@ import {
   ComposerContextDto,
   MASTODON_VISIBILITIES,
   MastodonVisibility,
-  PublishedReplyDto,
-  ReplyDraftDto,
+  PublishedPostDto,
+  PostDraftDto,
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
 import { postLength } from './post-length';
 
 /** The post a reply answers, as the composer shows it above the text. */
-export interface ReplyTarget {
+export interface ComposeTarget {
   entryId: number;
   network: SocialNetworkName;
   /** A reply in the thread; null answers the entry's own post. */
@@ -45,7 +45,7 @@ export interface ReplyTarget {
 }
 
 /** What the composer published, with what the panel needs to show it before the network does. */
-export interface SentReply extends PublishedReplyDto {
+export interface SentReply extends PublishedPostDto {
   text: string;
   authorHandle: string | null;
 }
@@ -62,7 +62,7 @@ type ContextState =
  * publishes the reply once.
  */
 @Component({
-  selector: 'app-reply-composer-dialog',
+  selector: 'app-composer-dialog',
   imports: [
     A11yModule,
     ButtonComponent,
@@ -72,13 +72,13 @@ type ContextState =
     SkeletonComponent,
     TranslocoPipe,
   ],
-  templateUrl: './reply-composer-dialog.component.html',
-  styleUrl: './reply-composer-dialog.component.scss',
+  templateUrl: './composer-dialog.component.html',
+  styleUrl: './composer-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ReplyComposerDialogComponent {
+export class ComposerDialogComponent {
   protected readonly ref = inject<DialogRef<SentReply>>(DialogRef);
-  protected readonly target = inject<ReplyTarget>(DIALOG_DATA);
+  protected readonly target = inject<ComposeTarget>(DIALOG_DATA);
   private readonly api = inject(SocialPostApi);
   private readonly idempotencyKey = randomUuid();
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
@@ -183,12 +183,12 @@ export class ReplyComposerDialogComponent {
     }
   }
 
-  private sentAs(published: PublishedReplyDto, context: ComposerContextDto): SentReply {
+  private sentAs(published: PublishedPostDto, context: ComposerContextDto): SentReply {
     const account = context.accounts.find((candidate) => candidate.id === context.accountId);
     return { ...published, text: this.text(), authorHandle: account?.handle ?? null };
   }
 
-  private draftFor(context: ComposerContextDto): ReplyDraftDto {
+  private draftFor(context: ComposerContextDto): PostDraftDto {
     const visibility = this.visibility();
     const warning = this.contentWarning()?.trim() ?? '';
     return {

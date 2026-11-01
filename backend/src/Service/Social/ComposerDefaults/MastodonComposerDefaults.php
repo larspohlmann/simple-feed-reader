@@ -38,13 +38,13 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         $account = $target->account;
-        $authors = [$target->replyContext->authorIdentity, $threadStarter()?->replyContext->authorIdentity];
+        $authors = [$target->responseContext->authorIdentity, $threadStarter()?->responseContext->authorIdentity];
 
         return new ComposerDefaultsModel(
             $this->answerOf($account, self::INSTANCE)->node('configuration')->node('statuses')->int('max_characters')
                 ?? self::DEFAULT_MAX_CHARACTERS,
             MastodonVisibility::stricterOf(
-                $target->replyContext->visibility ?? self::DEFAULT_VISIBILITY,
+                $target->responseContext->visibility ?? self::DEFAULT_VISIBILITY,
                 $this->answerOf($account, self::OWN_ACCOUNT)->node('source')->string('privacy')
                     ?? self::DEFAULT_VISIBILITY,
             ),

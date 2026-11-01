@@ -45,7 +45,7 @@ export const MASTODON_VISIBILITIES = ['public', 'unlisted', 'private', 'direct']
 export type MastodonVisibility = (typeof MASTODON_VISIBILITIES)[number];
 
 /** The body of `POST /api/entries/{id}/social/replies`; the Mastodon-only fields are ignored on Bluesky. */
-export interface ReplyDraftDto {
+export interface PostDraftDto {
   text: string;
   accountId: number;
   language: string | null;
@@ -55,7 +55,7 @@ export interface ReplyDraftDto {
 }
 
 /** A reply the network took: its address in the thread and where a browser shows it. */
-export interface PublishedReplyDto {
+export interface PublishedPostDto {
   address: string;
   url: string | null;
 }

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostReplier;
+namespace App\Tests\Service\Social\PostWriter;
 
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyDraftModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostReplier\MastodonPostReplier;
+use App\Service\Social\PostWriter\MastodonPostWriter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-final class MastodonPostReplierTest extends TestCase
+final class MastodonPostWriterTest extends TestCase
 {
     private const string STATUSES = 'POST https://mastodon.example/api/v1/statuses';
     private const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/120';
@@ -27,7 +27,7 @@ final class MastodonPostReplierTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $published = $this->replier($http)->publish(self::post(), new ReplyDraftModel(
+        $published = $this->replier($http)->publish(self::post(), new PostDraftModel(
             '@ann Thanks',
             visibility: 'unlisted',
             contentWarning: 'spoilers',
@@ -43,14 +43,14 @@ final class MastodonPostReplierTest extends TestCase
             'language' => 'de',
         ], json_decode($http->requests[0]['body'], true));
         self::assertContains('Idempotency-Key: key-1', $http->requests[0]['headers']);
-        self::assertEquals(new PublishedReplyModel(self::REPLY_URI, self::REPLY_URL), $published);
+        self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
     }
 
     public function testChoicesTheComposerLeftOpenAreNotSent(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $this->replier($http)->publish(self::post(), new ReplyDraftModel('Hi', contentWarning: ''));
+        $this->replier($http)->publish(self::post(), new PostDraftModel('Hi', contentWarning: ''));
 
         self::assertSame(['status' => 'Hi', 'in_reply_to_id' => '110'], json_decode($http->requests[0]['body'], true));
         self::assertEmpty(array_filter(
@@ -67,7 +67,7 @@ final class MastodonPostReplierTest extends TestCase
         )]);
 
         try {
-            $this->replier($http)->publish(self::post(), new ReplyDraftModel('Hi'));
+            $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
             self::fail('A token without the scope cannot reply.');
         } catch (SocialTokenScopeMissingException $exception) {
             self::assertSame('write:statuses', $exception->missingScope);
@@ -80,7 +80,7 @@ final class MastodonPostReplierTest extends TestCase
             json_encode(['id' => '120', 'url' => self::REPLY_URL], \JSON_THROW_ON_ERROR),
         )]);
 
-        $published = $this->replier($http)->publish(self::post(), new ReplyDraftModel('Hi'));
+        $published = $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
 
         self::assertSame(self::REPLY_URL, $published->address);
     }
@@ -91,7 +91,7 @@ final class MastodonPostReplierTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->replier($http)->publish(self::post(), new ReplyDraftModel('Hi'));
+        $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
     }
 
     public function testDeletingAReplyDeletesItsStatusAndAGoneOneCountsAsDeleted(): void
@@ -110,9 +110,9 @@ final class MastodonPostReplierTest extends TestCase
         self::assertCount(2, $http->requests);
     }
 
-    private function replier(RoutedHttpClient $http): MastodonPostReplier
+    private function replier(RoutedHttpClient $http): MastodonPostWriter
     {
-        return new MastodonPostReplier(SocialApiWiring::mastodonAccountApi($http->client()));
+        return new MastodonPostWriter(SocialApiWiring::mastodonAccountApi($http->client()));
     }
 
     private static function post(): SocialPostModel

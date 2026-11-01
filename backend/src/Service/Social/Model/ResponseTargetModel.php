@@ -6,8 +6,8 @@ namespace App\Service\Social\Model;
 
 use App\Entity\Entry;
 
-/** The post a reply answers: the entry's own post, or a reply in its thread, as one chosen account sees it. */
-final readonly class ReplyTargetModel
+/** The post a reply or quote responds to: the entry's own post, or a reply in its thread, as one chosen account sees it. */
+final readonly class ResponseTargetModel
 {
     /**
      * @noinspection AutowireWrongClass Built with new, never autowired

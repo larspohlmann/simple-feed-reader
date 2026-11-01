@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Dto\Social\ReplyRequest;
+use App\Dto\Social\PostDraftRequest;
 use App\Entity\User;
 use App\Http\ComposerContextJson;
-use App\Http\PublishedReplyJson;
+use App\Http\PublishedPostJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Social\Model\ReplyTargetModel;
-use App\Service\Social\ReplyComposer;
+use App\Service\Social\Model\ResponseTargetModel;
+use App\Service\Social\PostComposer;
 use App\Service\Social\SocialReplies;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,11 +22,11 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/entries')]
-final readonly class EntryReplyController
+final readonly class EntrySocialPostController
 {
     public function __construct(
         private EntryListRepository $entryList,
-        private ReplyComposer $composer,
+        private PostComposer $composer,
         private SocialReplies $replies,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialViewerLimiter,
@@ -49,7 +49,7 @@ final readonly class EntryReplyController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
-        $context = $this->composer->contextFor($user, new ReplyTargetModel($entry, $address, $accountId));
+        $context = $this->composer->contextFor($user, new ResponseTargetModel($entry, $address, $accountId));
 
         return new JsonResponse(ComposerContextJson::of($context));
     }
@@ -58,7 +58,7 @@ final readonly class EntryReplyController
     public function reply(
         int $id,
         #[CurrentUser] User $user,
-        #[MapRequestPayload] ReplyRequest $request,
+        #[MapRequestPayload] PostDraftRequest $request,
         #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?string $address = null,
     ): JsonResponse {
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
@@ -66,7 +66,7 @@ final readonly class EntryReplyController
 
         $published = $this->replies->reply($user, $request->toTarget($entry, $address), $request->toDraft());
 
-        return new JsonResponse(PublishedReplyJson::of($published), Response::HTTP_CREATED);
+        return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
     }
 
     #[Route(

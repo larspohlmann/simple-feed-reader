@@ -10,8 +10,8 @@ import { EntryCommentDto } from '../../entry-comment';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { ReplyTarget } from './reply-composer-dialog.component';
-import { ReplyComposer } from './reply-composer.service';
+import { ComposeTarget } from './composer-dialog.component';
+import { PostComposer } from './post-composer.service';
 import { sentComment } from './sent-comment';
 
 /**
@@ -20,7 +20,7 @@ import { sentComment } from './sent-comment';
  */
 @Injectable({ providedIn: 'root' })
 export class ReplyActions {
-  private readonly composer = inject(ReplyComposer);
+  private readonly composer = inject(PostComposer);
   private readonly comments = inject(CommentsService);
   private readonly counts = inject(SocialCountsService);
   private readonly api = inject(SocialPostApi);
@@ -28,7 +28,7 @@ export class ReplyActions {
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
 
-  reply(target: ReplyTarget): void {
+  reply(target: ComposeTarget): void {
     this.composer.open(target).subscribe((sent) => {
       if (sent === undefined) return;
       this.comments.insertReply(target.entryId, target.address, sentComment(sent, new Date()));

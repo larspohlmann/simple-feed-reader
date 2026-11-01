@@ -20,7 +20,7 @@ import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.com
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
-import { ReplyActions } from '../reply-composer/reply-actions.service';
+import { ReplyActions } from '../composer/reply-actions.service';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';

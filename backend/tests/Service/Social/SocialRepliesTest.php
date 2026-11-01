@@ -19,14 +19,14 @@ use App\Service\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyContextModel;
-use App\Service\Social\Model\ReplyDraftModel;
-use App\Service\Social\Model\ReplyTargetModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\ResponseContextModel;
+use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\PostReplying;
-use App\Service\Social\ReplyTargetFinder;
+use App\Service\Social\PostWriting;
+use App\Service\Social\ResponseTargetFinder;
 use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialCountsCache;
 use App\Service\Social\SocialPostFinder;
@@ -76,13 +76,13 @@ final class SocialRepliesTest extends DbTestCase
 
     public function testAReplyAnswersTheEntrysPostAsTheActingAccount(): void
     {
-        $target = new ReplyTargetModel($this->post());
+        $target = new ResponseTargetModel($this->post());
 
-        $published = $this->replies()->reply($this->owner, $target, new ReplyDraftModel('Hi'));
+        $published = $this->replies()->reply($this->owner, $target, new PostDraftModel('Hi'));
 
         self::assertSame(['resolve ' . self::STATUS_URL, 'reply 110 Hi'], $this->mastodon->calls);
         self::assertEquals(
-            new PublishedReplyModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
+            new PublishedPostModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
             $published,
         );
     }
@@ -91,8 +91,8 @@ final class SocialRepliesTest extends DbTestCase
     {
         $this->replies()->reply(
             $this->owner,
-            new ReplyTargetModel($this->post(), self::REPLY_URI),
-            new ReplyDraftModel('Hi'),
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            new PostDraftModel('Hi'),
         );
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'reply 110 Hi'], $this->mastodon->calls);
@@ -111,8 +111,8 @@ final class SocialRepliesTest extends DbTestCase
 
         $this->replies()->reply(
             $this->owner,
-            new ReplyTargetModel($this->post(), accountId: $second->requireId()),
-            new ReplyDraftModel('Hi'),
+            new ResponseTargetModel($this->post(), accountId: $second->requireId()),
+            new PostDraftModel('Hi'),
         );
 
         self::assertSame(['bea@mastodon.example'], $resolvedOn);
@@ -131,8 +131,8 @@ final class SocialRepliesTest extends DbTestCase
             $this->assertRefused(
                 fn (): mixed => $this->replies()->reply(
                     $this->owner,
-                    new ReplyTargetModel($entry, accountId: $account->requireId()),
-                    new ReplyDraftModel('Hi'),
+                    new ResponseTargetModel($entry, accountId: $account->requireId()),
+                    new PostDraftModel('Hi'),
                 ),
                 SocialAccountNotFoundException::class,
                 'Only an account of the user on the entry\'s network can answer.',
@@ -143,13 +143,13 @@ final class SocialRepliesTest extends DbTestCase
 
     public function testAPostThatTakesNoRepliesIsRefusedBeforeTheReply(): void
     {
-        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(canReply: false));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
 
         $this->assertRefused(
             fn (): mixed => $this->replies()->reply(
                 $this->owner,
-                new ReplyTargetModel($this->post()),
-                new ReplyDraftModel('Hi'),
+                new ResponseTargetModel($this->post()),
+                new PostDraftModel('Hi'),
             ),
             SocialPostRefusedException::class,
             'A post that takes no replies cannot be answered.',
@@ -163,7 +163,7 @@ final class SocialRepliesTest extends DbTestCase
         $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, null));
         $this->comments->load($this->owner, $entry);
 
-        $this->replies()->reply($this->owner, new ReplyTargetModel($entry), new ReplyDraftModel('Hi'));
+        $this->replies()->reply($this->owner, new ResponseTargetModel($entry), new PostDraftModel('Hi'));
         $this->comments->load($this->owner, $entry);
 
         self::assertNull($this->countsCache->find(self::address()));
@@ -175,8 +175,8 @@ final class SocialRepliesTest extends DbTestCase
         $this->assertRefused(
             fn (): mixed => $this->replies()->reply(
                 $this->owner,
-                new ReplyTargetModel($this->post(), 'at://did:plc:x/app.bsky.feed.post/1'),
-                new ReplyDraftModel('Hi'),
+                new ResponseTargetModel($this->post(), 'at://did:plc:x/app.bsky.feed.post/1'),
+                new PostDraftModel('Hi'),
             ),
             NotASocialPostException::class,
             'Only a post on the entry\'s network can be answered.',
@@ -187,7 +187,7 @@ final class SocialRepliesTest extends DbTestCase
     public function testAReplyAConnectedAccountWroteIsDeletedAndTheCachesDropped(): void
     {
         $entry = $this->post();
-        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(authorIdentity: 'Alice@Mastodon.Example'));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'Alice@Mastodon.Example'));
         $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 1, null));
         $this->comments->load($this->owner, $entry);
 
@@ -201,7 +201,7 @@ final class SocialRepliesTest extends DbTestCase
 
     public function testAReplySomeoneElseWroteIsNotDeleted(): void
     {
-        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(authorIdentity: 'ann@hachyderm.io'));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'ann@hachyderm.io'));
 
         $this->assertRefused(
             fn () => $this->replies()->delete($this->owner, $this->post(), self::REPLY_URI),
@@ -217,7 +217,7 @@ final class SocialRepliesTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
         );
-        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(authorIdentity: 'bea@mastodon.example'));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'bea@mastodon.example'));
         $this->mastodon->onResolve(function (SocialAccount $account): void {
             if ($account === $this->account) {
                 throw new SocialNetworkUnreachableException('The instance is down.');
@@ -252,7 +252,7 @@ final class SocialRepliesTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
         );
-        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(authorIdentity: 'ann@hachyderm.io'));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'ann@hachyderm.io'));
         $this->mastodon->onResolve(function (SocialAccount $account): void {
             if ($account !== $this->account) {
                 throw new SocialNetworkUnreachableException('The instance is down.');
@@ -268,7 +268,7 @@ final class SocialRepliesTest extends DbTestCase
     {
         $this->account->markNeedsReconnect();
         $this->entityManager->flush();
-        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(authorIdentity: 'alice@mastodon.example'));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'alice@mastodon.example'));
 
         $this->assertRefused(
             fn () => $this->replies()->delete($this->owner, $this->post(), self::REPLY_URI),
@@ -306,9 +306,9 @@ final class SocialRepliesTest extends DbTestCase
         $posts = new SocialPostFinder($chooser, $guard, $network);
 
         return new SocialReplies(
-            new ReplyTargetFinder($posts, $chooser, new SocialAccountForUser($accounts)),
+            new ResponseTargetFinder($posts, $chooser, new SocialAccountForUser($accounts)),
             $posts,
-            new PostReplying($guard, $network),
+            new PostWriting($guard, $network),
             $accounts,
             $this->countsCache,
             $this->comments,

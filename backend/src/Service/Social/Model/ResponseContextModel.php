@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model;
 
-/** What answering a post needs to know about it beyond its id. */
-final readonly class ReplyContextModel
+/** What replying to or quoting a post needs to know about it beyond its id. */
+final readonly class ResponseContextModel
 {
     /**
      * @noinspection AutowireWrongClass Built with new, never autowired

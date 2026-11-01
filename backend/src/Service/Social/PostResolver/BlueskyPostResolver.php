@@ -12,7 +12,7 @@ use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\PostReferenceModel;
-use App\Service\Social\Model\ReplyContextModel;
+use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\PostCounts;
@@ -43,12 +43,12 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         $resolved = SocialPostModel::onBluesky($account, $address, $contentId)
             ->withCounts(PostCounts::ofBlueskyPost($post));
 
-        return self::withViewer($resolved, $post->node('viewer'))->inReplyContext(self::replyContextOf($post));
+        return self::withViewer($resolved, $post->node('viewer'))->inResponseContext(self::responseContextOf($post));
     }
 
-    private static function replyContextOf(JsonNodeModel $post): ReplyContextModel
+    private static function responseContextOf(JsonNodeModel $post): ResponseContextModel
     {
-        return new ReplyContextModel(
+        return new ResponseContextModel(
             authorIdentity: $post->node('author')->string('did'),
             threadRoot: self::referenceOrNull($post->node('record')->node('reply')->node('root')),
             canReply: !$post->node('viewer')->isTrue('replyDisabled'),

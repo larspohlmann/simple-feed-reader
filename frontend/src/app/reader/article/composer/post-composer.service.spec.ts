@@ -1,15 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
-import { ReplyComposerDialogComponent, ReplyTarget } from './reply-composer-dialog.component';
-import { ReplyComposer } from './reply-composer.service';
+import { ComposerDialogComponent, ComposeTarget } from './composer-dialog.component';
+import { PostComposer } from './post-composer.service';
 
-describe('ReplyComposer', () => {
+describe('PostComposer', () => {
   it('opens the composer as an app dialog and answers what it closed with', () => {
     const published = { address: 'at://x', url: null };
     const dialog = { open: jest.fn(() => ({ closed: of(published) })) };
     TestBed.configureTestingModule({ providers: [{ provide: Dialog, useValue: dialog }] });
-    const target: ReplyTarget = {
+    const target: ComposeTarget = {
       entryId: 7,
       network: 'bluesky',
       address: null,
@@ -19,11 +19,11 @@ describe('ReplyComposer', () => {
     };
     let received: unknown;
 
-    TestBed.inject(ReplyComposer)
+    TestBed.inject(PostComposer)
       .open(target)
       .subscribe((reply) => (received = reply));
 
-    expect(dialog.open).toHaveBeenCalledWith(ReplyComposerDialogComponent, {
+    expect(dialog.open).toHaveBeenCalledWith(ComposerDialogComponent, {
       panelClass: 'app-dialog',
       data: target,
     });

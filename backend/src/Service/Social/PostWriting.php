@@ -5,29 +5,29 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyDraftModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostReplier\PostReplierInterface;
+use App\Service\Social\PostWriter\PostWriterInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-final readonly class PostReplying
+final readonly class PostWriting
 {
     public function __construct(
         private ActingAccountGuard $guard,
-        #[AutowireLocator('app.social_post_replier', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_post_writer', defaultIndexMethod: 'network')]
         private ContainerInterface $repliers,
     ) {
     }
 
-    public function publish(SocialPostModel $target, ReplyDraftModel $draft): PublishedReplyModel
+    public function publish(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         $replier = $this->replierOf($target->account);
 
         return $this->guard->actAs(
             $target->account,
-            static fn (): PublishedReplyModel => $replier->publish($target, $draft),
+            static fn (): PublishedPostModel => $replier->publish($target, $draft),
         );
     }
 
@@ -39,10 +39,10 @@ final readonly class PostReplying
         });
     }
 
-    private function replierOf(SocialAccount $account): PostReplierInterface
+    private function replierOf(SocialAccount $account): PostWriterInterface
     {
         $replier = $this->repliers->get($account->getNetwork()->value);
-        \assert($replier instanceof PostReplierInterface);
+        \assert($replier instanceof PostWriterInterface);
 
         return $replier;
     }

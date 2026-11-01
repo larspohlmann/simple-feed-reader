@@ -85,12 +85,12 @@ final class MastodonPostResolverTest extends TestCase
             'account' => $author,
         ]])]);
 
-        $replying = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->replyContext;
+        $writing = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
 
-        self::assertSame($identity, $replying->authorIdentity);
-        self::assertSame('unlisted', $replying->visibility);
-        self::assertTrue($replying->canReply);
-        self::assertNull($replying->threadRoot);
+        self::assertSame($identity, $writing->authorIdentity);
+        self::assertSame('unlisted', $writing->visibility);
+        self::assertTrue($writing->canReply);
+        self::assertNull($writing->threadRoot);
     }
 
     /** @return iterable<string, array{array<string, string>, string}> */
@@ -104,10 +104,10 @@ final class MastodonPostResolverTest extends TestCase
     {
         $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876']])]);
 
-        $replying = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->replyContext;
+        $writing = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
 
-        self::assertNull($replying->authorIdentity);
-        self::assertNull($replying->visibility);
+        self::assertNull($writing->authorIdentity);
+        self::assertNull($writing->visibility);
     }
 
     #[DataProvider('visibilities')]

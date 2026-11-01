@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Entity\Entry;
-use App\Service\Social\Model\ReplyDraftModel;
-use App\Service\Social\Model\ReplyTargetModel;
+use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Support\MastodonVisibility;
 use Symfony\Component\Validator\Constraints as Assert;
 
-final readonly class ReplyRequest
+final readonly class PostDraftRequest
 {
     public function __construct(
         #[Assert\NotBlank(normalizer: 'trim')]
@@ -29,9 +29,9 @@ final readonly class ReplyRequest
     ) {
     }
 
-    public function toDraft(): ReplyDraftModel
+    public function toDraft(): PostDraftModel
     {
-        return new ReplyDraftModel(
+        return new PostDraftModel(
             $this->text,
             $this->visibility,
             $this->contentWarning,
@@ -41,8 +41,8 @@ final readonly class ReplyRequest
     }
 
     /** @param string|null $address a reply in the entry's thread; null answers the entry's own post */
-    public function toTarget(Entry $entry, ?string $address): ReplyTargetModel
+    public function toTarget(Entry $entry, ?string $address): ResponseTargetModel
     {
-        return new ReplyTargetModel($entry, $address, $this->accountId);
+        return new ResponseTargetModel($entry, $address, $this->accountId);
     }
 }

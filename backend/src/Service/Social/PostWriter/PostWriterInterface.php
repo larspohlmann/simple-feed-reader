@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostReplier;
+namespace App\Service\Social\PostWriter;
 
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialReplyTooLongException;
+use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyDraftModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-#[AutoconfigureTag('app.social_post_replier')]
-interface PostReplierInterface
+#[AutoconfigureTag('app.social_post_writer')]
+interface PostWriterInterface
 {
     public static function network(): string;
 
     /**
-     * @throws SocialReplyTooLongException
+     * @throws SocialPostTooLongException
      * @throws SocialPostNotFoundException
      * @throws SocialCredentialsRejectedException
      * @throws SocialTokenScopeMissingException
@@ -30,7 +30,7 @@ interface PostReplierInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function publish(SocialPostModel $target, ReplyDraftModel $draft): PublishedReplyModel;
+    public function publish(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel;
 
     /**
      * A post the network no longer has counts as deleted.

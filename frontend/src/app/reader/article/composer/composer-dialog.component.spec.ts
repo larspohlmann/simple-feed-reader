@@ -3,13 +3,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ComposerContextDto, PublishedReplyDto } from '../../entry-social';
+import { ComposerContextDto, PublishedPostDto } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
-import { ReplyComposerDialogComponent, ReplyTarget } from './reply-composer-dialog.component';
+import { ComposerDialogComponent, ComposeTarget } from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
 
-describe('ReplyComposerDialogComponent', () => {
+describe('ComposerDialogComponent', () => {
   const close = jest.fn();
   let api: { composer: jest.Mock; reply: jest.Mock };
 
@@ -23,7 +23,7 @@ describe('ReplyComposerDialogComponent', () => {
     ...overrides,
   });
 
-  const target = (overrides: Partial<ReplyTarget> = {}): ReplyTarget => ({
+  const target = (overrides: Partial<ComposeTarget> = {}): ComposeTarget => ({
     entryId: 7,
     network: 'mastodon',
     address: REPLY,
@@ -42,7 +42,7 @@ describe('ReplyComposerDialogComponent', () => {
         { provide: SocialPostApi, useValue: api },
       ],
     });
-    const fixture = TestBed.createComponent(ReplyComposerDialogComponent);
+    const fixture = TestBed.createComponent(ComposerDialogComponent);
     fixture.detectChanges();
     return fixture;
   }
@@ -68,7 +68,7 @@ describe('ReplyComposerDialogComponent', () => {
     close.mockReset();
     api = {
       composer: jest.fn(() => of(context())),
-      reply: jest.fn(() => of<PublishedReplyDto>({ address: 'https://x/1', url: null })),
+      reply: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
     };
   });
 
@@ -221,7 +221,7 @@ describe('ReplyComposerDialogComponent', () => {
   });
 
   it('cannot send twice while a reply is on the wire', () => {
-    const pending = new Subject<PublishedReplyDto>();
+    const pending = new Subject<PublishedPostDto>();
     api.reply.mockReturnValue(pending);
     const fixture = mount();
     type(fixture, 'Once');
@@ -233,7 +233,7 @@ describe('ReplyComposerDialogComponent', () => {
   });
 
   it('stays open while a reply is on the wire, and closable again once it fails', () => {
-    const pending = new Subject<PublishedReplyDto>();
+    const pending = new Subject<PublishedPostDto>();
     api.reply.mockReturnValue(pending);
     const fixture = mount();
     const ref = TestBed.inject(DialogRef);

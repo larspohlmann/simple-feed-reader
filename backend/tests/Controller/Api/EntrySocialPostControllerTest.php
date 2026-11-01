@@ -12,7 +12,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-final class EntryReplyControllerTest extends ApiTestCase
+final class EntrySocialPostControllerTest extends ApiTestCase
 {
     use RoutesSocialApis;
 

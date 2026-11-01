@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostReplier;
+namespace App\Tests\Service\Social\PostWriter;
 
 use App\Service\Social\BlueskyFacets;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialReplyTooLongException;
+use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Model\PostReferenceModel;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyContextModel;
-use App\Service\Social\Model\ReplyDraftModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\ResponseContextModel;
+use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostReplier\BlueskyPostReplier;
+use App\Service\Social\PostWriter\BlueskyPostWriter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-final class BlueskyPostReplierTest extends TestCase
+final class BlueskyPostWriterTest extends TestCase
 {
     private const string POST_URI = 'at://did:plc:bob/app.bsky.feed.post/3abc';
     private const string REPLY_URI = 'at://did:plc:alice/app.bsky.feed.post/3rep';
@@ -32,7 +32,7 @@ final class BlueskyPostReplierTest extends TestCase
     {
         $http = $this->creating();
 
-        $published = $this->replier($http)->publish(self::post(), new ReplyDraftModel('Thanks #news', language: 'de'));
+        $published = $this->replier($http)->publish(self::post(), new PostDraftModel('Thanks #news', language: 'de'));
 
         self::assertSame([
             'repo' => 'did:plc:alice',
@@ -53,7 +53,7 @@ final class BlueskyPostReplierTest extends TestCase
             ],
         ], json_decode($http->requests[1]['body'], true));
         self::assertEquals(
-            new PublishedReplyModel(self::REPLY_URI, 'https://bsky.app/profile/did:plc:alice/post/3rep'),
+            new PublishedPostModel(self::REPLY_URI, 'https://bsky.app/profile/did:plc:alice/post/3rep'),
             $published,
         );
     }
@@ -61,11 +61,11 @@ final class BlueskyPostReplierTest extends TestCase
     public function testAReplyInsideAThreadNamesTheThreadsRoot(): void
     {
         $http = $this->creating();
-        $post = self::post()->inReplyContext(
-            new ReplyContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
+        $post = self::post()->inResponseContext(
+            new ResponseContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
         );
 
-        $this->replier($http)->publish($post, new ReplyDraftModel('Yes'));
+        $this->replier($http)->publish($post, new PostDraftModel('Yes'));
 
         $record = self::recordSent($http);
         self::assertSame([
@@ -81,12 +81,12 @@ final class BlueskyPostReplierTest extends TestCase
         $http = $this->creating();
         $family = '👨‍👩‍👧';
 
-        $this->replier($http)->publish(self::post(), new ReplyDraftModel(str_repeat($family, 300)));
+        $this->replier($http)->publish(self::post(), new PostDraftModel(str_repeat($family, 300)));
 
-        $this->expectException(SocialReplyTooLongException::class);
+        $this->expectException(SocialPostTooLongException::class);
 
         try {
-            $this->replier($http)->publish(self::post(), new ReplyDraftModel(str_repeat($family, 301)));
+            $this->replier($http)->publish(self::post(), new PostDraftModel(str_repeat($family, 301)));
         } finally {
             self::assertCount(2, $http->requests);
         }
@@ -101,7 +101,7 @@ final class BlueskyPostReplierTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->replier($http)->publish(self::post(), new ReplyDraftModel('Hi'));
+        $this->replier($http)->publish(self::post(), new PostDraftModel('Hi'));
     }
 
     public function testDeletingAReplyDeletesItsPostRecord(): void
@@ -149,9 +149,9 @@ final class BlueskyPostReplierTest extends TestCase
         ]);
     }
 
-    private function replier(RoutedHttpClient $http): BlueskyPostReplier
+    private function replier(RoutedHttpClient $http): BlueskyPostWriter
     {
-        return new BlueskyPostReplier(
+        return new BlueskyPostWriter(
             SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
         );

@@ -16,7 +16,7 @@ import { ChapterDto, EntryDto, ReaderContent, TranscriptDto } from '../../models
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
-import { ReplyActions } from '../reply-composer/reply-actions.service';
+import { ReplyActions } from '../composer/reply-actions.service';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AudioPlayerService } from '../../audio-player.service';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';

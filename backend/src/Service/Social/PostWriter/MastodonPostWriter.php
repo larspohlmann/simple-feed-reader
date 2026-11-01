@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostReplier;
+namespace App\Service\Social\PostWriter;
 
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
@@ -10,12 +10,12 @@ use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyDraftModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
-final readonly class MastodonPostReplier implements PostReplierInterface
+final readonly class MastodonPostWriter implements PostWriterInterface
 {
     private const string STATUSES = '/api/v1/statuses';
     private const string STATUSES_SCOPE = 'write:statuses';
@@ -29,7 +29,7 @@ final readonly class MastodonPostReplier implements PostReplierInterface
         return SocialNetwork::Mastodon->value;
     }
 
-    public function publish(SocialPostModel $target, ReplyDraftModel $draft): PublishedReplyModel
+    public function publish(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         $request = ApiRequestModel::postJson(
             $target->account->getServiceUrl() . self::STATUSES,
@@ -40,7 +40,7 @@ final readonly class MastodonPostReplier implements PostReplierInterface
         $address = AbsoluteHttpUrl::orNull($status->string('uri')) ?? AbsoluteHttpUrl::orNull($status->string('url'))
             ?? throw new SocialNetworkUnreachableException('Mastodon took the reply but named no address for it.');
 
-        return new PublishedReplyModel($address, AbsoluteHttpUrl::orNull($status->string('url')));
+        return new PublishedPostModel($address, AbsoluteHttpUrl::orNull($status->string('url')));
     }
 
     public function delete(SocialPostModel $ownPost): void
@@ -53,7 +53,7 @@ final readonly class MastodonPostReplier implements PostReplierInterface
     }
 
     /** @return array<string, string> */
-    private static function statusOf(SocialPostModel $target, ReplyDraftModel $draft): array
+    private static function statusOf(SocialPostModel $target, PostDraftModel $draft): array
     {
         return array_filter([
             'status' => $draft->text,

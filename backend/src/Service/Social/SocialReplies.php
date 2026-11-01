@@ -17,11 +17,11 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialReplyTooLongException;
+use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyDraftModel;
-use App\Service\Social\Model\ReplyTargetModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialIdentity;
@@ -31,9 +31,9 @@ use App\Service\Social\Support\SocialPostAddress;
 final readonly class SocialReplies
 {
     public function __construct(
-        private ReplyTargetFinder $targets,
+        private ResponseTargetFinder $targets,
         private SocialPostFinder $posts,
-        private PostReplying $replying,
+        private PostWriting $writing,
         private SocialAccountRepository $socialAccounts,
         private SocialCountsCache $countsCache,
         private CommentsLoader $comments,
@@ -47,20 +47,20 @@ final readonly class SocialReplies
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialPostNotFoundException
      * @throws SocialPostRefusedException
-     * @throws SocialReplyTooLongException
+     * @throws SocialPostTooLongException
      * @throws SocialTokenScopeMissingException
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function reply(User $user, ReplyTargetModel $target, ReplyDraftModel $draft): PublishedReplyModel
+    public function reply(User $user, ResponseTargetModel $target, PostDraftModel $draft): PublishedPostModel
     {
         $post = $this->targets->find($user, $target);
-        if (!$post->replyContext->canReply) {
+        if (!$post->responseContext->canReply) {
             throw new SocialPostRefusedException('The author does not take replies on this post.');
         }
 
-        $published = $this->replying->publish($post, $draft);
+        $published = $this->writing->publish($post, $draft);
         $this->forgetWhatChanged($user, $target->entry);
 
         return $published;
@@ -79,7 +79,7 @@ final readonly class SocialReplies
     {
         $ownReply = $this->ownReplyAt($user, SocialPostAddress::replyOrRefuse($entry, $address));
         if (null !== $ownReply) {
-            $this->replying->delete($ownReply);
+            $this->writing->delete($ownReply);
         }
         $this->forgetWhatChanged($user, $entry);
     }
@@ -107,7 +107,7 @@ final readonly class SocialReplies
                 $failure ??= $exception;
                 continue;
             }
-            if (SocialIdentity::isAccount($post->replyContext->authorIdentity, $account)) {
+            if (SocialIdentity::isAccount($post->responseContext->authorIdentity, $account)) {
                 return $post;
             }
             $writtenByAnother = true;

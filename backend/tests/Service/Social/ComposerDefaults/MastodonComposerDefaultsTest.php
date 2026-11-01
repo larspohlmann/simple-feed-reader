@@ -6,7 +6,7 @@ namespace App\Tests\Service\Social\ComposerDefaults;
 
 use App\Service\Social\ComposerDefaults\MastodonComposerDefaults;
 use App\Service\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Model\ReplyContextModel;
+use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -23,8 +23,8 @@ final class MastodonComposerDefaultsTest extends TestCase
     public function testTheInstanceLimitTheStricterVisibilityAndBothAuthorsOpenTheComposer(): void
     {
         $http = $this->answering(1000, 'private');
-        $target = self::post(new ReplyContextModel('ann@hachyderm.io', visibility: 'unlisted'));
-        $starter = self::post(new ReplyContextModel('Gargron@mastodon.social', visibility: 'public'));
+        $target = self::post(new ResponseContextModel('ann@hachyderm.io', visibility: 'unlisted'));
+        $starter = self::post(new ResponseContextModel('Gargron@mastodon.social', visibility: 'public'));
 
         $defaults = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $starter);
 
@@ -37,9 +37,9 @@ final class MastodonComposerDefaultsTest extends TestCase
     public function testTheAccountItselfAndARepeatedAuthorAreMentionedNoMoreThanOnce(): void
     {
         $http = $this->answering(500, 'public');
-        $target = self::post(new ReplyContextModel('Alice@mastodon.example', visibility: 'direct'));
-        $starter = self::post(new ReplyContextModel('ann@hachyderm.io'));
-        $again = self::post(new ReplyContextModel('ann@hachyderm.io'));
+        $target = self::post(new ResponseContextModel('Alice@mastodon.example', visibility: 'direct'));
+        $starter = self::post(new ResponseContextModel('ann@hachyderm.io'));
+        $again = self::post(new ResponseContextModel('ann@hachyderm.io'));
 
         $first = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $starter);
         $second = $this->defaults($http)->defaultsFor($again, static fn (): SocialPostModel => $again);
@@ -55,7 +55,7 @@ final class MastodonComposerDefaultsTest extends TestCase
             self::INSTANCE => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
             self::OWN_ACCOUNT => new MockResponse('{}'),
         ]);
-        $target = self::post(new ReplyContextModel());
+        $target = self::post(new ResponseContextModel());
 
         $defaults = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $target);
 
@@ -84,8 +84,8 @@ final class MastodonComposerDefaultsTest extends TestCase
         );
     }
 
-    private static function post(ReplyContextModel $replyContext): SocialPostModel
+    private static function post(ResponseContextModel $responseContext): SocialPostModel
     {
-        return SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110')->inReplyContext($replyContext);
+        return SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110')->inResponseContext($responseContext);
     }
 }

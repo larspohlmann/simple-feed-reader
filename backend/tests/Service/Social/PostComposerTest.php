@@ -13,10 +13,10 @@ use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Model\ReplyContextModel;
-use App\Service\Social\Model\ReplyTargetModel;
-use App\Service\Social\ReplyComposer;
-use App\Service\Social\ReplyTargetFinder;
+use App\Service\Social\Model\ResponseContextModel;
+use App\Service\Social\Model\ResponseTargetModel;
+use App\Service\Social\PostComposer;
+use App\Service\Social\ResponseTargetFinder;
 use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
@@ -27,7 +27,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
-final class ReplyComposerTest extends DbTestCase
+final class PostComposerTest extends DbTestCase
 {
     use SeedsUsers;
 
@@ -58,9 +58,9 @@ final class ReplyComposerTest extends DbTestCase
         );
         $broken->markNeedsReconnect();
         $this->entityManager->flush();
-        $this->mastodon->knowsTheReplyContext(new ReplyContextModel(canReply: false));
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
 
-        $context = $this->composer()->contextFor($this->owner, new ReplyTargetModel($this->post()));
+        $context = $this->composer()->contextFor($this->owner, new ResponseTargetModel($this->post()));
 
         self::assertSame([$default, $first], $context->accounts);
         self::assertSame($default, $context->account);
@@ -73,7 +73,7 @@ final class ReplyComposerTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $this->composer()->contextFor($this->owner, new ReplyTargetModel($this->post(), self::REPLY_URI));
+        $this->composer()->contextFor($this->owner, new ResponseTargetModel($this->post(), self::REPLY_URI));
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'resolve ' . self::STATUS_URL], $this->mastodon->calls);
     }
@@ -88,7 +88,7 @@ final class ReplyComposerTest extends DbTestCase
             }
         });
 
-        $context = $this->composer()->contextFor($this->owner, new ReplyTargetModel($this->post(), self::REPLY_URI));
+        $context = $this->composer()->contextFor($this->owner, new ResponseTargetModel($this->post(), self::REPLY_URI));
 
         self::assertSame(['110', 'no thread starter'], $context->defaults->mentions);
     }
@@ -105,7 +105,7 @@ final class ReplyComposerTest extends DbTestCase
         return $entry;
     }
 
-    private function composer(): ReplyComposer
+    private function composer(): PostComposer
     {
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
@@ -114,8 +114,8 @@ final class ReplyComposerTest extends DbTestCase
         $chooser = new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts);
         $posts = new SocialPostFinder($chooser, new ActingAccountGuard($this->entityManager), $network);
 
-        return new ReplyComposer(
-            new ReplyTargetFinder($posts, $chooser, new SocialAccountForUser($accounts)),
+        return new PostComposer(
+            new ResponseTargetFinder($posts, $chooser, new SocialAccountForUser($accounts)),
             $posts,
             $accounts,
             new ServiceLocator(['mastodon' => static fn (): FakeComposerDefaults => new FakeComposerDefaults()]),

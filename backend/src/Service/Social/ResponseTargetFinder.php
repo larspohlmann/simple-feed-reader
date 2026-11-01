@@ -14,12 +14,12 @@ use App\Service\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\ReplyTargetModel;
+use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialPostAddress;
 
-final readonly class ReplyTargetFinder
+final readonly class ResponseTargetFinder
 {
     public function __construct(
         private SocialPostFinder $posts,
@@ -37,7 +37,7 @@ final readonly class ReplyTargetFinder
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkUnreachableException
      */
-    public function find(User $user, ReplyTargetModel $target): SocialPostModel
+    public function find(User $user, ResponseTargetModel $target): SocialPostModel
     {
         $address = self::addressOf($target);
         $account = null === $target->accountId
@@ -59,7 +59,7 @@ final readonly class ReplyTargetFinder
         return $account;
     }
 
-    private static function addressOf(ReplyTargetModel $target): SocialPostAddressModel
+    private static function addressOf(ResponseTargetModel $target): SocialPostAddressModel
     {
         return null === $target->address
             ? SocialPostAddress::ofOrRefuse($target->entry)

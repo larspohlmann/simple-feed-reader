@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostReplier;
+namespace App\Service\Social\PostWriter;
 
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Social\BlueskyFacets;
 use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialReplyTooLongException;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyDraftModel;
+use App\Service\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
 
-final readonly class BlueskyPostReplier implements PostReplierInterface
+final readonly class BlueskyPostWriter implements PostWriterInterface
 {
     public const int MAX_GRAPHEMES = 300;
 
@@ -30,10 +30,10 @@ final readonly class BlueskyPostReplier implements PostReplierInterface
         return SocialNetwork::Bluesky->value;
     }
 
-    public function publish(SocialPostModel $target, ReplyDraftModel $draft): PublishedReplyModel
+    public function publish(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         if ((int) grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
-            throw new SocialReplyTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));
+            throw new SocialPostTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));
         }
 
         $uri = $this->records->createPost($target->account, [
@@ -43,7 +43,7 @@ final readonly class BlueskyPostReplier implements PostReplierInterface
             ...(null === $draft->language ? [] : ['langs' => [$draft->language]]),
         ]);
 
-        return new PublishedReplyModel($uri, AtPostUri::webUrl($uri));
+        return new PublishedPostModel($uri, AtPostUri::webUrl($uri));
     }
 
     public function delete(SocialPostModel $ownPost): void
@@ -60,7 +60,7 @@ final readonly class BlueskyPostReplier implements PostReplierInterface
     private static function replyRefsOf(SocialPostModel $target): array
     {
         $parent = ['uri' => $target->postId, 'cid' => $target->contentId];
-        $root = $target->replyContext->threadRoot;
+        $root = $target->responseContext->threadRoot;
 
         return [
             'root' => null === $root ? $parent : ['uri' => $root->uri, 'cid' => $root->contentId],

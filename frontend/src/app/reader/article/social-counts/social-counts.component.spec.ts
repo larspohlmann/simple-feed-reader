@@ -9,7 +9,7 @@ import { EntrySocialDto, PostActionsView, SocialCountsDto } from '../../entry-so
 import { ToastService } from '../../../shared/toast/toast.service';
 import { Problem } from '../../../core/problem';
 import { EntryDto } from '../../models';
-import { ReplyActions } from '../reply-composer/reply-actions.service';
+import { ReplyActions } from '../composer/reply-actions.service';
 import { SocialCountsComponent } from './social-counts.component';
 import { SocialCountsService, SocialCountsState } from './social-counts.service';
 

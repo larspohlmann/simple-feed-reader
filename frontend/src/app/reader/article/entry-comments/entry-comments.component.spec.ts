@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
-import { ReplyActions } from '../reply-composer/reply-actions.service';
+import { ReplyActions } from '../composer/reply-actions.service';
 import { CommentsService, CommentsState } from './comments.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
