@@ -165,6 +165,11 @@ export class ComposerDialogComponent {
     this.text.set(inputValue(event));
   }
 
+  protected clear(): void {
+    this.text.set('');
+    this.textField()?.nativeElement.focus();
+  }
+
   protected chooseVisibility(event: Event): void {
     this.visibility.set(inputValue(event) as MastodonVisibility);
     this.visibilityChosen = true;

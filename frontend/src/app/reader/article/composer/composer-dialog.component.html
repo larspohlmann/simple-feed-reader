@@ -74,9 +74,20 @@
           (input)="write($event)"
         ></textarea>
       </app-field>
-      <p class="counter" [class.over]="over()" aria-live="polite">
-        {{ 'reader.composer.counter' | transloco: { used: used(), max: context.maxCharacters } }}
-      </p>
+      <div class="text-tools">
+        <app-button
+          class="clear"
+          variant="ghost"
+          size="sm"
+          [disabled]="text() === '' || sending()"
+          (click)="clear()"
+        >
+          {{ 'reader.composer.clear' | transloco }}
+        </app-button>
+        <p class="counter" [class.over]="over()" aria-live="polite">
+          {{ 'reader.composer.counter' | transloco: { used: used(), max: context.maxCharacters } }}
+        </p>
+      </div>
 
       @if (visibility(); as current) {
         <app-field [label]="'reader.composer.visibility' | transloco">

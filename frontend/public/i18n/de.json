@@ -1518,6 +1518,7 @@
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
+      "clear": "Text löschen",
       "visibility": "Sichtbarkeit",
       "visibilities": {
         "public": "Öffentlich",

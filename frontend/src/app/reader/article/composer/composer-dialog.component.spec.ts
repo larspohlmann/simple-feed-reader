@@ -106,6 +106,19 @@ describe('ComposerDialogComponent', () => {
     expect(document.activeElement).toBe(textArea(fixture));
   });
 
+  it('clears the text and puts the cursor back, and cannot clear an empty text', () => {
+    const fixture = mount();
+    const clear = () => element(fixture).querySelector('.clear button') as HTMLButtonElement;
+    textArea(fixture).blur();
+
+    clear().click();
+    fixture.detectChanges();
+
+    expect(textArea(fixture).value).toBe('');
+    expect(document.activeElement).toBe(textArea(fixture));
+    expect(clear().disabled).toBe(true);
+  });
+
   it('offers the account choice only with more than one account, keeping the text on a change', () => {
     const single = mount();
     expect(element(single).querySelector('#reply-account')).toBeNull();

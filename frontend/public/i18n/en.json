@@ -1518,6 +1518,7 @@
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
+      "clear": "Clear text",
       "visibility": "Visibility",
       "visibilities": {
         "public": "Public",
