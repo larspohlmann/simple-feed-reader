@@ -13,6 +13,7 @@ use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonAuthor;
+use App\Service\Social\Support\MastodonQuoting;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\PostCounts;
 
@@ -51,6 +52,7 @@ final readonly class MastodonPostResolver implements PostResolverInterface
         return new ResponseContextModel(
             authorIdentity: MastodonAuthor::identity($status->node('account')),
             visibility: $status->string('visibility'),
+            canQuote: MastodonQuoting::allows($status),
         );
     }
 

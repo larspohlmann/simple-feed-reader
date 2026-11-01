@@ -14,13 +14,18 @@ final class CommentPostModelTest extends TestCase
     public function testOwningAPostKeepsEverythingElseTheViewerKnew(): void
     {
         $counts = new CommentCountsModel(1, 2, 3, null);
-        $viewer = new CommentViewerModel(true, false, true, canReply: false);
+        $viewer = new CommentViewerModel(true, false, true, canReply: false, canQuote: false);
         $post = new CommentPostModel('at://x', $counts, $viewer, 'did:x');
 
         $owned = $post->ownedByViewer();
 
         self::assertEquals(
-            new CommentPostModel('at://x', $counts, new CommentViewerModel(true, false, true, false, true), 'did:x'),
+            new CommentPostModel(
+                'at://x',
+                $counts,
+                new CommentViewerModel(true, false, true, canReply: false, canQuote: false, isOwn: true),
+                'did:x',
+            ),
             $owned,
         );
         self::assertFalse($post->viewer->isOwn);

@@ -19,6 +19,7 @@ final readonly class ResponseContextModel
         public ?PostReferenceModel $threadRoot = null,
         public ?string $visibility = null,
         public bool $canReply = true,
+        public bool $canQuote = true,
     ) {
     }
 }

@@ -52,6 +52,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
             authorIdentity: $post->node('author')->string('did'),
             threadRoot: self::referenceOrNull($post->node('record')->node('reply')->node('root')),
             canReply: !$post->node('viewer')->isTrue('replyDisabled'),
+            canQuote: !$post->node('viewer')->isTrue('embeddingDisabled'),
         );
     }
 

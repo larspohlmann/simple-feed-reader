@@ -65,7 +65,11 @@ final class CommentPostTest extends TestCase
     public function testAMastodonReplyIsItsUriWithItsCountsAndNoQuotes(): void
     {
         self::assertEquals(
-            new CommentPostModel(self::STATUS_URI, new CommentCountsModel(7, 2, 1, null), self::untouched()),
+            new CommentPostModel(
+                self::STATUS_URI,
+                new CommentCountsModel(7, 2, 1, null),
+                new CommentViewerModel(false, false, true, canQuote: false),
+            ),
             CommentPost::ofMastodonStatus(self::mastodonStatus(['uri' => self::STATUS_URI, 'url' => self::STATUS_URL])),
         );
     }
@@ -108,7 +112,7 @@ final class CommentPostTest extends TestCase
         $post = CommentPost::ofBlueskyPost(JsonNodeModel::of([
             'uri' => self::POST_URI,
             'author' => ['did' => 'did:plc:ann'],
-            'viewer' => ['replyDisabled' => true],
+            'viewer' => ['replyDisabled' => true, 'embeddingDisabled' => true],
             'likeCount' => 0,
             'repostCount' => 0,
             'replyCount' => 0,
@@ -117,6 +121,7 @@ final class CommentPostTest extends TestCase
         self::assertNotNull($post);
         self::assertSame('did:plc:ann', $post->authorIdentity);
         self::assertFalse($post->viewer->canReply);
+        self::assertFalse($post->viewer->canQuote);
         self::assertFalse($post->viewer->isOwn);
     }
 
@@ -125,6 +130,7 @@ final class CommentPostTest extends TestCase
         $status = self::mastodonStatus([
             'uri' => self::STATUS_URI,
             'account' => ['acct' => 'Ann', 'url' => 'https://mastodon.social/@Ann'],
+            'quote_approval' => ['current_user' => 'manual'],
         ]);
 
         $post = CommentPost::ofMastodonStatus($status);
@@ -132,6 +138,7 @@ final class CommentPostTest extends TestCase
         self::assertNotNull($post);
         self::assertSame('ann@mastodon.social', $post->authorIdentity);
         self::assertTrue($post->viewer->canReply);
+        self::assertTrue($post->viewer->canQuote);
     }
 
     private static function untouched(): CommentViewerModel
