@@ -16,11 +16,9 @@ use App\Service\Backup\Pass\RestoreFeedTargets;
 use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Service\Bluesky\BlueskyEntryIdentityUrl;
-use App\Service\Url\EntryUrlHash;
-use App\Service\Url\UrlNormalizer;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
+use App\Tests\Support\EntryUrlHashes;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -105,7 +103,7 @@ final class RestoreEntryLoaderTest extends TestCase
             $this->createStub(RestoreEntryStatesInterface::class),
             new EntryBatchInserter(
                 $this->createStub(Connection::class),
-                new EntryUrlHash(new UrlNormalizer(), [new BlueskyEntryIdentityUrl()]),
+                EntryUrlHashes::production(),
             ),
             EntryIndexers::with(new RecordingSearchIndexWriter()),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),

@@ -15,10 +15,8 @@ use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\Dto\EntryLine;
-use App\Service\Bluesky\BlueskyEntryIdentityUrl;
-use App\Service\Url\EntryUrlHash;
-use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\EntryUrlHashes;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -236,7 +234,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
     {
         return new EntryBatchInserter(
             $this->entityManager->getConnection(),
-            new EntryUrlHash(new UrlNormalizer(), [new BlueskyEntryIdentityUrl()]),
+            EntryUrlHashes::production(),
         );
     }
 }

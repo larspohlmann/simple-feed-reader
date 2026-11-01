@@ -7,6 +7,7 @@ namespace App\Tests\Service\Url;
 use App\Service\Bluesky\BlueskyEntryIdentityUrl;
 use App\Service\Url\EntryUrlHash;
 use App\Service\Url\UrlNormalizer;
+use App\Tests\Support\EntryUrlHashes;
 use PHPUnit\Framework\TestCase;
 
 final class EntryUrlHashTest extends TestCase
@@ -15,7 +16,7 @@ final class EntryUrlHashTest extends TestCase
 
     public function testATimelineCopyAndAnRssCopyOfOnePostShareTheHash(): void
     {
-        $hash = new EntryUrlHash(new UrlNormalizer(), [new BlueskyEntryIdentityUrl()]);
+        $hash = EntryUrlHashes::production();
 
         self::assertSame(
             $hash->of(self::POST_GUID, 'https://bsky.app/profile/did:plc:xjc7mkotpenvhh6ffewkdpyn/post/3mz7vexdd5c2n'),
@@ -25,7 +26,7 @@ final class EntryUrlHashTest extends TestCase
 
     public function testAnIdentityUrlHashesEvenWithoutALink(): void
     {
-        $hash = new EntryUrlHash(new UrlNormalizer(), [new BlueskyEntryIdentityUrl()]);
+        $hash = EntryUrlHashes::production();
 
         self::assertSame(
             hash('sha256', 'https://bsky.app/profile/did:plc:xjc7mkotpenvhh6ffewkdpyn/post/3mz7vexdd5c2n'),
