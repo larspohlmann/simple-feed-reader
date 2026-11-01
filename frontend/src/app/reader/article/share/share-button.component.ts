@@ -7,6 +7,7 @@ import {
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
@@ -32,10 +33,18 @@ import { ResponseActions } from '../composer/response-actions.service';
 import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareLogoUrl, shareUrl } from './share-targets';
 import { stripTracking } from './tracking-params';
 
-const POSITIONS: ConnectedPosition[] = [
-  { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
-  { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
-];
+/** Where the trigger sits: in the article toolbar, or as a disc in the article's bottom-left corner. */
+export type ShareButtonAppearance = 'toolbar' | 'corner';
+
+const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
+  toolbar: [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
+  ],
+  corner: [
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
+  ],
+};
 
 /** A network the URL can be posted to, with the handles of the connected accounts there. */
 interface ConnectedNetwork {
@@ -90,6 +99,7 @@ export class ShareButtonComponent {
   readonly url = input.required<string>();
   readonly title = input('');
   readonly imageUrl = input<string | null>(null);
+  readonly appearance = input<ShareButtonAppearance>('toolbar');
 
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
@@ -100,10 +110,11 @@ export class ShareButtonComponent {
   private readonly responses = inject(ResponseActions);
 
   protected readonly glyph = SHARE_GLYPH;
-  protected readonly positions = POSITIONS;
+  protected readonly positions = computed(() => POSITIONS[this.appearance()]);
   protected readonly targets = SHARE_TARGETS;
   protected readonly logoUrl = shareLogoUrl;
   protected readonly open = signal(false);
+  protected readonly origin = viewChild.required(CdkOverlayOrigin);
   private readonly activeLang = toSignal(this.i18n.langChanges$, {
     initialValue: this.i18n.getActiveLang(),
   });
@@ -159,6 +170,11 @@ export class ShareButtonComponent {
       imageUrl: this.imageUrl(),
       prefill: linkPrefill(network, this.title(), url),
     });
+  }
+
+  protected closed(): void {
+    this.open.set(false);
+    (this.origin().elementRef.nativeElement as HTMLElement).focus();
   }
 
   protected step(event: KeyboardEvent): void {

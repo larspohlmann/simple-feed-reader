@@ -34,7 +34,11 @@ describe('ShareButtonComponent', () => {
   let chosen: Subject<string | undefined>;
   let fixture: ComponentFixture<ShareButtonComponent>;
 
-  function mount(coarse: boolean, title = 'First'): void {
+  function mount(
+    coarse: boolean,
+    title = 'First',
+    appearance: 'toolbar' | 'corner' = 'toolbar',
+  ): void {
     chosen = new Subject();
     sheet.open.mockReturnValue(chosen.asObservable());
     TestBed.configureTestingModule({
@@ -51,6 +55,7 @@ describe('ShareButtonComponent', () => {
     fixture.componentRef.setInput('url', 'https://example.com/a?utm_source=rss&id=1');
     fixture.componentRef.setInput('title', title);
     fixture.componentRef.setInput('imageUrl', IMAGE_URL);
+    fixture.componentRef.setInput('appearance', appearance);
     fixture.detectChanges();
   }
 
@@ -210,6 +215,22 @@ describe('ShareButtonComponent', () => {
           prefill: 'https://example.com/a?id=1',
         }),
       );
+    });
+  });
+
+  describe('in the article corner', () => {
+    beforeEach(() => mount(false, 'First', 'corner'));
+
+    it('is a round icon-only trigger that opens the same menu', () => {
+      const trigger = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+      expect(trigger.classList).toContain('corner-share');
+      expect(trigger.getAttribute('aria-label')).toBe('Share');
+      expect(trigger.querySelector('.txt')).toBeNull();
+
+      const menu = openMenu();
+
+      expect(labelOf(items(menu)[0])).toBe('Post on Bluesky');
+      expect(item(menu, 'Copy link')).toBeTruthy();
     });
   });
 

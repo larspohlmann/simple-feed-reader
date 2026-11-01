@@ -1,8 +1,16 @@
+@use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/glass-rim';
 @use '../../../theme/menu-items';
 
 :host {
   display: contents;
+}
+
+/* At rest like the keep and favourite discs beside it, so the corner reads as one quiet row. */
+.corner-share {
+  --corner-button-tone: var(--text-muted);
+
+  @include circle.corner-circle-button;
 }
 
 .menu {

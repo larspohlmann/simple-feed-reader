@@ -997,6 +997,14 @@ describe('ReaderViewComponent', () => {
       }
     });
 
+    it('puts the share disc left of Keep', () => {
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      const [first] = element.querySelectorAll<HTMLButtonElement>('.corner-actions button');
+      expect(first.classList).toContain('corner-share');
+      expect(first.getAttribute('aria-label')).toBe('Share');
+    });
+
     it('fills and marks the disc of a kept, favourite entry', () => {
       const element = mount(entry({ isKept: true, isFavorite: true })).nativeElement as HTMLElement;
 

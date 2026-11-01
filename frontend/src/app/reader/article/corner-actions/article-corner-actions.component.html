@@ -1,0 +1,28 @@
+@if (entry().url; as url) {
+  <app-share-button
+    appearance="corner"
+    [url]="url"
+    [title]="entry().title"
+    [imageUrl]="entry().imageUrl"
+  />
+}
+<button
+  type="button"
+  class="corner-flag"
+  [appFlagToggle]="entry().isKept"
+  [attr.aria-label]="'reader.keep' | transloco"
+  [attr.title]="'reader.keep' | transloco"
+  (click)="actions.keep(entry())"
+>
+  <app-icon name="bookmark" size="dense" [fill]="entry().isKept" />
+</button>
+<button
+  type="button"
+  class="corner-flag"
+  [appFlagToggle]="entry().isFavorite"
+  [attr.aria-label]="'reader.favorite' | transloco"
+  [attr.title]="'reader.favorite' | transloco"
+  (click)="actions.favorite(entry())"
+>
+  <app-icon name="star" size="dense" [fill]="entry().isFavorite" />
+</button>
