@@ -1,5 +1,6 @@
 import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -19,6 +20,7 @@ import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { ResponseActions } from '../composer/response-actions.service';
+import { ShareButtonComponent } from '../share/share-button.component';
 
 const FIRST_LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
 const SECOND_LINK: SignedUrl = { url: 'https://news.test/second', token: A_READER_TOKEN };
@@ -102,6 +104,17 @@ describe('LinkReaderComponent', () => {
     expect(element.querySelector('.meta')!.textContent).toContain('news.test');
     expect(element.querySelector('app-loading-overlay.shown')).not.toBeNull();
     expect(element.querySelector('article')!.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('shares the opened link with its card image', () => {
+    const fixture = mount(
+      aLinkCard({ url: 'https://news.test/story', imageUrl: 'https://news.test/hero.jpg' }),
+    );
+
+    const share = fixture.debugElement.query(By.directive(ShareButtonComponent))
+      .componentInstance as ShareButtonComponent;
+    expect(share.url()).toBe('https://news.test/story');
+    expect(share.imageUrl()).toBe('https://news.test/hero.jpg');
   });
 
   it('renders the extracted page', () => {

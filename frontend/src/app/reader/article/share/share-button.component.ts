@@ -25,7 +25,6 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/to
 import { stepMenuFocus } from '../../../shared/menu-keys';
 import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
-import { EntryDto } from '../../models';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { linkPrefill } from '../composer/link-prefill';
@@ -38,7 +37,7 @@ const POSITIONS: ConnectedPosition[] = [
   { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
 ];
 
-/** A network the entry can be posted to, with the handles of the connected accounts there. */
+/** A network the URL can be posted to, with the handles of the connected accounts there. */
 interface ConnectedNetwork {
   readonly network: SocialNetworkName;
   readonly accounts: readonly string[];
@@ -57,6 +56,14 @@ function connectedNetworks(accounts: readonly SocialAccountRefDto[]): ConnectedN
       .filter((account) => account.network === network)
       .map((account) => account.handle),
   })).filter((target) => target.accounts.length > 0);
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }
 
 function postIdOf(network: SocialNetworkName): string {
@@ -82,7 +89,7 @@ function postIdOf(network: SocialNetworkName): string {
 export class ShareButtonComponent {
   readonly url = input.required<string>();
   readonly title = input('');
-  readonly entry = input<EntryDto | null>(null);
+  readonly imageUrl = input<string | null>(null);
 
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
@@ -103,7 +110,6 @@ export class ShareButtonComponent {
   protected readonly postTargets = computed((): PostTarget[] => {
     // translate() is one-shot: reading the language re-resolves the hints on a switch.
     this.activeLang();
-    if (!this.entry()?.url) return [];
     return connectedNetworks(this.subscriptions.socialAccounts()).map((target) => ({
       ...target,
       hint: this.postHint(target.accounts),
@@ -142,16 +148,16 @@ export class ShareButtonComponent {
 
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
-    const entry = this.entry();
-    if (!entry?.url) return;
+    const url = stripTracking(this.url());
+    const site = hostOf(url);
     this.responses.respond({
       kind: 'link',
-      entryId: entry.id,
       network,
-      title: entry.title,
-      site: entry.source,
-      imageUrl: entry.imageUrl,
-      prefill: linkPrefill(network, entry.title, stripTracking(entry.url)),
+      url,
+      title: this.title() || site,
+      site,
+      imageUrl: this.imageUrl(),
+      prefill: linkPrefill(network, this.title(), url),
     });
   }
 

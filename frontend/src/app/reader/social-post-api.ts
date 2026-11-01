@@ -9,10 +9,13 @@ import {
   PublishedPostDto,
   PostDraftDto,
   PostTargetDto,
+  ResponseKind,
   SocialCountsDto,
   SocialViewerDto,
 } from './entry-social';
 import { refreshParams } from './refresh-params';
+
+const RESPONSE_PATHS: Record<ResponseKind, string> = { reply: 'replies', quote: 'quotes' };
 
 /** What the reader sees of and does to an entry's network post, and to the replies in its thread. */
 @Injectable({ providedIn: 'root' })
@@ -71,8 +74,11 @@ export class SocialPostApi {
   }
 
   composer(target: PostTargetDto, accountId?: number): Observable<ComposerContextDto> {
-    const path = target.kind === 'link' ? 'social/link-composer' : 'social/composer';
-    return this.http.get<ComposerContextDto>(this.entryPath(target.entryId, path), {
+    const path =
+      target.kind === 'link'
+        ? this.socialPath('link-composer')
+        : this.entryPath(target.entryId, 'social/composer');
+    return this.http.get<ComposerContextDto>(path, {
       params: {
         ...composerParams(target),
         ...(accountId === undefined ? {} : { accountId }),
@@ -81,8 +87,15 @@ export class SocialPostApi {
   }
 
   send(target: PostTargetDto, draft: PostDraftDto): Observable<PublishedPostDto> {
-    const path = this.entryPath(target.entryId, sendPath(target));
-    return this.http.post<PublishedPostDto>(path, draft, { params: sendParams(target) });
+    if (target.kind === 'link') {
+      return this.http.post<PublishedPostDto>(
+        this.socialPath('links'),
+        { ...draft, url: target.url },
+        { params: { network: target.network } },
+      );
+    }
+    const path = this.entryPath(target.entryId, `social/${RESPONSE_PATHS[target.kind]}`);
+    return this.http.post<PublishedPostDto>(path, draft, { params: addressParam(target.address) });
   }
 
   deleteReply(entryId: number, address: string): Observable<void> {
@@ -94,26 +107,15 @@ export class SocialPostApi {
   private entryPath(entryId: number, action: string): string {
     return `${this.base}/api/entries/${entryId}/${action}`;
   }
+
+  private socialPath(action: string): string {
+    return `${this.base}/api/social/${action}`;
+  }
 }
 
 function composerParams(target: PostTargetDto): Record<string, string> {
   if (target.kind === 'link') return { network: target.network };
   return { kind: target.kind, ...addressParam(target.address) };
-}
-
-function sendPath(target: PostTargetDto): string {
-  switch (target.kind) {
-    case 'link':
-      return 'social/links';
-    case 'quote':
-      return 'social/quotes';
-    case 'reply':
-      return 'social/replies';
-  }
-}
-
-function sendParams(target: PostTargetDto): Record<string, string> {
-  return target.kind === 'link' ? { network: target.network } : addressParam(target.address);
 }
 
 function addressParam(address: string | null): Record<string, string> {

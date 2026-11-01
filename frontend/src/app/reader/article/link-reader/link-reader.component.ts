@@ -70,6 +70,7 @@ export class LinkReaderComponent {
   protected readonly siteName = computed(
     () => this.source.card()?.siteName ?? this.source.article()?.siteName ?? '',
   );
+  protected readonly imageUrl = computed(() => this.source.card()?.imageUrl ?? null);
   protected readonly originalUrl = computed(
     () =>
       this.source.card()?.url ?? this.source.article()?.url ?? this.source.failure()?.url ?? null,

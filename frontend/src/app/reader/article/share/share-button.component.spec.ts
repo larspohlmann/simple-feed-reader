@@ -11,20 +11,12 @@ import {
   ActionSheetItem,
 } from '../../../shared/action-sheet/action-sheet.component';
 import { ToastService } from '../../../shared/toast/toast.service';
-import { anEntry } from '../../../../testing/entry-testing';
-import { EntryDto } from '../../models';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { ResponseActions } from '../composer/response-actions.service';
 import { ShareButtonComponent } from './share-button.component';
 
-const ARTICLE = anEntry({
-  id: 7,
-  title: 'First',
-  url: 'https://example.com/a?utm_source=rss&id=1',
-  source: 'Example Daily',
-  imageUrl: 'https://example.com/a.jpg',
-});
+const IMAGE_URL = 'https://example.com/a.jpg';
 
 function account(
   id: number,
@@ -42,7 +34,7 @@ describe('ShareButtonComponent', () => {
   let chosen: Subject<string | undefined>;
   let fixture: ComponentFixture<ShareButtonComponent>;
 
-  function mount(coarse: boolean, entry: EntryDto | null = null): void {
+  function mount(coarse: boolean, title = 'First'): void {
     chosen = new Subject();
     sheet.open.mockReturnValue(chosen.asObservable());
     TestBed.configureTestingModule({
@@ -57,8 +49,8 @@ describe('ShareButtonComponent', () => {
     });
     fixture = TestBed.createComponent(ShareButtonComponent);
     fixture.componentRef.setInput('url', 'https://example.com/a?utm_source=rss&id=1');
-    fixture.componentRef.setInput('title', 'First');
-    fixture.componentRef.setInput('entry', entry);
+    fixture.componentRef.setInput('title', title);
+    fixture.componentRef.setInput('imageUrl', IMAGE_URL);
     fixture.detectChanges();
   }
 
@@ -143,14 +135,10 @@ describe('ShareButtonComponent', () => {
         item(document.querySelector('[role="menu"]')!, 'Copy link').querySelector('.external'),
       ).toBeNull();
     });
-
-    it('offers no post without an entry', () => {
-      expect(item(openMenu(), 'Post on Bluesky')).toBeUndefined();
-    });
   });
 
-  describe('on a fine pointer, for an entry', () => {
-    beforeEach(() => mount(false, ARTICLE));
+  describe('on a fine pointer, with connected accounts', () => {
+    beforeEach(() => mount(false));
 
     it('offers a post per connected network at the top, Bluesky first, then a divider', () => {
       const menu = openMenu();
@@ -192,28 +180,36 @@ describe('ShareButtonComponent', () => {
       expect(item(menu, 'Post on Mastodon')).toBeUndefined();
     });
 
-    it('opens the composer with the article, tracking parameters removed', () => {
+    it('opens the composer with the shared URL, tracking parameters removed', () => {
       item(openMenu(), 'Post on Mastodon').click();
       fixture.detectChanges();
 
       expect(responses.respond).toHaveBeenCalledWith({
         kind: 'link',
-        entryId: 7,
         network: 'mastodon',
+        url: 'https://example.com/a?id=1',
         title: 'First',
-        site: 'Example Daily',
-        imageUrl: 'https://example.com/a.jpg',
+        site: 'example.com',
+        imageUrl: IMAGE_URL,
         prefill: 'First\n\nhttps://example.com/a?id=1',
       });
       expect(document.querySelector('[role="menu"]')).toBeNull();
     });
   });
 
-  describe('on a fine pointer, for an entry without a link', () => {
-    beforeEach(() => mount(false, { ...ARTICLE, url: null }));
+  describe('on a fine pointer, for a page without a title', () => {
+    beforeEach(() => mount(false, ''));
 
-    it('offers no post', () => {
-      expect(item(openMenu(), 'Post on Bluesky')).toBeUndefined();
+    it('titles the composer card with the host and starts the text with the URL', () => {
+      item(openMenu(), 'Post on Mastodon').click();
+
+      expect(responses.respond).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'example.com',
+          site: 'example.com',
+          prefill: 'https://example.com/a?id=1',
+        }),
+      );
     });
   });
 
@@ -265,16 +261,10 @@ describe('ShareButtonComponent', () => {
 
       expect(open).not.toHaveBeenCalled();
     });
-
-    it('offers no post without an entry', () => {
-      press();
-
-      expect(action('Post on Bluesky')).toBeUndefined();
-    });
   });
 
-  describe('on a coarse pointer, for an entry', () => {
-    beforeEach(() => mount(true, ARTICLE));
+  describe('on a coarse pointer, with connected accounts', () => {
+    beforeEach(() => mount(true));
 
     function sheetData(): ActionSheetData {
       return sheet.open.mock.calls[0][0] as ActionSheetData;

@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../core/api';
 import { SocialPostApi } from './social-post-api';
 
 const REPLY = 'https://hachyderm.io/@ann/200';
+const SHARED_URL = 'https://example.com/story';
 
 describe('SocialPostApi', () => {
   let api: SocialPostApi;
@@ -158,25 +159,24 @@ describe('SocialPostApi', () => {
   });
 
   it('GETs the composer context for a link post on a network, on a chosen account', () => {
-    api.composer({ kind: 'link', entryId: 7, network: 'bluesky' }).subscribe();
+    api.composer({ kind: 'link', network: 'bluesky', url: SHARED_URL }).subscribe();
     expect(
-      ctrl.expectOne('https://api.test/api/entries/7/social/link-composer?network=bluesky').request
-        .method,
+      ctrl.expectOne('https://api.test/api/social/link-composer?network=bluesky').request.method,
     ).toBe('GET');
 
-    api.composer({ kind: 'link', entryId: 7, network: 'mastodon' }, 4).subscribe();
+    api.composer({ kind: 'link', network: 'mastodon', url: SHARED_URL }, 4).subscribe();
     ctrl
-      .expectOne('https://api.test/api/entries/7/social/link-composer?network=mastodon&accountId=4')
+      .expectOne('https://api.test/api/social/link-composer?network=mastodon&accountId=4')
       .flush({});
   });
 
-  it('POSTs a link post on the network it names', () => {
+  it('POSTs a link post of the shared URL on the network it names', () => {
     const draft = { text: 'Read this', accountId: 4, language: 'en', idempotencyKey: 'k-3' };
-    api.send({ kind: 'link', entryId: 7, network: 'mastodon' }, draft).subscribe();
+    api.send({ kind: 'link', network: 'mastodon', url: SHARED_URL }, draft).subscribe();
 
-    const toPost = ctrl.expectOne('https://api.test/api/entries/7/social/links?network=mastodon');
+    const toPost = ctrl.expectOne('https://api.test/api/social/links?network=mastodon');
     expect(toPost.request.method).toBe('POST');
-    expect(toPost.request.body).toEqual(draft);
+    expect(toPost.request.body).toEqual({ ...draft, url: SHARED_URL });
     toPost.flush({ address: 'https://x/1', url: null });
   });
 

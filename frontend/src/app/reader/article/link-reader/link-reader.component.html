@@ -30,7 +30,7 @@
       </button>
     }
     @if (originalUrl(); as url) {
-      <app-share-button [url]="url" [title]="title()" />
+      <app-share-button [url]="url" [title]="title()" [imageUrl]="imageUrl()" />
     }
   </div>
   <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">

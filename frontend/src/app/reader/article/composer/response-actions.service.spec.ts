@@ -106,10 +106,10 @@ describe('ResponseActions', () => {
   it('offers to open a link post, leaving the counts and the thread alone', () => {
     const link: LinkComposeTarget = {
       kind: 'link',
-      entryId: 7,
       network: 'bluesky',
+      url: 'https://example.com/story',
       title: 'A story',
-      site: null,
+      site: 'example.com',
       imageUrl: null,
       prefill: 'A story',
     };

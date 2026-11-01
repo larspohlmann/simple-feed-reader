@@ -41,8 +41,8 @@ describe('ComposerDialogComponent', () => {
 
   const article = (overrides: Partial<LinkComposeTarget> = {}): LinkComposeTarget => ({
     kind: 'link',
-    entryId: 7,
     network: 'mastodon',
+    url: 'https://example.com/story',
     title: 'A long read',
     site: 'example.com',
     imageUrl: 'https://example.com/lead.jpg',
@@ -357,13 +357,17 @@ describe('ComposerDialogComponent', () => {
       expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Post on Mastodon');
       expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
       expect(api.composer).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'link', entryId: 7, network: 'mastodon' }),
+        expect.objectContaining({
+          kind: 'link',
+          network: 'mastodon',
+          url: 'https://example.com/story',
+        }),
         undefined,
       );
     });
 
     it('shows a card without an image or site when the article has none', () => {
-      const fixture = mount(article({ imageUrl: null, site: null }));
+      const fixture = mount(article({ imageUrl: null, site: '' }));
 
       expect(element(fixture).querySelector('.article img')).toBeNull();
       expect(element(fixture).querySelector('.article .site')).toBeNull();
@@ -392,7 +396,11 @@ describe('ComposerDialogComponent', () => {
       submit(fixture);
 
       expect(api.send).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'link', entryId: 7, network: 'bluesky' }),
+        expect.objectContaining({
+          kind: 'link',
+          network: 'bluesky',
+          url: 'https://example.com/story',
+        }),
         expect.objectContaining({ text: 'A long read', accountId: 4 }),
       );
       expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/1' }));

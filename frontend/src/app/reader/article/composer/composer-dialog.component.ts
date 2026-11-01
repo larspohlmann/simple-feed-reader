@@ -44,13 +44,13 @@ export interface ResponseComposeTarget extends ResponseTargetDto {
   excerpt: string;
 }
 
-/** The article a link post shares, as the composer shows it above the text, and where the text starts. */
-export interface LinkComposeTarget extends LinkTargetDto {
+/** The page a link post shares, as the composer shows it above the text, and where the text starts. */
+export type LinkComposeTarget = LinkTargetDto & {
   title: string;
-  site: string | null;
+  site: string;
   imageUrl: string | null;
   prefill: string;
-}
+};
 
 export type ComposeTarget = ResponseComposeTarget | LinkComposeTarget;
 
@@ -66,7 +66,7 @@ type ContextState =
   | { status: 'failed'; message: string };
 
 /**
- * Writes a reply to, or a quote of, a Bluesky or Mastodon post, or a post of the entry's link.
+ * Writes a reply to, or a quote of, a Bluesky or Mastodon post, or a post of a shared URL.
  * Closing never asks: typed text is discarded.
  * It stays open while a post is on the wire, so the reader always learns what was published.
  * A failed send keeps the text and says why; a resend carries the key minted on open, so Mastodon
