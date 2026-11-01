@@ -104,3 +104,7 @@ app-avatar {
   color: var(--text-secondary);
   font-size: var(--fs-sm);
 }
+
+app-link-card {
+  z-index: 1;
+}

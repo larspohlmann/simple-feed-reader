@@ -68,12 +68,10 @@ function threadRootHeight(entry: EntryDto): number {
 
 function threadPostHeight(text: string, media: EntryMediumDto[], card: LinkCardDto | null): number {
   const lines = THREAD.line * lineCount(text, THREAD.charsPerLine, THREAD.linesMax);
-  return (
-    lines + withGap(mediaHeight(media, THREAD.mediaWidth)) + threadCardHeight(card) + THREAD.gap
-  );
+  return lines + withGap(mediaHeight(media, THREAD.mediaWidth)) + linkCardHeight(card) + THREAD.gap;
 }
 
-function threadCardHeight(card: LinkCardDto | null): number {
+function linkCardHeight(card: LinkCardDto | null): number {
   if (!card) return 0;
   return card.imageUrl ? THREAD.cardWithImage : THREAD.cardBare;
 }
@@ -89,12 +87,13 @@ export function quotingHeight(entry: EntryDto): number {
   return QUOTING.chrome + own + QUOTING.gap + quotedBoxHeight(quote);
 }
 
-/** The quoted box: its header, text, media and nested-quote line. */
+/** The quoted box: its header, text, media, link card and nested-quote line. */
 function quotedBoxHeight(quote: QuotedPostDto): number {
   return (
     QUOTING.quoteChrome +
     QUOTING.quoteLine * lineCount(quote.text, QUOTING.quoteCharsPerLine, QUOTING.quoteLinesMax) +
     withGap(mediaHeight(quote.media, QUOTING.quoteMediaWidth)) +
+    withGap(linkCardHeight(quote.linkCard)) +
     (quote.nestedQuote ? QUOTING.gap + QUOTING.nestedLine : 0)
   );
 }

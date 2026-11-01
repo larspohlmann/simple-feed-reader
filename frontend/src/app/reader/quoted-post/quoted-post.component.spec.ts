@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { QuotedPostComponent, QuotedPostLayout } from './quoted-post.component';
 import { QuotedPostDto } from './quoted-post';
 import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
-import { aQuotedPost } from '../../../testing/entry-testing';
+import { aLinkCard, aQuotedPost } from '../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 const failingProxy = { recover: () => Promise.resolve('failed' as const) };
@@ -71,6 +71,39 @@ describe('QuotedPostComponent', () => {
     expect(open.target).toBe('_blank');
     expect(open.rel).toContain('noopener');
     expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it('shows the quoted post’s link card inside the box, in the quote’s layout', () => {
+    const fixture = mount(
+      { linkCard: aLinkCard({ title: 'A shared story', siteName: 'news.test' }) },
+      'article',
+    );
+
+    const card = query(fixture, '.box app-link-card')!;
+    expect(card.classList).toContain('article');
+    expect(card.querySelector('strong')!.textContent).toBe('A shared story');
+    expect(card.querySelector('a')!.getAttribute('href')).toBe('https://news.test/story');
+  });
+
+  it('puts the card in the block layout in the magazine', () => {
+    expect(query(mount({ linkCard: aLinkCard() }), 'app-link-card')!.classList).toContain('block');
+  });
+
+  it('opens the card’s page without reaching a parent click', () => {
+    const fixture = mount({ linkCard: aLinkCard() });
+    const parentClick = jest.fn();
+    (fixture.nativeElement as HTMLElement).addEventListener('click', parentClick);
+    const link = query(fixture, 'app-link-card a') as HTMLAnchorElement;
+    link.addEventListener('click', (event) => event.preventDefault());
+
+    link.click();
+
+    expect(link.target).toBe('_blank');
+    expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it('renders no card without one', () => {
+    expect(query(mount({ linkCard: null }), 'app-link-card')).toBeNull();
   });
 
   it('swaps a failed avatar for the author initials', async () => {

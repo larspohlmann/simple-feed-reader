@@ -31,6 +31,16 @@
       [videoLabel]="'reader.quotedVideo' | transloco"
     />
   }
+  @if (post.linkCard; as card) {
+    <app-link-card
+      [card]="card"
+      [layout]="layout()"
+      [opensInReader]="cardOpening()"
+      (click)="$event.stopPropagation()"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    />
+  }
   @if (post.nestedQuote; as nested) {
     <a
       class="nested"
