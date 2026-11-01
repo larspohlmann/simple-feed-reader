@@ -17,7 +17,6 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\SocialPostAddress;
 
 /** Reposts an entry's post or a reply in its thread; the network keeps the repost, so nothing is stored here. */
 final readonly class SocialReposts
@@ -44,7 +43,7 @@ final readonly class SocialReposts
     public function repost(User $user, Entry $entry): void
     {
         $this->repostIfNot($this->posts->find($user, $entry));
-        $this->forgetCountsOf($entry);
+        $this->countsCache->forgetEntry($entry);
     }
 
     /**
@@ -61,7 +60,7 @@ final readonly class SocialReposts
     public function unrepost(User $user, Entry $entry): void
     {
         $this->undoIfReposted($this->posts->find($user, $entry));
-        $this->forgetCountsOf($entry);
+        $this->countsCache->forgetEntry($entry);
     }
 
     /**
@@ -113,14 +112,6 @@ final readonly class SocialReposts
     {
         if (null !== $post->existingRepostId) {
             $this->reposting->unrepost($post->account, $post->existingRepostId);
-        }
-    }
-
-    private function forgetCountsOf(Entry $entry): void
-    {
-        $post = SocialPostAddress::of($entry);
-        if (null !== $post) {
-            $this->countsCache->forget($post);
         }
     }
 }

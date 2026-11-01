@@ -24,10 +24,7 @@ export interface EntryRepostDto {
   isReposted: boolean;
 }
 
-export interface RepostView {
-  isReposted: boolean;
-  canRepost: boolean;
-}
+export type RepostView = Omit<SocialViewerDto, 'isLiked'>;
 
 /** The answer of `GET /api/entries/{id}/social`; `quotes` is null on Mastodon. */
 export interface SocialCountsDto {

@@ -1,8 +1,8 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, finalize, of } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { Problem, parseProblem } from '../../../core/problem';
+import { Problem } from '../../../core/problem';
+import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
 import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi } from '../../social-post-api';
@@ -24,21 +24,12 @@ export type CommentsState =
   | { status: 'throttled'; retryAt: number }
   | { status: 'failed'; failedAt: number };
 
-/** A flag on one comment set at once and put back if what `send` sends fails. */
-interface OptimisticChange {
-  key: string;
-  send: () => Observable<unknown>;
-  to: boolean;
-  apply: (state: CommentsState, value: boolean) => CommentsState;
-  onError: (problem: Problem) => void;
-}
-
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
   private readonly states = new Map<number, WritableSignal<CommentsState>>();
-  private readonly actionsInFlight = new Set<string>();
+  private readonly toggles = new OptimisticToggles();
   private generation = 0;
 
   constructor() {
@@ -57,7 +48,7 @@ export class CommentsService {
   /** A reload waits out a like or repost on the wire, whose answer the reloaded thread might not include yet. */
   reload(id: number): void {
     const state = this.stateFor(id);
-    if (state().status === 'loading' || this.hasActionInFlight(id)) return;
+    if (state().status === 'loading' || this.toggles.isBusy(id)) return;
     this.fetch(state, this.api.comments(id, true));
   }
 
@@ -69,14 +60,15 @@ export class CommentsService {
   ): void {
     const { address } = post;
     const isLiked = !post.isLiked;
-    this.optimistic(entryId, {
+    const state = this.stateFor(entryId);
+    this.toggles.run(entryId, {
       key: `like ${address}`,
       send: () =>
         isLiked
           ? this.socialPosts.likeComment(entryId, address)
           : this.socialPosts.unlikeComment(entryId, address),
       to: isLiked,
-      apply: (state, liked) => withLike(state, address, liked),
+      show: (liked) => state.update((current) => withLike(current, address, liked)),
       onError,
     });
   }
@@ -90,37 +82,17 @@ export class CommentsService {
     if (!post.canRepost) return;
     const { address } = post;
     const isReposted = !post.isReposted;
-    this.optimistic(entryId, {
+    const state = this.stateFor(entryId);
+    this.toggles.run(entryId, {
       key: `repost ${address}`,
       send: () =>
         isReposted
           ? this.socialPosts.repostComment(entryId, address)
           : this.socialPosts.unrepostComment(entryId, address),
       to: isReposted,
-      apply: (state, reposted) => withRepost(state, address, reposted),
+      show: (reposted) => state.update((current) => withRepost(current, address, reposted)),
       onError,
     });
-  }
-
-  private hasActionInFlight(entryId: number): boolean {
-    return [...this.actionsInFlight].some((key) => key.startsWith(`${entryId} `));
-  }
-
-  private optimistic(entryId: number, change: OptimisticChange): void {
-    const key = `${entryId} ${change.key}`;
-    if (this.actionsInFlight.has(key)) return;
-    const state = this.stateFor(entryId);
-    this.actionsInFlight.add(key);
-    state.update((current) => change.apply(current, change.to));
-    change
-      .send()
-      .pipe(finalize(() => this.actionsInFlight.delete(key)))
-      .subscribe({
-        error: (error: HttpErrorResponse) => {
-          state.update((current) => change.apply(current, !change.to));
-          change.onError(parseProblem(error));
-        },
-      });
   }
 
   private stateFor(id: number): WritableSignal<CommentsState> {
@@ -143,7 +115,7 @@ export class CommentsService {
   private clear(): void {
     this.generation++;
     this.states.clear();
-    this.actionsInFlight.clear();
+    this.toggles.clear();
   }
 }
 
@@ -184,7 +156,11 @@ function withLike(state: CommentsState, address: string, isLiked: boolean): Comm
   return withPost(state, address, (post) =>
     post.isLiked === isLiked
       ? post
-      : { ...post, isLiked, counts: { ...post.counts, likes: moved(post.counts.likes, isLiked) } },
+      : {
+          ...post,
+          isLiked,
+          counts: { ...post.counts, likes: steppedCount(post.counts.likes, isLiked) },
+        },
   );
 }
 
@@ -196,7 +172,7 @@ function withRepost(state: CommentsState, address: string, isReposted: boolean):
       : {
           ...post,
           isReposted,
-          counts: { ...post.counts, reposts: moved(post.counts.reposts, isReposted) },
+          counts: { ...post.counts, reposts: steppedCount(post.counts.reposts, isReposted) },
         },
   );
 }
@@ -214,8 +190,4 @@ function withPost(
     return changed === post ? comment : { ...comment, post: changed };
   });
   return { ...state, comments };
-}
-
-function moved(count: number, up: boolean): number {
-  return Math.max(0, count + (up ? 1 : -1));
 }

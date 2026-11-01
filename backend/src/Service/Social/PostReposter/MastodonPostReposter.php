@@ -9,6 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\MastodonStatusAction;
 
 final readonly class MastodonPostReposter implements PostReposterInterface
 {
@@ -25,13 +26,13 @@ final readonly class MastodonPostReposter implements PostReposterInterface
 
     public function repost(SocialPostModel $post): void
     {
-        $this->actOnStatus($post->account, self::statusAction($post->postId, 'reblog'));
+        $this->actOnStatus($post->account, MastodonStatusAction::path($post->postId, 'reblog'));
     }
 
     public function unrepost(SocialAccount $account, string $repostId): void
     {
         try {
-            $this->actOnStatus($account, self::statusAction($repostId, 'unreblog'));
+            $this->actOnStatus($account, MastodonStatusAction::path($repostId, 'unreblog'));
         } catch (SocialPostNotFoundException) {
         }
     }
@@ -39,10 +40,5 @@ final readonly class MastodonPostReposter implements PostReposterInterface
     private function actOnStatus(SocialAccount $account, string $path): void
     {
         $this->mastodon->actOnPost($account, $path, self::STATUSES_SCOPE);
-    }
-
-    private static function statusAction(string $statusId, string $action): string
-    {
-        return '/api/v1/statuses/' . rawurlencode($statusId) . '/' . $action;
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\PostReposter;
 
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialPostRefusedException;
@@ -44,15 +45,6 @@ final class BlueskyPostReposterTest extends TestCase
                 'createdAt' => '2026-10-13T06:30:00.123Z',
             ],
         ], json_decode($http->requests[1]['body'], true));
-    }
-
-    public function testAnExistingRepostIsKeptWithoutAnyCall(): void
-    {
-        $http = new RoutedHttpClient([]);
-
-        $this->reposter($http)->repost(self::post()->alreadyRepostedAs(self::REPOST_URI));
-
-        self::assertSame([], $http->requests);
     }
 
     public function testARepostBlueskyRejectsIsARefusalOfThePost(): void
@@ -138,10 +130,10 @@ final class BlueskyPostReposterTest extends TestCase
 
     private function reposter(RoutedHttpClient $http): BlueskyPostReposter
     {
-        return new BlueskyPostReposter(
+        return new BlueskyPostReposter(new BlueskyRecords(
             SocialApiWiring::blueskySessions($http->client()),
             new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00.123+02:00'))),
-        );
+        ));
     }
 
     private static function post(): SocialPostModel

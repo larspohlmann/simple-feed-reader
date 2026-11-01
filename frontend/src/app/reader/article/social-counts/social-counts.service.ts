@@ -1,8 +1,8 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, finalize, forkJoin, of } from 'rxjs';
+import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { Problem, parseProblem } from '../../../core/problem';
+import { Problem } from '../../../core/problem';
+import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
 import { RepostView, SocialCountsDto, SocialViewerDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
@@ -30,14 +30,12 @@ export type SocialCountsState =
     }
   | { status: 'failed'; failedAt: number };
 
-type LoadedCounts = Extract<SocialCountsState, { status: 'ok' }>;
-
 @Injectable({ providedIn: 'root' })
 export class SocialCountsService {
   private readonly api = inject(SocialPostApi);
   private readonly entries = inject(EntriesStore);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
-  private readonly repostsInFlight = new Set<number>();
+  private readonly toggles = new OptimisticToggles();
   private generation = 0;
 
   constructor() {
@@ -56,7 +54,7 @@ export class SocialCountsService {
   /** A reload waits out a repost on the wire, whose answer the reloaded counts might not include yet. */
   reload(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
-    if (state().status === 'loading' || this.repostsInFlight.has(entry.id)) return;
+    if (state().status === 'loading' || this.toggles.isBusy(entry.id)) return;
     this.fetch(entry, state, this.api.counts(entry.id, true));
   }
 
@@ -65,16 +63,13 @@ export class SocialCountsService {
     const state = this.stateFor(entry.id);
     const current = state();
     if (current.status !== 'ok' || !current.repost?.canRepost) return;
-    if (this.repostsInFlight.has(entry.id)) return;
     const isReposted = !current.repost.isReposted;
-    const request$ = isReposted ? this.api.repost(entry.id) : this.api.unrepost(entry.id);
-    this.repostsInFlight.add(entry.id);
-    state.update((loaded) => withRepost(loaded, isReposted));
-    request$.pipe(finalize(() => this.repostsInFlight.delete(entry.id))).subscribe({
-      error: (error: HttpErrorResponse) => {
-        state.update((loaded) => withRepost(loaded, !isReposted));
-        onError(parseProblem(error));
-      },
+    this.toggles.run(entry.id, {
+      key: 'repost',
+      send: () => (isReposted ? this.api.repost(entry.id) : this.api.unrepost(entry.id)),
+      to: isReposted,
+      show: (reposted) => state.update((loaded) => withRepost(loaded, reposted)),
+      onError,
     });
   }
 
@@ -123,7 +118,7 @@ export class SocialCountsService {
   private clear(): void {
     this.generation++;
     this.states.clear();
-    this.repostsInFlight.clear();
+    this.toggles.clear();
   }
 }
 
@@ -144,11 +139,9 @@ function isStale(state: SocialCountsState): boolean {
 function withRepost(state: SocialCountsState, isReposted: boolean): SocialCountsState {
   if (state.status !== 'ok' || !state.repost || state.repost.isReposted === isReposted)
     return state;
-  const reposts = Math.max(0, state.counts.reposts + (isReposted ? 1 : -1));
-  const loaded: LoadedCounts = {
+  return {
     ...state,
-    counts: { ...state.counts, reposts },
+    counts: { ...state.counts, reposts: steppedCount(state.counts.reposts, isReposted) },
     repost: { ...state.repost, isReposted },
   };
-  return loaded;
 }

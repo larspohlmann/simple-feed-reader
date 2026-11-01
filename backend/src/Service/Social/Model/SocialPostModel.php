@@ -31,12 +31,28 @@ final readonly class SocialPostModel
 
     public static function onBluesky(SocialAccount $account, string $uri, string $contentId): self
     {
-        return new self($account, $uri, $contentId, null, null, true, null);
+        return new self(
+            $account,
+            $uri,
+            $contentId,
+            existingLikeId: null,
+            existingRepostId: null,
+            canRepost: true,
+            counts: null,
+        );
     }
 
     public static function onMastodon(SocialAccount $account, string $statusId): self
     {
-        return new self($account, $statusId, null, null, null, true, null);
+        return new self(
+            $account,
+            $statusId,
+            null,
+            existingLikeId: null,
+            existingRepostId: null,
+            canRepost: true,
+            counts: null,
+        );
     }
 
     public function alreadyLikedAs(string $likeId): self

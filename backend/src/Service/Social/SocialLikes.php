@@ -11,7 +11,6 @@ use App\Entity\User;
 use App\Repository\SocialLikeRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\SocialPostAddress;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SocialLikes
@@ -35,7 +34,7 @@ final readonly class SocialLikes
         $result = $this->liking->like($post);
 
         $this->store($user, $entry, $post->account, $result->likeId);
-        $this->forgetCountsOf($entry);
+        $this->countsCache->forgetEntry($entry);
     }
 
     public function unlike(User $user, Entry $entry): void
@@ -47,7 +46,7 @@ final readonly class SocialLikes
         $this->liking->unlike($like->getSocialAccount(), $like->getRemoteId());
 
         $this->drop($like);
-        $this->forgetCountsOf($entry);
+        $this->countsCache->forgetEntry($entry);
     }
 
     /** The post as the network reports it now, the user's like on it mirrored into the stored likes. */
@@ -55,23 +54,28 @@ final readonly class SocialLikes
     {
         $stored = $this->likes->findOneFor($user, $entry);
         $post = $this->posts->find($user, $entry);
+        $this->mirror($stored, $user, $entry, $post);
+
+        return $post;
+    }
+
+    private function mirror(?SocialLike $stored, User $user, Entry $entry, SocialPostModel $post): void
+    {
         $likeId = $post->existingLikeId;
         if (null === $likeId) {
             $this->drop($stored);
 
-            return $post;
+            return;
         }
         if (null === $stored) {
             $this->store($user, $entry, $post->account, $likeId);
 
-            return $post;
+            return;
         }
         if (!self::reportsTheSameLike($stored, $post)) {
             $stored->replaceWith($post->account, $likeId, $this->clock->now());
             $this->entityManager->flush();
         }
-
-        return $post;
     }
 
     private static function reportsTheSameLike(SocialLike $stored, SocialPostModel $post): bool
@@ -93,14 +97,5 @@ final readonly class SocialLikes
         }
         $this->entityManager->remove($like);
         $this->entityManager->flush();
-    }
-
-    private function forgetCountsOf(Entry $entry): void
-    {
-        $post = SocialPostAddress::of($entry);
-        if (null === $post) {
-            return;
-        }
-        $this->countsCache->forget($post);
     }
 }
