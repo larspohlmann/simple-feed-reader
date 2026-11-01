@@ -5,6 +5,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AdminApi } from '../../../admin/admin-api';
 import { SelfUpdatePhase, SelfUpdateStatusDto } from '../../../admin/admin.models';
+import { PAGE_RELOAD } from '../../../core/page-reload';
 import { LatestRelease, VersionService } from '../../../core/version.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { SELF_UPDATE_POLL_INTERVAL_MS, SelfUpdateComponent } from './self-update.component';
@@ -28,7 +29,7 @@ describe('SelfUpdateComponent', () => {
   const updateStatus = jest.fn<Observable<SelfUpdateStatusDto>, []>();
   const requestUpdate = jest.fn<Observable<SelfUpdateStatusDto>, []>();
   const ask = jest.fn<Observable<boolean>, [unknown]>();
-  const load = jest.fn();
+  const reload = jest.fn();
   const checkNow = jest.fn<Observable<void>, []>();
   const updateAvailable = signal(false);
   const latest = signal<LatestRelease | null>(null);
@@ -39,7 +40,8 @@ describe('SelfUpdateComponent', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         { provide: AdminApi, useValue: { updateStatus, requestUpdate } },
-        { provide: VersionService, useValue: { load, checkNow, updateAvailable, latest } },
+        { provide: VersionService, useValue: { checkNow, updateAvailable, latest } },
+        { provide: PAGE_RELOAD, useValue: reload },
         { provide: ConfirmService, useValue: { ask } },
       ],
     });
@@ -99,7 +101,7 @@ describe('SelfUpdateComponent', () => {
     updateStatus.mockReset();
     requestUpdate.mockReset();
     ask.mockReset();
-    load.mockReset();
+    reload.mockReset();
     checkNow.mockReset();
     updateAvailable.set(false);
     latest.set(null);
@@ -388,12 +390,12 @@ describe('SelfUpdateComponent', () => {
     expect(updateStatus).toHaveBeenCalledTimes(1);
   });
 
-  it('does not re-read the release for an update that finished before the page opened', () => {
+  it('does not reload for an update that finished before the page opened', () => {
     updateStatus.mockReturnValue(of(status('succeeded')));
     const fixture = mount();
 
     expect(element(fixture).textContent).toContain('Update finished.');
-    expect(load).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
   });
 
   it('reports a failed update that left no exit code', () => {
@@ -444,17 +446,29 @@ describe('SelfUpdateComponent', () => {
     expect(updateStatus).toHaveBeenCalledTimes(2);
   });
 
-  it('re-reads the release once the update finishes', () => {
+  it('reloads the page onto the new release once the update it watched succeeds', () => {
     updateStatus
       .mockReturnValueOnce(of(status('running')))
       .mockReturnValue(of(status('succeeded')));
     const fixture = mount();
+    expect(reload).not.toHaveBeenCalled();
 
     advancePoll(fixture);
     advancePoll(fixture);
 
-    expect(element(fixture).textContent).toContain('Update finished.');
-    expect(load).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays on the page when the update it watched fails', () => {
+    updateStatus
+      .mockReturnValueOnce(of(status('running')))
+      .mockReturnValue(of(status('failed', { exitCode: 3 })));
+    const fixture = mount();
+
+    advancePoll(fixture);
+
+    expect(element(fixture).textContent).toContain('The update failed (exit code 3).');
+    expect(reload).not.toHaveBeenCalled();
   });
 
   it('reports a failed update with its exit code and offers it again', () => {
