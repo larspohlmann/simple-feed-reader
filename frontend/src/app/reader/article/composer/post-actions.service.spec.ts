@@ -3,10 +3,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
 import { Observable, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
+import { aCommentPost, anEntry, anEntryComment } from '../../../../testing/entry-testing';
+import { aThreadPost } from '../../../../testing/thread-testing';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryCommentDto } from '../../entry-comment';
+import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
@@ -21,7 +23,7 @@ describe('PostActions', () => {
   let composed: Observable<SentPost | undefined>;
   let comments: { insertReply: jest.Mock; removeReply: jest.Mock; countQuote: jest.Mock };
   let counts: { stepReplies: jest.Mock; stepQuotes: jest.Mock };
-  let api: { deleteReply: jest.Mock };
+  let api: { deleteReply: jest.Mock; deletePost: jest.Mock };
   let confirm: { ask: jest.Mock };
   let toast: { show: jest.Mock };
   let dialog: { open: jest.Mock };
@@ -49,7 +51,10 @@ describe('PostActions', () => {
     composed = of(sent);
     comments = { insertReply: jest.fn(), removeReply: jest.fn(), countQuote: jest.fn() };
     counts = { stepReplies: jest.fn(), stepQuotes: jest.fn() };
-    api = { deleteReply: jest.fn(() => of(undefined)) };
+    api = {
+      deleteReply: jest.fn(() => of(undefined)),
+      deletePost: jest.fn(() => of({ outcome: 'deleted' })),
+    };
     confirm = { ask: jest.fn(() => of(true)) };
     toast = { show: jest.fn() };
     dialog = {
@@ -222,5 +227,72 @@ describe('PostActions', () => {
 
     expect(comments.removeReply).not.toHaveBeenCalled();
     expect(toast.show).toHaveBeenCalledWith({ message: 'No connected account wrote this reply.' });
+  });
+
+  const ownPost = (replies: number): EntryDto =>
+    anEntry({
+      id: 9,
+      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: true },
+      thread: Array.from({ length: replies }, () => aThreadPost()),
+    });
+
+  it.each([
+    [0, 'Delete this post?'],
+    [1, 'Delete this post and its reply?'],
+    [3, 'Delete this post and its 3 replies?'],
+  ])('asks before deleting a post with %i replies', (replies, title) => {
+    let gone = false;
+    actions.deletePost(ownPost(replies)).subscribe(() => (gone = true));
+
+    expect(confirm.ask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title,
+        message: 'It is deleted on Bluesky as well.',
+        danger: true,
+      }),
+    );
+    expect(api.deletePost).toHaveBeenCalledWith(9);
+    expect(gone).toBe(true);
+    expect(toast.show).not.toHaveBeenCalled();
+  });
+
+  it('says so when the network no longer had the post, and still lets it go', () => {
+    api.deletePost.mockReturnValue(of({ outcome: 'alreadyGone' }));
+    let gone = false;
+
+    actions.deletePost(ownPost(0)).subscribe(() => (gone = true));
+
+    expect(gone).toBe(true);
+    expect(toast.show).toHaveBeenCalledWith({
+      message: 'Already deleted on Bluesky — removed here.',
+    });
+  });
+
+  it('deletes nothing when the reader cancels', () => {
+    confirm.ask.mockReturnValue(of(false));
+    let gone = false;
+
+    actions.deletePost(ownPost(0)).subscribe(() => (gone = true));
+
+    expect(api.deletePost).not.toHaveBeenCalled();
+    expect(gone).toBe(false);
+  });
+
+  it('keeps the post and says why when the network refuses', () => {
+    api.deletePost.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 502,
+            error: { type: 'social_network_unreachable', title: 'x', detail: 'Bluesky is down.' },
+          }),
+      ),
+    );
+    let gone = false;
+
+    actions.deletePost(ownPost(0)).subscribe(() => (gone = true));
+
+    expect(gone).toBe(false);
+    expect(toast.show).toHaveBeenCalledWith({ message: 'Bluesky is down.' });
   });
 });

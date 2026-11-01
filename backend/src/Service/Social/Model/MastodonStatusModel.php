@@ -22,4 +22,10 @@ final readonly class MastodonStatusModel
     {
         return $this->apiUrl() . '/context';
     }
+
+    /** The `uri` its own instance gives the status, which a timeline page stores it under. */
+    public function uri(): string
+    {
+        return str_replace('/@', '/users/', $this->authorPrefix) . '/statuses/' . $this->id;
+    }
 }

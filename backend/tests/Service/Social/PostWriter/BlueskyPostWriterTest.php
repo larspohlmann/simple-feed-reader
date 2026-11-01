@@ -13,6 +13,7 @@ use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\ResponseContextModel;
@@ -23,9 +24,11 @@ use App\Service\Social\SharedPageCards;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StubGuardedImageDownloader;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class BlueskyPostWriterTest extends TestCase
 {
@@ -179,29 +182,47 @@ final class BlueskyPostWriterTest extends TestCase
         $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
     }
 
-    public function testDeletingAReplyDeletesItsPostRecord(): void
+    public function testDeletingAPostDeletesItsRecordInTheAccountsRepo(): void
     {
-        $http = new RoutedHttpClient([
-            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
-            self::DELETE_RECORD => new MockResponse('{}'),
-        ]);
-        $own = SocialPostModel::onBluesky(SocialApiWiring::blueskyAccount(), self::REPLY_URI, 'bafy-rep');
+        $http = $this->deleting(new MockResponse('{"commit":{"cid":"bafy-commit","rev":"3rev"}}'));
 
-        $this->writer($http)->delete($own);
+        $deletion = $this->writer($http)->delete(SocialApiWiring::blueskyAccount(), self::REPLY_URI);
 
+        self::assertSame(PostDeletion::Deleted, $deletion);
         self::assertSame(
             ['repo' => 'did:plc:alice', 'collection' => 'app.bsky.feed.post', 'rkey' => '3rep'],
             json_decode($http->requests[1]['body'], true),
         );
     }
 
+    #[DataProvider('goneAnswers')]
+    public function testARecordBlueskyNoLongerHasIsReportedGone(MockResponse $answer): void
+    {
+        $deletion = $this->writer($this->deleting($answer))->delete(SocialApiWiring::blueskyAccount(), self::REPLY_URI);
+
+        self::assertSame(PostDeletion::AlreadyGone, $deletion);
+    }
+
+    /** @return iterable<string, array{MockResponse}> */
+    public static function goneAnswers(): iterable
+    {
+        yield 'an answer without a commit' => [new MockResponse('{}')];
+        yield 'not found' => [new MockResponse('{}', ['http_code' => Response::HTTP_NOT_FOUND])];
+    }
+
     public function testAnAddressThatNamesNoPostRecordCannotBeDeleted(): void
     {
-        $own = SocialPostModel::onBluesky(SocialApiWiring::blueskyAccount(), 'at://did:plc:alice/x/y', 'bafy');
-
         $this->expectException(SocialPostRefusedException::class);
 
-        $this->writer(new RoutedHttpClient([]))->delete($own);
+        $this->writer(new RoutedHttpClient([]))->delete(SocialApiWiring::blueskyAccount(), 'at://did:plc:alice/x/y');
+    }
+
+    private function deleting(MockResponse $answer): RoutedHttpClient
+    {
+        return new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::DELETE_RECORD => $answer,
+        ]);
     }
 
     /** @return array<mixed> */

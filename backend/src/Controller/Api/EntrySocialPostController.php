@@ -7,11 +7,13 @@ namespace App\Controller\Api;
 use App\Dto\Social\PostDraftRequest;
 use App\Entity\User;
 use App\Http\ComposerContextJson;
+use App\Http\PostDeletionJson;
 use App\Http\PublishedPostJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
+use App\Service\Social\OwnPostDeletion;
 use App\Service\Social\SocialResponses;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +29,7 @@ final readonly class EntrySocialPostController
     public function __construct(
         private EntryListRepository $entryList,
         private SocialResponses $responses,
+        private OwnPostDeletion $ownPosts,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialViewerLimiter,
         private RateLimiterFactoryInterface $socialWritesLimiter,
@@ -103,5 +106,14 @@ final readonly class EntrySocialPostController
         $this->responses->delete($user, $entry, $address);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/{id}/post', name: 'api_entries_delete_post', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    public function deletePost(int $id, #[CurrentUser] User $user): JsonResponse
+    {
+        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
+        $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
+
+        return new JsonResponse(PostDeletionJson::of($this->ownPosts->delete($user, $entry)));
     }
 }

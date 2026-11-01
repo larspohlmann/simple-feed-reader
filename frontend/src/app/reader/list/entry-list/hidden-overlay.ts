@@ -20,6 +20,18 @@ export function blocksWithout(blocks: ListBlock[], hidden: ReadonlySet<number>):
   return withoutEmptyRuns(blocks.flatMap((block) => blockWithout(block, hidden)));
 }
 
+/** `blocks` with the leaving ids taken out of group widgets only: a single-entry
+ *  block animates out in its slot, a group's member leaves its widget at once. */
+export function groupMembersWithout(
+  blocks: ListBlock[],
+  leaving: ReadonlySet<number>,
+): ListBlock[] {
+  if (leaving.size === 0) return blocks;
+  return withoutEmptyRuns(
+    blocks.flatMap((block) => (block.kind === 'group' ? blockWithout(block, leaving) : [block])),
+  );
+}
+
 function blockWithout(block: ListBlock, hidden: ReadonlySet<number>): ListBlock[] {
   if (block.kind === 'run-header') return [block];
   if (block.kind !== 'group') return hidden.has(block.entry.id) ? [] : [block];

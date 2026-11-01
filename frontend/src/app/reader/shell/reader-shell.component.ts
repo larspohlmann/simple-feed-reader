@@ -25,7 +25,7 @@ import { SavedSearchToggle } from './saved-search-toggle.service';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { flattenTagTree } from '../state/subscription-derivations';
@@ -113,7 +113,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
   ],
 })
 export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
@@ -333,14 +332,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   withOpen(action: (entry: EntryDto) => void): void {
     const entry = this.openEntry();
     if (entry) action(entry);
-  }
-
-  onCloseReader(): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: entryChangeParams(null),
-      queryParamsHandling: 'merge',
-    });
   }
 
   onMarkAboveRead(ids: number[]): void {

@@ -15,6 +15,7 @@ const entryActions = {
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
+  deletePost: jest.fn(),
 };
 
 beforeEach(() => {
@@ -111,6 +112,22 @@ it('closes the popover once the copy is opened', () => {
   expect(overlay.querySelector('.dup-popover')).toBeNull();
 });
 
+it("deletes the row's post from a copy and closes the popover (#1972)", () => {
+  const own = { network: 'bluesky', isLiked: false, canLike: true, isOwn: true } as const;
+  const dup = entry({ id: 2, title: 'Copy', social: own });
+  const row = entry({ id: 1, social: own, duplicates: [dup] });
+  const fixture = mount(row);
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  (overlay.querySelector('.dup-popover [aria-label="Delete post"]') as HTMLElement).click();
+  fixture.detectChanges();
+
+  expect(entryActions.deletePost).toHaveBeenCalledWith(row);
+  expect(overlay.querySelector('.dup-popover')).toBeNull();
+});
+
 it('re-emits favorite for the copy and shows the flag the store then holds', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
   const fixture = mount(entry({ duplicates: [dup] }));
@@ -135,7 +152,7 @@ function openLikePopover() {
   const dup = entry({
     id: 2,
     title: 'Skeet',
-    social: { network: 'bluesky', isLiked: false, canLike: true },
+    social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
   });
   const fixture = mount(entry({ duplicates: [dup] }));
   (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
@@ -147,7 +164,11 @@ function openLikePopover() {
   const storeHolds = (isLiked: boolean) => {
     fixture.componentRef.setInput(
       'entry',
-      entry({ duplicates: [{ ...dup, social: { network: 'bluesky', isLiked, canLike: true } }] }),
+      entry({
+        duplicates: [
+          { ...dup, social: { network: 'bluesky', isLiked, canLike: true, isOwn: false } },
+        ],
+      }),
     );
     fixture.detectChanges();
   };

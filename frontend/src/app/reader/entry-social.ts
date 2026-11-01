@@ -6,11 +6,18 @@ export interface EntrySocialDto {
   network: SocialNetworkName;
   isLiked: boolean;
   canLike: boolean;
+  /** Whether one of the reader's own accounts wrote the post (#1972). */
+  isOwn: boolean;
 }
 
 /** The answer of `PUT`/`DELETE /api/entries/{id}/like`. */
 export interface EntryLikeDto {
   isLiked: boolean;
+}
+
+/** The answer of `DELETE /api/entries/{id}/post`: whether the network still had the post. */
+export interface PostDeletionDto {
+  outcome: 'deleted' | 'alreadyGone';
 }
 
 /** The answer of `GET /api/entries/{id}/social/viewer`: what the reader has done to the post on its network. */

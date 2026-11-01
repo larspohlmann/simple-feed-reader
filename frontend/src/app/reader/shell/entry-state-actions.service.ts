@@ -11,6 +11,7 @@ import { EntryDto, EntryStatePatch } from '../models';
 import { ToastService } from '../../shared/toast/toast.service';
 import { problemMessage } from '../../core/problem';
 import { ReaderRouteState } from './reader-route-state.service';
+import { PostActions } from '../article/composer/post-actions.service';
 
 @Injectable()
 export class EntryStateActions implements EntryActionHandler {
@@ -21,6 +22,7 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly routeState = inject(ReaderRouteState);
   private readonly toast = inject(ToastService);
+  private readonly postActions = inject(PostActions);
 
   private readonly viewedOnOpen = new Set<number>();
   private readonly leaving = signal<ReadonlySet<number>>(new Set());
@@ -88,6 +90,23 @@ export class EntryStateActions implements EntryActionHandler {
     });
   }
 
+  /** The deleted post's row leaves the list as an excluded one does; its open article closes. */
+  deletePost(entry: EntryDto): void {
+    this.postActions.deletePost(entry).subscribe(() => {
+      this.markLeaving(entry.id);
+      if (this.routeState.openEntryId() === entry.id) this.closeEntry();
+      this.subscriptions.reloadCountsQuietly();
+    });
+  }
+
+  closeEntry(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: entryChangeParams(null),
+      queryParamsHandling: 'merge',
+    });
+  }
+
   readonly openOriginal = (entry: EntryDto): void => {
     if (entry.isViewed) return;
     this.markOpenedViewed(entry);
@@ -137,8 +156,12 @@ export class EntryStateActions implements EntryActionHandler {
     if (flag === null) return () => undefined;
     const stillMember = (localStatePatch(patch)[flag] ?? entry[flag]) === true;
     if (stillMember) return () => undefined;
-    this.leaving.update((ids) => new Set(ids).add(entry.id));
+    this.markLeaving(entry.id);
     return () => this.leaving.update((ids) => withoutId(ids, entry.id));
+  }
+
+  private markLeaving(id: number): void {
+    this.leaving.update((ids) => new Set(ids).add(id));
   }
 }
 

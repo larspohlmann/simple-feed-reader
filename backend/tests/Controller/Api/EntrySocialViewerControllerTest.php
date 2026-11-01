@@ -64,7 +64,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         );
         self::assertSame([self::SEARCH], $this->routesAsked());
         self::assertSame(
-            ['network' => 'mastodon', 'isLiked' => true, 'canLike' => true],
+            ['network' => 'mastodon', 'isLiked' => true, 'canLike' => true, 'isOwn' => false],
             $this->socialOf($client, $entryId),
         );
     }
@@ -158,7 +158,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         return new MockResponse(json_encode(['statuses' => [['id' => '110', ...$fields]]], \JSON_THROW_ON_ERROR));
     }
 
-    /** @return array{network: string, isLiked: bool, canLike: bool}|null */
+    /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool}|null */
     private function socialOf(KernelBrowser $client, int $entryId): ?array
     {
         $client->request('GET', sprintf('/api/entries/%d', $entryId));
@@ -168,7 +168,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         $social = $entry['social'];
         self::assertTrue(null === $social || is_array($social));
 
-        /** @var array{network: string, isLiked: bool, canLike: bool}|null $social */
+        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool}|null $social */
         return $social;
     }
 

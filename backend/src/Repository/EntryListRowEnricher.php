@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\SocialAccount;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Comments\Support\SubstackPostAddress;
+use App\Service\Social\Support\PostAuthor;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
@@ -86,23 +88,41 @@ final readonly class EntryListRowEnricher
         if ([] === $postNetworks) {
             return [];
         }
-        $accountNetworks = $this->socialAccounts->networksOf($userId);
+        $accountsByNetwork = self::accountsByNetwork($this->socialAccounts->findAllForUserId($userId));
         $likeable = array_filter(
             $postNetworks,
-            static fn (SocialNetwork $network): bool => \in_array($network, $accountNetworks, true),
+            static fn (SocialNetwork $network): bool => isset($accountsByNetwork[$network->value]),
         );
         $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($likeable));
 
         $states = [];
         foreach ($postNetworks as $entryId => $network) {
+            $networkAccounts = $accountsByNetwork[$network->value] ?? [];
+            $canLike = [] !== $networkAccounts;
             $states[$entryId] = new EntryListRowSocial(
                 $network,
                 isLiked: isset($likedIds[$entryId]),
-                canLike: isset($likeable[$entryId]),
+                canLike: $canLike,
+                isOwn: $canLike && null !== PostAuthor::accountAmong($entries[$entryId], $networkAccounts),
             );
         }
 
         return $states;
+    }
+
+    /**
+     * @param list<SocialAccount> $accounts
+     *
+     * @return array<string, non-empty-list<SocialAccount>> by network value
+     */
+    private static function accountsByNetwork(array $accounts): array
+    {
+        $byNetwork = [];
+        foreach ($accounts as $account) {
+            $byNetwork[$account->getNetwork()->value][] = $account;
+        }
+
+        return $byNetwork;
     }
 
     /**

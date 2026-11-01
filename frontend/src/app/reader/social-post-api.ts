@@ -6,6 +6,7 @@ import {
   ComposerContextDto,
   EntryLikeDto,
   EntryRepostDto,
+  PostDeletionDto,
   PublishedPostDto,
   PostDraftDto,
   PostTargetDto,
@@ -98,6 +99,10 @@ export class SocialPostApi {
     return this.http.delete<void>(this.entryPath(entryId, 'comments/reply'), {
       params: { address },
     });
+  }
+
+  deletePost(entryId: number): Observable<PostDeletionDto> {
+    return this.http.delete<PostDeletionDto>(this.entryPath(entryId, 'post'));
   }
 
   private entryPath(entryId: number, action: string): string {

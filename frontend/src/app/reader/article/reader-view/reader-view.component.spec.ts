@@ -863,7 +863,10 @@ describe('ReaderViewComponent', () => {
         },
       });
       const fixture = mount(
-        entry({ comments: 'auto', social: { network: 'bluesky', isLiked: false, canLike: true } }),
+        entry({
+          comments: 'auto',
+          social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+        }),
       );
       const host = fixture.nativeElement as HTMLElement;
       const comments = host.querySelector('app-entry-comments') as HTMLElement;
@@ -1033,7 +1036,10 @@ describe('ReaderViewComponent', () => {
   describe('the counts row of a social post (#1615)', () => {
     const realIntersectionObserver = globalThis.IntersectionObserver;
     const post = (over: Partial<EntryDto> = {}): EntryDto =>
-      entry({ social: { network: 'bluesky', isLiked: false, canLike: true }, ...over });
+      entry({
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+        ...over,
+      });
     let counts: { state: () => Signal<SocialCountsState>; load: jest.Mock; reload: jest.Mock };
 
     beforeEach(() => {

@@ -13,6 +13,7 @@ use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\FeedShareEnrichment;
 use App\Service\Refresh\IncomingEntries;
+use App\Service\Social\DeletedPostTombstones;
 use App\Service\Social\SelfThreadEnricher;
 use App\Service\Social\TimelineSelfThreads;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
@@ -22,6 +23,7 @@ use PHPUnit\Framework\Assert;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\ClockInterface;
 
 /** A FeedOutcomePersister over the real repositories, the Bluesky rule included; each seam has a wither. */
@@ -31,6 +33,7 @@ final class FeedOutcomePersisters
     private SearchIndexWriterInterface $indexWriter;
     private LoggerInterface $logger;
     private ?SelfThreadEnricher $selfThreadEnricher = null;
+    private DeletedPostTombstones $tombstones;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -41,6 +44,7 @@ final class FeedOutcomePersisters
         $this->flushingEntityManager = $entityManager;
         $this->indexWriter = new RecordingSearchIndexWriter();
         $this->logger = new NullLogger();
+        $this->tombstones = new DeletedPostTombstones(new ArrayAdapter(), $clock);
     }
 
     public static function fromContainer(
@@ -95,6 +99,11 @@ final class FeedOutcomePersisters
         return $copy;
     }
 
+    public function tombstones(): DeletedPostTombstones
+    {
+        return $this->tombstones;
+    }
+
     public function idle(): FeedOutcomePersister
     {
         return $this->enrichingWith(PostEnrichers::idle($this->entityManager, $this->clock));
@@ -116,7 +125,11 @@ final class FeedOutcomePersisters
             ),
             FeedSchedulers::build($this->clock),
             EntryIndexers::with($this->indexWriter),
-            new IncomingEntries(PostEnrichers::queue($this->entityManager, $this->clock), $this->timelineSelfThreads),
+            new IncomingEntries(
+                PostEnrichers::queue($this->entityManager, $this->clock),
+                $this->timelineSelfThreads,
+                $this->tombstones,
+            ),
             new FeedShareEnrichment(
                 $postEnricher,
                 $this->selfThreadEnricher ?? SelfThreadEnrichers::idle($this->entityManager, $this->clock),

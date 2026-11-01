@@ -181,7 +181,7 @@
       [tags]="openEntryTags()"
       [fullscreen]="fullscreen"
       (openOriginal)="withOpen(entryActions.openOriginal)"
-      (close)="onCloseReader()"
+      (close)="entryActions.closeEntry()"
     />
   </ng-template>
   <ng-template #linkPane let-fullscreen="fullscreen">

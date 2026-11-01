@@ -57,7 +57,10 @@ describe('SocialCountsComponent', () => {
   }
 
   const post = (social: Partial<EntrySocialDto> = {}): EntryDto =>
-    anEntry({ id: 1, social: { network: 'bluesky', isLiked: false, canLike: true, ...social } });
+    anEntry({
+      id: 1,
+      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, ...social },
+    });
 
   const loaded = (
     counts: Partial<SocialCountsDto> = {},
@@ -115,7 +118,7 @@ describe('SocialCountsComponent', () => {
   });
 
   it('shows nothing for a post the user cannot like until the counts arrive', () => {
-    expect(show(post({ canLike: false })).querySelector('.row')).toBeNull();
+    expect(show(post({ canLike: false, isOwn: false })).querySelector('.row')).toBeNull();
   });
 
   it('orders reposts, replies and quotes, then the like at the right end', () => {
@@ -176,7 +179,7 @@ describe('SocialCountsComponent', () => {
   });
 
   it('shows the like count as a plain count to a user without an account there', () => {
-    show(post({ canLike: false }));
+    show(post({ canLike: false, isOwn: false }));
     const element = settle(loaded());
 
     expect(likeButton(element)).toBeNull();
@@ -211,7 +214,7 @@ describe('SocialCountsComponent', () => {
     it('opens the composer for the post from the replies count', () => {
       const entry = anEntry({
         id: 1,
-        social: { network: 'bluesky', isLiked: false, canLike: true },
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
       });
       show(entry);
       const button = replyButton(
@@ -261,7 +264,7 @@ describe('SocialCountsComponent', () => {
         anEntry({
           id: 1,
           excerpt: 'Big news',
-          social: { network: 'bluesky', isLiked: false, canLike: true },
+          social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
         }),
       );
       const button = quoteButton(
@@ -379,7 +382,7 @@ describe('SocialCountsComponent', () => {
         anEntry({
           id: 1,
           excerpt: 'Big news',
-          social: { network: 'bluesky', isLiked: false, canLike: true },
+          social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
         }),
       );
       repostButton(

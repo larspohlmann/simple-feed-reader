@@ -21,4 +21,9 @@ final readonly class IncomingFeedModel
     {
         return new self($parsed, KnownSharesModel::none(), TimelineThreadsModel::none());
     }
+
+    public function withParsed(ParsedFeedModel $parsed): self
+    {
+        return new self($parsed, $this->knownShares, $this->threads);
+    }
 }

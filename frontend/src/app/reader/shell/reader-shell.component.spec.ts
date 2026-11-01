@@ -2148,7 +2148,7 @@ describe('ReaderShellComponent', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const fixture = boot();
 
-      fixture.componentInstance.onCloseReader();
+      fixture.componentInstance.entryActions.closeEntry();
 
       const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
       expect(queryParams).not.toHaveProperty('q');

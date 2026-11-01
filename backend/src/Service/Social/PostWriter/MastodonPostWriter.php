@@ -11,6 +11,7 @@ use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -60,13 +61,16 @@ final readonly class MastodonPostWriter implements PostWriterInterface
         return new PublishedPostModel($address, AbsoluteHttpUrl::orNull($status->string('url')));
     }
 
-    public function delete(SocialPostModel $ownPost): void
+    public function delete(SocialAccount $account, string $postId): PostDeletion
     {
-        $url = $ownPost->account->getServiceUrl() . self::STATUSES . '/' . rawurlencode($ownPost->postId);
+        $url = $account->getServiceUrl() . self::STATUSES . '/' . rawurlencode($postId);
         try {
-            $this->mastodon->writeAs($ownPost->account, ApiRequestModel::delete($url), self::STATUSES_SCOPE);
+            $this->mastodon->writeAs($account, ApiRequestModel::delete($url), self::STATUSES_SCOPE);
         } catch (SocialPostNotFoundException) {
+            return PostDeletion::AlreadyGone;
         }
+
+        return PostDeletion::Deleted;
     }
 
     /**

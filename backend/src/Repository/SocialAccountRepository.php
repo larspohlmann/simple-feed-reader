@@ -31,8 +31,7 @@ final class SocialAccountRepository extends ServiceEntityRepository
     /** @return list<SocialAccount> */
     public function findAllForUser(User $user): array
     {
-        // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
-        return array_values($this->findBy(['user' => $user], ['network' => 'ASC', 'id' => 'ASC']));
+        return $this->findAllForUserId($user->requireId());
     }
 
     public function countForUser(User $user): int
@@ -62,19 +61,11 @@ final class SocialAccountRepository extends ServiceEntityRepository
         ));
     }
 
-    /** @return list<SocialNetwork> each network the user has an account on, once */
-    public function networksOf(int $userId): array
+    /** @return list<SocialAccount> */
+    public function findAllForUserId(int $userId): array
     {
-        /** @var list<array{network: SocialNetwork}> $rows */
-        $rows = $this->createQueryBuilder('sa')
-            ->select('DISTINCT sa.network AS network')
-            ->andWhere('sa.user = :user')
-            ->setParameter('user', $userId)
-            ->orderBy('sa.network', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
-
-        return array_map(static fn (array $row): SocialNetwork => $row['network'], $rows);
+        // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
+        return array_values($this->findBy(['user' => $userId], ['network' => 'ASC', 'id' => 'ASC']));
     }
 
     public function findActingOnNetwork(User $user, SocialNetwork $network): ?SocialAccount

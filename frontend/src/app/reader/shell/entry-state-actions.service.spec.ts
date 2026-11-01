@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
+import { EMPTY, Observable, of } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
@@ -10,6 +11,7 @@ import { ToastService } from '../../shared/toast/toast.service';
 import { Problem } from '../../core/problem';
 import { EntryDto, EntryStatePatch } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
+import { PostActions } from '../article/composer/post-actions.service';
 
 describe('EntryStateActions liking (#1600)', () => {
   const setLiked = jest.fn<void, [EntryDto, boolean, (problem: Problem) => void]>();
@@ -31,14 +33,19 @@ describe('EntryStateActions liking (#1600)', () => {
           useValue: { openEntryId: signal(null), openEntry: signal(null) },
         },
         { provide: ToastService, useValue: { show } },
+        { provide: PostActions, useValue: {} },
       ],
     });
     actions = TestBed.inject(EntryStateActions);
   });
 
   it('likes an unliked post and unlikes a liked one', () => {
-    const unliked = anEntry({ social: { network: 'bluesky', isLiked: false, canLike: true } });
-    const liked = anEntry({ social: { network: 'bluesky', isLiked: true, canLike: true } });
+    const unliked = anEntry({
+      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+    });
+    const liked = anEntry({
+      social: { network: 'bluesky', isLiked: true, canLike: true, isOwn: false },
+    });
 
     actions.like(unliked);
     actions.like(liked);
@@ -50,7 +57,9 @@ describe('EntryStateActions liking (#1600)', () => {
   });
 
   it("toasts the problem's own message when the like fails", () => {
-    actions.like(anEntry({ social: { network: 'mastodon', isLiked: false, canLike: true } }));
+    actions.like(
+      anEntry({ social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false } }),
+    );
     const onError = setLiked.mock.calls[0][2];
 
     onError({
@@ -78,6 +87,7 @@ describe('EntryStateActions opening', () => {
           useValue: { openEntryId: signal(null), openEntry: signal(null) },
         },
         { provide: ToastService, useValue: {} },
+        { provide: PostActions, useValue: {} },
       ],
     });
     const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -134,6 +144,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
           },
         },
         { provide: ToastService, useValue: { show: jest.fn() } },
+        { provide: PostActions, useValue: {} },
       ],
     });
     actions = TestBed.inject(EntryStateActions);
@@ -195,6 +206,66 @@ describe('EntryStateActions reading counts (#1679)', () => {
     actions.toggleRead(anEntry({ isViewed: true }));
     outcome().onSaved?.();
 
+    expect(reloadCountsQuietly).not.toHaveBeenCalled();
+  });
+});
+
+describe('EntryStateActions deleting my own post (#1972)', () => {
+  const deletePost = jest.fn<Observable<void>, [EntryDto]>();
+  const reloadCountsQuietly = jest.fn();
+  const openEntryId = signal<number | null>(null);
+  let actions: EntryStateActions;
+  let navigate: jest.SpyInstance;
+
+  beforeEach(() => {
+    deletePost.mockReset().mockReturnValue(of(undefined));
+    reloadCountsQuietly.mockReset();
+    openEntryId.set(null);
+    TestBed.configureTestingModule({
+      providers: [
+        EntryStateActions,
+        provideRouter([]),
+        { provide: EntriesStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId, openEntry: signal(null), selection: () => ({ kind: 'all' }) },
+        },
+        { provide: ToastService, useValue: {} },
+        { provide: PostActions, useValue: { deletePost } },
+      ],
+    });
+    actions = TestBed.inject(EntryStateActions);
+    navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+  });
+
+  it('lets the row leave and recounts once the post is gone', () => {
+    actions.deletePost(anEntry({ id: 7 }));
+
+    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(reloadCountsQuietly).toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('closes the article of the deleted post as Back does', () => {
+    openEntryId.set(7);
+
+    actions.deletePost(anEntry({ id: 7 }));
+
+    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { entry: null, link: null } }),
+    );
+  });
+
+  it('keeps the row when the post stays', () => {
+    deletePost.mockReturnValue(EMPTY);
+
+    actions.deletePost(anEntry({ id: 7 }));
+
+    expect(actions.leavingIds().size).toBe(0);
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
 });

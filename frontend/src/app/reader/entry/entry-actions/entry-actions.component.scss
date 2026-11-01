@@ -34,6 +34,10 @@ button {
   cursor: pointer;
 }
 
+.danger {
+  color: var(--danger);
+}
+
 /* Touch density, applied locally: vertical padding reaches --tap-target then
    is cancelled by a negative margin, so a card never grows taller on a phone.
    Horizontal padding is half the gap, so hit boxes tile edge to edge without overlap. */

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
+use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
@@ -27,6 +30,9 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         . 'https%3A%2F%2Fmastodon.example%2Fusers%2Falice%2Fstatuses%2F200&resolve=true&type=statuses&limit=1';
     private const string QUOTE = 'https://mastodon.example/users/alice/statuses/201';
     private const string DELETE_REPLY = 'DELETE https://mastodon.example/api/v1/statuses/200';
+    private const string OWN_PROFILE = 'https://mastodon.example/@alice.rss';
+    private const string OWN_STATUS = 'https://mastodon.example/@alice/120';
+    private const string DELETE_OWN = 'DELETE https://mastodon.example/api/v1/statuses/120';
     private const string IDEMPOTENCY_KEY = '9b2f6c1e-4a7d-4c1b-8f3e-2d5a6b7c8d9e';
 
     /** Must match framework.rate_limiter.social_writes.limit in rate_limiter.yaml. */
@@ -289,6 +295,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         yield 'reply' => ['POST', '/api/entries/{id}/social/replies'];
         yield 'quote' => ['POST', '/api/entries/{id}/social/quotes'];
         yield 'delete' => ['DELETE', '/api/entries/{id}/comments/reply?address=' . rawurlencode(self::REPLY)];
+        yield 'delete post' => ['DELETE', '/api/entries/{id}/post'];
     }
 
     #[DataProvider('composers')]
@@ -310,6 +317,105 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     public static function composers(): iterable
     {
         yield 'response composer' => ['/api/entries/{id}/social/composer'];
+    }
+
+    public function testMyOwnPostIsDeletedThereAndHere(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::DELETE_OWN => new MockResponse('{}'),
+        ]);
+        $user = $this->signIn($client, 'own-post-delete@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->ownPostFor($user);
+
+        $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['outcome' => 'deleted'], $this->payload($client));
+        self::assertSame([self::DELETE_OWN], $this->routesAsked());
+        $this->entityManager()->clear();
+        self::assertNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
+    public function testTheArticleSaysWhichPostIsMine(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'own-post-article@example.test');
+        $this->mastodonAccountOf($user);
+
+        $client->request('GET', sprintf('/api/entries/%d', $this->ownPostFor($user)));
+        self::assertTrue($this->socialOf($client)['isOwn']);
+        $client->request('GET', sprintf('/api/entries/%d', $this->mastodonPostFor($user)));
+        self::assertFalse($this->socialOf($client)['isOwn']);
+    }
+
+    public function testAPostAlreadyGoneThereIsRemovedHereAndSaysSo(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::DELETE_OWN => new MockResponse('{}', ['http_code' => Response::HTTP_NOT_FOUND]),
+        ]);
+        $user = $this->signIn($client, 'own-post-gone@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->ownPostFor($user);
+
+        $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['outcome' => 'alreadyGone'], $this->payload($client));
+        $this->entityManager()->clear();
+        self::assertNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
+    public function testSomeoneElsesPostIsRefusedAndKept(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'own-post-foreign@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
+
+        $this->assertRejected($client, Response::HTTP_CONFLICT);
+        self::assertSame([], $this->http->requests);
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
+    public function testAnUnreachableNetworkKeepsThePost(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::DELETE_OWN => new MockResponse('{}', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
+        ]);
+        $user = $this->signIn($client, 'own-post-down@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->ownPostFor($user);
+
+        $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_GATEWAY);
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
+    private function ownPostFor(User $user): int
+    {
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
+
+        return $fixtures->post($fixtures->subscribe($user, self::OWN_PROFILE), self::OWN_STATUS, '2026-10-12T10:00:00Z')
+            ->requireId();
+    }
+
+    /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool} */
+    private function socialOf(KernelBrowser $client): array
+    {
+        $entry = $this->payload($client)['entry'];
+        self::assertIsArray($entry);
+        self::assertIsArray($entry['social']);
+
+        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool} $social */
+        $social = $entry['social'];
+
+        return $social;
     }
 
     /** @param array<string, string> $body */

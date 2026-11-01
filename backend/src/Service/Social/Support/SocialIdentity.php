@@ -17,4 +17,10 @@ final class SocialIdentity
     {
         return null !== $author && mb_strtolower($author) === mb_strtolower($account->getIdentity());
     }
+
+    /** @param list<SocialAccount> $accounts */
+    public static function accountAmong(?string $author, array $accounts): ?SocialAccount
+    {
+        return array_find($accounts, static fn (SocialAccount $account): bool => self::isAccount($author, $account));
+    }
 }

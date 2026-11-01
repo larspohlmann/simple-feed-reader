@@ -139,11 +139,12 @@ final readonly class FeedOutcomePersister
         IncomingFeedModel $incoming,
         FeedIngestContext $context,
     ): FeedRefreshResultModel {
-        $createdEntries = $this->ingestor->ingest($feed, $incoming->parsed, $context);
+        $stored = $this->incomingEntries->withoutDeletedPosts($feed, $incoming);
+        $createdEntries = $this->ingestor->ingest($feed, $stored->parsed, $context);
         // A backfilled image is not new content, so it stays out of the count.
-        $this->ingestor->fillMissingImages($feed, $incoming->parsed);
+        $this->ingestor->fillMissingImages($feed, $stored->parsed);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
-        $this->incomingEntries->settle($feed, $incoming, $createdEntries);
+        $this->incomingEntries->settle($feed, $stored, $createdEntries);
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it.
         $this->indexer->index($createdEntries);

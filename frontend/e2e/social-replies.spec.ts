@@ -12,7 +12,7 @@ import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from 
 const POST = entryWire({
   id: 1,
   title: 'A post worth answering',
-  social: { network: 'bluesky', isLiked: false, canLike: true },
+  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
   comments: 'auto',
   discussionUrl: 'https://bsky.invalid/post/1',
 });

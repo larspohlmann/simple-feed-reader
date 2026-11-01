@@ -71,4 +71,15 @@ final class MastodonAuthorTest extends TestCase
         self::assertSame('https://h.test/@ann', $profile);
         self::assertNull(MastodonAuthor::profile(JsonNodeModel::of(['url' => '/@ann'])));
     }
+
+    public function testAProfileUrlNamesTheSameIdentityAsTheAccountItShows(): void
+    {
+        $account = JsonNodeModel::of(['acct' => 'ZOË', 'url' => 'https://Mastodon.Example/@ZOË']);
+
+        self::assertSame('zoë@mastodon.example', MastodonAuthor::identity($account));
+        self::assertSame(
+            MastodonAuthor::identity($account),
+            MastodonAuthor::identityOfProfileUrl('https://Mastodon.Example/@ZOË'),
+        );
+    }
 }

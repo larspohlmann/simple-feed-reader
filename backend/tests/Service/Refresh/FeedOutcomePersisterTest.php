@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
+use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\FeedStatus;
+use App\Enum\SocialNetwork;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -17,6 +19,7 @@ use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
+use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FeedOutcomePersisters;
@@ -235,6 +238,37 @@ final class FeedOutcomePersisterTest extends DbTestCase
             ->flushingThrough($entityManager)
             ->loggingTo($this->logger)
             ->idle();
+    }
+
+    public function testAPostDeletedFromTheReaderIsNotStoredAgain(): void
+    {
+        $feed = $this->feed('https://one.example.com/feed');
+        $feed->classifyAs(SocialNetwork::Mastodon);
+
+        $result = $this->persistWithOneTwoBuried($feed);
+
+        self::assertSame(1, $result->entriesCreated);
+        self::assertNull($this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'one-2']));
+    }
+
+    public function testAFeedOfNoNetworkHoldsNoPostSoItsTombstonesAreNotRead(): void
+    {
+        $result = $this->persistWithOneTwoBuried($this->feed('https://one.example.com/feed'));
+
+        self::assertSame(2, $result->entriesCreated);
+    }
+
+    private function persistWithOneTwoBuried(Feed $feed): FeedRefreshResultModel
+    {
+        $persisters = FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->loggingTo($this->logger);
+        $persisters->tombstones()->bury($feed->requireId(), [EntryGuid::hashOf('one-2')]);
+
+        return $persisters->idle()->persist(
+            $feed,
+            FetchOutcomeModel::succeeded(FetchResponseModel::fetched($feed->getUrl(), false, $this->rss(), null, null)),
+            $this->clock->now(),
+        );
     }
 
     private function feed(string $url): Feed

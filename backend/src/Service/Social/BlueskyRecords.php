@@ -9,6 +9,7 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyStrongRef;
 
@@ -60,17 +61,20 @@ final readonly class BlueskyRecords
             ?? throw new SocialNetworkUnreachableException('Bluesky took the post but named no address for it.');
     }
 
-    /** A record Bluesky no longer has counts as deleted. */
-    public function delete(SocialAccount $account, string $collection, string $recordKey): void
+    /** Bluesky answers a missing record without a commit, or with a 404. */
+    public function delete(SocialAccount $account, string $collection, string $recordKey): PostDeletion
     {
         try {
-            $this->sessions->actAs($account, self::DELETE_RECORD, [
+            $answer = $this->sessions->actAs($account, self::DELETE_RECORD, [
                 'repo' => $account->getIdentity(),
                 'collection' => $collection,
                 'rkey' => $recordKey,
             ]);
         } catch (SocialPostNotFoundException) {
+            return PostDeletion::AlreadyGone;
         }
+
+        return JsonNodeModel::of($answer->json())->has('commit') ? PostDeletion::Deleted : PostDeletion::AlreadyGone;
     }
 
     private function now(): string

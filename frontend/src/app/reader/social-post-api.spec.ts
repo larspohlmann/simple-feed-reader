@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
+import { PostDeletionDto } from './entry-social';
 import { SocialPostApi } from './social-post-api';
 
 const REPLY = 'https://hachyderm.io/@ann/200';
@@ -201,5 +202,15 @@ describe('SocialPostApi', () => {
     );
     expect(testRequest.request.method).toBe('DELETE');
     testRequest.flush(null);
+  });
+
+  it('deletes my own post', () => {
+    let answer: PostDeletionDto | undefined;
+    api.deletePost(7).subscribe((deletion) => (answer = deletion));
+
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/post');
+    expect(testRequest.request.method).toBe('DELETE');
+    testRequest.flush({ outcome: 'alreadyGone' });
+    expect(answer).toEqual({ outcome: 'alreadyGone' });
   });
 });

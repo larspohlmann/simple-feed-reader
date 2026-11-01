@@ -84,6 +84,11 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     this.shellActions.toggleRead(copy);
   }
 
+  deletePost(): void {
+    this.close();
+    this.shellActions.deletePost(this.entry());
+  }
+
   close(): void {
     this.displayedId.set(null);
   }

@@ -342,8 +342,21 @@ final class EntryJsonTest extends TestCase
         );
 
         self::assertSame(
-            ['network' => 'bluesky', 'isLiked' => true, 'canLike' => true],
+            ['network' => 'bluesky', 'isLiked' => true, 'canLike' => true, 'isOwn' => false],
             JsonMappers::entryJson()->detail($row, new ServedChaptersModel([], null), null)['social'],
+        );
+    }
+
+    public function testMyOwnPostSaysItIsMine(): void
+    {
+        $row = $this->row(
+            $this->entryTitled('Post'),
+            new EntryListRowEnrichment(social: new EntryListRowSocial(SocialNetwork::Bluesky, false, true, true)),
+        );
+
+        self::assertSame(
+            ['network' => 'bluesky', 'isLiked' => false, 'canLike' => true, 'isOwn' => true],
+            JsonMappers::entryJson()->listRow($row)['social'],
         );
     }
 
@@ -355,7 +368,7 @@ final class EntryJsonTest extends TestCase
         );
 
         self::assertSame(
-            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false],
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false, 'isOwn' => false],
             JsonMappers::entryJson()->listRow($row)['social'],
         );
     }
