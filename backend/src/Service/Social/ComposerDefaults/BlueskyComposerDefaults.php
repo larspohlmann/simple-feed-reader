@@ -19,7 +19,7 @@ final readonly class BlueskyComposerDefaults implements ComposerDefaultsInterfac
 
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
-        return new ComposerDefaultsModel(BlueskyPostWriter::MAX_GRAPHEMES);
+        return $this->forAccount($target->account);
     }
 
     public function forAccount(SocialAccount $account): ComposerDefaultsModel

@@ -389,18 +389,26 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         yield 'delete' => ['DELETE', '/api/entries/{id}/comments/reply?address=' . rawurlencode(self::REPLY)];
     }
 
-    public function testOpeningTheComposerDrawsOnTheViewerBudget(): void
+    #[DataProvider('composers')]
+    public function testOpeningAComposerDrawsOnTheViewerBudget(string $path): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
-        $user = $this->signIn($client, 'reply-composer-budget@example.test');
+        $user = $this->signIn($client, sprintf('composer-budget-%s@example.test', md5($path)));
         $entryId = $this->mastodonPostFor($user);
         for ($attempt = 0; $attempt < self::VIEWER_BUDGET; ++$attempt) {
             $client->request('GET', sprintf('/api/entries/%d/social/viewer', $entryId));
         }
 
-        $client->request('GET', sprintf('/api/entries/%d/social/composer', $entryId));
+        $client->request('GET', str_replace('{id}', (string) $entryId, $path));
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function composers(): iterable
+    {
+        yield 'response composer' => ['/api/entries/{id}/social/composer'];
+        yield 'link composer' => ['/api/entries/{id}/social/link-composer?network=mastodon'];
     }
 
     /** @param array<string, string> $body */

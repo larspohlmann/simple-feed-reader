@@ -132,6 +132,10 @@ final class BlueskyLinkCardsTest extends TestCase
 
         self::assertArrayNotHasKey('thumb', self::externalOf($card));
         $this->assertLoggedAtDebug();
+        self::assertSame(
+            ['image' => self::IMAGE_URL, 'reason' => 'not an image'],
+            $this->logger->records[0]['context'],
+        );
     }
 
     /** @return iterable<string, array{int}> */

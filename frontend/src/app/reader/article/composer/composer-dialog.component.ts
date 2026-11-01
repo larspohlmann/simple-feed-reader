@@ -102,7 +102,10 @@ export class ComposerDialogComponent {
   /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = `reader.composer.${this.target.kind}`;
   protected readonly headingKey = `reader.${this.target.kind}.${this.target.network}`;
-  protected readonly forbiddenKey = `reader.${this.target.kind}Forbidden.${this.target.network}`;
+  protected readonly forbiddenKey =
+    this.response === null
+      ? null
+      : `reader.${this.response.kind}Forbidden.${this.response.network}`;
   protected readonly state = signal<ContextState>({ status: 'loading' });
   protected readonly text = signal(this.article?.prefill ?? '');
   protected readonly visibility = signal<MastodonVisibility | null>(null);

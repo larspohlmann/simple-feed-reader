@@ -8,7 +8,7 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -39,12 +39,17 @@ const POSITIONS: ConnectedPosition[] = [
 ];
 
 /** A network the entry can be posted to, with the handles of the connected accounts there. */
-interface PostTarget {
+interface ConnectedNetwork {
   readonly network: SocialNetworkName;
   readonly accounts: readonly string[];
 }
 
-function postTargets(accounts: readonly SocialAccountRefDto[]): PostTarget[] {
+/** Who the post goes out as, or that the composer asks when the network has several accounts. */
+interface PostTarget extends ConnectedNetwork {
+  readonly hint: string;
+}
+
+function connectedNetworks(accounts: readonly SocialAccountRefDto[]): ConnectedNetwork[] {
   const connected = accounts.filter((account) => account.status === 'connected');
   return SOCIAL_NETWORKS.map((network) => ({
     network,
@@ -54,7 +59,9 @@ function postTargets(accounts: readonly SocialAccountRefDto[]): PostTarget[] {
   })).filter((target) => target.accounts.length > 0);
 }
 
-const POST_ID_PREFIX = 'post-';
+function postIdOf(network: SocialNetworkName): string {
+  return `post-${network}`;
+}
 
 @Component({
   selector: 'app-share-button',
@@ -90,14 +97,26 @@ export class ShareButtonComponent {
   protected readonly targets = SHARE_TARGETS;
   protected readonly logoUrl = shareLogoUrl;
   protected readonly open = signal(false);
-  protected readonly postTargets = computed(() =>
-    this.entry()?.url ? postTargets(this.subscriptions.socialAccounts()) : [],
-  );
+  private readonly activeLang = toSignal(this.i18n.langChanges$, {
+    initialValue: this.i18n.getActiveLang(),
+  });
+  protected readonly postTargets = computed((): PostTarget[] => {
+    // translate() is one-shot: reading the language re-resolves the hints on a switch.
+    this.activeLang();
+    if (!this.entry()?.url) return [];
+    return connectedNetworks(this.subscriptions.socialAccounts()).map((target) => ({
+      ...target,
+      hint: this.postHint(target.accounts),
+    }));
+  });
 
   private readonly targetsById = new Map(
     this.targets.flatMap((target, index) =>
       target.kind === 'divider' ? [] : [[String(index), target] as const],
     ),
+  );
+  private readonly postNetworksById = new Map(
+    SOCIAL_NETWORKS.map((network) => [postIdOf(network), network] as const),
   );
 
   constructor() {
@@ -136,16 +155,15 @@ export class ShareButtonComponent {
     });
   }
 
-  /** Who the post goes out as, or that the composer asks when the network has several accounts. */
-  protected postHint(target: PostTarget): string {
-    return target.accounts.length === 1
-      ? this.i18n.translate('reader.share.postAs', { handle: target.accounts[0] })
-      : this.i18n.translate('reader.share.pickAccount');
-  }
-
   protected step(event: KeyboardEvent): void {
     const menu = (event.target as Element).closest('[role="menu"]');
     if (menu !== null) stepMenuFocus(event, menu);
+  }
+
+  private postHint(accounts: readonly string[]): string {
+    return accounts.length === 1
+      ? this.i18n.translate('reader.share.postAs', { handle: accounts[0] })
+      : this.i18n.translate('reader.share.pickAccount');
   }
 
   private openSheet(): void {
@@ -163,9 +181,9 @@ export class ShareButtonComponent {
 
   private postSheetItems(): ActionSheetItem[] {
     const items = this.postTargets().map((target): ActionSheetItem => ({
-      id: POST_ID_PREFIX + target.network,
+      id: postIdOf(target.network),
       label: this.i18n.translate(`reader.link.${target.network}`),
-      hint: this.postHint(target),
+      hint: target.hint,
       logo: {
         url: shareLogoUrl(`${target.network}.svg`),
         color: `var(--brand-${target.network})`,
@@ -185,9 +203,10 @@ export class ShareButtonComponent {
   }
 
   private chooseById(choice: string | undefined): void {
-    const post = this.postTargets().find((target) => POST_ID_PREFIX + target.network === choice);
-    if (post !== undefined) return this.post(post.network);
-    const target = choice === undefined ? undefined : this.targetsById.get(choice);
+    if (choice === undefined) return;
+    const network = this.postNetworksById.get(choice);
+    if (network !== undefined) return this.post(network);
+    const target = this.targetsById.get(choice);
     if (target !== undefined) this.choose(target);
   }
 

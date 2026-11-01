@@ -46,7 +46,7 @@ final readonly class MastodonPostWriter implements PostWriterInterface
         return $this->published($account, $draft, []);
     }
 
-    /** @param array<string, string> $attachment the id the status answers or quotes, none for a link */
+    /** @param array<string, string> $attachment the id the status answers or quotes */
     private function published(SocialAccount $account, PostDraftModel $draft, array $attachment): PublishedPostModel
     {
         $request = ApiRequestModel::postJson(

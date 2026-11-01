@@ -51,7 +51,7 @@ final readonly class BlueskyLinkCards
         }
 
         try {
-            $blob = $this->uploaded($account, $link->imageUrl);
+            return $this->uploaded($account, $link->imageUrl);
         } catch (
             GuardedImageUnavailableException
             | ImageProcessingException
@@ -66,12 +66,10 @@ final readonly class BlueskyLinkCards
 
             return [];
         }
-
-        return null === $blob ? [] : ['thumb' => $blob];
     }
 
-    /** @return array<mixed>|null the blob Bluesky stored the thumbnail as, null when it named none */
-    private function uploaded(SocialAccount $account, string $imageUrl): ?array
+    /** @return array{thumb?: array<mixed>} */
+    private function uploaded(SocialAccount $account, string $imageUrl): array
     {
         $thumbnail = $this->resizer->coverJpeg(
             $this->downloader->download($imageUrl)->bytes,
@@ -81,6 +79,6 @@ final readonly class BlueskyLinkCards
         $answer = $this->sessions->uploadAs($account, self::UPLOAD_BLOB, $thumbnail, self::THUMBNAIL_TYPE);
         $blob = $answer->json()['blob'] ?? null;
 
-        return \is_array($blob) ? $blob : null;
+        return \is_array($blob) ? ['thumb' => $blob] : [];
     }
 }

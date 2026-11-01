@@ -49,15 +49,13 @@ final readonly class LinkPosts
      */
     public function contextFor(User $user, Entry $entry, SocialNetwork $network, ?int $accountId): ComposerContextModel
     {
-        $this->addressOf($entry);
-        $account = $this->actingAccount($user, $network, $accountId);
+        $this->requireLink($entry);
+        $connected = $this->socialAccounts->findConnectedOnNetwork($user, $network);
+        $account = null === $accountId
+            ? ($connected[0] ?? throw self::noAccountOn($network))
+            : $this->accountsForUser->requireConnectedOn($user, $accountId, $network);
 
-        return new ComposerContextModel(
-            $this->socialAccounts->findConnectedOnNetwork($user, $network),
-            $account,
-            true,
-            $this->defaultsOf($account),
-        );
+        return new ComposerContextModel($connected, $account, canSend: true, defaults: $this->defaultsOf($account));
     }
 
     /**
@@ -73,14 +71,14 @@ final readonly class LinkPosts
      */
     public function share(User $user, Entry $entry, LinkPostModel $post): PublishedPostModel
     {
-        $link = SharedLink::of($entry, $this->addressOf($entry));
+        $link = SharedLink::of($entry, $this->requireLink($entry));
         $account = $this->actingAccount($user, $post->network, $post->accountId);
 
         return $this->writing->share($account, $link, $post->draft);
     }
 
     /** @throws SocialPostRefusedException */
-    private function addressOf(Entry $entry): string
+    private function requireLink(Entry $entry): string
     {
         return $this->urls->normalize($entry->getUrl())
             ?? throw new SocialPostRefusedException('This entry has no link to share.');
@@ -97,10 +95,14 @@ final readonly class LinkPosts
             return $this->accountsForUser->requireConnectedOn($user, $accountId, $network);
         }
 
-        return $this->socialAccounts->findReadyActingOnNetwork($user, $network)
-            ?? throw new NoSocialAccountForNetworkException(
-                sprintf('No %s account is connected to post this link.', $network->displayName()),
-            );
+        return $this->socialAccounts->findReadyActingOnNetwork($user, $network) ?? throw self::noAccountOn($network);
+    }
+
+    private static function noAccountOn(SocialNetwork $network): NoSocialAccountForNetworkException
+    {
+        return new NoSocialAccountForNetworkException(
+            sprintf('No %s account is connected to post this link.', $network->displayName()),
+        );
     }
 
     private function defaultsOf(SocialAccount $account): ComposerDefaultsModel

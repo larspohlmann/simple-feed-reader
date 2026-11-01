@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Image\ImageResizer;
 
-use App\Service\Image\ImageResizer\GdImageResizer;
 use App\Service\Image\Exception\ImageProcessingException;
+use App\Service\Image\ImageResizer\GdImageResizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

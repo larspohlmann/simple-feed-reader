@@ -28,9 +28,9 @@ final class BlueskySessionsTest extends TestCase
 {
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string CREATE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.createRecord';
+    private const string CREATE_RECORD_PATH = '/xrpc/com.atproto.repo.createRecord';
     private const string UPLOAD_BLOB = 'POST https://pds.example.test/xrpc/com.atproto.repo.uploadBlob';
     private const string UPLOAD_BLOB_PATH = '/xrpc/com.atproto.repo.uploadBlob';
-    private const string CREATE_RECORD_PATH = '/xrpc/com.atproto.repo.createRecord';
     private const string LIKE_URI = '{"uri":"at://did:plc:alice/app.bsky.feed.like/3l"}';
 
     public function testASecondPollReusesTheCachedSession(): void

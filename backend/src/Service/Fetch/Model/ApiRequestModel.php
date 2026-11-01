@@ -9,6 +9,7 @@ final readonly class ApiRequestModel
     /**
      * @param array<string, string>     $headers
      * @param array<string, mixed>|null $json
+     * @param string|null               $body raw bytes, never set together with $json
      */
     private function __construct(
         public string $method,

@@ -32,7 +32,7 @@ export class ResponseActions {
   respond(target: ComposeTarget): void {
     this.composer.open(target).subscribe((sent) => {
       if (sent === undefined) return;
-      if (target.kind === 'link') this.linked(sent);
+      if (target.kind === 'link') this.announce('reader.linkPosted', sent.url);
       else if (target.kind === 'quote') this.quoted(target, sent);
       else this.replied(target, sent);
     });
@@ -47,10 +47,6 @@ export class ResponseActions {
     if (target.address === null) this.counts.stepQuotes(target.entryId);
     else this.comments.countQuote(target.entryId, target.address);
     this.announce('reader.quoteSent', sent.url);
-  }
-
-  private linked(sent: SentPost): void {
-    this.announce('reader.linkPosted', sent.url);
   }
 
   private announce(messageKey: string, url: string | null): void {

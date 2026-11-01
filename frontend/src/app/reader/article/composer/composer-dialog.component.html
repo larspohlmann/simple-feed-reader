@@ -48,7 +48,7 @@
     }
 
     @if (context(); as context) {
-      @if (!context.canSend) {
+      @if (!context.canSend && forbiddenKey !== null) {
         <app-error-banner [message]="forbiddenKey | transloco" />
       }
 

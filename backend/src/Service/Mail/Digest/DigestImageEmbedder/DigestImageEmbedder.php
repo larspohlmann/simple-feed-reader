@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest\DigestImageEmbedder;
 
 use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\Exception\ImageProcessingException;
 use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\ImageResizer\ImageResizerInterface;
-use App\Service\Image\Exception\ImageProcessingException;
 use App\Service\Mail\Digest\Model\DigestImageKind;
 use App\Service\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Mail\Digest\Model\DigestPageModel;
