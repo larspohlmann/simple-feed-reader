@@ -83,7 +83,7 @@ final class FakeCommentsSource implements CommentsSourceInterface
         return CommentsAnswerModel::settled($body);
     }
 
-    public function read(Entry $entry, string $answer): CommentsPageModel
+    public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
         if (\in_array($answer, $this->unreadableAnswers, true)) {
             throw new CommentsUnavailableException('unreadable');

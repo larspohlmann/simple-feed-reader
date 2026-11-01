@@ -31,5 +31,5 @@ interface CommentsSourceInterface
     public function fetch(CommentsRequest $request): CommentsAnswerModel;
 
     /** @throws CommentsUnavailableException */
-    public function read(Entry $entry, string $answer): CommentsPageModel;
+    public function read(CommentsRequest $request, string $answer): CommentsPageModel;
 }

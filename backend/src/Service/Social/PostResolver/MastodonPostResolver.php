@@ -48,10 +48,8 @@ final readonly class MastodonPostResolver implements PostResolverInterface
 
     private static function replyContextOf(JsonNodeModel $status): ReplyContextModel
     {
-        $handle = MastodonAuthor::handle($status->node('account'));
-
         return new ReplyContextModel(
-            authorIdentity: null === $handle ? null : mb_strtolower($handle),
+            authorIdentity: MastodonAuthor::identity($status->node('account')),
             visibility: $status->string('visibility'),
         );
     }

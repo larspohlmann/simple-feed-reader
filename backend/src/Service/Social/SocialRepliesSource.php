@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsSource\CommentsSourceInterface;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
@@ -26,6 +27,7 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
+use App\Service\Social\Support\OwnReplies;
 use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -45,6 +47,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         private ReplyThreadOrder $order,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialRepliesLimiter,
+        private SocialAccountRepository $socialAccounts,
     ) {
     }
 
@@ -78,11 +81,24 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         return $this->accountOrPublicThreadOf($thread, $account, $post->address);
     }
 
-    public function read(Entry $entry, string $answer): CommentsPageModel
+    public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
-        $post = self::postOf($entry);
+        $post = self::postOf($request->entry);
+        $page = $this->order->pageOf($this->threadOn($post->network)->repliesIn($post->address, $answer));
 
-        return $this->order->pageOf($this->threadOn($post->network)->repliesIn($post->address, $answer));
+        return new CommentsPageModel(
+            OwnReplies::marked($page->comments, $this->ownIdentities($request->user, $post->network)),
+            $page->omitted,
+        );
+    }
+
+    /** @return list<string> */
+    private function ownIdentities(User $user, SocialNetwork $network): array
+    {
+        return array_map(
+            static fn (SocialAccount $account): string => mb_strtolower($account->getIdentity()),
+            $this->socialAccounts->findConnectedOnNetwork($user, $network),
+        );
     }
 
     private function accountOrPublicThreadOf(

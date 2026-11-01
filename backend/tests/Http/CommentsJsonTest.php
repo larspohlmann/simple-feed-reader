@@ -47,7 +47,7 @@ final class CommentsJsonTest extends TestCase
             new CommentPostModel(
                 'at://did:plc:ann/app.bsky.feed.post/2',
                 new CommentCountsModel(5, 1, 2, 0),
-                new CommentViewerModel(true, true, false),
+                new CommentViewerModel(true, true, false, canReply: false, isOwn: true),
             ),
         );
 
@@ -85,6 +85,8 @@ final class CommentsJsonTest extends TestCase
                 'isLiked' => true,
                 'isReposted' => true,
                 'canRepost' => false,
+                'canReply' => false,
+                'isOwn' => true,
             ],
         ], self::firstComment($json));
     }

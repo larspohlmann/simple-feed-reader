@@ -26,6 +26,14 @@ final class MastodonAuthor
         return $acct . '@' . $host;
     }
 
+    /** The account as a social account identity, which is its handle in lower case. */
+    public static function identity(JsonNodeModel $account): ?string
+    {
+        $handle = self::handle($account);
+
+        return null === $handle ? null : mb_strtolower($handle);
+    }
+
     public static function avatar(JsonNodeModel $account): ?string
     {
         return AbsoluteHttpUrl::orNull($account->string('avatar_static'))

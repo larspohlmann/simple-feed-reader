@@ -58,6 +58,8 @@ final readonly class CommentsJson
      *     isLiked: bool,
      *     isReposted: bool,
      *     canRepost: bool,
+     *     canReply: bool,
+     *     isOwn: bool,
      * }
      */
     private static function post(CommentPostModel $post): array
@@ -68,6 +70,8 @@ final readonly class CommentsJson
             'isLiked' => $post->viewer->isLiked,
             'isReposted' => $post->viewer->isReposted,
             'canRepost' => $post->viewer->canRepost,
+            'canReply' => $post->viewer->canReply,
+            'isOwn' => $post->viewer->isOwn,
         ];
     }
 }

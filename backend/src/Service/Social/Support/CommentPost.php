@@ -22,40 +22,50 @@ final class CommentPost
     public static function ofBlueskyPost(JsonNodeModel $post): ?CommentPostModel
     {
         $uri = $post->string('uri');
-        $address = null !== $uri && AtPostUri::matches($uri) ? $uri : null;
+        $counts = PostCounts::ofBlueskyPost($post);
+        if (null === $uri || !AtPostUri::matches($uri) || null === $counts) {
+            return null;
+        }
         $viewer = $post->node('viewer');
         $commentViewer = new CommentViewerModel(
             null !== BlueskyRecordUri::likeOrNull($viewer->string('like')),
             null !== BlueskyRecordUri::repostOrNull($viewer->string('repost')),
-            true,
+            canRepost: true,
+            canReply: !$viewer->isTrue('replyDisabled'),
         );
 
-        return self::postOrNull($address, PostCounts::ofBlueskyPost($post), $commentViewer);
+        return new CommentPostModel(
+            $uri,
+            self::commentCountsOf($counts),
+            $commentViewer,
+            $post->node('author')->string('did'),
+        );
     }
 
     public static function ofMastodonStatus(JsonNodeModel $status): ?CommentPostModel
     {
         $address = AbsoluteHttpUrl::orNull($status->string('uri')) ?? AbsoluteHttpUrl::orNull($status->string('url'));
 
+        $counts = PostCounts::ofMastodonStatus($status);
+        if (null === $address || null === $counts) {
+            return null;
+        }
         $viewer = new CommentViewerModel(
             $status->isTrue('favourited'),
             $status->isTrue('reblogged'),
             MastodonVisibility::allowsReblog($status),
         );
 
-        return self::postOrNull($address, PostCounts::ofMastodonStatus($status), $viewer);
+        return new CommentPostModel(
+            $address,
+            self::commentCountsOf($counts),
+            $viewer,
+            MastodonAuthor::identity($status->node('account')),
+        );
     }
 
-    private static function postOrNull(
-        ?string $address,
-        ?SocialCountsModel $counts,
-        CommentViewerModel $viewer,
-    ): ?CommentPostModel {
-        if (null === $address || null === $counts) {
-            return null;
-        }
-        $commentCounts = new CommentCountsModel($counts->likes, $counts->reposts, $counts->replies, $counts->quotes);
-
-        return new CommentPostModel($address, $commentCounts, $viewer);
+    private static function commentCountsOf(SocialCountsModel $counts): CommentCountsModel
+    {
+        return new CommentCountsModel($counts->likes, $counts->reposts, $counts->replies, $counts->quotes);
     }
 }

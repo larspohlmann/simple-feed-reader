@@ -11,6 +11,13 @@ final readonly class CommentViewerModel
         public bool $isLiked,
         public bool $isReposted,
         public bool $canRepost,
+        public bool $canReply = true,
+        public bool $isOwn = false,
     ) {
+    }
+
+    public function ownedByViewer(): self
+    {
+        return new self($this->isLiked, $this->isReposted, $this->canRepost, $this->canReply, isOwn: true);
     }
 }

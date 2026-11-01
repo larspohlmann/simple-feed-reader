@@ -54,7 +54,7 @@ final readonly class CommentsLoader
     {
         try {
             $answer = $request->source->fetch($request);
-            $page = $request->source->read($request->entry, $answer->body);
+            $page = $request->source->read($request, $answer->body);
         } catch (CommentsThrottledException $exception) {
             return CommentsResultModel::throttled($exception->retryAfterSeconds);
         } catch (CommentsUnavailableException) {
@@ -69,7 +69,7 @@ final readonly class CommentsLoader
     private function cachedOrFetched(CommentsRequest $request, CachedCommentsModel $cached): CommentsResultModel
     {
         try {
-            return CommentsResultModel::ok($request->source->read($request->entry, $cached->body), $cached->fetchedAt);
+            return CommentsResultModel::ok($request->source->read($request, $cached->body), $cached->fetchedAt);
         } catch (CommentsUnavailableException) {
             return $this->fetched($request);
         }
