@@ -20,12 +20,12 @@ import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.com
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
-import { ResponseActions } from '../composer/response-actions.service';
+import { PostActions } from '../composer/post-actions.service';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
 import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
-import { ResponseKind, likeableSocial } from '../../entry-social';
+import { likeableSocial } from '../../entry-social';
 import { mediumRatio } from '../../entry-medium';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
@@ -64,7 +64,7 @@ export class EntryCommentsComponent {
 
   private readonly service = inject(CommentsService);
   private readonly toast = inject(ToastService);
-  private readonly responses = inject(ResponseActions);
+  private readonly responses = inject(PostActions);
   private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
@@ -123,15 +123,12 @@ export class EntryCommentsComponent {
     );
   }
 
-  respond(kind: ResponseKind, comment: EntryCommentDto, post: EntryCommentPostDto): void {
-    const network = this.entry().social?.network;
-    if (network === undefined) return;
-    this.responses.respond({
-      kind,
-      entryId: this.entryId(),
-      network,
-      address: post.address,
-    });
+  reply(network: SocialNetworkName, post: EntryCommentPostDto): void {
+    this.responses.reply(this.entryId(), network, post.address);
+  }
+
+  quote(network: SocialNetworkName, post: EntryCommentPostDto): void {
+    this.responses.quote(this.entryId(), network, post.address);
   }
 
   deleteReply(network: SocialNetworkName, comment: EntryCommentDto): void {

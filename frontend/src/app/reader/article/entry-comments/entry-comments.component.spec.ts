@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
-import { ResponseActions } from '../composer/response-actions.service';
+import { PostActions } from '../composer/post-actions.service';
 import { CommentsService, CommentsState } from './comments.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
@@ -22,7 +22,7 @@ const navigation = { layer: jest.fn() };
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
-  let responses: { respond: jest.Mock; delete: jest.Mock };
+  let responses: { reply: jest.Mock; quote: jest.Mock; delete: jest.Mock };
   let service: {
     state: jest.Mock;
     load: jest.Mock;
@@ -32,7 +32,7 @@ describe('EntryCommentsComponent', () => {
   };
 
   beforeEach(() => {
-    responses = { respond: jest.fn(), delete: jest.fn() };
+    responses = { reply: jest.fn(), quote: jest.fn(), delete: jest.fn() };
     states = new Map();
     service = {
       state: jest.fn((id: number) => stateOf(id)),
@@ -46,7 +46,7 @@ describe('EntryCommentsComponent', () => {
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
       providers: [
         { provide: CommentsService, useValue: service },
-        { provide: ResponseActions, useValue: responses },
+        { provide: PostActions, useValue: responses },
         { provide: LinkReaderNavigation, useValue: navigation },
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
       ],
@@ -129,13 +129,7 @@ describe('EntryCommentsComponent', () => {
       fixture.detectChanges();
       document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click();
 
-      expect(responses.respond).toHaveBeenCalledWith(
-        expect.objectContaining({
-          kind: 'quote',
-          entryId: 5,
-          address: post.address,
-        }),
-      );
+      expect(responses.quote).toHaveBeenCalledWith(5, 'bluesky', post.address);
     });
 
     it('likes the comment through the service', () => {
@@ -166,12 +160,7 @@ describe('EntryCommentsComponent', () => {
         settleComments([comment]).querySelector('.comment button.reply') as HTMLButtonElement
       ).click();
 
-      expect(responses.respond).toHaveBeenCalledWith({
-        kind: 'reply',
-        entryId: 5,
-        network: 'bluesky',
-        address: post.address,
-      });
+      expect(responses.reply).toHaveBeenCalledWith(5, 'bluesky', post.address);
     });
 
     it('offers to delete only a reply the reader wrote', () => {

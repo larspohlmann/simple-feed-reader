@@ -13,7 +13,7 @@ import {
 import { ToastService } from '../../../shared/toast/toast.service';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { ResponseActions } from '../composer/response-actions.service';
+import { PostActions } from '../composer/post-actions.service';
 import { ShareButtonComponent } from './share-button.component';
 
 function account(
@@ -27,7 +27,7 @@ function account(
 describe('ShareButtonComponent', () => {
   const toast = { show: jest.fn() };
   const sheet = { open: jest.fn() };
-  const responses = { respond: jest.fn() };
+  const postActions = { postLink: jest.fn() };
   const accounts = signal<SocialAccountRefDto[]>([]);
   let chosen: Subject<string | undefined>;
   let fixture: ComponentFixture<ShareButtonComponent>;
@@ -46,7 +46,7 @@ describe('ShareButtonComponent', () => {
         { provide: ActionSheet, useValue: sheet },
         { provide: LayoutService, useValue: { isCoarse: signal(coarse) } },
         { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
-        { provide: ResponseActions, useValue: responses },
+        { provide: PostActions, useValue: postActions },
       ],
     });
     fixture = TestBed.createComponent(ShareButtonComponent);
@@ -59,7 +59,7 @@ describe('ShareButtonComponent', () => {
   beforeEach(() => {
     toast.show.mockReset();
     sheet.open.mockReset();
-    responses.respond.mockReset();
+    postActions.postLink.mockReset();
     accounts.set([
       account(1, 'mastodon', '@me@mastodon.social'),
       account(2, 'bluesky', 'me.bsky.social'),
@@ -186,25 +186,12 @@ describe('ShareButtonComponent', () => {
       item(openMenu(), 'Post on Mastodon').click();
       fixture.detectChanges();
 
-      expect(responses.respond).toHaveBeenCalledWith({
-        kind: 'link',
-        network: 'mastodon',
-        url: 'https://example.com/a?id=1',
-        prefill: 'First\n\nhttps://example.com/a?id=1',
-      });
-      expect(document.querySelector('[role="menu"]')).toBeNull();
-    });
-  });
-
-  describe('on a fine pointer, for a page without a title', () => {
-    beforeEach(() => mount(false, ''));
-
-    it('starts the text with the URL', () => {
-      item(openMenu(), 'Post on Mastodon').click();
-
-      expect(responses.respond).toHaveBeenCalledWith(
-        expect.objectContaining({ prefill: 'https://example.com/a?id=1' }),
+      expect(postActions.postLink).toHaveBeenCalledWith(
+        'mastodon',
+        'https://example.com/a?id=1',
+        'First',
       );
+      expect(document.querySelector('[role="menu"]')).toBeNull();
     });
   });
 
@@ -305,8 +292,10 @@ describe('ShareButtonComponent', () => {
 
       chosen.next('post-bluesky');
 
-      expect(responses.respond).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'link', network: 'bluesky', prefill: 'First' }),
+      expect(postActions.postLink).toHaveBeenCalledWith(
+        'bluesky',
+        'https://example.com/a?id=1',
+        'First',
       );
     });
   });

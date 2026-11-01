@@ -16,7 +16,7 @@ import { ChapterDto, EntryDto, ReaderContent, TranscriptDto } from '../../models
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
-import { ResponseActions } from '../composer/response-actions.service';
+import { PostActions } from '../composer/post-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -200,7 +200,10 @@ describe('ReaderViewComponent', () => {
         NO_EMBED_DETAILS,
         { provide: PreviewProgress, useValue: { isLoading: () => true } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
-        { provide: ResponseActions, useValue: { respond: jest.fn(), delete: jest.fn() } },
+        {
+          provide: PostActions,
+          useValue: { reply: jest.fn(), quote: jest.fn(), delete: jest.fn() },
+        },
         { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
         {
           provide: CommentsService,

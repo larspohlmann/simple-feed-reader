@@ -112,8 +112,8 @@
                   [canQuote]="likeable() ? post.canQuote : null"
                   (likeToggled)="toggleLike(post)"
                   (repostToggled)="toggleRepost(post)"
-                  (replyRequested)="respond('reply', c, post)"
-                  (quoteRequested)="respond('quote', c, post)"
+                  (replyRequested)="reply(social.network, post)"
+                  (quoteRequested)="quote(social.network, post)"
                 />
               }
             </li>

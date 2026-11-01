@@ -19,7 +19,7 @@ import { LinkArticleSource } from './link-article-source.service';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { ResponseActions } from '../composer/response-actions.service';
+import { PostActions } from '../composer/post-actions.service';
 import { ShareButtonComponent } from '../share/share-button.component';
 
 const FIRST_LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
@@ -61,7 +61,7 @@ describe('LinkReaderComponent', () => {
         { provide: ReaderContentService, useValue: { load: loadTarget, reload: reloadTarget } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
-        { provide: ResponseActions, useValue: {} },
+        { provide: PostActions, useValue: {} },
         NO_EMBED_DETAILS,
         {
           provide: ImageProxyService,

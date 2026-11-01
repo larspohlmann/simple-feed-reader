@@ -47,32 +47,37 @@
     role="menu"
     [attr.aria-label]="'reader.share.button' | transloco"
   >
-    @for (target of postTargets(); track target.network) {
-      <button role="menuitem" type="button" [title]="target.hint" (click)="post(target.network)">
-        <app-network-logo [network]="target.network" />
-        <span class="label">{{ 'reader.link.' + target.network | transloco }}</span>
-      </button>
-      @if ($last) {
-        <hr role="separator" />
-      }
-    }
-    @for (target of targets; track $index) {
-      @if (target.kind === 'divider') {
-        <hr role="separator" />
-      } @else {
-        <button role="menuitem" type="button" (click)="choose(target)">
-          @if (target.icon) {
-            <app-masked-logo [src]="logoUrl(target.icon)" [color]="target.color" />
-          } @else {
-            <app-icon [name]="target.symbol ?? glyph" size="sm" />
-          }
-          <span class="label">{{
-            target.labelKey ? (target.labelKey | transloco) : target.label
-          }}</span>
-          @if (target.external) {
-            <app-icon class="external" name="open_in_new" size="sm" />
-          }
-        </button>
+    @for (item of items(); track item.id) {
+      @switch (item.kind) {
+        @case ('post') {
+          <button
+            role="menuitem"
+            type="button"
+            [title]="item.post.hint"
+            (click)="post(item.post.network)"
+          >
+            <app-network-logo [network]="item.post.network" />
+            <span class="label">{{ 'reader.link.' + item.post.network | transloco }}</span>
+          </button>
+        }
+        @case ('divider') {
+          <hr role="separator" />
+        }
+        @case ('target') {
+          <button role="menuitem" type="button" (click)="choose(item.target)">
+            @if (item.target.icon) {
+              <app-masked-logo [src]="logoUrl(item.target.icon)" [color]="item.target.color" />
+            } @else {
+              <app-icon [name]="item.target.symbol ?? glyph" size="sm" />
+            }
+            <span class="label">{{
+              item.target.labelKey ? (item.target.labelKey | transloco) : item.target.label
+            }}</span>
+            @if (item.target.external) {
+              <app-icon class="external" name="open_in_new" size="sm" />
+            }
+          </button>
+        }
       }
     }
   </div>

@@ -2,17 +2,18 @@ import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
-import { filter, switchMap } from 'rxjs';
+import { Observable, filter, switchMap } from 'rxjs';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryCommentDto } from '../../entry-comment';
+import { PostTargetDto } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { ComposeTarget, ResponseComposeTarget, SentPost } from './composer-dialog.component';
-import { PostComposer } from './post-composer.service';
+import { SentPost } from './composed-post';
+import { ComposerDialogComponent } from './composer-dialog.component';
 import { PostSentDialogComponent } from './post-sent-dialog.component';
 import { sentComment } from './sent-comment';
 
@@ -22,8 +23,7 @@ import { sentComment } from './sent-comment';
  * or a link post lands outside the thread, so an overlay shows what went out and offers to open it.
  */
 @Injectable({ providedIn: 'root' })
-export class ResponseActions {
-  private readonly composer = inject(PostComposer);
+export class PostActions {
   private readonly comments = inject(CommentsService);
   private readonly counts = inject(SocialCountsService);
   private readonly api = inject(SocialPostApi);
@@ -32,31 +32,25 @@ export class ResponseActions {
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
 
-  respond(target: ComposeTarget): void {
-    this.composer.open(target).subscribe((sent) => {
-      if (sent === undefined) return;
-      if (target.kind === 'link') this.announce(sent);
-      else if (target.kind === 'quote') this.quoted(target, sent);
-      else this.replied(target, sent);
+  /** Replies to the entry's own post, or to the reply in its thread named by `address`. */
+  reply(entryId: number, network: SocialNetworkName, address: string | null): void {
+    this.respond({ kind: 'reply', entryId, network, address }).subscribe((sent) => {
+      this.comments.insertReply(entryId, address, sentComment(sent, new Date()));
+      if (address === null) this.counts.stepReplies(entryId, true);
     });
   }
 
-  private replied(target: ResponseComposeTarget, sent: SentPost): void {
-    this.comments.insertReply(target.entryId, target.address, sentComment(sent, new Date()));
-    if (target.address === null) this.counts.stepReplies(target.entryId, true);
-  }
-
-  private quoted(target: ResponseComposeTarget, sent: SentPost): void {
-    if (target.address === null) this.counts.stepQuotes(target.entryId);
-    else this.comments.countQuote(target.entryId, target.address);
-    this.announce(sent);
-  }
-
-  private announce(sent: SentPost): void {
-    this.dialog.open<void, SentPost>(PostSentDialogComponent, {
-      panelClass: 'app-dialog',
-      data: sent,
+  /** Quotes the entry's own post, or the reply in its thread named by `address`. */
+  quote(entryId: number, network: SocialNetworkName, address: string | null): void {
+    this.respond({ kind: 'quote', entryId, network, address }).subscribe((sent) => {
+      if (address === null) this.counts.stepQuotes(entryId);
+      else this.comments.countQuote(entryId, address);
+      this.announce(sent);
     });
+  }
+
+  postLink(network: SocialNetworkName, url: string, title: string): void {
+    this.respond({ kind: 'link', network, url, title }).subscribe((sent) => this.announce(sent));
   }
 
   delete(entryId: number, network: SocialNetworkName, comment: EntryCommentDto): void {
@@ -83,5 +77,22 @@ export class ResponseActions {
         error: (error: HttpErrorResponse) =>
           this.toast.show({ message: problemMessage(parseProblem(error)) }),
       });
+  }
+
+  /** Opens the composer; it answers the published post, and nothing when closed. */
+  private respond(target: PostTargetDto): Observable<SentPost> {
+    return this.dialog
+      .open<SentPost, PostTargetDto>(ComposerDialogComponent, {
+        panelClass: 'app-dialog',
+        data: target,
+      })
+      .closed.pipe(filter((sent): sent is SentPost => sent !== undefined));
+  }
+
+  private announce(sent: SentPost): void {
+    this.dialog.open<void, SentPost>(PostSentDialogComponent, {
+      panelClass: 'app-dialog',
+      data: sent,
+    });
   }
 }

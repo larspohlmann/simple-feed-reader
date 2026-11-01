@@ -22,14 +22,13 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { MaskedLogoComponent } from '../../../shared/masked-logo/masked-logo.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
+import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { stepMenuFocus } from '../../../shared/menu-keys';
 import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
-import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { linkPrefill } from '../composer/link-prefill';
-import { ResponseActions } from '../composer/response-actions.service';
+import { PostActions } from '../composer/post-actions.service';
 import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareLogoUrl, shareUrl } from './share-targets';
 import { stripTracking } from './tracking-params';
 
@@ -46,29 +45,23 @@ const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
   ],
 };
 
-/** A network the URL can be posted to, with the handles of the connected accounts there. */
-interface ConnectedNetwork {
+/** A network the URL can be posted to, and who the post goes out as, or that the composer asks. */
+interface PostNetworkItem {
   readonly network: SocialNetworkName;
-  readonly accounts: readonly string[];
-}
-
-/** Who the post goes out as, or that the composer asks when the network has several accounts. */
-interface PostTarget extends ConnectedNetwork {
   readonly hint: string;
 }
 
-function connectedNetworks(accounts: readonly SocialAccountRefDto[]): ConnectedNetwork[] {
-  const connected = accounts.filter((account) => account.status === 'connected');
-  return SOCIAL_NETWORKS.map((network) => ({
-    network,
-    accounts: connected
-      .filter((account) => account.network === network)
-      .map((account) => account.handle),
-  })).filter((target) => target.accounts.length > 0);
-}
+type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
 
-function postIdOf(network: SocialNetworkName): string {
-  return `post-${network}`;
+/** One entry of the menu and of the sheet, under the id the sheet answers with. */
+type ShareItem =
+  | { readonly kind: 'post'; readonly id: string; readonly post: PostNetworkItem }
+  | { readonly kind: 'divider'; readonly id: string }
+  | { readonly kind: 'target'; readonly id: string; readonly target: ConfiguredTarget };
+
+function configuredItem(target: ShareTarget, index: number): ShareItem {
+  const id = String(index);
+  return target.kind === 'divider' ? { kind: 'divider', id } : { kind: 'target', id, target };
 }
 
 @Component({
@@ -98,34 +91,38 @@ export class ShareButtonComponent {
   private readonly sheet = inject(ActionSheet);
   private readonly destroyRef = inject(DestroyRef);
   private readonly subscriptions = inject(SubscriptionsStore);
-  private readonly responses = inject(ResponseActions);
+  private readonly postActions = inject(PostActions);
 
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
-  protected readonly targets = SHARE_TARGETS;
   protected readonly logoUrl = shareLogoUrl;
   protected readonly open = signal(false);
   protected readonly origin = viewChild.required(CdkOverlayOrigin);
   private readonly activeLang = toSignal(this.i18n.langChanges$, {
     initialValue: this.i18n.getActiveLang(),
   });
-  protected readonly postTargets = computed((): PostTarget[] => {
+  private readonly postItems = computed((): ShareItem[] => {
     // translate() is one-shot: reading the language re-resolves the hints on a switch.
     this.activeLang();
-    return connectedNetworks(this.subscriptions.socialAccounts()).map((target) => ({
-      ...target,
-      hint: this.postHint(target.accounts),
-    }));
+    const connected = this.subscriptions
+      .socialAccounts()
+      .filter((account) => account.status === 'connected');
+    return SOCIAL_NETWORKS.flatMap((network): ShareItem[] => {
+      const handles = connected
+        .filter((account) => account.network === network)
+        .map((account) => account.handle);
+      if (handles.length === 0) return [];
+      const post = { network, hint: this.postHint(handles) };
+      return [{ kind: 'post', id: `post-${network}`, post }];
+    });
   });
-
-  private readonly targetsById = new Map(
-    this.targets.flatMap((target, index) =>
-      target.kind === 'divider' ? [] : [[String(index), target] as const],
-    ),
-  );
-  private readonly postNetworksById = new Map(
-    SOCIAL_NETWORKS.map((network) => [postIdOf(network), network] as const),
-  );
+  protected readonly items = computed((): ShareItem[] => {
+    const posts = this.postItems();
+    const divider: ShareItem[] =
+      posts.length === 0 ? [] : [{ kind: 'divider', id: 'post-divider' }];
+    return [...posts, ...divider, ...SHARE_TARGETS.map(configuredItem)];
+  });
+  private readonly itemsById = computed(() => new Map(this.items().map((item) => [item.id, item])));
 
   constructor() {
     effect(() => {
@@ -140,7 +137,7 @@ export class ShareButtonComponent {
   }
 
   /** Runs inside the click, so Safari still sees the gesture that share and clipboard need. */
-  protected choose(target: Exclude<ShareTarget, { kind: 'divider' }>): void {
+  protected choose(target: ConfiguredTarget): void {
     this.open.set(false);
     const url = stripTracking(this.url());
     if (target.kind === 'system') this.shareThroughSystem(url);
@@ -150,13 +147,7 @@ export class ShareButtonComponent {
 
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
-    const url = stripTracking(this.url());
-    this.responses.respond({
-      kind: 'link',
-      network,
-      url,
-      prefill: linkPrefill(network, this.title(), url),
-    });
+    this.postActions.postLink(network, stripTracking(this.url()), this.title());
   }
 
   protected closed(): void {
@@ -169,9 +160,9 @@ export class ShareButtonComponent {
     if (menu !== null) stepMenuFocus(event, menu);
   }
 
-  private postHint(accounts: readonly string[]): string {
-    return accounts.length === 1
-      ? this.i18n.translate('reader.share.postAs', { handle: accounts[0] })
+  private postHint(handles: readonly string[]): string {
+    return handles.length === 1
+      ? this.i18n.translate('reader.share.postAs', { handle: handles[0] })
       : this.i18n.translate('reader.share.pickAccount');
   }
 
@@ -179,32 +170,26 @@ export class ShareButtonComponent {
     this.sheet
       .open({
         title: this.i18n.translate('reader.share.button'),
-        actions: [
-          ...this.postSheetItems(),
-          ...this.targets.map((target, index) => this.sheetItem(target, index)),
-        ],
+        actions: this.items().map((item) => this.sheetItem(item)),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => this.chooseById(choice));
   }
 
-  private postSheetItems(): ActionSheetItem[] {
-    const items = this.postTargets().map((target): ActionSheetItem => ({
-      id: postIdOf(target.network),
-      label: this.i18n.translate(`reader.link.${target.network}`),
-      hint: target.hint,
-      logo: {
-        url: shareLogoUrl(`${target.network}.svg`),
-        color: `var(--brand-${target.network})`,
-      },
-    }));
-    return items.length === 0 ? [] : [...items, ACTION_SHEET_DIVIDER];
-  }
-
-  private sheetItem(target: ShareTarget, index: number): ActionSheetItem {
-    if (target.kind === 'divider') return ACTION_SHEET_DIVIDER;
+  private sheetItem(item: ShareItem): ActionSheetItem {
+    if (item.kind === 'divider') return ACTION_SHEET_DIVIDER;
+    if (item.kind === 'post') {
+      const network = item.post.network;
+      return {
+        id: item.id,
+        label: this.i18n.translate(`reader.link.${network}`),
+        hint: item.post.hint,
+        logo: { url: shareLogoUrl(`${network}.svg`), color: `var(--brand-${network})` },
+      };
+    }
+    const target = item.target;
     return {
-      id: String(index),
+      id: item.id,
       label: target.labelKey ? this.i18n.translate(target.labelKey) : (target.label ?? ''),
       symbol: target.icon ? undefined : (target.symbol ?? this.glyph),
       logo: target.icon ? { url: shareLogoUrl(target.icon), color: target.color } : undefined,
@@ -212,11 +197,9 @@ export class ShareButtonComponent {
   }
 
   private chooseById(choice: string | undefined): void {
-    if (choice === undefined) return;
-    const network = this.postNetworksById.get(choice);
-    if (network !== undefined) return this.post(network);
-    const target = this.targetsById.get(choice);
-    if (target !== undefined) this.choose(target);
+    const item = choice === undefined ? undefined : this.itemsById().get(choice);
+    if (item?.kind === 'post') this.post(item.post.network);
+    if (item?.kind === 'target') this.choose(item.target);
   }
 
   private shareThroughSystem(url: string): void {
@@ -235,7 +218,7 @@ export class ShareButtonComponent {
 
   /** mailto: hands off to another program; a new tab for it would stay blank. */
   private visit(address: string): void {
-    if (/^https?:/i.test(address)) window.open(address, '_blank', 'noopener,noreferrer');
+    if (/^https?:/i.test(address)) openExternal(address);
     else window.location.assign(address);
   }
 
