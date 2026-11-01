@@ -104,7 +104,8 @@ describe('EntryCommentsComponent', () => {
       showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
       const element = settleComments([anEntryComment({ post })]);
 
-      expect(element.querySelectorAll('.comment .count')).toHaveLength(1);
+      expect(element.querySelectorAll('.comment .count')).toHaveLength(0);
+      expect(element.querySelector('.comment button.quote')).not.toBeNull();
       expect(element.querySelector('.comment button.repost .number')?.textContent?.trim()).toBe(
         '1',
       );

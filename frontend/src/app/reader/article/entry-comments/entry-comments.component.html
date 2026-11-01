@@ -109,7 +109,7 @@
                   [reposted]="likeable() ? post.isReposted : null"
                   [canRepost]="post.canRepost"
                   [canReply]="likeable() ? post.canReply : null"
-                  [canQuote]="post.canQuote"
+                  [canQuote]="likeable() ? post.canQuote : null"
                   (likeToggled)="toggleLike(post)"
                   (repostToggled)="toggleRepost(post)"
                   (replyRequested)="respond('reply', c, post)"

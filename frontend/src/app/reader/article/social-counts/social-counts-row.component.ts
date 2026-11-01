@@ -16,8 +16,8 @@ interface ShownCount {
 }
 
 /**
- * A post's counters with its repost, reply and like buttons; `liked`, `reposted` and `canReply` are null when
- * the reader cannot act on the post, which shows plain counts instead.
+ * A post's counters with its repost, reply, quote and like buttons; `liked`, `reposted`, `canReply` and `canQuote`
+ * are null when the reader cannot act on the post, which shows plain counts instead.
  */
 @Component({
   selector: 'app-social-counts-row',
@@ -33,7 +33,7 @@ export class SocialCountsRowComponent {
   readonly reposted = input<boolean | null>(null);
   readonly canRepost = input(true);
   readonly canReply = input<boolean | null>(null);
-  readonly canQuote = input(true);
+  readonly canQuote = input<boolean | null>(null);
   readonly likeToggled = output<void>();
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
@@ -54,6 +54,9 @@ export class SocialCountsRowComponent {
   protected readonly replyHintKey = computed(
     () => `reader.${this.canReply() ? 'reply' : 'replyForbidden'}.${this.network()}`,
   );
+  protected readonly quoteHintKey = computed(
+    () => `reader.${this.canQuote() ? 'quote' : 'quoteForbidden'}.${this.network()}`,
+  );
   protected readonly likeKey = computed(
     () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
   );
@@ -67,7 +70,7 @@ export class SocialCountsRowComponent {
     if (this.canReply() === null) {
       shown.push({ kind: 'replies', icon: 'chat_bubble', count: counts.replies });
     }
-    if (counts.quotes !== null) {
+    if (this.canQuote() === null && counts.quotes !== null) {
       shown.push({ kind: 'quotes', icon: 'format_quote', count: counts.quotes });
     }
     if (this.liked() === null) shown.push({ kind: 'likes', icon: 'thumb_up', count: counts.likes });

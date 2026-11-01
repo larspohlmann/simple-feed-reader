@@ -13,7 +13,7 @@
         "
         [reposted]="isReposted"
         [canRepost]="canRepost()"
-        [canQuote]="canQuote()"
+        [canQuote]="canQuote() === true"
         (toggled)="repostToggled.emit()"
         (quoteRequested)="quoteRequested.emit()"
       />
@@ -38,6 +38,29 @@
         <app-icon name="chat_bubble" size="sm" />
         @if (replies !== null) {
           <span class="number">{{ format(replies) }}</span>
+        }
+      </button>
+    }
+    @let quoteGate = canQuote();
+    @if (quoteGate !== null) {
+      @let quotes = counts()?.quotes ?? null;
+      @let quoteHint = quoteHintKey() | transloco;
+      <button
+        type="button"
+        class="quote"
+        aria-haspopup="dialog"
+        [attr.aria-disabled]="quoteGate ? null : 'true'"
+        [attr.title]="quoteHint"
+        [attr.aria-label]="
+          quotes === null
+            ? quoteHint
+            : quoteHint + ', ' + (labelKey('quotes', quotes) | transloco: { count: quotes })
+        "
+        (click)="quoteGate && quoteRequested.emit()"
+      >
+        <app-icon name="format_quote" size="sm" />
+        @if (quotes !== null) {
+          <span class="number">{{ format(quotes) }}</span>
         }
       </button>
     }

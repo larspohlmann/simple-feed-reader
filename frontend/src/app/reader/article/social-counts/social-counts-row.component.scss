@@ -26,6 +26,7 @@
 }
 
 .like,
-.reply {
+.reply,
+.quote {
   @include pill-toggle.pill-toggle;
 }

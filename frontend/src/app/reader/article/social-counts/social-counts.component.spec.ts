@@ -262,6 +262,76 @@ describe('SocialCountsComponent', () => {
     });
   });
 
+  describe('quote', () => {
+    const quoteButton = (element: HTMLElement) =>
+      element.querySelector('button.quote') as HTMLButtonElement | null;
+
+    it('turns the quotes count into a button that opens the composer for a quote', () => {
+      show(
+        anEntry({
+          id: 1,
+          excerpt: 'Big news',
+          social: { network: 'bluesky', isLiked: false, canLike: true },
+        }),
+      );
+      const button = quoteButton(
+        settle(
+          loaded({}, false, { isReposted: false, canRepost: true, canReply: true, canQuote: true }),
+        ),
+      )!;
+
+      expect(button.getAttribute('aria-label')).toBe('Quote on Bluesky, 2 quotes');
+      expect(button.querySelector('.number')?.textContent?.trim()).toBe('2');
+      button.click();
+
+      expect(responses.respond).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'quote', entryId: 1, address: null }),
+      );
+    });
+
+    it('offers the quote disabled, with its reason, on a post the author keeps from quotes', () => {
+      show(post());
+      const button = quoteButton(
+        settle(
+          loaded({}, false, {
+            isReposted: false,
+            canRepost: true,
+            canReply: true,
+            canQuote: false,
+          }),
+        ),
+      )!;
+      button.click();
+
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(button.title).toBe('The author doesn’t allow quotes of this post');
+      expect(responses.respond).not.toHaveBeenCalled();
+    });
+
+    it('shows Mastodon, which counts no quotes, a quote button without a number', () => {
+      show(post({ network: 'mastodon' }));
+      const button = quoteButton(
+        settle(
+          loaded({ quotes: null }, false, {
+            isReposted: false,
+            canRepost: true,
+            canReply: true,
+            canQuote: true,
+          }),
+        ),
+      )!;
+
+      expect(button.querySelector('.number')).toBeNull();
+      expect(button.getAttribute('aria-label')).toBe('Quote on Mastodon');
+    });
+
+    it('stays a plain count until the network says what the reader may do', () => {
+      show(post());
+
+      expect(quoteButton(settle(loaded()))).toBeNull();
+    });
+  });
+
   describe('repost', () => {
     it('stays a plain count until the network says what the reader did', () => {
       show(post());
@@ -278,7 +348,7 @@ describe('SocialCountsComponent', () => {
       );
       const button = repostButton(element)!;
 
-      expect(labels(element)).toEqual(['2 quotes']);
+      expect(labels(element)).toEqual([]);
       expect(element.querySelector('.row')!.firstElementChild?.tagName).toBe('APP-REPOST-BUTTON');
       expect(button.querySelector('.number')?.textContent?.trim()).toBe('5');
       expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky, 5 reposts');
