@@ -28,8 +28,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     private const float TIMEOUT_SECONDS = 10.0;
     private const int MAXIMUM_RESPONSE_BYTES = 4 * 1024 * 1024;
     private const string TEXT_OUTPUT = 'text';
-    // Anthropic refuses its model listing without it; every other provider ignores the header.
-    private const string ANTHROPIC_VERSION = '2023-06-01';
+    // Retry only: Anthropic refuses its listing without it; OpenRouter shrinks its listing to 20 models with it.
+    private const array ANTHROPIC_VERSION_HEADER = ['anthropic-version' => '2023-06-01'];
     private const array SCORING_OUTPUTS = [
         'decisions' => ScoringProtocol::SystemOne,
         'rerank' => ScoringProtocol::Rerank,
@@ -63,6 +63,9 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     {
         try {
             $response = $this->request($credentials);
+            if (Response::HTTP_BAD_REQUEST === $response->getStatusCode()) {
+                $response = $this->request($credentials, self::ANTHROPIC_VERSION_HEADER);
+            }
             $status = $response->getStatusCode();
 
             if (RejectingStatus::refusesKey($status)) {
@@ -79,7 +82,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
         }
     }
 
-    private function request(ProviderCredentialsModel $credentials): ResponseInterface
+    /** @param array<string, string> $extraHeaders */
+    private function request(ProviderCredentialsModel $credentials, array $extraHeaders = []): ResponseInterface
     {
         return $this->httpClient->request('GET', $credentials->baseUrl . '/models?output_modalities=all', [
             'headers' => [
@@ -87,7 +91,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
                 // No transparent compression, so the wire cap below also bounds the decompressed body.
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
-                'anthropic-version' => self::ANTHROPIC_VERSION,
+                ...$extraHeaders,
                 ...$credentials->authorizationHeaders(),
             ],
             'timeout' => self::TIMEOUT_SECONDS,

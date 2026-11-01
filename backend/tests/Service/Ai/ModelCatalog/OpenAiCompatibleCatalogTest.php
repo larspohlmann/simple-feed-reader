@@ -18,14 +18,16 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class OpenAiCompatibleCatalogTest extends TestCase
 {
+    private const string ANTHROPIC_VERSION_HEADER = 'anthropic-version: 2023-06-01';
+
     private function credentials(): ProviderCredentialsModel
     {
         return ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
     }
 
-    private function catalogAnswering(MockResponse $response): OpenAiCompatibleCatalog
+    private function catalogAnswering(MockResponse ...$responses): OpenAiCompatibleCatalog
     {
-        return new OpenAiCompatibleCatalog(new MockHttpClient($response), 'SimpleFeedReader/1.0');
+        return new OpenAiCompatibleCatalog(new MockHttpClient($responses), 'SimpleFeedReader/1.0');
     }
 
     /**
@@ -255,9 +257,47 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         self::assertContains('Accept: application/json', $this->headersSentFor($this->credentials()));
     }
 
-    public function testItSendsTheAnthropicVersionHeader(): void
+    /** OpenRouter answers an authenticated request carrying the header with its 20-model Anthropic listing (#1957). */
+    public function testAnAnsweredListingCarriesNoAnthropicVersion(): void
     {
-        self::assertContains('anthropic-version: 2023-06-01', $this->headersSentFor($this->credentials()));
+        $listing = new MockResponse('{"data":[{"id":"gpt-4o"}]}');
+
+        $this->catalogAnswering($listing)->listModels($this->credentials());
+
+        self::assertNotContains(self::ANTHROPIC_VERSION_HEADER, self::headersSentWith($listing));
+    }
+
+    public function testAListingRefusedWithoutAVersionIsRetriedWithIt(): void
+    {
+        $listing = new MockResponse('{"data":[{"id":"claude-haiku-5-5"}]}');
+        $catalog = $this->catalogAnswering(
+            new MockResponse('{"error":"anthropic-version: header is required"}', ['http_code' => 400]),
+            $listing,
+        );
+
+        self::assertSame(['claude-haiku-5-5'], $this->ids($catalog->listModels($this->credentials())));
+        self::assertContains(self::ANTHROPIC_VERSION_HEADER, self::headersSentWith($listing));
+    }
+
+    /** @return array<mixed> */
+    private static function headersSentWith(MockResponse $response): array
+    {
+        $headers = $response->getRequestOptions()['headers'] ?? null;
+        self::assertIsArray($headers);
+
+        return $headers;
+    }
+
+    public function testARetryThatIsRefusedAgainIsUnreachable(): void
+    {
+        $catalog = $this->catalogAnswering(
+            new MockResponse('{}', ['http_code' => 400]),
+            new MockResponse('{}', ['http_code' => 400]),
+        );
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider answered with status 400.');
+        $catalog->listModels($this->credentials());
     }
 
     /** @return array<int, string> */
