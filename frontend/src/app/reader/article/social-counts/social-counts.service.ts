@@ -90,7 +90,6 @@ export class SocialCountsService {
     );
   }
 
-  /** A quotes count the network leaves out (Mastodon's) stays out. */
   stepQuotes(entryId: number): void {
     this.stateFor(entryId).update((state) =>
       state.status === 'ok' && state.counts.quotes !== null

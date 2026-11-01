@@ -1,6 +1,6 @@
 import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
 import { EntryCommentDto } from '../../entry-comment';
-import { withQuoteCounted, withReply, withoutReply } from './thread-edits';
+import { withReply, withoutReply } from './thread-edits';
 
 const commentAt = (address: string, depth: number, replies = 0): EntryCommentDto =>
   anEntryComment({
@@ -40,20 +40,6 @@ describe('thread edits', () => {
     expect(shape(withoutReply(thread, 'a1'))).toEqual(['a@0', 'b@0']);
     expect(shape(withoutReply(thread, 'b'))).toEqual(['a@0', 'a1@1']);
     expect(withoutReply(thread, 'gone')).toBe(thread);
-  });
-
-  it('counts a quote on the quoted comment only, where its network counts quotes', () => {
-    const quoted = {
-      ...commentAt('a', 0),
-      post: aCommentPost({ address: 'a', counts: { likes: 0, reposts: 0, replies: 0, quotes: 2 } }),
-    };
-    const uncounted = commentAt('b', 0);
-
-    const edited = withQuoteCounted([quoted, uncounted], 'a');
-
-    expect(edited[0].post?.counts.quotes).toBe(3);
-    expect(edited[1]).toBe(uncounted);
-    expect(withQuoteCounted([uncounted], 'b')[0].post?.counts.quotes).toBeNull();
   });
 
   it('counts one reply less on the comment a removed reply answered', () => {

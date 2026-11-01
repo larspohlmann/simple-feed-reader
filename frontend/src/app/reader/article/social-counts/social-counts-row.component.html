@@ -18,49 +18,26 @@
         (quoteRequested)="quoteRequested.emit()"
       />
     }
-    @let replyGate = canReply();
-    @if (replyGate !== null) {
-      @let replies = counts()?.replies ?? null;
-      @let hint = replyHintKey() | transloco;
+    @for (pill of responsePills(); track pill.kind) {
+      @let hint = hintKey(pill) | transloco;
       <button
         type="button"
-        class="reply"
+        [class]="pill.kind"
         aria-haspopup="dialog"
-        [attr.aria-disabled]="replyGate ? null : 'true'"
+        [attr.aria-disabled]="pill.allowed ? null : 'true'"
         [attr.title]="hint"
         [attr.aria-label]="
-          replies === null
+          pill.count === null
             ? hint
-            : hint + ', ' + (labelKey('replies', replies) | transloco: { count: replies })
+            : hint +
+              ', ' +
+              (labelKey(pill.countKind, pill.count) | transloco: { count: pill.count })
         "
-        (click)="replyGate && replyRequested.emit()"
+        (click)="pill.allowed && pill.requested.emit()"
       >
-        <app-icon name="chat_bubble" size="sm" />
-        @if (replies !== null) {
-          <span class="number">{{ format(replies) }}</span>
-        }
-      </button>
-    }
-    @let quoteGate = canQuote();
-    @if (quoteGate !== null) {
-      @let quotes = counts()?.quotes ?? null;
-      @let quoteHint = quoteHintKey() | transloco;
-      <button
-        type="button"
-        class="quote"
-        aria-haspopup="dialog"
-        [attr.aria-disabled]="quoteGate ? null : 'true'"
-        [attr.title]="quoteHint"
-        [attr.aria-label]="
-          quotes === null
-            ? quoteHint
-            : quoteHint + ', ' + (labelKey('quotes', quotes) | transloco: { count: quotes })
-        "
-        (click)="quoteGate && quoteRequested.emit()"
-      >
-        <app-icon name="format_quote" size="sm" />
-        @if (quotes !== null) {
-          <span class="number">{{ format(quotes) }}</span>
+        <app-icon [name]="pill.icon" size="sm" />
+        @if (pill.count !== null) {
+          <span class="number">{{ format(pill.count) }}</span>
         }
       </button>
     }

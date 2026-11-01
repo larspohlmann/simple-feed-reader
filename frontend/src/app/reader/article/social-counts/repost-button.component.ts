@@ -61,12 +61,11 @@ export class RepostButtonComponent {
     () => `reader.${this.reposted() ? 'unrepost' : 'repost'}.${this.network()}`,
   );
   protected readonly opens = computed(() => this.canRepost() || this.canQuote());
+  private readonly repostForbiddenKey = computed(() => `reader.repostForbidden.${this.network()}`);
   /** Named for the repost while it is allowed, for the menu while only quoting is, for the refusal otherwise. */
   protected readonly hintKey = computed(() => {
     if (this.canRepost()) return this.actionKey();
-    return this.canQuote()
-      ? `reader.repostMenu.${this.network()}`
-      : `reader.repostForbidden.${this.network()}`;
+    return this.canQuote() ? `reader.repostMenu.${this.network()}` : this.repostForbiddenKey();
   });
 
   protected press(): void {
@@ -105,7 +104,7 @@ export class RepostButtonComponent {
             id: TOGGLE,
             label: this.i18n.translate(this.actionKey()),
             symbol: 'repeat',
-            ...this.refusal(this.canRepost(), `reader.repostForbidden.${this.network()}`),
+            ...this.refusal(this.canRepost(), this.repostForbiddenKey()),
           },
           {
             id: QUOTE,

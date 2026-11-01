@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OutputEmitterRef,
+  computed,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { LanguageService } from '../../../core/i18n/language.service';
@@ -13,6 +21,16 @@ interface ShownCount {
   kind: CountKind;
   icon: string;
   count: number;
+}
+
+/** A count the reader can answer from: the reply or the quote pill, dimmed with its reason where refused. */
+interface ResponsePill {
+  kind: 'reply' | 'quote';
+  countKind: CountKind;
+  icon: string;
+  count: number | null;
+  allowed: boolean;
+  requested: OutputEmitterRef<void>;
 }
 
 /**
@@ -51,12 +69,33 @@ export class SocialCountsRowComponent {
       this.canReply() !== null ||
       this.counts() !== null,
   );
-  protected readonly replyHintKey = computed(
-    () => `reader.${this.canReply() ? 'reply' : 'replyForbidden'}.${this.network()}`,
-  );
-  protected readonly quoteHintKey = computed(
-    () => `reader.${this.canQuote() ? 'quote' : 'quoteForbidden'}.${this.network()}`,
-  );
+  protected readonly responsePills = computed<ResponsePill[]>(() => {
+    const counts = this.counts();
+    const replyGate = this.canReply();
+    const quoteGate = this.canQuote();
+    const pills: ResponsePill[] = [];
+    if (replyGate !== null) {
+      pills.push({
+        kind: 'reply',
+        countKind: 'replies',
+        icon: 'chat_bubble',
+        count: counts?.replies ?? null,
+        allowed: replyGate,
+        requested: this.replyRequested,
+      });
+    }
+    if (quoteGate !== null) {
+      pills.push({
+        kind: 'quote',
+        countKind: 'quotes',
+        icon: 'format_quote',
+        count: counts?.quotes ?? null,
+        allowed: quoteGate,
+        requested: this.quoteRequested,
+      });
+    }
+    return pills;
+  });
   protected readonly likeKey = computed(
     () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
   );
@@ -80,6 +119,10 @@ export class SocialCountsRowComponent {
   protected readonly repostKind = computed<CountKind>(() =>
     this.network() === 'mastodon' ? 'boosts' : 'reposts',
   );
+  protected hintKey(pill: ResponsePill): string {
+    return `reader.${pill.kind}${pill.allowed ? '' : 'Forbidden'}.${this.network()}`;
+  }
+
   protected format(count: number): string {
     return this.compact().format(count);
   }
