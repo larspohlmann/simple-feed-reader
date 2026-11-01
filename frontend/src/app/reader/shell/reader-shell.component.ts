@@ -336,11 +336,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onCloseReader(): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: entryChangeParams(null),
-      queryParamsHandling: 'merge',
-    });
+    this.entryActions.closeEntry();
   }
 
   onMarkAboveRead(ids: number[]): void {

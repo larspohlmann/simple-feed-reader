@@ -5,6 +5,7 @@ describe('likeableSocial', () => {
     network: 'bluesky',
     isLiked: false,
     canLike,
+    isOwn: false,
   });
 
   it('returns the social data when the reader can like', () => {

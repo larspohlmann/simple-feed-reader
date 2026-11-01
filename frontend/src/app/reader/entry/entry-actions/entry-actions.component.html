@@ -84,3 +84,16 @@
 >
   <app-icon name="check" [size]="size()" />
 </button>
+@if (entry().social?.isOwn) {
+  <button
+    type="button"
+    class="danger"
+    [attr.aria-label]="'reader.deletePost.action' | transloco"
+    [attr.title]="'reader.deletePost.action' | transloco"
+    (click)="$event.stopPropagation(); actions.deletePost(entry())"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon name="delete" [size]="size()" />
+  </button>
+}

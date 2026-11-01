@@ -1553,6 +1553,15 @@
       "message": "It is deleted on {{ network }} as well.",
       "confirm": "Delete"
     },
+    "deletePost": {
+      "action": "Delete post",
+      "title": "Delete this post?",
+      "titleWithOneReply": "Delete this post and its reply?",
+      "titleWithReplies": "Delete this post and its {{ count }} replies?",
+      "message": "It is deleted on {{ network }} as well.",
+      "confirm": "Delete",
+      "alreadyGone": "Already deleted on {{ network }} — removed here."
+    },
     "quote": {
       "bluesky": "Quote on Bluesky",
       "mastodon": "Quote on Mastodon"

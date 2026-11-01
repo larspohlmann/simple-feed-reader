@@ -8,6 +8,7 @@ export abstract class EntryActionHandler {
   abstract keep(entry: EntryDto): void;
   abstract toggleRead(entry: EntryDto): void;
   abstract open(entry: EntryDto): void;
+  abstract deletePost(entry: EntryDto): void;
 }
 
 const IGNORED_ENTRY_ACTIONS: EntryActionHandler = {
@@ -16,4 +17,5 @@ const IGNORED_ENTRY_ACTIONS: EntryActionHandler = {
   keep: () => undefined,
   toggleRead: () => undefined,
   open: () => undefined,
+  deletePost: () => undefined,
 };

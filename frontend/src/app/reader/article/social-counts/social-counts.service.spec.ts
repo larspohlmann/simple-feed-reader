@@ -29,7 +29,7 @@ describe('SocialCountsService', () => {
     ...overrides,
   });
   const post = (id = 1, isLiked = false) =>
-    anEntry({ id, social: { network: 'bluesky', isLiked, canLike: true } });
+    anEntry({ id, social: { network: 'bluesky', isLiked, canLike: true, isOwn: false } });
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -119,7 +119,10 @@ describe('SocialCountsService', () => {
 
   it('asks no like state for a post the reader cannot like', () => {
     service.load(
-      anEntry({ id: 3, social: { network: 'mastodon', isLiked: false, canLike: false } }),
+      anEntry({
+        id: 3,
+        social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
+      }),
     );
 
     expect(api.viewer).not.toHaveBeenCalled();

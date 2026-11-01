@@ -1553,6 +1553,15 @@
       "message": "Sie wird auch auf {{ network }} gelöscht.",
       "confirm": "Löschen"
     },
+    "deletePost": {
+      "action": "Beitrag löschen",
+      "title": "Diesen Beitrag löschen?",
+      "titleWithOneReply": "Diesen Beitrag und seine Antwort löschen?",
+      "titleWithReplies": "Diesen Beitrag und seine {{ count }} Antworten löschen?",
+      "message": "Er wird auch auf {{ network }} gelöscht.",
+      "confirm": "Löschen",
+      "alreadyGone": "Auf {{ network }} schon gelöscht – hier entfernt."
+    },
     "quote": {
       "bluesky": "Auf Bluesky zitieren",
       "mastodon": "Auf Mastodon zitieren"

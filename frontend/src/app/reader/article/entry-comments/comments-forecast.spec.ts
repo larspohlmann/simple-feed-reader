@@ -47,7 +47,7 @@ const socialPost = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
     id: 1,
     comments: 'auto',
-    social: { network: 'bluesky', isLiked: false, canLike: true },
+    social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
     ...over,
   });
 
