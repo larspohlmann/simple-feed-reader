@@ -24,6 +24,7 @@ describe('SocialCountsService', () => {
     isLiked: false,
     isReposted: false,
     canRepost: true,
+    canReply: true,
     ...overrides,
   });
   const post = (id = 1, isLiked = false) =>
@@ -67,7 +68,7 @@ describe('SocialCountsService', () => {
       status: 'ok',
       counts,
       likedAtLoad: false,
-      repost: { isReposted: false, canRepost: true },
+      actions: { isReposted: false, canRepost: true, canReply: true },
       loadedAt: Date.parse('2026-10-13T12:00:00Z'),
     });
   });
@@ -112,7 +113,7 @@ describe('SocialCountsService', () => {
     service.load(post(1, true));
 
     expect(entries.adoptLike).not.toHaveBeenCalled();
-    expect(service.state(1)()).toMatchObject({ status: 'ok', likedAtLoad: true, repost: null });
+    expect(service.state(1)()).toMatchObject({ status: 'ok', likedAtLoad: true, actions: null });
   });
 
   it('asks no like state for a post the reader cannot like', () => {
@@ -121,7 +122,7 @@ describe('SocialCountsService', () => {
     );
 
     expect(api.viewer).not.toHaveBeenCalled();
-    expect(service.state(3)()).toMatchObject({ status: 'ok', likedAtLoad: false, repost: null });
+    expect(service.state(3)()).toMatchObject({ status: 'ok', likedAtLoad: false, actions: null });
   });
 
   it('asks the like state again on a reload', () => {
@@ -149,7 +150,7 @@ describe('SocialCountsService', () => {
 
     service.load(post());
 
-    expect(service.state(1)()).toMatchObject({ repost: { isReposted: true, canRepost: false } });
+    expect(service.state(1)()).toMatchObject({ actions: { isReposted: true, canRepost: false } });
   });
 
   describe('toggleRepost', () => {
@@ -164,14 +165,14 @@ describe('SocialCountsService', () => {
       expect(api.repost).toHaveBeenCalledWith(1);
       expect(service.state(1)()).toMatchObject({
         counts: { reposts: 6 },
-        repost: { isReposted: true },
+        actions: { isReposted: true },
       });
 
       service.toggleRepost(post(), onError);
       expect(api.unrepost).toHaveBeenCalledWith(1);
       expect(service.state(1)()).toMatchObject({
         counts: { reposts: 5 },
-        repost: { isReposted: false },
+        actions: { isReposted: false },
       });
     });
 
@@ -191,7 +192,7 @@ describe('SocialCountsService', () => {
 
       expect(service.state(1)()).toMatchObject({
         counts: { reposts: 5 },
-        repost: { isReposted: false },
+        actions: { isReposted: false },
       });
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'social_post_refused' }),
@@ -291,5 +292,17 @@ describe('SocialCountsService', () => {
 
     expect(service.state(1)()).toEqual({ status: 'idle' });
     expect(held()).toEqual({ status: 'loading' });
+  });
+
+  it('steps the replies count for a reply the reader published or deleted, never below zero', () => {
+    service.load(post());
+    service.stepReplies(1, true);
+    expect(service.state(1)()).toMatchObject({ counts: { replies: 8 } });
+
+    service.stepReplies(1, false);
+    service.stepReplies(1, false);
+    expect(service.state(1)()).toMatchObject({ counts: { replies: 6 } });
+    service.stepReplies(2, true);
+    expect(service.state(2)()).toEqual({ status: 'idle' });
   });
 });

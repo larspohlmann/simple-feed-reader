@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Model;
 
+use App\Service\Social\Model\ReplyContextModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Tests\Support\SocialAccounts;
@@ -37,7 +38,8 @@ final class SocialPostModelTest extends TestCase
             ->withCounts($counts)
             ->alreadyLikedAs('110')
             ->alreadyRepostedAs('110')
-            ->notRepostable();
+            ->notRepostable()
+            ->inReplyContext(new ReplyContextModel('alice@mastodon.example', null, 'private', true));
 
         self::assertSame('110', $post->existingLikeId);
         self::assertSame('110', $post->existingRepostId);
@@ -45,5 +47,9 @@ final class SocialPostModelTest extends TestCase
         self::assertSame($counts, $post->counts);
         self::assertSame('110', $post->withCounts(null)->existingRepostId);
         self::assertFalse($post->withCounts(null)->canRepost);
+        self::assertSame('private', $post->withCounts(null)->replyContext->visibility);
+        self::assertSame('private', $post->alreadyLikedAs('111')->replyContext->visibility);
+        self::assertSame('110', $post->inReplyContext(new ReplyContextModel())->existingLikeId);
+        self::assertSame($counts, $post->inReplyContext(new ReplyContextModel())->counts);
     }
 }

@@ -7,12 +7,14 @@ namespace App\Service\Social;
 use App\Entity\SocialAccount;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialPostModel;
 
-/** Writes and deletes the records an account keeps about a post in its own repo: likes and reposts. */
+/** Writes and deletes records in an account's own repo: likes and reposts of a post, and its own posts. */
 final readonly class BlueskyRecords
 {
+    public const string POST_COLLECTION = 'app.bsky.feed.post';
     private const string CREATE_RECORD = '/xrpc/com.atproto.repo.createRecord';
     private const string DELETE_RECORD = '/xrpc/com.atproto.repo.deleteRecord';
 
@@ -31,11 +33,30 @@ final readonly class BlueskyRecords
             'record' => [
                 '$type' => $collection,
                 'subject' => ['uri' => $post->postId, 'cid' => $post->contentId],
-                'createdAt' => $this->clock->now()->format('Y-m-d\TH:i:s.v\Z'),
+                'createdAt' => $this->now(),
             ],
         ]);
 
         return JsonNodeModel::of($answer->json())->string('uri');
+    }
+
+    /**
+     * @param array<string, mixed> $fields the post record beyond its type and creation time
+     *
+     * @return string the AT URI Bluesky gave the new post
+     *
+     * @throws SocialNetworkUnreachableException when Bluesky answers without one
+     */
+    public function createPost(SocialAccount $account, array $fields): string
+    {
+        $answer = $this->sessions->actAs($account, self::CREATE_RECORD, [
+            'repo' => $account->getIdentity(),
+            'collection' => self::POST_COLLECTION,
+            'record' => ['$type' => self::POST_COLLECTION, ...$fields, 'createdAt' => $this->now()],
+        ]);
+
+        return JsonNodeModel::of($answer->json())->string('uri')
+            ?? throw new SocialNetworkUnreachableException('Bluesky took the post but named no address for it.');
     }
 
     /** A record Bluesky no longer has counts as deleted. */
@@ -49,5 +70,10 @@ final readonly class BlueskyRecords
             ]);
         } catch (SocialPostNotFoundException) {
         }
+    }
+
+    private function now(): string
+    {
+        return $this->clock->now()->format('Y-m-d\TH:i:s.v\Z');
     }
 }

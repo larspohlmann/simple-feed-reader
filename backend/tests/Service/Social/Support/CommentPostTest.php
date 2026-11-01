@@ -103,6 +103,37 @@ final class CommentPostTest extends TestCase
         self::assertNull(CommentPost::ofMastodonStatus(self::mastodonStatus([])));
     }
 
+    public function testABlueskyReplyNamesItsAuthorsDidAndItsReplyGate(): void
+    {
+        $post = CommentPost::ofBlueskyPost(JsonNodeModel::of([
+            'uri' => self::POST_URI,
+            'author' => ['did' => 'did:plc:ann'],
+            'viewer' => ['replyDisabled' => true],
+            'likeCount' => 0,
+            'repostCount' => 0,
+            'replyCount' => 0,
+        ]));
+
+        self::assertNotNull($post);
+        self::assertSame('did:plc:ann', $post->authorIdentity);
+        self::assertFalse($post->viewer->canReply);
+        self::assertFalse($post->viewer->isOwn);
+    }
+
+    public function testAMastodonReplyNamesItsAuthorAsAnIdentityAndTakesReplies(): void
+    {
+        $status = self::mastodonStatus([
+            'uri' => self::STATUS_URI,
+            'account' => ['acct' => 'Ann', 'url' => 'https://mastodon.social/@Ann'],
+        ]);
+
+        $post = CommentPost::ofMastodonStatus($status);
+
+        self::assertNotNull($post);
+        self::assertSame('ann@mastodon.social', $post->authorIdentity);
+        self::assertTrue($post->viewer->canReply);
+    }
+
     private static function untouched(): CommentViewerModel
     {
         return new CommentViewerModel(false, false, true);
@@ -121,7 +152,7 @@ final class CommentPostTest extends TestCase
         ]);
     }
 
-    /** @param array<string, string|bool> $fields */
+    /** @param array<string, string|bool|array<string, string>> $fields */
     private static function mastodonStatus(array $fields): JsonNodeModel
     {
         return JsonNodeModel::of(['favourites_count' => 7, 'reblogs_count' => 2, 'replies_count' => 1] + $fields);

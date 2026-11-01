@@ -82,6 +82,10 @@
   text-decoration: none;
 }
 
+.delete {
+  margin-inline-start: auto;
+}
+
 a.author:hover,
 a.when:hover {
   text-decoration: underline;

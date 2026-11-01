@@ -7,9 +7,12 @@ namespace App\Service\Social\PostResolver;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\PostReferenceModel;
+use App\Service\Social\Model\ReplyContextModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\PostCounts;
@@ -40,7 +43,27 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         $resolved = SocialPostModel::onBluesky($account, $address, $contentId)
             ->withCounts(PostCounts::ofBlueskyPost($post));
 
-        return self::withViewer($resolved, $post->node('viewer'));
+        return self::withViewer($resolved, $post->node('viewer'))->inReplyContext(self::replyContextOf($post));
+    }
+
+    private static function replyContextOf(JsonNodeModel $post): ReplyContextModel
+    {
+        return new ReplyContextModel(
+            authorIdentity: $post->node('author')->string('did'),
+            threadRoot: self::referenceOrNull($post->node('record')->node('reply')->node('root')),
+            canReply: !$post->node('viewer')->isTrue('replyDisabled'),
+        );
+    }
+
+    private static function referenceOrNull(JsonNodeModel $reference): ?PostReferenceModel
+    {
+        $uri = $reference->string('uri');
+        $contentId = $reference->string('cid');
+        if (null === $uri || null === $contentId || !AtPostUri::matches($uri)) {
+            return null;
+        }
+
+        return new PostReferenceModel($uri, $contentId);
     }
 
     private static function withViewer(SocialPostModel $resolved, JsonNodeModel $viewer): SocialPostModel

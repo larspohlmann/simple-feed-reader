@@ -65,6 +65,26 @@ final readonly class MastodonAccountApi
         return self::postAnswerAccepted($this->answer($account, $request), $scope);
     }
 
+    /**
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException only on a 401; a 403 concerns the post or the token's scope
+     * @throws SocialTokenScopeMissingException naming $scope
+     * @throws SocialPostRefusedException carrying Mastodon's reason when it rejects what was sent
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function writeAs(SocialAccount $account, ApiRequestModel $request, string $scope): ApiResponseModel
+    {
+        $answer = $this->answer($account, $request);
+        if (Response::HTTP_UNPROCESSABLE_ENTITY === $answer->status) {
+            throw new SocialPostRefusedException(
+                JsonNodeModel::of($answer->json())->string('error') ?? 'Mastodon refused what was sent.',
+            );
+        }
+
+        return self::postAnswerAccepted($answer, $scope);
+    }
+
     private function answer(SocialAccount $account, ApiRequestModel $request): ApiResponseModel
     {
         return $this->mastodon->answer($this->authorized($account, $request));

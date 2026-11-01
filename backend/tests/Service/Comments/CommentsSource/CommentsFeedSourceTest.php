@@ -64,13 +64,13 @@ final class CommentsFeedSourceTest extends KernelTestCase
 
     private function fetch(Entry $entry): CommentsAnswerModel
     {
-        return $this->source->fetch(new CommentsRequest($this->source, $this->user, $entry));
+        return $this->source->fetch($this->requestFor($entry));
     }
 
     /** @return list<EntryCommentModel> */
     private function comments(Entry $entry): array
     {
-        return $this->source->read($entry, $this->fetch($entry)->body)->comments;
+        return $this->source->read($this->requestFor($entry), $this->fetch($entry)->body)->comments;
     }
 
     /** @return list<EntryCommentModel> */
@@ -302,7 +302,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
     {
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->read(self::entry(), /** @lang TEXT */ '<html>nope');
+        $this->source->read($this->requestFor(self::entry()), /** @lang TEXT */ '<html>nope');
     }
 
     public function testEachFetchSpendsTheReadersCommentsBudget(): void
@@ -319,5 +319,10 @@ final class CommentsFeedSourceTest extends KernelTestCase
         } finally {
             self::assertCount(self::COMMENTS_BUDGET, $this->fetcher->fetchedUrls);
         }
+    }
+
+    private function requestFor(Entry $entry): CommentsRequest
+    {
+        return new CommentsRequest($this->source, $this->user, $entry);
     }
 }

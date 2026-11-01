@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\PostResolver;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\PostReferenceModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\PostResolver\BlueskyPostResolver;
 use App\Tests\Support\RoutedHttpClient;
@@ -38,6 +39,64 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertNull($post->existingLikeId);
         self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
         self::assertNull($post->counts);
+    }
+
+    public function testAPostCarriesItsAuthorThreadRootAndReplyGate(): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.test'],
+            'record' => ['reply' => [
+                'root' => ['uri' => 'at://did:plc:carol/app.bsky.feed.post/3root', 'cid' => 'bafy-root'],
+                'parent' => ['uri' => 'at://did:plc:carol/app.bsky.feed.post/3root', 'cid' => 'bafy-root'],
+            ]],
+            'viewer' => ['replyDisabled' => true],
+        ]]]);
+
+        $replying = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->replyContext;
+
+        self::assertSame('did:plc:bob', $replying->authorIdentity);
+        self::assertEquals(
+            new PostReferenceModel('at://did:plc:carol/app.bsky.feed.post/3root', 'bafy-root'),
+            $replying->threadRoot,
+        );
+        self::assertFalse($replying->canReply);
+        self::assertNull($replying->visibility);
+    }
+
+    public function testATopLevelPostIsItsOwnThreadRootAndTakesReplies(): void
+    {
+        $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]);
+
+        $replying = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->replyContext;
+
+        self::assertNull($replying->threadRoot);
+        self::assertNull($replying->authorIdentity);
+        self::assertTrue($replying->canReply);
+    }
+
+    /** @param array<string, string> $root */
+    #[DataProvider('incompleteRoots')]
+    public function testAnIncompleteRootReferenceReadsAsNone(array $root): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'record' => ['reply' => ['root' => $root]],
+        ]]]);
+
+        $replying = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->replyContext;
+
+        self::assertNull($replying->threadRoot);
+    }
+
+    /** @return iterable<string, array{array<string, string>}> */
+    public static function incompleteRoots(): iterable
+    {
+        yield 'no cid' => [['uri' => 'at://did:plc:carol/app.bsky.feed.post/3root']];
+        yield 'no uri' => [['cid' => 'bafy-root']];
+        yield 'not a post' => [['uri' => 'https://bsky.app/x', 'cid' => 'bafy-root']];
     }
 
     public function testAPostCarriesTheCountsTheAccountsServerAnswered(): void

@@ -46,7 +46,7 @@ describe('SocialPostApi', () => {
     let received: unknown;
     api.viewer(7).subscribe((viewer) => (received = viewer));
 
-    const viewer = { isLiked: true, isReposted: false, canRepost: true };
+    const viewer = { isLiked: true, isReposted: false, canRepost: true, canReply: true };
     const testRequest = ctrl.expectOne('https://api.test/api/entries/7/social/viewer');
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush(viewer);
@@ -105,5 +105,42 @@ describe('SocialPostApi', () => {
     const testRequest = ctrl.expectOne(`https://api.test/api/entries/3/${path}?address=${REPLY}`);
     expect(testRequest.request.method).toBe(method);
     testRequest.flush({});
+  });
+
+  it('GETs the composer context for the post or a reply on a chosen account', () => {
+    api.composer(7, null).subscribe();
+    expect(ctrl.expectOne('https://api.test/api/entries/7/social/composer').request.method).toBe(
+      'GET',
+    );
+
+    api.composer(7, REPLY, 4).subscribe();
+    ctrl
+      .expectOne(`https://api.test/api/entries/7/social/composer?address=${REPLY}&accountId=4`)
+      .flush({});
+  });
+
+  it('POSTs a reply to the post, or to a reply named by its address', () => {
+    const draft = { text: 'Hi', accountId: 4, language: 'de', idempotencyKey: 'k-1' };
+    let received: unknown;
+    api.reply(7, null, draft).subscribe((published) => (received = published));
+
+    const toPost = ctrl.expectOne('https://api.test/api/entries/7/social/replies');
+    expect(toPost.request.method).toBe('POST');
+    expect(toPost.request.body).toEqual(draft);
+    toPost.flush({ address: 'at://x', url: null });
+    expect(received).toEqual({ address: 'at://x', url: null });
+
+    api.reply(7, REPLY, draft).subscribe();
+    ctrl.expectOne(`https://api.test/api/entries/7/social/replies?address=${REPLY}`).flush({});
+  });
+
+  it('DELETEs an own reply by its address', () => {
+    api.deleteReply(7, REPLY).subscribe();
+
+    const testRequest = ctrl.expectOne(
+      `https://api.test/api/entries/7/comments/reply?address=${REPLY}`,
+    );
+    expect(testRequest.request.method).toBe('DELETE');
+    testRequest.flush(null);
   });
 });

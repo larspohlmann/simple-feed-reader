@@ -106,8 +106,8 @@ h2 {
 }
 
 // Phone: only an opt-in surface (a route-level picker that IS the page)
-// becomes the screen; ordinary dialogs stay cards. Width uses `%` (both hosts
-// size to it); height needs `vh`/`dvh`, since a CDK pane is content-sized.
+// becomes the screen; ordinary dialogs stay cards. Width uses `%`, which a CDK
+// pane only satisfies once styles.scss stretches it; height needs `vh`/`dvh`.
 @media (width <= bp.$bp-sm) {
   .panel.fill-mobile {
     width: 100%;

@@ -3,7 +3,12 @@ import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { Problem } from '../../../core/problem';
 import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
-import { RepostView, SocialCountsDto, SocialViewerDto, likeableSocial } from '../../entry-social';
+import {
+  PostActionsView,
+  SocialCountsDto,
+  SocialViewerDto,
+  likeableSocial,
+} from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
@@ -16,7 +21,7 @@ export type CountedEntry = Pick<EntryDto, 'id' | 'social'>;
 
 /**
  * `likedAtLoad`: whether the loaded counts include the reader's like; the shown likes count from it.
- * `repost`: null when the network could not say, or the reader has no account on it.
+ * `actions`: null when the network could not say, or the reader has no account on it.
  */
 export type SocialCountsState =
   | { status: 'idle' }
@@ -25,7 +30,7 @@ export type SocialCountsState =
       status: 'ok';
       counts: SocialCountsDto;
       likedAtLoad: boolean;
-      repost: RepostView | null;
+      actions: PostActionsView | null;
       loadedAt: number;
     }
   | { status: 'failed'; failedAt: number };
@@ -62,8 +67,8 @@ export class SocialCountsService {
   toggleRepost(entry: CountedEntry, onError: (problem: Problem) => void): void {
     const state = this.stateFor(entry.id);
     const current = state();
-    if (current.status !== 'ok' || !current.repost?.canRepost) return;
-    const isReposted = !current.repost.isReposted;
+    if (current.status !== 'ok' || !current.actions?.canRepost) return;
+    const isReposted = !current.actions.isReposted;
     this.toggles.run(entry.id, {
       key: 'repost',
       send: () => (isReposted ? this.api.repost(entry.id) : this.api.unrepost(entry.id)),
@@ -71,6 +76,18 @@ export class SocialCountsService {
       show: (reposted) => state.update((loaded) => withRepost(loaded, reposted)),
       onError,
     });
+  }
+
+  /** Counts a reply the reader published to the post, or one they deleted, before the network does. */
+  stepReplies(entryId: number, up: boolean): void {
+    this.stateFor(entryId).update((state) =>
+      state.status === 'ok'
+        ? {
+            ...state,
+            counts: { ...state.counts, replies: steppedCount(state.counts.replies, up) },
+          }
+        : state,
+    );
   }
 
   private stateFor(id: number): WritableSignal<SocialCountsState> {
@@ -99,7 +116,11 @@ export class SocialCountsService {
           status: 'ok',
           counts,
           likedAtLoad: viewer?.isLiked ?? likedBefore,
-          repost: viewer && { isReposted: viewer.isReposted, canRepost: viewer.canRepost },
+          actions: viewer && {
+            isReposted: viewer.isReposted,
+            canRepost: viewer.canRepost,
+            canReply: viewer.canReply,
+          },
           loadedAt: Date.now(),
         });
       },
@@ -137,11 +158,11 @@ function isStale(state: SocialCountsState): boolean {
 
 /** The loaded state with the reader's repost set, the reposts count following. */
 function withRepost(state: SocialCountsState, isReposted: boolean): SocialCountsState {
-  if (state.status !== 'ok' || !state.repost || state.repost.isReposted === isReposted)
+  if (state.status !== 'ok' || !state.actions || state.actions.isReposted === isReposted)
     return state;
   return {
     ...state,
     counts: { ...state.counts, reposts: steppedCount(state.counts.reposts, isReposted) },
-    repost: { ...state.repost, isReposted },
+    actions: { ...state.actions, isReposted },
   };
 }

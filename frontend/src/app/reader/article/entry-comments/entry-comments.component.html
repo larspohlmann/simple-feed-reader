@@ -74,6 +74,18 @@
                     <span class="when">{{ when(publishedAt) }}</span>
                   }
                 }
+                @if (social && likeable() && c.post?.isOwn) {
+                  <button
+                    appIconButton
+                    type="button"
+                    class="delete danger"
+                    [attr.aria-label]="'reader.deleteReply.action' | transloco"
+                    [title]="'reader.deleteReply.action' | transloco"
+                    (click)="deleteReply(social.network, c)"
+                  >
+                    <app-icon name="delete" size="sm" />
+                  </button>
+                }
               </p>
               <div class="body" [innerHTML]="c.html"></div>
               @if (c.media.length) {
@@ -96,8 +108,10 @@
                   [liked]="likeable() ? post.isLiked : null"
                   [reposted]="likeable() ? post.isReposted : null"
                   [canRepost]="post.canRepost"
+                  [canReply]="likeable() ? post.canReply : null"
                   (likeToggled)="toggleLike(post)"
                   (repostToggled)="toggleRepost(post)"
+                  (replyRequested)="reply(social.network, c, post)"
                 />
               }
             </li>

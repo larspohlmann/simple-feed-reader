@@ -10,7 +10,9 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
+use App\Service\Social\Model\ReplyContextModel;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\MastodonAuthor;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\PostCounts;
 
@@ -41,7 +43,15 @@ final readonly class MastodonPostResolver implements PostResolverInterface
 
         $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(PostCounts::ofMastodonStatus($status));
 
-        return self::withViewer($post, $status, $statusId);
+        return self::withViewer($post, $status, $statusId)->inReplyContext(self::replyContextOf($status));
+    }
+
+    private static function replyContextOf(JsonNodeModel $status): ReplyContextModel
+    {
+        return new ReplyContextModel(
+            authorIdentity: MastodonAuthor::identity($status->node('account')),
+            visibility: $status->string('visibility'),
+        );
     }
 
     private static function withViewer(SocialPostModel $post, JsonNodeModel $status, string $statusId): SocialPostModel

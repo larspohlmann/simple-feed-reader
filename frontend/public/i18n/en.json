@@ -1504,6 +1504,36 @@
       "copied": "Link copied",
       "copyFailed": "Couldn't copy the link",
       "failed": "Couldn't share the link"
+    },
+    "replyForbidden": {
+      "bluesky": "The author limits who can reply",
+      "mastodon": "You can’t reply to this post"
+    },
+    "reply": {
+      "bluesky": "Reply on Bluesky",
+      "mastodon": "Reply on Mastodon"
+    },
+    "composer": {
+      "loading": "Getting the reply ready",
+      "account": "Reply as",
+      "text": "Your reply",
+      "counter": "{{ used }} / {{ max }}",
+      "visibility": "Visibility",
+      "visibilities": {
+        "public": "Public",
+        "unlisted": "Quiet public",
+        "private": "Followers only",
+        "direct": "Mentioned people only"
+      },
+      "addWarning": "Add a content warning",
+      "warning": "Content warning",
+      "send": "Reply"
+    },
+    "deleteReply": {
+      "action": "Delete reply",
+      "title": "Delete this reply?",
+      "message": "It is deleted on {{ network }} as well.",
+      "confirm": "Delete"
     }
   },
   "common": {

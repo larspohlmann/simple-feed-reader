@@ -28,4 +28,14 @@ final class ApiRequestModelTest extends TestCase
             $authorized->json,
         ]);
     }
+
+    public function testADeleteCarriesItsHeadersAndNoBody(): void
+    {
+        $request = ApiRequestModel::delete('https://api.example.test/x', ['Accept' => 'application/json']);
+
+        self::assertSame(
+            ['DELETE', 'https://api.example.test/x', ['Accept' => 'application/json'], null],
+            [$request->method, $request->url, $request->headers, $request->json],
+        );
+    }
 }

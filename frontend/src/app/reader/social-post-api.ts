@@ -2,7 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
-import { EntryLikeDto, EntryRepostDto, SocialCountsDto, SocialViewerDto } from './entry-social';
+import {
+  ComposerContextDto,
+  EntryLikeDto,
+  EntryRepostDto,
+  PublishedReplyDto,
+  ReplyDraftDto,
+  SocialCountsDto,
+  SocialViewerDto,
+} from './entry-social';
 import { refreshParams } from './refresh-params';
 
 /** What the reader sees of and does to an entry's network post, and to the replies in its thread. */
@@ -57,6 +65,36 @@ export class SocialPostApi {
 
   unrepostComment(entryId: number, address: string): Observable<EntryRepostDto> {
     return this.http.delete<EntryRepostDto>(this.entryPath(entryId, 'comments/repost'), {
+      params: { address },
+    });
+  }
+
+  /** `address` names a reply in the thread; null answers the entry's own post. */
+  composer(
+    entryId: number,
+    address: string | null,
+    accountId?: number,
+  ): Observable<ComposerContextDto> {
+    return this.http.get<ComposerContextDto>(this.entryPath(entryId, 'social/composer'), {
+      params: {
+        ...(address === null ? {} : { address }),
+        ...(accountId === undefined ? {} : { accountId }),
+      },
+    });
+  }
+
+  reply(
+    entryId: number,
+    address: string | null,
+    draft: ReplyDraftDto,
+  ): Observable<PublishedReplyDto> {
+    return this.http.post<PublishedReplyDto>(this.entryPath(entryId, 'social/replies'), draft, {
+      params: address === null ? {} : { address },
+    });
+  }
+
+  deleteReply(entryId: number, address: string): Observable<void> {
+    return this.http.delete<void>(this.entryPath(entryId, 'comments/reply'), {
       params: { address },
     });
   }

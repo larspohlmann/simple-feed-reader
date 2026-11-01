@@ -92,12 +92,12 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         $this->servePost();
         $entry = self::entry();
 
-        return $this->source->read($entry, $this->fetch($entry)->body)->comments;
+        return $this->source->read($this->requestFor($entry), $this->fetch($entry)->body)->comments;
     }
 
     private function fetch(Entry $entry): CommentsAnswerModel
     {
-        return $this->source->fetch(new CommentsRequest($this->source, $this->user, $entry));
+        return $this->source->fetch($this->requestFor($entry));
     }
 
     public function testServesAPostOfASubstack(): void
@@ -167,7 +167,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     {
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->read(self::entry(), '{"error": "not found"}');
+        $this->source->read($this->requestFor(self::entry()), '{"error": "not found"}');
     }
 
     public function testAPostAnswerWithoutAnIdIsUnavailable(): void
@@ -232,7 +232,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     #[DataProvider('droppedCommentsWithAReply')]
     public function testADroppedCommentKeepsItsReply(string $answer): void
     {
-        $comments = $this->source->read(self::entry(), $answer)->comments;
+        $comments = $this->source->read($this->requestFor(self::entry()), $answer)->comments;
 
         self::assertSame([[self::POST . '/comment/2', 0]], self::urlsAndDepths($comments));
     }
@@ -275,5 +275,10 @@ final class SubstackCommentsSourceTest extends KernelTestCase
             static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
             $comments,
         );
+    }
+
+    private function requestFor(Entry $entry): CommentsRequest
+    {
+        return new CommentsRequest($this->source, $this->user, $entry);
     }
 }

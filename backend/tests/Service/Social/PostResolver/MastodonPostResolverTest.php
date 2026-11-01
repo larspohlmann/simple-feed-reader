@@ -75,6 +75,41 @@ final class MastodonPostResolverTest extends TestCase
         self::assertSame('109876', $post->existingRepostId);
     }
 
+    /** @param array<string, string> $author */
+    #[DataProvider('authors')]
+    public function testAStatusCarriesItsAuthorAsAccountIdentityAndItsVisibility(array $author, string $identity): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([[
+            'id' => '109876',
+            'visibility' => 'unlisted',
+            'account' => $author,
+        ]])]);
+
+        $replying = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->replyContext;
+
+        self::assertSame($identity, $replying->authorIdentity);
+        self::assertSame('unlisted', $replying->visibility);
+        self::assertTrue($replying->canReply);
+        self::assertNull($replying->threadRoot);
+    }
+
+    /** @return iterable<string, array{array<string, string>, string}> */
+    public static function authors(): iterable
+    {
+        yield 'local' => [['acct' => 'Alice', 'url' => 'https://mastodon.example/@Alice'], 'alice@mastodon.example'];
+        yield 'remote' => [['acct' => 'ann@hachyderm.io', 'url' => 'https://hachyderm.io/@ann'], 'ann@hachyderm.io'];
+    }
+
+    public function testAStatusWithoutAccountOrVisibilityNamesNeither(): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876']])]);
+
+        $replying = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->replyContext;
+
+        self::assertNull($replying->authorIdentity);
+        self::assertNull($replying->visibility);
+    }
+
     #[DataProvider('visibilities')]
     public function testOnlyAPublicOrUnlistedStatusCanBeBoosted(string $visibility, bool $canRepost): void
     {
@@ -184,7 +219,7 @@ final class MastodonPostResolverTest extends TestCase
         );
     }
 
-    /** @param list<array<string, string|int|bool>> $statuses */
+    /** @param list<array<string, string|int|bool|array<string, string>>> $statuses */
     private static function statuses(array $statuses): MockResponse
     {
         return new MockResponse(json_encode(

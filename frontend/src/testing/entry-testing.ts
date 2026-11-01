@@ -1,4 +1,4 @@
-import { EntryCommentDto } from '../app/reader/entry-comment';
+import { EntryCommentDto, EntryCommentPostDto } from '../app/reader/entry-comment';
 import { EntryDto } from '../app/reader/models';
 import { QuotedPostDto } from '../app/reader/quoted-post/quoted-post';
 import { LinkCardDto } from '../app/reader/link-card/link-card';
@@ -69,6 +69,19 @@ export function aLinkCard(overrides: Partial<LinkCardDto> = {}): LinkCardDto {
     imageUrl: null,
     siteName: 'news.test',
     readerToken: A_READER_TOKEN,
+    ...overrides,
+  };
+}
+
+export function aCommentPost(overrides: Partial<EntryCommentPostDto> = {}): EntryCommentPostDto {
+  return {
+    address: 'at://did:plc:ann/app.bsky.feed.post/2',
+    counts: { likes: 0, reposts: 0, replies: 0, quotes: null },
+    isLiked: false,
+    isReposted: false,
+    canRepost: true,
+    canReply: true,
+    isOwn: false,
     ...overrides,
   };
 }

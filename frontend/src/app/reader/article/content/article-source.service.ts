@@ -7,6 +7,7 @@ import { ReaderLoad, ReaderLoadOutcome } from './reader-load';
 import { ReaderModeService } from './reader-mode.service';
 import { isPost } from '../../entry/entry-text';
 import { articlePostMedia } from '../post-media/article-post-media';
+import { textOf } from '../../../shared/text-of';
 
 const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
   'unextractable',
@@ -14,11 +15,6 @@ const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
   'mismatch',
   'player_page',
 ]);
-
-function textOf(html: string | null): string {
-  if (!html) return '';
-  return (new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '').trim();
-}
 
 /** What the open article shows: the extracted reader article, or the feed's
  *  own body, and the load lifecycle between them. */

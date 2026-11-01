@@ -25,6 +25,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.like {
+.like,
+.reply {
   @include pill-toggle.pill-toggle;
 }

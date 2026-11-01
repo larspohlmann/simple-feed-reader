@@ -14,7 +14,11 @@ use App\Repository\SocialAccountRepository;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
+use App\Service\Comments\Model\CommentCountsModel;
+use App\Service\Comments\Model\CommentPostModel;
+use App\Service\Comments\Model\CommentViewerModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\RateLimit\Exception\RateLimitedException;
@@ -217,7 +221,7 @@ final class SocialRepliesSourceTest extends DbTestCase
     {
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source()->read($this->entryOn('https://example.com/feed.xml'), 'the thread');
+        $this->read($this->entryOn('https://example.com/feed.xml'));
     }
 
     public function testTheAudienceSeparatesAccountsFromThePublic(): void
@@ -272,7 +276,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             self::reply('newer', '2026-10-16 09:00:00'),
         ]);
 
-        $page = $this->source()->read($this->post(), 'the thread');
+        $page = $this->read($this->post());
 
         self::assertSame(['newer', 'older'], array_map(
             static fn (EntryCommentModel $comment): string => $comment->html,
@@ -296,12 +300,68 @@ final class SocialRepliesSourceTest extends DbTestCase
             self::reply('other', '2026-10-16 07:00:00'),
         ]);
 
-        $page = $this->source()->read($entry, 'the thread');
+        $page = $this->read($entry);
 
         self::assertSame(['folded', 'child', 'other'], array_map(
             static fn (EntryCommentModel $comment): string => $comment->html,
             $page->comments,
         ));
+    }
+
+    public function testRepliesAConnectedAccountOfTheViewerWroteAreMarkedAsItsOwn(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $broken = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $broken->markNeedsReconnect();
+        $this->entityManager->flush();
+        $this->threads->readsReplies([
+            self::postedReply('mine', '2026-10-16 09:00:00', 'Alice@Mastodon.Example'),
+            self::postedReply('broken', '2026-10-16 08:00:00', 'bea@mastodon.example'),
+            self::postedReply('theirs', '2026-10-16 07:00:00', 'ann@hachyderm.io'),
+            self::reply('no post', '2026-10-16 06:00:00'),
+        ]);
+
+        $page = $this->read($this->post());
+
+        self::assertSame([true, false, false, null], array_map(
+            static fn (EntryCommentModel $comment): ?bool => $comment->post?->viewer->isOwn,
+            $page->comments,
+        ));
+    }
+
+    private function read(Entry $entry): CommentsPageModel
+    {
+        $source = $this->source();
+
+        return $source->read(new CommentsRequest($source, $this->owner, $entry), 'the thread');
+    }
+
+    private static function postedReply(string $text, string $publishedAt, string $author): ReplyNode
+    {
+        $post = new CommentPostModel(
+            'https://hachyderm.io/users/x/statuses/' . $text,
+            new CommentCountsModel(0, 0, 0, null),
+            new CommentViewerModel(false, false, true),
+            $author,
+        );
+
+        return new ReplyNode(
+            new \DateTimeImmutable($publishedAt),
+            static fn (?\DateTimeImmutable $at): EntryCommentModel => new EntryCommentModel(
+                new CommentAuthorModel('Ann'),
+                null,
+                $at,
+                $text,
+                false,
+                post: $post,
+            ),
+            [],
+            null,
+            false,
+        );
     }
 
     private static function reply(string $text, string $publishedAt, ?string $url = null): ReplyNode
@@ -369,6 +429,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             $order,
             new RateLimitGuard(new MockClock('2026-10-16 10:00:00')),
             $limiter,
+            $accounts,
         );
     }
 }

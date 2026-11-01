@@ -54,7 +54,10 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         $client->request('GET', $this->viewerPath($entryId));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['isLiked' => true, 'isReposted' => true, 'canRepost' => true], $this->payload($client));
+        self::assertSame(
+            ['isLiked' => true, 'isReposted' => true, 'canRepost' => true, 'canReply' => true],
+            $this->payload($client),
+        );
         self::assertSame([self::SEARCH], $this->routesAsked());
         self::assertSame(
             ['network' => 'mastodon', 'isLiked' => true, 'canLike' => true],
@@ -75,7 +78,10 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
 
         $client->request('GET', $this->viewerPath($entryId));
 
-        self::assertSame(['isLiked' => false, 'isReposted' => false, 'canRepost' => true], $this->payload($client));
+        self::assertSame(
+            ['isLiked' => false, 'isReposted' => false, 'canRepost' => true, 'canReply' => true],
+            $this->payload($client),
+        );
         self::assertSame(0, $this->likeRows());
     }
 
@@ -90,7 +96,10 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
 
         $client->request('GET', $this->viewerPath($this->mastodonPostFor($user)));
 
-        self::assertSame(['isLiked' => false, 'isReposted' => false, 'canRepost' => false], $this->payload($client));
+        self::assertSame(
+            ['isLiked' => false, 'isReposted' => false, 'canRepost' => false, 'canReply' => true],
+            $this->payload($client),
+        );
     }
 
     public function testThePostOfAReaderWithoutAnAccountIsRefused(): void

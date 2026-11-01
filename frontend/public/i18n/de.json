@@ -1504,6 +1504,36 @@
       "copied": "Link kopiert",
       "copyFailed": "Link konnte nicht kopiert werden",
       "failed": "Link konnte nicht geteilt werden"
+    },
+    "replyForbidden": {
+      "bluesky": "Antworten auf diesen Beitrag sind eingeschränkt",
+      "mastodon": "Auf diesen Beitrag kannst du nicht antworten"
+    },
+    "reply": {
+      "bluesky": "Auf Bluesky antworten",
+      "mastodon": "Auf Mastodon antworten"
+    },
+    "composer": {
+      "loading": "Antwort wird vorbereitet",
+      "account": "Antworten als",
+      "text": "Deine Antwort",
+      "counter": "{{ used }} / {{ max }}",
+      "visibility": "Sichtbarkeit",
+      "visibilities": {
+        "public": "Öffentlich",
+        "unlisted": "Still öffentlich",
+        "private": "Nur für Follower",
+        "direct": "Nur erwähnte Profile"
+      },
+      "addWarning": "Inhaltswarnung hinzufügen",
+      "warning": "Inhaltswarnung",
+      "send": "Antworten"
+    },
+    "deleteReply": {
+      "action": "Antwort löschen",
+      "title": "Diese Antwort löschen?",
+      "message": "Sie wird auch auf {{ network }} gelöscht.",
+      "confirm": "Löschen"
     }
   },
   "common": {

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
+import { ReplyActions } from '../reply-composer/reply-actions.service';
 import { CommentsService, CommentsState } from './comments.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
@@ -21,6 +22,7 @@ const navigation = { layer: jest.fn() };
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
+  let replies: { reply: jest.Mock; delete: jest.Mock };
   let service: {
     state: jest.Mock;
     load: jest.Mock;
@@ -30,6 +32,7 @@ describe('EntryCommentsComponent', () => {
   };
 
   beforeEach(() => {
+    replies = { reply: jest.fn(), delete: jest.fn() };
     states = new Map();
     service = {
       state: jest.fn((id: number) => stateOf(id)),
@@ -43,6 +46,7 @@ describe('EntryCommentsComponent', () => {
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
       providers: [
         { provide: CommentsService, useValue: service },
+        { provide: ReplyActions, useValue: replies },
         { provide: LinkReaderNavigation, useValue: navigation },
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
       ],
@@ -89,6 +93,8 @@ describe('EntryCommentsComponent', () => {
       isLiked: false,
       isReposted: false,
       canRepost: true,
+      canReply: true,
+      isOwn: false,
     };
     const likeButton = (element: HTMLElement) =>
       element.querySelector('.comment button.like') as HTMLButtonElement | null;
@@ -97,7 +103,7 @@ describe('EntryCommentsComponent', () => {
       showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
       const element = settleComments([anEntryComment({ post })]);
 
-      expect(element.querySelectorAll('.comment .count')).toHaveLength(2);
+      expect(element.querySelectorAll('.comment .count')).toHaveLength(1);
       expect(element.querySelector('.comment button.repost .number')?.textContent?.trim()).toBe(
         '1',
       );
@@ -128,6 +134,39 @@ describe('EntryCommentsComponent', () => {
 
       expect(likeButton(element)).toBeNull();
       expect(element.querySelectorAll('.comment .count')).toHaveLength(4);
+    });
+
+    it('opens the composer for the comment from its replies count', () => {
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
+      const comment = anEntryComment({
+        post,
+        author: 'Ann',
+        authorHandle: '@ann.bsky.social',
+        html: '<p>Is it <b>true</b>?</p>',
+      });
+      (
+        settleComments([comment]).querySelector('.comment button.reply') as HTMLButtonElement
+      ).click();
+
+      expect(replies.reply).toHaveBeenCalledWith({
+        entryId: 5,
+        network: 'bluesky',
+        address: post.address,
+        authorName: 'Ann',
+        authorHandle: '@ann.bsky.social',
+        excerpt: 'Is it true?',
+      });
+    });
+
+    it('offers to delete only a reply the reader wrote', () => {
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
+      const own = anEntryComment({ post: { ...post, isOwn: true } });
+      const element = settleComments([own, anEntryComment({ post })]);
+      const deletes = element.querySelectorAll('.comment button.delete');
+
+      expect(deletes).toHaveLength(1);
+      (deletes[0] as HTMLButtonElement).click();
+      expect(replies.delete).toHaveBeenCalledWith(5, 'bluesky', own);
     });
 
     it('shows no row for a comment from a feed', () => {

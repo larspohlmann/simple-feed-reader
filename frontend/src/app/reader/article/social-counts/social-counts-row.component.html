@@ -16,6 +16,29 @@
         (toggled)="repostToggled.emit()"
       />
     }
+    @let replyGate = canReply();
+    @if (replyGate !== null) {
+      @let replies = counts()?.replies ?? null;
+      @let hint = replyHintKey() | transloco;
+      <button
+        type="button"
+        class="reply"
+        aria-haspopup="dialog"
+        [attr.aria-disabled]="replyGate ? null : 'true'"
+        [attr.title]="hint"
+        [attr.aria-label]="
+          replies === null
+            ? hint
+            : hint + ', ' + (labelKey('replies', replies) | transloco: { count: replies })
+        "
+        (click)="replyGate && replyRequested.emit()"
+      >
+        <app-icon name="chat_bubble" size="sm" />
+        @if (replies !== null) {
+          <span class="number">{{ format(replies) }}</span>
+        }
+      </button>
+    }
     @for (shownCount of shownCounts(); track shownCount.kind) {
       @let label =
         labelKey(shownCount.kind, shownCount.count) | transloco: { count: shownCount.count };

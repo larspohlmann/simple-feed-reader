@@ -26,6 +26,9 @@ export interface EntryCommentPostDto {
   isLiked: boolean;
   isReposted: boolean;
   canRepost: boolean;
+  canReply: boolean;
+  /** Written by one of the reader's connected accounts, so it can be deleted. */
+  isOwn: boolean;
 }
 
 export type CommentsResponse =

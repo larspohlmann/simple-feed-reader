@@ -67,7 +67,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         }
     }
 
-    public function read(Entry $entry, string $answer): CommentsPageModel
+    public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
         try {
             $parsed = $this->parser->parse($answer)->entries;
@@ -75,7 +75,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
             throw new CommentsUnavailableException('The comments feed could not be parsed.', previous: $exception);
         }
 
-        return new CommentsPageModel($this->comments($entry, $parsed));
+        return new CommentsPageModel($this->comments($request->entry, $parsed));
     }
 
     /**

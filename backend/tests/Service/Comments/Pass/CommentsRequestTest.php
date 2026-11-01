@@ -38,7 +38,7 @@ final class CommentsRequestTest extends TestCase
                 return CommentsAnswerModel::settled('');
             }
 
-            public function read(Entry $entry, string $answer): CommentsPageModel
+            public function read(CommentsRequest $request, string $answer): CommentsPageModel
             {
                 return new CommentsPageModel([]);
             }

@@ -1,0 +1,68 @@
+// The frame is app-overlay-panel's; `display: contents` on host and form
+// removes the boxes CDK can't centre/stretch, as in passkey-name-dialog.
+:host {
+  display: contents;
+
+  --panel-w: 520px;
+}
+
+form {
+  display: contents;
+}
+
+.target {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--text-muted);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.author {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+}
+
+.name {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.handle {
+  color: var(--text-muted);
+}
+
+.excerpt {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.counter {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.counter.over {
+  color: var(--danger);
+}
+
+.warns {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-sm);
+}

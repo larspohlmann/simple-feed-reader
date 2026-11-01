@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Entry;
+use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
@@ -59,15 +60,25 @@ final readonly class SocialPostFinder
         return $this->resolvedFor($user, $entry, SocialPostAddress::replyOrRefuse($entry, $address));
     }
 
-    private function resolvedFor(User $user, Entry $entry, SocialPostAddressModel $address): SocialPostModel
+    /**
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function findAs(SocialAccount $account, SocialPostAddressModel $address): SocialPostModel
     {
-        $account = $this->accounts->accountFor($user, $entry, $address->network);
         $resolver = $this->resolverOn($address->network);
 
         return $this->guard->actAs(
             $account,
             static fn (): SocialPostModel => $resolver->resolve($account, $address->address),
         );
+    }
+
+    private function resolvedFor(User $user, Entry $entry, SocialPostAddressModel $address): SocialPostModel
+    {
+        return $this->findAs($this->accounts->accountFor($user, $entry, $address->network), $address);
     }
 
     private function resolverOn(SocialNetwork $network): PostResolverInterface

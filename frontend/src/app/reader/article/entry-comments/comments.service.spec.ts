@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError, Subject } from 'rxjs';
-import { CommentsService } from './comments.service';
+import { CommentsService, CommentsState } from './comments.service';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsResponse, EntryCommentPostDto } from '../../entry-comment';
-import { anEntryComment } from '../../../../testing/entry-testing';
+import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
 
 describe('CommentsService', () => {
   let api: { comments: jest.Mock };
@@ -41,6 +41,8 @@ describe('CommentsService', () => {
       isLiked: false,
       isReposted: false,
       canRepost: true,
+      canReply: true,
+      isOwn: false,
     };
     let likes: { likeComment: jest.Mock; unlikeComment: jest.Mock };
     let answer: Subject<{ isLiked: boolean }>;
@@ -115,6 +117,8 @@ describe('CommentsService', () => {
       isLiked: true,
       isReposted: false,
       canRepost: true,
+      canReply: true,
+      isOwn: false,
     };
     let reposts: { repostComment: jest.Mock; unrepostComment: jest.Mock };
     let answer: Subject<{ isReposted: boolean }>;
@@ -308,4 +312,38 @@ describe('CommentsService', () => {
     expect(api.comments).toHaveBeenCalledTimes(1);
     expect(service.state(1)()).toEqual({ status: 'loading' });
   });
+
+  describe('a reply the reader changed', () => {
+    it('shows a reply the reader published and hides one they deleted', () => {
+      api.comments.mockReturnValue(
+        of({
+          status: 'ok',
+          comments: [anEntryComment({ html: 'old' })],
+          omitted: 0,
+          fetchedAt: 'now',
+        }),
+      );
+      service.load(1);
+      const reply = anEntryComment({
+        html: 'mine',
+        post: aCommentPost({ address: 'at://mine', isOwn: true }),
+      });
+
+      service.insertReply(1, null, reply);
+      expect(htmlOf(service.state(1)())).toEqual(['mine', 'old']);
+
+      service.removeReply(1, 'at://mine');
+      expect(htmlOf(service.state(1)())).toEqual(['old']);
+    });
+
+    it('leaves a thread that is not loaded alone', () => {
+      service.insertReply(2, null, anEntryComment());
+
+      expect(service.state(2)()).toEqual({ status: 'idle' });
+    });
+  });
 });
+
+function htmlOf(state: CommentsState): string[] {
+  return state.status === 'ok' ? state.comments.map((comment) => comment.html) : [];
+}

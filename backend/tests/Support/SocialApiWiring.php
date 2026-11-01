@@ -9,7 +9,10 @@ use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\BlueskyApiClient;
+use App\Service\Social\BlueskyIdentityResolver;
+use App\Service\Social\BlueskyRecords;
 use App\Service\Social\BlueskySessionCache;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\BlueskySessions;
@@ -22,6 +25,7 @@ use App\Service\Social\TimelineSource\BlueskyTimelineSource;
 use App\Service\Social\TimelineSource\MastodonTimelineSource;
 use App\Service\Social\TimelineSources;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -33,6 +37,7 @@ final class SocialApiWiring
     public const string RSS_HOST = 'news.example';
 
     private const string BLUESKY_HOST = 'pds.example.test';
+    private const string APP_VIEW_HOST = 'public.api.bsky.app';
     private const string MASTODON_HOST = 'mastodon.example';
     private const string OTHER_MASTODON_HOST = 'other.example';
     private const string ORIGIN_MASTODON_HOST = 'mastodon.social';
@@ -57,6 +62,24 @@ final class SocialApiWiring
     public static function blueskySessionCache(ArrayAdapter $cache): BlueskySessionCache
     {
         return new BlueskySessionCache($cache, new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))));
+    }
+
+    /** @param string $now when the records are written; their createdAt is its UTC time */
+    public static function blueskyRecords(
+        HttpClientInterface $http,
+        string $now = '2026-10-13T08:30:00.123+02:00',
+    ): BlueskyRecords {
+        return new BlueskyRecords(
+            self::blueskySessions($http),
+            new NaiveUtcClock(new MockClock(new \DateTimeImmutable($now))),
+        );
+    }
+
+    public static function blueskyIdentityResolver(HttpClientInterface $http): BlueskyIdentityResolver
+    {
+        return new BlueskyIdentityResolver(
+            new BlueskyApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::APP_VIEW_HOST))),
+        );
     }
 
     public static function mastodonApiClient(HttpClientInterface $http): MastodonApiClient

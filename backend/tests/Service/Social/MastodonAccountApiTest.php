@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
@@ -53,6 +54,37 @@ final class MastodonAccountApiTest extends TestCase
 
         self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
         self::assertSame('', $http->requests[0]['body']);
+    }
+
+    public function testAWriteSendsTheGivenRequestWithTheAccountsToken(): void
+    {
+        $http = new RoutedHttpClient(['DELETE ' . self::STATUS => new MockResponse('{}')]);
+
+        SocialApiWiring::mastodonAccountApi($http->client())->writeAs(
+            SocialAccounts::mastodon(),
+            ApiRequestModel::delete(self::STATUS, ['Idempotency-Key' => 'k-1']),
+            'write:statuses',
+        );
+
+        self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
+        self::assertContains('Idempotency-Key: k-1', $http->requests[0]['headers']);
+    }
+
+    public function testARejectedWriteIsARefusalCarryingMastodonsReason(): void
+    {
+        $http = new RoutedHttpClient(['POST https://mastodon.example/api/v1/statuses' => self::answer(
+            '{"error":"Validation failed: Text character limit of 500 exceeded"}',
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+        )]);
+
+        $this->expectException(SocialPostRefusedException::class);
+        $this->expectExceptionMessage('Validation failed: Text character limit of 500 exceeded');
+
+        SocialApiWiring::mastodonAccountApi($http->client())->writeAs(
+            SocialAccounts::mastodon(),
+            ApiRequestModel::postJson('https://mastodon.example/api/v1/statuses', ['status' => 'x']),
+            'write:statuses',
+        );
     }
 
     /**

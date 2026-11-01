@@ -1,6 +1,7 @@
 @use 'glass-rim';
 
-// A rounded count-and-glyph button that turns accent while `.on` (the counts row's like and repost).
+// A rounded count-and-glyph button that turns accent while `.on`, and dims while `aria-disabled`
+// (the counts row's like, repost and reply).
 @mixin pill-toggle {
   display: inline-flex;
   align-items: center;
@@ -19,6 +20,11 @@
 
     background: var(--accent-soft);
     color: var(--accent);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+    opacity: 0.7;
   }
 
   @media (pointer: coarse) {
