@@ -12,6 +12,7 @@ use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -55,14 +56,12 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         return $this->published($account, $draft, ['embed' => $this->externalEmbeds->embedOf($account, $url)]);
     }
 
-    public function delete(SocialPostModel $ownPost): void
+    public function delete(SocialAccount $account, string $postId): PostDeletion
     {
-        $recordKey = BlueskyRecordUri::recordKeyOf(BlueskyRecordUri::postOrNull($ownPost->postId) ?? '');
-        if (null === $recordKey) {
-            throw new SocialPostRefusedException('The address names no Bluesky post.');
-        }
+        $recordKey = BlueskyRecordUri::recordKeyOf(BlueskyRecordUri::postOrNull($postId) ?? '')
+            ?? throw new SocialPostRefusedException('The address names no Bluesky post.');
 
-        $this->records->delete($ownPost->account, BlueskyRecords::POST_COLLECTION, $recordKey);
+        return $this->records->delete($account, BlueskyRecords::POST_COLLECTION, $recordKey);
     }
 
     /** @param array<string, mixed> $attachment */

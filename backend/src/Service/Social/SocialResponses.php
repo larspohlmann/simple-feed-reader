@@ -121,7 +121,7 @@ final readonly class SocialResponses
     {
         $ownReply = $this->ownReplyAt($user, SocialPostAddress::replyOrRefuse($entry, $address));
         if (null !== $ownReply) {
-            $this->writing->delete($ownReply);
+            $this->writing->delete($ownReply->account, $ownReply->postId);
         }
         $this->forgetWhatChanged($user, $entry);
     }

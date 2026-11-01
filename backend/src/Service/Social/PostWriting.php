@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -45,12 +46,11 @@ final readonly class PostWriting
         );
     }
 
-    public function delete(SocialPostModel $ownPost): void
+    public function delete(SocialAccount $account, string $postId): PostDeletion
     {
-        $writer = $this->writerOf($ownPost->account);
-        $this->guard->actAs($ownPost->account, static function () use ($writer, $ownPost): void {
-            $writer->delete($ownPost);
-        });
+        $writer = $this->writerOf($account);
+
+        return $this->guard->actAs($account, static fn (): PostDeletion => $writer->delete($account, $postId));
     }
 
     /** @param \Closure(PostWriterInterface): PublishedPostModel $publish */

@@ -12,6 +12,7 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -55,7 +56,7 @@ interface PostWriterInterface
     public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel;
 
     /**
-     * A post the network no longer has counts as deleted.
+     * @return PostDeletion AlreadyGone when the network no longer has the post
      *
      * @throws SocialCredentialsRejectedException
      * @throws SocialTokenScopeMissingException
@@ -63,5 +64,5 @@ interface PostWriterInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function delete(SocialPostModel $ownPost): void;
+    public function delete(SocialAccount $account, string $postId): PostDeletion;
 }

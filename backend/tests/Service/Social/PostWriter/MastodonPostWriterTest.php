@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\PostWriter;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -148,7 +149,7 @@ final class MastodonPostWriterTest extends TestCase
         $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
     }
 
-    public function testDeletingAReplyDeletesItsStatusAndAGoneOneCountsAsDeleted(): void
+    public function testDeletingAStatusReportsWhetherMastodonStillHadIt(): void
     {
         $http = new RoutedHttpClient([
             'DELETE https://mastodon.example/api/v1/statuses/120' => new MockResponse('{}'),
@@ -158,10 +159,8 @@ final class MastodonPostWriterTest extends TestCase
             ),
         ]);
 
-        $this->writer($http)->delete(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '120'));
-        $this->writer($http)->delete(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '121'));
-
-        self::assertCount(2, $http->requests);
+        self::assertSame(PostDeletion::Deleted, $this->writer($http)->delete(SocialAccounts::mastodon(), '120'));
+        self::assertSame(PostDeletion::AlreadyGone, $this->writer($http)->delete(SocialAccounts::mastodon(), '121'));
     }
 
     private function writer(RoutedHttpClient $http): MastodonPostWriter

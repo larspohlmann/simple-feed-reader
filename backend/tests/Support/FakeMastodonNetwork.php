@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\PostDraftModel;
@@ -33,6 +34,9 @@ final class FakeMastodonNetwork implements
     private ?\Throwable $failure = null;
 
     private ?SocialCountsModel $counts = null;
+
+    /** @var array<string, true> */
+    private array $gonePostIds = [];
 
     private ?string $existingLikeId = null;
 
@@ -62,6 +66,11 @@ final class FakeMastodonNetwork implements
     public function knowsCounts(SocialCountsModel $counts): void
     {
         $this->counts = $counts;
+    }
+
+    public function knowsGone(string $postId): void
+    {
+        $this->gonePostIds[$postId] = true;
     }
 
     public function knowsTheLike(string $likeId = self::STATUS_ID): void
@@ -147,9 +156,11 @@ final class FakeMastodonNetwork implements
         return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }
 
-    public function delete(SocialPostModel $ownPost): void
+    public function delete(SocialAccount $account, string $postId): PostDeletion
     {
-        $this->record('delete ' . $ownPost->postId);
+        $this->record('delete ' . $postId);
+
+        return isset($this->gonePostIds[$postId]) ? PostDeletion::AlreadyGone : PostDeletion::Deleted;
     }
 
     private function record(string $call): void
