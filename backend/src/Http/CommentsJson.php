@@ -14,6 +14,7 @@ final readonly class CommentsJson
 {
     public function __construct(
         private LinkCardJson $linkCardJson,
+        private QuotedPostJson $quotedPostJson,
     ) {
     }
 
@@ -46,7 +47,7 @@ final readonly class CommentsJson
             'depth' => $comment->depth,
             'media' => EntryMedia::toJsonList($comment->embeds->media),
             'linkCard' => $this->linkCardJson->ofOrNull($comment->embeds->linkCard),
-            'quote' => QuotedPostJson::ofOrNull($comment->embeds->quote),
+            'quote' => $this->quotedPostJson->ofOrNull($comment->embeds->quote),
             'post' => null === $comment->post ? null : self::post($comment->post),
         ];
     }
