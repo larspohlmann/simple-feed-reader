@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -68,6 +77,7 @@ export class ReplyComposerDialogComponent {
   protected readonly target = inject<ReplyTarget>(DIALOG_DATA);
   private readonly api = inject(SocialPostApi);
   private readonly idempotencyKey = crypto.randomUUID();
+  private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
   protected readonly visibilities = MASTODON_VISIBILITIES;
   protected readonly state = signal<ContextState>({ status: 'loading' });
@@ -98,6 +108,8 @@ export class ReplyComposerDialogComponent {
 
   constructor() {
     this.load();
+    // The field appears only once the context loads, after the focus trap placed its initial focus.
+    effect(() => this.textField()?.nativeElement.focus());
   }
 
   protected load(accountId?: number): void {

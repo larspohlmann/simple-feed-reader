@@ -46,9 +46,9 @@
 
       <app-field [label]="'reader.composer.text' | transloco">
         <textarea
+          #textField
           id="reply-text"
           rows="5"
-          cdkFocusInitial
           [value]="text()"
           [disabled]="!context.canReply"
           (input)="write($event)"

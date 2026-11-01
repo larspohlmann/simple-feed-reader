@@ -80,6 +80,12 @@ describe('ReplyComposerDialogComponent', () => {
     expect(textArea(fixture).value).toBe('@ann@hachyderm.io ');
   });
 
+  it('puts the cursor in the text once the composer is ready', () => {
+    const fixture = mount();
+
+    expect(document.activeElement).toBe(textArea(fixture));
+  });
+
   it('offers the account choice only with more than one account, keeping the text on a change', () => {
     const single = mount();
     expect(element(single).querySelector('#reply-account')).toBeNull();
