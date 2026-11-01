@@ -50,8 +50,8 @@ final readonly class SocialLikes
         $this->forgetCountsOf($entry);
     }
 
-    /** The user's like as the network reports it now, mirrored into the stored likes. */
-    public function syncFromNetwork(User $user, Entry $entry): bool
+    /** The post as the network reports it now, the user's like on it mirrored into the stored likes. */
+    public function syncFromNetwork(User $user, Entry $entry): SocialPostModel
     {
         $stored = $this->likes->findOneFor($user, $entry);
         $post = $this->posts->find($user, $entry);
@@ -59,19 +59,19 @@ final readonly class SocialLikes
         if (null === $likeId) {
             $this->drop($stored);
 
-            return false;
+            return $post;
         }
         if (null === $stored) {
             $this->store($user, $entry, $post->account, $likeId);
 
-            return true;
+            return $post;
         }
         if (!self::reportsTheSameLike($stored, $post)) {
             $stored->replaceWith($post->account, $likeId, $this->clock->now());
             $this->entityManager->flush();
         }
 
-        return true;
+        return $post;
     }
 
     private static function reportsTheSameLike(SocialLike $stored, SocialPostModel $post): bool
