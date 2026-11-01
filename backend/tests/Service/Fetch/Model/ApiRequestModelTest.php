@@ -38,4 +38,19 @@ final class ApiRequestModelTest extends TestCase
             [$request->method, $request->url, $request->headers, $request->json],
         );
     }
+
+    public function testABytesPostCarriesItsBodyAndContentTypeAndKeepsTheBodyThroughHeaders(): void
+    {
+        $request = ApiRequestModel::postBytes('https://api.example.test/blob', 'raw-bytes', 'image/png');
+
+        $authorized = $request->withHeaders(['Authorization' => 'Bearer jwt']);
+
+        self::assertSame(
+            ['POST', 'https://api.example.test/blob', 'raw-bytes', null],
+            [$request->method, $request->url, $request->body, $request->json],
+        );
+        self::assertSame(['Content-Type' => 'image/png'], $request->headers);
+        self::assertSame('raw-bytes', $authorized->body);
+        self::assertSame(['Content-Type' => 'image/png', 'Authorization' => 'Bearer jwt'], $authorized->headers);
+    }
 }

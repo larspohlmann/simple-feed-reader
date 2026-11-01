@@ -89,6 +89,21 @@ final class GuardedApiClientTest extends TestCase
         self::assertArrayNotHasKey('json', $seenOptions);
     }
 
+    public function testABytesRequestSendsItsBodyAndNoJson(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{}');
+        });
+
+        $this->client($http)->send(ApiRequestModel::postBytes('https://api.example.test/x', 'raw-bytes', 'image/png'));
+
+        self::assertSame('raw-bytes', $seenOptions['body']);
+        self::assertArrayNotHasKey('json', $seenOptions);
+    }
+
     public function testACallWithinABudgetCarriesItsTimeoutsAndItsSizeLimit(): void
     {
         $seenOptions = [];

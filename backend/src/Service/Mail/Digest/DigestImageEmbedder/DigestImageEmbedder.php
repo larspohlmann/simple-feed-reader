@@ -6,8 +6,8 @@ namespace App\Service\Mail\Digest\DigestImageEmbedder;
 
 use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
-use App\Service\Mail\Digest\DigestImageResizer\DigestImageResizerInterface;
-use App\Service\Mail\Digest\Exception\ImageProcessingException;
+use App\Service\Image\ImageResizer\ImageResizerInterface;
+use App\Service\Image\Exception\ImageProcessingException;
 use App\Service\Mail\Digest\Model\DigestImageKind;
 use App\Service\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Mail\Digest\Model\DigestPageModel;
@@ -27,7 +27,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
 
     public function __construct(
         private GuardedImageDownloaderInterface $downloader,
-        private DigestImageResizerInterface $resizer,
+        private ImageResizerInterface $resizer,
         private LoggerInterface $logger,
     ) {
     }

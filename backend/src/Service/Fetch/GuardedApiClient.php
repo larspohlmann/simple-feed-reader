@@ -97,6 +97,7 @@ final readonly class GuardedApiClient
                 ResponseTooLargeException::throwIfExceeded($sizeLimit, $downloaded);
             },
             ...(null === $request->json ? [] : ['json' => $request->json]),
+            ...(null === $request->body ? [] : ['body' => $request->body]),
         ];
     }
 }
