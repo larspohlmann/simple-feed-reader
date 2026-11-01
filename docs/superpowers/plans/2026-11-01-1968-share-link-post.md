@@ -144,3 +144,33 @@
 - [ ] `/simplify`, independent bug review; fix confirmed findings.
 - [ ] Live on :4200 (`docker compose exec -T php bin/console cache:clear` first): post a non-social RSS entry to Bluesky and Mastodon through the UI; check the Bluesky record has the card with a thumb and the Mastodon status shows the instance card; then delete both posts (Bluesky `deleteRecord`, Mastodon `DELETE /api/v1/statuses/{id}`) via a one-off console call.
 - [ ] PR into develop, `Closes #1968`.
+
+---
+
+## Revision (2026-11-01, after Lars tried it): share a URL, not an entry
+
+Lars: "I don't want to share an entry, but I want to share an external url." The share menu posts **whatever URL it shares** — the entry's URL in the article view, the opened link in the link reader. The backend no longer knows entries for a link post.
+
+**Changed Global Constraints (these replace the entry-based ones above):**
+- Endpoints are not entry-scoped: `GET /api/social/link-composer?network=&accountId=` and `POST /api/social/links?network=` with body = the draft fields plus `url` (required, absolute http(s), ≤ `LinkCardContent::URL_MAX`). No subscription check; same limiters (`socialViewerLimiter` / `socialWritesLimiter`).
+- The URL is normalised with `UrlNormalizer::normalize` (tracking parameters stripped); a URL it rejects → `SocialPostRefusedException('This is no link to share.')`.
+- The Bluesky card comes from the page itself: `PageCardReaderInterface::read($url)` (LinkCard module; SSRF-guarded fetch) gives `LinkCardContent {url, title, description, imageUrl, siteName}`. The card uses its title/description/imageUrl; when the page read fails (`PageFetchException`) or declares no card, the card goes out with `title` = the URL's host and `description` `''`, no thumb. Thumbnail rules unchanged. Mastodon never reads the page (the instance builds its card).
+- Acting account rule unchanged (explicit `accountId` on the asked network, else `findConnectedOnNetwork` first / `findReadyActingOnNetwork`).
+
+### Task 7: Backend — a link post shares a URL
+
+- `PostWriterInterface::share(SocialAccount $account, string $url, PostDraftModel $draft)`; `PostWriting::share` likewise. Delete `SharedLinkModel` and `Support/SharedLink` (+ tests) — nothing else uses them.
+- `BlueskyLinkCards::cardOf(SocialAccount $account, string $url)` reads the page card through `PageCardReaderInterface` (inject it), then builds the embed and the thumbnail from the card's `imageUrl` exactly as today. A failed/empty page read → the fallback card above (catch `PageFetchException`; log at debug like the thumbnail failures).
+- `LinkPosts`: no `Entry`. `contextFor(User $user, SocialNetwork $network, ?int $accountId)`; `share(User $user, LinkPostModel $post)` where `LinkPostModel` = `network, accountId, url, draft`. URL check first (before any account lookup), as today.
+- Controller: move both actions out of `EntrySocialPostController` into a new `SocialLinkPostController` (`#[Route('/api/social')]`), route names `api_social_link_composer`, `api_social_link`. New request DTO `Dto/Social/LinkPostRequest` = `PostDraftRequest`'s fields + `#[Assert\NotBlank] #[Assert\Url(requireTld: true)] #[Assert\Length(max: LinkCardContent::URL_MAX)] public string $url`, with `toLinkPost(SocialNetwork $network): LinkPostModel`; drop `PostDraftRequest::toLinkPost`. Avoid duplicating the five draft fields by composition if the validator allows (`#[Assert\Valid]` nested) — otherwise extend nothing and keep it flat; pick the cleaner, note it.
+- Tests: rewrite `LinkPostsTest`, the link-composer/link tests (move them to `SocialLinkPostControllerTest`), `BlueskyLinkCardsTest` (page card read: full card, page fails → host fallback, page without image → no download), writer tests for the new signature. Bad/missing `url` → 422 per the project's MapRequestPayload convention (check an existing test for the status used).
+- Commit `refactor(#1968): a link post shares a URL, and Bluesky reads its card from the page`.
+
+### Task 8: Frontend — share the URL the menu shares
+
+- `LinkTargetDto` = `{ kind: 'link'; network; url: string }` (no `entryId`); `SocialPostApi` link calls go to `/api/social/link-composer` and `/api/social/links?network=` with `url` in the POST body.
+- `LinkComposeTarget` = `LinkTargetDto & { title: string; site: string; imageUrl: string | null; prefill: string }`.
+- `ShareButtonComponent`: drop the `entry` input; post targets depend only on connected accounts and the `url` input, so **both** the reader view and the link reader offer them. Optional input `imageUrl = input<string | null>(null)`; `site` = the URL's host. Reader view passes `[imageUrl]="e.imageUrl"`; the link reader passes its card/article image if it has one (read `link-reader.component.ts`: `source.card()` / `source.article()`).
+- The composer's article card shows title, site (host) and image as before.
+- Update every spec touched; i18n unchanged.
+- Commit `refactor(#1968): the share menu posts the URL it shares, in the link reader too`.
