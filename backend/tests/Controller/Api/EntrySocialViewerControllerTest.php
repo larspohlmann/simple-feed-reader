@@ -81,7 +81,10 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
 
     public function testADirectPostCannotBeBoosted(): void
     {
-        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::SEARCH => self::foundStatus(['visibility' => 'direct'])]);
+        $client = $this->clientRouting(
+            self::ROUTED_HOSTS,
+            [self::SEARCH => self::foundStatus(['visibility' => 'direct'])],
+        );
         $user = $this->signIn($client, 'viewer-direct@example.test');
         $this->mastodonAccountOf($user);
 

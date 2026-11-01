@@ -13,7 +13,7 @@ final readonly class SocialPostModel
      * @noinspection AutowireWrongClass Built with new, never autowired
      *
      * @param string      $postId           the Bluesky AT URI, or the status id on the account's own instance
-     * @param string|null $contentId        the Bluesky record's CID, which a like or a reply must name; null on Mastodon
+     * @param string|null $contentId        the Bluesky record's CID, which a like or repost must name; null on Mastodon
      * @param string|null $existingLikeId   what unlikes the acting account's existing like: its Bluesky AT URI, or the
      *                                      status id on Mastodon
      * @param string|null $existingRepostId what undoes the acting account's repost, in the same form as a like
