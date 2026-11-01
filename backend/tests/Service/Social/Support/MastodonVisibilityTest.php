@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 final class MastodonVisibilityTest extends TestCase
 {
     #[DataProvider('pairs')]
-    public function testTheStricterVisibilityWinsWhicheverSideItIsOn(string $left, string $right, string $stricter): void
+    public function testTheStricterVisibilityWinsOnEitherSide(string $left, string $right, string $stricter): void
     {
         self::assertSame($stricter, MastodonVisibility::stricterOf($left, $right));
         self::assertSame($stricter, MastodonVisibility::stricterOf($right, $left));
