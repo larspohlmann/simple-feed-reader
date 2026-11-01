@@ -24,7 +24,7 @@ import { SentPost } from './composer-dialog.component';
 export class PostSentDialogComponent {
   protected readonly ref = inject(DialogRef);
   protected readonly posted = inject<SentPost>(DIALOG_DATA);
-  protected readonly headingKey = `reader.posted.${this.posted.shown.kind}.${this.posted.shown.network}`;
+  protected readonly headingKey = `reader.posted.${this.posted.kind}.${this.posted.network}`;
 
   protected open(url: string): void {
     window.open(url, '_blank', 'noopener');

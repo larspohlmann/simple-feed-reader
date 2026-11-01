@@ -211,8 +211,6 @@ describe('SocialCountsComponent', () => {
     it('opens the composer for the post from the replies count', () => {
       const entry = anEntry({
         id: 1,
-        excerpt: 'Big news',
-        author: 'Bob',
         social: { network: 'bluesky', isLiked: false, canLike: true },
       });
       show(entry);
@@ -230,10 +228,6 @@ describe('SocialCountsComponent', () => {
         entryId: 1,
         network: 'bluesky',
         address: null,
-        authorName: 'Bob',
-        authorHandle: null,
-        excerpt: 'Big news',
-        card: null,
       });
     });
 
@@ -404,7 +398,7 @@ describe('SocialCountsComponent', () => {
       document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click();
 
       expect(responses.respond).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'quote', entryId: 1, address: null, excerpt: 'Big news' }),
+        expect.objectContaining({ kind: 'quote', entryId: 1, address: null }),
       );
     });
   });

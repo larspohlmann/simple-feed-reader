@@ -1,14 +1,14 @@
-@if (response(); as post) {
+@if (post(); as shown) {
   <blockquote class="target">
     <p class="author">
-      @if (post.authorName) {
-        <span class="name">{{ post.authorName }}</span>
+      @if (shown.authorName) {
+        <span class="name">{{ shown.authorName }}</span>
       }
-      @if (post.authorHandle) {
-        <span class="handle">{{ post.authorHandle }}</span>
+      @if (shown.authorHandle) {
+        <span class="handle">{{ shown.authorHandle }}</span>
       }
     </p>
-    <p class="excerpt">{{ post.excerpt }}</p>
+    <p class="excerpt">{{ shown.excerpt }}</p>
     <ng-container [ngTemplateOutlet]="compactCard" />
   </blockquote>
 } @else {
@@ -31,8 +31,8 @@
       }
       <div class="article-text">
         <p class="title">{{ card.title }}</p>
-        @if (card.site) {
-          <p class="site">{{ card.site }}</p>
+        @if (card.siteName) {
+          <p class="site">{{ card.siteName }}</p>
         }
       </div>
     </div>

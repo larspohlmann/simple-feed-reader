@@ -32,7 +32,6 @@ import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
 import { ToastService } from '../../../shared/toast/toast.service';
-import { textOf } from '../../../shared/text-of';
 import { problemMessage } from '../../../core/problem';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
@@ -132,10 +131,6 @@ export class EntryCommentsComponent {
       entryId: this.entryId(),
       network,
       address: post.address,
-      authorName: comment.author,
-      authorHandle: comment.authorHandle,
-      excerpt: textOf(comment.html),
-      card: null,
     });
   }
 

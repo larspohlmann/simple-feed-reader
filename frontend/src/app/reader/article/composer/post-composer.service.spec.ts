@@ -14,10 +14,6 @@ describe('PostComposer', () => {
       entryId: 7,
       network: 'bluesky',
       address: null,
-      authorName: null,
-      authorHandle: '@ann.bsky.social',
-      excerpt: 'Hi',
-      card: null,
     };
     let received: unknown;
 

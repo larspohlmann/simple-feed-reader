@@ -3,7 +3,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ComposerContextDto, PublishedPostDto, QuotedPostDto } from '../../entry-social';
+import {
+  ComposerCardDto,
+  ComposerContextDto,
+  LinkComposerTargetDto,
+  PostComposerTargetDto,
+  PublishedPostDto,
+} from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
 import {
   ComposerDialogComponent,
@@ -13,12 +19,21 @@ import {
 } from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
-const QUOTED: QuotedPostDto = {
+const QUOTED: PostComposerTargetDto = {
+  kind: 'post',
   authorName: 'Ann',
   authorHandle: '@ann@hachyderm.io',
   excerpt: 'What do you think?',
   card: null,
 };
+const STORY_CARD: ComposerCardDto = {
+  url: 'https://example.com/story',
+  title: 'A long read',
+  description: null,
+  imageUrl: 'https://example.com/lead.jpg',
+  siteName: 'example.com',
+};
+const STORY: LinkComposerTargetDto = { kind: 'link', card: STORY_CARD };
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
@@ -31,7 +46,7 @@ describe('ComposerDialogComponent', () => {
     maxCharacters: 500,
     visibility: 'unlisted',
     mentions: ['@ann@hachyderm.io'],
-    quote: null,
+    target: QUOTED,
     ...overrides,
   });
 
@@ -40,10 +55,6 @@ describe('ComposerDialogComponent', () => {
     entryId: 7,
     network: 'mastodon',
     address: REPLY,
-    authorName: 'Ann',
-    authorHandle: '@ann@hachyderm.io',
-    excerpt: 'What do you think?',
-    card: null,
     ...overrides,
   });
 
@@ -51,9 +62,6 @@ describe('ComposerDialogComponent', () => {
     kind: 'link',
     network: 'mastodon',
     url: 'https://example.com/story',
-    title: 'A long read',
-    site: 'example.com',
-    imageUrl: 'https://example.com/lead.jpg',
     prefill: 'A long read\n\nhttps://example.com/story',
     ...overrides,
   });
@@ -104,7 +112,9 @@ describe('ComposerDialogComponent', () => {
       expect.objectContaining({ kind: 'reply', entryId: 7, address: REPLY }),
       undefined,
     );
-    expect(element(fixture).querySelector('.target')!.textContent).toContain('What do you think?');
+    const answered = element(fixture).querySelector('.target')!;
+    expect(answered.querySelector('.handle')!.textContent).toContain('@ann@hachyderm.io');
+    expect(answered.querySelector('.excerpt')!.textContent).toContain('What do you think?');
     expect(textArea(fixture).value).toBe('@ann@hachyderm.io ');
   });
 
@@ -239,7 +249,9 @@ describe('ComposerDialogComponent', () => {
       url: null,
       text: '@ann@hachyderm.io Agreed',
       authorHandle: '@alice@mastodon.example',
-      shown: target(),
+      kind: 'reply',
+      network: 'mastodon',
+      target: QUOTED,
     });
   });
 
@@ -366,9 +378,12 @@ describe('ComposerDialogComponent', () => {
       { id: 5, handle: '@bea@mastodon.example' },
     ];
 
-    beforeEach(() => api.composer.mockReturnValue(of(context({ mentions: [] }))));
+    const linkContext = (overrides: Partial<ComposerContextDto> = {}) =>
+      context({ mentions: [], target: STORY, ...overrides });
 
-    it('shows the article as a card and starts the text with the prefill', () => {
+    beforeEach(() => api.composer.mockReturnValue(of(linkContext())));
+
+    it('shows the page card the server read and starts the text with the prefill', () => {
       const fixture = mount(article());
 
       const card = element(fixture).querySelector('.article')!;
@@ -389,7 +404,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('shows a post on its own network as the quote it becomes, with an empty text', () => {
-      api.composer.mockReturnValue(of(context({ mentions: [], quote: QUOTED })));
+      api.composer.mockReturnValue(of(linkContext({ target: QUOTED })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       const quoted = element(fixture).querySelector('.target')!;
@@ -410,7 +425,7 @@ describe('ComposerDialogComponent', () => {
         imageUrl: 'https://cdn.bsky.app/img/thumb.jpg',
         siteName: 'politico.com',
       };
-      api.composer.mockReturnValue(of(context({ mentions: [], quote: { ...QUOTED, card } })));
+      api.composer.mockReturnValue(of(linkContext({ target: { ...QUOTED, card } })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       const quotedCard = element(fixture).querySelector('.target .article')!;
@@ -420,7 +435,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('sends the quote of a post on its own network to the link endpoint, closing with it shown', () => {
-      api.composer.mockReturnValue(of(context({ mentions: [], quote: QUOTED })));
+      api.composer.mockReturnValue(of(linkContext({ target: QUOTED })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
       type(fixture, 'Look');
 
@@ -431,19 +446,26 @@ describe('ComposerDialogComponent', () => {
         expect.objectContaining({ text: 'Look' }),
       );
       expect(close).toHaveBeenCalledWith(
-        expect.objectContaining({ shown: { ...QUOTED, kind: 'quote', network: 'mastodon' } }),
+        expect.objectContaining({ kind: 'quote', network: 'mastodon', target: QUOTED }),
       );
     });
 
-    it('shows a card without an image or site when the article has none', () => {
-      const fixture = mount(article({ imageUrl: null, site: '' }));
+    it('shows a card without an image or site when the page has none', () => {
+      api.composer.mockReturnValue(
+        of(
+          linkContext({
+            target: { kind: 'link', card: { ...STORY_CARD, imageUrl: null, siteName: '' } },
+          }),
+        ),
+      );
+      const fixture = mount(article());
 
       expect(element(fixture).querySelector('.article img')).toBeNull();
       expect(element(fixture).querySelector('.article .site')).toBeNull();
     });
 
     it('uses the prefill once, keeping what the reader wrote over an account switch', () => {
-      api.composer.mockReturnValue(of(context({ accounts, mentions: [] })));
+      api.composer.mockReturnValue(of(linkContext({ accounts })));
       const fixture = mount(article());
       type(fixture, '');
       const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
@@ -458,22 +480,26 @@ describe('ComposerDialogComponent', () => {
       expect(textArea(fixture).value).toBe('');
     });
 
-    it('starts the text with the prefill once the context arrives', () => {
+    it('shows the card and starts the text with the prefill once the context arrives', () => {
       const slow = new Subject<ComposerContextDto>();
       api.composer.mockReturnValue(slow);
       const fixture = mount(article());
+      expect(element(fixture).querySelector('.article')).toBeNull();
 
-      slow.next(context({ mentions: [] }));
+      slow.next(linkContext());
       fixture.detectChanges();
 
+      expect(element(fixture).querySelector('.article .title')!.textContent).toContain(
+        'A long read',
+      );
       expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
     });
 
     it('keeps what the reader wrote when a later context quotes', () => {
-      api.composer.mockReturnValue(of(context({ accounts, mentions: [] })));
+      api.composer.mockReturnValue(of(linkContext({ accounts })));
       const fixture = mount(article());
       type(fixture, 'Mine');
-      api.composer.mockReturnValue(of(context({ accounts, mentions: [], quote: QUOTED })));
+      api.composer.mockReturnValue(of(linkContext({ accounts, target: QUOTED })));
       const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
       select.value = '5';
       select.dispatchEvent(new Event('change'));
@@ -496,7 +522,9 @@ describe('ComposerDialogComponent', () => {
         }),
         expect.objectContaining({ text: 'A long read', accountId: 4 }),
       );
-      expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/1' }));
+      expect(close).toHaveBeenCalledWith(
+        expect.objectContaining({ address: 'https://x/1', kind: 'link', target: STORY }),
+      );
     });
   });
 });

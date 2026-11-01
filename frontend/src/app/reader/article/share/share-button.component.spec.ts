@@ -16,8 +16,6 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { ResponseActions } from '../composer/response-actions.service';
 import { ShareButtonComponent } from './share-button.component';
 
-const IMAGE_URL = 'https://example.com/a.jpg';
-
 function account(
   id: number,
   network: SocialAccountRefDto['network'],
@@ -54,7 +52,6 @@ describe('ShareButtonComponent', () => {
     fixture = TestBed.createComponent(ShareButtonComponent);
     fixture.componentRef.setInput('url', 'https://example.com/a?utm_source=rss&id=1');
     fixture.componentRef.setInput('title', title);
-    fixture.componentRef.setInput('imageUrl', IMAGE_URL);
     fixture.componentRef.setInput('appearance', appearance);
     fixture.detectChanges();
   }
@@ -193,9 +190,6 @@ describe('ShareButtonComponent', () => {
         kind: 'link',
         network: 'mastodon',
         url: 'https://example.com/a?id=1',
-        title: 'First',
-        site: 'example.com',
-        imageUrl: IMAGE_URL,
         prefill: 'First\n\nhttps://example.com/a?id=1',
       });
       expect(document.querySelector('[role="menu"]')).toBeNull();
@@ -205,15 +199,11 @@ describe('ShareButtonComponent', () => {
   describe('on a fine pointer, for a page without a title', () => {
     beforeEach(() => mount(false, ''));
 
-    it('titles the composer card with the host and starts the text with the URL', () => {
+    it('starts the text with the URL', () => {
       item(openMenu(), 'Post on Mastodon').click();
 
       expect(responses.respond).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'example.com',
-          site: 'example.com',
-          prefill: 'https://example.com/a?id=1',
-        }),
+        expect.objectContaining({ prefill: 'https://example.com/a?id=1' }),
       );
     });
   });

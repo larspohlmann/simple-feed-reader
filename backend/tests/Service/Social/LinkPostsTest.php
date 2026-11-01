@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
@@ -30,6 +31,7 @@ use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\PostResolver\BlueskyPostResolver;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
 use App\Service\Social\PostWriting;
+use App\Service\Social\SharedPageCards;
 use App\Service\Social\SharedPostQuotes;
 use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialPostFinder;
@@ -44,6 +46,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubGuardedImageDownloader;
+use App\Tests\Support\StubPageCardReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Container\ContainerInterface;
 use Psr\Log\NullLogger;
@@ -67,12 +70,14 @@ final class LinkPostsTest extends DbTestCase
     private const string CREATE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.createRecord';
 
     private FakeMastodonNetwork $mastodon;
+    private StubPageCardReader $pages;
     private User $owner;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->mastodon = new FakeMastodonNetwork();
+        $this->pages = new StubPageCardReader();
         $this->owner = $this->user('link-posts@example.test');
     }
 
@@ -93,8 +98,30 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame($default, $context->account);
         self::assertTrue($context->canSend);
         self::assertEquals(new ComposerDefaultsModel(500, 'public'), $context->defaults);
-        self::assertNull($context->quote);
         self::assertSame([], $this->mastodon->calls);
+    }
+
+    public function testTheComposerShowsTheCardOfThePageTheLinkPostShares(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+
+        $context = $this->linkPosts()->contextFor($this->owner, self::target(null));
+
+        self::assertEquals(
+            new LinkCardContent(self::ARTICLE_URL, 'Card for ' . self::ARTICLE_URL, null, null, 'example.com'),
+            $context->target,
+        );
+        self::assertSame([self::ARTICLE_URL], $this->pages->readUrls());
+    }
+
+    public function testTheComposerShowsAPageThatCannotBeReadByItsHost(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $missing = 'https://news.example/missing';
+
+        $context = $this->linkPosts()->contextFor($this->owner, self::target(null, $missing));
+
+        self::assertEquals(new LinkCardContent($missing, 'news.example', null, null, 'news.example'), $context->target);
     }
 
     public function testTheComposerWritesAsTheChosenAccount(): void
@@ -120,6 +147,7 @@ final class LinkPostsTest extends DbTestCase
         );
 
         self::assertSame(['share ' . self::ARTICLE_URL . ' Worth reading'], $this->mastodon->calls);
+        self::assertSame([], $this->pages->readUrls());
         self::assertEquals(
             new PublishedPostModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
             $published,
@@ -134,18 +162,20 @@ final class LinkPostsTest extends DbTestCase
 
         $context = $this->linkPosts()->contextFor($this->owner, self::target(null, self::STATUS_URL));
 
-        self::assertSame($preview, $context->quote);
+        self::assertSame($preview, $context->target);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+        self::assertSame([], $this->pages->readUrls());
     }
 
-    public function testTheComposerForAStatusThatTakesNoQuoteShowsNone(): void
+    public function testTheComposerForAStatusThatTakesNoQuoteShowsItsPageCard(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
 
         $context = $this->linkPosts()->contextFor($this->owner, self::target(null, self::STATUS_URL));
 
-        self::assertNull($context->quote);
+        self::assertInstanceOf(LinkCardContent::class, $context->target);
+        self::assertSame(self::STATUS_URL, $context->target->url);
     }
 
     public function testAStatusSharedOnItsOwnNetworkIsQuoted(): void
@@ -306,7 +336,7 @@ final class LinkPostsTest extends DbTestCase
         $mastodon = $this->mastodon;
         $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
 
-        return $this->linkPostsOver($network, $network, new RoutedHttpClient([]));
+        return $this->linkPostsOver($network, $network, new RoutedHttpClient([]), $this->pages);
     }
 
     private function blueskyLinkPosts(RoutedHttpClient $http, PageCardReaderInterface $pageCards): LinkPosts
@@ -317,7 +347,7 @@ final class LinkPostsTest extends DbTestCase
             SocialApiWiring::blueskyRecords($client),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($client)),
             new BlueskyLinkCards(
-                $pageCards,
+                new SharedPageCards($pageCards, new NullLogger()),
                 new StubGuardedImageDownloader(),
                 $this->createStub(ImageResizerInterface::class),
                 SocialApiWiring::blueskySessions($client),
@@ -329,6 +359,7 @@ final class LinkPostsTest extends DbTestCase
             new ServiceLocator(['bluesky' => static fn (): BlueskyPostResolver => $resolver]),
             new ServiceLocator(['bluesky' => static fn (): BlueskyPostWriter => $writer]),
             $http,
+            $pageCards,
         );
     }
 
@@ -336,6 +367,7 @@ final class LinkPostsTest extends DbTestCase
         ContainerInterface $resolvers,
         ContainerInterface $writers,
         RoutedHttpClient $http,
+        PageCardReaderInterface $pageCards,
     ): LinkPosts {
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
@@ -355,6 +387,7 @@ final class LinkPostsTest extends DbTestCase
                 ),
                 SocialApiWiring::blueskyIdentityResolver($http->client()),
             ),
+            new SharedPageCards($pageCards, new NullLogger()),
             new ServiceLocator(['mastodon' => $defaults, 'bluesky' => $defaults]),
         );
     }

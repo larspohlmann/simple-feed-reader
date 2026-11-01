@@ -19,6 +19,7 @@ use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
+use App\Service\Social\SharedPageCards;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StubGuardedImageDownloader;
@@ -242,7 +243,7 @@ final class BlueskyPostWriterTest extends TestCase
             SocialApiWiring::blueskyRecords($http->client()),
             new BlueskyFacets(SocialApiWiring::blueskyIdentityResolver($http->client())),
             new BlueskyLinkCards(
-                $pageCards,
+                new SharedPageCards($pageCards, new NullLogger()),
                 new StubGuardedImageDownloader(),
                 $this->createStub(ImageResizerInterface::class),
                 SocialApiWiring::blueskySessions($http->client()),

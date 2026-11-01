@@ -62,16 +62,11 @@ export class SocialCountsComponent {
   }
 
   protected respond(kind: ResponseKind, network: SocialNetworkName): void {
-    const entry = this.entry();
     this.responses.respond({
       kind,
-      entryId: entry.id,
+      entryId: this.entry().id,
       network,
       address: null,
-      authorName: entry.poster?.name ?? entry.author,
-      authorHandle: null,
-      excerpt: entry.excerpt,
-      card: null,
     });
   }
 

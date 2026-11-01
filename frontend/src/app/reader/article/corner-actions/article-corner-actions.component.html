@@ -1,10 +1,5 @@
 @if (entry().url; as url) {
-  <app-share-button
-    appearance="corner"
-    [url]="url"
-    [title]="entry().title"
-    [imageUrl]="entry().imageUrl"
-  />
+  <app-share-button appearance="corner" [url]="url" [title]="entry().title" />
 }
 <button
   type="button"

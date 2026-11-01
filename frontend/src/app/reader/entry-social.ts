@@ -30,21 +30,32 @@ export interface EntryRepostDto {
 /** What the reader can do to the post beyond liking it, and has done. */
 export type PostActionsView = Omit<SocialViewerDto, 'isLiked'>;
 
-/** The link card a post carries, as the composer shows it below the post's text. */
-export type QuotedLinkCardDto = Omit<LinkCardDto, 'readerToken'>;
+/** A link card as the composer shows it: the one a post carries, or the page a link post shares. */
+export type ComposerCardDto = Omit<LinkCardDto, 'readerToken'>;
 
-/** A post as the composer shows it above the text: who wrote it, how it starts, and the link card it carries. */
-export interface QuotedPostDto {
+/** The post a reply or quote answers, or a link post quotes: who wrote it, how it starts, and the card it carries. */
+export interface PostComposerTargetDto {
+  kind: 'post';
   authorName: string | null;
   authorHandle: string | null;
   excerpt: string;
-  card: QuotedLinkCardDto | null;
+  card: ComposerCardDto | null;
 }
 
+/** The page a link post shares, by its own card, else by its host. */
+export interface LinkComposerTargetDto {
+  kind: 'link';
+  card: ComposerCardDto;
+}
+
+/** What the composer shows above the text: what the post answers, quotes or shares. */
+export type ComposerTargetDto = PostComposerTargetDto | LinkComposerTargetDto;
+
 /**
- * The answer of `GET /api/entries/{id}/social/composer` and `GET /api/social/link-composer`: whether the author lets
- * the reader reply or quote, as asked, as whom, and where the text starts. `visibility` is null on Bluesky; `quote`
- * is the post a link post quotes instead, when its URL names one on the account's network, else null.
+ * The answer of `GET /api/entries/{id}/social/composer` and `GET /api/social/link-composer`: what the post answers,
+ * quotes or shares, whether the author lets the reader reply or quote, as asked, as whom, and where the text starts.
+ * `visibility` is null on Bluesky. A link post whose URL names a post on the account's network quotes it, so its
+ * `target` is that post.
  */
 export interface ComposerContextDto {
   accounts: { id: number; handle: string }[];
@@ -53,7 +64,7 @@ export interface ComposerContextDto {
   maxCharacters: number;
   visibility: MastodonVisibility | null;
   mentions: string[];
-  quote: QuotedPostDto | null;
+  target: ComposerTargetDto;
 }
 
 /** What the composer writes about its target post. */

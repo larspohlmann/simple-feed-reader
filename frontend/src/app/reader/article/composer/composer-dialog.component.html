@@ -1,8 +1,6 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
   <app-overlay-panel fillOnMobile [heading]="headingKey() | transloco">
-    <app-compose-target [target]="shown()" />
-
     @if (state().status === 'loading') {
       <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
     }
@@ -15,6 +13,8 @@
     }
 
     @if (context(); as context) {
+      <app-compose-target [target]="context.target" />
+
       @if (!context.canSend && forbiddenKey !== null) {
         <app-error-banner [message]="forbiddenKey | transloco" />
       }

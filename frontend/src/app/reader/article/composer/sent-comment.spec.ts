@@ -7,14 +7,9 @@ describe('sentComment', () => {
     url: 'https://bsky.app/profile/did:plc:alice/post/3',
     text: '<b>Hi</b> & bye\nsee you\n\nlater ',
     authorHandle: '@alice.bsky.social',
-    shown: {
-      kind: 'reply',
-      network: 'bluesky',
-      authorName: null,
-      authorHandle: null,
-      excerpt: '',
-      card: null,
-    },
+    kind: 'reply',
+    network: 'bluesky',
+    target: { kind: 'post', authorName: null, authorHandle: null, excerpt: '', card: null },
   };
 
   it('shows the text escaped, in paragraphs, as the reader’s own fresh reply', () => {

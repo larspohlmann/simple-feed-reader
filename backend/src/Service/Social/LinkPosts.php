@@ -35,6 +35,7 @@ final readonly class LinkPosts
         private UrlNormalizer $urls,
         private PostWriting $writing,
         private SharedPostQuotes $quotes,
+        private SharedPageCards $pageCards,
         #[AutowireLocator('app.social_composer_defaults', defaultIndexMethod: 'network')]
         private ContainerInterface $defaults,
     ) {
@@ -60,7 +61,8 @@ final readonly class LinkPosts
             $account,
             canSend: true,
             defaults: $this->defaultsOf($account),
-            quote: $this->quotes->quotableAt($account, $url)?->responseContext->preview,
+            target: $this->quotes->quotableAt($account, $url)?->responseContext->preview
+                ?? $this->pageCards->cardOf($url),
         );
     }
 

@@ -32,6 +32,13 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     private const string LINK_POST_URL = 'https://mastodon.example/@alice/202';
     private const string STATUS_COMPOSER = '/api/social/link-composer?network=mastodon'
         . '&url=https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110';
+    private const array ARTICLE_HOST_CARD = ['kind' => 'link', 'card' => [
+        'url' => 'https://example.com/article',
+        'title' => 'example.com',
+        'description' => null,
+        'imageUrl' => null,
+        'siteName' => 'example.com',
+    ]];
     private const string IDEMPOTENCY_KEY = '9b2f6c1e-4a7d-4c1b-8f3e-2d5a6b7c8d9e';
 
     /** Must match framework.rate_limiter.social_writes.limit in rate_limiter.yaml. */
@@ -79,7 +86,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
             'mentions' => [],
-            'quote' => null,
+            'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
     }
 
@@ -101,7 +108,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'maxCharacters' => BlueskyPostWriter::MAX_GRAPHEMES,
             'visibility' => null,
             'mentions' => [],
-            'quote' => null,
+            'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
         self::assertSame([], $this->http->requests);
     }
@@ -228,6 +235,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         self::assertSame(
             [
+                'kind' => 'post',
                 'authorName' => 'Eugen',
                 'authorHandle' => '@Gargron@mastodon.social',
                 'excerpt' => 'Hello world',
@@ -239,7 +247,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
                     'siteName' => 'Example',
                 ],
             ],
-            $this->payload($client)['quote'],
+            $this->payload($client)['target'],
         );
     }
 
@@ -300,7 +308,9 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $this->mastodonAccountOf($user);
 
         $client->request('GET', '/api/social/link-composer?network=mastodon&url=' . rawurlencode($blueskyPost));
-        self::assertNull($this->payload($client)['quote']);
+        $target = $this->payload($client)['target'];
+        self::assertIsArray($target);
+        self::assertSame('link', $target['kind']);
 
         $this->send($client, self::LINKS . 'mastodon', ['url' => $blueskyPost, 'text' => 'Look']);
 

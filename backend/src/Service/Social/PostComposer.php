@@ -52,6 +52,7 @@ final readonly class PostComposer
             $post->account,
             $post->responseContext->allows($kind),
             $this->defaultsOf($post, $target, $kind),
+            $post->responseContext->preview,
         );
     }
 

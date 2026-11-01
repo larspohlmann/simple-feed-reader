@@ -56,10 +56,17 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     public function testTheComposerStartsFromTheInstancesLimitTheStricterVisibilityAndTheAuthor(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::SEARCH => self::statuses(['id' => '110', 'visibility' => 'public', 'account' => [
-                'acct' => 'Gargron@mastodon.social',
-                'url' => 'https://mastodon.social/@Gargron',
-            ]]),
+            self::SEARCH => self::statuses([
+                'id' => '110',
+                'visibility' => 'public',
+                'account' => [
+                    'display_name' => 'Eugen',
+                    'acct' => 'Gargron@mastodon.social',
+                    'url' => 'https://mastodon.social/@Gargron',
+                ],
+                'content' => '<p>Hello <b>world</b></p>',
+                'card' => ['url' => 'https://example.org/story', 'title' => 'The story', 'provider_name' => 'Example'],
+            ]),
             self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":1000}}}'),
             self::OWN_ACCOUNT => new MockResponse('{"id":"1","source":{"privacy":"unlisted"}}'),
         ]);
@@ -76,7 +83,19 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             'maxCharacters' => 1000,
             'visibility' => 'unlisted',
             'mentions' => ['@gargron@mastodon.social'],
-            'quote' => null,
+            'target' => [
+                'kind' => 'post',
+                'authorName' => 'Eugen',
+                'authorHandle' => '@Gargron@mastodon.social',
+                'excerpt' => 'Hello world',
+                'card' => [
+                    'url' => 'https://example.org/story',
+                    'title' => 'The story',
+                    'description' => null,
+                    'imageUrl' => null,
+                    'siteName' => 'Example',
+                ],
+            ],
         ], $this->payload($client));
     }
 

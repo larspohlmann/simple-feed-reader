@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
@@ -13,6 +14,7 @@ use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Model\PostPreviewModel;
 use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\Model\ResponseTargetModel;
@@ -72,6 +74,26 @@ final class PostComposerTest extends DbTestCase
         self::assertFalse($context->canSend);
         self::assertEquals(new ComposerDefaultsModel(500, 'public', ['110', '110']), $context->defaults);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testTheComposerShowsThePostItAnswersWithTheLinkCardItCarries(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $preview = new PostPreviewModel(
+            'Eugen',
+            '@Gargron@mastodon.social',
+            'Hello',
+            new LinkCardContent('https://example.org/story', 'The story', null, null, 'Example'),
+        );
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
+
+        $context = $this->composer()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Quote,
+        );
+
+        self::assertSame($preview, $context->target);
     }
 
     public function testAReplyInTheThreadAlsoLooksUpTheEntrysPostAsItsStarter(): void

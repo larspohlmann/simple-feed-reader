@@ -25,12 +25,12 @@ import { randomUuid } from '../../../shared/random-uuid';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
   ComposerContextDto,
+  ComposerTargetDto,
   MASTODON_VISIBILITIES,
   MastodonVisibility,
   PublishedPostDto,
   LinkTargetDto,
   PostDraftDto,
-  QuotedPostDto,
   ResponseKind,
   ResponseTargetDto,
 } from '../../entry-social';
@@ -38,32 +38,25 @@ import { SocialPostApi } from '../../social-post-api';
 import { ComposeTargetComponent } from './compose-target.component';
 import { postLength } from './post-length';
 
-/** The post a reply or quote responds to, as the composer shows it above the text. */
-export interface ResponseComposeTarget extends ResponseTargetDto, QuotedPostDto {
-  network: SocialNetworkName;
-}
+/** A reply to or quote of a post on the network the composer writes to. */
+export type ResponseComposeTarget = ResponseTargetDto & { network: SocialNetworkName };
 
-/** The page a link post shares, as the composer shows it above the text, and where the text starts. */
-export type LinkComposeTarget = LinkTargetDto & {
-  title: string;
-  site: string;
-  imageUrl: string | null;
-  prefill: string;
-};
+/** A post of a shared URL, and where its text starts unless it quotes a post. */
+export type LinkComposeTarget = LinkTargetDto & { prefill: string };
 
+/** Where the composer sends, and what it was asked to write; what it shows comes from the server. */
 export type ComposeTarget = ResponseComposeTarget | LinkComposeTarget;
 
-/** A post the composer answers or quotes, as it shows it. */
-export type ShownPost = QuotedPostDto & { kind: ResponseKind; network: SocialNetworkName };
-
-/** What the composer shows above the text: a link post that names a post on its network shows it as a quote. */
-export type ShownTarget = ShownPost | LinkComposeTarget;
+/** What the composer sends: a link post that names a post on its network quotes it. */
+export type SentKind = ResponseKind | 'link';
 
 /** What the composer published, with what the panel and the sent overlay need to show it before the network does. */
 export interface SentPost extends PublishedPostDto {
+  kind: SentKind;
+  network: SocialNetworkName;
   text: string;
   authorHandle: string | null;
-  shown: ShownTarget;
+  target: ComposerTargetDto;
 }
 
 type ContextState =
@@ -127,16 +120,13 @@ export class ComposerDialogComponent {
     const state = this.state();
     return state.status === 'failed' ? state.message : null;
   });
-  protected readonly shown = computed<ShownTarget>(() => {
-    const quote = this.context()?.quote ?? null;
-    if (this.target.kind !== 'link' || quote === null) return this.target;
-    return { ...quote, kind: 'quote', network: this.target.network };
+  protected readonly kind = computed<SentKind>(() => {
+    if (this.target.kind !== 'link') return this.target.kind;
+    return this.context()?.target.kind === 'post' ? 'quote' : 'link';
   });
   /** Where the words that differ between a reply, a quote and a link post live. */
-  protected readonly copy = computed(() => `reader.composer.${this.shown().kind}`);
-  protected readonly headingKey = computed(
-    () => `reader.${this.shown().kind}.${this.target.network}`,
-  );
+  protected readonly copy = computed(() => `reader.composer.${this.kind()}`);
+  protected readonly headingKey = computed(() => `reader.${this.kind()}.${this.target.network}`);
   protected readonly used = computed(() => postLength(this.text(), this.target.network));
   protected readonly over = computed(() => {
     const max = this.context()?.maxCharacters;
@@ -222,17 +212,21 @@ export class ComposerDialogComponent {
 
   /** A quote carries the link it was shared by, so a link post that quotes starts empty. */
   private startingText(context: ComposerContextDto): string {
-    if (this.target.kind === 'link') return context.quote === null ? this.target.prefill : '';
-    return context.mentions.length > 0 ? context.mentions.join(' ') + ' ' : '';
+    if (this.target.kind !== 'link') {
+      return context.mentions.length > 0 ? context.mentions.join(' ') + ' ' : '';
+    }
+    return context.target.kind === 'post' ? '' : this.target.prefill;
   }
 
   private sentAs(published: PublishedPostDto, context: ComposerContextDto): SentPost {
     const account = context.accounts.find((candidate) => candidate.id === context.accountId);
     return {
       ...published,
+      kind: this.kind(),
+      network: this.target.network,
       text: this.text(),
       authorHandle: account?.handle ?? null,
-      shown: this.shown(),
+      target: context.target,
     };
   }
 

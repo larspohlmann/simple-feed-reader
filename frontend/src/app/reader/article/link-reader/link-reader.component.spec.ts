@@ -106,15 +106,12 @@ describe('LinkReaderComponent', () => {
     expect(element.querySelector('article')!.getAttribute('aria-busy')).toBe('true');
   });
 
-  it('shares the opened link with its card image', () => {
-    const fixture = mount(
-      aLinkCard({ url: 'https://news.test/story', imageUrl: 'https://news.test/hero.jpg' }),
-    );
+  it('shares the opened link', () => {
+    const fixture = mount(aLinkCard({ url: 'https://news.test/story' }));
 
     const share = fixture.debugElement.query(By.directive(ShareButtonComponent))
       .componentInstance as ShareButtonComponent;
     expect(share.url()).toBe('https://news.test/story');
-    expect(share.imageUrl()).toBe('https://news.test/hero.jpg');
   });
 
   it('renders the extracted page', () => {

@@ -12,8 +12,8 @@ use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\ImageResizer\ImageResizerInterface;
 use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Social\BlueskyLinkCards;
+use App\Service\Social\SharedPageCards;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
@@ -91,29 +91,6 @@ final class BlueskyLinkCardsTest extends TestCase
             ['uri' => self::URL, 'title' => 'An article', 'description' => 'A summary'],
             self::externalOf($card),
         );
-    }
-
-    public function testAPageWithoutCardOfItsOwnIsTitledWithItsHost(): void
-    {
-        $this->page = new PageCardModel(null, null);
-
-        $card = $this->cardsNeverDownloading()->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
-
-        self::assertSame(['uri' => self::URL, 'title' => 'example.com', 'description' => ''], self::externalOf($card));
-        self::assertSame([], $this->logger->records);
-    }
-
-    public function testAPageThatCannotBeReadIsTitledWithItsHost(): void
-    {
-        $pageCards = $this->createStub(PageCardReaderInterface::class);
-        $pageCards->method('read')->willThrowException(new PageFetchException('gone'));
-
-        $card = $this->cardsReading($pageCards, $this->neverDownloading(), new RoutedHttpClient([]), $this->resizer())
-            ->cardOf(SocialApiWiring::blueskyAccount(), self::URL);
-
-        self::assertSame(['uri' => self::URL, 'title' => 'example.com', 'description' => ''], self::externalOf($card));
-        $this->assertLoggedAtDebug();
-        self::assertSame(['url' => self::URL, 'reason' => 'gone'], $this->logger->records[0]['context']);
     }
 
     public function testAnUploadAnswerWithoutBlobLeavesTheThumbnailOut(): void
@@ -237,7 +214,7 @@ final class BlueskyLinkCardsTest extends TestCase
         ImageResizerInterface $resizer,
     ): BlueskyLinkCards {
         return new BlueskyLinkCards(
-            $pageCards,
+            new SharedPageCards($pageCards, $this->logger),
             $downloader,
             $resizer,
             SocialApiWiring::blueskySessions($http->client()),

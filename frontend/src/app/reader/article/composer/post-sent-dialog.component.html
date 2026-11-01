@@ -3,7 +3,7 @@
     <p class="account">{{ 'reader.posted.as' | transloco: { handle } }}</p>
   }
   <p class="text">{{ posted.text }}</p>
-  <app-compose-target [target]="posted.shown" />
+  <app-compose-target [target]="posted.target" />
 
   <app-button footer variant="ghost" [focusInitial]="!posted.url" (click)="ref.close()">
     {{ 'dialog.close' | transloco }}

@@ -1,24 +1,25 @@
 import { TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkComposeTarget, ShownPost, SentPost } from './composer-dialog.component';
+import { LinkComposerTargetDto, PostComposerTargetDto } from '../../entry-social';
+import { SentPost } from './composer-dialog.component';
 import { PostSentDialogComponent } from './post-sent-dialog.component';
 
 describe('PostSentDialogComponent', () => {
   const close = jest.fn();
 
-  const link: LinkComposeTarget = {
+  const story: LinkComposerTargetDto = {
     kind: 'link',
-    network: 'bluesky',
-    url: 'https://example.com/story',
-    title: 'A long read',
-    site: 'example.com',
-    imageUrl: 'https://example.com/lead.jpg',
-    prefill: '',
+    card: {
+      url: 'https://example.com/story',
+      title: 'A long read',
+      description: null,
+      imageUrl: 'https://example.com/lead.jpg',
+      siteName: 'example.com',
+    },
   };
-  const quote: ShownPost = {
-    kind: 'quote',
-    network: 'mastodon',
+  const quoted: PostComposerTargetDto = {
+    kind: 'post',
     authorName: 'Ann',
     authorHandle: '@ann@hachyderm.io',
     excerpt: 'What do you think?',
@@ -29,7 +30,9 @@ describe('PostSentDialogComponent', () => {
     url: 'https://bsky.app/profile/alice.test/post/9',
     text: 'Worth a read\nhttps://example.com/story',
     authorHandle: '@alice.test',
-    shown: link,
+    kind: 'link',
+    network: 'bluesky',
+    target: story,
     ...overrides,
   });
 
@@ -76,12 +79,12 @@ describe('PostSentDialogComponent', () => {
   });
 
   it('shows a quote with the post it quoted', () => {
-    const element = mount(sent({ shown: quote }));
+    const element = mount(sent({ kind: 'quote', network: 'mastodon', target: quoted }));
 
     expect(element.querySelector('h1, h2')?.textContent).toContain('Quote posted on Mastodon');
-    const quoted = element.querySelector('.target')!;
-    expect(quoted.textContent).toContain('Ann');
-    expect(quoted.textContent).toContain('What do you think?');
+    const shown = element.querySelector('.target')!;
+    expect(shown.textContent).toContain('Ann');
+    expect(shown.textContent).toContain('What do you think?');
     expect(element.querySelector('.article')).toBeNull();
   });
 
@@ -93,7 +96,9 @@ describe('PostSentDialogComponent', () => {
       imageUrl: null,
       siteName: 'politico.com',
     };
-    const element = mount(sent({ shown: { ...quote, card } }));
+    const element = mount(
+      sent({ kind: 'quote', network: 'mastodon', target: { ...quoted, card } }),
+    );
 
     expect(element.querySelector('.target .article .title')!.textContent).toContain(
       'Senate passes the bill',

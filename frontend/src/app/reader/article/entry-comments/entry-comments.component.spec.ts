@@ -134,7 +134,6 @@ describe('EntryCommentsComponent', () => {
           kind: 'quote',
           entryId: 5,
           address: post.address,
-          excerpt: 'Yes',
         }),
       );
     });
@@ -172,10 +171,6 @@ describe('EntryCommentsComponent', () => {
         entryId: 5,
         network: 'bluesky',
         address: post.address,
-        authorName: 'Ann',
-        authorHandle: '@ann.bsky.social',
-        excerpt: 'Is it true?',
-        card: null,
       });
     });
 

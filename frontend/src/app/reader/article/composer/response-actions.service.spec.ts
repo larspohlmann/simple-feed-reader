@@ -32,17 +32,15 @@ describe('ResponseActions', () => {
     entryId: 7,
     network: 'mastodon',
     address: null,
-    authorName: null,
-    authorHandle: null,
-    excerpt: '',
-    card: null,
   };
   const sent: SentPost = {
     address: 'https://x/9',
     url: null,
+    kind: 'reply',
+    network: 'mastodon',
     text: 'Hi',
     authorHandle: '@a',
-    shown: target,
+    target: { kind: 'post', authorName: 'Ann', authorHandle: '@ann', excerpt: 'Hi', card: null },
   };
   const comment = (depth: number): EntryCommentDto =>
     anEntryComment({
@@ -95,7 +93,7 @@ describe('ResponseActions', () => {
 
   it('counts a quote of the post there and shows what was posted, leaving the thread alone', () => {
     const quote: ResponseComposeTarget = { ...target, kind: 'quote' };
-    const posted: SentPost = { ...sent, url: 'https://x.test/@a/9', shown: quote };
+    const posted: SentPost = { ...sent, url: 'https://x.test/@a/9', kind: 'quote' };
     composer.open.mockReturnValue(of(posted));
 
     actions.respond(quote);
@@ -121,13 +119,23 @@ describe('ResponseActions', () => {
       kind: 'link',
       network: 'bluesky',
       url: 'https://example.com/story',
-      title: 'A story',
-      site: 'example.com',
-      imageUrl: null,
       prefill: 'A story',
     };
-
-    const posted: SentPost = { ...sent, shown: link };
+    const posted: SentPost = {
+      ...sent,
+      kind: 'link',
+      network: 'bluesky',
+      target: {
+        kind: 'link',
+        card: {
+          url: 'https://example.com/story',
+          title: 'A story',
+          description: null,
+          imageUrl: null,
+          siteName: 'example.com',
+        },
+      },
+    };
     composer.open.mockReturnValue(of(posted));
 
     actions.respond(link);

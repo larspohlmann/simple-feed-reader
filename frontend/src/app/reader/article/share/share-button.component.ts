@@ -67,14 +67,6 @@ function connectedNetworks(accounts: readonly SocialAccountRefDto[]): ConnectedN
   })).filter((target) => target.accounts.length > 0);
 }
 
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
-}
-
 function postIdOf(network: SocialNetworkName): string {
   return `post-${network}`;
 }
@@ -98,7 +90,6 @@ function postIdOf(network: SocialNetworkName): string {
 export class ShareButtonComponent {
   readonly url = input.required<string>();
   readonly title = input('');
-  readonly imageUrl = input<string | null>(null);
   readonly appearance = input<ShareButtonAppearance>('toolbar');
 
   private readonly toast = inject(ToastService);
@@ -160,14 +151,10 @@ export class ShareButtonComponent {
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
     const url = stripTracking(this.url());
-    const site = hostOf(url);
     this.responses.respond({
       kind: 'link',
       network,
       url,
-      title: this.title() || site,
-      site,
-      imageUrl: this.imageUrl(),
       prefill: linkPrefill(network, this.title(), url),
     });
   }
