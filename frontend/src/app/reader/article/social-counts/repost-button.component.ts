@@ -109,8 +109,8 @@ export class RepostButtonComponent {
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        if (choice === TOGGLE) this.toggled.emit();
-        if (choice === QUOTE) this.quoteRequested.emit();
+        if (choice === TOGGLE) this.choose();
+        if (choice === QUOTE) this.quote();
       });
   }
 }

@@ -15,6 +15,7 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\ComposerContextModel;
+use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialPostModel;
@@ -45,19 +46,28 @@ final readonly class PostComposer
     public function contextFor(User $user, ResponseTargetModel $target, ResponseKind $kind): ComposerContextModel
     {
         $post = $this->targets->find($user, $target);
-        $network = $post->account->getNetwork();
-        $defaults = $this->defaults->get($network->value);
-        \assert($defaults instanceof ComposerDefaultsInterface);
 
         return new ComposerContextModel(
-            $this->socialAccounts->findConnectedOnNetwork($user, $network),
+            $this->socialAccounts->findConnectedOnNetwork($user, $post->account->getNetwork()),
             $post->account,
-            match ($kind) {
-                ResponseKind::Reply => $post->responseContext->canReply,
-                ResponseKind::Quote => $post->responseContext->canQuote,
-            },
-            $defaults->defaultsFor($post, $kind, $this->threadStarterOf($target, $post)),
+            $post->responseContext->allows($kind),
+            $this->defaultsOf($post, $target, $kind),
         );
+    }
+
+    /** A quote names nobody, so it never asks for the thread's starter. */
+    private function defaultsOf(
+        SocialPostModel $post,
+        ResponseTargetModel $target,
+        ResponseKind $kind,
+    ): ComposerDefaultsModel {
+        $defaults = $this->defaults->get($post->account->getNetwork()->value);
+        \assert($defaults instanceof ComposerDefaultsInterface);
+        if (ResponseKind::Quote === $kind) {
+            return $defaults->defaultsFor($post, static fn (): ?SocialPostModel => null)->withoutMentions();
+        }
+
+        return $defaults->defaultsFor($post, $this->threadStarterOf($target, $post));
     }
 
     /** @return \Closure(): ?SocialPostModel */

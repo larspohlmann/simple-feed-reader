@@ -10,6 +10,7 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\BlueskyStrongRef;
 
 /** Writes and deletes records in an account's own repo: likes and reposts of a post, and its own posts. */
 final readonly class BlueskyRecords
@@ -32,7 +33,7 @@ final readonly class BlueskyRecords
             'collection' => $collection,
             'record' => [
                 '$type' => $collection,
-                'subject' => ['uri' => $post->postId, 'cid' => $post->contentId],
+                'subject' => BlueskyStrongRef::of($post),
                 'createdAt' => $this->now(),
             ],
         ]);

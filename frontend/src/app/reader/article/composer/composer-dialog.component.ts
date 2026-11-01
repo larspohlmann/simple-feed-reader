@@ -13,7 +13,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { Observable, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -54,10 +54,10 @@ type ContextState =
   | { status: 'failed'; message: string };
 
 /**
- * Writes a reply to, or a quote of, a Bluesky or Mastodon post (#1964, #1965). Closing never asks: typed text is discarded.
- * It stays open while a reply is on the wire, so the panel always learns what was published.
+ * Writes a reply to, or a quote of, a Bluesky or Mastodon post. Closing never asks: typed text is discarded.
+ * It stays open while a post is on the wire, so the reader always learns what was published.
  * A failed send keeps the text and says why; a resend carries the key minted on open, so Mastodon
- * publishes the reply once.
+ * publishes the post once.
  */
 @Component({
   selector: 'app-composer-dialog',
@@ -82,6 +82,10 @@ export class ComposerDialogComponent {
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
   protected readonly visibilities = MASTODON_VISIBILITIES;
+  /** Where the words that differ between a reply and a quote live. */
+  protected readonly copy = `reader.composer.${this.target.kind}`;
+  protected readonly headingKey = `reader.${this.target.kind}.${this.target.network}`;
+  protected readonly forbiddenKey = `reader.${this.target.kind}Forbidden.${this.target.network}`;
   protected readonly state = signal<ContextState>({ status: 'loading' });
   protected readonly text = signal('');
   protected readonly visibility = signal<MastodonVisibility | null>(null);
@@ -161,7 +165,7 @@ export class ComposerDialogComponent {
     this.sending.set(true);
     this.ref.disableClose = true;
     this.sendError.set(null);
-    this.publish(context).subscribe({
+    this.api.send(this.target, this.draftFor(context)).subscribe({
       next: (published) => this.ref.close(this.sentAs(published, context)),
       error: (error: HttpErrorResponse) => {
         this.sending.set(false);
@@ -177,14 +181,6 @@ export class ComposerDialogComponent {
     if (this.text() === '' && context.mentions.length > 0) {
       this.text.set(context.mentions.join(' ') + ' ');
     }
-  }
-
-  private publish(context: ComposerContextDto): Observable<PublishedPostDto> {
-    const { entryId, address } = this.target;
-    const draft = this.draftFor(context);
-    return this.target.kind === 'quote'
-      ? this.api.quote(entryId, address, draft)
-      : this.api.reply(entryId, address, draft);
   }
 
   private sentAs(published: PublishedPostDto, context: ComposerContextDto): SentPost {

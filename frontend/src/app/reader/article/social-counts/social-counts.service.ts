@@ -94,7 +94,7 @@ export class SocialCountsService {
   stepQuotes(entryId: number): void {
     this.stateFor(entryId).update((state) =>
       state.status === 'ok' && state.counts.quotes !== null
-        ? { ...state, counts: { ...state.counts, quotes: state.counts.quotes + 1 } }
+        ? { ...state, counts: { ...state.counts, quotes: steppedCount(state.counts.quotes, true) } }
         : state,
     );
   }

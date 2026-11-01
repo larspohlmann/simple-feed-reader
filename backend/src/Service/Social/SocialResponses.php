@@ -21,14 +21,15 @@ use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\SocialIdentity;
 use App\Service\Social\Support\SocialPostAddress;
 
-/** Publishes the user's replies and deletes the ones a connected account wrote. */
-final readonly class SocialReplies
+/** Publishes the user's replies and quotes, and deletes the replies a connected account wrote. */
+final readonly class SocialResponses
 {
     public function __construct(
         private ResponseTargetFinder $targets,
@@ -55,13 +56,31 @@ final readonly class SocialReplies
      */
     public function reply(User $user, ResponseTargetModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        $post = $this->targets->find($user, $target);
-        if (!$post->responseContext->canReply) {
-            throw new SocialPostRefusedException('The author does not take replies on this post.');
-        }
-
-        $published = $this->writing->reply($post, $draft);
+        $published = $this->writing->reply($this->allowedTarget($user, $target, ResponseKind::Reply), $draft);
         $this->forgetWhatChanged($user, $target->entry);
+
+        return $published;
+    }
+
+    /**
+     * @throws NotASocialPostException
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNotFoundException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostNotFoundException
+     * @throws SocialPostRefusedException
+     * @throws SocialPostTooLongException
+     * @throws SocialTokenScopeMissingException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function quote(User $user, ResponseTargetModel $target, PostDraftModel $draft): PublishedPostModel
+    {
+        $published = $this->writing->quote($this->allowedTarget($user, $target, ResponseKind::Quote), $draft);
+        if (null === $target->address) {
+            $this->countsCache->forgetEntry($target->entry);
+        }
 
         return $published;
     }
@@ -118,6 +137,17 @@ final readonly class SocialReplies
             $writtenByAnother => throw new SocialPostRefusedException('No connected account wrote this reply.'),
             default => null,
         };
+    }
+
+    /** @throws SocialPostRefusedException when the author does not allow this kind of response to the post */
+    private function allowedTarget(User $user, ResponseTargetModel $target, ResponseKind $kind): SocialPostModel
+    {
+        $post = $this->targets->find($user, $target);
+        if (!$post->responseContext->allows($kind)) {
+            throw new SocialPostRefusedException(sprintf('The author does not allow a %s of this post.', $kind->value));
+        }
+
+        return $post;
     }
 
     private function forgetWhatChanged(User $user, Entry $entry): void

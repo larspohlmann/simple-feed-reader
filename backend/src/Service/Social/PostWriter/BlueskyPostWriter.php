@@ -14,6 +14,7 @@ use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
+use App\Service\Social\Support\BlueskyStrongRef;
 
 final readonly class BlueskyPostWriter implements PostWriterInterface
 {
@@ -40,7 +41,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     {
         return $this->published($target, $draft, ['embed' => [
             '$type' => self::QUOTE_EMBED,
-            'record' => ['uri' => $target->postId, 'cid' => $target->contentId],
+            'record' => BlueskyStrongRef::of($target),
         ]]);
     }
 
@@ -74,7 +75,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     /** @return array{root: array{uri: string, cid: ?string}, parent: array{uri: string, cid: ?string}} */
     private static function replyRefsOf(SocialPostModel $target): array
     {
-        $parent = ['uri' => $target->postId, 'cid' => $target->contentId];
+        $parent = BlueskyStrongRef::of($target);
         $root = $target->responseContext->threadRoot;
 
         return [

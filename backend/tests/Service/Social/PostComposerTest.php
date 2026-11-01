@@ -116,6 +116,20 @@ final class PostComposerTest extends DbTestCase
         self::assertTrue($this->composer()->contextFor($this->owner, $target, ResponseKind::Reply)->canSend);
     }
 
+    public function testAQuoteOfAReplyStartsWithNoMentionsAndNeverLooksUpTheThreadStarter(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+
+        $context = $this->composer()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Quote,
+        );
+
+        self::assertSame([], $context->defaults->mentions);
+        self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
+    }
+
     private function post(): Entry
     {
         $feed = new Feed('https://mastodon.social/@Gargron.rss');

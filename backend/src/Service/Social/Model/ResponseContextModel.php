@@ -22,4 +22,12 @@ final readonly class ResponseContextModel
         public bool $canQuote = true,
     ) {
     }
+
+    public function allows(ResponseKind $kind): bool
+    {
+        return match ($kind) {
+            ResponseKind::Reply => $this->canReply,
+            ResponseKind::Quote => $this->canQuote,
+        };
+    }
 }

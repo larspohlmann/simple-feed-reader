@@ -83,22 +83,12 @@ export class SocialPostApi {
     });
   }
 
-  reply(
-    entryId: number,
-    address: string | null,
+  send(
+    { kind, entryId, address }: ResponseTargetDto,
     draft: PostDraftDto,
   ): Observable<PublishedPostDto> {
-    return this.http.post<PublishedPostDto>(this.entryPath(entryId, 'social/replies'), draft, {
-      params: address === null ? {} : { address },
-    });
-  }
-
-  quote(
-    entryId: number,
-    address: string | null,
-    draft: PostDraftDto,
-  ): Observable<PublishedPostDto> {
-    return this.http.post<PublishedPostDto>(this.entryPath(entryId, 'social/quotes'), draft, {
+    const path = kind === 'quote' ? 'social/quotes' : 'social/replies';
+    return this.http.post<PublishedPostDto>(this.entryPath(entryId, path), draft, {
       params: address === null ? {} : { address },
     });
   }

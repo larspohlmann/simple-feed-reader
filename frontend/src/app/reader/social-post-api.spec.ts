@@ -129,21 +129,23 @@ describe('SocialPostApi', () => {
 
   it('POSTs a quote of the post, or of a reply named by its address', () => {
     const draft = { text: 'Look', accountId: 4, language: 'en', idempotencyKey: 'k-2' };
-    api.quote(7, null, draft).subscribe();
+    api.send({ kind: 'quote', entryId: 7, address: null }, draft).subscribe();
 
     const toPost = ctrl.expectOne('https://api.test/api/entries/7/social/quotes');
     expect(toPost.request.method).toBe('POST');
     expect(toPost.request.body).toEqual(draft);
     toPost.flush({ address: 'at://x', url: null });
 
-    api.quote(7, REPLY, draft).subscribe();
+    api.send({ kind: 'quote', entryId: 7, address: REPLY }, draft).subscribe();
     ctrl.expectOne(`https://api.test/api/entries/7/social/quotes?address=${REPLY}`).flush({});
   });
 
   it('POSTs a reply to the post, or to a reply named by its address', () => {
     const draft = { text: 'Hi', accountId: 4, language: 'de', idempotencyKey: 'k-1' };
     let received: unknown;
-    api.reply(7, null, draft).subscribe((published) => (received = published));
+    api
+      .send({ kind: 'reply', entryId: 7, address: null }, draft)
+      .subscribe((published) => (received = published));
 
     const toPost = ctrl.expectOne('https://api.test/api/entries/7/social/replies');
     expect(toPost.request.method).toBe('POST');
@@ -151,7 +153,7 @@ describe('SocialPostApi', () => {
     toPost.flush({ address: 'at://x', url: null });
     expect(received).toEqual({ address: 'at://x', url: null });
 
-    api.reply(7, REPLY, draft).subscribe();
+    api.send({ kind: 'reply', entryId: 7, address: REPLY }, draft).subscribe();
     ctrl.expectOne(`https://api.test/api/entries/7/social/replies?address=${REPLY}`).flush({});
   });
 

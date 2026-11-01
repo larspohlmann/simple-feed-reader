@@ -25,9 +25,3 @@
 .menu button {
   white-space: nowrap;
 }
-
-// Dimmed, not disabled: a disabled button takes no focus and shows no title, and the title is the reason.
-.menu [aria-disabled='true'] {
-  cursor: default;
-  opacity: 0.6;
-}

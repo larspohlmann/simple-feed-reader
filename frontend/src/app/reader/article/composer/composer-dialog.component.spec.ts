@@ -11,7 +11,7 @@ const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
-  let api: { composer: jest.Mock; reply: jest.Mock; quote: jest.Mock };
+  let api: { composer: jest.Mock; send: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
     accounts: [{ id: 4, handle: '@alice@mastodon.example' }],
@@ -69,8 +69,7 @@ describe('ComposerDialogComponent', () => {
     close.mockReset();
     api = {
       composer: jest.fn(() => of(context())),
-      reply: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
-      quote: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/2', url: null })),
+      send: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
     };
   });
 
@@ -154,7 +153,7 @@ describe('ComposerDialogComponent', () => {
 
       submit(fixture);
 
-      expect(api.reply.mock.calls[0][2]).toMatchObject({ accountId: 5, visibility: 'private' });
+      expect(api.send.mock.calls[0][1]).toMatchObject({ accountId: 5, visibility: 'private' });
     });
 
     it('drops a context still on the wire when the composer closes', () => {
@@ -189,9 +188,8 @@ describe('ComposerDialogComponent', () => {
 
     submit(fixture);
 
-    expect(api.reply).toHaveBeenCalledWith(
-      7,
-      REPLY,
+    expect(api.send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'reply', entryId: 7, address: REPLY }),
       expect.objectContaining({
         text: '@ann@hachyderm.io Agreed',
         accountId: 4,
@@ -208,7 +206,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('keeps the text after a failed send, says why, and resends with the same key', () => {
-    api.reply.mockReturnValueOnce(
+    api.send.mockReturnValueOnce(
       throwError(
         () =>
           new HttpErrorResponse({
@@ -226,26 +224,26 @@ describe('ComposerDialogComponent', () => {
     expect(textArea(fixture).value).toBe('Try');
     expect(element(fixture).textContent).toContain('Mastodon said no');
     submit(fixture);
-    const keys = api.reply.mock.calls.map((call) => call[2].idempotencyKey);
+    const keys = api.send.mock.calls.map((call) => call[1].idempotencyKey);
     expect(keys[0]).toBe(keys[1]);
     expect(close).toHaveBeenCalled();
   });
 
   it('cannot send twice while a reply is on the wire', () => {
     const pending = new Subject<PublishedPostDto>();
-    api.reply.mockReturnValue(pending);
+    api.send.mockReturnValue(pending);
     const fixture = mount();
     type(fixture, 'Once');
 
     submit(fixture);
     submit(fixture);
 
-    expect(api.reply).toHaveBeenCalledTimes(1);
+    expect(api.send).toHaveBeenCalledTimes(1);
   });
 
   it('stays open while a reply is on the wire, and closable again once it fails', () => {
     const pending = new Subject<PublishedPostDto>();
-    api.reply.mockReturnValue(pending);
+    api.send.mockReturnValue(pending);
     const fixture = mount();
     const ref = TestBed.inject(DialogRef);
     const cancel = () =>
@@ -285,13 +283,11 @@ describe('ComposerDialogComponent', () => {
     );
     submit(fixture);
 
-    expect(api.quote).toHaveBeenCalledWith(
-      7,
-      REPLY,
+    expect(api.send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'quote', entryId: 7, address: REPLY }),
       expect.objectContaining({ text: 'Worth reading' }),
     );
-    expect(api.reply).not.toHaveBeenCalled();
-    expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/2' }));
+    expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/1' }));
   });
 
   it('says so and sends nothing when the author keeps the post from quotes', () => {
@@ -315,7 +311,7 @@ describe('ComposerDialogComponent', () => {
 
     submit(fixture);
 
-    expect(api.reply.mock.calls[0][2]).toMatchObject({ contentWarning: 'Ending' });
+    expect(api.send.mock.calls[0][1]).toMatchObject({ contentWarning: 'Ending' });
   });
 
   it('shows Bluesky no visibility choice', () => {

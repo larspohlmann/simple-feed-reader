@@ -1,9 +1,6 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
-  <app-overlay-panel
-    fillOnMobile
-    [heading]="'reader.' + target.kind + '.' + target.network | transloco"
-  >
+  <app-overlay-panel fillOnMobile [heading]="headingKey | transloco">
     <blockquote class="target">
       <p class="author">
         @if (target.authorName) {
@@ -17,10 +14,7 @@
     </blockquote>
 
     @if (state().status === 'loading') {
-      <app-skeleton
-        [label]="'reader.composer.' + target.kind + '.loading' | transloco"
-        [rows]="2"
-      />
+      <app-skeleton [label]="copy + '.loading' | transloco" [rows]="2" />
     }
     @if (loadError(); as message) {
       <app-error-banner
@@ -32,13 +26,11 @@
 
     @if (context(); as context) {
       @if (!context.canSend) {
-        <app-error-banner
-          [message]="'reader.' + target.kind + 'Forbidden.' + target.network | transloco"
-        />
+        <app-error-banner [message]="forbiddenKey | transloco" />
       }
 
       @if (context.accounts.length > 1) {
-        <app-field [label]="'reader.composer.' + target.kind + '.account' | transloco">
+        <app-field [label]="copy + '.account' | transloco">
           <select id="reply-account" (change)="chooseAccount($event)">
             @for (account of context.accounts; track account.id) {
               <option [value]="account.id" [selected]="account.id === context.accountId">
@@ -49,7 +41,7 @@
         </app-field>
       }
 
-      <app-field [label]="'reader.composer.' + target.kind + '.text' | transloco">
+      <app-field [label]="copy + '.text' | transloco">
         <textarea
           #textField
           id="reply-text"
@@ -108,7 +100,7 @@
       [loading]="sending()"
       [disabled]="!canSend()"
     >
-      {{ 'reader.composer.' + target.kind + '.send' | transloco }}
+      {{ copy + '.send' | transloco }}
     </app-button>
   </app-overlay-panel>
 </form>

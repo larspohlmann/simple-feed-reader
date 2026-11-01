@@ -53,11 +53,6 @@ nav button {
   border-radius: var(--radius);
 }
 
-nav button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 nav button.danger {
   color: var(--danger);
 }
