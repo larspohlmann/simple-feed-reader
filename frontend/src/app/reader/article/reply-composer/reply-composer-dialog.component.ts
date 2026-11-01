@@ -21,6 +21,7 @@ import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.
 import { FieldComponent } from '../../../shared/field/field.component';
 import { inputValue } from '../../../shared/input-value';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
+import { randomUuid } from '../../../shared/random-uuid';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
   ComposerContextDto,
@@ -79,7 +80,7 @@ export class ReplyComposerDialogComponent {
   protected readonly ref = inject<DialogRef<SentReply>>(DialogRef);
   protected readonly target = inject<ReplyTarget>(DIALOG_DATA);
   private readonly api = inject(SocialPostApi);
-  private readonly idempotencyKey = crypto.randomUUID();
+  private readonly idempotencyKey = randomUuid();
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
   protected readonly visibilities = MASTODON_VISIBILITIES;
