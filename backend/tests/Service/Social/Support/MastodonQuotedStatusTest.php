@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Support;
 
 use App\Entity\EntryMedium;
+use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Service\Bluesky\Model\JsonNodeModel;
@@ -132,6 +133,33 @@ final class MastodonQuotedStatusTest extends TestCase
             new QuotedPostReference('https://third.example/@carol/7', 'carol@third.example'),
             $quote->nestedQuote,
         );
+    }
+
+    public function testAQuotedStatusCarriesItsPreviewCard(): void
+    {
+        $quote = self::quoted(MastodonQuotedStatus::of(JsonNodeModel::of(self::statusFields(['card' => [
+            'url' => 'https://news.example/story',
+            'title' => 'The story',
+            'description' => 'What happened.',
+            'image' => 'https://files.mastodon.example/cards/s.jpg',
+            'provider_name' => 'News',
+        ]]))));
+
+        self::assertEquals(
+            new LinkCardContent(
+                'https://news.example/story',
+                'The story',
+                'What happened.',
+                'https://files.mastodon.example/cards/s.jpg',
+                'News',
+            ),
+            $quote->linkCard,
+        );
+    }
+
+    public function testAQuotedStatusWithoutACardHasNone(): void
+    {
+        self::assertNull(self::quoted(MastodonQuotedStatus::of(JsonNodeModel::of(self::statusFields())))->linkCard);
     }
 
     /** @param array<string, string> $account */

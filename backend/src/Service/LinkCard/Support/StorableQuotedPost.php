@@ -34,6 +34,7 @@ final class StorableQuotedPost
             WordBoundary::clipped($quote->text, QuotedPostContent::TEXT_MAX),
             self::storableMedia($quote->media),
             self::storableReference($quote->nestedQuote),
+            $quote->linkCard === null ? null : StorableLinkCard::of($quote->linkCard),
         );
     }
 
