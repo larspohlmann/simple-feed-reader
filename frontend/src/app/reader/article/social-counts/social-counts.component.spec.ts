@@ -9,7 +9,7 @@ import { EntrySocialDto, PostActionsView, SocialCountsDto } from '../../entry-so
 import { ToastService } from '../../../shared/toast/toast.service';
 import { Problem } from '../../../core/problem';
 import { EntryDto } from '../../models';
-import { ReplyActions } from '../reply-composer/reply-actions.service';
+import { ResponseActions } from '../composer/response-actions.service';
 import { SocialCountsComponent } from './social-counts.component';
 import { SocialCountsService, SocialCountsState } from './social-counts.service';
 
@@ -21,7 +21,7 @@ describe('SocialCountsComponent', () => {
   let service: { state: jest.Mock; load: jest.Mock; toggleRepost: jest.Mock };
   let toast: { show: jest.Mock };
   let actions: { like: jest.Mock };
-  let replies: { reply: jest.Mock };
+  let responses: { respond: jest.Mock };
   let language: { lang: WritableSignal<Lang> };
 
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('SocialCountsComponent', () => {
     };
     toast = { show: jest.fn() };
     actions = { like: jest.fn() };
-    replies = { reply: jest.fn() };
+    responses = { respond: jest.fn() };
     language = { lang: signal<Lang>('en') };
     TestBed.configureTestingModule({
       imports: [SocialCountsComponent, provideTranslocoTesting()],
@@ -42,7 +42,7 @@ describe('SocialCountsComponent', () => {
         { provide: EntryActionHandler, useValue: actions },
         { provide: LanguageService, useValue: language },
         { provide: ToastService, useValue: toast },
-        { provide: ReplyActions, useValue: replies },
+        { provide: ResponseActions, useValue: responses },
       ],
     });
     fixture = TestBed.createComponent(SocialCountsComponent);
@@ -217,13 +217,16 @@ describe('SocialCountsComponent', () => {
       });
       show(entry);
       const button = replyButton(
-        settle(loaded({}, false, { isReposted: false, canRepost: true, canReply: true })),
+        settle(
+          loaded({}, false, { isReposted: false, canRepost: true, canReply: true, canQuote: true }),
+        ),
       )!;
 
       expect(button.getAttribute('aria-label')).toBe('Reply on Bluesky, 7 replies');
       button.click();
 
-      expect(replies.reply).toHaveBeenCalledWith({
+      expect(responses.respond).toHaveBeenCalledWith({
+        kind: 'reply',
         entryId: 1,
         network: 'bluesky',
         address: null,
@@ -236,19 +239,96 @@ describe('SocialCountsComponent', () => {
     it('offers the reply disabled, with its reason, on a post the author closed', () => {
       show(post());
       const button = replyButton(
-        settle(loaded({}, false, { isReposted: false, canRepost: true, canReply: false })),
+        settle(
+          loaded({}, false, {
+            isReposted: false,
+            canRepost: true,
+            canReply: false,
+            canQuote: true,
+          }),
+        ),
       )!;
       button.click();
 
       expect(button.getAttribute('aria-disabled')).toBe('true');
       expect(button.title).toBe('The author limits who can reply');
-      expect(replies.reply).not.toHaveBeenCalled();
+      expect(responses.respond).not.toHaveBeenCalled();
     });
 
     it('stays a plain count until the network says what the reader may do', () => {
       show(post());
 
       expect(replyButton(settle(loaded()))).toBeNull();
+    });
+  });
+
+  describe('quote', () => {
+    const quoteButton = (element: HTMLElement) =>
+      element.querySelector('button.quote') as HTMLButtonElement | null;
+
+    it('turns the quotes count into a button that opens the composer for a quote', () => {
+      show(
+        anEntry({
+          id: 1,
+          excerpt: 'Big news',
+          social: { network: 'bluesky', isLiked: false, canLike: true },
+        }),
+      );
+      const button = quoteButton(
+        settle(
+          loaded({}, false, { isReposted: false, canRepost: true, canReply: true, canQuote: true }),
+        ),
+      )!;
+
+      expect(button.getAttribute('aria-label')).toBe('Quote on Bluesky, 2 quotes');
+      expect(button.querySelector('.number')?.textContent?.trim()).toBe('2');
+      button.click();
+
+      expect(responses.respond).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'quote', entryId: 1, address: null }),
+      );
+    });
+
+    it('offers the quote disabled, with its reason, on a post the author keeps from quotes', () => {
+      show(post());
+      const button = quoteButton(
+        settle(
+          loaded({}, false, {
+            isReposted: false,
+            canRepost: true,
+            canReply: true,
+            canQuote: false,
+          }),
+        ),
+      )!;
+      button.click();
+
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(button.title).toBe('The author doesn’t allow quotes of this post');
+      expect(responses.respond).not.toHaveBeenCalled();
+    });
+
+    it('shows Mastodon, which counts no quotes, a quote button without a number', () => {
+      show(post({ network: 'mastodon' }));
+      const button = quoteButton(
+        settle(
+          loaded({ quotes: null }, false, {
+            isReposted: false,
+            canRepost: true,
+            canReply: true,
+            canQuote: true,
+          }),
+        ),
+      )!;
+
+      expect(button.querySelector('.number')).toBeNull();
+      expect(button.getAttribute('aria-label')).toBe('Quote on Mastodon');
+    });
+
+    it('stays a plain count until the network says what the reader may do', () => {
+      show(post());
+
+      expect(quoteButton(settle(loaded()))).toBeNull();
     });
   });
 
@@ -264,11 +344,11 @@ describe('SocialCountsComponent', () => {
     it('turns the repost count into the first button once the network answers', () => {
       show(post());
       const element = settle(
-        loaded({}, false, { isReposted: false, canRepost: true, canReply: true }),
+        loaded({}, false, { isReposted: false, canRepost: true, canReply: true, canQuote: true }),
       );
       const button = repostButton(element)!;
 
-      expect(labels(element)).toEqual(['2 quotes']);
+      expect(labels(element)).toEqual([]);
       expect(element.querySelector('.row')!.firstElementChild?.tagName).toBe('APP-REPOST-BUTTON');
       expect(button.querySelector('.number')?.textContent?.trim()).toBe('5');
       expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky, 5 reposts');
@@ -278,7 +358,9 @@ describe('SocialCountsComponent', () => {
     it('marks a reposted post', () => {
       show(post({ network: 'mastodon' }));
       const button = repostButton(
-        settle(loaded({}, false, { isReposted: true, canRepost: true, canReply: true })),
+        settle(
+          loaded({}, false, { isReposted: true, canRepost: true, canReply: true, canQuote: true }),
+        ),
       )!;
 
       expect(button.getAttribute('aria-label')).toBe('Undo boost on Mastodon, 5 boosts');
@@ -289,7 +371,7 @@ describe('SocialCountsComponent', () => {
       const entry = post();
       show(entry);
       const element = settle(
-        loaded({}, false, { isReposted: false, canRepost: true, canReply: true }),
+        loaded({}, false, { isReposted: false, canRepost: true, canReply: true, canQuote: true }),
       );
       repostButton(element)!.click();
       fixture.detectChanges();
@@ -302,6 +384,27 @@ describe('SocialCountsComponent', () => {
       const onError = service.toggleRepost.mock.calls[0][1] as (problem: Problem) => void;
       onError({ status: 409, type: 'social_post_refused', title: 'Refused', detail: 'No boosts' });
       expect(toast.show).toHaveBeenCalledWith({ message: 'No boosts' });
+    });
+
+    it('quotes the post from the repost menu', () => {
+      show(
+        anEntry({
+          id: 1,
+          excerpt: 'Big news',
+          social: { network: 'bluesky', isLiked: false, canLike: true },
+        }),
+      );
+      repostButton(
+        settle(
+          loaded({}, false, { isReposted: false, canRepost: true, canReply: true, canQuote: true }),
+        ),
+      )!.click();
+      fixture.detectChanges();
+      document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click();
+
+      expect(responses.respond).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'quote', entryId: 1, address: null, excerpt: 'Big news' }),
+      );
     });
   });
 });

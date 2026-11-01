@@ -26,7 +26,7 @@ final readonly class SocialPostModel
         public ?string $existingRepostId,
         public bool $canRepost,
         public ?SocialCountsModel $counts,
-        public ReplyContextModel $replyContext,
+        public ResponseContextModel $responseContext,
     ) {
     }
 
@@ -40,7 +40,7 @@ final readonly class SocialPostModel
             existingRepostId: null,
             canRepost: true,
             counts: null,
-            replyContext: new ReplyContextModel(),
+            responseContext: new ResponseContextModel(),
         );
     }
 
@@ -54,7 +54,7 @@ final readonly class SocialPostModel
             existingRepostId: null,
             canRepost: true,
             counts: null,
-            replyContext: new ReplyContextModel(),
+            responseContext: new ResponseContextModel(),
         );
     }
 
@@ -83,11 +83,11 @@ final readonly class SocialPostModel
             $this->existingRepostId,
             $this->canRepost,
             $counts,
-            $this->replyContext,
+            $this->responseContext,
         );
     }
 
-    public function inReplyContext(ReplyContextModel $replyContext): self
+    public function inResponseContext(ResponseContextModel $responseContext): self
     {
         return new self(
             $this->account,
@@ -97,7 +97,7 @@ final readonly class SocialPostModel
             $this->existingRepostId,
             $this->canRepost,
             $this->counts,
-            $replyContext,
+            $responseContext,
         );
     }
 
@@ -114,7 +114,7 @@ final readonly class SocialPostModel
             $existingRepostId ?? $this->existingRepostId,
             $canRepost ?? $this->canRepost,
             $this->counts,
-            $this->replyContext,
+            $this->responseContext,
         );
     }
 }

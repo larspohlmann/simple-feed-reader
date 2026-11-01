@@ -16,7 +16,7 @@ use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\SocialIdentity;
 
-/** Mastodon's composer answers the author and the thread's starter, never less private than the post it answers. */
+/** Mastodon's composer names the author and the thread's starter, never less private than the post it answers. */
 final readonly class MastodonComposerDefaults implements ComposerDefaultsInterface
 {
     private const string INSTANCE = '/api/v2/instance';
@@ -38,27 +38,28 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         $account = $target->account;
-        $authors = [$target->replyContext->authorIdentity, $threadStarter()?->replyContext->authorIdentity];
 
         return new ComposerDefaultsModel(
             $this->answerOf($account, self::INSTANCE)->node('configuration')->node('statuses')->int('max_characters')
                 ?? self::DEFAULT_MAX_CHARACTERS,
             MastodonVisibility::stricterOf(
-                $target->replyContext->visibility ?? self::DEFAULT_VISIBILITY,
+                $target->responseContext->visibility ?? self::DEFAULT_VISIBILITY,
                 $this->answerOf($account, self::OWN_ACCOUNT)->node('source')->string('privacy')
                     ?? self::DEFAULT_VISIBILITY,
             ),
-            self::mentionsOf($account, $authors),
+            self::mentionsOf($target, $threadStarter),
         );
     }
 
     /**
-     * @param list<?string> $authors
+     * @param \Closure(): ?SocialPostModel $threadStarter
      *
      * @return list<string>
      */
-    private static function mentionsOf(SocialAccount $account, array $authors): array
+    private static function mentionsOf(SocialPostModel $target, \Closure $threadStarter): array
     {
+        $account = $target->account;
+        $authors = [$target->responseContext->authorIdentity, $threadStarter()?->responseContext->authorIdentity];
         $others = array_filter(
             array_map(static fn (?string $author): string => mb_strtolower($author ?? ''), $authors),
             static fn (string $author): bool => '' !== $author && !SocialIdentity::isAccount($author, $account),

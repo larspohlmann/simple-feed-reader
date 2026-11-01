@@ -111,6 +111,10 @@ export class CommentsService {
     );
   }
 
+  countQuote(entryId: number, address: string): void {
+    this.stateFor(entryId).update((state) => withQuote(state, address));
+  }
+
   private stateFor(id: number): WritableSignal<CommentsState> {
     const state = this.states.get(id) ?? signal<CommentsState>({ status: 'idle' });
     this.states.delete(id);
@@ -190,6 +194,15 @@ function withRepost(state: CommentsState, address: string, isReposted: boolean):
           isReposted,
           counts: { ...post.counts, reposts: steppedCount(post.counts.reposts, isReposted) },
         },
+  );
+}
+
+/** The state with one more quote counted on the comment at `address`, where its network counts quotes. */
+function withQuote(state: CommentsState, address: string): CommentsState {
+  return withPost(state, address, (post) =>
+    post.counts.quotes === null
+      ? post
+      : { ...post, counts: { ...post.counts, quotes: steppedCount(post.counts.quotes, true) } },
   );
 }
 

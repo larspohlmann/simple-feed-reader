@@ -45,7 +45,11 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
     public function testOpeningAPostLikedAndBoostedOnTheNetworkSaysSoAndStoresTheLikeForTheList(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::SEARCH => self::foundStatus(['favourited' => true, 'reblogged' => true]),
+            self::SEARCH => self::foundStatus([
+                'favourited' => true,
+                'reblogged' => true,
+                'quote_approval' => ['current_user' => 'automatic'],
+            ]),
         ]);
         $user = $this->signIn($client, 'viewer-liked@example.test');
         $this->mastodonAccountOf($user);
@@ -55,7 +59,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['isLiked' => true, 'isReposted' => true, 'canRepost' => true, 'canReply' => true],
+            ['isLiked' => true, 'isReposted' => true, 'canRepost' => true, 'canReply' => true, 'canQuote' => true],
             $this->payload($client),
         );
         self::assertSame([self::SEARCH], $this->routesAsked());
@@ -79,7 +83,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         $client->request('GET', $this->viewerPath($entryId));
 
         self::assertSame(
-            ['isLiked' => false, 'isReposted' => false, 'canRepost' => true, 'canReply' => true],
+            ['isLiked' => false, 'isReposted' => false, 'canRepost' => true, 'canReply' => true, 'canQuote' => false],
             $this->payload($client),
         );
         self::assertSame(0, $this->likeRows());
@@ -97,7 +101,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         $client->request('GET', $this->viewerPath($this->mastodonPostFor($user)));
 
         self::assertSame(
-            ['isLiked' => false, 'isReposted' => false, 'canRepost' => false, 'canReply' => true],
+            ['isLiked' => false, 'isReposted' => false, 'canRepost' => false, 'canReply' => true, 'canQuote' => false],
             $this->payload($client),
         );
     }

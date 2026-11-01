@@ -47,11 +47,19 @@ final class PostCountsTest extends TestCase
         yield 'replies' => ['replyCount'];
     }
 
-    public function testAMastodonStatusGivesItsCountsAndNoQuotes(): void
+    public function testAMastodonStatusBefore45GivesItsCountsAndNoQuotes(): void
     {
         self::assertEquals(
             new SocialCountsModel(5, 2, 1, null),
             PostCounts::ofMastodonStatus(JsonNodeModel::of(self::MASTODON_STATUS)),
+        );
+    }
+
+    public function testAMastodon45StatusCountsItsQuotes(): void
+    {
+        self::assertEquals(
+            new SocialCountsModel(5, 2, 1, 3),
+            PostCounts::ofMastodonStatus(JsonNodeModel::of([...self::MASTODON_STATUS, 'quotes_count' => 3])),
         );
     }
 

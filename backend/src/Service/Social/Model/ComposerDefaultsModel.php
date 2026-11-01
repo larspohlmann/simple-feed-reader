@@ -19,4 +19,9 @@ final readonly class ComposerDefaultsModel
         public array $mentions = [],
     ) {
     }
+
+    public function withoutMentions(): self
+    {
+        return new self($this->maxCharacters, $this->visibility);
+    }
 }

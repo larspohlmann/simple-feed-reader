@@ -4,7 +4,7 @@
   [class.on]="reposted()"
   [attr.aria-haspopup]="popup()"
   [attr.aria-expanded]="open()"
-  [attr.aria-disabled]="canRepost() ? null : 'true'"
+  [attr.aria-disabled]="opens() ? null : 'true'"
   [attr.title]="hintKey() | transloco"
   [attr.aria-label]="(hintKey() | transloco) + (countLabel() ? ', ' + countLabel() : '')"
   cdkOverlayOrigin
@@ -38,9 +38,25 @@
     role="menu"
     [attr.aria-label]="'reader.repostMenu.' + network() | transloco"
   >
-    <button role="menuitem" type="button" (click)="choose()">
+    <button
+      role="menuitem"
+      type="button"
+      [attr.aria-disabled]="canRepost() ? null : 'true'"
+      [attr.title]="canRepost() ? null : ('reader.repostForbidden.' + network() | transloco)"
+      (click)="choose()"
+    >
       <app-icon name="repeat" size="sm" />
       {{ actionKey() | transloco }}
+    </button>
+    <button
+      role="menuitem"
+      type="button"
+      [attr.aria-disabled]="canQuote() ? null : 'true'"
+      [attr.title]="canQuote() ? null : ('reader.quoteForbidden.' + network() | transloco)"
+      (click)="quote()"
+    >
+      <app-icon name="format_quote" size="sm" />
+      {{ 'reader.quote.' + network() | transloco }}
     </button>
   </div>
 </ng-template>

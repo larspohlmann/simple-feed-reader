@@ -14,12 +14,19 @@
     cursor: pointer;
   }
 
+  // A refused action stays listed, dimmed: `aria-disabled` keeps focus and the title that says why.
+  [role='menuitem']:disabled,
+  [role='menuitem'][aria-disabled='true'] {
+    cursor: default;
+    opacity: 0.5;
+  }
+
   [role='menuitem']:focus-visible {
     background: var(--surface-0);
   }
 
   @media (hover: hover) {
-    [role='menuitem']:hover:not(:disabled) {
+    [role='menuitem']:hover:not(:disabled, [aria-disabled='true']) {
       background: var(--surface-0);
     }
   }

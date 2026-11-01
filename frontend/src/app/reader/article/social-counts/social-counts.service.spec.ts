@@ -25,6 +25,7 @@ describe('SocialCountsService', () => {
     isReposted: false,
     canRepost: true,
     canReply: true,
+    canQuote: true,
     ...overrides,
   });
   const post = (id = 1, isLiked = false) =>
@@ -68,7 +69,7 @@ describe('SocialCountsService', () => {
       status: 'ok',
       counts,
       likedAtLoad: false,
-      actions: { isReposted: false, canRepost: true, canReply: true },
+      actions: { isReposted: false, canRepost: true, canReply: true, canQuote: true },
       loadedAt: Date.parse('2026-10-13T12:00:00Z'),
     });
   });
@@ -304,5 +305,16 @@ describe('SocialCountsService', () => {
     expect(service.state(1)()).toMatchObject({ counts: { replies: 6 } });
     service.stepReplies(2, true);
     expect(service.state(2)()).toEqual({ status: 'idle' });
+  });
+
+  it('steps the quotes count for a quote the reader published, where the network counts quotes', () => {
+    service.load(post(1));
+    service.stepQuotes(1);
+    expect(service.state(1)()).toMatchObject({ counts: { quotes: 3 } });
+
+    api.counts.mockReturnValue(of({ ...counts, quotes: null }));
+    service.load(post(2));
+    service.stepQuotes(2);
+    expect(service.state(2)()).toMatchObject({ counts: { quotes: null } });
   });
 });

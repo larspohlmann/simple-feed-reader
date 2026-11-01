@@ -20,6 +20,8 @@ export interface ActionSheetAction {
   logo?: ActionSheetLogo;
   danger?: boolean;
   disabled?: boolean;
+  /** A second line under the label, already translated: why a disabled action is unavailable. */
+  hint?: string;
 }
 
 export const ACTION_SHEET_DIVIDER = { divider: true } as const;

@@ -90,6 +90,14 @@ export class SocialCountsService {
     );
   }
 
+  stepQuotes(entryId: number): void {
+    this.stateFor(entryId).update((state) =>
+      state.status === 'ok' && state.counts.quotes !== null
+        ? { ...state, counts: { ...state.counts, quotes: steppedCount(state.counts.quotes, true) } }
+        : state,
+    );
+  }
+
   private stateFor(id: number): WritableSignal<SocialCountsState> {
     const state = this.states.get(id) ?? signal<SocialCountsState>({ status: 'idle' });
     this.states.delete(id);
@@ -120,6 +128,7 @@ export class SocialCountsService {
             isReposted: viewer.isReposted,
             canRepost: viewer.canRepost,
             canReply: viewer.canReply,
+            canQuote: viewer.canQuote,
           },
           loadedAt: Date.now(),
         });

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
-import { ReplyActions } from '../reply-composer/reply-actions.service';
+import { ResponseActions } from '../composer/response-actions.service';
 import { CommentsService, CommentsState } from './comments.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
@@ -22,7 +22,7 @@ const navigation = { layer: jest.fn() };
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
-  let replies: { reply: jest.Mock; delete: jest.Mock };
+  let responses: { respond: jest.Mock; delete: jest.Mock };
   let service: {
     state: jest.Mock;
     load: jest.Mock;
@@ -32,7 +32,7 @@ describe('EntryCommentsComponent', () => {
   };
 
   beforeEach(() => {
-    replies = { reply: jest.fn(), delete: jest.fn() };
+    responses = { respond: jest.fn(), delete: jest.fn() };
     states = new Map();
     service = {
       state: jest.fn((id: number) => stateOf(id)),
@@ -46,7 +46,7 @@ describe('EntryCommentsComponent', () => {
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
       providers: [
         { provide: CommentsService, useValue: service },
-        { provide: ReplyActions, useValue: replies },
+        { provide: ResponseActions, useValue: responses },
         { provide: LinkReaderNavigation, useValue: navigation },
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
       ],
@@ -94,6 +94,7 @@ describe('EntryCommentsComponent', () => {
       isReposted: false,
       canRepost: true,
       canReply: true,
+      canQuote: true,
       isOwn: false,
     };
     const likeButton = (element: HTMLElement) =>
@@ -103,7 +104,8 @@ describe('EntryCommentsComponent', () => {
       showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
       const element = settleComments([anEntryComment({ post })]);
 
-      expect(element.querySelectorAll('.comment .count')).toHaveLength(1);
+      expect(element.querySelectorAll('.comment .count')).toHaveLength(0);
+      expect(element.querySelector('.comment button.quote')).not.toBeNull();
       expect(element.querySelector('.comment button.repost .number')?.textContent?.trim()).toBe(
         '1',
       );
@@ -118,6 +120,23 @@ describe('EntryCommentsComponent', () => {
       (document.querySelector('[role="menuitem"]') as HTMLButtonElement).click();
 
       expect(service.toggleRepost).toHaveBeenCalledWith(5, post, expect.any(Function));
+    });
+
+    it('quotes the comment from its repost menu', () => {
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
+      const element = settleComments([anEntryComment({ post, author: 'Ann', html: '<p>Yes</p>' })]);
+      (element.querySelector('.comment button.repost') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click();
+
+      expect(responses.respond).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'quote',
+          entryId: 5,
+          address: post.address,
+          excerpt: 'Yes',
+        }),
+      );
     });
 
     it('likes the comment through the service', () => {
@@ -148,7 +167,8 @@ describe('EntryCommentsComponent', () => {
         settleComments([comment]).querySelector('.comment button.reply') as HTMLButtonElement
       ).click();
 
-      expect(replies.reply).toHaveBeenCalledWith({
+      expect(responses.respond).toHaveBeenCalledWith({
+        kind: 'reply',
         entryId: 5,
         network: 'bluesky',
         address: post.address,
@@ -166,7 +186,7 @@ describe('EntryCommentsComponent', () => {
 
       expect(deletes).toHaveLength(1);
       (deletes[0] as HTMLButtonElement).click();
-      expect(replies.delete).toHaveBeenCalledWith(5, 'bluesky', own);
+      expect(responses.delete).toHaveBeenCalledWith(5, 'bluesky', own);
     });
 
     it('shows no row for a comment from a feed', () => {

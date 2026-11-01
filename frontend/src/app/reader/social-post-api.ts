@@ -6,8 +6,9 @@ import {
   ComposerContextDto,
   EntryLikeDto,
   EntryRepostDto,
-  PublishedReplyDto,
-  ReplyDraftDto,
+  PublishedPostDto,
+  PostDraftDto,
+  ResponseTargetDto,
   SocialCountsDto,
   SocialViewerDto,
 } from './entry-social';
@@ -69,26 +70,25 @@ export class SocialPostApi {
     });
   }
 
-  /** `address` names a reply in the thread; null answers the entry's own post. */
   composer(
-    entryId: number,
-    address: string | null,
+    { kind, entryId, address }: ResponseTargetDto,
     accountId?: number,
   ): Observable<ComposerContextDto> {
     return this.http.get<ComposerContextDto>(this.entryPath(entryId, 'social/composer'), {
       params: {
+        kind,
         ...(address === null ? {} : { address }),
         ...(accountId === undefined ? {} : { accountId }),
       },
     });
   }
 
-  reply(
-    entryId: number,
-    address: string | null,
-    draft: ReplyDraftDto,
-  ): Observable<PublishedReplyDto> {
-    return this.http.post<PublishedReplyDto>(this.entryPath(entryId, 'social/replies'), draft, {
+  send(
+    { kind, entryId, address }: ResponseTargetDto,
+    draft: PostDraftDto,
+  ): Observable<PublishedPostDto> {
+    const path = kind === 'quote' ? 'social/quotes' : 'social/replies';
+    return this.http.post<PublishedPostDto>(this.entryPath(entryId, path), draft, {
       params: address === null ? {} : { address },
     });
   }

@@ -1351,8 +1351,8 @@
       "mastodon": "Undo boost on Mastodon"
     },
     "repostMenu": {
-      "bluesky": "Repost",
-      "mastodon": "Boost"
+      "bluesky": "Repost or quote",
+      "mastodon": "Boost or quote"
     },
     "repostForbidden": {
       "bluesky": "This post can't be reposted",
@@ -1514,9 +1514,6 @@
       "mastodon": "Reply on Mastodon"
     },
     "composer": {
-      "loading": "Getting the reply ready",
-      "account": "Reply as",
-      "text": "Your reply",
       "counter": "{{ used }} / {{ max }}",
       "visibility": "Visibility",
       "visibilities": {
@@ -1527,14 +1524,35 @@
       },
       "addWarning": "Add a content warning",
       "warning": "Content warning",
-      "send": "Reply"
+      "reply": {
+        "loading": "Getting the reply ready",
+        "account": "Reply as",
+        "text": "Your reply",
+        "send": "Reply"
+      },
+      "quote": {
+        "loading": "Getting the quote ready",
+        "account": "Quote as",
+        "text": "Your comment",
+        "send": "Quote"
+      }
     },
     "deleteReply": {
       "action": "Delete reply",
       "title": "Delete this reply?",
       "message": "It is deleted on {{ network }} as well.",
       "confirm": "Delete"
-    }
+    },
+    "quote": {
+      "bluesky": "Quote on Bluesky",
+      "mastodon": "Quote on Mastodon"
+    },
+    "quoteForbidden": {
+      "bluesky": "The author doesn’t allow quotes of this post",
+      "mastodon": "You can’t quote this post"
+    },
+    "quoteSent": "Quote posted",
+    "openQuote": "Open"
   },
   "common": {
     "save": "Save",

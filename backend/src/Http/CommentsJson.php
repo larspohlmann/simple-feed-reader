@@ -59,6 +59,7 @@ final readonly class CommentsJson
      *     isReposted: bool,
      *     canRepost: bool,
      *     canReply: bool,
+     *     canQuote: bool,
      *     isOwn: bool,
      * }
      */
@@ -71,6 +72,7 @@ final readonly class CommentsJson
             'isReposted' => $post->viewer->isReposted,
             'canRepost' => $post->viewer->canRepost,
             'canReply' => $post->viewer->canReply,
+            'canQuote' => $post->viewer->canQuote,
             'isOwn' => $post->viewer->isOwn,
         ];
     }

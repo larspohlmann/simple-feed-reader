@@ -27,6 +27,7 @@ export interface EntryCommentPostDto {
   isReposted: boolean;
   canRepost: boolean;
   canReply: boolean;
+  canQuote: boolean;
   /** Written by one of the reader's connected accounts, so it can be deleted. */
   isOwn: boolean;
 }

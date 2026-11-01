@@ -12,7 +12,7 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialReplyTooLongException;
+use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -46,8 +46,8 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 Response::HTTP_CONFLICT,
                 $exception->getMessage(),
             )),
-            $exception instanceof SocialReplyTooLongException => new ResolvedProblem(new ApiProblem(
-                'social_reply_too_long',
+            $exception instanceof SocialPostTooLongException => new ResolvedProblem(new ApiProblem(
+                'social_post_too_long',
                 'The reply is too long for the network',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),

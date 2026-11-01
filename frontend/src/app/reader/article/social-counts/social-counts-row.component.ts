@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OutputEmitterRef,
+  computed,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { LanguageService } from '../../../core/i18n/language.service';
@@ -15,9 +23,19 @@ interface ShownCount {
   count: number;
 }
 
+/** A count the reader can answer from: the reply or the quote pill, dimmed with its reason where refused. */
+interface ResponsePill {
+  kind: 'reply' | 'quote';
+  countKind: CountKind;
+  icon: string;
+  count: number | null;
+  allowed: boolean;
+  requested: OutputEmitterRef<void>;
+}
+
 /**
- * A post's counters with its repost, reply and like buttons; `liked`, `reposted` and `canReply` are null when
- * the reader cannot act on the post, which shows plain counts instead.
+ * A post's counters with its repost, reply, quote and like buttons; `liked`, `reposted`, `canReply` and `canQuote`
+ * are null when the reader cannot act on the post, which shows plain counts instead.
  */
 @Component({
   selector: 'app-social-counts-row',
@@ -33,9 +51,11 @@ export class SocialCountsRowComponent {
   readonly reposted = input<boolean | null>(null);
   readonly canRepost = input(true);
   readonly canReply = input<boolean | null>(null);
+  readonly canQuote = input<boolean | null>(null);
   readonly likeToggled = output<void>();
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
+  readonly quoteRequested = output<void>();
 
   private readonly language = inject(LanguageService);
   private readonly compact = computed(
@@ -49,9 +69,33 @@ export class SocialCountsRowComponent {
       this.canReply() !== null ||
       this.counts() !== null,
   );
-  protected readonly replyHintKey = computed(
-    () => `reader.${this.canReply() ? 'reply' : 'replyForbidden'}.${this.network()}`,
-  );
+  protected readonly responsePills = computed<ResponsePill[]>(() => {
+    const counts = this.counts();
+    const replyGate = this.canReply();
+    const quoteGate = this.canQuote();
+    const pills: ResponsePill[] = [];
+    if (replyGate !== null) {
+      pills.push({
+        kind: 'reply',
+        countKind: 'replies',
+        icon: 'chat_bubble',
+        count: counts?.replies ?? null,
+        allowed: replyGate,
+        requested: this.replyRequested,
+      });
+    }
+    if (quoteGate !== null) {
+      pills.push({
+        kind: 'quote',
+        countKind: 'quotes',
+        icon: 'format_quote',
+        count: counts?.quotes ?? null,
+        allowed: quoteGate,
+        requested: this.quoteRequested,
+      });
+    }
+    return pills;
+  });
   protected readonly likeKey = computed(
     () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
   );
@@ -65,7 +109,7 @@ export class SocialCountsRowComponent {
     if (this.canReply() === null) {
       shown.push({ kind: 'replies', icon: 'chat_bubble', count: counts.replies });
     }
-    if (counts.quotes !== null) {
+    if (this.canQuote() === null && counts.quotes !== null) {
       shown.push({ kind: 'quotes', icon: 'format_quote', count: counts.quotes });
     }
     if (this.liked() === null) shown.push({ kind: 'likes', icon: 'thumb_up', count: counts.likes });
@@ -75,6 +119,10 @@ export class SocialCountsRowComponent {
   protected readonly repostKind = computed<CountKind>(() =>
     this.network() === 'mastodon' ? 'boosts' : 'reposts',
   );
+  protected hintKey(pill: ResponsePill): string {
+    return `reader.${pill.kind}${pill.allowed ? '' : 'Forbidden'}.${this.network()}`;
+  }
+
   protected format(count: number): string {
     return this.compact().format(count);
   }

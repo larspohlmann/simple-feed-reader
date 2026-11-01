@@ -6,14 +6,14 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\PublishedReplyModel;
-use App\Service\Social\Model\ReplyContextModel;
-use App\Service\Social\Model\ReplyDraftModel;
+use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\ResponseContextModel;
+use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\PostLikerInterface;
-use App\Service\Social\PostReplier\PostReplierInterface;
+use App\Service\Social\PostWriter\PostWriterInterface;
 use App\Service\Social\PostReposter\PostReposterInterface;
 use App\Service\Social\PostResolver\PostResolverInterface;
 
@@ -22,7 +22,7 @@ final class FakeMastodonNetwork implements
     PostResolverInterface,
     PostLikerInterface,
     PostReposterInterface,
-    PostReplierInterface
+    PostWriterInterface
 {
     public const string STATUS_ID = '110';
     public const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/120';
@@ -42,11 +42,11 @@ final class FakeMastodonNetwork implements
 
     private ?\Closure $resolveHook = null;
 
-    private ReplyContextModel $replyContext;
+    private ResponseContextModel $responseContext;
 
     public function __construct()
     {
-        $this->replyContext = new ReplyContextModel();
+        $this->responseContext = new ResponseContextModel();
     }
 
     public static function network(): string
@@ -79,9 +79,9 @@ final class FakeMastodonNetwork implements
         $this->canRepost = false;
     }
 
-    public function knowsTheReplyContext(ReplyContextModel $replyContext): void
+    public function knowsTheResponseContext(ResponseContextModel $responseContext): void
     {
-        $this->replyContext = $replyContext;
+        $this->responseContext = $responseContext;
     }
 
     public function onResolve(\Closure $hook): void
@@ -97,7 +97,7 @@ final class FakeMastodonNetwork implements
         }
         $post = SocialPostModel::onMastodon($account, self::STATUS_ID)
             ->withCounts($this->counts)
-            ->inReplyContext($this->replyContext);
+            ->inResponseContext($this->responseContext);
         $liked = null === $this->existingLikeId ? $post : $post->alreadyLikedAs($this->existingLikeId);
         $reposted = null === $this->existingRepostId ? $liked : $liked->alreadyRepostedAs($this->existingRepostId);
 
@@ -126,11 +126,18 @@ final class FakeMastodonNetwork implements
         $this->record('unrepost ' . $repostId);
     }
 
-    public function publish(SocialPostModel $target, ReplyDraftModel $draft): PublishedReplyModel
+    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         $this->record('reply ' . $target->postId . ' ' . $draft->text);
 
-        return new PublishedReplyModel(self::REPLY_URI, self::REPLY_URI);
+        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
+    }
+
+    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    {
+        $this->record('quote ' . $target->postId . ' ' . $draft->text);
+
+        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }
 
     public function delete(SocialPostModel $ownPost): void

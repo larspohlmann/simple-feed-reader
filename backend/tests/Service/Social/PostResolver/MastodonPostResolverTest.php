@@ -77,20 +77,22 @@ final class MastodonPostResolverTest extends TestCase
 
     /** @param array<string, string> $author */
     #[DataProvider('authors')]
-    public function testAStatusCarriesItsAuthorAsAccountIdentityAndItsVisibility(array $author, string $identity): void
+    public function testAStatusCarriesItsAuthorVisibilityAndQuoteApproval(array $author, string $identity): void
     {
         $http = new RoutedHttpClient([self::SEARCH => self::statuses([[
             'id' => '109876',
             'visibility' => 'unlisted',
             'account' => $author,
+            'quote_approval' => ['current_user' => 'automatic'],
         ]])]);
 
-        $replying = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->replyContext;
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
 
-        self::assertSame($identity, $replying->authorIdentity);
-        self::assertSame('unlisted', $replying->visibility);
-        self::assertTrue($replying->canReply);
-        self::assertNull($replying->threadRoot);
+        self::assertSame($identity, $context->authorIdentity);
+        self::assertSame('unlisted', $context->visibility);
+        self::assertTrue($context->canReply);
+        self::assertTrue($context->canQuote);
+        self::assertNull($context->threadRoot);
     }
 
     /** @return iterable<string, array{array<string, string>, string}> */
@@ -100,14 +102,15 @@ final class MastodonPostResolverTest extends TestCase
         yield 'remote' => [['acct' => 'ann@hachyderm.io', 'url' => 'https://hachyderm.io/@ann'], 'ann@hachyderm.io'];
     }
 
-    public function testAStatusWithoutAccountOrVisibilityNamesNeither(): void
+    public function testAStatusWithoutAccountVisibilityOrQuoteApprovalNamesNeitherAndTakesNoQuote(): void
     {
         $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876']])]);
 
-        $replying = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->replyContext;
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
 
-        self::assertNull($replying->authorIdentity);
-        self::assertNull($replying->visibility);
+        self::assertNull($context->authorIdentity);
+        self::assertNull($context->visibility);
+        self::assertFalse($context->canQuote);
     }
 
     #[DataProvider('visibilities')]

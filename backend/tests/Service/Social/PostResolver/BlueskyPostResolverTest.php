@@ -41,7 +41,7 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertNull($post->counts);
     }
 
-    public function testAPostCarriesItsAuthorThreadRootAndReplyGate(): void
+    public function testAPostCarriesItsAuthorThreadRootAndReplyAndQuoteGates(): void
     {
         $http = $this->answering(['posts' => [[
             'uri' => self::POST_URI,
@@ -51,29 +51,31 @@ final class BlueskyPostResolverTest extends TestCase
                 'root' => ['uri' => 'at://did:plc:carol/app.bsky.feed.post/3root', 'cid' => 'bafy-root'],
                 'parent' => ['uri' => 'at://did:plc:carol/app.bsky.feed.post/3root', 'cid' => 'bafy-root'],
             ]],
-            'viewer' => ['replyDisabled' => true],
+            'viewer' => ['replyDisabled' => true, 'embeddingDisabled' => true],
         ]]]);
 
-        $replying = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->replyContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
 
-        self::assertSame('did:plc:bob', $replying->authorIdentity);
+        self::assertSame('did:plc:bob', $context->authorIdentity);
         self::assertEquals(
             new PostReferenceModel('at://did:plc:carol/app.bsky.feed.post/3root', 'bafy-root'),
-            $replying->threadRoot,
+            $context->threadRoot,
         );
-        self::assertFalse($replying->canReply);
-        self::assertNull($replying->visibility);
+        self::assertFalse($context->canReply);
+        self::assertFalse($context->canQuote);
+        self::assertNull($context->visibility);
     }
 
     public function testATopLevelPostIsItsOwnThreadRootAndTakesReplies(): void
     {
         $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]);
 
-        $replying = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->replyContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
 
-        self::assertNull($replying->threadRoot);
-        self::assertNull($replying->authorIdentity);
-        self::assertTrue($replying->canReply);
+        self::assertNull($context->threadRoot);
+        self::assertNull($context->authorIdentity);
+        self::assertTrue($context->canReply);
+        self::assertTrue($context->canQuote);
     }
 
     /** @param array<string, string> $root */
@@ -86,9 +88,9 @@ final class BlueskyPostResolverTest extends TestCase
             'record' => ['reply' => ['root' => $root]],
         ]]]);
 
-        $replying = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->replyContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
 
-        self::assertNull($replying->threadRoot);
+        self::assertNull($context->threadRoot);
     }
 
     /** @return iterable<string, array{array<string, string>}> */

@@ -81,6 +81,7 @@ export function aCommentPost(overrides: Partial<EntryCommentPostDto> = {}): Entr
     isReposted: false,
     canRepost: true,
     canReply: true,
+    canQuote: true,
     isOwn: false,
     ...overrides,
   };

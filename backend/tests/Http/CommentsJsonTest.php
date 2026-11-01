@@ -86,6 +86,7 @@ final class CommentsJsonTest extends TestCase
                 'isReposted' => true,
                 'canRepost' => false,
                 'canReply' => false,
+                'canQuote' => true,
                 'isOwn' => true,
             ],
         ], self::firstComment($json));

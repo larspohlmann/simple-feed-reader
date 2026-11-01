@@ -11,6 +11,7 @@ describe('RepostButtonComponent', () => {
   let isCoarse: WritableSignal<boolean>;
   let sheet: { open: jest.Mock };
   let toggled: jest.Mock;
+  let quoteRequested: jest.Mock;
 
   beforeEach(() => {
     isCoarse = signal(false);
@@ -25,6 +26,8 @@ describe('RepostButtonComponent', () => {
     fixture = TestBed.createComponent(RepostButtonComponent);
     toggled = jest.fn();
     fixture.componentInstance.toggled.subscribe(toggled);
+    quoteRequested = jest.fn();
+    fixture.componentInstance.quoteRequested.subscribe(quoteRequested);
   });
 
   afterEach(() =>
@@ -38,6 +41,7 @@ describe('RepostButtonComponent', () => {
       countLabel: string | null;
       reposted: boolean;
       canRepost: boolean;
+      canQuote: boolean;
     }> = {},
   ): HTMLButtonElement {
     const settled = {
@@ -46,6 +50,7 @@ describe('RepostButtonComponent', () => {
       countLabel: '5 reposts',
       reposted: false,
       canRepost: true,
+      canQuote: true,
       ...inputs,
     };
     for (const [name, value] of Object.entries(settled)) fixture.componentRef.setInput(name, value);
@@ -71,15 +76,23 @@ describe('RepostButtonComponent', () => {
     expect(show({ countText: null }).querySelector('.number')).toBeNull();
   });
 
-  it('offers one repost in the menu and emits it when chosen', () => {
+  it('offers repost and quote in the menu and emits the one chosen', () => {
     show().click();
     fixture.detectChanges();
 
-    expect(menuItems().map(labelOf)).toEqual(['Repost on Bluesky']);
+    expect(menuItems().map(labelOf)).toEqual(['Repost on Bluesky', 'Quote on Bluesky']);
     menuItems()[0].click();
     fixture.detectChanges();
 
     expect(toggled).toHaveBeenCalledTimes(1);
+    expect(menuItems()).toHaveLength(0);
+
+    show().click();
+    fixture.detectChanges();
+    menuItems()[1].click();
+    fixture.detectChanges();
+
+    expect(quoteRequested).toHaveBeenCalledTimes(1);
     expect(menuItems()).toHaveLength(0);
   });
 
@@ -87,7 +100,7 @@ describe('RepostButtonComponent', () => {
     show({ network: 'mastodon', reposted: true }).click();
     fixture.detectChanges();
 
-    expect(menuItems().map(labelOf)).toEqual(['Undo boost on Mastodon']);
+    expect(menuItems().map(labelOf)).toEqual(['Undo boost on Mastodon', 'Quote on Mastodon']);
   });
 
   it('opens the action sheet on a touch screen', () => {
@@ -97,11 +110,61 @@ describe('RepostButtonComponent', () => {
     button.click();
 
     expect(sheet.open).toHaveBeenCalledWith({
-      title: 'Repost',
-      actions: [{ id: 'toggle', label: 'Repost on Bluesky', symbol: 'repeat' }],
+      title: 'Repost or quote',
+      actions: [
+        { id: 'toggle', label: 'Repost on Bluesky', symbol: 'repeat', disabled: false },
+        { id: 'quote', label: 'Quote on Bluesky', symbol: 'format_quote', disabled: false },
+      ],
     });
     expect(toggled).toHaveBeenCalledTimes(1);
     expect(menuItems()).toHaveLength(0);
+  });
+
+  it('quotes from the action sheet', () => {
+    isCoarse.set(true);
+    sheet.open.mockReturnValue(of('quote'));
+    show().click();
+
+    expect(quoteRequested).toHaveBeenCalledTimes(1);
+    expect(toggled).not.toHaveBeenCalled();
+  });
+
+  it('keeps a refused repost in the menu, dimmed with its reason, and still quotes', () => {
+    const button = show({ network: 'mastodon', canRepost: false });
+    expect(button.getAttribute('aria-label')).toBe('Boost or quote, 5 reposts');
+    button.click();
+    fixture.detectChanges();
+    const [repost, quote] = menuItems();
+
+    expect(repost.getAttribute('aria-disabled')).toBe('true');
+    expect(repost.title).toBe("The post's visibility keeps it from boosts");
+    expect(quote.getAttribute('aria-disabled')).toBeNull();
+    repost.click();
+    expect(toggled).not.toHaveBeenCalled();
+    quote.click();
+    expect(quoteRequested).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a refused quote in the menu, dimmed with its reason', () => {
+    show({ canQuote: false }).click();
+    fixture.detectChanges();
+    const quote = menuItems()[1];
+
+    expect(quote.getAttribute('aria-disabled')).toBe('true');
+    expect(quote.title).toBe('The author doesn’t allow quotes of this post');
+    quote.click();
+    expect(quoteRequested).not.toHaveBeenCalled();
+  });
+
+  it('dims a refused action on the action sheet and says why under it', () => {
+    isCoarse.set(true);
+    sheet.open.mockReturnValue(of(undefined));
+    show({ canRepost: false }).click();
+
+    const [repost, quote] = sheet.open.mock.calls[0][0].actions;
+    expect(repost).toMatchObject({ disabled: true, hint: "This post can't be reposted" });
+    expect(quote).toEqual(expect.objectContaining({ disabled: false }));
+    expect(quote.hint).toBeUndefined();
   });
 
   it('emits nothing when the sheet is dismissed', () => {
@@ -112,8 +175,8 @@ describe('RepostButtonComponent', () => {
     expect(toggled).not.toHaveBeenCalled();
   });
 
-  it('stays visible but inert on a post the network keeps from reposts, saying why', () => {
-    const button = show({ network: 'mastodon', canRepost: false });
+  it('stays visible but inert on a post the network keeps from reposts and quotes, saying why', () => {
+    const button = show({ network: 'mastodon', canRepost: false, canQuote: false });
 
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(button.getAttribute('title')).toBe("The post's visibility keeps it from boosts");

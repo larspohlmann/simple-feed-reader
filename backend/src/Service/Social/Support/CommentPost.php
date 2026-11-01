@@ -32,6 +32,7 @@ final class CommentPost
             null !== BlueskyRecordUri::repostOrNull($viewer->string('repost')),
             canRepost: true,
             canReply: !$viewer->isTrue('replyDisabled'),
+            canQuote: !$viewer->isTrue('embeddingDisabled'),
         );
 
         return new CommentPostModel(
@@ -54,6 +55,7 @@ final class CommentPost
             $status->isTrue('favourited'),
             $status->isTrue('reblogged'),
             MastodonVisibility::allowsReblog($status),
+            canQuote: MastodonQuoting::allows($status),
         );
 
         return new CommentPostModel(

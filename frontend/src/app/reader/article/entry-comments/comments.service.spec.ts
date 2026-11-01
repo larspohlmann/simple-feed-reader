@@ -42,6 +42,7 @@ describe('CommentsService', () => {
       isReposted: false,
       canRepost: true,
       canReply: true,
+      canQuote: true,
       isOwn: false,
     };
     let likes: { likeComment: jest.Mock; unlikeComment: jest.Mock };
@@ -118,6 +119,7 @@ describe('CommentsService', () => {
       isReposted: false,
       canRepost: true,
       canReply: true,
+      canQuote: true,
       isOwn: false,
     };
     let reposts: { repostComment: jest.Mock; unrepostComment: jest.Mock };
@@ -334,6 +336,31 @@ describe('CommentsService', () => {
 
       service.removeReply(1, 'at://mine');
       expect(htmlOf(service.state(1)())).toEqual(['old']);
+    });
+
+    it('counts a quote on the quoted comment, where its network counts quotes', () => {
+      const counted = aCommentPost({
+        address: 'at://quoted',
+        counts: { likes: 0, reposts: 0, replies: 0, quotes: 2 },
+      });
+      const uncounted = aCommentPost({ address: 'at://toot' });
+      api.comments.mockReturnValue(
+        of({
+          status: 'ok',
+          comments: [anEntryComment({ post: counted }), anEntryComment({ post: uncounted })],
+          omitted: 0,
+          fetchedAt: 'now',
+        }),
+      );
+      service.load(1);
+
+      service.countQuote(1, 'at://quoted');
+      service.countQuote(1, 'at://toot');
+
+      const state = service.state(1)();
+      const quotes =
+        state.status === 'ok' ? state.comments.map((comment) => comment.post?.counts.quotes) : [];
+      expect(quotes).toEqual([3, null]);
     });
 
     it('leaves a thread that is not loaded alone', () => {
