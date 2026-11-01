@@ -371,7 +371,7 @@
       "appPasswordHint": "Create an app password in Bluesky under Settings → Privacy and security → App passwords. It looks like xxxx-xxxx-xxxx-xxxx; your account password is refused.",
       "instanceUrl": "Instance",
       "accessToken": "Access token",
-      "accessTokenHint": "Create a token under Preferences → Development → New application with the scopes read and write:favourites, then copy \"Your access token\".",
+      "accessTokenHint": "Create a token under Preferences → Development → New application with the scopes read, write:favourites and write:statuses, then copy \"Your access token\".",
       "connect": "Connect",
       "connected": "Account connected",
       "default": "Default",
@@ -1341,6 +1341,22 @@
     "unlike": {
       "bluesky": "Unlike on Bluesky",
       "mastodon": "Unlike on Mastodon"
+    },
+    "repost": {
+      "bluesky": "Repost on Bluesky",
+      "mastodon": "Boost on Mastodon"
+    },
+    "unrepost": {
+      "bluesky": "Undo repost on Bluesky",
+      "mastodon": "Undo boost on Mastodon"
+    },
+    "repostMenu": {
+      "bluesky": "Repost",
+      "mastodon": "Boost"
+    },
+    "repostForbidden": {
+      "bluesky": "This post can't be reposted",
+      "mastodon": "The post's visibility keeps it from boosts"
     },
     "keep": "Keep",
     "toggleRead": "Toggle read",

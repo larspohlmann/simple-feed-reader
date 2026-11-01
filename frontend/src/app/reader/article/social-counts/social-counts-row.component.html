@@ -1,5 +1,15 @@
 @if (shown()) {
   <div class="row">
+    @let isReposted = reposted();
+    @if (isReposted !== null) {
+      <app-repost-button
+        [network]="network()"
+        [countText]="repostCountText()"
+        [reposted]="isReposted"
+        [canRepost]="canRepost()"
+        (toggled)="repostToggled.emit()"
+      />
+    }
     @for (shownCount of shownCounts(); track shownCount.kind) {
       @let label =
         labelKey(shownCount.kind, shownCount.count) | transloco: { count: shownCount.count };

@@ -8,6 +8,8 @@ import {
   input,
   untracked,
 } from '@angular/core';
+import { problemMessage } from '../../../core/problem';
+import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { SocialCountsDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
@@ -25,6 +27,7 @@ export class SocialCountsComponent {
 
   protected readonly actions = inject(EntryActionHandler);
   private readonly service = inject(SocialCountsService);
+  private readonly toast = inject(ToastService);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly entryId = computed(() => this.entry().id);
   private readonly loaded = computed(() => {
@@ -33,6 +36,7 @@ export class SocialCountsComponent {
   });
 
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
+  protected readonly repost = computed(() => this.loaded()?.repost ?? null);
   /** The loaded counts with the likes moved by a like given or taken back since they loaded. */
   protected readonly counts = computed<SocialCountsDto | null>(() => {
     const loaded = this.loaded();
@@ -46,6 +50,12 @@ export class SocialCountsComponent {
       const id = this.entryId();
       untracked(() => this.service.load({ id, social: this.entry().social }));
     });
+  }
+
+  protected toggleRepost(): void {
+    this.service.toggleRepost(this.entry(), (problem) =>
+      this.toast.show({ message: problemMessage(problem) }),
+    );
   }
 
   reload(): void {
