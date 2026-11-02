@@ -52,7 +52,8 @@ becomes "entry → page source + entry slots", the link reader becomes "link →
   appearance="corner">` and the flags into `articleCorner` side by side.
 - **Scroll restore.** `ArticleScrollRestore.arm(key)`, `reseat(currentKey)`, `remember(key, top)` take a
   string page key; `ListScrollMemory.saveEntry/readEntry` become `saveArticle/readArticle(pageKey)`, stored
-  under `feed-reader:article-scroll:<pageKey>`. `articlePageKey` builds `entry:<id>` and `link:<url>`.
+  under `feed-reader:article-scroll:<pageKey>`. `entryPageKey(id)` in `article/reading/article-page-key.ts`
+  builds `entry:<id>`; #1984 adds `linkPageKey(url)` for `link:<url>`.
 
 **Tests:** moved specs retargeted, a spec for the page-key helper; `npm run check` and `ng build`.
 
