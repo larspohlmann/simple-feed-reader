@@ -1,7 +1,6 @@
 import {
   Component,
   ElementRef,
-  Injector,
   computed,
   effect,
   inject,
@@ -37,7 +36,7 @@ import { SocialCountsService } from '../social-counts/social-counts.service';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
-import { AutoplayRegion } from '../../media/autoplay/autoplay-region';
+import { HandedAutoplayRegion, handedAutoplayRegion } from '../../media/autoplay/autoplay-region';
 import { relativeTime } from '../../format';
 import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
@@ -73,7 +72,8 @@ import { EntryArticlePage } from './entry-article-page';
   providers: [
     ArticleSource,
     EntryArticlePage,
-    provideArticlePage({ source: EntryArticlePage, autoplayRegion: theArticleComments }),
+    HandedAutoplayRegion,
+    provideArticlePage({ source: EntryArticlePage, autoplayRegion: handedAutoplayRegion }),
   ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
@@ -139,6 +139,7 @@ export class ReaderViewComponent {
   private readonly openId = computed(() => this.entry().id);
 
   constructor() {
+    inject(HandedAutoplayRegion).handOver(computed(() => this.commentsSection()?.nativeElement));
     effect(() => {
       this.openId();
       untracked(() => this.autoplay.soundChanged(false));
@@ -147,10 +148,6 @@ export class ReaderViewComponent {
 
   protected scrollToComments(): void {
     this.page()?.scrollToElement(this.commentsSection()?.nativeElement);
-  }
-
-  commentsRegion(): Element | undefined {
-    return this.commentsSection()?.nativeElement;
   }
 
   protected reloadSocialCounts(): void {
@@ -169,10 +166,4 @@ export class ReaderViewComponent {
   when(entry: EntryDto): string {
     return relativeTime(entry.publishedAt ?? entry.createdAt, this.language.lang());
   }
-}
-
-/** Resolved on first use: the coordinator is built while the view is still constructing. */
-function theArticleComments(): AutoplayRegion {
-  const injector = inject(Injector);
-  return () => injector.get(ReaderViewComponent).commentsRegion();
 }
