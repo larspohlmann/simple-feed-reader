@@ -82,7 +82,6 @@ describe('LinkReaderComponent', () => {
     const fixture = TestBed.createComponent(LinkReaderComponent);
     routeState.linkTarget.set(FIRST_LINK);
     routeState.openLinkCard.set(card);
-    fixture.componentRef.setInput('target', FIRST_LINK);
     fixture.componentRef.setInput('returnsTo', returnsTo);
     fixture.detectChanges();
     return fixture;
@@ -202,7 +201,6 @@ describe('LinkReaderComponent', () => {
     expect(loadTarget).toHaveBeenCalledWith(FIRST_LINK);
 
     routeState.linkTarget.set(SECOND_LINK);
-    fixture.componentRef.setInput('target', SECOND_LINK);
     fixture.detectChanges();
 
     expect(loadTarget).toHaveBeenLastCalledWith(SECOND_LINK);
@@ -226,6 +224,18 @@ describe('LinkReaderComponent', () => {
 
     elementOf(fixture)
       .querySelector<HTMLButtonElement>('.nav button[aria-label="Reload article"]')!
+      .click();
+
+    expect(reloadTarget).toHaveBeenCalledWith(FIRST_LINK);
+  });
+
+  it('retries a failed page from its failure note', () => {
+    const fixture = mount();
+    reply(fixture, linkedPageFailure);
+    reloadTarget.mockClear();
+
+    elementOf(fixture)
+      .querySelector<HTMLButtonElement>('app-warning-box.reader-fallback button.note-link')!
       .click();
 
     expect(reloadTarget).toHaveBeenCalledWith(FIRST_LINK);
@@ -300,7 +310,7 @@ describe('LinkReaderComponent', () => {
       select(elementOf(fixture).querySelector('.content p')!.firstChild!, 'Linked page words');
       collapse();
 
-      fixture.componentRef.setInput('target', { ...FIRST_LINK });
+      routeState.linkTarget.set({ ...FIRST_LINK });
       fixture.detectChanges();
 
       const selection = fixture.debugElement.injector.get(ArticleSelection);
