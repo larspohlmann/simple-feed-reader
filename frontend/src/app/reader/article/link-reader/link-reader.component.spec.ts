@@ -6,7 +6,7 @@ import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
-import { trackScrollTop } from '../../../../testing/scroll-testing';
+import { scrollerOf, trackScrollTop } from '../../../../testing/scroll-testing';
 import { A_READER_TOKEN, aLinkCard } from '../../../../testing/entry-testing';
 import { ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
@@ -17,7 +17,11 @@ import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
 import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
-import { provideArticlePageStubs } from '../../../../testing/article-page-testing';
+import {
+  longArticleHtml,
+  provideArticlePageStubs,
+  settleContent,
+} from '../../../../testing/article-page-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { articleScrollKey } from '../../scroll/list-scroll-memory';
@@ -175,7 +179,7 @@ describe('LinkReaderComponent', () => {
   it('closes from the back button, labelled for the article it returns to', () => {
     const fixture = mount(aLinkCard(), 'article');
     const closes = jest.fn();
-    fixture.componentInstance.close.subscribe(closes);
+    fixture.componentInstance.back.subscribe(closes);
     const back = elementOf(fixture).querySelector<HTMLButtonElement>('button.close')!;
 
     back.click();
@@ -252,15 +256,8 @@ describe('LinkReaderComponent', () => {
       url: 'https://news.test/story',
       title: 'The extracted story',
       siteName: 'News',
-      contentHtml: `<p>${Array.from({ length: 660 }, (_, index) => `w${index}`).join(' ')}</p>`,
+      contentHtml: longArticleHtml(),
     });
-
-    /** Let the content-processing microtask and any follow-up effect settle. */
-    async function settle(fixture: ComponentFixture<LinkReaderComponent>): Promise<void> {
-      await Promise.resolve();
-      fixture.detectChanges();
-      await Promise.resolve();
-    }
 
     it('shares the link from the corner disc too', () => {
       const fixture = mount(aLinkCard({ url: 'https://news.test/story' }));
@@ -283,7 +280,7 @@ describe('LinkReaderComponent', () => {
           contentHtml: '<h2>Alpha</h2><p>a</p><h2>Beta</h2><p>b</p><h3>Gamma</h3>',
         }),
       );
-      await settle(fixture);
+      await settleContent(fixture);
 
       const element = elementOf(fixture);
       const toggle = element.querySelector('.reader-panel__toggle') as HTMLButtonElement;
@@ -308,11 +305,11 @@ describe('LinkReaderComponent', () => {
     it('reopens the page where it was left', async () => {
       sessionStorage.setItem(articleScrollKey(linkPageKey(FIRST_LINK.url)), '900');
       const fixture = mount();
-      const scroller = elementOf(fixture).querySelector('.scroller') as HTMLElement;
+      const scroller = scrollerOf(fixture);
       const scroll = trackScrollTop(scroller);
 
       reply(fixture, longPage);
-      await settle(fixture);
+      await settleContent(fixture);
 
       expect(scroll.top).toBe(900);
     });

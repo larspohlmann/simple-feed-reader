@@ -4807,7 +4807,7 @@ describe('ReaderShellComponent', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       openLink(fixture, { entry: '1', link: LINK });
 
-      linkReaderOf(fixture).close.emit();
+      linkReaderOf(fixture).back.emit();
 
       expect(nav).toHaveBeenCalledWith(
         [],

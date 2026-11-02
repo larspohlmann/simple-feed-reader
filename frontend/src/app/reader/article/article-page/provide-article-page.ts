@@ -4,13 +4,11 @@ import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-eleme
 import { AUTOPLAY_REGION, AutoplayRegion } from '../../media/autoplay/autoplay-region';
 import { ARTICLE_PAGE_SOURCE, ArticlePageSource } from './article-page-source';
 
-export interface ArticlePageProviders {
+/** The services a view's projected parts share with its article page. */
+export function provideArticlePage(page: {
   readonly source: Type<ArticlePageSource>;
   readonly autoplayRegion: () => AutoplayRegion;
-}
-
-/** The services a view's projected parts share with its article page. */
-export function provideArticlePage(page: ArticlePageProviders): Provider[] {
+}): Provider[] {
   return [
     { provide: ARTICLE_PAGE_SOURCE, useExisting: page.source },
     ListAutoplayCoordinator,

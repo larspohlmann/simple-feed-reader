@@ -86,9 +86,7 @@ export class ReaderViewComponent {
   protected readonly actions = inject(EntryActionHandler);
 
   readonly openOriginal = output<void>();
-  // Semantic "back to list" output; not a DOM element's close event.
-  // eslint-disable-next-line @angular-eslint/no-output-native
-  readonly close = output<void>();
+  readonly back = output<void>();
 
   private readonly page = viewChild(ArticlePageComponent);
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
@@ -154,8 +152,6 @@ export class ReaderViewComponent {
       this.autoplay.soundChanged(false);
       this.source.open(entry);
     });
-
-    effect(() => this.audio.shareChapters());
   }
 
   protected scrollToComments(): void {

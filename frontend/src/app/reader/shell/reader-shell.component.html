@@ -181,7 +181,7 @@
       [tags]="openEntryTags()"
       [fullscreen]="fullscreen"
       (openOriginal)="withOpen(entryActions.openOriginal)"
-      (close)="entryActions.closeEntry()"
+      (back)="entryActions.closeEntry()"
     />
   </ng-template>
   <ng-template #linkPane let-fullscreen="fullscreen">
@@ -189,7 +189,7 @@
       <app-link-reader
         [fullscreen]="fullscreen"
         [returnsTo]="linkReturnsTo()"
-        (close)="linkNavigation.close()"
+        (back)="linkNavigation.close()"
       />
     }
   </ng-template>

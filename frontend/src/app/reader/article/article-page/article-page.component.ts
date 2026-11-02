@@ -33,8 +33,13 @@ import { ArticleScrollRestore } from '../reading/article-scroll-restore.service'
 import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { estimateReadingMinutes } from '../decorators/reading-time';
-import { ARTICLE_PAGE_SOURCE } from './article-page-source';
+import { ARTICLE_PAGE_SOURCE, type ArticlePageBody } from './article-page-source';
 import { ArticlePageSlotDirective, ArticlePageSlotName } from './article-page-slot.directive';
+
+function sameBody(left: ArticlePageBody | null, right: ArticlePageBody | null): boolean {
+  if (left === null || right === null) return left === right;
+  return left.html === right.html && left.pageUrl === right.pageUrl;
+}
 
 /** One article page — its layer, skeleton and reading aids — filled by a view through its source and slots. */
 @Component({
@@ -65,9 +70,7 @@ export class ArticlePageComponent {
   readonly trailing = input<readonly TrailingPart[]>([]);
 
   readonly openOriginal = output<void>();
-  // Semantic "back" output; not a DOM element's close event.
-  // eslint-disable-next-line @angular-eslint/no-output-native
-  readonly close = output<void>();
+  readonly back = output<void>();
 
   protected readonly source = inject(ARTICLE_PAGE_SOURCE);
   protected readonly scope = inject(ReadingScope);
@@ -95,8 +98,9 @@ export class ArticlePageComponent {
   protected readonly toc = signal<TocEntry[]>([]);
   protected readonly tocOpen = signal(false);
 
+  protected readonly body = computed(() => this.source.body(), { equal: sameBody });
   protected readonly readingMinutes = computed(() =>
-    estimateReadingMinutes(this.source.body()?.html ?? ''),
+    estimateReadingMinutes(this.body()?.html ?? ''),
   );
 
   constructor() {
@@ -123,7 +127,7 @@ export class ArticlePageComponent {
     this.layer()?.scrollToTop(this.titleHeading()?.nativeElement);
   }
 
-  scrollToHeading(id: string): void {
+  protected scrollToHeading(id: string): void {
     this.scrollToElement(
       this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`),
     );

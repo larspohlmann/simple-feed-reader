@@ -19,7 +19,6 @@ export interface ArticlePageFailure {
   readonly messageKey: string;
   readonly quiet: boolean;
   readonly detail: string | null;
-  readonly offersOriginal: boolean;
 }
 
 export interface ArticlePageFavicon {

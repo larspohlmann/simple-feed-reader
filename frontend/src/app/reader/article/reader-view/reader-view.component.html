@@ -3,7 +3,7 @@
     [fullscreen]="fullscreen()"
     [backLabel]="'reader.backToList' | transloco"
     [trailing]="trailingParts"
-    (close)="close.emit()"
+    (back)="back.emit()"
     (openOriginal)="openOriginal.emit()"
   >
     @if (readerMode.canToggle()) {

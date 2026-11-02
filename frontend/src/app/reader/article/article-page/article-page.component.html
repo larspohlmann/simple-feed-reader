@@ -4,7 +4,7 @@
   [progressRail]="progressRail"
   [withTail]="scope.hasTail()"
   [backLabel]="backLabel()"
-  (close)="close.emit()"
+  (back)="back.emit()"
   (scrolled)="onScroll($event)"
   (toTop)="scrollToTop()"
   (barResized)="scope.refresh()"
@@ -71,20 +71,20 @@
       @if (source.failure(); as failure) {
         @if (failure.quiet) {
           <p class="reader-fallback-quiet">
-            {{ failure.messageKey | transloco }}
-            <button type="button" class="note-link reads-as-text" (click)="source.reload()">
-              {{ 'reader.retry' | transloco }}
-            </button>
+            <ng-container
+              [ngTemplateOutlet]="failureLine"
+              [ngTemplateOutletContext]="{ $implicit: failure }"
+            />
           </p>
         } @else {
           <app-warning-box class="reader-fallback">
             <span class="warning-glyph" aria-hidden="true">⚠</span>
             <div class="warning-text">
               <p class="reader-note">
-                {{ failure.messageKey | transloco }}
-                <button type="button" class="note-link reads-as-text" (click)="source.reload()">
-                  {{ 'reader.retry' | transloco }}
-                </button>
+                <ng-container
+                  [ngTemplateOutlet]="failureLine"
+                  [ngTemplateOutletContext]="{ $implicit: failure }"
+                />
               </p>
               @if (failure.detail; as detail) {
                 <details class="reader-error">
@@ -113,12 +113,12 @@
           referrerpolicy="no-referrer"
         />
       }
-      @if (source.failure()?.offersOriginal && source.url(); as url) {
+      @if (source.failure() && !body() && source.url(); as url) {
         <a class="open-original" [href]="url" target="_blank" rel="noopener noreferrer"
           >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="sm"
         /></a>
       }
-      @if (source.body(); as body) {
+      @if (body(); as body) {
         @let audio = source.bodyAudio();
         <app-article-content
           [html]="body.html"
@@ -134,6 +134,12 @@
     }
     <ng-container [ngTemplateOutlet]="footer()" />
   </article>
+  <ng-template #failureLine let-failure>
+    {{ failure.messageKey | transloco }}
+    <button type="button" class="note-link reads-as-text" (click)="source.reload()">
+      {{ 'reader.retry' | transloco }}
+    </button>
+  </ng-template>
   <app-selection-share articleDock [url]="source.url()" [title]="source.shareTitle()" />
   <!-- Laid over the whole pane while an article loads or refetches, in place
        of a line of text — the same overlay the feed list raises on reload. -->

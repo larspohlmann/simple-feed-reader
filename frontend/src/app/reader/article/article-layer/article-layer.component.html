@@ -13,7 +13,7 @@
     </div>
   }
   <div #bar class="bar" [class.hidden]="toolbarHidden()">
-    <button class="close" type="button" [attr.aria-label]="backLabel()" (click)="back()">
+    <button class="close" type="button" [attr.aria-label]="backLabel()" (click)="goBack()">
       <app-icon name="arrow_back" size="md" />
     </button>
     <ng-content select="[articleBar]" />
@@ -48,7 +48,7 @@
   </div>
   @if (showToTop() && !leaving()) {
     <div class="end-corner">
-      <button class="corner-back" type="button" [attr.aria-label]="backLabel()" (click)="back()">
+      <button class="corner-back" type="button" [attr.aria-label]="backLabel()" (click)="goBack()">
         <app-icon name="arrow_back" size="dense" />
       </button>
       <app-to-top-button (activate)="toTop.emit()" />

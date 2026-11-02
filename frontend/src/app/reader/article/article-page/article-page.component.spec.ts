@@ -1,6 +1,5 @@
 import { Component, Injectable } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
@@ -9,6 +8,7 @@ import { StubArticlePageSource } from '../../../../testing/article-page-source-t
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { ArticlePageSlotDirective } from './article-page-slot.directive';
 import { ArticlePageComponent } from './article-page.component';
+import { scrollerOf, stubCssEscape } from '../../../../testing/scroll-testing';
 import { noAutoplayRegion, provideArticlePage } from './provide-article-page';
 
 @Injectable()
@@ -157,7 +157,6 @@ describe('ArticlePageComponent', () => {
         messageKey: 'reader.linkFailed',
         quiet: false,
         detail: 'HTTP 503',
-        offersOriginal: false,
       }),
     );
 
@@ -174,7 +173,6 @@ describe('ArticlePageComponent', () => {
         messageKey: 'reader.fallback.empty',
         quiet: true,
         detail: 'x',
-        offersOriginal: false,
       }),
     );
 
@@ -189,8 +187,8 @@ describe('ArticlePageComponent', () => {
         messageKey: 'reader.linkFailed',
         quiet: false,
         detail: null,
-        offersOriginal: true,
       });
+      stub.body.set(null);
       stub.lead.set({ url: 'https://news.test/lead.jpg', width: null, height: null });
     });
 
@@ -227,25 +225,27 @@ describe('ArticlePageComponent', () => {
   });
 
   it('jumps to a heading through the page', async () => {
-    mount();
+    const element = mount((stub) =>
+      stub.body.set({
+        html: '<h2 id="one">One</h2><p>a</p><h2 id="two">Two</h2><p>b</p><h2 id="three">Three</h2>',
+        pageUrl: 'https://news.test/a',
+      }),
+    );
     await Promise.resolve();
     rerender();
-    const page = fixture.debugElement.query(By.directive(ArticlePageComponent))
-      .componentInstance as ArticlePageComponent;
-    const scroller = fixture.nativeElement.querySelector('.scroller') as HTMLElement;
+    const scroller = scrollerOf(fixture);
     const scrollTo = jest.fn();
     scroller.scrollTo = scrollTo;
-    // jsdom ships no `CSS` namespace; the test id needs no escaping.
-    const globals = globalThis as unknown as { CSS?: { escape: (value: string) => string } };
-    globals.CSS = { escape: (value) => value };
-
-    const heading = fixture.nativeElement.querySelector('.content h2') as HTMLElement;
+    const heading = element.querySelector('.content h2') as HTMLElement;
     heading.getBoundingClientRect = () => ({ top: 700 }) as DOMRect;
+    const restoreCss = stubCssEscape();
 
     try {
-      page.scrollToHeading(heading.id);
+      element.querySelector<HTMLButtonElement>('.reader-panel__toggle')!.click();
+      rerender();
+      element.querySelector<HTMLButtonElement>('.toc-list button')!.click();
     } finally {
-      delete globals.CSS;
+      restoreCss();
     }
 
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 700 }));

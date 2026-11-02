@@ -1,4 +1,4 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, effect, inject } from '@angular/core';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 import { ListenLauncher } from '../../audio/listen-launcher';
@@ -21,6 +21,10 @@ export class EntryArticlePage implements ArticlePageSource {
   private readonly article = inject(ArticleSource);
   private readonly readerMode = inject(ReaderModeService);
   private readonly entry = this.article.openEntry;
+
+  constructor() {
+    effect(() => this.audio.shareChapters());
+  }
 
   /** The entry's first playable audio enclosure, surfaced as a listen control
    *  above the article; its attachment is null when the feed declared none (#915). */
@@ -52,13 +56,10 @@ export class EntryArticlePage implements ArticlePageSource {
     const entry = this.entry();
     return entry ? { url: entry.faviconUrl, avatarUrl: entry.poster?.imageUrl ?? null } : null;
   });
-  readonly body = computed<ArticlePageBody>(
-    () => ({
-      html: this.article.displayHtml(),
-      pageUrl: this.entry()?.url ?? null,
-    }),
-    { equal: (left, right) => left.html === right.html && left.pageUrl === right.pageUrl },
-  );
+  readonly body = computed<ArticlePageBody>(() => ({
+    html: this.article.displayHtml(),
+    pageUrl: this.entry()?.url ?? null,
+  }));
   readonly bodyAudio = computed<ArticlePageBodyAudio>(() => {
     const entry = this.entry();
     return {
@@ -90,7 +91,6 @@ export class EntryArticlePage implements ArticlePageSource {
       messageKey: `reader.fallback.${reason ?? 'transport'}`,
       quiet: reason === 'empty',
       detail: this.article.errorDetail(),
-      offersOriginal: false,
     };
   });
 

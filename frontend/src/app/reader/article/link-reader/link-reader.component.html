@@ -1,7 +1,7 @@
 <app-article-page
   [fullscreen]="fullscreen()"
   [backLabel]="backLabelKey() | transloco"
-  (close)="close.emit()"
+  (back)="back.emit()"
 >
   <span pageByline>{{ source.nameplate() }}</span>
 </app-article-page>
