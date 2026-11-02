@@ -84,7 +84,7 @@ becomes "entry → page source + entry slots", the link reader becomes "link →
 `failure` is `{ messageKey, quiet, detail, offersOriginal } | null`. Settled while planning #1983: `html`
 becomes `body: { html, pageUrl } | null` (null renders no body element), `shareTitle` carries the raw title
 the share buttons used, `dropLead()` replaces each source's own lead-failed flag, and the holding gate is a
-`readingAids` boolean on the source. `EntryArticlePage` lives in
+`readingAids` boolean on the source (deleted in #1984). `EntryArticlePage` lives in
 `reader-view/` and adapts the entry plus `ArticleSource`, which keeps its entry shape.
 
 **`provideArticlePage({ source, autoplayRegion })`** returns the source class, the token

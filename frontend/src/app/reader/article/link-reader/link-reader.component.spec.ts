@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
+import { trackScrollTop } from '../../../../testing/scroll-testing';
 import { A_READER_TOKEN, aLinkCard } from '../../../../testing/entry-testing';
 import { ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
@@ -308,14 +309,7 @@ describe('LinkReaderComponent', () => {
       sessionStorage.setItem(articleScrollKey(linkPageKey(FIRST_LINK.url)), '900');
       const fixture = mount();
       const scroller = elementOf(fixture).querySelector('.scroller') as HTMLElement;
-      const scroll = { top: 0 };
-      Object.defineProperty(scroller, 'scrollTop', {
-        configurable: true,
-        get: () => scroll.top,
-        set: (value: number) => {
-          scroll.top = value;
-        },
-      });
+      const scroll = trackScrollTop(scroller);
 
       reply(fixture, longPage);
       await settle(fixture);

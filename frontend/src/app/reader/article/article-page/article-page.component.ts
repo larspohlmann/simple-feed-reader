@@ -102,9 +102,9 @@ export class ArticlePageComponent {
   constructor() {
     this.restore.connect(this.scroller);
     effect(() => {
-      this.source.key();
+      const key = this.source.key();
       untracked(() => {
-        this.restore.arm(this.source.key());
+        this.restore.arm(key);
         this.toc.set([]);
         this.tocOpen.set(false);
       });

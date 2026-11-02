@@ -36,6 +36,7 @@ import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
+import { trackScrollTop } from '../../../../testing/scroll-testing';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -662,18 +663,6 @@ describe('ReaderViewComponent', () => {
   // changes value (mode flips reader -> original but the feed's own content is
   // shown either way), so the content signal alone can never trigger it.
   describe('article scroll restore', () => {
-    function trackScrollTop(scroller: HTMLElement): { top: number } {
-      const state = { top: 0 };
-      Object.defineProperty(scroller, 'scrollTop', {
-        configurable: true,
-        get: () => state.top,
-        set: (value: number) => {
-          state.top = value;
-        },
-      });
-      return state;
-    }
-
     /** Mount entry 1 with a remembered offset and extraction still in flight. */
     function mountRemembering(top: number) {
       const load = new Subject<ReaderContent>();
