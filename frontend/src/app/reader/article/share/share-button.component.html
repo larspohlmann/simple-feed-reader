@@ -8,7 +8,7 @@
       [attr.aria-label]="'reader.share.button' | transloco"
       [attr.title]="'reader.share.button' | transloco"
       cdkOverlayOrigin
-      (mousedown)="$event.preventDefault()"
+      appKeepSelection
       (click)="press()"
     >
       <app-icon [name]="glyph" size="dense" />
@@ -23,7 +23,7 @@
       [attr.aria-label]="'reader.share.button' | transloco"
       [attr.title]="'reader.share.button' | transloco"
       cdkOverlayOrigin
-      (mousedown)="$event.preventDefault()"
+      appKeepSelection
       (click)="press()"
     >
       <app-icon [name]="glyph" size="sm" />
@@ -38,7 +38,7 @@
       [attr.aria-expanded]="open()"
       [attr.aria-label]="'reader.share.button' | transloco"
       cdkOverlayOrigin
-      (mousedown)="$event.preventDefault()"
+      appKeepSelection
       (click)="press()"
     >
       <app-icon [name]="glyph" size="sm" />
@@ -66,7 +66,7 @@
     cdkTrapFocusAutoCapture
     role="menu"
     [attr.aria-label]="'reader.share.button' | transloco"
-    (mousedown)="$event.preventDefault()"
+    appKeepSelection
   >
     @if (quote(); as quote) {
       <p class="snippet" role="presentation">“{{ quote.text }}”</p>

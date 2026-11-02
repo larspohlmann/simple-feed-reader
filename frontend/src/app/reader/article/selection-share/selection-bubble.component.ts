@@ -7,6 +7,7 @@ import {
   FlexibleConnectedPositionStrategyOrigin,
 } from '@angular/cdk/overlay';
 import { fromEvent } from 'rxjs';
+import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { LayoutService } from '../../layout.service';
 import { ArticleSelection } from './article-selection.service';
 import { SelectionActionsComponent } from './selection-actions.component';
@@ -19,7 +20,7 @@ const UNDER_THE_LAST_LINE: ConnectedPosition[] = [
 /** The selection's actions under its last line, on a fine pointer only; a phone's own callout owns that spot. */
 @Component({
   selector: 'app-selection-bubble',
-  imports: [CdkConnectedOverlay, SelectionActionsComponent],
+  imports: [CdkConnectedOverlay, KeepSelectionDirective, SelectionActionsComponent],
   templateUrl: './selection-bubble.component.html',
   styleUrl: './selection-bubble.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

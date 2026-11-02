@@ -19,6 +19,7 @@ import {
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
+import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { MaskedLogoComponent } from '../../../shared/masked-logo/masked-logo.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
@@ -69,6 +70,7 @@ const SHEET_SNIPPET_LENGTH = 60;
     TranslocoPipe,
     IconComponent,
     IconButtonDirective,
+    KeepSelectionDirective,
     ListActionDirective,
     MaskedLogoComponent,
     NetworkLogoComponent,
