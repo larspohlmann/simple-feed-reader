@@ -85,6 +85,36 @@ describe('SelectionBarComponent', () => {
     expect(element().querySelector('.selection-bar')).toBeNull();
   });
 
+  it('stays while a press on it lasts, though the press has collapsed the selection', async () => {
+    select();
+    const bar = element().querySelector('.selection-bar')!;
+    bar.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    selection.quote.set(null);
+    fixture.detectChanges();
+
+    expect(element().querySelector('.selection-bar')).not.toBeNull();
+
+    bar.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    fixture.detectChanges();
+    expect(element().querySelector('.selection-bar')).not.toBeNull();
+
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    expect(element().querySelector('.selection-bar')).toBeNull();
+  });
+
+  it('leaves once a cancelled press ends', async () => {
+    select();
+    const bar = element().querySelector('.selection-bar')!;
+    bar.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    selection.quote.set(null);
+    bar.dispatchEvent(new Event('pointercancel', { bubbles: true }));
+
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    expect(element().querySelector('.selection-bar')).toBeNull();
+  });
+
   it('quotes the remembered selection when the tap has collapsed it', () => {
     select();
     const mastodon = element().querySelector<HTMLButtonElement>(
