@@ -136,8 +136,10 @@ The PR 2 holding gate goes; each feature then reaches both views.
 - **Scroll restore** keyed `link:<url>`; `?link=` survives a resume-reload. Two cards linking the same page
   share one position.
 
-**Done-when check:** no file under `article/` outside `reader-view/` imports `EntryDto`; each "Done when" of
-#1978 checked against the code before the PR.
+**Done-when check:** no file in the generic folders (`article-page/`, `article-content/`, `article-layer/`,
+`reading/`, `share/`, `selection-share/`, `link-reader/`) imports `EntryDto`; the entry-only parts the reader
+view slots in (comments, social counts, link cards, thread, post media, composer, `ArticleSource`) keep
+theirs. Each "Done when" of #1978 checked against the code before the PR.
 
 **Tests:** one link-reader spec per feature through the DOM (disc present, TOC from headings, reading-time
 chip, restore after re-creating with a saved position); `npm run check` and `ng build`. Live check on
