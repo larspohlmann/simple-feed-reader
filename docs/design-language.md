@@ -586,7 +586,9 @@ with its body scrolling, at every width. Owns the heading, the scrolling body an
 the footer row, so a dialog's own stylesheet carries only what is specific to it.
 
 A dialog stays a card on a phone too — a short confirm has no business opening as
-a mostly-empty full page. The one exception is a route-level picker that *is* the
+a mostly-empty full page. There it sits below centre, the free height split 2:1
+above and below it (`styles.scss`, #1996), so its buttons fall within thumb reach;
+a card tall enough to fill the screen is unaffected. The one exception is a route-level picker that *is* the
 page rather than a modal over it (discover): it passes `fillOnMobile` to keep the
 full-screen phone layout.
 

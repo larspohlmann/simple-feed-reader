@@ -1720,9 +1720,9 @@ describe('EntryListComponent', () => {
       expect(element.querySelector('app-to-top-button')).toBeNull();
     });
 
-    it('renders the corner slot left of the button (#1943)', () => {
+    it('renders the corner slot right of the button (#1997)', () => {
       const tb = topBlockTemplate();
-      const fixture = mount({ cornerLeading: tb });
+      const fixture = mount({ cornerTrailing: tb });
       const element = fixture.nativeElement as HTMLElement;
 
       fixture.componentInstance.scrolling.onScroll({
@@ -1731,20 +1731,19 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
 
       const marker = element.querySelector('.end-corner .top-marker')!;
-      expect(marker.parentElement!.nextElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
+      expect(marker.parentElement!.previousElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
     });
 
-    it('keeps the corner slot in place without the button (#1945)', () => {
-      const fixture = mount({ cornerLeading: topBlockTemplate() });
+    it('shows the corner slot without the button (#1945)', () => {
+      const fixture = mount({ cornerTrailing: topBlockTemplate() });
       const element = fixture.nativeElement as HTMLElement;
 
-      const marker = element.querySelector('.end-corner .top-marker')!;
       expect(element.querySelector('app-to-top-button')).toBeNull();
-      expect(marker.parentElement!.nextElementSibling!.classList).toContain('to-top-place');
+      expect(element.querySelector('.end-corner .top-marker')).not.toBeNull();
     });
 
     it('keeps the corner slot when marking all read empties an unread view (#1945)', () => {
-      const fixture = mount({ cornerLeading: topBlockTemplate() });
+      const fixture = mount({ cornerTrailing: topBlockTemplate() });
       const element = fixture.nativeElement as HTMLElement;
       fixture.componentInstance.scrolling.onScroll({
         target: { scrollTop: 900 },

@@ -202,15 +202,13 @@
 
 @let hasEntries = content.visibleEntryCount() > 0;
 @let toTopShown = scrolling.showToTop() && hasEntries;
-@if (toTopShown || cornerLeading()) {
+@if (toTopShown || cornerTrailing()) {
   <div class="end-corner">
-    @if (cornerLeading(); as leading) {
-      <span class="corner-leading"><ng-container [ngTemplateOutlet]="leading" /></span>
-    }
     @if (toTopShown) {
       <app-to-top-button (activate)="scrollToTop()" />
-    } @else {
-      <span class="to-top-place"></span>
+    }
+    @if (cornerTrailing(); as trailing) {
+      <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
     }
   </div>
 }
