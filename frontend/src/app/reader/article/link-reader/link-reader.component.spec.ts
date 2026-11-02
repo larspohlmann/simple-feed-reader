@@ -259,6 +259,12 @@ describe('LinkReaderComponent', () => {
       jest.advanceTimersByTime(SELECTION_SETTLE_MS);
     }
 
+    function collapse(): void {
+      document.getSelection()!.removeAllRanges();
+      document.dispatchEvent(new Event('selectionchange'));
+      jest.advanceTimersByTime(SELECTION_SETTLE_MS);
+    }
+
     function quoteOf(fixture: ComponentFixture<LinkReaderComponent>) {
       return fixture.debugElement.injector.get(ArticleSelection).quote();
     }
@@ -272,6 +278,33 @@ describe('LinkReaderComponent', () => {
       select(words, 'Linked page words');
 
       expect(quoteOf(fixture)?.text).toBe('Linked page words');
+      elementOf(fixture).remove();
+    });
+
+    it('does not quote the page title', () => {
+      const fixture = mount(null);
+      reply(fixture, { ...linkedPage, contentHtml: '<p>Linked page words here</p>' });
+      document.body.append(elementOf(fixture));
+      const title = elementOf(fixture).querySelector('h1')!;
+
+      select(title.firstChild!, title.textContent!);
+
+      expect(quoteOf(fixture)).toBeNull();
+      elementOf(fixture).remove();
+    });
+
+    it('remembers the quote while the same link is opened again', () => {
+      const fixture = mount(null);
+      reply(fixture, { ...linkedPage, contentHtml: '<p>Linked page words here</p>' });
+      document.body.append(elementOf(fixture));
+      select(elementOf(fixture).querySelector('.content p')!.firstChild!, 'Linked page words');
+      collapse();
+
+      fixture.componentRef.setInput('target', { ...FIRST_LINK });
+      fixture.detectChanges();
+
+      const selection = fixture.debugElement.injector.get(ArticleSelection);
+      expect(selection.remembered()?.text).toBe('Linked page words');
       elementOf(fixture).remove();
     });
 

@@ -1,13 +1,4 @@
-import {
-  Component,
-  ElementRef,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
@@ -74,7 +65,6 @@ export class LinkReaderComponent {
   protected readonly scope = inject(ReadingScope);
   private readonly layer = viewChild(ArticleLayerComponent);
   private readonly articleContent = viewChild(ArticleContentComponent);
-  private readonly page = viewChild<ElementRef<HTMLElement>>('page');
 
   protected readonly progressRail = new ScrollProgressRail({
     isWide: inject(LayoutService).isWide,
@@ -95,16 +85,17 @@ export class LinkReaderComponent {
   );
 
   constructor() {
+    const content = computed(() => this.articleContent()?.element);
     this.scope.connect({
       scroller: computed(() => this.layer()?.scroller()),
-      content: computed(() => this.articleContent()?.element),
+      content,
       trailing: [],
     });
 
     this.scope.observeResizes();
     inject(ArticleSelection).connect({
-      body: this.page,
-      key: this.target,
+      body: content,
+      key: computed(() => this.target().url),
       socialPost: signal(false),
     });
   }
