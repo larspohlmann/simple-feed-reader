@@ -163,12 +163,6 @@ export class ShareButtonComponent {
       : quoteContent(this.page(), quote);
   }
 
-  private postHint(handles: readonly string[]): string {
-    return handles.length === 1
-      ? this.i18n.translate('reader.share.postAs', { handle: handles[0] })
-      : this.i18n.translate('reader.share.pickAccount');
-  }
-
   /** Not bound to this component's life: the sheet outlives a trigger in the phone bar, and `closed` completes. */
   private openSheet(): void {
     this.sheet
@@ -196,7 +190,7 @@ export class ShareButtonComponent {
         return {
           id: item.id,
           label: this.i18n.translate(item.labelKey),
-          hint: this.postHint(item.handles),
+          hint: this.i18n.translate(item.hint.key, item.hint.params),
           logo: {
             url: shareLogoUrl(`${item.network}.svg`),
             color: `var(--brand-${item.network})`,

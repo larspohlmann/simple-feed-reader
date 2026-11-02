@@ -11,7 +11,7 @@ export type ShareItem =
       readonly kind: 'post';
       readonly id: string;
       readonly network: SocialNetworkName;
-      readonly handles: readonly string[];
+      readonly hint: MenuText;
       readonly labelKey: string;
     }
   | { readonly kind: 'hint'; readonly id: string }
@@ -22,6 +22,11 @@ export type ShareItem =
       readonly target: ConfiguredTarget;
       readonly linkOnly: boolean;
     };
+
+export interface MenuText {
+  readonly key: string;
+  readonly params?: Record<string, string>;
+}
 
 export type TargetItem = Extract<ShareItem, { kind: 'target' }>;
 
@@ -41,7 +46,13 @@ export function shareMenuItems(networks: readonly PostNetwork[], mode: ShareMenu
 
 function postItem({ network, handles }: PostNetwork, mode: ShareMenuMode): ShareItem {
   const labelKey = mode === 'quote' ? `reader.quote.${network}` : `reader.link.${network}`;
-  return { kind: 'post', id: `post-${network}`, network, handles, labelKey };
+  return { kind: 'post', id: `post-${network}`, network, hint: postHint(handles), labelKey };
+}
+
+function postHint(handles: readonly string[]): MenuText {
+  return handles.length === 1
+    ? { key: 'reader.share.postAs', params: { handle: handles[0] } }
+    : { key: 'reader.share.pickAccount' };
 }
 
 function configuredItem(target: ShareTarget, index: number, mode: ShareMenuMode): ShareItem {

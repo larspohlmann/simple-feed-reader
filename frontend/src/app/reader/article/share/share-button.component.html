@@ -78,11 +78,7 @@
           <button
             role="menuitem"
             type="button"
-            [title]="
-              item.handles.length === 1
-                ? ('reader.share.postAs' | transloco: { handle: item.handles[0] })
-                : ('reader.share.pickAccount' | transloco)
-            "
+            [title]="item.hint.key | transloco: item.hint.params"
             (click)="post(item.network)"
           >
             <app-network-logo [network]="item.network" />

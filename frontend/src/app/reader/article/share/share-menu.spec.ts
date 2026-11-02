@@ -21,6 +21,22 @@ describe('shareMenuItems', () => {
     expect(target(items, 'X').linkOnly).toBe(false);
   });
 
+  it('names the one account a post goes out as, or asks to pick one', () => {
+    const items = shareMenuItems(
+      [...NETWORKS, { network: 'mastodon', handles: ['@a@one.social', '@b@two.social'] }],
+      'link',
+    );
+
+    expect(items[0]).toEqual(
+      expect.objectContaining({
+        hint: { key: 'reader.share.postAs', params: { handle: 'me.bsky.social' } },
+      }),
+    );
+    expect(items[2]).toEqual(
+      expect.objectContaining({ hint: { key: 'reader.share.pickAccount' } }),
+    );
+  });
+
   it('hints under the posts that a selection could be quoted', () => {
     expect(kinds(shareMenuItems(NETWORKS, 'hinted'))).toEqual(['post', 'post', 'hint', 'divider']);
   });
