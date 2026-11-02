@@ -8,7 +8,6 @@ use App\Entity\EntryMedia;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Http\QuotedPostJson;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentCountsModel;
 use App\Service\Comments\Model\CommentEmbedsModel;
@@ -78,7 +77,7 @@ final class CommentsJsonTest extends TestCase
                 'siteName' => 'site.test',
                 'readerToken' => JsonMappers::readerToken('https://site.test/a'),
             ],
-            'quote' => QuotedPostJson::ofOrNull($quote),
+            'quote' => JsonMappers::quotedPostJson()->ofOrNull($quote),
             'post' => [
                 'address' => 'at://did:plc:ann/app.bsky.feed.post/2',
                 'counts' => ['likes' => 5, 'reposts' => 1, 'replies' => 2, 'quotes' => 0],

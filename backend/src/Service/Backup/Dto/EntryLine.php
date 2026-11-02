@@ -124,6 +124,7 @@ final readonly class EntryLine
             return null;
         }
         $nested = LineField::objectOrNull($fields, 'nestedQuote');
+        $card = LineField::objectOrNull($fields, 'linkCard');
 
         return StorableQuotedPost::of(new QuotedPostContent(
             LineField::string($fields, 'url'),
@@ -137,6 +138,7 @@ final readonly class EntryLine
                 LineField::string($nested, 'url'),
                 LineField::stringOrNull($nested, 'handle'),
             ),
+            $card === null ? null : self::linkCardFrom($card),
         ));
     }
 
@@ -182,25 +184,36 @@ final readonly class EntryLine
     }
 
     /**
-     * The file is user-supplied, so each card passes the gate every made card passes.
-     *
      * @param array<string, mixed> $line
      *
      * @return list<LinkCardContent>
      */
     private static function linkCardsOf(array $line): array
     {
-        $cards = [];
-        foreach (LineField::objectListOrEmpty($line, 'linkCards') as $card) {
-            $cards[] = StorableLinkCard::of(new LinkCardContent(
-                LineField::string($card, 'url'),
-                LineField::string($card, 'title'),
-                LineField::stringOrNull($card, 'description'),
-                LineField::stringOrNull($card, 'imageUrl'),
-                LineField::string($card, 'siteName'),
-            ));
-        }
+        $cards = array_map(self::linkCardOf(...), LineField::objectListOrEmpty($line, 'linkCards'));
 
         return array_values(array_filter($cards));
+    }
+
+    /**
+     * The file is user-supplied, so each card passes the gate every made card passes.
+     *
+     * @param array<string, mixed> $card
+     */
+    private static function linkCardOf(array $card): ?LinkCardContent
+    {
+        return StorableLinkCard::of(self::linkCardFrom($card));
+    }
+
+    /** @param array<string, mixed> $card */
+    private static function linkCardFrom(array $card): LinkCardContent
+    {
+        return new LinkCardContent(
+            LineField::string($card, 'url'),
+            LineField::string($card, 'title'),
+            LineField::stringOrNull($card, 'description'),
+            LineField::stringOrNull($card, 'imageUrl'),
+            LineField::string($card, 'siteName'),
+        );
     }
 }

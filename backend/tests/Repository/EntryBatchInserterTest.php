@@ -159,6 +159,7 @@ final class EntryBatchInserterTest extends DbTestCase
             "quoted\ntext",
             [new EntryMedium('https://cdn.example/1.jpg', 'image', 1200, 675)],
             new QuotedPostReference('https://bsky.app/profile/n/post/9', 'n.bsky.social'),
+            new LinkCardContent('https://news.example/s', 'Story', 'D', 'https://news.example/s.jpg', 'news.example'),
         );
 
         $this->inserter()->insert($feedId, [

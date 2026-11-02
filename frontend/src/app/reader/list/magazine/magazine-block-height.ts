@@ -34,9 +34,15 @@ const THREAD = {
   dekCharsPerLine: 50,
   dekLinesMax: 3,
   mediaWidth: 320,
-  cardWithImage: 330,
-  cardBare: 110,
   gap: 12,
+} as const;
+
+/** A magazine link card: its image across the width, then its text; a bare card is its text alone. */
+const LINK_CARD = {
+  // In step with `$image-ratio` in `theme/_link-card.scss`.
+  imageRatio: 1.91,
+  textBelowImage: 162.5,
+  bare: 110,
 } as const;
 
 const GRID_RATIO = 16 / 9;
@@ -57,7 +63,7 @@ export function threadHeight(entry: EntryDto): number {
 
 function threadRootHeight(entry: EntryDto): number {
   const quote = sharesQuotedPost(entry) ? entry.quote : null;
-  const pendingCard = entry.linkCards.length === 0 && entry.pending ? THREAD.cardBare : 0;
+  const pendingCard = entry.linkCards.length === 0 && entry.pending ? LINK_CARD.bare : 0;
   return (
     threadPostHeight(entryHeadline(entry), threadRootMedia(entry), entry.linkCards[0] ?? null) +
     THREAD.dekLine * lineCount(entryDek(entry), THREAD.dekCharsPerLine, THREAD.dekLinesMax) +
@@ -69,13 +75,16 @@ function threadRootHeight(entry: EntryDto): number {
 function threadPostHeight(text: string, media: EntryMediumDto[], card: LinkCardDto | null): number {
   const lines = THREAD.line * lineCount(text, THREAD.charsPerLine, THREAD.linesMax);
   return (
-    lines + withGap(mediaHeight(media, THREAD.mediaWidth)) + threadCardHeight(card) + THREAD.gap
+    lines +
+    withGap(mediaHeight(media, THREAD.mediaWidth)) +
+    linkCardHeight(card, THREAD.mediaWidth) +
+    THREAD.gap
   );
 }
 
-function threadCardHeight(card: LinkCardDto | null): number {
+function linkCardHeight(card: LinkCardDto | null, width: number): number {
   if (!card) return 0;
-  return card.imageUrl ? THREAD.cardWithImage : THREAD.cardBare;
+  return card.imageUrl ? width / LINK_CARD.imageRatio + LINK_CARD.textBelowImage : LINK_CARD.bare;
 }
 
 /** Chrome, the post's own text and media, then the quoted box: its header, text and media (#1612). */
@@ -89,12 +98,13 @@ export function quotingHeight(entry: EntryDto): number {
   return QUOTING.chrome + own + QUOTING.gap + quotedBoxHeight(quote);
 }
 
-/** The quoted box: its header, text, media and nested-quote line. */
+/** The quoted box: its header, text, media, link card and nested-quote line. */
 function quotedBoxHeight(quote: QuotedPostDto): number {
   return (
     QUOTING.quoteChrome +
     QUOTING.quoteLine * lineCount(quote.text, QUOTING.quoteCharsPerLine, QUOTING.quoteLinesMax) +
     withGap(mediaHeight(quote.media, QUOTING.quoteMediaWidth)) +
+    withGap(linkCardHeight(quote.linkCard, QUOTING.quoteMediaWidth)) +
     (quote.nestedQuote ? QUOTING.gap + QUOTING.nestedLine : 0)
   );
 }

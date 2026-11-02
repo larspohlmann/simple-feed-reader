@@ -69,6 +69,7 @@ final readonly class EntryJson
     public function __construct(
         private LinkCardJson $linkCardJson,
         private ThreadPostJson $threadPostJson,
+        private QuotedPostJson $quotedPostJson,
     ) {
     }
 
@@ -130,7 +131,7 @@ final readonly class EntryJson
             'linkCards' => array_map($this->linkCardJson->of(...), $row->enrichment->linkCards),
             'thread' => array_map($this->threadPostJson->of(...), $row->enrichment->threadPosts),
             'share' => $entry->getShareKind()?->value,
-            'quote' => QuotedPostJson::ofOrNull($entry->getQuotedPost()),
+            'quote' => $this->quotedPostJson->ofOrNull($entry->getQuotedPost()),
         ];
     }
 

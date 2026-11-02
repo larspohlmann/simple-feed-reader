@@ -54,6 +54,7 @@ export function aQuotedPost(overrides: Partial<QuotedPostDto> = {}): QuotedPostD
     text: 'Quoted text.',
     media: [],
     nestedQuote: null,
+    linkCard: null,
     ...overrides,
   };
 }

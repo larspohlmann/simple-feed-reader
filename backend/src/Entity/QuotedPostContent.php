@@ -21,6 +21,7 @@ final readonly class QuotedPostContent
         public string $text,
         public array $media,
         public ?QuotedPostReference $nestedQuote,
+        public ?LinkCardContent $linkCard = null,
     ) {
     }
 }

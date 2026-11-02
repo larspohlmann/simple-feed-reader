@@ -6,14 +6,7 @@
       [name]="post.authorName"
       [toneSeed]="post.authorHandle"
     />
-    <a
-      class="open"
-      [href]="post.url"
-      target="_blank"
-      rel="noopener noreferrer"
-      (click)="$event.stopPropagation()"
-      (keydown.enter)="$event.stopPropagation()"
-    >
+    <a class="open" [href]="post.url" target="_blank" rel="noopener noreferrer">
       <span class="name">{{ post.authorName }}</span>
       <span class="handle">{{ '@' + post.authorHandle }}</span>
     </a>
@@ -31,15 +24,16 @@
       [videoLabel]="'reader.quotedVideo' | transloco"
     />
   }
+  @if (post.linkCard; as card) {
+    <app-link-card
+      [card]="card"
+      [layout]="layout()"
+      siteLine="last"
+      [opensInReader]="cardOpening()"
+    />
+  }
   @if (post.nestedQuote; as nested) {
-    <a
-      class="nested"
-      [href]="nested.url"
-      target="_blank"
-      rel="noopener noreferrer"
-      (click)="$event.stopPropagation()"
-      (keydown.enter)="$event.stopPropagation()"
-    >
+    <a class="nested" [href]="nested.url" target="_blank" rel="noopener noreferrer">
       @if (nested.handle) {
         {{ 'reader.quotingPostBy' | transloco: { handle: '@' + nested.handle } }}
       } @else {

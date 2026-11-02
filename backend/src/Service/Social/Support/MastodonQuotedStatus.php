@@ -44,6 +44,7 @@ final class MastodonQuotedStatus
             self::textOf($body, $status->string('spoiler_text')),
             MastodonAttachments::entryMediaOf($status),
             self::nestedOf($status->node('quote'), $quoted),
+            MastodonCard::of($status->node('card')),
         ));
     }
 

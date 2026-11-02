@@ -62,6 +62,16 @@ describe('quotingHeight', () => {
     expect(quotingHeight(post('Hi', nested))).toBeGreaterThan(quotingHeight(post('Hi')));
   });
 
+  it('adds the quoted post’s link card to the quoted box, more with an image', () => {
+    const bare = quotingHeight(post('Hi', aQuotedPost({ linkCard: aLinkCard() })));
+    const pictured = quotingHeight(
+      post('Hi', aQuotedPost({ linkCard: aLinkCard({ imageUrl: 'https://news.test/s.jpg' }) })),
+    );
+
+    expect(bare).toBeGreaterThan(quotingHeight(post('Hi')));
+    expect(pictured).toBeGreaterThan(bare);
+  });
+
   it('adds the post’s own media', () => {
     const withMedia = anEntry({ ...post('Hi'), media: [video(1920, 1080)] });
 

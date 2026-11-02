@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { QuotedPostComponent, QuotedPostLayout } from './quoted-post.component';
 import { QuotedPostDto } from './quoted-post';
 import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
-import { aQuotedPost } from '../../../testing/entry-testing';
+import { aLinkCard, aQuotedPost } from '../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 const failingProxy = { recover: () => Promise.resolve('failed' as const) };
@@ -26,6 +26,14 @@ function mount(overrides: Partial<QuotedPostDto> = {}, layout: QuotedPostLayout 
 
 const query = (fixture: { nativeElement: unknown }, selector: string) =>
   (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(selector);
+
+function parentListener(fixture: { nativeElement: unknown }, type: 'click' | 'keydown') {
+  const parent = document.createElement('div');
+  parent.appendChild(fixture.nativeElement as HTMLElement);
+  const listener = jest.fn();
+  parent.addEventListener(type, listener);
+  return listener;
+}
 
 describe('QuotedPostComponent', () => {
   it('shows the author and the narrow relative time in the block layout', () => {
@@ -61,8 +69,7 @@ describe('QuotedPostComponent', () => {
 
   it('opens the quoted post in a new tab, without reaching a parent click', () => {
     const fixture = mount({ url: 'https://bsky.app/profile/q/post/1' });
-    const parentClick = jest.fn();
-    (fixture.nativeElement as HTMLElement).addEventListener('click', parentClick);
+    const parentClick = parentListener(fixture, 'click');
     const open = query(fixture, 'a.open') as HTMLAnchorElement;
 
     open.click();
@@ -71,6 +78,71 @@ describe('QuotedPostComponent', () => {
     expect(open.target).toBe('_blank');
     expect(open.rel).toContain('noopener');
     expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it('shows the quoted post’s link card inside the box, in the quote’s layout', () => {
+    const fixture = mount(
+      { linkCard: aLinkCard({ title: 'A shared story', siteName: 'news.test' }) },
+      'article',
+    );
+
+    const card = query(fixture, '.box app-link-card')!;
+    expect(card.classList).toContain('article');
+    expect(card.querySelector('strong')!.textContent).toBe('A shared story');
+    expect(card.querySelector('a')!.getAttribute('href')).toBe('https://news.test/story');
+  });
+
+  it.each<QuotedPostLayout>(['block', 'article'])(
+    'keeps the card’s site line last in the %s layout',
+    (layout) => {
+      const card = query(mount({ linkCard: aLinkCard() }, layout), 'app-link-card')!;
+
+      expect(card.classList).toContain(layout);
+      expect([...card.querySelector('a')!.children].map((child) => child.tagName).at(-1)).toBe(
+        'SMALL',
+      );
+    },
+  );
+
+  it('opens the card’s page without reaching a parent click', () => {
+    const fixture = mount({ linkCard: aLinkCard() });
+    const parentClick = parentListener(fixture, 'click');
+    const link = query(fixture, 'app-link-card a') as HTMLAnchorElement;
+    link.addEventListener('click', (event) => event.preventDefault());
+
+    link.click();
+
+    expect(link.target).toBe('_blank');
+    expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  describe.each(['a.open', 'app-link-card a', 'a.nested'])('from %s', (selector) => {
+    const mountFull = () =>
+      mount({ linkCard: aLinkCard(), nestedQuote: { url: 'https://n/1', handle: null } });
+
+    it('lets no click reach a parent', () => {
+      const fixture = mountFull();
+      const parentClick = parentListener(fixture, 'click');
+      const link = query(fixture, selector)!;
+      link.addEventListener('click', (event) => event.preventDefault());
+
+      link.click();
+
+      expect(parentClick).not.toHaveBeenCalled();
+    });
+
+    it.each(['Enter', ' '])('lets no %j key reach a parent', (key) => {
+      const fixture = mountFull();
+      const parentKeydown = parentListener(fixture, 'keydown');
+
+      query(fixture, selector)!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+      expect(parentKeydown).not.toHaveBeenCalled();
+    });
+  });
+
+  it('renders no card without one', () => {
+    expect(query(mount({ linkCard: null }), 'app-link-card')).toBeNull();
   });
 
   it('swaps a failed avatar for the author initials', async () => {

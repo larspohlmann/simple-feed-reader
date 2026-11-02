@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Bluesky\Support;
 
 use App\Entity\EntryMedium;
+use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostReference;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Support\QuotedViewRecord;
@@ -105,15 +106,87 @@ final class QuotedViewRecordTest extends TestCase
         self::assertSame('nested.bsky.social', $quote->nestedQuote?->handle);
     }
 
-    public function testAQuotedLinkCardGivesNoMedia(): void
+    public function testTheRealQuoteOfALinkPostCarriesItsCard(): void
+    {
+        $quote = QuotedViewRecord::of(Bluesky::post('record')->node('embed')->node('record'));
+
+        self::assertEquals(
+            new LinkCardContent(
+                'https://www.motherjones.com/politics/2026/10/'
+                . 'stress-test-campaign-finance-corruption-midterms-video-podcast/',
+                'The midterm spending bonanza is threatening democracy like never before.',
+                null,
+                null,
+                'motherjones.com',
+            ),
+            $quote?->linkCard,
+        );
+    }
+
+    public function testAQuotedLinkCardIsItsCardAndNoMedia(): void
     {
         $quote = QuotedViewRecord::of(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.external#view',
-            'external' => ['uri' => 'https://example.com/', 'title' => 'T', 'thumb' => 'https://cdn.bsky.app/t.jpg'],
+            'external' => [
+                'uri' => 'https://www.example.com/story',
+                'title' => 'T',
+                'description' => 'D',
+                'thumb' => 'https://cdn.bsky.app/t.jpg',
+            ],
         ]));
 
         self::assertSame([], $quote?->media);
         self::assertNull($quote->nestedQuote);
+        self::assertEquals(
+            new LinkCardContent(
+                'https://www.example.com/story',
+                'T',
+                'D',
+                'https://cdn.bsky.app/t.jpg',
+                'example.com',
+            ),
+            $quote->linkCard,
+        );
+    }
+
+    public function testAQuotedRecordWithMediaCarriesTheCardOfItsMedia(): void
+    {
+        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'media' => [
+                '$type' => 'app.bsky.embed.external#view',
+                'external' => ['uri' => 'https://example.com/a', 'title' => 'A'],
+            ],
+            'record' => ['record' => self::nested()],
+        ]));
+
+        self::assertSame('https://example.com/a', $quote?->linkCard?->url);
+        self::assertSame('nested.bsky.social', $quote->nestedQuote?->handle);
+    }
+
+    public function testAQuotedGifIsNoCard(): void
+    {
+        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://media.tenor.com/a/clap.gif?hh=237&ww=316', 'title' => 'Clap'],
+        ]));
+
+        self::assertNull($quote?->linkCard);
+    }
+
+    public function testAQuotedPostWithImagesOrAnUntitledLinkHasNoCard(): void
+    {
+        $images = QuotedViewRecord::of(self::viewRecord(embed: [
+            '$type' => 'app.bsky.embed.images#view',
+            'images' => [['fullsize' => 'https://cdn.bsky.app/full/1.jpg']],
+        ]));
+        $untitled = QuotedViewRecord::of(self::viewRecord(embed: [
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://example.com/a'],
+        ]));
+
+        self::assertNull($images?->linkCard);
+        self::assertNull($untitled?->linkCard);
     }
 
     public function testAQuotedGifIsItsAnimatedImage(): void

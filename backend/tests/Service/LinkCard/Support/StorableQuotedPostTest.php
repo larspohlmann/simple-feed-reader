@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\LinkCard\Support;
 
 use App\Entity\EntryMedium;
+use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Service\LinkCard\Support\StorableQuotedPost;
@@ -17,7 +18,15 @@ final class StorableQuotedPostTest extends TestCase
 
     public function testAQuoteThatFitsIsKeptAsItIs(): void
     {
-        $quote = self::quote();
+        $quote = self::quote(
+            linkCard: new LinkCardContent(
+                'https://news.example/s',
+                'Story',
+                'D',
+                'https://news.example/s.jpg',
+                'news.example',
+            ),
+        );
 
         self::assertEquals($quote, StorableQuotedPost::of($quote));
     }
@@ -190,6 +199,31 @@ final class StorableQuotedPostTest extends TestCase
         self::assertNull(StorableQuotedPost::of(self::quote(nested: $nested))?->nestedQuote?->handle);
     }
 
+    public function testAQuotesCardPassesTheGateEveryCardPasses(): void
+    {
+        $card = new LinkCardContent(
+            'https://news.example/s',
+            'Story',
+            null,
+            'http://news.example/s.jpg',
+            'news.example',
+        );
+
+        self::assertEquals(
+            new LinkCardContent('https://news.example/s', 'Story', null, null, 'news.example'),
+            StorableQuotedPost::of(self::quote(linkCard: $card))?->linkCard,
+        );
+    }
+
+    public function testACardNoCardMayHoldIsDroppedAndTheQuoteKept(): void
+    {
+        $card = new LinkCardContent('https://news.example/s', '  ', null, null, 'news.example');
+        $quote = StorableQuotedPost::of(self::quote(linkCard: $card));
+
+        self::assertNotNull($quote);
+        self::assertNull($quote->linkCard);
+    }
+
     /** @param list<EntryMedium> $media */
     private static function quote(
         string $url = self::URL,
@@ -200,7 +234,8 @@ final class StorableQuotedPostTest extends TestCase
         string $text = 'Quoted text.',
         array $media = [],
         ?QuotedPostReference $nested = null,
+        ?LinkCardContent $linkCard = null,
     ): QuotedPostContent {
-        return new QuotedPostContent($url, $name, $handle, $avatar, $postedAt, $text, $media, $nested);
+        return new QuotedPostContent($url, $name, $handle, $avatar, $postedAt, $text, $media, $nested, $linkCard);
     }
 }
