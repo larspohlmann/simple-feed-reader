@@ -17,7 +17,7 @@ import {
   ActionSheetItem,
 } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
-import { IconComponent } from '../../../shared/icon/icon.component';
+import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
@@ -100,6 +100,9 @@ export class ShareButtonComponent {
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
   protected readonly logoUrl = shareLogoUrl;
+  protected readonly compactIconSize = computed((): IconSize =>
+    this.screen.isCoarse() ? 'md' : 'sm',
+  );
   protected readonly open = signal(false);
   protected readonly origin = viewChild.required(CdkOverlayOrigin);
   private readonly overlay = viewChild.required(CdkConnectedOverlay);

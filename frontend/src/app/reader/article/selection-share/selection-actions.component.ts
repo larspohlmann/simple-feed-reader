@@ -17,6 +17,7 @@ import { ArticleSelection } from './article-selection.service';
   templateUrl: './selection-actions.component.html',
   styleUrl: './selection-actions.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.touch]': 'screen.isCoarse()' },
 })
 export class SelectionActionsComponent {
   readonly url = input.required<string>();
@@ -25,7 +26,7 @@ export class SelectionActionsComponent {
   private readonly postActions = inject(PostActions);
   protected readonly networks = inject(PostNetworks).connected;
   private readonly selection = inject(ArticleSelection);
-  private readonly screen = inject(LayoutService);
+  protected readonly screen = inject(LayoutService);
   protected readonly remembered = this.selection.remembered;
 
   protected post(network: SocialNetworkName): void {

@@ -171,6 +171,15 @@ describe('SelectionShareComponent', () => {
   describe('on a fine pointer, quoting from the bubble', () => {
     beforeEach(() => mount(false));
 
+    it('wears no touch class and keeps the small share glyph', () => {
+      select();
+
+      const bubble = document.querySelector('.selection-bubble')!;
+      const glyph = bubble.querySelector<HTMLElement>('[aria-label="Share"] app-icon')!;
+      expect(bubble.classList).not.toContain('touch');
+      expect(glyph.style.fontSize).toBe('var(--icon-sm)');
+    });
+
     it('keeps the page selection highlighted', () => {
       select();
 
@@ -194,6 +203,15 @@ describe('SelectionShareComponent', () => {
       expect(bar.querySelector('.count')?.textContent?.trim()).toBe('3 words selected');
       expect(bar.querySelectorAll('[aria-label^="Quote on"]')).toHaveLength(2);
       expect(bar.querySelector('[aria-label="Share"]')).not.toBeNull();
+    });
+
+    it('wears the touch class and a share glyph a size up, for tap-sized buttons', () => {
+      select();
+
+      const bar = element().querySelector('.selection-bar')!;
+      const glyph = bar.querySelector<HTMLElement>('[aria-label="Share"] app-icon')!;
+      expect(bar.classList).toContain('touch');
+      expect(glyph.style.fontSize).toBe('var(--icon-md)');
     });
 
     it('raises no bubble, the phone callout owns that spot', () => {

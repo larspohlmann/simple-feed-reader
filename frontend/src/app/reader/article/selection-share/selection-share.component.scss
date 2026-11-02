@@ -13,16 +13,19 @@
 }
 
 .selection-bar {
-  @include glass-rim.filled(var(--surface-2));
+  @include glass-rim.filled(
+    color-mix(in srgb, var(--surface-2), var(--rim-light) 10%),
+    var(--border-strong)
+  );
 
   flex: 1;
   border-radius: var(--radius-lg);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-3);
   box-shadow: var(--panel-shadow);
 }
 
 .count {
   margin-inline-end: auto;
   font-size: var(--fs-sm);
-  color: var(--text-muted);
+  color: var(--text-primary);
 }

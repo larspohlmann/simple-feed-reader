@@ -9,8 +9,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--icon-lg);
-  height: var(--icon-lg);
+  width: var(--ib-size, var(--icon-lg));
+  height: var(--ib-size, var(--icon-lg));
   border: 0;
   border-radius: var(--radius-sm);
   background: var(--rim-fill);
