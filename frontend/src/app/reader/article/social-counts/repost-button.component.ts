@@ -10,18 +10,13 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
-import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
+import { CdkConnectedOverlay, CdkOverlayOrigin } from '@angular/cdk/overlay';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { stepMenuFocus } from '../../../shared/menu-keys';
+import { TOOLBAR_MENU_POSITIONS, stepMenu } from '../../../shared/menu-keys';
 import { SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
-
-const POSITIONS: ConnectedPosition[] = [
-  { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
-  { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
-];
 
 const TOGGLE = 'toggle';
 const QUOTE = 'quote';
@@ -54,7 +49,8 @@ export class RepostButtonComponent {
   private readonly sheet = inject(ActionSheet);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly positions = POSITIONS;
+  protected readonly positions = TOOLBAR_MENU_POSITIONS;
+  protected readonly step = stepMenu;
   protected readonly popup = computed(() => (this.screen.isCoarse() ? 'dialog' : 'menu'));
   protected readonly open = signal(false);
   protected readonly actionKey = computed(
@@ -84,11 +80,6 @@ export class RepostButtonComponent {
     if (!this.canQuote()) return;
     this.open.set(false);
     this.quoteRequested.emit();
-  }
-
-  protected step(event: KeyboardEvent): void {
-    const menu = (event.target as Element).closest('[role="menu"]');
-    if (menu !== null) stepMenuFocus(event, menu);
   }
 
   private refusal(allowed: boolean, reasonKey: string): { disabled: boolean; hint?: string } {

@@ -4,7 +4,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { EMPTY, Observable, catchError, filter, map, switchMap, tap } from 'rxjs';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
-import { parseProblem, problemMessage } from '../../../core/problem';
+import { parseProblem } from '../../../core/problem';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService } from '../../../shared/toast/toast.service';
@@ -105,7 +105,7 @@ export class PostActions {
       filter(Boolean),
       switchMap(remove),
       catchError((error: HttpErrorResponse) => {
-        this.toast.show({ message: problemMessage(parseProblem(error)) });
+        this.toast.showProblem(parseProblem(error));
         return EMPTY;
       }),
     );

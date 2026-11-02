@@ -1,9 +1,10 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
 import { Observable, catchError, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { Problem } from '../../../core/problem';
-import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
+import { ToastService } from '../../../shared/toast/toast.service';
+import { OptimisticToggles, steppedCounts } from '../optimistic-toggles';
 import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
+import { SocialCountsDto } from '../../entry-social';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi } from '../../social-post-api';
 import { withReply, withoutReply } from './thread-edits';
@@ -11,6 +12,17 @@ import { withReply, withoutReply } from './thread-edits';
 const CACHE_CAP = 50;
 const FRESH_MS = 60 * 60 * 1000;
 const FAILED_RETRY_MS = 60 * 1000;
+
+/** A flag the reader toggles on a comment: the count it moves, and the requests that set and unset it. */
+const POST_FLAGS = {
+  isLiked: { count: 'likes', set: 'likeComment', unset: 'unlikeComment' },
+  isReposted: { count: 'reposts', set: 'repostComment', unset: 'unrepostComment' },
+} as const satisfies Record<
+  string,
+  { count: keyof SocialCountsDto; set: keyof SocialPostApi; unset: keyof SocialPostApi }
+>;
+
+type PostFlag = keyof typeof POST_FLAGS;
 
 export type CommentsState =
   | { status: 'idle' }
@@ -30,7 +42,7 @@ export class CommentsService {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
   private readonly states = new Map<number, WritableSignal<CommentsState>>();
-  private readonly toggles = new OptimisticToggles();
+  private readonly toggles = new OptimisticToggles(inject(ToastService));
   private generation = 0;
 
   constructor() {
@@ -54,46 +66,13 @@ export class CommentsService {
   }
 
   /** Optimistic like of one comment; dropped while a like of the same comment is on the wire. */
-  toggleLike(
-    entryId: number,
-    post: EntryCommentPostDto,
-    onError: (problem: Problem) => void,
-  ): void {
-    const { address } = post;
-    const isLiked = !post.isLiked;
-    const state = this.stateFor(entryId);
-    this.toggles.run(entryId, {
-      key: `like ${address}`,
-      send: () =>
-        isLiked
-          ? this.socialPosts.likeComment(entryId, address)
-          : this.socialPosts.unlikeComment(entryId, address),
-      to: isLiked,
-      show: (liked) => state.update((current) => withLike(current, address, liked)),
-      onError,
-    });
+  toggleLike(entryId: number, post: EntryCommentPostDto): void {
+    this.toggle(entryId, post, 'isLiked');
   }
 
   /** Optimistic repost of one comment; dropped while one is on the wire or the network forbids it. */
-  toggleRepost(
-    entryId: number,
-    post: EntryCommentPostDto,
-    onError: (problem: Problem) => void,
-  ): void {
-    if (!post.canRepost) return;
-    const { address } = post;
-    const isReposted = !post.isReposted;
-    const state = this.stateFor(entryId);
-    this.toggles.run(entryId, {
-      key: `repost ${address}`,
-      send: () =>
-        isReposted
-          ? this.socialPosts.repostComment(entryId, address)
-          : this.socialPosts.unrepostComment(entryId, address),
-      to: isReposted,
-      show: (reposted) => state.update((current) => withRepost(current, address, reposted)),
-      onError,
-    });
+  toggleRepost(entryId: number, post: EntryCommentPostDto): void {
+    if (post.canRepost) this.toggle(entryId, post, 'isReposted');
   }
 
   /** Shows a reply the reader just published, until the next load brings it from the network. */
@@ -113,6 +92,22 @@ export class CommentsService {
 
   countQuote(entryId: number, address: string): void {
     this.stateFor(entryId).update((state) => withQuote(state, address));
+  }
+
+  private toggle(entryId: number, post: EntryCommentPostDto, flag: PostFlag): void {
+    const { address } = post;
+    const to = !post[flag];
+    const state = this.stateFor(entryId);
+    const { set, unset } = POST_FLAGS[flag];
+    this.toggles.run(entryId, {
+      key: `${flag} ${address}`,
+      send: () => this.socialPosts[to ? set : unset](entryId, address),
+      to,
+      show: (value) =>
+        state.update((current) =>
+          withPost(current, address, (shown) => flagged(shown, flag, value)),
+        ),
+    });
   }
 
   private stateFor(id: number): WritableSignal<CommentsState> {
@@ -171,39 +166,19 @@ function settled(response: CommentsResponse): CommentsState {
   }
 }
 
-/** The state with the comment at `address` liked or not, its like count following. */
-function withLike(state: CommentsState, address: string, isLiked: boolean): CommentsState {
-  return withPost(state, address, (post) =>
-    post.isLiked === isLiked
-      ? post
-      : {
-          ...post,
-          isLiked,
-          counts: { ...post.counts, likes: steppedCount(post.counts.likes, isLiked) },
-        },
-  );
-}
-
-/** The state with the comment at `address` reposted or not, its repost count following. */
-function withRepost(state: CommentsState, address: string, isReposted: boolean): CommentsState {
-  return withPost(state, address, (post) =>
-    post.isReposted === isReposted
-      ? post
-      : {
-          ...post,
-          isReposted,
-          counts: { ...post.counts, reposts: steppedCount(post.counts.reposts, isReposted) },
-        },
-  );
+/** The post with `flag` set to `value`, the flag's count following. */
+function flagged(post: EntryCommentPostDto, flag: PostFlag, value: boolean): EntryCommentPostDto {
+  return post[flag] === value
+    ? post
+    : { ...post, [flag]: value, counts: steppedCounts(post.counts, POST_FLAGS[flag].count, value) };
 }
 
 /** The state with one more quote counted on the comment at `address`, where its network counts quotes. */
 function withQuote(state: CommentsState, address: string): CommentsState {
-  return withPost(state, address, (post) =>
-    post.counts.quotes === null
-      ? post
-      : { ...post, counts: { ...post.counts, quotes: steppedCount(post.counts.quotes, true) } },
-  );
+  return withPost(state, address, (post) => {
+    const counts = steppedCounts(post.counts, 'quotes', true);
+    return counts === post.counts ? post : { ...post, counts };
+  });
 }
 
 function withPost(

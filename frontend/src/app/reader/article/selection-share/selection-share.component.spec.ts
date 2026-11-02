@@ -134,11 +134,12 @@ describe('SelectionShareComponent', () => {
       expect(bubble()).toBeNull();
     });
 
-    it('closes when a scroll takes the selection out of view', () => {
+    it('closes when a scroll takes the selection out of view', async () => {
       select();
       lastLineTop = -100;
 
       document.dispatchEvent(new Event('scroll'));
+      await new Promise(requestAnimationFrame);
       fixture.detectChanges();
 
       expect(bubble()).toBeNull();

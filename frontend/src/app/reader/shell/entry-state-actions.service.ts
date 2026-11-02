@@ -11,7 +11,6 @@ import { entryParam } from '../query/slug';
 import { entryChangeParams } from '../query/link-param';
 import { EntryDto, EntryStatePatch } from '../models';
 import { ToastService } from '../../shared/toast/toast.service';
-import { problemMessage } from '../../core/problem';
 import { ReaderRouteState } from './reader-route-state.service';
 import { PostActions } from '../article/composer/post-actions.service';
 import { SOCIAL_NETWORK_NAMES } from '../../core/social-network';
@@ -62,7 +61,7 @@ export class EntryStateActions implements EntryActionHandler {
 
   like(entry: EntryDto): void {
     this.entries.setLiked(entry, !entry.social?.isLiked, (problem) =>
-      this.toast.show({ message: problemMessage(problem) }),
+      this.toast.showProblem(problem),
     );
   }
 

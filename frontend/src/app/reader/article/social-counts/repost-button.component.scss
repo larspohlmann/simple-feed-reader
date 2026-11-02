@@ -1,4 +1,3 @@
-@use '../../../theme/glass-rim';
 @use '../../../theme/menu-items';
 @use '../../../theme/pill-toggle';
 
@@ -15,13 +14,5 @@
 }
 
 .menu {
-  @include glass-rim.filled(var(--surface-2));
-  @include menu-items.menu-items;
-
-  border-radius: var(--radius);
-  padding-block: var(--space-1);
-}
-
-.menu button {
-  white-space: nowrap;
+  @include menu-items.menu-panel;
 }

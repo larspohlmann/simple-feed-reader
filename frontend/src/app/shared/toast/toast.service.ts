@@ -1,6 +1,7 @@
 import { Injectable, Signal, inject, signal } from '@angular/core';
 import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import { Overlay } from '@angular/cdk/overlay';
+import { Problem, problemMessage } from '../../core/problem';
 import { ToastComponent, ToastData } from './toast.component';
 
 const DEFAULT_DURATION_MS = 6000;
@@ -90,6 +91,10 @@ export class ToastService {
     const durationMs = this.durationOf(toast);
     if (durationMs === null) return;
     this.timer = setTimeout(() => this.dismiss(), durationMs);
+  }
+
+  showProblem(problem: Problem): void {
+    this.show({ message: problemMessage(problem) });
   }
 
   dismiss(): void {

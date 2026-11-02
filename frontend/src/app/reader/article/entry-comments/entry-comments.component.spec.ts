@@ -119,7 +119,7 @@ describe('EntryCommentsComponent', () => {
       fixture.detectChanges();
       (document.querySelector('[role="menuitem"]') as HTMLButtonElement).click();
 
-      expect(service.toggleRepost).toHaveBeenCalledWith(5, post, expect.any(Function));
+      expect(service.toggleRepost).toHaveBeenCalledWith(5, post);
     });
 
     it('quotes the comment from its repost menu', () => {
@@ -136,7 +136,7 @@ describe('EntryCommentsComponent', () => {
       showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
       likeButton(settleComments([anEntryComment({ post })]))?.click();
 
-      expect(service.toggleLike).toHaveBeenCalledWith(5, post, expect.any(Function));
+      expect(service.toggleLike).toHaveBeenCalledWith(5, post);
     });
 
     it('counts likes without a button when the reader has no account to like with', () => {

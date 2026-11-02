@@ -3,12 +3,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError, Subject } from 'rxjs';
 import { CommentsService, CommentsState } from './comments.service';
 import { ReaderApi } from '../../reader-api';
+import { ToastService } from '../../../shared/toast/toast.service';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsResponse, EntryCommentPostDto } from '../../entry-comment';
 import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
 
 describe('CommentsService', () => {
   let api: { comments: jest.Mock };
+  let toast: { showProblem: jest.Mock };
   let service: CommentsService;
 
   const ok: CommentsResponse = {
@@ -22,10 +24,12 @@ describe('CommentsService', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-09-24T12:00:00Z'));
     api = { comments: jest.fn(() => of(ok)) };
+    toast = { showProblem: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: ReaderApi, useValue: api },
         { provide: SocialPostApi, useValue: api },
+        { provide: ToastService, useValue: toast },
       ],
     });
     service = TestBed.inject(CommentsService);
@@ -47,7 +51,6 @@ describe('CommentsService', () => {
     };
     let likes: { likeComment: jest.Mock; unlikeComment: jest.Mock };
     let answer: Subject<{ isLiked: boolean }>;
-    let onError: jest.Mock;
 
     beforeEach(() => {
       answer = new Subject();
@@ -56,7 +59,6 @@ describe('CommentsService', () => {
       api.comments.mockReturnValue(
         of({ ...ok, comments: [anEntryComment({ post }), anEntryComment()] }),
       );
-      onError = jest.fn();
       service.load(1);
     });
 
@@ -66,44 +68,44 @@ describe('CommentsService', () => {
     };
 
     it('likes the comment at once and counts the like', () => {
-      service.toggleLike(1, post, onError);
+      service.toggleLike(1, post);
 
       expect(likes.likeComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual({ ...post, isLiked: true, counts: { ...post.counts, likes: 5 } });
     });
 
     it('takes a like back through the unlike call', () => {
-      service.toggleLike(1, post, onError);
+      service.toggleLike(1, post);
       answer.next({ isLiked: true });
       answer.complete();
       answer = new Subject();
       likes.unlikeComment.mockReturnValue(answer);
 
-      service.toggleLike(1, { ...post, isLiked: true }, onError);
+      service.toggleLike(1, { ...post, isLiked: true });
 
       expect(likes.unlikeComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual(post);
     });
 
     it('ignores a second toggle while the first is on the wire', () => {
-      service.toggleLike(1, post, onError);
-      service.toggleLike(1, { ...post, isLiked: true }, onError);
+      service.toggleLike(1, post);
+      service.toggleLike(1, { ...post, isLiked: true });
 
       expect(likes.unlikeComment).not.toHaveBeenCalled();
       expect(shownPost()?.isLiked).toBe(true);
     });
 
     it('puts the like back and reports the problem when the call fails', () => {
-      service.toggleLike(1, post, onError);
+      service.toggleLike(1, post);
 
       answer.error(new HttpErrorResponse({ status: 409, error: { title: 'No account' } }));
 
       expect(shownPost()).toEqual(post);
-      expect(onError).toHaveBeenCalledTimes(1);
+      expect(toast.showProblem).toHaveBeenCalledTimes(1);
     });
 
     it('leaves the other comments alone', () => {
-      service.toggleLike(1, post, onError);
+      service.toggleLike(1, post);
 
       const state = service.state(1)();
       expect(state.status === 'ok' && state.comments[1].post).toBeNull();
@@ -124,14 +126,12 @@ describe('CommentsService', () => {
     };
     let reposts: { repostComment: jest.Mock; unrepostComment: jest.Mock };
     let answer: Subject<{ isReposted: boolean }>;
-    let onError: jest.Mock;
 
     beforeEach(() => {
       answer = new Subject();
       reposts = { repostComment: jest.fn(() => answer), unrepostComment: jest.fn(() => answer) };
       Object.assign(api, reposts);
       api.comments.mockReturnValue(of({ ...ok, comments: [anEntryComment({ post })] }));
-      onError = jest.fn();
       service.load(1);
     });
 
@@ -141,7 +141,7 @@ describe('CommentsService', () => {
     };
 
     it('reposts the comment at once and counts the repost', () => {
-      service.toggleRepost(1, post, onError);
+      service.toggleRepost(1, post);
 
       expect(reposts.repostComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual({
@@ -152,23 +152,23 @@ describe('CommentsService', () => {
     });
 
     it('undoes a repost through the unrepost call', () => {
-      service.toggleRepost(1, { ...post, isReposted: true }, onError);
+      service.toggleRepost(1, { ...post, isReposted: true });
 
       expect(reposts.unrepostComment).toHaveBeenCalledWith(1, address);
     });
 
     it('puts the repost back and reports the problem when the call fails', () => {
-      service.toggleRepost(1, post, onError);
+      service.toggleRepost(1, post);
 
       answer.error(new HttpErrorResponse({ status: 409, error: { title: 'Refused' } }));
 
       expect(shownPost()).toEqual(post);
-      expect(onError).toHaveBeenCalledTimes(1);
+      expect(toast.showProblem).toHaveBeenCalledTimes(1);
     });
 
     it('ignores a second toggle while the first is on the wire', () => {
-      service.toggleRepost(1, post, onError);
-      service.toggleRepost(1, { ...post, isReposted: true }, onError);
+      service.toggleRepost(1, post);
+      service.toggleRepost(1, { ...post, isReposted: true });
 
       expect(reposts.unrepostComment).not.toHaveBeenCalled();
     });
@@ -176,15 +176,15 @@ describe('CommentsService', () => {
     it('lets a like through while a repost of the same comment is on the wire', () => {
       const likeComment = jest.fn(() => new Subject());
       Object.assign(api, { likeComment, unlikeComment: jest.fn() });
-      service.toggleRepost(1, post, onError);
+      service.toggleRepost(1, post);
 
-      service.toggleLike(1, { ...post, isLiked: false }, onError);
+      service.toggleLike(1, { ...post, isLiked: false });
 
       expect(likeComment).toHaveBeenCalledWith(1, address);
     });
 
     it('holds a reload back until the repost settles', () => {
-      service.toggleRepost(1, post, onError);
+      service.toggleRepost(1, post);
 
       service.reload(1);
 
@@ -192,7 +192,7 @@ describe('CommentsService', () => {
     });
 
     it('does nothing on a comment the network keeps from reposts', () => {
-      service.toggleRepost(1, { ...post, canRepost: false }, onError);
+      service.toggleRepost(1, { ...post, canRepost: false });
 
       expect(reposts.repostComment).not.toHaveBeenCalled();
       expect(shownPost()).toEqual(post);

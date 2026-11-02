@@ -15,7 +15,7 @@ import {
   FlexibleConnectedPositionStrategyOrigin,
 } from '@angular/cdk/overlay';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { fromEvent } from 'rxjs';
+import { animationFrameScheduler, auditTime, fromEvent } from 'rxjs';
 import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { LayoutService } from '../../layout.service';
 import { ArticleSelection } from './article-selection.service';
@@ -59,6 +59,7 @@ export class SelectionShareComponent {
     (): SelectedQuote | null =>
       this.selection.quote() ?? (this.pressing() ? this.selection.remembered() : null),
   );
+  private readonly hasQuote = computed(() => this.selection.quote() !== null);
   protected readonly bubbleOrigin = computed((): FlexibleConnectedPositionStrategyOrigin | null => {
     this.scrolls();
     const range = this.selection.range();
@@ -71,11 +72,11 @@ export class SelectionShareComponent {
 
   constructor() {
     effect((onCleanup) => {
-      if (this.coarse() || this.selection.quote() === null) return;
+      if (this.coarse() || !this.hasQuote()) return;
       const scrolling = this.zone.runOutsideAngular(() =>
-        fromEvent(this.document, 'scroll', { capture: true, passive: true }).subscribe(() =>
-          this.scrolls.update((count) => count + 1),
-        ),
+        fromEvent(this.document, 'scroll', { capture: true, passive: true })
+          .pipe(auditTime(0, animationFrameScheduler))
+          .subscribe(() => this.scrolls.update((count) => count + 1)),
       );
       onCleanup(() => scrolling.unsubscribe());
     });

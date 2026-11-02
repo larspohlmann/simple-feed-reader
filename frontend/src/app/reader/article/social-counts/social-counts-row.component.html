@@ -1,7 +1,7 @@
 @if (shown()) {
   <div class="row">
-    @let isReposted = reposted();
-    @if (isReposted !== null) {
+    @let postActions = actions();
+    @if (postActions) {
       @let reposts = counts()?.reposts ?? null;
       <app-repost-button
         [network]="network()"
@@ -11,9 +11,9 @@
             ? null
             : (labelKey(repostKind(), reposts) | transloco: { count: reposts })
         "
-        [reposted]="isReposted"
-        [canRepost]="canRepost()"
-        [canQuote]="canQuote() === true"
+        [reposted]="postActions.isReposted"
+        [canRepost]="postActions.canRepost"
+        [canQuote]="postActions.canQuote"
         (toggled)="repostToggled.emit()"
         (quoteRequested)="quoteRequested.emit()"
       />

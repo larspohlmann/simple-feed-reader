@@ -1,3 +1,5 @@
+@use 'glass-rim';
+
 // The rows of a role=menu, drawn alike by the share popover and the action sheet.
 @mixin menu-items {
   [role='menuitem'] {
@@ -39,5 +41,19 @@
     border: none;
     border-block-start: 1px solid var(--border);
     margin: var(--space-1) var(--row-pad-x);
+  }
+}
+
+// A popover role=menu: the rimmed panel around the rows, each kept to one line.
+@mixin menu-panel {
+  @include glass-rim.filled(var(--surface-2));
+
+  border-radius: var(--radius);
+  padding-block: var(--space-1);
+
+  @include menu-items;
+
+  button {
+    white-space: nowrap;
   }
 }

@@ -8,8 +8,6 @@ import {
   input,
   untracked,
 } from '@angular/core';
-import { problemMessage } from '../../../core/problem';
-import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { SocialCountsDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
@@ -29,7 +27,6 @@ export class SocialCountsComponent {
 
   protected readonly actions = inject(EntryActionHandler);
   private readonly service = inject(SocialCountsService);
-  private readonly toast = inject(ToastService);
   private readonly responses = inject(PostActions);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly entryId = computed(() => this.entry().id);
@@ -56,9 +53,7 @@ export class SocialCountsComponent {
   }
 
   protected toggleRepost(): void {
-    this.service.toggleRepost(this.entry(), (problem) =>
-      this.toast.show({ message: problemMessage(problem) }),
-    );
+    this.service.toggleRepost(this.entry());
   }
 
   protected reply(network: SocialNetworkName): void {

@@ -2,8 +2,9 @@ import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/cor
 import { Observable, catchError, forkJoin, of, throwError } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Problem, parseProblem } from '../../../core/problem';
-import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
+import { parseProblem } from '../../../core/problem';
+import { ToastService } from '../../../shared/toast/toast.service';
+import { OptimisticToggles, steppedCounts } from '../optimistic-toggles';
 import {
   PostActionsView,
   SOCIAL_POST_REMOVED,
@@ -44,7 +45,7 @@ export class SocialCountsService {
   private readonly entries = inject(EntriesStore);
   private readonly removedPosts = inject(RemovedPosts);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
-  private readonly toggles = new OptimisticToggles();
+  private readonly toggles = new OptimisticToggles(inject(ToastService));
   private generation = 0;
 
   constructor() {
@@ -68,7 +69,7 @@ export class SocialCountsService {
   }
 
   /** Optimistic repost of the entry's post; dropped while one is on the wire or the network forbids it. */
-  toggleRepost(entry: CountedEntry, onError: (problem: Problem) => void): void {
+  toggleRepost(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
     const current = state();
     if (current.status !== 'ok' || !current.actions?.canRepost) return;
@@ -78,28 +79,24 @@ export class SocialCountsService {
       send: () => (isReposted ? this.api.repost(entry.id) : this.api.unrepost(entry.id)),
       to: isReposted,
       show: (reposted) => state.update((loaded) => withRepost(loaded, reposted)),
-      onError,
     });
   }
 
   /** Counts a reply the reader published to the post, or one they deleted, before the network does. */
   stepReplies(entryId: number, up: boolean): void {
-    this.stateFor(entryId).update((state) =>
-      state.status === 'ok'
-        ? {
-            ...state,
-            counts: { ...state.counts, replies: steppedCount(state.counts.replies, up) },
-          }
-        : state,
-    );
+    this.stepCount(entryId, 'replies', up);
   }
 
   stepQuotes(entryId: number): void {
-    this.stateFor(entryId).update((state) =>
-      state.status === 'ok' && state.counts.quotes !== null
-        ? { ...state, counts: { ...state.counts, quotes: steppedCount(state.counts.quotes, true) } }
-        : state,
-    );
+    this.stepCount(entryId, 'quotes', true);
+  }
+
+  private stepCount(entryId: number, kind: keyof SocialCountsDto, up: boolean): void {
+    this.stateFor(entryId).update((state) => {
+      if (state.status !== 'ok') return state;
+      const counts = steppedCounts(state.counts, kind, up);
+      return counts === state.counts ? state : { ...state, counts };
+    });
   }
 
   private stateFor(id: number): WritableSignal<SocialCountsState> {
@@ -194,7 +191,7 @@ function withRepost(state: SocialCountsState, isReposted: boolean): SocialCounts
     return state;
   return {
     ...state,
-    counts: { ...state.counts, reposts: steppedCount(state.counts.reposts, isReposted) },
+    counts: steppedCounts(state.counts, 'reposts', isReposted),
     actions: { ...state.actions, isReposted },
   };
 }

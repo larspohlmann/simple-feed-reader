@@ -12,7 +12,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { SocialNetworkName } from '../../../core/social-network';
-import { SocialCountsDto } from '../../entry-social';
+import { PostActionsView, SocialCountsDto } from '../../entry-social';
 import { RepostButtonComponent } from './repost-button.component';
 
 type CountKind = 'likes' | 'reposts' | 'boosts' | 'replies' | 'quotes';
@@ -34,8 +34,8 @@ interface ResponsePill {
 }
 
 /**
- * A post's counters with its repost, reply, quote and like buttons; `liked`, `reposted`, `canReply` and `canQuote`
- * are null when the reader cannot act on the post, which shows plain counts instead.
+ * A post's counters with its repost, reply, quote and like buttons; `liked` and `actions` are null when the reader
+ * cannot act on the post, which shows plain counts instead.
  */
 @Component({
   selector: 'app-social-counts-row',
@@ -48,10 +48,7 @@ export class SocialCountsRowComponent {
   readonly network = input.required<SocialNetworkName>();
   readonly counts = input.required<SocialCountsDto | null>();
   readonly liked = input.required<boolean | null>();
-  readonly reposted = input<boolean | null>(null);
-  readonly canRepost = input(true);
-  readonly canReply = input<boolean | null>(null);
-  readonly canQuote = input<boolean | null>(null);
+  readonly actions = input<PostActionsView | null>(null);
   readonly likeToggled = output<void>();
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
@@ -63,38 +60,30 @@ export class SocialCountsRowComponent {
   );
 
   protected readonly shown = computed(
-    () =>
-      this.liked() !== null ||
-      this.reposted() !== null ||
-      this.canReply() !== null ||
-      this.counts() !== null,
+    () => this.liked() !== null || this.actions() !== null || this.counts() !== null,
   );
   protected readonly responsePills = computed<ResponsePill[]>(() => {
     const counts = this.counts();
-    const replyGate = this.canReply();
-    const quoteGate = this.canQuote();
-    const pills: ResponsePill[] = [];
-    if (replyGate !== null) {
-      pills.push({
+    const actions = this.actions();
+    if (actions === null) return [];
+    return [
+      {
         kind: 'reply',
         countKind: 'replies',
         icon: 'chat_bubble',
         count: counts?.replies ?? null,
-        allowed: replyGate,
+        allowed: actions.canReply,
         requested: this.replyRequested,
-      });
-    }
-    if (quoteGate !== null) {
-      pills.push({
+      },
+      {
         kind: 'quote',
         countKind: 'quotes',
         icon: 'format_quote',
         count: counts?.quotes ?? null,
-        allowed: quoteGate,
+        allowed: actions.canQuote,
         requested: this.quoteRequested,
-      });
-    }
-    return pills;
+      },
+    ];
   });
   protected readonly likeKey = computed(
     () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
@@ -103,14 +92,12 @@ export class SocialCountsRowComponent {
     const counts = this.counts();
     if (!counts) return [];
     const shown: ShownCount[] = [];
-    if (this.reposted() === null) {
+    if (this.actions() === null) {
       shown.push({ kind: this.repostKind(), icon: 'repeat', count: counts.reposts });
-    }
-    if (this.canReply() === null) {
       shown.push({ kind: 'replies', icon: 'chat_bubble', count: counts.replies });
-    }
-    if (this.canQuote() === null && counts.quotes !== null) {
-      shown.push({ kind: 'quotes', icon: 'format_quote', count: counts.quotes });
+      if (counts.quotes !== null) {
+        shown.push({ kind: 'quotes', icon: 'format_quote', count: counts.quotes });
+      }
     }
     if (this.liked() === null) shown.push({ kind: 'likes', icon: 'thumb_up', count: counts.likes });
     return shown;

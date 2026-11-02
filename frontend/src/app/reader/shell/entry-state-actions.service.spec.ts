@@ -17,12 +17,12 @@ import { RemovedPosts } from '../removed-posts.service';
 
 describe('EntryStateActions liking (#1600)', () => {
   const setLiked = jest.fn<void, [EntryDto, boolean, (problem: Problem) => void]>();
-  const show = jest.fn();
+  const showProblem = jest.fn();
   let actions: EntryStateActions;
 
   beforeEach(() => {
     setLiked.mockReset();
-    show.mockReset();
+    showProblem.mockReset();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -35,7 +35,7 @@ describe('EntryStateActions liking (#1600)', () => {
           provide: ReaderRouteState,
           useValue: { openEntryId: signal(null), openEntry: signal(null) },
         },
-        { provide: ToastService, useValue: { show } },
+        { provide: ToastService, useValue: { showProblem } },
         { provide: PostActions, useValue: {} },
       ],
     });
@@ -59,20 +59,21 @@ describe('EntryStateActions liking (#1600)', () => {
     ]);
   });
 
-  it("toasts the problem's own message when the like fails", () => {
+  it('toasts the problem when the like fails', () => {
     actions.like(
       anEntry({ social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false } }),
     );
     const onError = setLiked.mock.calls[0][2];
 
-    onError({
+    const problem = {
       type: 'social_post_not_found',
       title: 'Post no longer available',
       status: 404,
       detail: 'The post is no longer on Mastodon.',
-    });
+    };
+    onError(problem);
 
-    expect(show).toHaveBeenCalledWith({ message: 'The post is no longer on Mastodon.' });
+    expect(showProblem).toHaveBeenCalledWith(problem);
   });
 });
 
