@@ -277,8 +277,11 @@ describe('ArticlePageComponent', () => {
     const heading = fixture.nativeElement.querySelector('.content h2') as HTMLElement;
     heading.getBoundingClientRect = () => ({ top: 700 }) as DOMRect;
 
-    page.scrollToHeading(heading.id);
-    delete globals.CSS;
+    try {
+      page.scrollToHeading(heading.id);
+    } finally {
+      delete globals.CSS;
+    }
 
     expect(scrollTo).toHaveBeenCalled();
   });
