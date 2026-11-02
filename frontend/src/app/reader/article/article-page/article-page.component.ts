@@ -84,9 +84,6 @@ export class ArticlePageComponent {
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly layer = viewChild(ArticleLayerComponent);
   private readonly scroller = computed(() => this.layer()?.scroller());
-  private readonly restoreKey = computed(() =>
-    this.source.readingAids ? this.source.key() : undefined,
-  );
 
   protected readonly progressRail = new ScrollProgressRail({
     isWide: inject(LayoutService).isWide,
@@ -99,19 +96,15 @@ export class ArticlePageComponent {
   protected readonly tocOpen = signal(false);
 
   protected readonly readingMinutes = computed(() =>
-    this.source.readingAids ? estimateReadingMinutes(this.source.body()?.html ?? '') : null,
-  );
-
-  protected readonly cornerShareUrl = computed(() =>
-    this.source.readingAids ? this.source.url() : null,
+    estimateReadingMinutes(this.source.body()?.html ?? ''),
   );
 
   constructor() {
     this.restore.connect(this.scroller);
     effect(() => {
-      this.source.key();
+      const key = this.source.key();
       untracked(() => {
-        this.restore.arm(this.restoreKey());
+        this.restore.arm(key);
         this.toc.set([]);
         this.tocOpen.set(false);
       });
@@ -156,11 +149,11 @@ export class ArticlePageComponent {
     this.toc.set(collectToc(host));
     this.scope.refresh();
     // Runs on the original render and again when the reader content swaps in.
-    this.restore.reseat(this.restoreKey);
+    this.restore.reseat(this.source.key);
   }
 
   protected onScroll(scrollTop: number): void {
-    if (!this.layer()?.leaving()) this.restore.remember(this.restoreKey(), scrollTop);
+    if (!this.layer()?.leaving()) this.restore.remember(this.source.key(), scrollTop);
   }
 
   private slotNamed(name: ArticlePageSlotName) {

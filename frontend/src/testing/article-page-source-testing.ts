@@ -16,7 +16,6 @@ interface StubArticlePageOverrides {
   readonly nameplate?: string;
   readonly body?: ArticlePageBody;
   readonly canRefresh?: boolean;
-  readonly readingAids?: boolean;
 }
 
 export class StubArticlePageSource implements ArticlePageSource {
@@ -35,7 +34,6 @@ export class StubArticlePageSource implements ArticlePageSource {
   readonly canRefresh = signal(false);
   readonly failure = signal<ArticlePageFailure | null>(null);
   readonly socialPost = signal(false);
-  readingAids = false;
   readonly dropLead = jest.fn();
   readonly reload = jest.fn();
 
@@ -46,6 +44,5 @@ export class StubArticlePageSource implements ArticlePageSource {
     this.nameplate.set(overrides.nameplate ?? '');
     this.body.set(overrides.body ?? null);
     this.canRefresh.set(overrides.canRefresh ?? false);
-    this.readingAids = overrides.readingAids ?? false;
   }
 }

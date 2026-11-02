@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
+import { trackScrollTop } from '../../../../testing/scroll-testing';
 import { A_READER_TOKEN, aLinkCard } from '../../../../testing/entry-testing';
 import { ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
@@ -19,6 +20,8 @@ import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { provideArticlePageStubs } from '../../../../testing/article-page-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { ShareButtonComponent } from '../share/share-button.component';
+import { articleScrollKey } from '../../scroll/list-scroll-memory';
+import { linkPageKey } from '../reading/article-page-key';
 import {
   ArticleSelection,
   SELECTION_SETTLE_MS,
@@ -49,6 +52,7 @@ describe('LinkReaderComponent', () => {
   };
 
   beforeEach(() => {
+    sessionStorage.clear();
     installMockResizeObserver();
     replies = new Subject<ReaderContent>();
     loadTarget = jest.fn(() => replies);
@@ -241,6 +245,77 @@ describe('LinkReaderComponent', () => {
     expect(element.querySelector('app-link-cards')).toBeNull();
     expect(element.querySelector('app-entry-comments')).toBeNull();
     expect(element.querySelector('app-entry-actions')).toBeNull();
+  });
+
+  describe('reading aids', () => {
+    const longPage = aReaderArticle({
+      url: 'https://news.test/story',
+      title: 'The extracted story',
+      siteName: 'News',
+      contentHtml: `<p>${Array.from({ length: 660 }, (_, index) => `w${index}`).join(' ')}</p>`,
+    });
+
+    /** Let the content-processing microtask and any follow-up effect settle. */
+    async function settle(fixture: ComponentFixture<LinkReaderComponent>): Promise<void> {
+      await Promise.resolve();
+      fixture.detectChanges();
+      await Promise.resolve();
+    }
+
+    it('shares the link from the corner disc too', () => {
+      const fixture = mount(aLinkCard({ url: 'https://news.test/story' }));
+
+      const corner = fixture.debugElement
+        .queryAll(By.directive(ShareButtonComponent))
+        .find((share) => share.nativeElement.closest('.corner-actions'));
+      expect(corner).toBeDefined();
+      expect((corner!.componentInstance as ShareButtonComponent).url()).toBe(
+        'https://news.test/story',
+      );
+    });
+
+    it('lists the page headings in a table of contents', async () => {
+      const fixture = mount(null);
+      reply(
+        fixture,
+        aReaderArticle({
+          url: 'https://news.test/story',
+          contentHtml: '<h2>Alpha</h2><p>a</p><h2>Beta</h2><p>b</p><h3>Gamma</h3>',
+        }),
+      );
+      await settle(fixture);
+
+      const element = elementOf(fixture);
+      const toggle = element.querySelector('.reader-panel__toggle') as HTMLButtonElement;
+      expect(toggle).not.toBeNull();
+      toggle.click();
+      fixture.detectChanges();
+      const items = [...element.querySelectorAll('.toc-list button')].map((button) =>
+        button.textContent?.trim(),
+      );
+      expect(items).toEqual(['Alpha', 'Beta', 'Gamma']);
+    });
+
+    it('estimates the reading time after the site name', () => {
+      const fixture = mount(aLinkCard({ siteName: 'news.test' }));
+      reply(fixture, longPage);
+
+      const meta = elementOf(fixture).querySelector('.meta')!.textContent!;
+      expect(meta).toContain('≈ 3 min');
+      expect(meta.indexOf('news.test')).toBeLessThan(meta.indexOf('≈ 3 min'));
+    });
+
+    it('reopens the page where it was left', async () => {
+      sessionStorage.setItem(articleScrollKey(linkPageKey(FIRST_LINK.url)), '900');
+      const fixture = mount();
+      const scroller = elementOf(fixture).querySelector('.scroller') as HTMLElement;
+      const scroll = trackScrollTop(scroller);
+
+      reply(fixture, longPage);
+      await settle(fixture);
+
+      expect(scroll.top).toBe(900);
+    });
   });
 
   describe('selecting text to quote', () => {

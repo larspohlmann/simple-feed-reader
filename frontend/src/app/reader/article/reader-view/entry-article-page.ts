@@ -30,7 +30,6 @@ export class EntryArticlePage implements ArticlePageSource {
     inject(ListenLauncher),
   );
 
-  readonly readingAids = true;
   readonly loading = this.article.loading;
   readonly lead = this.article.hero;
 

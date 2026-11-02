@@ -6,7 +6,7 @@ import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 const ARTICLE_SETTLE_FRAMES = 60;
 const ARTICLE_SETTLE_STABLE = 4;
 
-/** Article scroll restore: a resume-reload reopens the entry at the top; this
+/** Article scroll restore: a resume-reload reopens the page at the top; this
  *  re-seats it where the user was. The pending target holds until it lands
  *  (re-asserted across the content swap/image loads) or the user scrolls. */
 @Injectable()

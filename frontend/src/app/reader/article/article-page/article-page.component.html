@@ -63,9 +63,7 @@
       <ng-content select="[pageMetaTail]" />
     </p>
     <ng-content select="[pageHead]" />
-    @if (source.readingAids) {
-      <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
-    }
+    <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
     @if (!source.loading()) {
       @if (source.paywall(); as paywall) {
         <app-paywall-notice class="paywall-note" [url]="paywall.url" />
@@ -140,7 +138,7 @@
   <!-- Laid over the whole pane while an article loads or refetches, in place
        of a line of text — the same overlay the feed list raises on reload. -->
   <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
-  @if (cornerShareUrl(); as url) {
+  @if (source.url(); as url) {
     <app-share-button articleCorner appearance="corner" [url]="url" [title]="source.shareTitle()" />
   }
   <ng-container articleCorner><ng-content select="[pageCorner]" /></ng-container>

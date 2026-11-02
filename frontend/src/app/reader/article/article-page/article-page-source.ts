@@ -48,8 +48,6 @@ export interface ArticlePageSource {
   readonly canRefresh: Signal<boolean>;
   readonly failure: Signal<ArticlePageFailure | null>;
   readonly socialPost: Signal<boolean>;
-  /** The corner share disc, TOC, reading time and scroll restore; #1984 gives them to every page. */
-  readonly readingAids: boolean;
   dropLead(): void;
   reload(): void;
 }
