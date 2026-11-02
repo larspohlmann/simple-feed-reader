@@ -125,7 +125,7 @@ export class ArticlePageComponent {
     });
   }
 
-  scrollToTop(): void {
+  protected scrollToTop(): void {
     this.restore.abort(); // don't let a restore fight the jump
     this.layer()?.scrollToTop(this.titleHeading()?.nativeElement);
   }

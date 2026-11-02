@@ -16,10 +16,7 @@
     <span class="mini-title">{{ source.title() }}</span>
   </ng-container>
   @if (!fullscreen()) {
-    <!-- The split pane's toolbar never retracts, so the nameplate rides
-         inside it rather than in the full-screen strip of its own.
-         aria-hidden: the h1 carries the same title, so announcing this too
-         would read the headline twice. -->
+    <!-- aria-hidden: the h1 already announces the title. -->
     <span articleBar class="bar-name" aria-hidden="true">
       @if (source.favicon(); as icon) {
         <app-favicon [url]="icon.url" [avatarUrl]="icon.avatarUrl" [size]="18" />

@@ -133,11 +133,12 @@ describe('ArticlePageComponent', () => {
     const element = mount();
 
     const nav = element.querySelector('.nav')!;
-    const order = [...nav.children].map((child) => child.className || child.tagName.toLowerCase());
-    expect(order[0]).toContain('lead-probe');
-    expect(order.at(-1)).toContain('flags-probe');
-    expect(nav.querySelector('[aria-label="Reload article"]')).not.toBeNull();
-    expect(nav.querySelector('app-share-button')).not.toBeNull();
+    const order = [...nav.children].map((child) => {
+      if (child.matches('[aria-label="Reload article"]')) return 'refresh';
+      if (child.matches('app-share-button')) return 'share';
+      return child.className;
+    });
+    expect(order).toEqual(['lead-probe', 'refresh', 'share', 'flags-probe']);
   });
 
   it('refreshes through the source, and hides refresh when the source cannot', () => {
@@ -283,6 +284,6 @@ describe('ArticlePageComponent', () => {
       delete globals.CSS;
     }
 
-    expect(scrollTo).toHaveBeenCalled();
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 700 }));
   });
 });

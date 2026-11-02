@@ -26,8 +26,6 @@ article {
   }
 }
 
-/* The toolbar carries the back button in every mode now (#128), so this is
-   just the title's box. */
 .title-row {
   margin: 0 0 var(--space-2);
 }
@@ -139,9 +137,7 @@ article {
   font-size: var(--fs-base);
 }
 
-/* The toolbar's buttons carry different type sizes (mode toggle vs arrows),
-   so inline left them staggered on differing baselines. A flex row centres
-   them by layout instead of by type metrics. */
+/* Flex centres buttons of differing type sizes on one line. */
 .nav {
   display: flex;
   gap: var(--space-3);
