@@ -169,6 +169,13 @@ app-reader-header.hidden {
   min-width: 0;
 }
 
+.placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--text-muted);
+}
+
 /* The linked article covers the reader pane; the entry beneath stays mounted so back keeps its scroll (#1664). */
 .link-overlay {
   position: absolute;

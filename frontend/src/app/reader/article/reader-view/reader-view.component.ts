@@ -80,7 +80,7 @@ import { EntryArticlePage } from './entry-article-page';
 export class ReaderViewComponent {
   protected readonly ratio = entryMediumRatio;
 
-  readonly entry = input.required<EntryDto | null>();
+  readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly fullscreen = input(false);
   protected readonly actions = inject(EntryActionHandler);
@@ -141,7 +141,7 @@ export class ReaderViewComponent {
 
     effect(() => {
       const entry = this.entry();
-      const id = entry?.id ?? null;
+      const id = entry.id;
       // Only react to a genuine entry change — not to a same-entry reference
       // churn from an optimistic flag update (which must not cancel an in-flight
       // load, re-fetch, or reset the mode toggle).
@@ -168,8 +168,7 @@ export class ReaderViewComponent {
 
   /** The inline error's retry action — refetches the open entry's body. */
   retryBody(): void {
-    const entry = this.entry();
-    if (entry) this.source.retryBody(entry.id);
+    this.source.retryBody(this.entry().id);
   }
 
   toggleMode(): void {

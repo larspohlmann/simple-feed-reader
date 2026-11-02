@@ -1,4 +1,4 @@
-import { Signal, WritableSignal, signal } from '@angular/core';
+import { Component, Signal, WritableSignal, signal } from '@angular/core';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -149,11 +149,22 @@ function entryWithBody(html: string | null, over: Partial<EntryDto> = {}): Entry
   return built;
 }
 
+/** Mounts the view only while an entry is open, as the reader shell does. */
+@Component({
+  imports: [ReaderViewComponent],
+  template: `@if (entry(); as open) {
+    <app-reader-view [entry]="open" />
+  }`,
+})
+class OpenEntryHost {
+  readonly entry = signal<EntryDto | null>(null);
+}
+
 let loadMock: jest.Mock;
 let reloadMock: jest.Mock;
 let fakeBody: FakeEntryBodyService;
 
-function mount(testEntry: EntryDto | null) {
+function mount(testEntry: EntryDto) {
   const fixture = TestBed.createComponent(ReaderViewComponent);
   fixture.componentRef.setInput('entry', testEntry);
   fixture.detectChanges();
@@ -721,13 +732,15 @@ describe('ReaderViewComponent', () => {
       const liveResizeListeners = () =>
         added.mock.calls.filter(([type]) => type === 'resize').length -
         removed.mock.calls.filter(([type]) => type === 'resize').length;
-      const fixture = mount(entry({ id: 1 }));
+      const fixture = TestBed.createComponent(OpenEntryHost);
+      fixture.componentInstance.entry.set(entry({ id: 1 }));
+      fixture.detectChanges();
       const afterFirstOpen = liveResizeListeners();
 
       for (let round = 0; round < 3; round++) {
-        fixture.componentRef.setInput('entry', null);
+        fixture.componentInstance.entry.set(null);
         fixture.detectChanges();
-        fixture.componentRef.setInput('entry', entry({ id: 1 }));
+        fixture.componentInstance.entry.set(entry({ id: 1 }));
         fixture.detectChanges();
       }
 

@@ -127,13 +127,9 @@ export class ArticleSource {
     this.heroFailedState.set(true);
   }
 
-  /** Start showing a newly opened entry (or none). */
-  open(entry: EntryDto | null): void {
+  /** Start showing a newly opened entry. */
+  open(entry: EntryDto): void {
     this.heroFailedState.set(false);
-    if (!entry) {
-      this.load.idle();
-      return;
-    }
     if (!entry.url || isPost(entry)) {
       this.load.idle();
       this.readerMode.setOriginalOnly();
