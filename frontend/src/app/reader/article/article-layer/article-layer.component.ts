@@ -76,7 +76,7 @@ export class ArticleLayerComponent {
     this.gestures.connect({
       fullscreen: this.fullscreen,
       scroller: this.scroller,
-      close: () => this.back.emit(),
+      back: () => this.back.emit(),
     });
     this.reserveToolbarHeight();
     effect(() => {

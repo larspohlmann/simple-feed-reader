@@ -1005,7 +1005,7 @@ describe('ReaderViewComponent', () => {
     expect(row!.classList).toContain('glyph-md');
   });
 
-  it('sends favorite/keep/read to the handler and emits close', () => {
+  it('sends favorite/keep/read to the handler and emits back', () => {
     const fixture = mount(entry());
     let closes = 0;
     fixture.componentInstance.back.subscribe(() => closes++);

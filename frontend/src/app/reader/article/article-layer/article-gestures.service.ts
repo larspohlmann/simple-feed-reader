@@ -36,7 +36,7 @@ function startsOnMediaControl(target: EventTarget | null): boolean {
 export interface ArticleGestureHost {
   readonly fullscreen: Signal<boolean>;
   readonly scroller: Signal<HTMLElement | undefined>;
-  readonly close: () => void;
+  readonly back: () => void;
 }
 
 /** Touch gestures (full-screen only): a rightward swipe or a pull past the end
@@ -50,7 +50,7 @@ export class ArticleGestures {
   private host: ArticleGestureHost = {
     fullscreen: signal(false),
     scroller: signal(undefined),
-    close: () => undefined,
+    back: () => undefined,
   };
 
   private readonly dragX = signal(0);
@@ -195,7 +195,7 @@ export class ArticleGestures {
   private leave(): void {
     this.leavingState.set(true);
     this.leaveTimer = window.setTimeout(
-      () => this.host.close(),
+      () => this.host.back(),
       this.reduceMotion ? 0 : LEAVE_ANIM_MS,
     );
   }

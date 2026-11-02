@@ -82,7 +82,7 @@ describe('ArticleLayerComponent', () => {
     expect(element.querySelector('.scroller .dock-probe')).toBeNull();
   });
 
-  it('emits close from the back button in the split pane', () => {
+  it('emits back from the back button in the split pane', () => {
     (element.querySelector('.bar .close') as HTMLButtonElement).click();
 
     expect(fixture.componentInstance.closes).toBe(1);
