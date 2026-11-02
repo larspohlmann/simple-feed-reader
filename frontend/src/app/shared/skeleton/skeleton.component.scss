@@ -7,11 +7,11 @@
 }
 
 .row {
-  @include loading-pulse.block;
-
   /* Matches a comfortable list row: two padding steps plus a line of text. */
   height: calc(var(--row-pad-comfy-y) * 2 + var(--fs-base));
   border-radius: var(--radius);
+
+  @include loading-pulse.block;
 }
 
 @include loading-pulse.keyframes;

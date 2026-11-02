@@ -9,8 +9,8 @@
 }
 
 @mixin credential-field-beside-button {
-  @include credential-field;
-
   flex: 1 1 auto;
   min-width: 0;
+
+  @include credential-field;
 }

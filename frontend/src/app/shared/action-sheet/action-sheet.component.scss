@@ -41,11 +41,11 @@
 }
 
 nav {
-  @include menu-items.menu-items;
-
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+
+  @include menu-items.menu-items;
 }
 
 nav button {
