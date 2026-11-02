@@ -48,10 +48,6 @@ export function wordsOf(text: string): string[] {
   return text.split(/\s+/).filter((word) => word !== '');
 }
 
-export function wordCount(text: string): number {
-  return wordsOf(text).length;
-}
-
 function textOf(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? '').replace(/\s+/g, ' ');
   if (!(node instanceof Element)) return childrenText(node);

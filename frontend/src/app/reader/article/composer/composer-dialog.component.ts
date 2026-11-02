@@ -76,7 +76,6 @@ export class ComposerDialogComponent {
   protected readonly state = signal<ContextState>({ status: 'loading' });
   protected readonly text = signal('');
   private textTouched = false;
-  /** A quote opens the text, so the caret waits before it for the reader's own words. */
   private readonly caretBeforeText = this.target.kind === 'link' && this.target.quote !== null;
   protected readonly visibility = signal<MastodonVisibility | null>(null);
   protected readonly contentWarning = signal<string | null>(null);

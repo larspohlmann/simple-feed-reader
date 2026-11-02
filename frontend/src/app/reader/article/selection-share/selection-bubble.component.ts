@@ -33,7 +33,6 @@ export class SelectionBubbleComponent {
   private readonly scrolls = signal(0);
   protected readonly positions = UNDER_THE_LAST_LINE;
   protected readonly nowhere: FlexibleConnectedPositionStrategyOrigin = { x: 0, y: 0 };
-  /** The last line of a quotable selection while it is on screen; null closes the bubble. */
   protected readonly origin = computed((): FlexibleConnectedPositionStrategyOrigin | null => {
     this.scrolls();
     if (this.screen.isCoarse() || this.url() === null) return null;

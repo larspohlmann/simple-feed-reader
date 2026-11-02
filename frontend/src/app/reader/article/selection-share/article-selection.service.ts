@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, fromEvent } from 'rxjs';
 import { SelectedQuote } from './selected-quote';
-import { selectionText, wordCount } from './selection-text';
+import { selectionText, wordsOf } from './selection-text';
 
 export const QUOTE_MIN_WORDS = 3;
 /** A drag in progress is no quote yet; the same rest delays the hide, so a tap that collapses it still lands. */
@@ -79,7 +79,7 @@ export class ArticleSelection {
 
   private quoteIn(range: Range): SelectedQuote | null {
     const { text, singleBlock } = selectionText(range);
-    const words = wordCount(text);
+    const words = wordsOf(text).length;
     if (words < QUOTE_MIN_WORDS) return null;
     return { text, words, anchorable: singleBlock && this.sources?.socialPost() === false };
   }

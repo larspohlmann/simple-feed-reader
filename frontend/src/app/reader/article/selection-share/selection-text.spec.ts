@@ -1,4 +1,4 @@
-import { selectionText, wordCount } from './selection-text';
+import { selectionText, wordsOf } from './selection-text';
 
 describe('selectionText', () => {
   let body: HTMLElement;
@@ -65,9 +65,9 @@ describe('selectionText', () => {
   });
 });
 
-describe('wordCount', () => {
-  it('counts the words between any whitespace', () => {
-    expect(wordCount('  one two\nthree ')).toBe(3);
-    expect(wordCount('')).toBe(0);
+describe('wordsOf', () => {
+  it('splits at any whitespace', () => {
+    expect(wordsOf('  one two\nthree ')).toEqual(['one', 'two', 'three']);
+    expect(wordsOf('')).toEqual([]);
   });
 });

@@ -30,7 +30,6 @@ export class SelectionBarComponent {
     this.screen.isCoarse() && this.url() !== null ? this.shownQuote() : null,
   );
 
-  /** The click follows the pointerup; the bar leaves only after it. */
   protected release(): void {
     setTimeout(() => this.pressing.set(false));
   }
