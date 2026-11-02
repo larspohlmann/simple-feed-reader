@@ -10,14 +10,14 @@
       (imageFailed)="imageFailed.set(true)"
     />
   }
-  @if (layout() === 'block') {
+  @if (siteLineFirst()) {
     <small>{{ card().siteName }}</small>
   }
   <strong>{{ card().title }}</strong>
   @if (card().description) {
     <span>{{ card().description }}</span>
   }
-  @if (layout() === 'article') {
+  @if (!siteLineFirst()) {
     <small>{{ card().siteName }}</small>
   }
 </a>

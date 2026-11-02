@@ -2,17 +2,23 @@ import { TestBed } from '@angular/core/testing';
 import { aLinkCard } from '../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LinkReaderNavigation } from '../shell/link-reader-navigation.service';
-import { LinkCardComponent, LinkCardLayout, LinkCardReaderOpening } from './link-card.component';
+import {
+  LinkCardComponent,
+  LinkCardLayout,
+  LinkCardReaderOpening,
+  LinkCardSiteLine,
+} from './link-card.component';
 
 const card = aLinkCard({
   description: 'What it is about.',
   imageUrl: 'https://news.test/story.jpg',
 });
 
-function mount(layout: LinkCardLayout): HTMLElement {
+function mount(layout: LinkCardLayout, siteLine: LinkCardSiteLine | null = null): HTMLElement {
   const fixture = TestBed.createComponent(LinkCardComponent);
   fixture.componentRef.setInput('card', card);
   fixture.componentRef.setInput('layout', layout);
+  fixture.componentRef.setInput('siteLine', siteLine);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -36,6 +42,17 @@ describe('LinkCardComponent', () => {
     expect(element.classList).toContain('block');
     expect(element.classList).not.toContain('article');
     expect(partsOf(element)).toEqual(['IMG', 'SMALL', 'STRONG', 'SPAN']);
+  });
+
+  it('puts the site last in the block layout when asked, the block’s type otherwise', () => {
+    const element = mount('block', 'last');
+
+    expect(element.classList).toContain('block');
+    expect(partsOf(element)).toEqual(['IMG', 'STRONG', 'SPAN', 'SMALL']);
+  });
+
+  it('puts the site first in the article layout when asked', () => {
+    expect(partsOf(mount('article', 'first'))).toEqual(['IMG', 'SMALL', 'STRONG', 'SPAN']);
   });
 
   describe('open in reader', () => {

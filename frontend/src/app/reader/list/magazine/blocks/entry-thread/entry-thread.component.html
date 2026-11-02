@@ -20,13 +20,7 @@
         />
       }
       @if (rootQuote(); as quote) {
-        <app-quoted-post
-          [quote]="quote"
-          layout="block"
-          (click)="$event.stopPropagation()"
-          (keydown.enter)="$event.stopPropagation()"
-          (keydown.space)="$event.stopPropagation()"
-        />
+        <app-quoted-post [quote]="quote" layout="block" />
       }
       @if (entry().linkCards[0]; as card) {
         <ng-container

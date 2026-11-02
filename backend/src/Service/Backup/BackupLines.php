@@ -173,7 +173,10 @@ final readonly class BackupLines
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'chapters' => EntryMedia::toJsonList($entry->getChapters()),
             'chaptersUrl' => $entry->getChaptersUrl(),
-            'linkCards' => array_map(self::linkCardFields(...), $companions->linkCards),
+            'linkCards' => array_map(
+                static fn (LinkCardContent $card): array => $card->toStored(),
+                $companions->linkCards,
+            ),
             'origin' => null === $companions->origin ? null : [
                 'title' => $companions->origin->title,
                 'faviconUrl' => $companions->origin->faviconUrl,
@@ -199,18 +202,6 @@ final readonly class BackupLines
         ]);
     }
 
-    /** @return array<string, string|null> */
-    private static function linkCardFields(LinkCardContent $card): array
-    {
-        return [
-            'url' => $card->url,
-            'title' => $card->title,
-            'description' => $card->description,
-            'imageUrl' => $card->imageUrl,
-            'siteName' => $card->siteName,
-        ];
-    }
-
     /** @return array<string, mixed>|null */
     private function quoteFields(?QuotedPostContent $quote): ?array
     {
@@ -228,6 +219,7 @@ final readonly class BackupLines
             'text' => $quote->text,
             'media' => EntryMedia::toJsonList($quote->media),
             'nestedQuote' => $nested === null ? null : ['url' => $nested->url, 'handle' => $nested->handle],
+            'linkCard' => $quote->linkCard?->toStored(),
         ];
     }
 

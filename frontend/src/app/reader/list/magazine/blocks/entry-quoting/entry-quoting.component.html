@@ -15,13 +15,7 @@
     />
   }
   @if (entry().quote; as quote) {
-    <app-quoted-post
-      [quote]="quote"
-      layout="block"
-      (click)="$event.stopPropagation()"
-      (keydown.enter)="$event.stopPropagation()"
-      (keydown.space)="$event.stopPropagation()"
-    />
+    <app-quoted-post [quote]="quote" layout="block" />
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-entry-duplicates [entry]="entry()" />

@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\EntryMedium;
 use App\Entity\EntryQuotedPost;
+use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -29,6 +30,7 @@ final class EntryQuotedPostTest extends TestCase
             "First line\nsecond line",
             [new EntryMedium('https://video.bsky.app/p.m3u8', 'video', 1080, 1920, 'https://video.bsky.app/t.jpg')],
             new QuotedPostReference('https://bsky.app/profile/did:plc:n/post/9z', 'nested.bsky.social'),
+            new LinkCardContent('https://n.example/s', 'Story', 'D', 'https://n.example/s.jpg', 'n.example'),
         );
         $stored = new EntryQuotedPost();
 
@@ -52,6 +54,14 @@ final class EntryQuotedPostTest extends TestCase
         ));
 
         self::assertEquals(new QuotedPostReference('https://other.example/@b/2', null), $stored->read()?->nestedQuote);
+    }
+
+    public function testAQuoteWithoutACardReadsBackWithNone(): void
+    {
+        $stored = new EntryQuotedPost();
+        $stored->store(new QuotedPostContent('https://a.example/1', 'A', 'a.example', null, null, '', [], null));
+
+        self::assertNull($stored->read()?->linkCard);
     }
 
     /** @return iterable<string, array{string}> */

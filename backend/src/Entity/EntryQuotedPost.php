@@ -42,6 +42,10 @@ final class EntryQuotedPost
     #[ORM\Column(name: 'quoted_nested_handle', length: QuotedPostContent::NAME_MAX, nullable: true)]
     private ?string $nestedHandle = null;
 
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(name: 'quoted_link_card', type: Types::JSON, nullable: true)]
+    private ?array $linkCard = null;
+
     public function store(QuotedPostContent $quote): void
     {
         $this->url = $quote->url;
@@ -53,6 +57,7 @@ final class EntryQuotedPost
         $this->media = StoredList::orNull(EntryMedia::toJsonList($quote->media));
         $this->nestedUrl = $quote->nestedQuote?->url;
         $this->nestedHandle = $quote->nestedQuote?->handle;
+        $this->linkCard = $quote->linkCard?->toStored();
     }
 
     public function read(): ?QuotedPostContent
@@ -70,6 +75,7 @@ final class EntryQuotedPost
             $this->text ?? '',
             StoredList::read($this->media, EntryMedium::isComplete(...), EntryMedium::fromStored(...)),
             $this->nestedUrl === null ? null : new QuotedPostReference($this->nestedUrl, $this->nestedHandle),
+            LinkCardContent::fromStoredOrNull($this->linkCard),
         );
     }
 }

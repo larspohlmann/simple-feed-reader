@@ -257,6 +257,13 @@ final class EntryLineTest extends TestCase
             'text' => 'quoted text',
             'media' => [['url' => 'https://cdn.example/1.jpg', 'kind' => 'image', 'width' => 1200, 'height' => 675]],
             'nestedQuote' => ['url' => 'https://bsky.app/profile/n/post/9', 'handle' => 'n.bsky.social'],
+            'linkCard' => [
+                'url' => 'https://news.example/s',
+                'title' => 'Story',
+                'description' => 'D',
+                'imageUrl' => 'https://news.example/s.jpg',
+                'siteName' => 'news.example',
+            ],
         ];
     }
 
@@ -274,10 +281,39 @@ final class EntryLineTest extends TestCase
                 'quoted text',
                 [new EntryMedium('https://cdn.example/1.jpg', 'image', 1200, 675)],
                 new QuotedPostReference('https://bsky.app/profile/n/post/9', 'n.bsky.social'),
+                new LinkCardContent(
+                    'https://news.example/s',
+                    'Story',
+                    'D',
+                    'https://news.example/s.jpg',
+                    'news.example',
+                ),
             ),
             $line->quote,
         );
         self::assertSame('quote', $line->shareKind);
+    }
+
+    public function testAnOlderFilesQuoteWithoutACardReadsWithNone(): void
+    {
+        $fields = self::quoteFields();
+        unset($fields['linkCard']);
+
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'quote', 'quote' => $fields]);
+
+        self::assertNotNull($line->quote);
+        self::assertNull($line->quote->linkCard);
+    }
+
+    public function testAQuotesCardNoCardMayHoldIsDroppedAndTheQuoteKept(): void
+    {
+        $fields = self::quoteFields();
+        $fields['linkCard'] = ['url' => 'javascript:alert(1)', 'title' => 'x', 'siteName' => 'x'];
+
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'quote', 'quote' => $fields]);
+
+        self::assertNotNull($line->quote);
+        self::assertNull($line->quote->linkCard);
     }
 
     public function testAnOlderFileWithoutAQuoteReadsAsNone(): void

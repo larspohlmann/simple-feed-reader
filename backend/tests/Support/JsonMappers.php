@@ -8,6 +8,7 @@ use App\Http\CommentsJson;
 use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\LinkCardJson;
+use App\Http\QuotedPostJson;
 use App\Http\RecommendationFeedJson;
 use App\Http\SavedSearchPage;
 use App\Http\SearchPage;
@@ -33,14 +34,19 @@ final class JsonMappers
         return new ThreadPostJson(self::linkCardJson());
     }
 
+    public static function quotedPostJson(): QuotedPostJson
+    {
+        return new QuotedPostJson(self::linkCardJson());
+    }
+
     public static function commentsJson(): CommentsJson
     {
-        return new CommentsJson(self::linkCardJson());
+        return new CommentsJson(self::linkCardJson(), self::quotedPostJson());
     }
 
     public static function entryJson(): EntryJson
     {
-        return new EntryJson(self::linkCardJson(), self::threadPostJson());
+        return new EntryJson(self::linkCardJson(), self::threadPostJson(), self::quotedPostJson());
     }
 
     public static function entryPage(): EntryPage

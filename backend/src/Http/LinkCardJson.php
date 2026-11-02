@@ -31,13 +31,7 @@ final readonly class LinkCardJson
     /** @return LinkCardFields */
     public static function fieldsOf(LinkCardContent $card): array
     {
-        return [
-            'url' => $card->url,
-            'title' => $card->title,
-            'description' => $card->description,
-            'imageUrl' => $card->imageUrl,
-            'siteName' => $card->siteName,
-        ];
+        return $card->toStored();
     }
 
     /** @return LinkCardRow|null */
