@@ -24,7 +24,6 @@ class StubPageSource extends StubArticlePageSource {
         pageUrl: 'https://news.test/a',
       },
       canRefresh: true,
-      readingAids: true,
     });
   }
 }
@@ -225,14 +224,6 @@ describe('ArticlePageComponent', () => {
     const share = corner.querySelector('app-share-button')!;
     const probe = corner.querySelector('.corner-probe')!;
     expect(share.compareDocumentPosition(probe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it('leaves out the corner disc, TOC and reading time without reading aids', () => {
-    const element = mount((stub) => (stub.readingAids = false));
-
-    expect(element.querySelector('.corner-actions app-share-button')).toBeNull();
-    expect(element.querySelector('app-reader-toc')).toBeNull();
-    expect(element.querySelector('.meta')!.textContent).not.toContain('≈');
   });
 
   it('jumps to a heading through the page', async () => {

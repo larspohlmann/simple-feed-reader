@@ -26,7 +26,6 @@ export class LinkArticleSource implements ArticlePageSource {
   readonly article = this.load.article;
   private readonly errorDetail = this.load.errorDetail;
   readonly loading = this.load.loading;
-  readonly readingAids = false;
 
   readonly key = computed(() => {
     const target = this.routeState.linkTarget();
