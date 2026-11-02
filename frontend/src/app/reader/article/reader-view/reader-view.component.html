@@ -101,28 +101,7 @@
             >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
           /></a>
         }
-        @if (e.comments) {
-          ·
-          <a
-            class="discussion-link"
-            href="#comments"
-            (click)="$event.preventDefault(); scrollToComments()"
-            >{{ 'reader.discussion' | transloco }}
-            @if (commentCount() !== null) {
-              ({{ commentCount() }})
-            }
-            <app-icon name="forum" size="text"
-          /></a>
-        } @else if (e.discussionUrl && e.discussionUrl !== e.url) {
-          ·
-          <a
-            class="discussion-link"
-            [href]="e.discussionUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
-          /></a>
-        }
+        <app-entry-discussion-link [entry]="e" (jump)="scrollToComments()" />
       </p>
       <app-entry-pills
         class="tags"

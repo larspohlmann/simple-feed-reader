@@ -64,6 +64,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectionShareComponent } from '../selection-share/selection-share.component';
+import { EntryDiscussionLinkComponent } from '../../entry/entry-discussion-link/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
 @Component({
   selector: 'app-reader-view',
@@ -94,6 +95,7 @@ import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-
     ArticleLayerComponent,
     ShareButtonComponent,
     EntryCornerFlagsComponent,
+    EntryDiscussionLinkComponent,
     SelectionShareComponent,
   ],
   providers: [
@@ -144,12 +146,6 @@ export class ReaderViewComponent {
     this.comments,
     inject(SocialCountsService),
   );
-  protected readonly commentCount = computed(() => {
-    const entry = this.entry();
-    if (!entry?.comments) return null;
-    const state = this.comments.state(entry.id)();
-    return state.status === 'ok' ? state.comments.length + state.omitted : null;
-  });
   private readonly trailingParts: readonly TrailingPart[] = [
     { query: this.postMedia, joinsFocus: false },
     { query: this.quotedPost, joinsFocus: false },
