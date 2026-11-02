@@ -2211,6 +2211,38 @@ describe('ReaderViewComponent', () => {
       fixture.destroy();
     });
 
+    function selectArticleText(fixture: ComponentFixture<ReaderViewComponent>): void {
+      const content = (fixture.nativeElement as HTMLElement).querySelector('.content')!;
+      window.getSelection()!.selectAllChildren(content);
+    }
+
+    it('yields to a text selection: dragging to extend it does not return to the list (#1989)', () => {
+      const fixture = fullscreen();
+      const component = gestures(fixture);
+      selectArticleText(fixture);
+      component.onTouchStart(touch(0, 0));
+      component.onTouchMove(touch(130, 6));
+      component.onTouchEnd();
+      expect(component.leaving()).toBe(false);
+      window.getSelection()!.removeAllRanges();
+      fixture.destroy();
+    });
+
+    it('gives up a swipe once a selection starts mid-drag, snapping the article back (#1989)', () => {
+      const fixture = fullscreen();
+      const component = gestures(fixture);
+      component.onTouchStart(touch(0, 0));
+      component.onTouchMove(touch(40, 4));
+      selectArticleText(fixture);
+      component.onTouchMove(touch(130, 6));
+      component.onTouchEnd();
+      fixture.detectChanges();
+      const frame = (fixture.nativeElement as HTMLElement).querySelector('.frame') as HTMLElement;
+      expect([component.leaving(), frame.style.transform]).toEqual([false, 'none']);
+      window.getSelection()!.removeAllRanges();
+      fixture.destroy();
+    });
+
     it('still returns to the list on a real swipe right after a suppressed one', () => {
       const fixture = fullscreen();
       const component = gestures(fixture);

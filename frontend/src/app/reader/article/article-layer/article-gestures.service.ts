@@ -65,8 +65,8 @@ export class ArticleGestures {
   private touchDy = 0;
   private axis: 'none' | 'h' | 'v' = 'none';
   private atBottomOnStart = false;
-  // A drag that begins on a player's own control (the scrubber, the embed) is
-  // that control's to handle; the back-swipe must not steal it (#1057).
+  // A drag on a player's own control (#1057) or across a text selection (#1989)
+  // is not the back-swipe's to take.
   private gestureSuppressed = false;
   private leaveTimer = 0;
 
@@ -111,7 +111,7 @@ export class ArticleGestures {
 
   onTouchStart(touchEvent: TouchEvent): void {
     if (!this.tracking(touchEvent)) return;
-    this.gestureSuppressed = startsOnMediaControl(touchEvent.target);
+    this.gestureSuppressed = startsOnMediaControl(touchEvent.target) || this.selectingText();
     if (this.gestureSuppressed) return;
     const touch = touchEvent.touches[0];
     this.touchStartX = touch.clientX;
@@ -126,6 +126,10 @@ export class ArticleGestures {
 
   onTouchMove(touchEvent: TouchEvent): void {
     if (this.gestureSuppressed || !this.tracking(touchEvent)) return;
+    if (this.selectingText()) {
+      this.abandon();
+      return;
+    }
     const touch = touchEvent.touches[0];
     const deltaX = touch.clientX - this.touchStartX;
     const deltaY = touch.clientY - this.touchStartY;
@@ -169,6 +173,23 @@ export class ArticleGestures {
   /** A single-finger touch on a full-screen article that is not already leaving. */
   private tracking(touchEvent: TouchEvent): boolean {
     return this.host.fullscreen() && !this.leaving() && touchEvent.touches.length === 1;
+  }
+
+  /** Whether the article holds a text selection the finger may be extending. */
+  private selectingText(): boolean {
+    const selection = window.getSelection();
+    return (
+      selection !== null && !selection.isCollapsed && this.layer.contains(selection.anchorNode)
+    );
+  }
+
+  /** Give the rest of this touch up and snap whatever it moved back into place. */
+  private abandon(): void {
+    this.gestureSuppressed = true;
+    this.axis = 'none';
+    this.snapping.set(true);
+    this.dragX.set(0);
+    this.pull.set(0);
   }
 
   /** Decide the drag's axis once it has travelled far enough; false until then. */
