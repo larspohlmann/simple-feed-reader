@@ -48,7 +48,7 @@ final class ComposerStartingText
             return '';
         }
 
-        $marks = mb_strlen(self::OPENING_QUOTE . self::CLOSING_QUOTE);
+        $marks = mb_strlen(self::OPENING_QUOTE) + mb_strlen(self::CLOSING_QUOTE);
 
         return self::OPENING_QUOTE . WordBoundary::clipped($quote, $room - $marks) . self::CLOSING_QUOTE;
     }

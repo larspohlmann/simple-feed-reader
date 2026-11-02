@@ -47,7 +47,7 @@ final class SocialPostAddress
     /** The post a shared URL names, whatever its fragment: a Bluesky post's web or AT address, or a Mastodon status. */
     public static function ofUrl(string $url): ?SocialPostAddressModel
     {
-        $address = explode('#', $url, 2)[0];
+        $address = explode('#', $url)[0];
         $blueskyPost = AtPostUri::matches($address) ? $address : AtPostUri::ofWebUrl($address);
         if (null !== $blueskyPost) {
             return new SocialPostAddressModel(SocialNetwork::Bluesky, $blueskyPost);

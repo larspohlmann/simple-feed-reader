@@ -103,6 +103,16 @@ final class ComposerStartingTextTest extends TestCase
         self::assertSame('“one two…”', ComposerStartingText::quoting('one two three four', 11));
     }
 
+    public function testAQuoteThatFillsTheRoomExactlyWithItsMarksIsKeptWhole(): void
+    {
+        self::assertSame('“one two”', ComposerStartingText::quoting('one two', 9));
+    }
+
+    public function testAQuoteOneCharacterOverTheRoomWithItsMarksIsCut(): void
+    {
+        self::assertSame('“one…”', ComposerStartingText::quoting('one two', 8));
+    }
+
     public function testNoQuoteStartsNothing(): void
     {
         self::assertSame('', ComposerStartingText::quoting('', 500));
