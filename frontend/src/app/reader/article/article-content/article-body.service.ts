@@ -18,7 +18,8 @@ import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
-import { ChapterDto, EntryDto } from '../../models';
+import { EmbedTrackOrigin } from '../../audio/embed-track';
+import { ChapterDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
 import { ArticleIslands, isInIsland } from './article-islands';
@@ -42,7 +43,7 @@ export interface ArticleBodyParts {
   readonly enclosureUrl: () => string | null;
   readonly chapters: () => ChapterDto[];
   readonly audioTrack: () => AudioTrack | null;
-  readonly entry: () => EntryDto | null;
+  readonly origin: () => EmbedTrackOrigin | null;
   readonly decorated: (host: HTMLElement) => void;
 }
 
@@ -138,7 +139,7 @@ export class ArticleBody {
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
     });
     const listen = this.embedAudio.actions({
-      entry: parts.entry(),
+      origin: parts.origin(),
       detailsOf: (media) => this.embedDetails.detailsOf(media.url),
       onListened: (listened) => this.chapters.followTrack(listened),
     });

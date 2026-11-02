@@ -5,7 +5,7 @@ import { StubListenLauncher } from '../../../../testing/stub-listen-launcher';
 import { AudioTrack } from '../../audio-player.service';
 import { EmbedMedia } from '../../audio/embed-media';
 import type { ListenLauncher } from '../../audio/listen-launcher';
-import { toEmbedTrack } from '../../audio/embed-track';
+import { embedTrackOrigin, toEmbedTrack } from '../../audio/embed-track';
 import { ChapterDto } from '../../models';
 import type { TrackDetails } from '../../audio/audio-track';
 import { ListenActions } from '../player-bar/embed-listen';
@@ -32,6 +32,7 @@ const VIDEO_DETAILS: TrackDetails = {
   artworkUrl: null,
 };
 const ENTRY = anEntry({ id: 42, title: 'The video' });
+const ORIGIN = embedTrackOrigin(ENTRY);
 
 function setUp(context: Partial<EmbedListenContext> = {}) {
   const player = new StubAudioPlayer();
@@ -41,7 +42,7 @@ function setUp(context: Partial<EmbedListenContext> = {}) {
   );
   const listened: AudioTrack[] = [];
   const actions = embedAudio.actions({
-    entry: ENTRY,
+    origin: ORIGIN,
     detailsOf: (media) => (media.url === VIDEO.url ? VIDEO_DETAILS : null),
     onListened: (track) => listened.push(track),
     ...context,
@@ -50,8 +51,8 @@ function setUp(context: Partial<EmbedListenContext> = {}) {
 }
 
 describe('ArticleEmbedAudio', () => {
-  it('offers no actions without an entry to make a track of', () => {
-    expect(setUp({ entry: null }).actions).toBeUndefined();
+  it('offers no actions without an origin to make a track of', () => {
+    expect(setUp({ origin: null }).actions).toBeUndefined();
   });
 
   describe('listen', () => {
@@ -62,7 +63,7 @@ describe('ArticleEmbedAudio', () => {
       } as unknown as ListenLauncher);
       const listened: AudioTrack[] = [];
       const actions = embedAudio.actions({
-        entry: ENTRY,
+        origin: ORIGIN,
         detailsOf: () => null,
         onListened: (track) => listened.push(track),
       }) as ListenActions;
@@ -78,7 +79,7 @@ describe('ArticleEmbedAudio', () => {
 
       (actions as ListenActions).listen(VIDEO, frame);
 
-      const track = toEmbedTrack(ENTRY, VIDEO, VIDEO_DETAILS);
+      const track = toEmbedTrack(ORIGIN, VIDEO, VIDEO_DETAILS);
       expect(messagesOf(posted)).toEqual([
         { event: 'command', func: 'pauseVideo', args: [], id: 1, channel: 'widget' },
       ]);
@@ -91,7 +92,7 @@ describe('ArticleEmbedAudio', () => {
 
       (actions as ListenActions).listen(SOUND, document.createElement('iframe'));
 
-      expect(player.played).toEqual([toEmbedTrack(ENTRY, SOUND)]);
+      expect(player.played).toEqual([toEmbedTrack(ORIGIN, SOUND)]);
     });
   });
 
@@ -106,7 +107,7 @@ describe('ArticleEmbedAudio', () => {
 
     it('takes a queued embed out of the playlist', () => {
       const { player, actions } = setUp();
-      player.enqueue(toEmbedTrack(ENTRY, VIDEO));
+      player.enqueue(toEmbedTrack(ORIGIN, VIDEO));
 
       (actions as ListenActions).toggleQueued(VIDEO);
 

@@ -56,6 +56,7 @@ import { relativeTime } from '../../format';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { embedTrackOrigin } from '../../audio/embed-track';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
@@ -184,6 +185,11 @@ export class ReaderViewComponent {
     inject(AudioPlayerService),
     inject(ListenLauncher),
   );
+
+  protected readonly embedOrigin = computed(() => {
+    const entry = this.entry();
+    return entry ? embedTrackOrigin(entry) : null;
+  });
 
   /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */
   protected readonly fallbackNoticeShown = computed(

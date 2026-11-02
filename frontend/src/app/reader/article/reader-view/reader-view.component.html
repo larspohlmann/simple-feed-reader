@@ -204,7 +204,7 @@
           [enclosureUrl]="audio.attachment()?.url ?? null"
           [chapters]="source.chapters()"
           [audioTrack]="audio.track()"
-          [entry]="e"
+          [origin]="embedOrigin()"
           (decorated)="onDecorated($event)"
         />
         @let media = source.postMedia();
