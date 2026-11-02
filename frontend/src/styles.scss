@@ -24,6 +24,31 @@
   .cdk-overlay-pane:has(.panel.fill-mobile) {
     width: 100%;
   }
+
+  // A phone dialog card sits below centre, within thumb reach (#1996): two
+  // spacers split the free height 2:1, so a tall card keeps its full height.
+  .cdk-global-overlay-wrapper:has(
+    > .cdk-overlay-pane > cdk-dialog-container .panel:not(.fill-mobile)
+  ) {
+    flex-direction: column;
+
+    &::before,
+    &::after {
+      content: '';
+    }
+
+    &::before {
+      flex: 2 1 0;
+    }
+
+    &::after {
+      flex: 1 1 0;
+    }
+
+    > .cdk-overlay-pane {
+      flex: none;
+    }
+  }
 }
 
 // WebKit leaves a dialog's initial focus on the container; a ring there outlines the whole sheet.
