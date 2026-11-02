@@ -60,6 +60,7 @@ import { ListenLauncher } from '../../audio/listen-launcher';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 import { ShareButtonComponent } from '../share/share-button.component';
+import { ArticleSelection } from '../selection-share/article-selection.service';
 import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-actions.component';
 @Component({
   selector: 'app-reader-view',
@@ -97,6 +98,7 @@ import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-
     ReadingScope,
     ListAutoplayCoordinator,
     UnlockedVideoElements,
+    ArticleSelection,
     { provide: AUTOPLAY_REGION, useFactory: theArticleComments },
   ],
   templateUrl: './reader-view.component.html',
@@ -242,6 +244,7 @@ export class ReaderViewComponent {
     });
 
     this.scope.observeResizes();
+    inject(ArticleSelection).connect({ body: this.content, article: this.entry });
   }
 
   protected onDecorated(host: HTMLElement): void {
