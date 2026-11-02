@@ -20,13 +20,17 @@ export interface ActionSheetAction {
   logo?: ActionSheetLogo;
   danger?: boolean;
   disabled?: boolean;
-  /** A second line under the label, already translated: why a disabled action is unavailable. */
+  /** A muted second line under the label, already translated. */
   hint?: string;
 }
 
 export const ACTION_SHEET_DIVIDER = { divider: true } as const;
 export type ActionSheetDivider = typeof ACTION_SHEET_DIVIDER;
-export type ActionSheetItem = ActionSheetAction | ActionSheetDivider;
+/** A line of text among the actions, already translated: a hint that belongs to no single action. */
+export interface ActionSheetNote {
+  readonly note: string;
+}
+export type ActionSheetItem = ActionSheetAction | ActionSheetDivider | ActionSheetNote;
 
 /** What the sheet shows: the row it acts on, and that row's actions. */
 export interface ActionSheetData {
@@ -59,6 +63,10 @@ export class ActionSheetComponent {
 
   protected isDivider(item: ActionSheetItem): item is ActionSheetDivider {
     return 'divider' in item;
+  }
+
+  protected isNote(item: ActionSheetItem): item is ActionSheetNote {
+    return 'note' in item;
   }
 
   onKeydown(event: KeyboardEvent): void {

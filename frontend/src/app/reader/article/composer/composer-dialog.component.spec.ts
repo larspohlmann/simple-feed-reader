@@ -62,6 +62,7 @@ describe('ComposerDialogComponent', () => {
     network: 'mastodon',
     url: 'https://example.com/story',
     title: 'A long read',
+    quote: null,
     ...overrides,
   });
 
@@ -388,6 +389,23 @@ describe('ComposerDialogComponent', () => {
       linkContext({ kind: 'quote', text: '', target: QUOTED, ...overrides });
 
     beforeEach(() => api.composer.mockReturnValue(of(linkContext())));
+
+    it('puts the caret before the quote so a comment can go first', () => {
+      api.composer.mockReturnValue(
+        of(linkContext({ text: '“A line”\n\nhttps://example.com/story' })),
+      );
+
+      const fixture = mount(article({ quote: 'A line' }));
+
+      expect(document.activeElement).toBe(textArea(fixture));
+      expect([textArea(fixture).selectionStart, textArea(fixture).selectionEnd]).toEqual([0, 0]);
+    });
+
+    it('leaves the caret after the text of a link post without a quote', () => {
+      const fixture = mount(article());
+
+      expect(textArea(fixture).selectionStart).toBe(textArea(fixture).value.length);
+    });
 
     it('shows the page card and the starting text once the context arrives', () => {
       const slow = new Subject<ComposerContextDto>();

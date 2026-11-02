@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   computed,
   effect,
   inject,
@@ -9,31 +8,45 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import {
   ACTION_SHEET_DIVIDER,
+  ActionSheetAction,
   ActionSheetItem,
 } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
-import { IconComponent } from '../../../shared/icon/icon.component';
+import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
+import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
+import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { MaskedLogoComponent } from '../../../shared/masked-logo/masked-logo.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { stepMenuFocus } from '../../../shared/menu-keys';
-import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
+import { SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { PostActions } from '../composer/post-actions.service';
-import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareLogoUrl, shareUrl } from './share-targets';
-import { stripTracking } from './tracking-params';
+import { ArticleSelection } from '../selection-share/article-selection.service';
+import { SelectedQuote } from '../selection-share/selected-quote';
+import { PostNetworks } from './post-networks.service';
+import {
+  ShareContent,
+  SharedPage,
+  clipboardText,
+  clippedAtWord,
+  linkContent,
+  quoteContent,
+  sharedLink,
+  sharedPage,
+} from './share-content';
+import { ShareItem, ShareMenuMode, TargetItem, shareMenuItems } from './share-menu';
+import { SHARE_GLYPH, shareLogoUrl, shareUrl } from './share-targets';
 
-/** Where the trigger sits: in the article toolbar, or as a disc in the article's bottom-left corner. */
-export type ShareButtonAppearance = 'toolbar' | 'corner';
+/** Where the trigger sits: in the article toolbar, as a disc in the article's corner, or among a selection's actions. */
+export type ShareButtonAppearance = 'toolbar' | 'corner' | 'compact';
 
 const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
   toolbar: [
@@ -43,34 +56,21 @@ const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
   corner: [
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
   ],
+  compact: [
+    { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 6 },
+    { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -6 },
+  ],
 };
 
-type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
-
-/**
- * One entry of the menu and of the sheet, under the id the sheet answers with. A post names the network the URL
- * goes to, and its hint who the post goes out as, or that the composer asks.
- */
-type ShareItem =
-  | {
-      readonly kind: 'post';
-      readonly id: string;
-      readonly network: SocialNetworkName;
-      readonly hint: string;
-    }
-  | { readonly kind: 'divider'; readonly id: string }
-  | { readonly kind: 'target'; readonly id: string; readonly target: ConfiguredTarget };
-
-function configuredItem(target: ShareTarget, index: number): ShareItem {
-  const id = String(index);
-  return target.kind === 'divider' ? { kind: 'divider', id } : { kind: 'target', id, target };
-}
+const SHEET_SNIPPET_LENGTH = 60;
 
 @Component({
   selector: 'app-share-button',
   imports: [
     TranslocoPipe,
     IconComponent,
+    IconButtonDirective,
+    KeepSelectionDirective,
     ListActionDirective,
     MaskedLogoComponent,
     NetworkLogoComponent,
@@ -86,43 +86,35 @@ export class ShareButtonComponent {
   readonly url = input.required<string>();
   readonly title = input('');
   readonly appearance = input<ShareButtonAppearance>('toolbar');
+  /** Unset, the live selection is shared; a host that remembers the quote passes it, or null for none. */
+  readonly offeredQuote = input<SelectedQuote | null | undefined>(undefined);
 
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
   private readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly subscriptions = inject(SubscriptionsStore);
   private readonly postActions = inject(PostActions);
+  private readonly selection = inject(ArticleSelection, { optional: true });
+  private readonly networks = inject(PostNetworks).connected;
 
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
   protected readonly logoUrl = shareLogoUrl;
+  protected readonly compactIconSize = computed((): IconSize =>
+    this.screen.isCoarse() ? 'md' : 'sm',
+  );
   protected readonly open = signal(false);
   protected readonly origin = viewChild.required(CdkOverlayOrigin);
-  private readonly activeLang = toSignal(this.i18n.langChanges$, {
-    initialValue: this.i18n.getActiveLang(),
+  private readonly overlay = viewChild.required(CdkConnectedOverlay);
+  /** Caught when the menu opens: the press that opens it may collapse the selection it shares. */
+  protected readonly quote = signal<SelectedQuote | null>(null);
+  /** A keyboard click has no pointer position, so `detail` is 0; only then is the first item meant to look focused. */
+  private opensByKeyboard = false;
+  private readonly mode = computed((): ShareMenuMode => {
+    if (this.quote() !== null) return 'quote';
+    return this.selection === null ? 'link' : 'hinted';
   });
-  private readonly postItems = computed((): ShareItem[] => {
-    // translate() is one-shot: reading the language re-resolves the hints on a switch.
-    this.activeLang();
-    const connected = this.subscriptions
-      .socialAccounts()
-      .filter((account) => account.status === 'connected');
-    return SOCIAL_NETWORKS.flatMap((network): ShareItem[] => {
-      const handles = connected
-        .filter((account) => account.network === network)
-        .map((account) => account.handle);
-      if (handles.length === 0) return [];
-      return [{ kind: 'post', id: `post-${network}`, network, hint: this.postHint(handles) }];
-    });
-  });
-  protected readonly items = computed((): ShareItem[] => {
-    const posts = this.postItems();
-    const divider: ShareItem[] =
-      posts.length === 0 ? [] : [{ kind: 'divider', id: 'post-divider' }];
-    return [...posts, ...divider, ...SHARE_TARGETS.map(configuredItem)];
-  });
+  protected readonly items = computed(() => shareMenuItems(this.networks(), this.mode()));
   private readonly itemsById = computed(() => new Map(this.items().map((item) => [item.id, item])));
 
   constructor() {
@@ -132,23 +124,36 @@ export class ShareButtonComponent {
     });
   }
 
-  protected press(): void {
-    if (this.screen.isCoarse()) this.openSheet();
+  protected press(event: MouseEvent): void {
+    this.opensByKeyboard = event.detail === 0;
+    this.quote.set(this.selectedQuote());
+    if (this.screen.isCoarse()) this.openSheetOverReleasedSelection();
     else this.open.update((open) => !open);
   }
 
   /** Runs inside the click, so Safari still sees the gesture that share and clipboard need. */
-  protected choose(target: ConfiguredTarget): void {
+  protected choose(item: TargetItem): void {
     this.open.set(false);
-    const url = stripTracking(this.url());
-    if (target.kind === 'system') this.shareThroughSystem(url);
-    if (target.kind === 'copy') this.copy(url);
-    if (target.kind === 'link') this.visit(shareUrl(target.url, url, this.title()));
+    const content = this.contentFor(item);
+    const target = item.target;
+    if (target.kind === 'system') this.shareThroughSystem(content);
+    if (target.kind === 'copy') this.copy(content);
+    if (target.kind === 'link') this.visit(shareUrl(target.url, content));
   }
 
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
-    this.postActions.postLink(network, stripTracking(this.url()), this.title());
+    this.postActions.postLink(network, sharedLink(this.page(), this.quote()));
+  }
+
+  /** Scrolling to the focus would park the first item under the sticky quote snippet. */
+  protected focusEntry(): void {
+    const overlay = this.overlay().overlayRef.overlayElement;
+    const menu = overlay.querySelector<HTMLElement>('[role="menu"]');
+    const entry = this.opensByKeyboard
+      ? menu?.querySelector<HTMLElement>('[role="menuitem"]')
+      : menu;
+    entry?.focus({ preventScroll: true });
   }
 
   protected closed(): void {
@@ -161,58 +166,94 @@ export class ShareButtonComponent {
     if (menu !== null) stepMenuFocus(event, menu);
   }
 
-  private postHint(handles: readonly string[]): string {
-    return handles.length === 1
-      ? this.i18n.translate('reader.share.postAs', { handle: handles[0] })
-      : this.i18n.translate('reader.share.pickAccount');
+  private selectedQuote(): SelectedQuote | null {
+    const offered = this.offeredQuote();
+    if (offered !== undefined) return offered;
+    return this.selection?.quote() ?? null;
   }
 
+  private page(): SharedPage {
+    return sharedPage(this.url(), this.title());
+  }
+
+  private contentFor(item: TargetItem): ShareContent {
+    const quote = this.quote();
+    return quote === null || item.linkOnly
+      ? linkContent(this.page())
+      : quoteContent(this.page(), quote);
+  }
+
+  private openSheetOverReleasedSelection(): void {
+    this.openSheet();
+    if (this.quote() !== null) this.selection?.releasePageSelection();
+  }
+
+  /** Not bound to this component's life: the sheet outlives a trigger in the phone bar, and `closed` completes. */
   private openSheet(): void {
     this.sheet
       .open({
-        title: this.i18n.translate('reader.share.button'),
+        title: this.sheetTitle(),
         actions: this.items().map((item) => this.sheetItem(item)),
       })
-      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => this.chooseById(choice));
   }
 
+  private sheetTitle(): string {
+    const quote = this.quote();
+    return quote === null
+      ? this.i18n.translate('reader.share.button')
+      : `“${clippedAtWord(quote.text, SHEET_SNIPPET_LENGTH)}”`;
+  }
+
   private sheetItem(item: ShareItem): ActionSheetItem {
-    if (item.kind === 'divider') return ACTION_SHEET_DIVIDER;
-    if (item.kind === 'post') {
-      const network = item.network;
-      return {
-        id: item.id,
-        label: this.i18n.translate(`reader.link.${network}`),
-        hint: item.hint,
-        logo: { url: shareLogoUrl(`${network}.svg`), color: `var(--brand-${network})` },
-      };
+    switch (item.kind) {
+      case 'divider':
+        return ACTION_SHEET_DIVIDER;
+      case 'hint':
+        return { note: this.i18n.translate('reader.share.quoteHint') };
+      case 'post':
+        return {
+          id: item.id,
+          label: this.i18n.translate(item.labelKey),
+          hint: this.i18n.translate(item.hint.key, item.hint.params),
+          logo: {
+            url: shareLogoUrl(`${item.network}.svg`),
+            color: `var(--brand-${item.network})`,
+          },
+        };
+      case 'target':
+        return this.targetSheetItem(item);
     }
-    const target = item.target;
+  }
+
+  private targetSheetItem({ id, target, linkOnly }: TargetItem): ActionSheetAction {
     return {
-      id: item.id,
+      id,
       label: target.labelKey ? this.i18n.translate(target.labelKey) : (target.label ?? ''),
       symbol: target.icon ? undefined : (target.symbol ?? this.glyph),
       logo: target.icon ? { url: shareLogoUrl(target.icon), color: target.color } : undefined,
+      ...(linkOnly ? { hint: this.i18n.translate('reader.share.linkOnly') } : {}),
     };
   }
 
   private chooseById(choice: string | undefined): void {
     const item = choice === undefined ? undefined : this.itemsById().get(choice);
     if (item?.kind === 'post') this.post(item.network);
-    if (item?.kind === 'target') this.choose(item.target);
+    if (item?.kind === 'target') this.choose(item);
   }
 
-  private shareThroughSystem(url: string): void {
-    navigator.share({ title: this.title(), url }).catch((error: unknown) => {
+  private shareThroughSystem(content: ShareContent): void {
+    const text = content.quote === null ? {} : { text: content.quote };
+    navigator.share({ title: content.title, url: content.url, ...text }).catch((error: unknown) => {
       if (error instanceof DOMException && error.name === 'AbortError') return;
       this.notify('reader.share.failed');
     });
   }
 
-  private copy(url: string): void {
-    (navigator.clipboard?.writeText(url) ?? Promise.reject()).then(
-      () => this.notify('reader.share.copied', CONFIRMATION_DURATION_MS),
+  private copy(content: ShareContent): void {
+    const copied = content.quote === null ? 'reader.share.copied' : 'reader.share.quoteCopied';
+    (navigator.clipboard?.writeText(clipboardText(content)) ?? Promise.reject()).then(
+      () => this.notify(copied, CONFIRMATION_DURATION_MS),
       () => this.notify('reader.share.copyFailed'),
     );
   }

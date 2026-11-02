@@ -2,6 +2,8 @@
   @for (item of data.actions; track $index) {
     @if (isDivider(item)) {
       <hr role="separator" />
+    } @else if (isNote(item)) {
+      <p class="note" role="presentation">{{ item.note }}</p>
     } @else {
       <button
         role="menuitem"

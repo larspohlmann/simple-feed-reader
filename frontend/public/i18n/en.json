@@ -1506,7 +1506,14 @@
       "failed": "Couldn't share the link",
       "blueskyApp": "Open in Bluesky app",
       "postAs": "as {{handle}}",
-      "pickAccount": "Choose the account in the composer"
+      "pickAccount": "Choose the account in the composer",
+      "quoteSystem": "Share quote…",
+      "quoteCopy": "Copy quote with link",
+      "quoteCopied": "Quote copied",
+      "linkOnly": "(link only)",
+      "quoteHint": "Select text in the article to share it as a quote",
+      "selection": "Share the selection",
+      "selectedWords": "{{count}} words selected"
     },
     "replyForbidden": {
       "bluesky": "The author limits who can reply",

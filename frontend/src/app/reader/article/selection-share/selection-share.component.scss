@@ -1,0 +1,31 @@
+@use '../../../theme/glass-rim';
+
+:host {
+  display: contents;
+}
+
+.selection-bubble {
+  @include glass-rim.filled(var(--surface-2));
+
+  border-radius: var(--radius-pill);
+  padding: var(--space-1);
+  box-shadow: var(--panel-shadow);
+}
+
+.selection-bar {
+  @include glass-rim.filled(
+    color-mix(in srgb, var(--surface-2), var(--rim-light) 10%),
+    var(--accent)
+  );
+
+  flex: 1;
+  border-radius: var(--radius-lg);
+  padding: var(--space-1) var(--space-3);
+  box-shadow: var(--panel-shadow);
+}
+
+.count {
+  margin-inline-end: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}

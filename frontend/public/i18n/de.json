@@ -1506,7 +1506,14 @@
       "failed": "Link konnte nicht geteilt werden",
       "blueskyApp": "In der Bluesky-App öffnen",
       "postAs": "als {{handle}}",
-      "pickAccount": "Konto im Editor wählen"
+      "pickAccount": "Konto im Editor wählen",
+      "quoteSystem": "Zitat teilen …",
+      "quoteCopy": "Zitat mit Link kopieren",
+      "quoteCopied": "Zitat kopiert",
+      "linkOnly": "(nur Link)",
+      "quoteHint": "Text im Artikel markieren, um ihn als Zitat zu teilen",
+      "selection": "Markierung teilen",
+      "selectedWords": "{{count}} Wörter markiert"
     },
     "replyForbidden": {
       "bluesky": "Antworten auf diesen Beitrag sind eingeschränkt",

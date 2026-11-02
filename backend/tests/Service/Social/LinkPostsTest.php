@@ -192,6 +192,48 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame([], $this->pages->readUrls());
     }
 
+    public function testTheLinkComposerStartsWithTheSelectedQuoteAboveTheLink(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $target = new LinkTargetModel(
+            SocialNetwork::Mastodon,
+            null,
+            self::ARTICLE_URL,
+            'A story',
+            'A line worth sharing',
+        );
+
+        $context = $this->linkPosts()->contextFor($this->owner, $target);
+
+        self::assertSame(ComposerKind::Link, $context->kind);
+        self::assertSame("“A line worth sharing”\n\n" . self::ARTICLE_URL, $context->text);
+    }
+
+    public function testTheSharedAddressKeepsTheTextFragmentThatPointsAtTheQuote(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $page = 'https://news.example/page#:~:text=A%20line%20worth%20sharing';
+        $target = new LinkTargetModel(SocialNetwork::Mastodon, null, $page, 'A story', 'A line worth sharing');
+
+        $context = $this->linkPosts()->contextFor($this->owner, $target);
+
+        self::assertSame("“A line worth sharing”\n\n" . $page, $context->text);
+    }
+
+    public function testTheComposerForAQuotedStatusStartsWithTheSelectedQuote(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+        $preview = new PostPreviewModel('Eugen', '@Gargron@mastodon.social', 'Hello');
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
+        $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::STATUS_URL, '', 'A line worth sharing');
+
+        $context = $this->linkPosts()->contextFor($this->owner, $target);
+
+        self::assertSame(ComposerKind::Quote, $context->kind);
+        self::assertSame($preview, $context->target);
+        self::assertSame('“A line worth sharing”', $context->text);
+    }
+
     public function testTheComposerForAStatusThatTakesNoQuoteShowsItsPageCard(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));

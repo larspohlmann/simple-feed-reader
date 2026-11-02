@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+app-network-logo {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* The phone bar: each button a full tap target, a glyph size up, clear of its neighbour. */
+:host(.touch) {
+  --ib-size: var(--tap-target);
+
+  .actions {
+    gap: var(--space-2);
+  }
+
+  app-network-logo {
+    width: var(--icon-md);
+    height: var(--icon-md);
+  }
+}

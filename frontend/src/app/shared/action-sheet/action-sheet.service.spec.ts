@@ -64,6 +64,16 @@ describe('ActionSheet', () => {
     expect(items()[0].textContent).toContain('Quote');
   });
 
+  it('renders a note as a line of text between the actions', () => {
+    open({
+      title: 'Share',
+      actions: [{ id: 'post', label: 'Post' }, { note: 'Select text to quote it' }],
+    }).subscribe();
+
+    expect(items()).toHaveLength(1);
+    expect(container.querySelector('.note')?.textContent?.trim()).toBe('Select text to quote it');
+  });
+
   it('resolves with the chosen action id', (done) => {
     open().subscribe((choice) => {
       expect(choice).toBe('delete');

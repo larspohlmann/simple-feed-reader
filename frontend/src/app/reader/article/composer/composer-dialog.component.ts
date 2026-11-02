@@ -76,6 +76,7 @@ export class ComposerDialogComponent {
   protected readonly state = signal<ContextState>({ status: 'loading' });
   protected readonly text = signal('');
   private textTouched = false;
+  private readonly caretBeforeText = this.target.kind === 'link' && this.target.quote !== null;
   protected readonly visibility = signal<MastodonVisibility | null>(null);
   protected readonly contentWarning = signal<string | null>(null);
   private readonly accountId = signal<number | undefined>(undefined);
@@ -121,7 +122,13 @@ export class ComposerDialogComponent {
     inject(DestroyRef).onDestroy(() => this.loading.unsubscribe());
     this.load();
     // The field appears only once the context loads, after the focus trap placed its initial focus.
-    effect(() => this.textField()?.nativeElement.focus());
+    effect(() => this.placeCaret(this.textField()?.nativeElement));
+  }
+
+  private placeCaret(field: HTMLTextAreaElement | undefined): void {
+    if (field === undefined) return;
+    field.focus();
+    if (this.caretBeforeText && !this.textTouched) field.setSelectionRange(0, 0);
   }
 
   /** A newer load drops the one still on the wire, so a slow answer never replaces a later choice. */

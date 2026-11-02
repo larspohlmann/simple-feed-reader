@@ -175,6 +175,14 @@ final class SocialPostAddressTest extends TestCase
             self::STATUS_URI,
             new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URI),
         ];
+        yield 'a bluesky web url pointing at a quote in the post' => [
+            'https://bsky.app/profile/bob.test/post/3abc#:~:text=one%20two%20three',
+            new SocialPostAddressModel(SocialNetwork::Bluesky, 'at://bob.test/app.bsky.feed.post/3abc'),
+        ];
+        yield 'a mastodon status url pointing at a quote in the status' => [
+            self::STATUS_URL . '#:~:text=one%20two%20three',
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
+        ];
         yield 'an article' => ['https://news.example/article?id=7', null];
         yield 'a mastodon profile' => ['https://mastodon.social/@Gargron', null];
     }

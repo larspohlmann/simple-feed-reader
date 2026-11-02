@@ -60,6 +60,8 @@ import { ListenLauncher } from '../../audio/listen-launcher';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 import { ShareButtonComponent } from '../share/share-button.component';
+import { ArticleSelection } from '../selection-share/article-selection.service';
+import { SelectionShareComponent } from '../selection-share/selection-share.component';
 import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-actions.component';
 @Component({
   selector: 'app-reader-view',
@@ -90,6 +92,7 @@ import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-
     ArticleLayerComponent,
     ShareButtonComponent,
     ArticleCornerActionsComponent,
+    SelectionShareComponent,
   ],
   providers: [
     ArticleScrollRestore,
@@ -97,6 +100,7 @@ import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-
     ReadingScope,
     ListAutoplayCoordinator,
     UnlockedVideoElements,
+    ArticleSelection,
     { provide: AUTOPLAY_REGION, useFactory: theArticleComments },
   ],
   templateUrl: './reader-view.component.html',
@@ -242,6 +246,11 @@ export class ReaderViewComponent {
     });
 
     this.scope.observeResizes();
+    inject(ArticleSelection).connect({
+      body: this.content,
+      key: computed(() => this.entry()?.id ?? null),
+      socialPost: computed(() => this.entry()?.social != null),
+    });
   }
 
   protected onDecorated(host: HTMLElement): void {

@@ -15,13 +15,15 @@ import { ArticleLayerComponent } from '../article-layer/article-layer.component'
 import { ArticleContentComponent } from '../article-content/article-content.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { ReadingScope } from '../reading/reading-scope.service';
+import { ShareButtonComponent } from '../share/share-button.component';
+import { ArticleSelection } from '../selection-share/article-selection.service';
+import { SelectionShareComponent } from '../selection-share/selection-share.component';
 import { LinkArticleSource } from './link-article-source.service';
 
 /** Where the back button returns: the article the card sits in, or the list. */
 export type LinkReaderReturn = 'article' | 'list';
 
 /** A link card's page in the reader, with only the chrome a page that is no entry has. */
-import { ShareButtonComponent } from '../share/share-button.component';
 @Component({
   selector: 'app-link-reader',
   imports: [
@@ -35,9 +37,11 @@ import { ShareButtonComponent } from '../share/share-button.component';
     ArticleLayerComponent,
     ArticleContentComponent,
     ShareButtonComponent,
+    SelectionShareComponent,
   ],
   providers: [
     ReadingScope,
+    ArticleSelection,
     ListAutoplayCoordinator,
     UnlockedVideoElements,
     // Nothing autoplays in a linked page: an undefined region covers nothing.
@@ -79,13 +83,18 @@ export class LinkReaderComponent {
   );
 
   constructor() {
+    const content = computed(() => this.articleContent()?.element);
     this.scope.connect({
       scroller: computed(() => this.layer()?.scroller()),
-      content: computed(() => this.articleContent()?.element),
+      content,
       trailing: [],
     });
 
     this.scope.observeResizes();
+    inject(ArticleSelection).connect({
+      body: content,
+      key: computed(() => this.target().url),
+    });
   }
 
   protected reload(): void {

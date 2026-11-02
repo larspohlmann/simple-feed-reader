@@ -63,6 +63,13 @@ nav button {
   font-size: var(--fs-sm);
 }
 
+.note {
+  margin: 0;
+  padding: 0 var(--row-pad-x) var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
 nav button.danger {
   color: var(--danger);
 }

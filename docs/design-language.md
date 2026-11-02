@@ -1198,7 +1198,9 @@ Labels and title are **already-translated strings** (shared component, no
 feature keys). `danger: true` renders the action in the danger colour. An
 action may lead with a `symbol` (a Material symbol) or a `logo: { url, color? }`
 (drawn through `<app-masked-logo>`), and `ACTION_SHEET_DIVIDER` among the
-`actions` renders a separator between groups. The head (grabber, title, the
+`actions` renders a separator between groups. A `{ note }` item renders a muted
+line of text in place among the actions — a hint no single action owns (the share
+sheet's quote hint, #1970). The head (grabber, title, the
 round close button) stays pinned while a long list scrolls. Dismissed by the
 close button, a backdrop tap, Escape, or a downward pull on a list at its top —
 all resolve `undefined`.
@@ -1783,6 +1785,10 @@ The CDK's structural overlay CSS is imported by `src/styles.scss`, not by
 `angular.json`, so every build configuration gets it. Without it a dialog renders
 as a plain block appended after the 100vh reader shell — a full viewport below
 the fold (#85).
+
+### Selection share (#1970)
+
+A selection of three or more words in the article body offers itself as a quote. On a fine pointer a pill-shaped bubble sits under the selection's last line (CDK overlay, `--radius-pill`, glass rim, `--panel-shadow`). On a coarse pointer a bar docks at the foot of the article (the layer's `articleDock` slot). One `<app-selection-share>` per article view, mounted in that slot, renders whichever the pointer calls for; both hold `<app-selection-actions>`: one `appIconButton` per connected network, then `<app-share-button appearance="compact">`. The bubble, the share trigger and its menu wear `appKeepSelection` (`src/app/shared/keep-selection/`), so a mouse press keeps the selection.
 
 ### Audio player chapters (#1810)
 

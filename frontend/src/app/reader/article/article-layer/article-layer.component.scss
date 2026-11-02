@@ -82,6 +82,13 @@
   @include circle.corner-anchor(right, 20);
 }
 
+/* A selection's bar, across the pane's foot and over the corner discs while it lasts. */
+.dock {
+  @include circle.corner-anchor(left, 21);
+
+  right: var(--space-5);
+}
+
 .corner-back {
   @include circle.corner-circle-button;
 }
