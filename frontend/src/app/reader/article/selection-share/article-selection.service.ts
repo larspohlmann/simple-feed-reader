@@ -4,6 +4,7 @@ import {
   ElementRef,
   Injectable,
   Injector,
+  NgZone,
   Signal,
   effect,
   inject,
@@ -23,7 +24,7 @@ export interface ArticleSelectionSources {
   readonly body: Signal<ElementRef<HTMLElement> | undefined>;
   /** A change ends the remembered quote: another article is open. */
   readonly key: Signal<unknown>;
-  readonly socialPost: Signal<boolean>;
+  readonly socialPost?: Signal<boolean>;
 }
 
 /**
@@ -35,6 +36,7 @@ export class ArticleSelection {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly zone = inject(NgZone);
   private readonly liveQuote = signal<SelectedQuote | null>(null);
   private readonly keptQuote = signal<SelectedQuote | null>(null);
   private readonly liveRange = signal<Range | null>(null);
@@ -53,23 +55,26 @@ export class ArticleSelection {
       },
       { injector: this.injector },
     );
-    fromEvent(this.document, 'selectionchange')
-      .pipe(debounceTime(SELECTION_SETTLE_MS), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.read());
+    this.zone.runOutsideAngular(() =>
+      fromEvent(this.document, 'selectionchange')
+        .pipe(debounceTime(SELECTION_SETTLE_MS), takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.read()),
+    );
   }
 
   private read(): void {
-    const range = this.selectedRange();
-    const quote = range === null || !this.inBody(range) ? null : this.quoteIn(range);
-    this.liveRange.set(quote === null || range === null ? null : range.cloneRange());
+    const range = this.rangeInBody();
+    const quote = range && this.quoteIn(range);
     this.liveQuote.set(quote);
-    if (range !== null && this.inBody(range)) this.keptQuote.set(quote);
+    this.liveRange.set(quote && range ? range.cloneRange() : null);
+    if (range !== null) this.keptQuote.set(quote);
   }
 
-  private selectedRange(): Range | null {
+  private rangeInBody(): Range | null {
     const selection = this.document.getSelection();
     if (selection === null || selection.isCollapsed || selection.rangeCount === 0) return null;
-    return selection.getRangeAt(0);
+    const range = selection.getRangeAt(0);
+    return this.inBody(range) ? range : null;
   }
 
   private inBody(range: Range): boolean {
@@ -81,7 +86,7 @@ export class ArticleSelection {
     const { text, singleBlock } = selectionText(range);
     const words = wordsOf(text).length;
     if (words < QUOTE_MIN_WORDS) return null;
-    return { text, words, anchorable: singleBlock && this.sources?.socialPost() === false };
+    return { text, words, anchorable: singleBlock && this.sources?.socialPost?.() !== true };
   }
 
   private forget(): void {
