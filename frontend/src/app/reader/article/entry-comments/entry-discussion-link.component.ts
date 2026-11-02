@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { CommentsService } from '../../article/entry-comments/comments.service';
+import { CommentsService } from './comments.service';
 import { EntryDto } from '../../models';
 
 /** The meta line's link to an entry's discussion: its own comments, or the source's thread. */

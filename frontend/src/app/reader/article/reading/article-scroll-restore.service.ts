@@ -36,9 +36,9 @@ export class ArticleScrollRestore {
   }
 
   /** Arm a restore for a newly opened page if a position is remembered for it. */
-  arm(pageKey: string | null): void {
+  arm(pageKey: string | undefined): void {
     this.cancelRestore();
-    if (pageKey === null) {
+    if (pageKey === undefined) {
       this.pendingRestore = null;
       return;
     }

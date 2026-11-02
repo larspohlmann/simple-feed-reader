@@ -64,7 +64,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectionShareComponent } from '../selection-share/selection-share.component';
-import { EntryDiscussionLinkComponent } from '../../entry/entry-discussion-link/entry-discussion-link.component';
+import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
 @Component({
   selector: 'app-reader-view',
@@ -237,7 +237,7 @@ export class ReaderViewComponent {
       this.loadedId = id;
       // Before the source opens: a synchronous load calls enableToggle().
       this.readerMode.reset();
-      this.restore.arm(id === null ? null : entryPageKey(id));
+      this.restore.arm(this.pageKey());
       // This instance is reused: a new article starts with a fresh, collapsed TOC.
       this.toc.set([]);
       this.tocOpen.set(false);
