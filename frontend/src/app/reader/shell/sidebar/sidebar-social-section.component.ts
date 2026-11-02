@@ -8,7 +8,8 @@ import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
-import { exclusionTitle } from '../../feed-exclusions';
+import { ExclusionSurface, exclusionTitle } from '../../feed-exclusions';
+import { ForYouNetworksStore } from '../../state/for-you-networks.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
@@ -45,6 +46,7 @@ export class SidebarSocialSectionComponent {
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly forYouNetworks = inject(ForYouNetworksStore);
   private readonly i18n = inject(TranslocoService);
   private readonly dictionary = inject(ActiveDictionary);
 
@@ -65,12 +67,17 @@ export class SidebarSocialSectionComponent {
   );
   protected readonly selectionQueryParams = selectionQueryParams;
 
-  protected readonly networkExcluded = computed(
-    () => !this.savedSearches.includedNetworks().has(this.section().network),
-  );
+  private readonly networkExcludedSurfaces = computed<ExclusionSurface[]>(() => {
+    const network = this.section().network;
+    const surfaces: ExclusionSurface[] = [];
+    if (this.forYouNetworks.excludedNetworks().has(network)) surfaces.push('forYou');
+    if (!this.savedSearches.includedNetworks().has(network)) surfaces.push('savedSearches');
+    return surfaces;
+  });
+  protected readonly networkExcluded = computed(() => this.networkExcludedSurfaces().length > 0);
   protected readonly networkExclusionTitle = computed(() => {
     this.dictionary.loaded();
-    return exclusionTitle(this.i18n, ['savedSearches']);
+    return exclusionTitle(this.i18n, this.networkExcludedSurfaces());
   });
 
   protected readonly menuKey = computed(() => `social-${this.section().network}`);

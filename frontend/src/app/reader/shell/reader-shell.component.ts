@@ -33,6 +33,7 @@ import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
+import { ForYouNetworksStore } from '../state/for-you-networks.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { DigestService } from '../../core/preferences/digest.service';
@@ -124,6 +125,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
+  private readonly forYouNetworks = inject(ForYouNetworksStore);
   readonly ai = inject(AiAvailabilityService);
   readonly digest = inject(DigestService);
   private readonly versions = inject(VersionService);
@@ -254,6 +256,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.savedSearchesStore.load();
+    this.forYouNetworks.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     // Reopening the app resumes a for-you run left in flight by an earlier session.
     this.recs.resume();

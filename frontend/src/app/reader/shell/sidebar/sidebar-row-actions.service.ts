@@ -17,12 +17,14 @@ import {
   flipFeedFlag,
 } from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
+import { ForYouNetworksStore } from '../../state/for-you-networks.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { siblingIdsOf } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 
 const SAVED_SEARCHES_CHOICE = 'savedSearches';
+const FOR_YOU_CHOICE = 'forYou';
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
  *  on the sidebar, so all rows share one open menu and a late sheet choice dies
@@ -34,6 +36,7 @@ export class SidebarRowActions {
   private readonly transloco = inject(TranslocoService);
   private readonly picker = inject(SocialFeedsPicker);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly forYouNetworks = inject(ForYouNetworksStore);
   private readonly tags = inject(TagsStore);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -158,12 +161,20 @@ export class SidebarRowActions {
     this.sheet
       .open({
         title: this.transloco.translate(`settings.social.${section.network}`),
-        actions: [...this.socialAccountActions(section), this.networkSavedSearchesAction(section)],
+        actions: [
+          ...this.socialAccountActions(section),
+          this.networkSavedSearchesAction(section),
+          this.networkForYouAction(section),
+        ],
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === SAVED_SEARCHES_CHOICE) {
           this.toggleNetworkInSavedSearches(section);
+          return;
+        }
+        if (choice === FOR_YOU_CHOICE) {
+          this.toggleNetworkInForYou(section);
           return;
         }
         const account = section.networkAccounts.find(({ id }) => String(id) === choice);
@@ -186,6 +197,22 @@ export class SidebarRowActions {
 
   toggleNetworkInSavedSearches(section: SocialSection): void {
     this.savedSearches.toggleNetwork(section.network);
+    this.closeMenu();
+  }
+
+  /** The network head's For you item, for its sheet and its menu alike. */
+  networkForYouAction(section: SocialSection): ActionSheetAction {
+    const excluded = this.forYouNetworks.excludedNetworks().has(section.network);
+    return {
+      id: FOR_YOU_CHOICE,
+      label: this.transloco.translate(
+        excluded ? 'reader.includeInForYou' : 'reader.excludeFromForYou',
+      ),
+    };
+  }
+
+  toggleNetworkInForYou(section: SocialSection): void {
+    this.forYouNetworks.toggleNetwork(section.network);
     this.closeMenu();
   }
 

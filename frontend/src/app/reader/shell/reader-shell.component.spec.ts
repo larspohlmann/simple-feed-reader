@@ -225,6 +225,9 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
+      .expectOne('https://api.test/api/for-you/excluded-networks')
+      .flush({ excludedNetworks: [] });
+    ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
     // resume() fires on init to pick up a run left in flight by an earlier
@@ -1414,6 +1417,9 @@ describe('ReaderShellComponent', () => {
         .forEach((testRequest) => testRequest.flush(subscriptionsBody));
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl
+        .expectOne('https://api.test/api/for-you/excluded-networks')
+        .flush({ excludedNetworks: [] });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({

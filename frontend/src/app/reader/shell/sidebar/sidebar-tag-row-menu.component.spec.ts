@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
+import { ForYouNetworksStore } from '../../state/for-you-networks.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { LayoutService } from '../../layout.service';
 import { TagDto } from '../../models';
@@ -27,6 +28,7 @@ function openMenuFor(target: TagDto): HTMLElement {
       SidebarRowActions,
       { provide: ActionSheet, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
+      { provide: ForYouNetworksStore, useValue: {} },
       { provide: LayoutService, useValue: { isCoarse: signal(false) } },
       { provide: ManageActions, useValue: {} },
       {
