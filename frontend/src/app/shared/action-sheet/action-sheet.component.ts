@@ -20,7 +20,7 @@ export interface ActionSheetAction {
   logo?: ActionSheetLogo;
   danger?: boolean;
   disabled?: boolean;
-  /** A second line under the label, already translated: why a disabled action is unavailable. */
+  /** A muted second line under the label, already translated. */
   hint?: string;
 }
 
