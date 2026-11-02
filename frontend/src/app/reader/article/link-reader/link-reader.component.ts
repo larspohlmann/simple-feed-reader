@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, viewChild } from '@angular/core';
+import { Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
@@ -87,7 +87,7 @@ export class LinkReaderComponent {
     this.scope.connect({
       scroller: computed(() => this.layer()?.scroller()),
       content,
-      trailing: [],
+      trailing: signal([]),
     });
 
     this.scope.observeResizes();

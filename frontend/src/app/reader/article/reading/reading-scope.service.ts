@@ -32,7 +32,7 @@ export interface ReadingScopeParts {
   readonly scroller: Signal<HTMLElement | undefined>;
   readonly content: ElementQuery;
   /** The sections below the body, in document order. */
-  readonly trailing: readonly TrailingPart[];
+  readonly trailing: Signal<readonly TrailingPart[]>;
 }
 
 function bottomWithin(scroller: HTMLElement, element: HTMLElement): number {
@@ -64,7 +64,7 @@ export class ReadingScope {
   private readonly reduceMotion = prefersReducedMotion();
   private scroller: Signal<HTMLElement | undefined> = signal(undefined);
   private content: ElementQuery = signal(undefined);
-  private trailing: readonly TrailingPart[] = [];
+  private trailing: Signal<readonly TrailingPart[]> = signal([]);
   private applier?: ReadingFocusApplier;
   private scopeObserver?: ResizeObserver;
 
@@ -90,7 +90,6 @@ export class ReadingScope {
     this.scroller = parts.scroller;
     this.content = parts.content;
     this.trailing = parts.trailing;
-    const focusParts = parts.trailing.filter((part) => part.joinsFocus);
     // The applier is rebuilt whenever `content` itself is (re)created — per
     // article and on the reader/original swap — destroying the old one first.
     effect(
@@ -103,7 +102,10 @@ export class ReadingScope {
         this.applier = new ReadingFocusApplier({
           scroller,
           blocks: () =>
-            [element, ...this.presentElements(focusParts)].flatMap((root) => readingBlocks(root)),
+            [
+              element,
+              ...this.presentElements(this.trailing().filter((part) => part.joinsFocus)),
+            ].flatMap((root) => readingBlocks(root)),
           curve: ARTICLE_FOCUS_CURVE,
           isActive: () =>
             this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
@@ -137,7 +139,7 @@ export class ReadingScope {
     // swap), and the trailing parts load after the article, past the applier's last refresh.
     effect(
       () => {
-        const targets = [this.content, ...this.trailing.map((part) => part.query)]
+        const targets = [this.content, ...this.trailing().map((part) => part.query)]
           .map((query) => query()?.nativeElement)
           .filter(isPresent);
         this.scopeObserver?.disconnect();
@@ -170,7 +172,7 @@ export class ReadingScope {
       this.readingBottom.set(0);
       return;
     }
-    const lastPart = this.presentElements(this.trailing).at(-1) ?? content;
+    const lastPart = this.presentElements(this.trailing()).at(-1) ?? content;
     this.viewportHeight.set(scroller.clientHeight);
     this.readingBottom.set(bottomWithin(scroller, lastPart));
   }
@@ -180,7 +182,7 @@ export class ReadingScope {
     const content = untracked(this.content)?.nativeElement;
     if (!content) return 0;
     let growth = 0;
-    for (const part of this.trailing) {
+    for (const part of this.trailing()) {
       const element = untracked(part.query)?.nativeElement;
       const expected = element && part.expectedHeight?.(element, content);
       if (element && expected)

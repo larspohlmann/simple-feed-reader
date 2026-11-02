@@ -250,7 +250,7 @@ export class ReaderViewComponent {
     this.scope.connect({
       scroller: this.scroller,
       content: this.content,
-      trailing: this.trailingParts,
+      trailing: signal(this.trailingParts),
     });
 
     this.scope.observeResizes();
