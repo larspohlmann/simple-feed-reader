@@ -1858,12 +1858,6 @@ describe('EntryListComponent', () => {
   });
 
   describe('mark-all-read corner button (#1912)', () => {
-    function scrolledDown(over: Record<string, unknown> = {}) {
-      const fixture = mount(over);
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.detectChanges();
-      return fixture;
-    }
     const markAll = (fixture: ReturnType<typeof mount>) =>
       (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
         '.corner-actions .mark-all',
@@ -1881,7 +1875,8 @@ describe('EntryListComponent', () => {
     });
 
     it('sits left of Mark above read', () => {
-      const fixture = scrolledDown();
+      const fixture = mount();
+      fixture.componentInstance.scrolling.showToTop.set(true);
       fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
@@ -1892,11 +1887,11 @@ describe('EntryListComponent', () => {
     });
 
     it('is absent where the list cannot be marked read', () => {
-      expect(markAll(scrolledDown({ canMarkAllRead: false }))).toBeNull();
+      expect(markAll(mount({ canMarkAllRead: false }))).toBeNull();
     });
 
     it('asks for mark all read when clicked', () => {
-      const fixture = scrolledDown();
+      const fixture = mount();
       let emitted = 0;
       fixture.componentInstance.markAllRead.subscribe(() => emitted++);
 

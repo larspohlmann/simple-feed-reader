@@ -200,7 +200,8 @@
 
 <app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
 
-@let toTopShown = scrolling.showToTop() && content.visibleEntryCount() > 0;
+@let hasEntries = content.visibleEntryCount() > 0;
+@let toTopShown = scrolling.showToTop() && hasEntries;
 @if (toTopShown || cornerLeading()) {
   <div class="end-corner">
     @if (cornerLeading(); as leading) {
@@ -214,7 +215,7 @@
   </div>
 }
 
-@let markAllShown = canMarkAllRead() && content.visibleEntryCount() > 0;
+@let markAllShown = canMarkAllRead() && hasEntries;
 @let markAboveShown = toTopShown && scrolling.hasAboveFold();
 @if (markAllShown || markAboveShown) {
   <div class="corner-actions">
