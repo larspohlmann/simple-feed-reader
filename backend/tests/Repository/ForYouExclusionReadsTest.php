@@ -50,7 +50,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
             'post',
         );
 
-        self::assertEqualsCanonicalizing([$this->kept->getId(), $post->getId()], $this->listedIds());
+        $this->assertSeenInListAndPool([$this->kept->requireId(), $post->requireId()]);
     }
 
     public function testExcludingTheNetworkDropsItsFeedsFromEveryRead(): void
@@ -72,7 +72,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
             'toot',
         );
 
-        self::assertEqualsCanonicalizing([$this->kept->getId(), $toot->getId()], $this->listedIds());
+        $this->assertSeenInListAndPool([$this->kept->requireId(), $toot->requireId()]);
     }
 
     public function testTheFeedSwitchStillAppliesWhileItsNetworkIsIncluded(): void
@@ -94,7 +94,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
             'post',
         );
 
-        self::assertEqualsCanonicalizing([$this->kept->getId(), $post->getId()], $this->listedIds());
+        $this->assertSeenInListAndPool([$this->kept->requireId(), $post->requireId()]);
     }
 
     public function testAnExcludedNetworksLowestIdCopyDoesNotHideTheIncludedOneFromThePool(): void
@@ -114,6 +114,21 @@ final class ForYouExclusionReadsTest extends DbTestCase
                 new \DateTimeImmutable('2026-01-01T00:00:00Z'),
                 50,
             )),
+        );
+    }
+
+    /** @param list<int> $ids */
+    private function assertSeenInListAndPool(array $ids): void
+    {
+        self::assertEqualsCanonicalizing($ids, $this->listedIds(), 'list');
+        self::assertEqualsCanonicalizing(
+            $ids,
+            $this->entryIds($this->candidates()->newestPool(
+                $this->user->requireId(),
+                new \DateTimeImmutable('2026-01-01T00:00:00Z'),
+                50,
+            )),
+            'pool',
         );
     }
 
@@ -187,12 +202,12 @@ final class ForYouExclusionReadsTest extends DbTestCase
         return $entry;
     }
 
-    /** @return list<int|null> */
+    /** @return list<int> */
     private function listedIds(): array
     {
         $rows = $this->items()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
 
-        return array_map(static fn (RecommendationFeedRow $row): ?int => $row->row->entry->getId(), $rows);
+        return array_map(static fn (RecommendationFeedRow $row): int => $row->row->entry->requireId(), $rows);
     }
 
     /**

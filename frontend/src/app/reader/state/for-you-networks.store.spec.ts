@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ReaderApi } from '../reader-api';
 import { ForYouNetworksStore } from './for-you-networks.store';
 import { SubscriptionsStore } from './subscriptions.store';
@@ -43,16 +43,28 @@ describe('ForYouNetworksStore', () => {
   });
 
   it('includes an excluded network again', () => {
-    const includeNetworkInForYou = jest.fn(() => of(undefined));
-    const store = setup({
-      forYouExcludedNetworks: () => of({ excludedNetworks: ['bluesky' as const] }),
-      includeNetworkInForYou,
-    });
+    const write = new Subject<undefined>();
+    const includeNetworkInForYou = jest.fn(() => write);
+    const forYouExcludedNetworks = jest
+      .fn()
+      .mockReturnValueOnce(of({ excludedNetworks: ['bluesky' as const] }))
+      .mockReturnValue(of({ excludedNetworks: [] }));
+    const store = setup({ forYouExcludedNetworks, includeNetworkInForYou });
     store.load();
+    expect(store.excludedNetworks().has('bluesky')).toBe(true);
 
     store.toggleNetwork('bluesky');
 
     expect(includeNetworkInForYou).toHaveBeenCalledWith('bluesky');
+    expect(store.excludedNetworks().has('bluesky')).toBe(false);
+    expect(forYouExcludedNetworks).toHaveBeenCalledTimes(1);
+
+    write.next(undefined);
+    write.complete();
+
+    expect(forYouExcludedNetworks).toHaveBeenCalledTimes(2);
+    expect(store.excludedNetworks().has('bluesky')).toBe(false);
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
   });
 
   it('a failed write reloads, which snaps the switch back', () => {

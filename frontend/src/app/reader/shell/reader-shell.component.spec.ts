@@ -1528,8 +1528,12 @@ describe('ReaderShellComponent', () => {
       const savedSearchesReloads = ctrl.match(
         (request) => request.url === 'https://api.test/api/saved-searches',
       );
+      const forYouNetworksReloads = ctrl.match(
+        (request) => request.url === 'https://api.test/api/for-you/excluded-networks',
+      );
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
+      expect(forYouNetworksReloads.length).toBe(1);
       expect(subscriptionsReloads.length).toBe(1);
       expect(savedSearchesReloads.length).toBe(1);
 
@@ -1538,6 +1542,7 @@ describe('ReaderShellComponent', () => {
       tagsReloads[0].flush({ tags: [] });
       subscriptionsReloads[0].flush(subscriptionsBody);
       savedSearchesReloads[0].flush({ savedSearches: [] });
+      forYouNetworksReloads[0].flush({ excludedNetworks: [] });
       ctrl.verify();
     });
   });

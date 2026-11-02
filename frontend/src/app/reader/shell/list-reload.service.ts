@@ -8,6 +8,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { ForYouNetworksStore } from '../state/for-you-networks.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { queryFromSelection } from '../query/query';
 
@@ -20,6 +21,7 @@ export class ListReload {
   private readonly refreshSvc = inject(RefreshService);
   private readonly recs = inject(RecommendationsService);
   private readonly savedSearchesStore = inject(SavedSearchesStore);
+  private readonly forYouNetworks = inject(ForYouNetworksStore);
   private readonly listPreferences = inject(ListPreferences);
   private readonly entryActions = inject(EntryStateActions);
   private readonly onboarding = inject(ReaderOnboarding);
@@ -50,6 +52,7 @@ export class ListReload {
         if (!this.onboarding.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
         this.savedSearchesStore.load();
+        this.forYouNetworks.load();
         // A refresh never touches tags, so reload them once when the run
         // finishes rather than on every onboarding slice (onDone reloaded them;
         // the old slice effect did not reload them at all).

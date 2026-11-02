@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/for-you/excluded-networks')]
-final readonly class ForYouController
+final readonly class ForYouNetworksController
 {
     public function __construct(
         private ForYouNetworkExclusionRepository $excludedNetworks,

@@ -87,8 +87,8 @@ final readonly class RecommendationCandidateRepository
             . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
             . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)',
             $aliases->state,
-        ))
-            ->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
+        ));
+        $inner->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
     }
 
     private function candidateQueryBuilder(int $userId): QueryBuilder
