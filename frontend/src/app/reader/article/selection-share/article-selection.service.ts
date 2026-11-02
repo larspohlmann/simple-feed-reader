@@ -5,7 +5,6 @@ import {
   Injectable,
   Injector,
   Signal,
-  computed,
   effect,
   inject,
   signal,
@@ -13,7 +12,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, fromEvent } from 'rxjs';
-import { EntryDto } from '../../models';
 import { SelectedQuote } from './selected-quote';
 import { selectionText, wordCount } from './selection-text';
 
@@ -23,7 +21,9 @@ export const SELECTION_SETTLE_MS = 150;
 
 export interface ArticleSelectionSources {
   readonly body: Signal<ElementRef<HTMLElement> | undefined>;
-  readonly article: Signal<EntryDto | null>;
+  /** A change ends the remembered quote: another article is open. */
+  readonly key: Signal<unknown>;
+  readonly socialPost: Signal<boolean>;
 }
 
 /**
@@ -46,10 +46,9 @@ export class ArticleSelection {
 
   connect(sources: ArticleSelectionSources): void {
     this.sources = sources;
-    const articleId = computed(() => sources.article()?.id ?? null);
     effect(
       () => {
-        articleId();
+        sources.key();
         untracked(() => this.forget());
       },
       { injector: this.injector },
@@ -82,7 +81,7 @@ export class ArticleSelection {
     const { text, singleBlock } = selectionText(range);
     const words = wordCount(text);
     if (words < QUOTE_MIN_WORDS) return null;
-    return { text, words, anchorable: singleBlock && this.sources?.article()?.social === null };
+    return { text, words, anchorable: singleBlock && this.sources?.socialPost() === false };
   }
 
   private forget(): void {

@@ -1,4 +1,13 @@
-import { Component, computed, inject, input, output, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
@@ -15,13 +24,16 @@ import { ArticleLayerComponent } from '../article-layer/article-layer.component'
 import { ArticleContentComponent } from '../article-content/article-content.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { ReadingScope } from '../reading/reading-scope.service';
+import { ShareButtonComponent } from '../share/share-button.component';
+import { ArticleSelection } from '../selection-share/article-selection.service';
+import { SelectionBarComponent } from '../selection-share/selection-bar.component';
+import { SelectionBubbleComponent } from '../selection-share/selection-bubble.component';
 import { LinkArticleSource } from './link-article-source.service';
 
 /** Where the back button returns: the article the card sits in, or the list. */
 export type LinkReaderReturn = 'article' | 'list';
 
 /** A link card's page in the reader, with only the chrome a page that is no entry has. */
-import { ShareButtonComponent } from '../share/share-button.component';
 @Component({
   selector: 'app-link-reader',
   imports: [
@@ -35,9 +47,12 @@ import { ShareButtonComponent } from '../share/share-button.component';
     ArticleLayerComponent,
     ArticleContentComponent,
     ShareButtonComponent,
+    SelectionBubbleComponent,
+    SelectionBarComponent,
   ],
   providers: [
     ReadingScope,
+    ArticleSelection,
     ListAutoplayCoordinator,
     UnlockedVideoElements,
     // Nothing autoplays in a linked page: an undefined region covers nothing.
@@ -59,6 +74,7 @@ export class LinkReaderComponent {
   protected readonly scope = inject(ReadingScope);
   private readonly layer = viewChild(ArticleLayerComponent);
   private readonly articleContent = viewChild(ArticleContentComponent);
+  private readonly page = viewChild<ElementRef<HTMLElement>>('page');
 
   protected readonly progressRail = new ScrollProgressRail({
     isWide: inject(LayoutService).isWide,
@@ -86,6 +102,11 @@ export class LinkReaderComponent {
     });
 
     this.scope.observeResizes();
+    inject(ArticleSelection).connect({
+      body: this.page,
+      key: this.target,
+      socialPost: signal(false),
+    });
   }
 
   protected reload(): void {

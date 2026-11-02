@@ -21,6 +21,10 @@ import { provideAccountIdentity } from '../../../../testing/account-identity-tes
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { PostActions } from '../composer/post-actions.service';
 import { ShareButtonComponent } from '../share/share-button.component';
+import {
+  ArticleSelection,
+  SELECTION_SETTLE_MS,
+} from '../selection-share/article-selection.service';
 
 const FIRST_LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
 const SECOND_LINK: SignedUrl = { url: 'https://news.test/second', token: A_READER_TOKEN };
@@ -235,5 +239,53 @@ describe('LinkReaderComponent', () => {
     expect(element.querySelector('app-link-cards')).toBeNull();
     expect(element.querySelector('app-entry-comments')).toBeNull();
     expect(element.querySelector('app-entry-actions')).toBeNull();
+  });
+
+  describe('selecting text to quote', () => {
+    beforeEach(() => jest.useFakeTimers());
+
+    afterEach(() => {
+      document.getSelection()?.removeAllRanges();
+      jest.useRealTimers();
+    });
+
+    function select(node: Node, text: string): void {
+      const range = document.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, text.length);
+      document.getSelection()!.removeAllRanges();
+      document.getSelection()!.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+      jest.advanceTimersByTime(SELECTION_SETTLE_MS);
+    }
+
+    function quoteOf(fixture: ComponentFixture<LinkReaderComponent>) {
+      return fixture.debugElement.injector.get(ArticleSelection).quote();
+    }
+
+    it('quotes words selected in the page body', () => {
+      const fixture = mount(null);
+      reply(fixture, { ...linkedPage, contentHtml: '<p>Linked page words here</p>' });
+      document.body.append(elementOf(fixture));
+      const words = elementOf(fixture).querySelector('.content p')!.firstChild!;
+
+      select(words, 'Linked page words');
+
+      expect(quoteOf(fixture)?.text).toBe('Linked page words');
+      elementOf(fixture).remove();
+    });
+
+    it('does not quote words selected outside the page body', () => {
+      const fixture = mount(aLinkCard({ siteName: 'News is the name' }));
+      reply(fixture, { ...linkedPage, siteName: '' });
+      document.body.append(elementOf(fixture));
+
+      const barTitle = elementOf(fixture).querySelector('.bar-title')!;
+
+      select(barTitle.firstChild!, barTitle.textContent!);
+
+      expect(quoteOf(fixture)).toBeNull();
+      elementOf(fixture).remove();
+    });
   });
 });

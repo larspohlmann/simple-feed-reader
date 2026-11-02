@@ -33,7 +33,7 @@
       <app-share-button [url]="url" [title]="title()" />
     }
   </div>
-  <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
+  <article #page class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
     <div class="title-row">
       <h1 class="title" #titleHeading tabindex="-1">{{ title() }}</h1>
     </div>
@@ -92,5 +92,7 @@
       }
     }
   </article>
+  <app-selection-bubble [url]="originalUrl()" [title]="title()" />
+  <app-selection-bar articleDock [url]="originalUrl()" [title]="title()" />
   <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
 </app-article-layer>

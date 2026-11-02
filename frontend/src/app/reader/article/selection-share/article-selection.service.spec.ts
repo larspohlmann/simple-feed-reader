@@ -1,11 +1,10 @@
 import { ElementRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { anEntry } from '../../../../testing/entry-testing';
-import { EntryDto } from '../../models';
 import { ArticleSelection, SELECTION_SETTLE_MS } from './article-selection.service';
 
 describe('ArticleSelection', () => {
-  const article = signal<EntryDto | null>(null);
+  const key = signal<unknown>(1);
+  const socialPost = signal(false);
   let body: HTMLElement;
   let outside: HTMLElement;
   let selection: ArticleSelection;
@@ -17,10 +16,11 @@ describe('ArticleSelection', () => {
     outside = document.createElement('p');
     outside.textContent = 'Nine ten eleven twelve';
     document.body.append(body, outside);
-    article.set(anEntry({ id: 1 }));
+    key.set(1);
+    socialPost.set(false);
     TestBed.configureTestingModule({ providers: [ArticleSelection] });
     selection = TestBed.inject(ArticleSelection);
-    selection.connect({ body: signal(new ElementRef(body)), article });
+    selection.connect({ body: signal(new ElementRef(body)), key, socialPost });
     TestBed.tick();
   });
 
@@ -86,12 +86,7 @@ describe('ArticleSelection', () => {
   });
 
   it('cannot anchor a quote in a social post', () => {
-    article.set(
-      anEntry({
-        id: 1,
-        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
-      }),
-    );
+    socialPost.set(true);
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
 
@@ -136,22 +131,22 @@ describe('ArticleSelection', () => {
     expect(selection.remembered()?.text).toBe('One two three');
   });
 
-  it('forgets the quote when another article opens', () => {
+  it('forgets the quote when another key opens', () => {
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
 
-    article.set(anEntry({ id: 2 }));
+    key.set(2);
     TestBed.tick();
 
     expect(selection.quote()).toBeNull();
     expect(selection.remembered()).toBeNull();
   });
 
-  it('keeps the quote when the same article only changes', () => {
+  it('keeps the quote when the same key is set again', () => {
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
 
-    article.set(anEntry({ id: 1, title: 'Renamed' }));
+    key.set(1);
     TestBed.tick();
 
     expect(selection.remembered()?.text).toBe('One two three');

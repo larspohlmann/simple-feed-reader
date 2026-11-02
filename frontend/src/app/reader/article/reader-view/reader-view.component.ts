@@ -248,7 +248,11 @@ export class ReaderViewComponent {
     });
 
     this.scope.observeResizes();
-    inject(ArticleSelection).connect({ body: this.content, article: this.entry });
+    inject(ArticleSelection).connect({
+      body: this.content,
+      key: computed(() => this.entry()?.id ?? null),
+      socialPost: computed(() => this.entry()?.social != null),
+    });
   }
 
   protected onDecorated(host: HTMLElement): void {
