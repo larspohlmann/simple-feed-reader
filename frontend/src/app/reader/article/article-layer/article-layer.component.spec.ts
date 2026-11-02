@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { scrollerOf } from '../../../../testing/scroll-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
@@ -16,7 +17,7 @@ import { ArticleLayerComponent } from './article-layer.component';
       [progressRail]="progressRail"
       [withTail]="false"
       backLabel="Back"
-      (close)="closes = closes + 1"
+      (back)="closes = closes + 1"
       (scrolled)="scrolledTo.push($event)"
       (toTop)="toTops = toTops + 1"
     >
@@ -55,7 +56,7 @@ describe('ArticleLayerComponent', () => {
   });
 
   function scrollTo(top: number): void {
-    const scroller = element.querySelector('.scroller') as HTMLElement;
+    const scroller = scrollerOf(fixture);
     scroller.scrollTop = top;
     scroller.dispatchEvent(new Event('scroll'));
     fixture.detectChanges();
@@ -81,7 +82,7 @@ describe('ArticleLayerComponent', () => {
     expect(element.querySelector('.scroller .dock-probe')).toBeNull();
   });
 
-  it('emits close from the back button in the split pane', () => {
+  it('emits back from the back button in the split pane', () => {
     (element.querySelector('.bar .close') as HTMLButtonElement).click();
 
     expect(fixture.componentInstance.closes).toBe(1);
@@ -152,13 +153,13 @@ describe('ArticleLayerComponent', () => {
     fixture.componentInstance.page.set('entry:2');
     fixture.detectChanges();
 
-    expect((element.querySelector('.scroller') as HTMLElement).scrollTop).toBe(0);
+    expect(scrollerOf(fixture).scrollTop).toBe(0);
     expect(element.querySelector('.bar')!.classList).not.toContain('hidden');
     expect(element.querySelector('app-to-top-button')).toBeNull();
   });
 
   it('jumps to the top and lands focus on the heading it is given', () => {
-    const scroller = element.querySelector('.scroller') as HTMLElement;
+    const scroller = scrollerOf(fixture);
     const scrollToSpy = jest.fn();
     scroller.scrollTo = scrollToSpy as unknown as typeof scroller.scrollTo;
     const heading = document.createElement('h1');

@@ -19,9 +19,7 @@ export class LinkReaderComponent {
   readonly fullscreen = input(false);
   readonly returnsTo = input.required<LinkReaderReturn>();
 
-  // Semantic "back" output; not a DOM element's close event.
-  // eslint-disable-next-line @angular-eslint/no-output-native
-  readonly close = output<void>();
+  readonly back = output<void>();
 
   protected readonly source = inject(LinkArticleSource);
   protected readonly backLabelKey = computed(() =>

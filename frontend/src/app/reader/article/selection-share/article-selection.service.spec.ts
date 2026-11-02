@@ -1,10 +1,11 @@
 import { ElementRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { StubArticlePageSource } from '../../../../testing/article-page-source-testing';
+import { ARTICLE_PAGE_SOURCE } from '../article-page/article-page-source';
 import { ArticleSelection, SELECTION_SETTLE_MS } from './article-selection.service';
 
 describe('ArticleSelection', () => {
-  const key = signal<unknown>(1);
-  const socialPost = signal(false);
+  let page: StubArticlePageSource;
   let body: HTMLElement;
   let outside: HTMLElement;
   let selection: ArticleSelection;
@@ -16,11 +17,13 @@ describe('ArticleSelection', () => {
     outside = document.createElement('p');
     outside.textContent = 'Nine ten eleven twelve';
     document.body.append(body, outside);
-    key.set(1);
-    socialPost.set(false);
-    TestBed.configureTestingModule({ providers: [ArticleSelection] });
+    page = new StubArticlePageSource();
+    page.key.set('entry:1');
+    TestBed.configureTestingModule({
+      providers: [ArticleSelection, { provide: ARTICLE_PAGE_SOURCE, useValue: page }],
+    });
     selection = TestBed.inject(ArticleSelection);
-    selection.connect({ body: signal(new ElementRef(body)), key, socialPost });
+    selection.connect(signal(new ElementRef(body)));
     TestBed.tick();
   });
 
@@ -86,7 +89,7 @@ describe('ArticleSelection', () => {
   });
 
   it('cannot anchor a quote in a social post', () => {
-    socialPost.set(true);
+    page.socialPost.set(true);
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
 
@@ -147,7 +150,7 @@ describe('ArticleSelection', () => {
   it('hands out a new quote when the same text turns unanchorable', () => {
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
-    socialPost.set(true);
+    page.socialPost.set(true);
 
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
@@ -170,7 +173,7 @@ describe('ArticleSelection', () => {
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
 
-    key.set(2);
+    page.key.set('entry:2');
     TestBed.tick();
 
     expect(selection.quote()).toBeNull();
@@ -181,7 +184,7 @@ describe('ArticleSelection', () => {
     select(paragraph(0), [0, 'One two three'.length]);
     settle();
 
-    key.set(1);
+    page.key.set('entry:1');
     TestBed.tick();
 
     expect(selection.remembered()?.text).toBe('One two three');

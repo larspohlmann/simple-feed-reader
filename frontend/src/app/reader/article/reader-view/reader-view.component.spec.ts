@@ -1,4 +1,4 @@
-import { Signal, WritableSignal, signal } from '@angular/core';
+import { Component, Signal, WritableSignal, signal } from '@angular/core';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -9,7 +9,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ArticleGestures } from '../article-layer/article-gestures.service';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
-import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { articleScrollKey } from '../../scroll/list-scroll-memory';
@@ -36,7 +35,8 @@ import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
-import { trackScrollTop } from '../../../../testing/scroll-testing';
+import { scrollerOf, stubCssEscape, trackScrollTop } from '../../../../testing/scroll-testing';
+import { longArticleHtml, settleContent } from '../../../../testing/article-page-testing';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -129,9 +129,6 @@ class FakeEntryBodyService {
 const gestures = (fixture: ComponentFixture<ReaderViewComponent>): ArticleGestures =>
   fixture.debugElement.query(By.directive(ArticleLayerComponent)).injector.get(ArticleGestures);
 
-const scrollerOf = (fixture: ComponentFixture<ReaderViewComponent>): HTMLElement =>
-  (fixture.nativeElement as HTMLElement).querySelector('.scroller') as HTMLElement;
-
 const DEFAULT_BODY = '<p>Body</p><a href="https://ext.test/z">link</a>';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
@@ -152,11 +149,22 @@ function entryWithBody(html: string | null, over: Partial<EntryDto> = {}): Entry
   return built;
 }
 
+/** Mounts the view only while an entry is open, as the reader shell does. */
+@Component({
+  imports: [ReaderViewComponent],
+  template: `@if (entry(); as open) {
+    <app-reader-view [entry]="open" />
+  }`,
+})
+class OpenEntryHost {
+  readonly entry = signal<EntryDto | null>(null);
+}
+
 let loadMock: jest.Mock;
 let reloadMock: jest.Mock;
 let fakeBody: FakeEntryBodyService;
 
-function mount(testEntry: EntryDto | null) {
+function mount(testEntry: EntryDto) {
   const fixture = TestBed.createComponent(ReaderViewComponent);
   fixture.componentRef.setInput('entry', testEntry);
   fixture.detectChanges();
@@ -550,7 +558,7 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('reading time', () => {
-    const longBody = `<p>${Array.from({ length: 660 }, (_, index) => `w${index}`).join(' ')}</p>`;
+    const longBody = longArticleHtml();
 
     it('shows the estimate for a long article', () => {
       const fixture = mount(entryWithBody(longBody));
@@ -675,17 +683,10 @@ describe('ReaderViewComponent', () => {
       return { fixture, scroll, load };
     }
 
-    /** Let the content-processing microtask and any follow-up effect settle. */
-    async function settle(fixture: { detectChanges(): void }) {
-      await Promise.resolve();
-      fixture.detectChanges();
-      await Promise.resolve();
-    }
-
     it('restores the remembered offset when extraction fails', async () => {
       const { fixture, scroll, load } = mountRemembering(900);
       load.next(aReaderFailure());
-      await settle(fixture);
+      await settleContent(fixture);
       expect(scroll.top).toBe(900);
       fixture.destroy();
     });
@@ -693,7 +694,7 @@ describe('ReaderViewComponent', () => {
     it('restores the remembered offset when extraction succeeds', async () => {
       const { fixture, scroll, load } = mountRemembering(900);
       load.next(aReaderArticle());
-      await settle(fixture);
+      await settleContent(fixture);
       expect(scroll.top).toBe(900);
       fixture.destroy();
     });
@@ -701,7 +702,7 @@ describe('ReaderViewComponent', () => {
     it('leaves an article with no remembered offset at the top', async () => {
       const { fixture, scroll, load } = mountRemembering(0);
       load.next(aReaderFailure());
-      await settle(fixture);
+      await settleContent(fixture);
       expect(scroll.top).toBe(0);
       fixture.destroy();
     });
@@ -713,11 +714,11 @@ describe('ReaderViewComponent', () => {
       sessionStorage.setItem(articleScrollKey(entryPageKey(2)), String(700));
       const fixture = mount(entry({ id: 1 }));
       const scroll = trackScrollTop(scrollerOf(fixture));
-      await settle(fixture);
+      await settleContent(fixture);
 
       fixture.componentRef.setInput('entry', entry({ id: 2 }));
       fixture.detectChanges();
-      await settle(fixture);
+      await settleContent(fixture);
 
       expect(scroll.top).toBe(700);
       fixture.destroy();
@@ -731,13 +732,15 @@ describe('ReaderViewComponent', () => {
       const liveResizeListeners = () =>
         added.mock.calls.filter(([type]) => type === 'resize').length -
         removed.mock.calls.filter(([type]) => type === 'resize').length;
-      const fixture = mount(entry({ id: 1 }));
+      const fixture = TestBed.createComponent(OpenEntryHost);
+      fixture.componentInstance.entry.set(entry({ id: 1 }));
+      fixture.detectChanges();
       const afterFirstOpen = liveResizeListeners();
 
       for (let round = 0; round < 3; round++) {
-        fixture.componentRef.setInput('entry', null);
+        fixture.componentInstance.entry.set(null);
         fixture.detectChanges();
-        fixture.componentRef.setInput('entry', entry({ id: 1 }));
+        fixture.componentInstance.entry.set(entry({ id: 1 }));
         fixture.detectChanges();
       }
 
@@ -1002,10 +1005,10 @@ describe('ReaderViewComponent', () => {
     expect(row!.classList).toContain('glyph-md');
   });
 
-  it('sends favorite/keep/read to the handler and emits close', () => {
+  it('sends favorite/keep/read to the handler and emits back', () => {
     const fixture = mount(entry());
     let closes = 0;
-    fixture.componentInstance.close.subscribe(() => closes++);
+    fixture.componentInstance.back.subscribe(() => closes++);
     const element = fixture.nativeElement as HTMLElement;
     // Scoped to the article's own row: the split pane's toolbar carries a
     // second favourite/keep pair, and it comes first in the DOM.
@@ -1169,7 +1172,7 @@ describe('ReaderViewComponent', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     const close = jest.fn();
-    fixture.componentInstance.close.subscribe(close);
+    fixture.componentInstance.back.subscribe(close);
     const back = element.querySelector('.bar .close') as HTMLButtonElement;
     expect(back).not.toBeNull();
     back.click();
@@ -1231,7 +1234,7 @@ describe('ReaderViewComponent', () => {
   });
 
   it('lands a contents jump below the chrome covering the scroller', async () => {
-    const fixture = mount(entryWithBody('<h2>A</h2><p>a</p><h2>B</h2><p>b</p>'));
+    const fixture = mount(entryWithBody('<h2>A</h2><p>a</p><h2>B</h2><p>b</p><h2>C</h2><p>c</p>'));
     await Promise.resolve();
     fixture.detectChanges();
     const scroller = scrollerOf(fixture);
@@ -1243,16 +1246,17 @@ describe('ReaderViewComponent', () => {
       .mockReturnValue({ scrollPaddingTop: '120px' } as CSSStyleDeclaration);
     const scrollTo = jest.fn();
     scroller.scrollTo = scrollTo as unknown as typeof scroller.scrollTo;
-    // jsdom ships no `CSS` namespace; the decorator's ids need no escaping.
-    const globals = globalThis as unknown as { CSS?: { escape: (value: string) => string } };
-    globals.CSS = { escape: (value) => value };
+    const restoreCss = stubCssEscape();
 
-    (
-      fixture.debugElement.query(By.directive(ArticlePageComponent))
-        .componentInstance as ArticlePageComponent
-    ).scrollToHeading(heading.id);
-    computedStyle.mockRestore();
-    delete globals.CSS;
+    try {
+      const element = fixture.nativeElement as HTMLElement;
+      element.querySelector<HTMLButtonElement>('.reader-panel__toggle')!.click();
+      fixture.detectChanges();
+      element.querySelector<HTMLButtonElement>('.toc-list li:last-child button')!.click();
+    } finally {
+      computedStyle.mockRestore();
+      restoreCss();
+    }
 
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 580 }));
   });
@@ -2174,7 +2178,7 @@ describe('ReaderViewComponent', () => {
       const fixture = fullscreen();
       const element = fixture.nativeElement as HTMLElement;
       const close = jest.fn();
-      fixture.componentInstance.close.subscribe(close);
+      fixture.componentInstance.back.subscribe(close);
       (element.querySelector('.bar .close') as HTMLButtonElement).click();
       fixture.detectChanges();
       // Committed to leaving and slid fully off to the right (same as a swipe).

@@ -3,7 +3,6 @@ import {
   DestroyRef,
   ElementRef,
   Injectable,
-  Injector,
   NgZone,
   Signal,
   computed,
@@ -13,6 +12,7 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ARTICLE_PAGE_SOURCE } from '../article-page/article-page-source';
 import { debounceTime, fromEvent } from 'rxjs';
 import { SelectedQuote } from './selected-quote';
 import { selectionText, wordsOf } from './selection-text';
@@ -26,13 +26,6 @@ interface LiveSelection {
   range: Range;
 }
 
-export interface ArticleSelectionSources {
-  readonly body: Signal<ElementRef<HTMLElement> | undefined>;
-  /** A change ends the remembered quote: another article is open. */
-  readonly key: Signal<unknown>;
-  readonly socialPost?: Signal<boolean>;
-}
-
 /**
  * The reader's selection inside the article body, as a quote to share. `remembered` outlives a collapse — a tap on a
  * phone collapses the selection before the share it starts — until another selection or another article ends it.
@@ -40,26 +33,26 @@ export interface ArticleSelectionSources {
 @Injectable()
 export class ArticleSelection {
   private readonly document = inject(DOCUMENT);
-  private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
   private readonly live = signal<LiveSelection | null>(null, { equal: sameSelection });
   private readonly keptQuote = signal<SelectedQuote | null>(null);
-  private sources: ArticleSelectionSources | null = null;
+  private readonly page = inject(ARTICLE_PAGE_SOURCE);
+  private body: Signal<ElementRef<HTMLElement> | undefined> | null = null;
 
   readonly quote = computed(() => this.live()?.quote ?? null);
   readonly remembered = this.keptQuote.asReadonly();
   readonly range = computed(() => this.live()?.range ?? null);
 
-  connect(sources: ArticleSelectionSources): void {
-    this.sources = sources;
-    effect(
-      () => {
-        sources.key();
-        untracked(() => this.forget());
-      },
-      { injector: this.injector },
-    );
+  constructor() {
+    effect(() => {
+      this.page.key();
+      untracked(() => this.forget());
+    });
+  }
+
+  connect(body: Signal<ElementRef<HTMLElement> | undefined>): void {
+    this.body = body;
     this.zone.runOutsideAngular(() =>
       fromEvent(this.document, 'selectionchange')
         .pipe(debounceTime(SELECTION_SETTLE_MS), takeUntilDestroyed(this.destroyRef))
@@ -87,7 +80,7 @@ export class ArticleSelection {
   }
 
   private inBody(range: Range): boolean {
-    const body = this.sources?.body()?.nativeElement;
+    const body = this.body?.()?.nativeElement;
     return body !== undefined && body.contains(range.commonAncestorContainer);
   }
 
@@ -95,7 +88,7 @@ export class ArticleSelection {
     const { text, singleBlock } = selectionText(range);
     const words = wordsOf(text).length;
     if (words < QUOTE_MIN_WORDS) return null;
-    return { text, words, anchorable: singleBlock && this.sources?.socialPost?.() !== true };
+    return { text, words, anchorable: singleBlock && !this.page.socialPost() };
   }
 
   private forget(): void {

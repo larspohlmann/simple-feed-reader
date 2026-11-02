@@ -33,8 +33,13 @@ import { ArticleScrollRestore } from '../reading/article-scroll-restore.service'
 import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { estimateReadingMinutes } from '../decorators/reading-time';
-import { ARTICLE_PAGE_SOURCE } from './article-page-source';
+import { ARTICLE_PAGE_SOURCE, type ArticlePageBody } from './article-page-source';
 import { ArticlePageSlotDirective, ArticlePageSlotName } from './article-page-slot.directive';
+
+function sameBody(left: ArticlePageBody | null, right: ArticlePageBody | null): boolean {
+  if (left === null || right === null) return left === right;
+  return left.html === right.html && left.pageUrl === right.pageUrl;
+}
 
 /** One article page — its layer, skeleton and reading aids — filled by a view through its source and slots. */
 @Component({
@@ -65,9 +70,7 @@ export class ArticlePageComponent {
   readonly trailing = input<readonly TrailingPart[]>([]);
 
   readonly openOriginal = output<void>();
-  // Semantic "back" output; not a DOM element's close event.
-  // eslint-disable-next-line @angular-eslint/no-output-native
-  readonly close = output<void>();
+  readonly back = output<void>();
 
   protected readonly source = inject(ARTICLE_PAGE_SOURCE);
   protected readonly scope = inject(ReadingScope);
@@ -95,27 +98,23 @@ export class ArticlePageComponent {
   protected readonly toc = signal<TocEntry[]>([]);
   protected readonly tocOpen = signal(false);
 
+  protected readonly body = computed(() => this.source.body(), { equal: sameBody });
   protected readonly readingMinutes = computed(() =>
-    estimateReadingMinutes(this.source.body()?.html ?? ''),
+    estimateReadingMinutes(this.body()?.html ?? ''),
   );
 
   constructor() {
     this.restore.connect(this.scroller);
     effect(() => {
-      const key = this.source.key();
+      this.source.key();
       untracked(() => {
-        this.restore.arm(key);
         this.toc.set([]);
         this.tocOpen.set(false);
       });
     });
     this.scope.connect({ scroller: this.scroller, content: this.content, trailing: this.trailing });
     this.scope.observeResizes();
-    inject(ArticleSelection).connect({
-      body: this.content,
-      key: this.source.key,
-      socialPost: this.source.socialPost,
-    });
+    inject(ArticleSelection).connect(this.content);
   }
 
   protected scrollToTop(): void {
@@ -123,7 +122,7 @@ export class ArticlePageComponent {
     this.layer()?.scrollToTop(this.titleHeading()?.nativeElement);
   }
 
-  scrollToHeading(id: string): void {
+  protected scrollToHeading(id: string): void {
     this.scrollToElement(
       this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`),
     );
@@ -149,11 +148,11 @@ export class ArticlePageComponent {
     this.toc.set(collectToc(host));
     this.scope.refresh();
     // Runs on the original render and again when the reader content swaps in.
-    this.restore.reseat(this.source.key);
+    this.restore.reseat();
   }
 
   protected onScroll(scrollTop: number): void {
-    if (!this.layer()?.leaving()) this.restore.remember(this.source.key(), scrollTop);
+    if (!this.layer()?.leaving()) this.restore.remember(scrollTop);
   }
 
   private slotNamed(name: ArticlePageSlotName) {

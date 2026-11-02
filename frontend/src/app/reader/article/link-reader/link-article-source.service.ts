@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HeroImageDto, ReaderContent } from '../../models';
+import { SignedUrl } from '../../query/link-param';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { ReaderLoad } from '../content/reader-load';
@@ -23,14 +24,10 @@ export class LinkArticleSource implements ArticlePageSource {
   private readonly leadFailed = signal(false);
 
   private readonly card = this.routeState.openLinkCard;
-  readonly article = this.load.article;
-  private readonly errorDetail = this.load.errorDetail;
+  private readonly article = this.load.article;
   readonly loading = this.load.loading;
 
-  readonly key = computed(() => {
-    const target = this.routeState.linkTarget();
-    return target === null ? undefined : linkPageKey(target.url);
-  });
+  readonly key = computed(() => linkPageKey(this.requireTarget().url));
   readonly title = computed(() => this.card()?.title || this.article()?.title || '');
   readonly shareTitle = this.title;
   readonly titleHidden = signal(false).asReadonly();
@@ -39,20 +36,10 @@ export class LinkArticleSource implements ArticlePageSource {
   readonly url = computed(
     () => this.card()?.url ?? this.article()?.url ?? this.load.failure()?.url ?? null,
   );
-  readonly body = computed<ArticlePageBody | null>(
-    () => {
-      const article = this.article();
-      return article === null ? null : { html: article.contentHtml, pageUrl: article.url };
-    },
-    {
-      equal: (left, right) =>
-        left === right ||
-        (left !== null &&
-          right !== null &&
-          left.html === right.html &&
-          left.pageUrl === right.pageUrl),
-    },
-  );
+  readonly body = computed<ArticlePageBody | null>(() => {
+    const article = this.article();
+    return article === null ? null : { html: article.contentHtml, pageUrl: article.url };
+  });
   readonly bodyAudio = signal<ArticlePageBodyAudio | null>(null).asReadonly();
   readonly lead = computed<HeroImageDto | null>(() => {
     const image = this.card()?.imageUrl ?? null;
@@ -66,12 +53,7 @@ export class LinkArticleSource implements ArticlePageSource {
   readonly canRefresh = computed(() => this.article() !== null || this.load.failed());
   readonly failure = computed<ArticlePageFailure | null>(() =>
     this.load.failed()
-      ? {
-          messageKey: 'reader.linkFailed',
-          quiet: false,
-          detail: this.errorDetail(),
-          offersOriginal: true,
-        }
+      ? { messageKey: 'reader.linkFailed', quiet: false, detail: this.load.errorDetail() }
       : null,
   );
   readonly socialPost = signal(false).asReadonly();
@@ -90,6 +72,13 @@ export class LinkArticleSource implements ArticlePageSource {
   reload(): void {
     const target = this.routeState.linkTarget();
     if (target !== null) this.run(this.reader.reload(target));
+  }
+
+  /** Only the open link reader reads its page, and it is mounted only while a link is open. */
+  private requireTarget(): SignedUrl {
+    const target = this.routeState.linkTarget();
+    if (target === null) throw new Error('LinkArticleSource: no link open');
+    return target;
   }
 
   private run(source: Observable<ReaderContent>): void {

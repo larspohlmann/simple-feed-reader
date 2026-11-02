@@ -58,7 +58,7 @@ describe('LinkArticleSource', () => {
     linkTarget.set(null);
     TestBed.tick();
 
-    expect(source.article()).toBeNull();
+    expect(source.body()).toBeNull();
     expect(source.title()).toBe('');
   });
 });

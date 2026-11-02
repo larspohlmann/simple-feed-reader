@@ -19,7 +19,6 @@ export interface ArticlePageFailure {
   readonly messageKey: string;
   readonly quiet: boolean;
   readonly detail: string | null;
-  readonly offersOriginal: boolean;
 }
 
 export interface ArticlePageFavicon {
@@ -33,7 +32,7 @@ export interface ArticlePagePaywall {
 
 /** What an article page shows, whichever view fills it. */
 export interface ArticlePageSource {
-  readonly key: Signal<string | undefined>;
+  readonly key: Signal<string>;
   readonly url: Signal<string | null>;
   readonly title: Signal<string>;
   readonly shareTitle: Signal<string>;

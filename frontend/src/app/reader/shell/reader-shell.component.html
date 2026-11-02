@@ -176,20 +176,26 @@
     </section>
   </ng-template>
   <ng-template #readerPane let-fullscreen="fullscreen">
-    <app-reader-view
-      [entry]="openEntry()"
-      [tags]="openEntryTags()"
-      [fullscreen]="fullscreen"
-      (openOriginal)="withOpen(entryActions.openOriginal)"
-      (close)="entryActions.closeEntry()"
-    />
+    @if (openEntry(); as entry) {
+      <app-reader-view
+        [entry]="entry"
+        [tags]="openEntryTags()"
+        [fullscreen]="fullscreen"
+        (openOriginal)="withOpen(entryActions.openOriginal)"
+        (back)="entryActions.closeEntry()"
+      />
+    } @else {
+      <div class="placeholder text-scaled">
+        <p>{{ 'reader.selectArticle' | transloco }}</p>
+      </div>
+    }
   </ng-template>
   <ng-template #linkPane let-fullscreen="fullscreen">
     @if (linkTarget()) {
       <app-link-reader
         [fullscreen]="fullscreen"
         [returnsTo]="linkReturnsTo()"
-        (close)="linkNavigation.close()"
+        (back)="linkNavigation.close()"
       />
     }
   </ng-template>

@@ -1224,6 +1224,20 @@ describe('ReaderShellComponent', () => {
       ctrl.verify();
     });
 
+    it('shows the placeholder when nothing is open', () => {
+      const fixture = boot();
+      screen.isWide.set(true);
+      fixture.componentInstance.layout.set('pane');
+      fixture.detectChanges();
+
+      const reader = fixture.nativeElement.querySelector('.main.split .reader') as HTMLElement;
+      expect(reader.querySelector('.placeholder')?.textContent).toContain(
+        'Select an article to read.',
+      );
+      expect(reader.querySelector('app-reader-view')).toBeNull();
+      ctrl.verify();
+    });
+
     it('carries no separator when the main area is not split', () => {
       const fixture = boot();
       expect(fixture.componentInstance.splitView()).toBe(false);
@@ -4807,7 +4821,7 @@ describe('ReaderShellComponent', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       openLink(fixture, { entry: '1', link: LINK });
 
-      linkReaderOf(fixture).close.emit();
+      linkReaderOf(fixture).back.emit();
 
       expect(nav).toHaveBeenCalledWith(
         [],

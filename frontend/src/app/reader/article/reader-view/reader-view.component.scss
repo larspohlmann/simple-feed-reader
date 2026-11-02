@@ -3,13 +3,6 @@
   height: 100%;
 }
 
-.placeholder {
-  display: grid;
-  place-items: center;
-  height: 100%;
-  color: var(--text-muted);
-}
-
 /* Feed-declared categories (#953): a muted footnote line closing the
    article, the same weight as the meta row that opens it. */
 .categories {

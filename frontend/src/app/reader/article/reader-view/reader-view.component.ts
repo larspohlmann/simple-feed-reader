@@ -1,12 +1,13 @@
 import {
   Component,
   ElementRef,
-  Injector,
+  OnChanges,
   computed,
   effect,
   inject,
   input,
   output,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
@@ -36,7 +37,7 @@ import { SocialCountsService } from '../social-counts/social-counts.service';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
-import { AutoplayRegion } from '../../media/autoplay/autoplay-region';
+import { HandedAutoplayRegion, handedAutoplayRegion } from '../../media/autoplay/autoplay-region';
 import { relativeTime } from '../../format';
 import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
@@ -72,23 +73,22 @@ import { EntryArticlePage } from './entry-article-page';
   providers: [
     ArticleSource,
     EntryArticlePage,
-    provideArticlePage({ source: EntryArticlePage, autoplayRegion: theArticleComments }),
+    HandedAutoplayRegion,
+    provideArticlePage({ source: EntryArticlePage, autoplayRegion: handedAutoplayRegion }),
   ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })
-export class ReaderViewComponent {
+export class ReaderViewComponent implements OnChanges {
   protected readonly ratio = entryMediumRatio;
 
-  readonly entry = input.required<EntryDto | null>();
+  readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly fullscreen = input(false);
   protected readonly actions = inject(EntryActionHandler);
 
   readonly openOriginal = output<void>();
-  // Semantic "back to list" output; not a DOM element's close event.
-  // eslint-disable-next-line @angular-eslint/no-output-native
-  readonly close = output<void>();
+  readonly back = output<void>();
 
   private readonly page = viewChild(ArticlePageComponent);
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
@@ -129,41 +129,23 @@ export class ReaderViewComponent {
   protected readonly audio = this.entryPage.audio;
   private readonly autoplay = inject(ListAutoplayCoordinator);
 
-  // The open entry's reference changes on every optimistic flag update, but its
-  // id doesn't. Tracking the loaded id lets the load effect ignore those churns
-  // — no re-fetch, and the Reader/Original toggle survives an in-reader action.
-  private loadedId: number | null = null;
-
-  // Alias the shared mode signal so the template reads it directly;
-  // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
+  private readonly openId = computed(() => this.entry().id);
 
   constructor() {
-    this.source.connect(this.entry);
-
+    inject(HandedAutoplayRegion).handOver(() => this.commentsSection()?.nativeElement);
     effect(() => {
-      const entry = this.entry();
-      const id = entry?.id ?? null;
-      // Only react to a genuine entry change — not to a same-entry reference
-      // churn from an optimistic flag update (which must not cancel an in-flight
-      // load, re-fetch, or reset the mode toggle).
-      if (id === this.loadedId) return;
-      this.loadedId = id;
-      // Before the source opens: a synchronous load calls enableToggle().
-      this.readerMode.reset();
-      this.autoplay.soundChanged(false);
-      this.source.open(entry);
+      this.openId();
+      untracked(() => this.autoplay.soundChanged(false));
     });
+  }
 
-    effect(() => this.audio.shareChapters());
+  ngOnChanges(): void {
+    this.source.show(this.entry());
   }
 
   protected scrollToComments(): void {
     this.page()?.scrollToElement(this.commentsSection()?.nativeElement);
-  }
-
-  commentsRegion(): Element | undefined {
-    return this.commentsSection()?.nativeElement;
   }
 
   protected reloadSocialCounts(): void {
@@ -172,8 +154,7 @@ export class ReaderViewComponent {
 
   /** The inline error's retry action — refetches the open entry's body. */
   retryBody(): void {
-    const entry = this.entry();
-    if (entry) this.source.retryBody(entry.id);
+    this.source.retryBody();
   }
 
   toggleMode(): void {
@@ -183,10 +164,4 @@ export class ReaderViewComponent {
   when(entry: EntryDto): string {
     return relativeTime(entry.publishedAt ?? entry.createdAt, this.language.lang());
   }
-}
-
-/** Resolved on first use: the coordinator is built while the view is still constructing. */
-function theArticleComments(): AutoplayRegion {
-  const injector = inject(Injector);
-  return () => injector.get(ReaderViewComponent).commentsRegion();
 }

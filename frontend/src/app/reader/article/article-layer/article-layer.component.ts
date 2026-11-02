@@ -48,11 +48,9 @@ export class ArticleLayerComponent {
   readonly withTail = input(false);
   readonly backLabel = input.required<string>();
   /** The page shown; a new one starts at the top with the toolbar presented. */
-  readonly resetKey = input.required<string | undefined>();
+  readonly resetKey = input.required<string>();
 
-  // Semantic "back to list" output; not a DOM element's close event.
-  // eslint-disable-next-line @angular-eslint/no-output-native
-  readonly close = output<void>();
+  readonly back = output<void>();
   readonly scrolled = output<number>();
   readonly toTop = output<void>();
   readonly barResized = output<void>();
@@ -78,7 +76,7 @@ export class ArticleLayerComponent {
     this.gestures.connect({
       fullscreen: this.fullscreen,
       scroller: this.scroller,
-      close: () => this.close.emit(),
+      back: () => this.back.emit(),
     });
     this.reserveToolbarHeight();
     effect(() => {
@@ -90,9 +88,9 @@ export class ArticleLayerComponent {
   /** The toolbar's back button. Full-screen it plays the same slide-out as a
    *  back-swipe rather than cutting straight to the list; the split pane has
    *  no overlay to slide, so it closes directly. */
-  back(): void {
+  protected onBackButton(): void {
     if (this.fullscreen()) this.gestures.slideBack();
-    else this.close.emit();
+    else this.back.emit();
   }
 
   scrollToTop(heading: HTMLElement | undefined): void {

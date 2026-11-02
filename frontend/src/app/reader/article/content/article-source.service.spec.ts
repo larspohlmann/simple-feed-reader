@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { NEVER } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { ChapterDto, TranscriptDto } from '../../models';
@@ -14,13 +15,16 @@ describe('ArticleSource chapters', () => {
     TestBed.configureTestingModule({
       providers: [
         ArticleSource,
-        { provide: ReaderContentService, useValue: {} },
-        { provide: ReaderModeService, useValue: { mode: () => 'original' } },
+        { provide: ReaderContentService, useValue: { load: () => NEVER } },
+        {
+          provide: ReaderModeService,
+          useValue: { mode: () => 'original', reset: jest.fn(), setOriginalOnly: jest.fn() },
+        },
         { provide: EntryBodyService, useValue: { body: () => signal(body) } },
       ],
     });
     const source = TestBed.inject(ArticleSource);
-    source.connect(signal(anEntry({ id: 1 })));
+    source.show(anEntry({ id: 1 }));
     return source;
   }
 
@@ -70,5 +74,27 @@ describe('ArticleSource chapters', () => {
     it('is not the body while the body loads', () => {
       expect(sourceWith({ status: 'loading' }).transcriptIsTheBody()).toBe(false);
     });
+  });
+});
+
+describe('ArticleSource showing an entry', () => {
+  it('takes a new object of the shown entry without loading it again', () => {
+    const load = jest.fn(() => NEVER);
+    TestBed.configureTestingModule({
+      providers: [
+        ArticleSource,
+        { provide: ReaderContentService, useValue: { load } },
+        { provide: ReaderModeService, useValue: { mode: () => 'reader', reset: jest.fn() } },
+        { provide: EntryBodyService, useValue: { body: () => signal({ status: 'loading' }) } },
+      ],
+    });
+    const source = TestBed.inject(ArticleSource);
+    source.show(anEntry({ id: 1, url: 'https://news.test/story' }));
+
+    const kept = anEntry({ id: 1, url: 'https://news.test/story', isKept: true });
+    source.show(kept);
+
+    expect(source.entry()).toBe(kept);
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });
