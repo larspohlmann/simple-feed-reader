@@ -1741,7 +1741,6 @@ describe('EntryListComponent', () => {
       const marker = element.querySelector('.end-corner .top-marker')!;
       expect(element.querySelector('app-to-top-button')).toBeNull();
       expect(marker.parentElement!.nextElementSibling!.classList).toContain('to-top-place');
-      expect(element.querySelector('.corner-actions')).toBeNull();
     });
 
     it('keeps the corner slot when marking all read empties an unread view (#1945)', () => {
@@ -1859,28 +1858,25 @@ describe('EntryListComponent', () => {
   });
 
   describe('mark-all-read corner button (#1912)', () => {
-    function scrolledDown(over: Record<string, unknown> = {}) {
-      const fixture = mount(over);
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.detectChanges();
-      return fixture;
-    }
     const markAll = (fixture: ReturnType<typeof mount>) =>
       (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
         '.corner-actions .mark-all',
       );
 
-    it('shows once scrolled down, with nothing above the fold yet', () => {
-      expect(markAll(mount())).toBeNull();
-
-      const fixture = scrolledDown();
+    it('shows before any scroll, without Mark above read (#1991)', () => {
+      const fixture = mount();
 
       expect(markAll(fixture)).not.toBeNull();
       expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
     });
 
+    it('is absent from an empty list (#1991)', () => {
+      expect(markAll(mount({ entries: [] }))).toBeNull();
+    });
+
     it('sits left of Mark above read', () => {
-      const fixture = scrolledDown();
+      const fixture = mount();
+      fixture.componentInstance.scrolling.showToTop.set(true);
       fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
@@ -1891,11 +1887,11 @@ describe('EntryListComponent', () => {
     });
 
     it('is absent where the list cannot be marked read', () => {
-      expect(markAll(scrolledDown({ canMarkAllRead: false }))).toBeNull();
+      expect(markAll(mount({ canMarkAllRead: false }))).toBeNull();
     });
 
     it('asks for mark all read when clicked', () => {
-      const fixture = scrolledDown();
+      const fixture = mount();
       let emitted = 0;
       fixture.componentInstance.markAllRead.subscribe(() => emitted++);
 
