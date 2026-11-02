@@ -6,6 +6,7 @@ import {
   linkContent,
   quoteContent,
   sharedLink,
+  sharedPage,
 } from './share-content';
 
 const PAGE = { url: 'https://a.example/s', title: 'A story' };
@@ -13,6 +14,13 @@ const QUOTE: SelectedQuote = { text: 'one two three', words: 3, anchorable: true
 const FRAGMENT = 'https://a.example/s#:~:text=one%20two%20three';
 
 describe('share content', () => {
+  it('shares a page without its tracking parameters', () => {
+    expect(sharedPage('https://example.com/a?utm_source=rss&id=1', 'First')).toEqual({
+      url: 'https://example.com/a?id=1',
+      title: 'First',
+    });
+  });
+
   it('shares a page by its title and URL', () => {
     expect(linkContent(PAGE)).toEqual({
       url: PAGE.url,

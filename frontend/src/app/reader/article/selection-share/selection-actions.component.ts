@@ -6,8 +6,7 @@ import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.
 import { PostActions } from '../composer/post-actions.service';
 import { PostNetworks } from '../share/post-networks.service';
 import { ShareButtonComponent } from '../share/share-button.component';
-import { sharedLink } from '../share/share-content';
-import { stripTracking } from '../share/tracking-params';
+import { sharedLink, sharedPage } from '../share/share-content';
 import { ArticleSelection } from './article-selection.service';
 
 /** What a selection offers, in the bubble and the phone bar alike: a quote per network, and the share menu. */
@@ -27,7 +26,7 @@ export class SelectionActionsComponent {
   protected readonly networks = inject(PostNetworks).connected;
 
   protected post(network: SocialNetworkName): void {
-    const page = { url: stripTracking(this.url()), title: this.title() };
+    const page = sharedPage(this.url(), this.title());
     this.postActions.postLink(network, sharedLink(page, this.selection.remembered()));
   }
 }

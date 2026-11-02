@@ -1,6 +1,7 @@
 import { SharedLinkDto } from '../../entry-social';
 import { SelectedQuote } from '../selection-share/selected-quote';
 import { quoteShareUrl } from './quote-share-url';
+import { stripTracking } from './tracking-params';
 
 /** The longest quote the composer is sent; `LinkTargetQuery::QUOTE_MAX` refuses more. */
 export const QUOTE_MAX = 1000;
@@ -16,6 +17,10 @@ export interface ShareContent {
   readonly title: string;
   readonly text: string;
   readonly quote: string | null;
+}
+
+export function sharedPage(url: string, title: string): SharedPage {
+  return { url: stripTracking(url), title };
 }
 
 export function linkContent(page: SharedPage): ShareContent {

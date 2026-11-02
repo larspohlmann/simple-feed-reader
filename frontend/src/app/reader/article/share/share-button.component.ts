@@ -39,10 +39,10 @@ import {
   linkContent,
   quoteContent,
   sharedLink,
+  sharedPage,
 } from './share-content';
 import { ShareItem, ShareMenuMode, TargetItem, shareMenuItems } from './share-menu';
 import { SHARE_GLYPH, shareLogoUrl, shareUrl } from './share-targets';
-import { stripTracking } from './tracking-params';
 
 /** Where the trigger sits: in the article toolbar, as a disc in the article's corner, or among a selection's actions. */
 export type ShareButtonAppearance = 'toolbar' | 'corner' | 'compact';
@@ -153,7 +153,7 @@ export class ShareButtonComponent {
   }
 
   private page(): SharedPage {
-    return { url: stripTracking(this.url()), title: this.title() };
+    return sharedPage(this.url(), this.title());
   }
 
   private contentFor(item: TargetItem): ShareContent {
