@@ -43,6 +43,12 @@ describe('ToastService', () => {
     expect(element()!.textContent).toContain('Refresh finished');
   });
 
+  it("renders a problem's own message", () => {
+    toast.showProblem({ type: 'x', title: 'Refused', status: 409, detail: 'No boosts' });
+    tick();
+    expect(element()!.textContent).toContain('No boosts');
+  });
+
   it('renders no action button without an actionLabel', () => {
     toast.show({ message: 'Refresh finished' });
     tick();

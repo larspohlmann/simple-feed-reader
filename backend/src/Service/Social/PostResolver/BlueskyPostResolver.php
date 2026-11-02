@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\PostResolver;
 
-use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
@@ -27,8 +26,6 @@ use App\Service\Social\Support\PostCounts;
 final readonly class BlueskyPostResolver implements PostResolverInterface
 {
     private const string GET_POSTS = '/xrpc/app.bsky.feed.getPosts?uris=';
-    private const string EXTERNAL = 'app.bsky.embed.external#view';
-    private const string RECORD_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
 
     public function __construct(
         private BlueskySessions $sessions,
@@ -98,17 +95,8 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
             BlueskyAuthor::name($author),
             null === $handle ? null : '@' . $handle,
             $post->node('record')->text('text') ?? '',
-            self::linkCardOf($post->node('embed')),
+            BlueskyExternalCard::ofEmbed($post->node('embed')),
         );
-    }
-
-    private static function linkCardOf(JsonNodeModel $embed): ?LinkCardContent
-    {
-        return match ($embed->type()) {
-            self::EXTERNAL => BlueskyExternalCard::of($embed->node('external')),
-            self::RECORD_WITH_MEDIA => self::linkCardOf($embed->node('media')),
-            default => null,
-        };
     }
 
     private static function referenceOrNull(JsonNodeModel $reference): ?PostReferenceModel

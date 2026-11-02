@@ -30,6 +30,7 @@ use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\ResponseContextModel;
 use App\Service\Social\PostResolver\BlueskyPostResolver;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
+use App\Service\Social\PostWriter\PostWriterInterface;
 use App\Service\Social\PostWriting;
 use App\Service\Social\SharedPageCards;
 use App\Service\Social\SharedPostQuoteFinder;
@@ -442,9 +443,10 @@ final class LinkPostsTest extends DbTestCase
         );
     }
 
+    /** @param ServiceLocator<PostWriterInterface> $writers */
     private function linkPostsOver(
         ContainerInterface $resolvers,
-        ContainerInterface $writers,
+        ServiceLocator $writers,
         PageCardReaderInterface $pageCards,
     ): LinkPosts {
         /** @var SocialAccountRepository $accounts */

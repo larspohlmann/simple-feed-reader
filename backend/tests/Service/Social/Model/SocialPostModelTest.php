@@ -30,6 +30,17 @@ final class SocialPostModelTest extends TestCase
         self::assertSame('110', $post->existingRepostId);
     }
 
+    public function testLaterCountsReplaceEarlierOnes(): void
+    {
+        $later = new SocialCountsModel(4, 5, 6, null);
+
+        $post = SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110')
+            ->withCounts(new SocialCountsModel(1, 2, 3, null))
+            ->withCounts($later);
+
+        self::assertSame($later, $post->counts);
+    }
+
     public function testEveryStepKeepsWhatTheOthersSet(): void
     {
         $counts = new SocialCountsModel(1, 2, 3, null);

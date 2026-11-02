@@ -32,30 +32,12 @@ final readonly class SocialPostModel
 
     public static function onBluesky(SocialAccount $account, string $uri, string $contentId): self
     {
-        return new self(
-            $account,
-            $uri,
-            $contentId,
-            existingLikeId: null,
-            existingRepostId: null,
-            canRepost: true,
-            counts: null,
-            responseContext: new ResponseContextModel(),
-        );
+        return self::fresh($account, $uri, $contentId);
     }
 
     public static function onMastodon(SocialAccount $account, string $statusId): self
     {
-        return new self(
-            $account,
-            $statusId,
-            null,
-            existingLikeId: null,
-            existingRepostId: null,
-            canRepost: true,
-            counts: null,
-            responseContext: new ResponseContextModel(),
-        );
+        return self::fresh($account, $statusId, null);
     }
 
     public function alreadyLikedAs(string $likeId): self
@@ -75,29 +57,25 @@ final readonly class SocialPostModel
 
     public function withCounts(?SocialCountsModel $counts): self
     {
-        return new self(
-            $this->account,
-            $this->postId,
-            $this->contentId,
-            $this->existingLikeId,
-            $this->existingRepostId,
-            $this->canRepost,
-            $counts,
-            $this->responseContext,
-        );
+        return $this->with(counts: $counts);
     }
 
     public function inResponseContext(ResponseContextModel $responseContext): self
     {
+        return $this->with(responseContext: $responseContext);
+    }
+
+    private static function fresh(SocialAccount $account, string $postId, ?string $contentId): self
+    {
         return new self(
-            $this->account,
-            $this->postId,
-            $this->contentId,
-            $this->existingLikeId,
-            $this->existingRepostId,
-            $this->canRepost,
-            $this->counts,
-            $responseContext,
+            $account,
+            $postId,
+            $contentId,
+            existingLikeId: null,
+            existingRepostId: null,
+            canRepost: true,
+            counts: null,
+            responseContext: new ResponseContextModel(),
         );
     }
 
@@ -105,6 +83,8 @@ final readonly class SocialPostModel
         ?string $existingLikeId = null,
         ?string $existingRepostId = null,
         ?bool $canRepost = null,
+        ?SocialCountsModel $counts = null,
+        ?ResponseContextModel $responseContext = null,
     ): self {
         return new self(
             $this->account,
@@ -113,8 +93,8 @@ final readonly class SocialPostModel
             $existingLikeId ?? $this->existingLikeId,
             $existingRepostId ?? $this->existingRepostId,
             $canRepost ?? $this->canRepost,
-            $this->counts,
-            $this->responseContext,
+            $counts ?? $this->counts,
+            $responseContext ?? $this->responseContext,
         );
     }
 }

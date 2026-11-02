@@ -1,3 +1,17 @@
+import { ConnectedPosition } from '@angular/cdk/overlay';
+
+/** A popover menu under its toolbar button, flush with its end edge, else above it. */
+export const TOOLBAR_MENU_POSITIONS: ConnectedPosition[] = [
+  { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
+  { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
+];
+
+/** Steps focus through the role=menu the key was pressed in. */
+export function stepMenu(event: KeyboardEvent): void {
+  const menu = (event.target as Element).closest('[role="menu"]');
+  if (menu !== null) stepMenuFocus(event, menu);
+}
+
 /** role=menu's keyboard contract: Arrow keys walk the container's items, wrapping. */
 export function stepMenuFocus(event: KeyboardEvent, container: Element): void {
   const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;

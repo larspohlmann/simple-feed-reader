@@ -5,6 +5,7 @@ import { SocialCountsDto, SocialViewerDto } from '../../entry-social';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
+import { ToastService } from '../../../shared/toast/toast.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { SocialCountsService } from './social-counts.service';
 import { RemovedPost, RemovedPosts } from '../../removed-posts.service';
@@ -17,6 +18,7 @@ describe('SocialCountsService', () => {
     unrepost: jest.Mock;
   };
   let entries: { adoptLike: jest.Mock };
+  let toast: { showProblem: jest.Mock };
   let tokens: TokenStore;
   let service: SocialCountsService;
 
@@ -43,10 +45,12 @@ describe('SocialCountsService', () => {
       unrepost: jest.fn(() => of({ isReposted: false })),
     };
     entries = { adoptLike: jest.fn() };
+    toast = { showProblem: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: SocialPostApi, useValue: api },
         { provide: EntriesStore, useValue: entries },
+        { provide: ToastService, useValue: toast },
       ],
     });
     tokens = TestBed.inject(TokenStore);
@@ -159,21 +163,17 @@ describe('SocialCountsService', () => {
   });
 
   describe('toggleRepost', () => {
-    const onError = jest.fn();
-
-    beforeEach(() => onError.mockReset());
-
     it('reposts at once, the count following, and undoes it on the next toggle', () => {
       service.load(post());
 
-      service.toggleRepost(post(), onError);
+      service.toggleRepost(post());
       expect(api.repost).toHaveBeenCalledWith(1);
       expect(service.state(1)()).toMatchObject({
         counts: { reposts: 6 },
         actions: { isReposted: true },
       });
 
-      service.toggleRepost(post(), onError);
+      service.toggleRepost(post());
       expect(api.unrepost).toHaveBeenCalledWith(1);
       expect(service.state(1)()).toMatchObject({
         counts: { reposts: 5 },
@@ -193,13 +193,13 @@ describe('SocialCountsService', () => {
       );
       service.load(post());
 
-      service.toggleRepost(post(), onError);
+      service.toggleRepost(post());
 
       expect(service.state(1)()).toMatchObject({
         counts: { reposts: 5 },
         actions: { isReposted: false },
       });
-      expect(onError).toHaveBeenCalledWith(
+      expect(toast.showProblem).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'social_post_refused' }),
       );
     });
@@ -208,8 +208,8 @@ describe('SocialCountsService', () => {
       api.repost.mockReturnValue(new Subject());
       service.load(post());
 
-      service.toggleRepost(post(), onError);
-      service.toggleRepost(post(), onError);
+      service.toggleRepost(post());
+      service.toggleRepost(post());
 
       expect(api.repost).toHaveBeenCalledTimes(1);
       expect(api.unrepost).not.toHaveBeenCalled();
@@ -218,7 +218,7 @@ describe('SocialCountsService', () => {
     it('holds a reload back until the repost settles', () => {
       api.repost.mockReturnValue(new Subject());
       service.load(post());
-      service.toggleRepost(post(), onError);
+      service.toggleRepost(post());
 
       service.reload(post());
 
@@ -229,7 +229,7 @@ describe('SocialCountsService', () => {
       api.viewer.mockReturnValue(of(viewer({ canRepost: false })));
       service.load(post());
 
-      service.toggleRepost(post(), onError);
+      service.toggleRepost(post());
 
       expect(api.repost).not.toHaveBeenCalled();
     });
@@ -238,7 +238,7 @@ describe('SocialCountsService', () => {
       api.viewer.mockReturnValue(throwError(() => new Error('offline')));
       service.load(post());
 
-      service.toggleRepost(post(), onError);
+      service.toggleRepost(post());
 
       expect(api.repost).not.toHaveBeenCalled();
     });

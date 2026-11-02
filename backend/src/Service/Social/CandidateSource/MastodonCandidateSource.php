@@ -24,7 +24,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonCandidateSource implements CandidateSourceInterface
 {
-    private const string VERIFY_CREDENTIALS = '/api/v1/accounts/verify_credentials';
     private const string LISTS = '/api/v1/lists';
     private const string FOLLOWED_TAGS = '/api/v1/followed_tags?limit=200';
     private const int PAGE_SIZE = 80;
@@ -70,7 +69,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
 
     private function ownAccountId(MastodonSessionModel $session): string
     {
-        $answer = $this->mastodon->send($session->get($session->url(self::VERIFY_CREDENTIALS)));
+        $answer = $this->mastodon->send($session->get($session->url(MastodonApiClient::VERIFY_CREDENTIALS)));
 
         return JsonNodeModel::of($answer->json())->string('id')
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');

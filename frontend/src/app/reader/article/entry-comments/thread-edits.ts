@@ -1,4 +1,5 @@
 import { EntryCommentDto } from '../../entry-comment';
+import { steppedCounts } from '../optimistic-toggles';
 
 /**
  * The thread with `reply` shown where a fresh load would put it: newest first, so at the top, or
@@ -15,7 +16,7 @@ export function withReply(
   if (parent?.post == null) return comments;
   return [
     ...comments.slice(0, at),
-    withRepliesStepped(parent, 1),
+    withRepliesStepped(parent, true),
     { ...reply, depth: parent.depth + 1 },
     ...comments.slice(at + 1),
   ];
@@ -31,7 +32,7 @@ export function withoutReply(comments: EntryCommentDto[], address: string): Entr
   const parentAt = parentIndexOf(comments, at);
   const before = comments
     .slice(0, at)
-    .map((comment, index) => (index === parentAt ? withRepliesStepped(comment, -1) : comment));
+    .map((comment, index) => (index === parentAt ? withRepliesStepped(comment, false) : comment));
   return [...before, ...(firstOutside === -1 ? [] : after.slice(firstOutside))];
 }
 
@@ -42,8 +43,8 @@ function parentIndexOf(comments: EntryCommentDto[], at: number): number {
   return -1;
 }
 
-function withRepliesStepped(comment: EntryCommentDto, step: number): EntryCommentDto {
+function withRepliesStepped(comment: EntryCommentDto, up: boolean): EntryCommentDto {
   if (comment.post == null) return comment;
-  const replies = Math.max(0, comment.post.counts.replies + step);
-  return { ...comment, post: { ...comment.post, counts: { ...comment.post.counts, replies } } };
+  const counts = steppedCounts(comment.post.counts, 'replies', up);
+  return { ...comment, post: { ...comment.post, counts } };
 }

@@ -20,23 +20,25 @@ use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\ComposerStartingText;
 use App\Service\Social\Support\SocialPostAddress;
-use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final readonly class ComposerContexts
 {
+    /** @param ServiceLocator<ComposerDefaultsInterface> $defaults */
     public function __construct(
         private SocialAccountRepository $socialAccounts,
         private SocialPostFinder $posts,
         private SharedPageCards $pageCards,
         #[AutowireLocator('app.social_composer_defaults', defaultIndexMethod: 'network')]
-        private ContainerInterface $defaults,
+        private ServiceLocator $defaults,
     ) {
     }
 
     public function ofReply(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
     {
-        $defaults = $this->defaultsOn($post->account)->defaultsFor($post, $this->threadStarterOf($target, $post));
+        $defaults = $this->defaults->get($post->account->getNetwork()->value)
+            ->defaultsFor($post, $this->threadStarterOf($target, $post));
         $text = ComposerStartingText::mentioning($defaults->mentions);
 
         return $this->contextOf($post, ResponseKind::Reply, $defaults, $text);
@@ -49,7 +51,7 @@ final readonly class ComposerContexts
 
     public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
-        $defaults = $this->defaultsOn($account)->forAccount($account);
+        $defaults = $this->defaults->get($account->getNetwork()->value)->forAccount($account);
 
         return new ComposerContextModel(
             $this->connectedBeside($account),
@@ -71,7 +73,7 @@ final readonly class ComposerContexts
     /** A quote names nobody, so it never asks for the thread's starter. */
     private function quoteContextOf(SocialPostModel $post, string $quote): ComposerContextModel
     {
-        $defaults = $this->defaultsOn($post->account)
+        $defaults = $this->defaults->get($post->account->getNetwork()->value)
             ->defaultsFor($post, static fn (): ?SocialPostModel => null)
             ->withoutMentions();
         $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
@@ -100,14 +102,6 @@ final readonly class ComposerContexts
     private function connectedBeside(SocialAccount $account): array
     {
         return $this->socialAccounts->findConnectedOnNetwork($account->getUser(), $account->getNetwork());
-    }
-
-    private function defaultsOn(SocialAccount $account): ComposerDefaultsInterface
-    {
-        $defaults = $this->defaults->get($account->getNetwork()->value);
-        \assert($defaults instanceof ComposerDefaultsInterface);
-
-        return $defaults;
     }
 
     /** @return \Closure(): ?SocialPostModel */

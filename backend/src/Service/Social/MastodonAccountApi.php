@@ -20,6 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 /** Calls an account's own Mastodon instance with its token. */
 final readonly class MastodonAccountApi
 {
+    public const string STATUSES_SCOPE = 'write:statuses';
     private const string OUTSIDE_SCOPES = 'outside the authorized scopes';
     private const string READ_SCOPE = 'read';
 

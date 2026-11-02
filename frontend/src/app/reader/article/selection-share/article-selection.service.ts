@@ -6,6 +6,7 @@ import {
   Injector,
   NgZone,
   Signal,
+  computed,
   effect,
   inject,
   signal,
@@ -19,6 +20,11 @@ import { selectionText, wordsOf } from './selection-text';
 export const QUOTE_MIN_WORDS = 3;
 /** A drag in progress is no quote yet; the same rest delays the hide, so a tap that collapses it still lands. */
 export const SELECTION_SETTLE_MS = 150;
+
+interface LiveSelection {
+  quote: SelectedQuote;
+  range: Range;
+}
 
 export interface ArticleSelectionSources {
   readonly body: Signal<ElementRef<HTMLElement> | undefined>;
@@ -37,14 +43,13 @@ export class ArticleSelection {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
-  private readonly liveQuote = signal<SelectedQuote | null>(null);
+  private readonly live = signal<LiveSelection | null>(null, { equal: sameSelection });
   private readonly keptQuote = signal<SelectedQuote | null>(null);
-  private readonly liveRange = signal<Range | null>(null);
   private sources: ArticleSelectionSources | null = null;
 
-  readonly quote = this.liveQuote.asReadonly();
+  readonly quote = computed(() => this.live()?.quote ?? null);
   readonly remembered = this.keptQuote.asReadonly();
-  readonly range = this.liveRange.asReadonly();
+  readonly range = computed(() => this.live()?.range ?? null);
 
   connect(sources: ArticleSelectionSources): void {
     this.sources = sources;
@@ -70,8 +75,7 @@ export class ArticleSelection {
   private read(): void {
     const range = this.rangeInBody();
     const quote = range && this.quoteIn(range);
-    this.liveQuote.set(quote);
-    this.liveRange.set(quote && range ? range.cloneRange() : null);
+    this.live.set(quote && range ? { quote, range: range.cloneRange() } : null);
     if (range !== null) this.keptQuote.set(quote);
   }
 
@@ -95,8 +99,17 @@ export class ArticleSelection {
   }
 
   private forget(): void {
-    this.liveQuote.set(null);
+    this.live.set(null);
     this.keptQuote.set(null);
-    this.liveRange.set(null);
   }
+}
+
+function sameSelection(left: LiveSelection | null, right: LiveSelection | null): boolean {
+  if (left === null || right === null) return left === right;
+  return (
+    left.quote.text === right.quote.text &&
+    left.quote.anchorable === right.quote.anchorable &&
+    left.range.compareBoundaryPoints(Range.START_TO_START, right.range) === 0 &&
+    left.range.compareBoundaryPoints(Range.END_TO_END, right.range) === 0
+  );
 }

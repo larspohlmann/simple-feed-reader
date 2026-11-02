@@ -25,7 +25,7 @@ describe('PostActions', () => {
   let counts: { stepReplies: jest.Mock; stepQuotes: jest.Mock };
   let api: { deleteReply: jest.Mock; deletePost: jest.Mock };
   let confirm: { ask: jest.Mock };
-  let toast: { show: jest.Mock };
+  let toast: { show: jest.Mock; showProblem: jest.Mock };
   let dialog: { open: jest.Mock };
   let actions: PostActions;
 
@@ -56,7 +56,7 @@ describe('PostActions', () => {
       deletePost: jest.fn(() => of({ outcome: 'deleted' })),
     };
     confirm = { ask: jest.fn(() => of(true)) };
-    toast = { show: jest.fn() };
+    toast = { show: jest.fn(), showProblem: jest.fn() };
     dialog = {
       open: jest.fn((component: unknown) => ({
         closed: component === ComposerDialogComponent ? composed : of(undefined),
@@ -246,7 +246,9 @@ describe('PostActions', () => {
     actions.delete(7, 'mastodon', comment(0));
 
     expect(comments.removeReply).not.toHaveBeenCalled();
-    expect(toast.show).toHaveBeenCalledWith({ message: 'No connected account wrote this reply.' });
+    expect(toast.showProblem).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: 'No connected account wrote this reply.' }),
+    );
   });
 
   const ownPost = (replies: number): EntryDto =>
@@ -313,6 +315,8 @@ describe('PostActions', () => {
     actions.deletePost(ownPost(0)).subscribe(() => (gone = true));
 
     expect(gone).toBe(false);
-    expect(toast.show).toHaveBeenCalledWith({ message: 'Bluesky is down.' });
+    expect(toast.showProblem).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: 'Bluesky is down.' }),
+    );
   });
 });

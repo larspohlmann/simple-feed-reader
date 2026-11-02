@@ -10,7 +10,6 @@ use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Social\BlueskyFacets;
 use App\Service\Social\BlueskyExternalEmbeds;
 use App\Service\Social\BlueskyRecords;
-use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PostDraftModel;
@@ -58,10 +57,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
 
     public function delete(SocialAccount $account, string $postId): PostDeletion
     {
-        $recordKey = BlueskyRecordUri::recordKeyOf(BlueskyRecordUri::postOrNull($postId) ?? '')
-            ?? throw new SocialPostRefusedException('The address names no Bluesky post.');
-
-        return $this->records->delete($account, BlueskyRecords::POST_COLLECTION, $recordKey);
+        return $this->records->delete($account, BlueskyRecordUri::POST, $postId);
     }
 
     /** @param array<string, mixed> $attachment */

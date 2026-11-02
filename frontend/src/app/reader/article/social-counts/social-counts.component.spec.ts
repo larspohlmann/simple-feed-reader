@@ -6,8 +6,6 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { Lang } from '../../../core/i18n/language';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntrySocialDto, PostActionsView, SocialCountsDto } from '../../entry-social';
-import { ToastService } from '../../../shared/toast/toast.service';
-import { Problem } from '../../../core/problem';
 import { EntryDto } from '../../models';
 import { PostActions } from '../composer/post-actions.service';
 import { SocialCountsComponent } from './social-counts.component';
@@ -19,7 +17,6 @@ describe('SocialCountsComponent', () => {
   let fixture: ComponentFixture<SocialCountsComponent>;
   let states: Map<number, WritableSignal<SocialCountsState>>;
   let service: { state: jest.Mock; load: jest.Mock; toggleRepost: jest.Mock };
-  let toast: { show: jest.Mock };
   let actions: { like: jest.Mock };
   let responses: { reply: jest.Mock; quote: jest.Mock };
   let language: { lang: WritableSignal<Lang> };
@@ -31,7 +28,6 @@ describe('SocialCountsComponent', () => {
       load: jest.fn(),
       toggleRepost: jest.fn(),
     };
-    toast = { show: jest.fn() };
     actions = { like: jest.fn() };
     responses = { reply: jest.fn(), quote: jest.fn() };
     language = { lang: signal<Lang>('en') };
@@ -41,7 +37,6 @@ describe('SocialCountsComponent', () => {
         { provide: SocialCountsService, useValue: service },
         { provide: EntryActionHandler, useValue: actions },
         { provide: LanguageService, useValue: language },
-        { provide: ToastService, useValue: toast },
         { provide: PostActions, useValue: responses },
       ],
     });
@@ -358,7 +353,7 @@ describe('SocialCountsComponent', () => {
       expect(button.classList).toContain('on');
     });
 
-    it('reposts through the counts service and toasts what the network refused', () => {
+    it('reposts through the counts service', () => {
       const entry = post();
       show(entry);
       const element = settle(
@@ -371,10 +366,7 @@ describe('SocialCountsComponent', () => {
       expect(item.textContent).toContain('Repost on Bluesky');
       item.click();
 
-      expect(service.toggleRepost).toHaveBeenCalledWith(entry, expect.any(Function));
-      const onError = service.toggleRepost.mock.calls[0][1] as (problem: Problem) => void;
-      onError({ status: 409, type: 'social_post_refused', title: 'Refused', detail: 'No boosts' });
-      expect(toast.show).toHaveBeenCalledWith({ message: 'No boosts' });
+      expect(service.toggleRepost).toHaveBeenCalledWith(entry);
     });
 
     it('quotes the post from the repost menu', () => {

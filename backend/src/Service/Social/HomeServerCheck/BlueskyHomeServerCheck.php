@@ -10,7 +10,6 @@ use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
-use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
 use App\Service\Social\Support\BlueskyRecordUri;
@@ -55,7 +54,7 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
     private function pdsHasNoRecord(BlueskyIdentityModel $identity, string $recordKey): bool
     {
         $query = http_build_query(
-            ['repo' => $identity->did, 'collection' => BlueskyRecords::POST_COLLECTION, 'rkey' => $recordKey],
+            ['repo' => $identity->did, 'collection' => BlueskyRecordUri::POST, 'rkey' => $recordKey],
             '',
             '&',
             \PHP_QUERY_RFC3986,

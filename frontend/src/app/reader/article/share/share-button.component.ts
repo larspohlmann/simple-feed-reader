@@ -25,7 +25,7 @@ import { MaskedLogoComponent } from '../../../shared/masked-logo/masked-logo.com
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
-import { stepMenuFocus } from '../../../shared/menu-keys';
+import { TOOLBAR_MENU_POSITIONS, stepMenu } from '../../../shared/menu-keys';
 import { SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
 import { PostActions } from '../composer/post-actions.service';
@@ -49,10 +49,7 @@ import { SHARE_GLYPH, shareLogoUrl, shareUrl } from './share-targets';
 export type ShareButtonAppearance = 'toolbar' | 'corner' | 'compact';
 
 const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
-  toolbar: [
-    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
-    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
-  ],
+  toolbar: TOOLBAR_MENU_POSITIONS,
   corner: [
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
   ],
@@ -100,6 +97,7 @@ export class ShareButtonComponent {
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
   protected readonly logoUrl = shareLogoUrl;
+  protected readonly step = stepMenu;
   protected readonly compactIconSize = computed((): IconSize =>
     this.screen.isCoarse() ? 'md' : 'sm',
   );
@@ -159,11 +157,6 @@ export class ShareButtonComponent {
   protected closed(): void {
     this.open.set(false);
     (this.origin().elementRef.nativeElement as HTMLElement).focus();
-  }
-
-  protected step(event: KeyboardEvent): void {
-    const menu = (event.target as Element).closest('[role="menu"]');
-    if (menu !== null) stepMenuFocus(event, menu);
   }
 
   private selectedQuote(): SelectedQuote | null {

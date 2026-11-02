@@ -1,5 +1,4 @@
 @use '../../../theme/corner-circle-button' as circle;
-@use '../../../theme/glass-rim';
 @use '../../../theme/menu-items';
 
 :host {
@@ -13,17 +12,10 @@
 }
 
 .menu {
-  @include glass-rim.filled(var(--surface-2));
-  @include menu-items.menu-items;
-
-  border-radius: var(--radius);
-  padding-block: var(--space-1);
   max-height: 80vh;
   overflow-y: auto;
-}
 
-.menu button {
-  white-space: nowrap;
+  @include menu-items.menu-panel;
 }
 
 .external {

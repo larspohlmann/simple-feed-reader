@@ -1,6 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, finalize } from 'rxjs';
-import { Problem, parseProblem } from '../../core/problem';
+import { parseProblem } from '../../core/problem';
+import { ToastService } from '../../shared/toast/toast.service';
+import { SocialCountsDto } from '../entry-social';
 
 /** A flag shown changed at once and shown back if what `send` sends fails. */
 export interface OptimisticToggle {
@@ -8,12 +10,16 @@ export interface OptimisticToggle {
   to: boolean;
   send: () => Observable<unknown>;
   show: (value: boolean) => void;
-  onError: (problem: Problem) => void;
 }
 
-/** Flags toggled ahead of their answer; a toggle whose key is still on the wire for its entry is dropped. */
+/**
+ * Flags toggled ahead of their answer; a toggle whose key is still on the wire for its entry is dropped, and a failed
+ * one is toasted.
+ */
 export class OptimisticToggles {
   private readonly inFlight = new Map<number, Set<string>>();
+
+  constructor(private readonly toast: ToastService) {}
 
   isBusy(entryId: number): boolean {
     return this.inFlight.has(entryId);
@@ -31,7 +37,7 @@ export class OptimisticToggles {
       .subscribe({
         error: (error: HttpErrorResponse) => {
           toggle.show(!toggle.to);
-          toggle.onError(parseProblem(error));
+          this.toast.showProblem(parseProblem(error));
         },
       });
   }
@@ -47,7 +53,17 @@ export class OptimisticToggles {
   }
 }
 
+/** The counts with `kind` moved by one toward `up`; the same counts where the network does not count it. */
+export function steppedCounts(
+  counts: SocialCountsDto,
+  kind: keyof SocialCountsDto,
+  up: boolean,
+): SocialCountsDto {
+  const count = counts[kind];
+  return count === null ? counts : { ...counts, [kind]: steppedCount(count, up) };
+}
+
 /** A count moved by one toward `up`, never below zero. */
-export function steppedCount(count: number, up: boolean): number {
+function steppedCount(count: number, up: boolean): number {
   return Math.max(0, count + (up ? 1 : -1));
 }

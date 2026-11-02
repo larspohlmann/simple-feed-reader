@@ -120,6 +120,41 @@ describe('ArticleSelection', () => {
     expect(selection.range()?.toString()).toBe('One two three four');
   });
 
+  it('keeps the same quote and range when the identical selection settles again', () => {
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+    const quote = selection.quote();
+    const range = selection.range();
+
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+
+    expect(selection.quote()).toBe(quote);
+    expect(selection.range()).toBe(range);
+  });
+
+  it('hands out the new range when the same words are selected elsewhere', () => {
+    (paragraph(1) as Text).data = 'One two three';
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+
+    select(paragraph(1), [0, 'One two three'.length]);
+    settle();
+
+    expect(selection.range()?.startContainer).toBe(paragraph(1));
+  });
+
+  it('hands out a new quote when the same text turns unanchorable', () => {
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+    socialPost.set(true);
+
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+
+    expect(selection.quote()?.anchorable).toBe(false);
+  });
+
   it('keeps the remembered quote when the reader selects text outside the article body', () => {
     select(paragraph(0), [0, 'One two three'.length]);
     settle();

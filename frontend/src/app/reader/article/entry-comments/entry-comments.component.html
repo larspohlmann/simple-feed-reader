@@ -37,7 +37,7 @@
       } @else {
         @let social = entry().social;
         <ol class="list">
-          @for (c of s.comments; track $index) {
+          @for (c of s.comments; track c.post?.address ?? c.url ?? $index) {
             <li class="comment" [class.reply]="c.depth > 0" [style.--depth]="indentOf(c)">
               <p class="byline">
                 @if (c.authorAvatarUrl; as avatarUrl) {
@@ -106,10 +106,7 @@
                   [network]="social.network"
                   [counts]="post.counts"
                   [liked]="likeable() ? post.isLiked : null"
-                  [reposted]="likeable() ? post.isReposted : null"
-                  [canRepost]="post.canRepost"
-                  [canReply]="likeable() ? post.canReply : null"
-                  [canQuote]="likeable() ? post.canQuote : null"
+                  [actions]="likeable() ? post : null"
                   (likeToggled)="toggleLike(post)"
                   (repostToggled)="toggleRepost(post)"
                   (replyRequested)="reply(social.network, post)"

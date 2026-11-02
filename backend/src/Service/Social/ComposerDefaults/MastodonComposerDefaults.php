@@ -20,7 +20,6 @@ use App\Service\Social\Support\SocialIdentity;
 final readonly class MastodonComposerDefaults implements ComposerDefaultsInterface
 {
     private const string INSTANCE = '/api/v2/instance';
-    private const string OWN_ACCOUNT = '/api/v1/accounts/verify_credentials';
     private const int DEFAULT_MAX_CHARACTERS = 500;
     private const string DEFAULT_VISIBILITY = 'public';
 
@@ -62,7 +61,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
 
     private function privacyOf(SocialAccount $account): string
     {
-        return $this->answerOf($account, self::OWN_ACCOUNT)->node('source')->string('privacy')
+        return $this->answerOf($account, MastodonApiClient::VERIFY_CREDENTIALS)->node('source')->string('privacy')
             ?? self::DEFAULT_VISIBILITY;
     }
 

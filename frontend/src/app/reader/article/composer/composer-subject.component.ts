@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal } from '@angular/core';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { ComposerSubjectDto } from '../../entry-social';
 
@@ -18,5 +18,5 @@ export class ComposerSubjectComponent {
     const subject = this.subject();
     return subject.kind === 'post' ? subject : null;
   });
-  protected readonly imageFailed = signal(false);
+  protected readonly imageFailed = linkedSignal({ source: this.subject, computation: () => false });
 }
