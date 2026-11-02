@@ -68,6 +68,13 @@ final class BlueskyHomeServerCheckTest extends TestCase
         yield 'a taken-down repo' => [self::recordError(Response::HTTP_BAD_REQUEST, 'RepoTakendown')];
         yield 'not found without its error' => [self::recordError(Response::HTTP_NOT_FOUND, 'NotFound')];
         yield 'failing' => [self::recordError(Response::HTTP_INTERNAL_SERVER_ERROR, 'InternalServerError')];
+        yield 'redirected' => [new MockResponse('', [
+            'http_code' => Response::HTTP_FOUND,
+            'response_headers' => ['Location: https://elsewhere.example/xrpc/com.atproto.repo.getRecord'],
+        ])];
+        yield 'not json' => [new MockResponse('RecordNotFound', ['http_code' => Response::HTTP_BAD_REQUEST])];
+        yield 'unauthorized' => [self::recordError(Response::HTTP_UNAUTHORIZED, 'RecordNotFound')];
+        yield 'throttled' => [self::recordError(Response::HTTP_TOO_MANY_REQUESTS, 'RecordNotFound')];
     }
 
     public function testAnAuthorWithoutADidDocumentProvesNothing(): void

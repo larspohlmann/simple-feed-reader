@@ -47,6 +47,7 @@ final class MastodonHomeServerCheckTest extends TestCase
     public static function unprovenAnswers(): iterable
     {
         yield 'still there' => [Response::HTTP_OK];
+        yield 'redirected' => [Response::HTTP_FOUND];
         yield 'closed to anonymous readers' => [Response::HTTP_UNAUTHORIZED];
         yield 'forbidden' => [Response::HTTP_FORBIDDEN];
         yield 'gone is not a status answer' => [Response::HTTP_GONE];
@@ -59,6 +60,14 @@ final class MastodonHomeServerCheckTest extends TestCase
         $http = new RoutedHttpClient([]);
 
         self::assertFalse($this->check($http)->confirmsDeleted('https://pixelfed.example/p/alice/123'));
+        self::assertSame([], $http->requests);
+    }
+
+    public function testARemoteStatusSeenThroughAnotherInstanceProvesNothingAndAsksNothing(): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        self::assertFalse($this->check($http)->confirmsDeleted('https://mastodon.social/@alice@other.social/123'));
         self::assertSame([], $http->requests);
     }
 
@@ -78,6 +87,9 @@ final class MastodonHomeServerCheckTest extends TestCase
 
     private static function answer(int $status): MockResponse
     {
-        return new MockResponse('{}', ['http_code' => $status]);
+        return new MockResponse('{}', [
+            'http_code' => $status,
+            'response_headers' => ['Location: https://elsewhere.example/api/v1/statuses/110'],
+        ]);
     }
 }
