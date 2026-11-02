@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.7.0] - 2026-11-02
+
 ### Highlights
 
 **Reply, repost and quote on Bluesky and Mastodon.** Answer, repost (boost on
@@ -22,6 +24,31 @@ Mastodon, and selecting a passage in an article shares it as a quote with a
 link that jumps to it.
 
 **Keep a network out of For you.** A network's ⋯ menu now has a For you switch.
+
+## What's Changed
+* feat(#1963): repost and boost social posts and replies by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1966
+* feat(#1964): reply to Bluesky and Mastodon posts, delete own replies by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1967
+* feat(#1965): quote Bluesky and Mastodon posts and replies by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1969
+* feat(#1968): post a shared URL to Bluesky or Mastodon by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1971
+* feat(#1972): delete my own social posts from the reader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1973
+* fix(#1974): a quoted post shows its link card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1976
+* fix(#1975): remove an entry whose post was deleted on its network by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1977
+* feat(#1970): share a text selection as a quote with the article's link by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1979
+* refactor(#1980): simplify pass over the social write-actions series by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1981
+* Article views: generic article code leaves reader-view, entry leaks removed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1985
+* Article views: one ArticlePage shell renders the reader view and the link reader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1986
+* Link reader: corner share disc, contents, reading time and scroll restore by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1987
+* Article views: simplify the ArticlePage shell series by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1988
+* fix(#1989): the back-swipe stands aside while the article holds a text selection by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1990
+* fix(#1991): Mark all read stays in the list corner before any scroll by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1992
+* fix(#1993): network ⋯ only in Organise mode on mobile by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1994
+* fix(#1996): phone dialogs sit lower, within thumb reach by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1998
+* fix(#1997): swap the list corner's 'to top' and 'open sidebar' buttons by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1999
+* feat(#1995): exclude social networks from For you by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2000
+* docs: v1.7.0 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2001
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.15...v1.7.0
 
 ## [v1.6.15] - 2026-11-01
 
