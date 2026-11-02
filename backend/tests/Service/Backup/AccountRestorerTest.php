@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCardContent;
 use App\Entity\Preferences;
 use App\Entity\SavedSearch;
@@ -19,6 +20,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Exception\ValidationException;
 use App\Repository\FeedRepository;
+use App\Repository\ForYouNetworkExclusionRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SubscriptionRepository;
@@ -440,6 +442,56 @@ final class AccountRestorerTest extends DbTestCase
         $this->restorer()->start($this->reload($user), $foundation, 'REPLACE');
 
         self::assertSame([SocialNetwork::Bluesky], $this->includedNetworksOf($user));
+    }
+
+    public function testTheExcludedForYouNetworksSurviveARestoreOverAnAccountThatAlreadyHasThem(): void
+    {
+        $source = $this->fullyPopulatedAccount()->create('for-you-networks-source@example.com');
+        $foundation = $this->backupOf($source);
+        $this->entityManager->persist(new ForYouNetworkExclusion($this->reload($source), SocialNetwork::Mastodon));
+        $this->entityManager->flush();
+
+        $this->restorer()->start($this->reload($source), $foundation, 'REPLACE');
+
+        self::assertSame([SocialNetwork::Bluesky], $this->forYouExcludedNetworksOf($source));
+    }
+
+    public function testAnAccountLineWithoutForYouExclusionsRestoresWithEveryNetworkIncluded(): void
+    {
+        $user = $this->userFactory->create('for-you-networks-missing@example.com');
+        $this->entityManager->persist(new ForYouNetworkExclusion($user, SocialNetwork::Bluesky));
+        $this->entityManager->flush();
+
+        $this->restorer()->start($this->reload($user), $this->foundationGzip(), 'REPLACE');
+
+        self::assertSame([], $this->forYouExcludedNetworksOf($user));
+    }
+
+    public function testAnUnknownExcludedForYouNetworkInTheFileIsDropped(): void
+    {
+        $user = $this->userFactory->create('for-you-networks-unknown@example.com');
+        $foundation = $this->gzipOf([
+            $this->headerLine(part: 0, parts: 1, totals: ['entries' => 0, 'entryStates' => 0]),
+            ['kind' => 'account', 'locale' => 'en', 'scrapeFallbackEnabled' => false, 'magazineStyle' => 'boxed',
+                'forYouExcludedNetworks' => ['myspace', 'mastodon', 7]],
+            ['kind' => 'footer', 'counts' => [
+                'tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 0, 'entryState' => 0,
+            ]],
+        ]);
+
+        $this->restorer()->start($this->reload($user), $foundation, 'REPLACE');
+
+        self::assertSame([SocialNetwork::Mastodon], $this->forYouExcludedNetworksOf($user));
+    }
+
+    /** @return list<SocialNetwork> */
+    private function forYouExcludedNetworksOf(User $user): array
+    {
+        $this->entityManager->clear();
+        $exclusions = self::getContainer()->get(ForYouNetworkExclusionRepository::class);
+        self::assertInstanceOf(ForYouNetworkExclusionRepository::class, $exclusions);
+
+        return $exclusions->excludedNetworksFor($user->requireId());
     }
 
     /** @return list<SocialNetwork> */

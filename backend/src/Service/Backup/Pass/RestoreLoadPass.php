@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Pass;
 
 use App\Entity\Feed;
+use App\Entity\ForYouNetworkExclusion;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Tag;
@@ -94,6 +95,9 @@ final class RestoreLoadPass
         $this->user->getPreferences()->setMagazineStyle($line->magazineStyle);
         foreach ($line->savedSearchIncludedNetworks as $network) {
             $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, $network));
+        }
+        foreach ($line->forYouExcludedNetworks as $network) {
+            $this->entityManager->persist(new ForYouNetworkExclusion($this->user, $network));
         }
     }
 

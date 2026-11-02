@@ -122,16 +122,17 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     /** Shared by the pager and the counts, so the sidebar number can never disagree with the list. */
     private function applyForYouCriteria(QueryBuilder $qb, int $userId): QueryBuilder
     {
-        return $qb
-            ->join('i.run', 'r')
+        $qb->join('i.run', 'r')
             ->join('i.entry', 'e')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('r.user = :user')
             ->andWhere('r.status = :completed')
-            ->andWhere('s.includeInForYou = true')
             ->andWhere($this->notDedupedByNewerRunDql())
             ->setParameter('user', $userId)
             ->setParameter('completed', RunStatus::Completed);
+        ForYouScopeDql::restrict($qb, EntryAliases::primary());
+
+        return $qb;
     }
 
     /**

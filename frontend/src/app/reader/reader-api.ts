@@ -273,6 +273,20 @@ export class ReaderApi {
     return this.http.delete<void>(`${this.base}/api/saved-searches/included-networks/${network}`);
   }
 
+  forYouExcludedNetworks(): Observable<{ excludedNetworks: SocialNetworkName[] }> {
+    return this.http.get<{ excludedNetworks: SocialNetworkName[] }>(
+      `${this.base}/api/for-you/excluded-networks`,
+    );
+  }
+
+  excludeNetworkFromForYou(network: SocialNetworkName): Observable<void> {
+    return this.http.put<void>(`${this.base}/api/for-you/excluded-networks/${network}`, null);
+  }
+
+  includeNetworkInForYou(network: SocialNetworkName): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/for-you/excluded-networks/${network}`);
+  }
+
   createSavedSearch(body: SavedSearchDraft): Observable<{ savedSearch: SavedSearchWire }> {
     return this.http.post<{ savedSearch: SavedSearchWire }>(
       `${this.base}/api/saved-searches`,

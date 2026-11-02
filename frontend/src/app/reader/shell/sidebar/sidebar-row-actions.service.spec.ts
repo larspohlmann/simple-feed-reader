@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { SocialNetworkName } from '../../../core/social-network';
+import { ForYouNetworksStore } from '../../state/for-you-networks.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
@@ -25,6 +26,7 @@ describe('SidebarRowActions', () => {
         { provide: ActionSheet, useValue: { open } },
         { provide: ManageActions, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: ForYouNetworksStore, useValue: {} },
         { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
       ],
     });
@@ -46,6 +48,9 @@ describe('SidebarRowActions', () => {
       handle: '@old.bsky.social',
       status: 'needs_reconnect' as const,
     };
+    const savedSearchesAction = (rows: SidebarRowActions) =>
+      rows.networkSurfaceActions(sectionOf([]))[0];
+    const forYouAction = (rows: SidebarRowActions) => rows.networkSurfaceActions(sectionOf([]))[1];
     const sectionOf = (networkAccounts: SocialSection['networkAccounts']): SocialSection => ({
       network: 'bluesky',
       accounts: [],
@@ -60,8 +65,12 @@ describe('SidebarRowActions', () => {
     const pickerOpen = jest.fn(() => of(undefined));
     const includedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set());
     const toggleNetwork = jest.fn();
+    const excludedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set());
+    const forYouToggle = jest.fn();
 
     beforeEach(() => {
+      forYouToggle.mockClear();
+      excludedNetworks.set(new Set());
       sheetOpen.mockClear();
       pickerOpen.mockClear();
       toggleNetwork.mockClear();
@@ -76,6 +85,10 @@ describe('SidebarRowActions', () => {
           {
             provide: SavedSearchesStore,
             useValue: { includedNetworks, toggleNetwork },
+          },
+          {
+            provide: ForYouNetworksStore,
+            useValue: { excludedNetworks, toggleNetwork: forYouToggle },
           },
           { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
         ],
@@ -106,6 +119,7 @@ describe('SidebarRowActions', () => {
           { id: '9', label: 'Manage feeds of @bob.bsky.social', disabled: false },
           { id: '4', label: 'Reconnect @old.bsky.social in settings', disabled: true },
           { id: 'savedSearches', label: 'Include in saved searches' },
+          { id: 'forYou', label: 'Exclude from For You' },
         ],
       });
       expect(pickerOpen).toHaveBeenCalledWith(bob);
@@ -124,7 +138,7 @@ describe('SidebarRowActions', () => {
       const rows = TestBed.inject(SidebarRowActions);
       rows.menuFor.set('social-bluesky');
 
-      rows.toggleNetworkInSavedSearches(sectionOf([]));
+      rows.toggleNetworkSurface(sectionOf([]), 'savedSearches');
 
       expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
       expect(rows.menuFor()).toBeNull();
@@ -132,16 +146,14 @@ describe('SidebarRowActions', () => {
 
     it('labels the network item by whether the network is included', () => {
       const rows = TestBed.inject(SidebarRowActions);
-      expect(rows.networkSavedSearchesAction(sectionOf([]))).toEqual({
+      expect(savedSearchesAction(rows)).toEqual({
         id: 'savedSearches',
         label: 'Include in saved searches',
       });
 
       includedNetworks.set(new Set(['bluesky']));
 
-      expect(rows.networkSavedSearchesAction(sectionOf([])).label).toBe(
-        'Exclude from saved searches',
-      );
+      expect(savedSearchesAction(rows).label).toBe('Exclude from saved searches');
     });
 
     it('offers to exclude an included network and excludes it on that choice', () => {
@@ -152,10 +164,48 @@ describe('SidebarRowActions', () => {
 
       expect(sheetOpen).toHaveBeenCalledWith(
         expect.objectContaining({
-          actions: [{ id: 'savedSearches', label: 'Exclude from saved searches' }],
+          actions: [
+            { id: 'savedSearches', label: 'Exclude from saved searches' },
+            { id: 'forYou', label: 'Exclude from For You' },
+          ],
         }),
       );
       expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
+    });
+
+    it('labels the network For you item by whether the network is excluded', () => {
+      const rows = TestBed.inject(SidebarRowActions);
+      expect(forYouAction(rows)).toEqual({
+        id: 'forYou',
+        label: 'Exclude from For You',
+      });
+
+      excludedNetworks.set(new Set(['bluesky']));
+
+      expect(forYouAction(rows).label).toBe('Show in For You');
+    });
+
+    it('toggles the network in For you and closes the menu', () => {
+      const rows = TestBed.inject(SidebarRowActions);
+      rows.menuFor.set('social-bluesky');
+
+      rows.toggleNetworkSurface(sectionOf([]), 'forYou');
+
+      expect(forYouToggle).toHaveBeenCalledWith('bluesky');
+      expect(rows.menuFor()).toBeNull();
+    });
+
+    it('the network sheet offers For you after saved searches and acts on it', () => {
+      sheetOpen.mockReturnValueOnce(of('forYou'));
+
+      TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([]));
+
+      expect(sheetOpen).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actions: expect.arrayContaining([expect.objectContaining({ id: 'forYou' })]),
+        }),
+      );
+      expect(forYouToggle).toHaveBeenCalledWith('bluesky');
     });
 
     it('closes the open menu when it opens the picker', () => {
@@ -196,6 +246,7 @@ describe('SidebarRowActions', () => {
           { provide: ActionSheet, useValue: { open: sheetOpen } },
           { provide: ManageActions, useValue: { reorderTags, editTag, deleteTag, createTag } },
           { provide: SavedSearchesStore, useValue: {} },
+          { provide: ForYouNetworksStore, useValue: {} },
           { provide: TagsStore, useValue: tagsStoreStub(tags) },
         ],
       });

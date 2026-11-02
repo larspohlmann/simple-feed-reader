@@ -11,18 +11,28 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SubscriptionDto, TagDto } from '../../models';
 import {
+  ExclusionSurface,
   FEED_FLAG_TOGGLES,
   FeedFlagToggle,
   feedFlagLabelKey,
   flipFeedFlag,
 } from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
+import { ForYouNetworksStore } from '../../state/for-you-networks.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { siblingIdsOf } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 
-const SAVED_SEARCHES_CHOICE = 'savedSearches';
+const TITLE_ORDER: readonly ExclusionSurface[] = ['forYou', 'savedSearches'];
+
+interface NetworkSurfaceSwitch {
+  readonly surface: ExclusionSurface;
+  readonly isExcluded: (network: SocialSection['network']) => boolean;
+  readonly toggle: (network: SocialSection['network']) => void;
+  readonly excludeKey: string;
+  readonly includeKey: string;
+}
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
  *  on the sidebar, so all rows share one open menu and a late sheet choice dies
@@ -34,8 +44,26 @@ export class SidebarRowActions {
   private readonly transloco = inject(TranslocoService);
   private readonly picker = inject(SocialFeedsPicker);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly forYouNetworks = inject(ForYouNetworksStore);
   private readonly tags = inject(TagsStore);
   private readonly destroyRef = inject(DestroyRef);
+
+  private readonly networkSurfaceSwitches: readonly NetworkSurfaceSwitch[] = [
+    {
+      surface: 'savedSearches',
+      isExcluded: (network) => !this.savedSearches.includedNetworks().has(network),
+      toggle: (network) => this.savedSearches.toggleNetwork(network),
+      excludeKey: 'reader.excludeNetworkFromSavedSearches',
+      includeKey: 'reader.includeNetworkInSavedSearches',
+    },
+    {
+      surface: 'forYou',
+      isExcluded: (network) => this.forYouNetworks.excludedNetworks().has(network),
+      toggle: (network) => this.forYouNetworks.toggleNetwork(network),
+      excludeKey: 'reader.excludeFromForYou',
+      includeKey: 'reader.includeInForYou',
+    },
+  ];
 
   readonly menuFor = signal<string | null>(null);
 
@@ -158,12 +186,14 @@ export class SidebarRowActions {
     this.sheet
       .open({
         title: this.transloco.translate(`settings.social.${section.network}`),
-        actions: [...this.socialAccountActions(section), this.networkSavedSearchesAction(section)],
+        actions: [...this.socialAccountActions(section), ...this.networkSurfaceActions(section)],
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        if (choice === SAVED_SEARCHES_CHOICE) {
-          this.toggleNetworkInSavedSearches(section);
+        const surfaceSwitch = this.switchFor(choice);
+        if (surfaceSwitch) {
+          surfaceSwitch.toggle(section.network);
+          this.closeMenu();
           return;
         }
         const account = section.networkAccounts.find(({ id }) => String(id) === choice);
@@ -171,22 +201,32 @@ export class SidebarRowActions {
       });
   }
 
-  /** The network head's saved-searches item, for its sheet and its menu alike. */
-  networkSavedSearchesAction(section: SocialSection): ActionSheetAction {
-    const included = this.savedSearches.includedNetworks().has(section.network);
-    return {
-      id: SAVED_SEARCHES_CHOICE,
+  /** The network head's surface items (saved searches, For you), for its sheet and its menu alike. */
+  networkSurfaceActions(section: SocialSection): ActionSheetAction[] {
+    return this.networkSurfaceSwitches.map((surfaceSwitch) => ({
+      id: surfaceSwitch.surface,
       label: this.transloco.translate(
-        included
-          ? 'reader.excludeNetworkFromSavedSearches'
-          : 'reader.includeNetworkInSavedSearches',
+        surfaceSwitch.isExcluded(section.network)
+          ? surfaceSwitch.includeKey
+          : surfaceSwitch.excludeKey,
       ),
-    };
+    }));
   }
 
-  toggleNetworkInSavedSearches(section: SocialSection): void {
-    this.savedSearches.toggleNetwork(section.network);
+  toggleNetworkSurface(section: SocialSection, surface: string): void {
+    this.switchFor(surface)?.toggle(section.network);
     this.closeMenu();
+  }
+
+  private switchFor(surface: string | undefined): NetworkSurfaceSwitch | undefined {
+    return this.networkSurfaceSwitches.find((surfaceSwitch) => surfaceSwitch.surface === surface);
+  }
+
+  networkExcludedSurfaces(network: SocialSection['network']): ExclusionSurface[] {
+    return this.networkSurfaceSwitches
+      .filter((surfaceSwitch) => surfaceSwitch.isExcluded(network))
+      .map(({ surface }) => surface)
+      .sort((left, right) => TITLE_ORDER.indexOf(left) - TITLE_ORDER.indexOf(right));
   }
 
   toggleFeedFlag(toggle: FeedFlagToggle, subscription: SubscriptionDto): void {

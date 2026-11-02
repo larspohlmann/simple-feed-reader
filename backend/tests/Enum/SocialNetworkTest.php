@@ -16,6 +16,13 @@ final class SocialNetworkTest extends TestCase
         self::assertSame('Mastodon', SocialNetwork::Mastodon->displayName());
     }
 
+    public function testNetworksListTheirWireValues(): void
+    {
+        $networks = [SocialNetwork::Mastodon, SocialNetwork::Bluesky];
+
+        self::assertSame(['mastodon', 'bluesky'], SocialNetwork::valuesOf($networks));
+    }
+
     public function testARequestValueNamesItsNetwork(): void
     {
         self::assertSame(SocialNetwork::Mastodon, SocialNetwork::fromRequestValue('mastodon'));

@@ -54,6 +54,7 @@ final readonly class RecommendationCandidateRepository
         $qb = $this->candidateQueryBuilder($userId)
             ->andWhere('e.id IN (:ids)')
             ->setParameter('ids', $entryIds);
+        ForYouScopeDql::restrict($qb, EntryAliases::primary());
 
         return $this->titledEntries($qb);
     }
@@ -65,13 +66,14 @@ final readonly class RecommendationCandidateRepository
      */
     public function span(int $userId, array $entryIds): array
     {
-        /** @var array{total: int, oldest: ?string, newest: ?string} $row */
-        $row = $this->candidateQueryBuilder($userId)
+        $qb = $this->candidateQueryBuilder($userId)
             ->select('COUNT(e.id) AS total', 'MIN(e.effectiveDate) AS oldest', 'MAX(e.effectiveDate) AS newest')
             ->andWhere('e.id IN (:ids)')
-            ->setParameter('ids', $entryIds)
-            ->getQuery()
-            ->getSingleResult();
+            ->setParameter('ids', $entryIds);
+        ForYouScopeDql::restrict($qb, EntryAliases::primary());
+
+        /** @var array{total: int, oldest: ?string, newest: ?string} $row */
+        $row = $qb->getQuery()->getSingleResult();
 
         return $row;
     }
@@ -79,14 +81,14 @@ final readonly class RecommendationCandidateRepository
     /** Shared by the outer query and the collapse semi-join, so the two cannot drift apart. */
     private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
     {
-        $inner->andWhere(\sprintf('%s.includeInForYou = true', $aliases->subscription))
-            ->andWhere(\sprintf(
-                '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
-                . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
-                . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)',
-                $aliases->state,
-            ))
-            ->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
+        ForYouScopeDql::restrict($inner, $aliases);
+        $inner->andWhere(\sprintf(
+            '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
+            . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
+            . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)',
+            $aliases->state,
+        ));
+        $inner->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
     }
 
     private function candidateQueryBuilder(int $userId): QueryBuilder
@@ -96,7 +98,6 @@ final readonly class RecommendationCandidateRepository
             ->from(Entry::class, 'e')
             ->join('e.feed', 'f')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->andWhere('s.includeInForYou = true')
             ->setParameter('user', $userId);
     }
 

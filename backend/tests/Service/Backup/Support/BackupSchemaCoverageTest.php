@@ -14,6 +14,7 @@ use App\Entity\EntryCategory;
 use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
+use App\Entity\ForYouNetworkExclusion;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\KnownSocialCollection;
@@ -240,6 +241,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'regenerates it from the new id once the flush that assigns that id has run.',
         ],
         SavedSearchNetworkInclusion::class => [
+            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+        ],
+        ForYouNetworkExclusion::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
         Feed::class => [

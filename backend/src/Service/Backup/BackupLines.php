@@ -17,6 +17,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\BackupTotals;
+use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupSchema;
@@ -55,20 +56,15 @@ final readonly class BackupLines
         ]);
     }
 
-    /**
-     * @param list<SocialNetwork> $savedSearchIncludedNetworks
-     */
-    public function accountLine(User $user, array $savedSearchIncludedNetworks): string
+    public function accountLine(User $user, AccountNetworkSwitchesModel $networks): string
     {
         return $this->encode([
             'kind' => BackupSchema::KIND_ACCOUNT,
             'locale' => $user->getLocale(),
             'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
             'magazineStyle' => $user->getPreferences()->getMagazineStyle()->value,
-            'savedSearchIncludedNetworks' => array_map(
-                static fn (SocialNetwork $network): string => $network->value,
-                $savedSearchIncludedNetworks,
-            ),
+            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($networks->savedSearchIncludedNetworks),
+            'forYouExcludedNetworks' => SocialNetwork::valuesOf($networks->forYouExcludedNetworks),
         ]);
     }
 

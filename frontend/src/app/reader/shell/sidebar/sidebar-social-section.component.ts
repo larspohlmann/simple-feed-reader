@@ -8,8 +8,7 @@ import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
-import { exclusionTitle } from '../../feed-exclusions';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
+import { ExclusionSurface, exclusionTitle } from '../../feed-exclusions';
 import { SocialSection } from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -44,7 +43,6 @@ export class SidebarSocialSectionComponent {
 
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
-  private readonly savedSearches = inject(SavedSearchesStore);
   private readonly i18n = inject(TranslocoService);
   private readonly dictionary = inject(ActiveDictionary);
 
@@ -65,12 +63,13 @@ export class SidebarSocialSectionComponent {
   );
   protected readonly selectionQueryParams = selectionQueryParams;
 
-  protected readonly networkExcluded = computed(
-    () => !this.savedSearches.includedNetworks().has(this.section().network),
+  private readonly networkExcludedSurfaces = computed<ExclusionSurface[]>(() =>
+    this.rows.networkExcludedSurfaces(this.section().network),
   );
+  protected readonly networkExcluded = computed(() => this.networkExcludedSurfaces().length > 0);
   protected readonly networkExclusionTitle = computed(() => {
     this.dictionary.loaded();
-    return exclusionTitle(this.i18n, ['savedSearches']);
+    return exclusionTitle(this.i18n, this.networkExcludedSurfaces());
   });
 
   protected readonly menuKey = computed(() => `social-${this.section().network}`);

@@ -10,9 +10,9 @@ import { ActionSheetAction } from '../../../shared/action-sheet/action-sheet.com
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { LayoutService } from '../../layout.service';
 import { SubscriptionDto } from '../../models';
+import { ExclusionSurface } from '../../feed-exclusions';
 import { Selection } from '../../query/query';
 import { SocialNetworkName } from '../../../core/social-network';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -70,6 +70,14 @@ const INCLUDE_NETWORK_ACTION: ActionSheetAction = {
   label: 'Include in saved searches',
 };
 let networkAction = INCLUDE_NETWORK_ACTION;
+const forYouNetworksStore = {
+  excludedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set()),
+};
+
+const savedSearchesStore = {
+  includedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set()),
+};
+
 const rowActions = {
   menuFor: signal<string | null>(null),
   toggleMenu: jest.fn(),
@@ -78,12 +86,17 @@ const rowActions = {
   openSocialSheet: jest.fn(),
   socialAccountActions: jest.fn(() => socialActions),
   manageSocialFeeds: jest.fn(),
-  networkSavedSearchesAction: jest.fn(() => networkAction),
-  toggleNetworkInSavedSearches: jest.fn(),
-};
-
-const savedSearchesStore = {
-  includedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set()),
+  networkSurfaceActions: jest.fn(() => [
+    networkAction,
+    { id: 'forYou', label: 'Exclude from For You' },
+  ]),
+  toggleNetworkSurface: jest.fn(),
+  networkExcludedSurfaces: (network: SocialNetworkName): ExclusionSurface[] => {
+    const surfaces: ExclusionSurface[] = [];
+    if (forYouNetworksStore.excludedNetworks().has(network)) surfaces.push('forYou');
+    if (!savedSearchesStore.includedNetworks().has(network)) surfaces.push('savedSearches');
+    return surfaces;
+  },
 };
 
 function mount(
@@ -102,7 +115,6 @@ function mount(
       { provide: LayoutService, useValue: { isCoarse: signal(coarse), isNarrow: signal(false) } },
       { provide: ManageActions, useValue: {} },
       { provide: SidebarRowActions, useValue: rowActions },
-      { provide: SavedSearchesStore, useValue: savedSearchesStore },
     ],
   });
   const fixture = TestBed.createComponent(SidebarSocialSectionComponent);
@@ -120,6 +132,7 @@ describe('SidebarSocialSectionComponent', () => {
     localStorage.clear();
     rowActions.menuFor.set(null);
     savedSearchesStore.includedNetworks.set(new Set());
+    forYouNetworksStore.excludedNetworks.set(new Set());
     socialActions = LONE_ACCOUNT_ACTIONS;
     networkAction = INCLUDE_NETWORK_ACTION;
     jest.clearAllMocks();
@@ -418,6 +431,21 @@ describe('SidebarSocialSectionComponent', () => {
       expect(marker.textContent).toContain('visibility_off');
     });
 
+    it('names For You alone when only For you leaves the network out', () => {
+      savedSearchesStore.includedNetworks.set(new Set(['bluesky']));
+      forYouNetworksStore.excludedNetworks.set(new Set(['bluesky']));
+      const marker = headSlot(mount(ONE_ACCOUNT)).querySelector('.feed-exclusion-marker')!;
+
+      expect(marker.getAttribute('title')).toBe('Hidden from For you');
+    });
+
+    it('names both surfaces when the network is out of For you and saved searches', () => {
+      forYouNetworksStore.excludedNetworks.set(new Set(['bluesky']));
+      const marker = headSlot(mount(ONE_ACCOUNT)).querySelector('.feed-exclusion-marker')!;
+
+      expect(marker.getAttribute('title')).toBe('Hidden from For you, Saved searches');
+    });
+
     it('re-titles the mark when the language switches', () => {
       const fixture = mount(ONE_ACCOUNT);
       TestBed.inject(TranslocoService).setActiveLang('de');
@@ -527,6 +555,7 @@ describe('SidebarSocialSectionComponent', () => {
         ['Manage feeds of @alice.bsky.social', false],
         ['Reconnect @bob.bsky.social in settings', true],
         ['Include in saved searches', false],
+        ['Exclude from For You', false],
       ]);
     });
 
@@ -538,6 +567,7 @@ describe('SidebarSocialSectionComponent', () => {
 
       expect(itemsOf(fixture).map((item) => item.textContent?.trim())).toEqual([
         'Include in saved searches',
+        'Exclude from For You',
       ]);
     });
 
@@ -546,12 +576,12 @@ describe('SidebarSocialSectionComponent', () => {
       rowActions.menuFor.set('social-bluesky');
       fixture.detectChanges();
 
-      const item = itemsOf(fixture).at(-1) as HTMLButtonElement;
+      const item = itemsOf(fixture).at(-2) as HTMLButtonElement;
       expect(item.textContent?.trim()).toBe('Include in saved searches');
       item.click();
 
-      expect(rowActions.networkSavedSearchesAction).toHaveBeenCalledWith(ONE_ACCOUNT);
-      expect(rowActions.toggleNetworkInSavedSearches).toHaveBeenCalledWith(ONE_ACCOUNT);
+      expect(rowActions.networkSurfaceActions).toHaveBeenCalledWith(ONE_ACCOUNT);
+      expect(rowActions.toggleNetworkSurface).toHaveBeenCalledWith(ONE_ACCOUNT, 'savedSearches');
     });
 
     it('shows the exclude label the row actions give an included network', () => {
@@ -560,9 +590,21 @@ describe('SidebarSocialSectionComponent', () => {
       rowActions.menuFor.set('social-bluesky');
       fixture.detectChanges();
 
-      expect((itemsOf(fixture).at(-1) as HTMLElement).textContent?.trim()).toBe(
+      expect((itemsOf(fixture).at(-2) as HTMLElement).textContent?.trim()).toBe(
         'Exclude from saved searches',
       );
+    });
+
+    it('lists the For you item last and switches the network on a click', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
+
+      const item = itemsOf(fixture).at(-1) as HTMLButtonElement;
+      expect(item.textContent?.trim()).toBe('Exclude from For You');
+      item.click();
+
+      expect(rowActions.toggleNetworkSurface).toHaveBeenCalledWith(ONE_ACCOUNT, 'forYou');
     });
 
     const profileSection = (subscription: SubscriptionDto): SocialSection => ({

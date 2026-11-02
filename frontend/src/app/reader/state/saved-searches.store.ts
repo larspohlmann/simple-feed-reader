@@ -5,11 +5,7 @@ import { SavedSearchDraft } from '../saved-search-api-shapes';
 import { countsAreStale } from './sidebar-freshness';
 import { SavedSearchDto, SavedSearchWire } from '../models';
 import { SocialNetworkName } from '../../core/social-network';
-
-const sameMembers = (
-  left: ReadonlySet<SocialNetworkName>,
-  right: ReadonlySet<SocialNetworkName>,
-): boolean => left.size === right.size && [...left].every((network) => right.has(network));
+import { sameMembers } from './same-members';
 
 /** The user's saved searches, newest first, each with a live unread-match
  *  count. load() re-syncs the whole set -- the hook the shell calls after every
