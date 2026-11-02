@@ -1,0 +1,152 @@
+<app-article-layer
+  [fullscreen]="fullscreen()"
+  [resetKey]="source.key()"
+  [progressRail]="progressRail"
+  [withTail]="scope.hasTail()"
+  [backLabel]="backLabel()"
+  (close)="close.emit()"
+  (scrolled)="onScroll($event)"
+  (toTop)="scrollToTop()"
+  (barResized)="scope.refresh()"
+>
+  <ng-container articleMini>
+    @if (source.favicon(); as icon) {
+      <app-favicon [url]="icon.url" [avatarUrl]="icon.avatarUrl" [size]="14" />
+    }
+    <span class="mini-title">{{ source.title() }}</span>
+  </ng-container>
+  @if (!fullscreen()) {
+    <!-- The split pane's toolbar never retracts, so the nameplate rides
+         inside it rather than in the full-screen strip of its own.
+         aria-hidden: the h1 carries the same title, so announcing this too
+         would read the headline twice. -->
+    <span articleBar class="bar-name" aria-hidden="true">
+      @if (source.favicon(); as icon) {
+        <app-favicon [url]="icon.url" [avatarUrl]="icon.avatarUrl" [size]="18" />
+      }
+      <span class="bar-title">{{ source.nameplate() }}</span>
+    </span>
+  }
+  <div articleBar class="nav">
+    <ng-content select="[pageBarLead]" />
+    @if (source.canRefresh()) {
+      <button
+        appListAction
+        class="mobile-icon-only"
+        type="button"
+        [attr.aria-label]="'reader.refreshArticle' | transloco"
+        (click)="source.reload()"
+      >
+        <app-icon name="refresh" size="sm" />
+        <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
+      </button>
+    }
+    @if (source.url(); as url) {
+      <app-share-button [url]="url" [title]="source.shareTitle()" />
+    }
+    <ng-content select="[pageBarFlags]" />
+  </div>
+  <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
+    <div class="title-row">
+      <h1 class="title" [class.sr-only]="source.titleHidden()" #titleHeading tabindex="-1">
+        {{ source.title() }}
+      </h1>
+    </div>
+    <p class="meta">
+      <ng-content select="[pageByline]" />
+      @if (readingMinutes(); as minutes) {
+        · {{ 'reader.readingTime' | transloco: { minutes } }}
+      }
+      @if (source.url(); as url) {
+        ·
+        <a [href]="url" target="_blank" rel="noopener noreferrer" (click)="openOriginal.emit()"
+          >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
+        /></a>
+      }
+      <ng-content select="[pageMetaTail]" />
+    </p>
+    <ng-content select="[pageHead]" />
+    @if (source.readingAids) {
+      <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
+    }
+    @if (!source.loading()) {
+      @if (source.paywall(); as paywall) {
+        <app-paywall-notice class="paywall-note" [url]="paywall.url" />
+      }
+      @if (source.failure(); as failure) {
+        @if (failure.quiet) {
+          <p class="reader-fallback-quiet">
+            {{ failure.messageKey | transloco }}
+            <button type="button" class="note-link reads-as-text" (click)="source.reload()">
+              {{ 'reader.retry' | transloco }}
+            </button>
+          </p>
+        } @else {
+          <app-warning-box class="reader-fallback">
+            <span class="warning-glyph" aria-hidden="true">⚠</span>
+            <div class="warning-text">
+              <p class="reader-note">
+                {{ failure.messageKey | transloco }}
+                <button type="button" class="note-link reads-as-text" (click)="source.reload()">
+                  {{ 'reader.retry' | transloco }}
+                </button>
+              </p>
+              @if (failure.detail; as detail) {
+                <details class="reader-error">
+                  <summary>{{ 'reader.showError' | transloco }}</summary>
+                  <pre>{{ detail }}</pre>
+                </details>
+              }
+            </div>
+          </app-warning-box>
+        }
+      }
+      <ng-container [ngTemplateOutlet]="notices()" />
+      @if (source.lead(); as image) {
+        <!-- Width/height carry the aspect ratio so the article doesn't jump;
+             `height: auto` keeps it from overriding the fluid layout. -->
+        <img
+          appProxiedImage
+          class="lead-image"
+          [src]="image.url"
+          [attr.width]="image.width"
+          [attr.height]="image.height"
+          (imageFailed)="source.dropLead()"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+        />
+      }
+      @if (source.failure()?.offersOriginal) {
+        @if (source.url(); as url) {
+          <a class="open-original" [href]="url" target="_blank" rel="noopener noreferrer"
+            >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="sm"
+          /></a>
+        }
+      }
+      @if (source.body(); as body) {
+        @let audio = source.bodyAudio();
+        <app-article-content
+          [html]="body.html"
+          [pageUrl]="body.pageUrl"
+          [enclosureUrl]="audio?.enclosureUrl ?? null"
+          [chapters]="audio?.chapters ?? []"
+          [audioTrack]="audio?.track ?? null"
+          [origin]="audio?.origin ?? null"
+          (decorated)="onDecorated($event)"
+        />
+      }
+      <ng-container [ngTemplateOutlet]="afterBody()" />
+    }
+    <ng-container [ngTemplateOutlet]="footer()" />
+  </article>
+  <app-selection-share articleDock [url]="source.url()" [title]="source.shareTitle()" />
+  <!-- Laid over the whole pane while an article loads or refetches, in place
+       of a line of text — the same overlay the feed list raises on reload. -->
+  <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
+  @if (cornerShareUrl(); as url) {
+    <app-share-button articleCorner appearance="corner" [url]="url" [title]="source.shareTitle()" />
+  }
+  <ng-container articleCorner><ng-content select="[pageCorner]" /></ng-container>
+</app-article-layer>
