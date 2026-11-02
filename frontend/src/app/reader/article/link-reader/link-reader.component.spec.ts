@@ -51,6 +51,7 @@ describe('LinkReaderComponent', () => {
   };
 
   beforeEach(() => {
+    sessionStorage.clear();
     installMockResizeObserver();
     replies = new Subject<ReaderContent>();
     loadTarget = jest.fn(() => replies);
@@ -320,8 +321,6 @@ describe('LinkReaderComponent', () => {
       await settle(fixture);
 
       expect(scroll.top).toBe(900);
-      sessionStorage.clear();
-      fixture.destroy();
     });
   });
 
