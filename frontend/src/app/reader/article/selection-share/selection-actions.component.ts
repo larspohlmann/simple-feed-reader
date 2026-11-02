@@ -21,12 +21,12 @@ export class SelectionActionsComponent {
   readonly url = input.required<string>();
   readonly title = input('');
 
-  private readonly selection = inject(ArticleSelection);
   private readonly postActions = inject(PostActions);
   protected readonly networks = inject(PostNetworks).connected;
+  protected readonly remembered = inject(ArticleSelection).remembered;
 
   protected post(network: SocialNetworkName): void {
     const page = sharedPage(this.url(), this.title());
-    this.postActions.postLink(network, sharedLink(page, this.selection.remembered()));
+    this.postActions.postLink(network, sharedLink(page, this.remembered()));
   }
 }

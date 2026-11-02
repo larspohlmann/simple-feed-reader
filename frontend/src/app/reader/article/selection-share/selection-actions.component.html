@@ -11,5 +11,10 @@
       <app-network-logo [network]="entry.network" />
     </button>
   }
-  <app-share-button appearance="compact" [url]="url()" [title]="title()" />
+  <app-share-button
+    appearance="compact"
+    [url]="url()"
+    [title]="title()"
+    [offeredQuote]="remembered()"
+  />
 </div>

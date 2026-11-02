@@ -475,13 +475,18 @@ describe('ShareButtonComponent', () => {
     );
   });
 
-  describe('as a compact trigger in an article, on a coarse pointer', () => {
+  describe('handed a quote by its host, on a coarse pointer', () => {
     beforeEach(() => inArticle(true, 'compact'));
 
     const sheetData = (): ActionSheetData => sheet.open.mock.calls[0][0] as ActionSheetData;
 
-    it('opens the sheet in quote mode from the remembered selection', () => {
-      selection.remembered.set(QUOTE);
+    function offer(quote: SelectedQuote | null): void {
+      fixture.componentRef.setInput('offeredQuote', quote);
+      fixture.detectChanges();
+    }
+
+    it('opens the sheet in quote mode from the offered quote', () => {
+      offer(QUOTE);
       press();
 
       const actions = sheetData().actions as ActionSheetAction[];
@@ -490,8 +495,8 @@ describe('ShareButtonComponent', () => {
       expect(actions.find((action) => action.label === 'X')?.hint).toBe('(link only)');
     });
 
-    it('opens the composer on the remembered quote', () => {
-      selection.remembered.set(QUOTE);
+    it('opens the composer on the offered quote', () => {
+      offer(QUOTE);
       press();
 
       chosen.next('post-bluesky');
@@ -501,6 +506,14 @@ describe('ShareButtonComponent', () => {
         title: 'First',
         quote: 'One two three',
       });
+    });
+
+    it('shares the link when its host offers no quote, whatever is selected', () => {
+      selection.quote.set(QUOTE);
+      offer(null);
+      press();
+
+      expect(sheetData().title).toBe('Share');
     });
   });
 

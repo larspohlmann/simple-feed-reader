@@ -84,6 +84,8 @@ export class ShareButtonComponent {
   readonly url = input.required<string>();
   readonly title = input('');
   readonly appearance = input<ShareButtonAppearance>('toolbar');
+  /** Unset, the live selection is shared; a host that remembers the quote passes it, or null for none. */
+  readonly offeredQuote = input<SelectedQuote | null | undefined>(undefined);
 
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
@@ -146,10 +148,9 @@ export class ShareButtonComponent {
   }
 
   private selectedQuote(): SelectedQuote | null {
-    if (this.selection === null) return null;
-    return this.appearance() === 'compact' && this.screen.isCoarse()
-      ? this.selection.remembered()
-      : this.selection.quote();
+    const offered = this.offeredQuote();
+    if (offered !== undefined) return offered;
+    return this.selection?.quote() ?? null;
   }
 
   private page(): SharedPage {
