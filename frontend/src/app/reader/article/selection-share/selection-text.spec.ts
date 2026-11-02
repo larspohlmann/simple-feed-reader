@@ -65,6 +65,67 @@ describe('selectionText', () => {
   });
 });
 
+describe('selectionText at word boundaries', () => {
+  let body: HTMLElement;
+
+  beforeEach(() => {
+    body = document.createElement('div');
+    document.body.append(body);
+  });
+
+  afterEach(() => body.remove());
+
+  function rangeOver(html: string, startOffset: number, endOffset: number): Range {
+    body.innerHTML = html;
+    const text = body.querySelector('p')!.firstChild as Text;
+    const range = document.createRange();
+    range.setStart(text, startOffset);
+    range.setEnd(text, endOffset);
+    return range;
+  }
+
+  it('widens a start inside a word back to the start of the word', () => {
+    const range = rangeOver('<p>Alpha bravo charlie delta</p>', 8, 19);
+
+    expect(selectionText(range).text).toBe('bravo charlie');
+  });
+
+  it('widens an end inside a word forward to the end of the word', () => {
+    const range = rangeOver('<p>Alpha bravo charlie delta</p>', 6, 16);
+
+    expect(selectionText(range).text).toBe('bravo charlie');
+  });
+
+  it('keeps an apostrophe and Unicode letters inside a word', () => {
+    const range = rangeOver("<p>Der Bär hat children's Bücher</p>", 9, 26);
+
+    expect(selectionText(range).text).toBe("hat children's Bücher");
+  });
+
+  it('leaves whole words unchanged', () => {
+    const range = rangeOver('<p>Alpha bravo charlie delta</p>', 6, 19);
+
+    expect(selectionText(range).text).toBe('bravo charlie');
+  });
+
+  it('leaves a boundary at the edge of its element unchanged', () => {
+    body.innerHTML = '<p>Alpha<em>bravo</em> charlie</p>';
+    const range = document.createRange();
+    range.setStart(body.querySelector('em')!.firstChild!, 0);
+    range.setEnd(body.querySelector('p')!.lastChild!, 8);
+
+    expect(selectionText(range).text).toBe('bravo charlie');
+  });
+
+  it('never moves the live range', () => {
+    const range = rangeOver('<p>Alpha bravo charlie delta</p>', 8, 16);
+
+    selectionText(range);
+
+    expect([range.startOffset, range.endOffset]).toEqual([8, 16]);
+  });
+});
+
 describe('wordsOf', () => {
   it('splits at any whitespace', () => {
     expect(wordsOf('  one two\nthree ')).toEqual(['one', 'two', 'three']);

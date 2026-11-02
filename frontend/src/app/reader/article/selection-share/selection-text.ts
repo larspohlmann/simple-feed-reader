@@ -30,6 +30,8 @@ const BLOCKS = new Set([
   'TR',
   'UL',
 ]);
+const LETTER_OR_DIGIT = /^[\p{L}\p{N}]$/u;
+const APOSTROPHE = /^['\u2019]$/;
 const SILENT = new Set(['BUTTON', 'NOSCRIPT', 'SCRIPT', 'STYLE', 'TEMPLATE']);
 
 export interface SelectionText {
@@ -39,13 +41,53 @@ export interface SelectionText {
 
 export function selectionText(range: Range): SelectionText {
   return {
-    text: normalisedLines(textOf(range.cloneContents())),
+    text: normalisedLines(textOf(wholeWords(range).cloneContents())),
     singleBlock: blockOf(range.startContainer) === blockOf(range.endContainer),
   };
 }
 
 export function wordsOf(text: string): string[] {
   return text.split(/\s+/).filter((word) => word !== '');
+}
+
+function wholeWords(range: Range): Range {
+  const widened = range.cloneRange();
+  const { startContainer, startOffset, endContainer, endOffset } = range;
+  if (startContainer instanceof Text) {
+    widened.setStart(startContainer, wordStart(startContainer.data, startOffset));
+  }
+  if (endContainer instanceof Text) {
+    widened.setEnd(endContainer, wordEnd(endContainer.data, endOffset));
+  }
+  return widened;
+}
+
+function wordStart(text: string, offset: number): number {
+  if (!insideWord(text, offset)) return offset;
+  let start = offset;
+  while (isWordAt(text, start - 1)) start--;
+  return start;
+}
+
+function wordEnd(text: string, offset: number): number {
+  if (!insideWord(text, offset)) return offset;
+  let end = offset;
+  while (isWordAt(text, end)) end++;
+  return end;
+}
+
+function insideWord(text: string, offset: number): boolean {
+  return isWordAt(text, offset - 1) && isWordAt(text, offset);
+}
+
+function isWordAt(text: string, index: number): boolean {
+  const character = text.charAt(index);
+  if (LETTER_OR_DIGIT.test(character)) return true;
+  return (
+    APOSTROPHE.test(character) &&
+    LETTER_OR_DIGIT.test(text.charAt(index - 1)) &&
+    LETTER_OR_DIGIT.test(text.charAt(index + 1))
+  );
 }
 
 function textOf(node: Node): string {
