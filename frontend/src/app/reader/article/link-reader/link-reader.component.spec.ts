@@ -16,6 +16,7 @@ import { ListAutoplayService } from '../../../core/preferences/list-autoplay.ser
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
+import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -276,7 +277,10 @@ describe('LinkReaderComponent', () => {
     }
 
     function quoteOf(fixture: ComponentFixture<LinkReaderComponent>) {
-      return fixture.debugElement.injector.get(ArticleSelection).quote();
+      return fixture.debugElement
+        .query(By.directive(ArticlePageComponent))
+        .injector.get(ArticleSelection)
+        .quote();
     }
 
     it('quotes words selected in the page body', () => {
@@ -313,7 +317,9 @@ describe('LinkReaderComponent', () => {
       routeState.linkTarget.set({ ...FIRST_LINK });
       fixture.detectChanges();
 
-      const selection = fixture.debugElement.injector.get(ArticleSelection);
+      const selection = fixture.debugElement
+        .query(By.directive(ArticlePageComponent))
+        .injector.get(ArticleSelection);
       expect(selection.remembered()?.text).toBe('Linked page words');
       elementOf(fixture).remove();
     });

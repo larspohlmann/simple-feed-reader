@@ -55,6 +55,7 @@ import { ArticlePageSlotDirective, ArticlePageSlotName } from './article-page-sl
     ShareButtonComponent,
     SelectionShareComponent,
   ],
+  providers: [ReadingScope, ArticleSelection, ArticleScrollRestore],
   templateUrl: './article-page.component.html',
   styleUrl: './article-page.component.scss',
 })

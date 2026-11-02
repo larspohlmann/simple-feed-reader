@@ -17,7 +17,6 @@ import {
   ArticlePageSource,
 } from '../article-page/article-page-source';
 
-/** The open entry as an article page. */
 @Injectable()
 export class EntryArticlePage implements ArticlePageSource {
   private readonly article = inject(ArticleSource);
