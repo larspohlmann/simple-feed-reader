@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   computed,
   effect,
   inject,
@@ -9,7 +8,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -91,7 +89,6 @@ export class ShareButtonComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly postActions = inject(PostActions);
   private readonly selection = inject(ArticleSelection, { optional: true });
   private readonly networks = inject(PostNetworks).connected;
@@ -150,7 +147,9 @@ export class ShareButtonComponent {
 
   private selectedQuote(): SelectedQuote | null {
     if (this.selection === null) return null;
-    return this.screen.isCoarse() ? this.selection.remembered() : this.selection.quote();
+    return this.appearance() === 'compact' && this.screen.isCoarse()
+      ? this.selection.remembered()
+      : this.selection.quote();
   }
 
   private page(): SharedPage {
@@ -170,13 +169,13 @@ export class ShareButtonComponent {
       : this.i18n.translate('reader.share.pickAccount');
   }
 
+  /** Not bound to this component's life: the sheet outlives a trigger in the phone bar, and `closed` completes. */
   private openSheet(): void {
     this.sheet
       .open({
         title: this.sheetTitle(),
         actions: this.items().map((item) => this.sheetItem(item)),
       })
-      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => this.chooseById(choice));
   }
 

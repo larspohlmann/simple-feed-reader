@@ -304,6 +304,19 @@ describe('ShareButtonComponent', () => {
         quote: null,
       });
     });
+
+    it('still acts on the choice when the trigger is gone before the sheet closes', () => {
+      press();
+      fixture.destroy();
+
+      chosen.next('post-bluesky');
+
+      expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
+        url: 'https://example.com/a?id=1',
+        title: 'First',
+        quote: null,
+      });
+    });
   });
 
   const QUOTE: SelectedQuote = { text: 'One two three', words: 3, anchorable: true };
@@ -313,11 +326,11 @@ describe('ShareButtonComponent', () => {
     remembered: signal<SelectedQuote | null>(null),
   };
 
-  function inArticle(coarse: boolean): void {
+  function inArticle(coarse: boolean, appearance: ShareButtonAppearance = 'toolbar'): void {
     selection.quote.set(null);
     selection.remembered.set(null);
     selectionProviders = [{ provide: ArticleSelection, useValue: selection }];
-    mount(coarse);
+    mount(coarse, 'First', appearance);
   }
 
   describe('outside an article', () => {
@@ -429,17 +442,43 @@ describe('ShareButtonComponent', () => {
   });
 
   describe('in an article, on a coarse pointer', () => {
-    beforeEach(() => inArticle(true));
-
     const sheetData = (): ActionSheetData => sheet.open.mock.calls[0][0] as ActionSheetData;
 
-    it('puts the hint on the sheet as a note under the network entries', () => {
-      press();
+    describe.each<ShareButtonAppearance>(['toolbar', 'corner'])(
+      'as the %s trigger',
+      (appearance) => {
+        beforeEach(() => inArticle(true, appearance));
 
-      expect(sheetData().actions[2]).toEqual({
-        note: 'Select text in the article to share it as a quote',
-      });
-    });
+        it('puts the hint on the sheet as a note under the network entries', () => {
+          press();
+
+          expect(sheetData().actions[2]).toEqual({
+            note: 'Select text in the article to share it as a quote',
+          });
+        });
+
+        it('shares the link once the selection is gone, whatever is remembered', () => {
+          selection.remembered.set(QUOTE);
+          press();
+
+          expect(sheetData().title).toBe('Share');
+        });
+
+        it('quotes the live selection', () => {
+          selection.quote.set(QUOTE);
+          selection.remembered.set(QUOTE);
+          press();
+
+          expect(sheetData().title).toBe('“One two three”');
+        });
+      },
+    );
+  });
+
+  describe('as a compact trigger in an article, on a coarse pointer', () => {
+    beforeEach(() => inArticle(true, 'compact'));
+
+    const sheetData = (): ActionSheetData => sheet.open.mock.calls[0][0] as ActionSheetData;
 
     it('opens the sheet in quote mode from the remembered selection', () => {
       selection.remembered.set(QUOTE);
