@@ -239,7 +239,10 @@
     <!-- Laid over the whole pane while an article loads or refetches, in place
          of a line of text — the same overlay the feed list raises on reload. -->
     <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
-    <app-article-corner-actions articleCorner [entry]="e" />
+    @if (e.url; as url) {
+      <app-share-button articleCorner appearance="corner" [url]="url" [title]="e.title" />
+    }
+    <app-entry-corner-flags articleCorner [entry]="e" />
   </app-article-layer>
 } @else {
   <div class="placeholder text-scaled">

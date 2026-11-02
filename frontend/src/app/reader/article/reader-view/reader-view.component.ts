@@ -63,7 +63,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectionShareComponent } from '../selection-share/selection-share.component';
-import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-actions.component';
+import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
 @Component({
   selector: 'app-reader-view',
   imports: [
@@ -92,7 +92,7 @@ import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-
     ArticleContentComponent,
     ArticleLayerComponent,
     ShareButtonComponent,
-    ArticleCornerActionsComponent,
+    EntryCornerFlagsComponent,
     SelectionShareComponent,
   ],
   providers: [
