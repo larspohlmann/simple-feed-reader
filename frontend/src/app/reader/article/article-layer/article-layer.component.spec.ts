@@ -29,7 +29,7 @@ import { ArticleLayerComponent } from './article-layer.component';
 })
 class LayerHostComponent {
   readonly fullscreen = signal(false);
-  readonly page = signal(1);
+  readonly page = signal('entry:1');
   readonly progressRail = new ScrollProgressRail({
     isWide: signal(false),
     contentBottom: () => null,
@@ -149,7 +149,7 @@ describe('ArticleLayerComponent', () => {
     goFullscreen();
     scrollTo(400);
 
-    fixture.componentInstance.page.set(2);
+    fixture.componentInstance.page.set('entry:2');
     fixture.detectChanges();
 
     expect((element.querySelector('.scroller') as HTMLElement).scrollTop).toBe(0);

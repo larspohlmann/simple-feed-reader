@@ -12,14 +12,12 @@ import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-conte
 import { LinkCardDto } from '../../link-card/link-card';
 import { ReaderContentService } from '../content/reader-content.service';
 import { SignedUrl } from '../../query/link-param';
-import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
-import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
+import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
+import { provideArticlePageStubs } from '../../../../testing/article-page-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { PostActions } from '../composer/post-actions.service';
 import { ShareButtonComponent } from '../share/share-button.component';
 import {
   ArticleSelection,
@@ -63,14 +61,8 @@ describe('LinkReaderComponent', () => {
         LinkArticleSource,
         { provide: ReaderRouteState, useValue: routeState },
         { provide: ReaderContentService, useValue: { load: loadTarget, reload: reloadTarget } },
-        { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
-        { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
-        { provide: PostActions, useValue: {} },
         NO_EMBED_DETAILS,
-        {
-          provide: ImageProxyService,
-          useValue: { recover: jest.fn<Promise<ProxyOutcome>, []>().mockResolvedValue('failed') },
-        },
+        ...provideArticlePageStubs(),
       ],
     });
   });
@@ -82,7 +74,6 @@ describe('LinkReaderComponent', () => {
     const fixture = TestBed.createComponent(LinkReaderComponent);
     routeState.linkTarget.set(FIRST_LINK);
     routeState.openLinkCard.set(card);
-    fixture.componentRef.setInput('target', FIRST_LINK);
     fixture.componentRef.setInput('returnsTo', returnsTo);
     fixture.detectChanges();
     return fixture;
@@ -202,7 +193,6 @@ describe('LinkReaderComponent', () => {
     expect(loadTarget).toHaveBeenCalledWith(FIRST_LINK);
 
     routeState.linkTarget.set(SECOND_LINK);
-    fixture.componentRef.setInput('target', SECOND_LINK);
     fixture.detectChanges();
 
     expect(loadTarget).toHaveBeenLastCalledWith(SECOND_LINK);
@@ -226,6 +216,18 @@ describe('LinkReaderComponent', () => {
 
     elementOf(fixture)
       .querySelector<HTMLButtonElement>('.nav button[aria-label="Reload article"]')!
+      .click();
+
+    expect(reloadTarget).toHaveBeenCalledWith(FIRST_LINK);
+  });
+
+  it('retries a failed page from its failure note', () => {
+    const fixture = mount();
+    reply(fixture, linkedPageFailure);
+    reloadTarget.mockClear();
+
+    elementOf(fixture)
+      .querySelector<HTMLButtonElement>('app-warning-box.reader-fallback button.note-link')!
       .click();
 
     expect(reloadTarget).toHaveBeenCalledWith(FIRST_LINK);
@@ -266,7 +268,10 @@ describe('LinkReaderComponent', () => {
     }
 
     function quoteOf(fixture: ComponentFixture<LinkReaderComponent>) {
-      return fixture.debugElement.injector.get(ArticleSelection).quote();
+      return fixture.debugElement
+        .query(By.directive(ArticlePageComponent))
+        .injector.get(ArticleSelection)
+        .quote();
     }
 
     it('quotes words selected in the page body', () => {
@@ -300,10 +305,12 @@ describe('LinkReaderComponent', () => {
       select(elementOf(fixture).querySelector('.content p')!.firstChild!, 'Linked page words');
       collapse();
 
-      fixture.componentRef.setInput('target', { ...FIRST_LINK });
+      routeState.linkTarget.set({ ...FIRST_LINK });
       fixture.detectChanges();
 
-      const selection = fixture.debugElement.injector.get(ArticleSelection);
+      const selection = fixture.debugElement
+        .query(By.directive(ArticlePageComponent))
+        .injector.get(ArticleSelection);
       expect(selection.remembered()?.text).toBe('Linked page words');
       elementOf(fixture).remove();
     });

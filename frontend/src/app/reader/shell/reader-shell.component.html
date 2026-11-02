@@ -185,9 +185,8 @@
     />
   </ng-template>
   <ng-template #linkPane let-fullscreen="fullscreen">
-    @if (linkTarget(); as target) {
+    @if (linkTarget()) {
       <app-link-reader
-        [target]="target"
         [fullscreen]="fullscreen"
         [returnsTo]="linkReturnsTo()"
         (close)="linkNavigation.close()"

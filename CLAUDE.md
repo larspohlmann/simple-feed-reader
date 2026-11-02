@@ -308,6 +308,9 @@ control, not ceremony — do not "simplify" it away, and do not delete
 
 - **No Claude attribution anywhere**: no "Generated with Claude Code", `Co-Authored-By: Claude`
   or session-link lines in commits, PR bodies or GitHub comments.
+- **Boy-scout principle.** An issue you come across that is easy to fix gets fixed, even when it is
+  not part of the current task: commit it on its own and name it in the PR. Larger finds still get
+  an issue or a separate session.
 - **git-flow.** Feature branches off `develop`; PRs merge into `develop`, never
   `main`. Every merge to `develop` is shippable.
 - **Branch names embed the GitHub issue number**: `feature/114-tag-triggered-deploy`,

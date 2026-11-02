@@ -21,7 +21,6 @@ import {
 } from '../../../shared/to-top-button/to-top-button.component';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
-import { ReaderTarget } from '../content/reader-cache.service';
 import { ArticleGestures } from './article-gestures.service';
 
 /** The reader's layer: its frame, hide-on-scroll toolbar, the one scroller, the
@@ -49,7 +48,7 @@ export class ArticleLayerComponent {
   readonly withTail = input(false);
   readonly backLabel = input.required<string>();
   /** The page shown; a new one starts at the top with the toolbar presented. */
-  readonly resetKey = input.required<ReaderTarget>();
+  readonly resetKey = input.required<string | undefined>();
 
   // Semantic "back to list" output; not a DOM element's close event.
   // eslint-disable-next-line @angular-eslint/no-output-native

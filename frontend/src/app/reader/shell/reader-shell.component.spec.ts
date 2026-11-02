@@ -65,6 +65,7 @@ describe('ReaderShellComponent', () => {
     isNarrow: WritableSignal<boolean>;
     isWide: WritableSignal<boolean>;
     isCoarse: WritableSignal<boolean>;
+    isPhone: WritableSignal<boolean>;
   };
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
@@ -163,7 +164,12 @@ describe('ReaderShellComponent', () => {
     // Provided rather than left to the real service: jsdom's matchMedia answers
     // "no" to every query, so the real one is stuck on wide and a phone-only test
     // has no way to say so. The defaults below match jsdom's all-false answers.
-    screen = { isNarrow: signal(false), isWide: signal(false), isCoarse: signal(false) };
+    screen = {
+      isNarrow: signal(false),
+      isWide: signal(false),
+      isCoarse: signal(false),
+      isPhone: signal(false),
+    };
     configureShell([{ provide: AuthService, useValue: auth }]);
     ctrl = TestBed.inject(HttpTestingController);
   });

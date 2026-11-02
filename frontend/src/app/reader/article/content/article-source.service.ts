@@ -24,6 +24,7 @@ export class ArticleSource {
   private readonly bodyService = inject(EntryBodyService);
   private readonly readerMode = inject(ReaderModeService);
   private entry: Signal<EntryDto | null> = signal(null);
+  readonly openEntry = computed(() => this.entry());
 
   private readonly load = new ReaderLoad();
 
@@ -46,7 +47,8 @@ export class ArticleSource {
   readonly paywallUrl = computed(() => this.article()?.url || this.entry()?.url || null);
   /** Set when the original view's hero image fails to load, so a broken picture
    *  hides rather than leaving a torn placeholder. Reset on every entry change. */
-  readonly heroFailed = signal(false);
+  private readonly heroFailedState = signal(false);
+  readonly heroFailed = this.heroFailedState.asReadonly();
 
   /**
    * The picture that leads the ORIGINAL view. The reader view carries its own
@@ -121,9 +123,13 @@ export class ArticleSource {
     this.entry = entry;
   }
 
+  dropHero(): void {
+    this.heroFailedState.set(true);
+  }
+
   /** Start showing a newly opened entry (or none). */
   open(entry: EntryDto | null): void {
-    this.heroFailed.set(false);
+    this.heroFailedState.set(false);
     if (!entry) {
       this.load.idle();
       return;

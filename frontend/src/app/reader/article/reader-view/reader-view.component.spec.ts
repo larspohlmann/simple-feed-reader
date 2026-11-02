@@ -9,10 +9,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ArticleGestures } from '../article-layer/article-gestures.service';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
+import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { articleScrollKey } from '../../scroll/list-scroll-memory';
 import { entryPageKey } from '../reading/article-page-key';
+import { EntryArticlePage } from './entry-article-page';
 import { ChapterDto, EntryDto, ReaderContent, TranscriptDto } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
@@ -714,6 +716,47 @@ describe('ReaderViewComponent', () => {
       expect(scroll.top).toBe(0);
       fixture.destroy();
     });
+
+    it('restores the remembered offset of the next article when it loads synchronously', async () => {
+      loadMock.mockImplementation((id: number) =>
+        of<ReaderContent>(aReaderArticle({ contentHtml: `<p>Article ${id}</p>` })),
+      );
+      sessionStorage.setItem(articleScrollKey(entryPageKey(2)), String(700));
+      const fixture = mount(entry({ id: 1 }));
+      const scroll = trackScrollTop(scrollerOf(fixture));
+      await settle(fixture);
+
+      fixture.componentRef.setInput('entry', entry({ id: 2 }));
+      fixture.detectChanges();
+      await settle(fixture);
+
+      expect(scroll.top).toBe(700);
+      fixture.destroy();
+    });
+  });
+
+  describe('article page lifetime', () => {
+    it('adds no resize listener however often the article closes and reopens', () => {
+      const added = jest.spyOn(window, 'addEventListener');
+      const removed = jest.spyOn(window, 'removeEventListener');
+      const liveResizeListeners = () =>
+        added.mock.calls.filter(([type]) => type === 'resize').length -
+        removed.mock.calls.filter(([type]) => type === 'resize').length;
+      const fixture = mount(entry({ id: 1 }));
+      const afterFirstOpen = liveResizeListeners();
+
+      for (let round = 0; round < 3; round++) {
+        fixture.componentRef.setInput('entry', null);
+        fixture.detectChanges();
+        fixture.componentRef.setInput('entry', entry({ id: 1 }));
+        fixture.detectChanges();
+      }
+
+      expect(liveResizeListeners()).toBe(afterFirstOpen);
+      added.mockRestore();
+      removed.mockRestore();
+      fixture.destroy();
+    });
   });
 
   // #107: the reading focus only fully highlights the block at the viewport
@@ -1215,7 +1258,10 @@ describe('ReaderViewComponent', () => {
     const globals = globalThis as unknown as { CSS?: { escape: (value: string) => string } };
     globals.CSS = { escape: (value) => value };
 
-    fixture.componentInstance.scrollToHeading(heading.id);
+    (
+      fixture.debugElement.query(By.directive(ArticlePageComponent))
+        .componentInstance as ArticlePageComponent
+    ).scrollToHeading(heading.id);
     computedStyle.mockRestore();
     delete globals.CSS;
 
@@ -1441,7 +1487,7 @@ describe('ReaderViewComponent', () => {
       fixture.componentInstance.toggleMode(); // reader -> original
       expect(fixture.componentInstance.mode()).toBe('original');
 
-      fixture.componentInstance.refreshArticle();
+      fixture.debugElement.injector.get(EntryArticlePage).reload();
       fixture.detectChanges();
       expect(fixture.componentInstance.mode()).toBe('original');
     });

@@ -1,13 +1,14 @@
-@use '../article-page/article-page';
-@use '../article-page/article-toolbar';
-
 :host {
   display: block;
   height: 100%;
 }
 
-@include article-page.article-page;
-@include article-toolbar.article-toolbar;
+.placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--text-muted);
+}
 
 /* Feed-declared categories (#953): a muted footnote line closing the
    article, the same weight as the meta row that opens it. */

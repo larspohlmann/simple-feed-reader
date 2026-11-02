@@ -7,37 +7,24 @@ import {
   inject,
   input,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
-import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
-import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
-import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
-import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { EntryCommentsComponent } from '../entry-comments/entry-comments.component';
-import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ArticleSource } from '../content/article-source.service';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { LayoutService } from '../../layout.service';
-import { entryPageKey } from '../reading/article-page-key';
-import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
-import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
-import { prefersReducedMotion } from '../../../core/reduced-motion';
-import { TocEntry, collectToc } from '../reading/reading-toc';
+import { type TrailingPart } from '../reading/reading-scope.service';
 import { EpisodePanelsComponent } from '../episode-panels/episode-panels.component';
-import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { ListenRowComponent } from '../listen-row/listen-row.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
 import { ThreadRepliesComponent } from '../thread-replies/thread-replies.component';
@@ -48,42 +35,28 @@ import { SocialCountsComponent } from '../social-counts/social-counts.component'
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
-import { ArticleContentComponent } from '../article-content/article-content.component';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
-import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
-import { AUTOPLAY_REGION, AutoplayRegion } from '../../media/autoplay/autoplay-region';
-import { ArticleLayerComponent } from '../article-layer/article-layer.component';
+import { AutoplayRegion } from '../../media/autoplay/autoplay-region';
 import { relativeTime } from '../../format';
-import { estimateReadingMinutes } from '../decorators/reading-time';
-import { AudioPlayerService } from '../../audio-player.service';
-import { EntryAudio } from '../../audio/entry-audio';
-import { embedTrackOrigin } from '../../audio/embed-track';
-import { ListenLauncher } from '../../audio/listen-launcher';
-import { entryDisplayTitle, isPost } from '../../entry/entry-text';
-
-import { ShareButtonComponent } from '../share/share-button.component';
-import { ArticleSelection } from '../selection-share/article-selection.service';
-import { SelectionShareComponent } from '../selection-share/selection-share.component';
 import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
+import { ArticlePageComponent } from '../article-page/article-page.component';
+import { ArticlePageSlotDirective } from '../article-page/article-page-slot.directive';
+import { provideArticlePage } from '../article-page/provide-article-page';
+import { EntryArticlePage } from './entry-article-page';
+
 @Component({
   selector: 'app-reader-view',
   imports: [
-    ProxiedImageDirective,
     IconComponent,
     ListActionDirective,
     FlagToggleDirective,
-    FaviconComponent,
     EntrySourceComponent,
-    LoadingOverlayComponent,
     EntryPillsComponent,
     EntryActionsComponent,
     TranslocoPipe,
-    PaywallNoticeComponent,
-    WarningBoxComponent,
     ErrorBannerComponent,
     EntryCommentsComponent,
-    ReaderTocComponent,
     EpisodePanelsComponent,
     LinkCardsComponent,
     ThreadRepliesComponent,
@@ -91,28 +64,20 @@ import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-
     QuotedPostComponent,
     PostMediaComponent,
     SocialCountsComponent,
-    ArticleContentComponent,
-    ArticleLayerComponent,
-    ShareButtonComponent,
     EntryCornerFlagsComponent,
     EntryDiscussionLinkComponent,
-    SelectionShareComponent,
+    ArticlePageComponent,
+    ArticlePageSlotDirective,
   ],
   providers: [
-    ArticleScrollRestore,
     ArticleSource,
-    ReadingScope,
-    ListAutoplayCoordinator,
-    UnlockedVideoElements,
-    ArticleSelection,
-    { provide: AUTOPLAY_REGION, useFactory: theArticleComments },
+    EntryArticlePage,
+    provideArticlePage({ source: EntryArticlePage, autoplayRegion: theArticleComments }),
   ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })
 export class ReaderViewComponent {
-  protected readonly entryDisplayTitle = entryDisplayTitle;
-  protected readonly isPost = isPost;
   protected readonly ratio = entryMediumRatio;
 
   readonly entry = input.required<EntryDto | null>();
@@ -125,8 +90,7 @@ export class ReaderViewComponent {
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly close = output<void>();
 
-  private readonly articleContent = viewChild(ArticleContentComponent);
-  private readonly content = computed(() => this.articleContent()?.element);
+  private readonly page = viewChild(ArticlePageComponent);
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
     read: ElementRef<HTMLElement>,
   });
@@ -146,7 +110,7 @@ export class ReaderViewComponent {
     this.comments,
     inject(SocialCountsService),
   );
-  private readonly trailingParts: readonly TrailingPart[] = [
+  protected readonly trailingParts: readonly TrailingPart[] = [
     { query: this.postMedia, joinsFocus: false },
     { query: this.quotedPost, joinsFocus: false },
     { query: this.linkCards, joinsFocus: false },
@@ -158,74 +122,24 @@ export class ReaderViewComponent {
       expectedHeight: this.commentsForecast.expectedHeight,
     },
   ];
-  private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
-  private readonly layer = viewChild(ArticleLayerComponent);
-  private readonly scroller = computed(() => this.layer()?.scroller());
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
-  private readonly screen = inject(LayoutService);
-  private readonly reduceMotion = prefersReducedMotion();
-  private readonly restore = inject(ArticleScrollRestore);
   protected readonly source = inject(ArticleSource);
-  protected readonly scope = inject(ReadingScope);
+  private readonly entryPage = inject(EntryArticlePage);
+  protected readonly audio = this.entryPage.audio;
   private readonly autoplay = inject(ListAutoplayCoordinator);
-  protected readonly progressRail = new ScrollProgressRail({
-    isWide: this.screen.isWide,
-    contentBottom: this.scope.readingEnd,
-    layout: this.scope.readingEnd,
-  });
-
-  /** The entry's first playable audio enclosure, surfaced as a listen control
-   *  above the article; its attachment is null when the feed declared none (#915). */
-  protected readonly audio = new EntryAudio(
-    { entry: this.entry, chapters: this.source.chapters },
-    inject(AudioPlayerService),
-    inject(ListenLauncher),
-  );
-
-  protected readonly embedOrigin = computed(() => {
-    const entry = this.entry();
-    return entry ? embedTrackOrigin(entry) : null;
-  });
-
-  /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */
-  protected readonly fallbackNoticeShown = computed(
-    () =>
-      this.source.failed() &&
-      this.mode() === 'original' &&
-      this.source.failureReason() !== 'player_page' &&
-      !(this.audio.attachment() && this.source.pageHoldsNoArticle()),
-  );
-
-  protected readonly fallbackMessageKey = computed(
-    () => `reader.fallback.${this.source.failureReason() ?? 'transport'}`,
-  );
 
   // The open entry's reference changes on every optimistic flag update, but its
   // id doesn't. Tracking the loaded id lets the load effect ignore those churns
   // — no re-fetch, and the Reader/Original toggle survives an in-reader action.
   private loadedId: number | null = null;
 
-  private readonly pageKey = computed(() => {
-    const entry = this.entry();
-    return entry ? entryPageKey(entry.id) : undefined;
-  });
-
-  // Alias the shared mode signal so the template and computeds read it directly;
+  // Alias the shared mode signal so the template reads it directly;
   // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
 
-  // Table of contents, built from the rendered article headings. `tocOpen` lives
-  // here, not in the TOC, so it survives the reader/original swap.
-  readonly toc = signal<TocEntry[]>([]);
-  readonly tocOpen = signal(false);
-
-  /** Estimated minutes to read the displayed text; null hides the meta chip. */
-  readonly readingMinutes = computed(() => estimateReadingMinutes(this.source.displayHtml()));
-
   constructor() {
     this.source.connect(this.entry);
-    this.restore.connect(this.scroller);
 
     effect(() => {
       const entry = this.entry();
@@ -237,70 +151,15 @@ export class ReaderViewComponent {
       this.loadedId = id;
       // Before the source opens: a synchronous load calls enableToggle().
       this.readerMode.reset();
-      this.restore.arm(this.pageKey());
-      // This instance is reused: a new article starts with a fresh, collapsed TOC.
-      this.toc.set([]);
-      this.tocOpen.set(false);
       this.autoplay.soundChanged(false);
       this.source.open(entry);
     });
 
     effect(() => this.audio.shareChapters());
-
-    this.scope.connect({
-      scroller: this.scroller,
-      content: this.content,
-      trailing: this.trailingParts,
-    });
-
-    this.scope.observeResizes();
-    inject(ArticleSelection).connect({
-      body: this.content,
-      key: computed(() => this.entry()?.id ?? null),
-      socialPost: computed(() => this.entry()?.social != null),
-    });
-  }
-
-  protected onDecorated(host: HTMLElement): void {
-    this.toc.set(collectToc(host));
-    this.scope.refresh();
-    // Runs on the original render and again when the reader content swaps in.
-    this.restore.reseat(this.pageKey);
-  }
-
-  protected onScroll(scrollTop: number): void {
-    if (!this.layer()?.leaving()) this.restore.remember(this.pageKey(), scrollTop);
-  }
-
-  scrollToTop(): void {
-    this.restore.abort(); // don't let a restore fight the jump
-    this.layer()?.scrollToTop(this.titleHeading()?.nativeElement);
-  }
-
-  scrollToHeading(id: string): void {
-    this.scrollToElement(
-      this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`),
-    );
   }
 
   protected scrollToComments(): void {
-    this.scrollToElement(this.commentsSection()?.nativeElement);
-  }
-
-  /** Scroll the reading pane to an element, clearing the chrome that covers the scroller. */
-  private scrollToElement(target: HTMLElement | null | undefined): void {
-    const scroller = this.scroller();
-    if (!scroller || !target) return;
-    this.restore.abort(); // a jump takes over from any in-flight restore
-    const top =
-      target.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top +
-      scroller.scrollTop;
-    const covered = parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;
-    scroller.scrollTo({
-      top: Math.max(0, top - covered),
-      behavior: this.reduceMotion ? 'auto' : 'smooth',
-    });
+    this.page()?.scrollToElement(this.commentsSection()?.nativeElement);
   }
 
   commentsRegion(): Element | undefined {
@@ -319,13 +178,6 @@ export class ReaderViewComponent {
 
   toggleMode(): void {
     this.readerMode.toggle();
-  }
-
-  /** Drop the open article from the browser cache and refetch it. */
-  refreshArticle(): void {
-    const entry = this.entry();
-    if (!entry) return;
-    this.source.reload(entry.id);
   }
 
   when(entry: EntryDto): string {
