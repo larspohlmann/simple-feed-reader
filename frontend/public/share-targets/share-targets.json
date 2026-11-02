@@ -5,7 +5,7 @@
     "kind": "link",
     "label": "E-Mail",
     "symbol": "mail",
-    "url": "mailto:?subject={title}&body={url}"
+    "url": "mailto:?subject={title}&body={text}"
   },
   { "kind": "divider" },
   {

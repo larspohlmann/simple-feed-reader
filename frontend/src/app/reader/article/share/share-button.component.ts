@@ -29,7 +29,15 @@ import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network
 import { LayoutService } from '../../layout.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { PostActions } from '../composer/post-actions.service';
-import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareLogoUrl, shareUrl } from './share-targets';
+import { linkContent } from './share-content';
+import {
+  ConfiguredTarget,
+  SHARE_GLYPH,
+  SHARE_TARGETS,
+  ShareTarget,
+  shareLogoUrl,
+  shareUrl,
+} from './share-targets';
 import { stripTracking } from './tracking-params';
 
 /** Where the trigger sits: in the article toolbar, or as a disc in the article's bottom-left corner. */
@@ -44,8 +52,6 @@ const POSITIONS: Record<ShareButtonAppearance, ConnectedPosition[]> = {
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
   ],
 };
-
-type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
 
 /**
  * One entry of the menu and of the sheet, under the id the sheet answers with. A post names the network the URL
@@ -143,7 +149,8 @@ export class ShareButtonComponent {
     const url = stripTracking(this.url());
     if (target.kind === 'system') this.shareThroughSystem(url);
     if (target.kind === 'copy') this.copy(url);
-    if (target.kind === 'link') this.visit(shareUrl(target.url, url, this.title()));
+    if (target.kind === 'link')
+      this.visit(shareUrl(target.url, linkContent({ url, title: this.title() })));
   }
 
   protected post(network: SocialNetworkName): void {

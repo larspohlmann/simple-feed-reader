@@ -1,4 +1,5 @@
 import config from '../../../../../public/share-targets/share-targets.json';
+import { ShareContent } from './share-content';
 
 interface ShareEntry {
   readonly label?: string;
@@ -29,11 +30,18 @@ export function shareLogoUrl(file: string): string {
   return `share-targets/${file}`;
 }
 
-/** Fills `{url}`, `{title}` and `{text}` (title and url together) into a target's address. */
-export function shareUrl(template: string, url: string, title: string): string {
-  const text = title === '' ? url : `${title} ${url}`;
+/** A target the menu lists, as against a divider between them. */
+export type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
+
+/** Whether a target can carry a quote: the system sheet and the clipboard can, an address only through `{text}`. */
+export function carriesText(target: ConfiguredTarget): boolean {
+  return target.kind !== 'link' || target.url.includes('{text}');
+}
+
+/** Fills `{url}`, `{title}` and `{text}` into a target's address. */
+export function shareUrl(template: string, content: ShareContent): string {
   return template
-    .replaceAll('{url}', encodeURIComponent(url))
-    .replaceAll('{title}', encodeURIComponent(title))
-    .replaceAll('{text}', encodeURIComponent(text));
+    .replaceAll('{url}', encodeURIComponent(content.url))
+    .replaceAll('{title}', encodeURIComponent(content.title))
+    .replaceAll('{text}', encodeURIComponent(content.text));
 }

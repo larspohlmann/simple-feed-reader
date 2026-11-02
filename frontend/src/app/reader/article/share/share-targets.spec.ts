@@ -1,13 +1,32 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { SHARE_TARGETS, shareUrl } from './share-targets';
+import { ConfiguredTarget, SHARE_TARGETS, carriesText, shareUrl } from './share-targets';
 
 describe('share targets', () => {
-  it('fills the url, the title and both together, encoded', () => {
-    expect(shareUrl('x?u={url}&t={title}&s={text}', 'https://a.b/?q=1', 'A & B')).toBe(
+  it('fills the url, the title and the text, encoded', () => {
+    const content = {
+      url: 'https://a.b/?q=1',
+      title: 'A & B',
+      text: 'A & B https://a.b/?q=1',
+      quote: null,
+    };
+
+    expect(shareUrl('x?u={url}&t={title}&s={text}', content)).toBe(
       'x?u=https%3A%2F%2Fa.b%2F%3Fq%3D1&t=A%20%26%20B&s=A%20%26%20B%20https%3A%2F%2Fa.b%2F%3Fq%3D1',
     );
-    expect(shareUrl('{text}', 'https://a.b', '')).toBe('https%3A%2F%2Fa.b');
+  });
+
+  it('carries text through the system sheet, the clipboard and a {text} address only', () => {
+    const byLabel = (label: string) =>
+      SHARE_TARGETS.find(
+        (target): target is ConfiguredTarget => target.kind !== 'divider' && target.label === label,
+      )!;
+
+    expect(carriesText({ kind: 'copy' })).toBe(true);
+    expect(carriesText(byLabel('E-Mail'))).toBe(true);
+    expect(carriesText(byLabel('WhatsApp'))).toBe(true);
+    expect(carriesText(byLabel('X'))).toBe(false);
+    expect(carriesText(byLabel('Facebook'))).toBe(false);
   });
 
   it('names only icon files that exist next to the config', () => {
