@@ -5,9 +5,21 @@
     [class.current]="!organising() && active()"
     [attr.data-testid]="'sidebar-social-' + current.network"
   >
+    @let manageLabel =
+      'reader.manageSocialSection'
+        | transloco: { network: ('settings.social.' + current.network | transloco) };
     @if (organising()) {
       <ng-container *ngTemplateOutlet="networkLogo" />
       <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
+      <button
+        class="dots"
+        type="button"
+        aria-haspopup="dialog"
+        [attr.aria-label]="manageLabel"
+        (click)="rows.openSocialSheet(current)"
+      >
+        <app-icon name="more_horiz" size="md" />
+      </button>
     } @else {
       <a
         class="section-link"
@@ -21,20 +33,7 @@
           <span class="section-count">{{ current.unreadCount }}</span>
         }
       </a>
-      @let manageLabel =
-        'reader.manageSocialSection'
-          | transloco: { network: ('settings.social.' + current.network | transloco) };
-      @if (screen.isCoarse()) {
-        <button
-          class="dots"
-          type="button"
-          aria-haspopup="dialog"
-          [attr.aria-label]="manageLabel"
-          (click)="rows.openSocialSheet(current)"
-        >
-          <app-icon name="more_horiz" size="dense" />
-        </button>
-      } @else {
+      @if (!screen.isCoarse()) {
         <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
           <ng-template>
             @for (

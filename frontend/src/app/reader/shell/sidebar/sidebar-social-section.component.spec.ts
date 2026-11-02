@@ -596,8 +596,17 @@ describe('SidebarSocialSectionComponent', () => {
       expect(title()).toBe('Hidden from Saved searches');
     });
 
-    it('opens the sheet on a coarse pointer', () => {
+    it('offers no manage control on a coarse pointer outside Organise', () => {
+      const root = element(mount(ONE_ACCOUNT, ALL, true));
+
+      expect(root.querySelector('.section-head .dots')).toBeNull();
+      expect(root.querySelector('.section-head app-sidebar-row-menu')).toBeNull();
+    });
+
+    it('opens the sheet from the head while organising', () => {
       const fixture = mount(ONE_ACCOUNT, ALL, true);
+      fixture.componentRef.setInput('organising', true);
+      fixture.detectChanges();
 
       (element(fixture).querySelector('.section-head .dots') as HTMLButtonElement).click();
 
