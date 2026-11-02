@@ -70,4 +70,18 @@ final class MastodonStatusAddressTest extends TestCase
             'https://mastodon.social/users/Gargron',
         ];
     }
+
+    #[DataProvider('servers')]
+    public function testAStatusAddressSaysWhetherItsInstanceOwnsTheStatus(string $address, bool $isOwnServer): void
+    {
+        self::assertSame($isOwnServer, MastodonStatusAddress::ofOrNull($address)?->isOnItsOwnServer());
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function servers(): iterable
+    {
+        yield 'a local author' => ['https://mastodon.social/@Gargron/110', true];
+        yield 'a uri' => ['https://mastodon.social/users/Gargron/statuses/110', true];
+        yield 'a remote author mirrored here' => ['https://mastodon.social/@alice@other.example/110', false];
+    }
 }

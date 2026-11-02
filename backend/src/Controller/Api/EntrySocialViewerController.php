@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Http\SocialViewerJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Social\OpenedPost;
+use App\Service\Social\SocialLikes;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -19,7 +19,7 @@ final readonly class EntrySocialViewerController
 {
     public function __construct(
         private EntryListRepository $entryList,
-        private OpenedPost $openedPost,
+        private SocialLikes $socialLikes,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialViewerLimiter,
     ) {
@@ -36,6 +36,6 @@ final readonly class EntrySocialViewerController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
-        return new JsonResponse(SocialViewerJson::of($this->openedPost->sync($user, $entry)));
+        return new JsonResponse(SocialViewerJson::of($this->socialLikes->syncFromNetwork($user, $entry)));
     }
 }

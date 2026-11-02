@@ -21,6 +21,11 @@ final readonly class LocalPostRemoval
     ) {
     }
 
+    public function removeWithoutReplies(Entry $entry): void
+    {
+        $this->remove($entry, []);
+    }
+
     /** @param list<string> $replyGuids the guids the post's deleted thread replies may come back under */
     public function remove(Entry $entry, array $replyGuids): void
     {

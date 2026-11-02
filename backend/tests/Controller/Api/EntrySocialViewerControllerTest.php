@@ -9,9 +9,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Enum\SourceFormat;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
@@ -271,18 +269,6 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
     private static function foundStatus(array $fields): MockResponse
     {
         return new MockResponse(json_encode(['statuses' => [['id' => '110', ...$fields]]], \JSON_THROW_ON_ERROR));
-    }
-
-    private function savedMastodonPostFor(User $user): int
-    {
-        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
-        $saved = $fixtures->subscribe(
-            $user,
-            SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon),
-            SourceFormat::SAVED,
-        );
-
-        return $fixtures->post($saved, self::MASTODON_POST_URL, '2026-10-12T10:00:00Z')->requireId();
     }
 
     private function blueskyPostFor(User $user): int

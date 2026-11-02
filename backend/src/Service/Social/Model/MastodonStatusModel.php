@@ -10,7 +10,14 @@ final readonly class MastodonStatusModel
         public string $host,
         public string $id,
         public string $authorPrefix,
+        public string $account,
     ) {
+    }
+
+    /** False for a remote author's `@user@domain` page, which only mirrors a status another instance owns. */
+    public function isOnItsOwnServer(): bool
+    {
+        return !str_contains($this->account, '@');
     }
 
     public function apiUrl(): string

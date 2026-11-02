@@ -14,7 +14,9 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Model\SocialCountsModel;
+use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\PostCountsSource\PostCountsSourceInterface;
 use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
@@ -26,6 +28,7 @@ final readonly class SocialCounts
     public function __construct(
         private SocialCountsCache $cache,
         private SocialPostFinder $posts,
+        private ConfirmedDeletion $confirmedDeletion,
         #[AutowireLocator('app.social_post_counts_source', defaultIndexMethod: 'network')]
         private ContainerInterface $publicSources,
     ) {
@@ -34,6 +37,7 @@ final readonly class SocialCounts
     /**
      * @throws NotASocialPostException
      * @throws SocialPostNotFoundException
+     * @throws SocialPostRemovedException
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      * @throws SocialAccountNeedsReconnectException
@@ -48,9 +52,11 @@ final readonly class SocialCounts
         }
 
         try {
-            $counts = $this->publicSourceOn($post->network)->countsOf($post->address);
-        } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $publicFailure) {
-            $counts = $this->actingAccountCountsOf($user, $entry, $publicFailure);
+            $counts = $this->lookedUp($user, $entry, $post);
+        } catch (SocialPostNotFoundException $notFound) {
+            $this->confirmedDeletion->removeIfConfirmed($entry);
+
+            throw $notFound;
         }
         $this->cache->remember($post, $counts);
 
@@ -60,6 +66,7 @@ final readonly class SocialCounts
     /**
      * @throws NotASocialPostException
      * @throws SocialPostNotFoundException
+     * @throws SocialPostRemovedException
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      * @throws SocialAccountNeedsReconnectException
@@ -71,6 +78,15 @@ final readonly class SocialCounts
         $this->cache->forget($post);
 
         return $this->of($user, $entry);
+    }
+
+    private function lookedUp(User $user, Entry $entry, SocialPostAddressModel $post): SocialCountsModel
+    {
+        try {
+            return $this->publicSourceOn($post->network)->countsOf($post->address);
+        } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $publicFailure) {
+            return $this->actingAccountCountsOf($user, $entry, $publicFailure);
+        }
     }
 
     private function actingAccountCountsOf(

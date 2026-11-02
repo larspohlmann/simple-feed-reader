@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
@@ -120,6 +121,36 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
         self::assertSame('social_network_unreachable', $this->payload($client)['type']);
     }
 
+    public function testAPostItsOriginNoLongerHasIsRemovedHereWithoutAnAccount(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::ORIGIN => self::statusGone()]);
+        $user = $this->signIn($client, 'counts-deleted@example.test');
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/social', $entryId));
+
+        $this->assertRejected($client, Response::HTTP_GONE);
+        self::assertSame('social_post_removed', $this->payload($client)['type']);
+        self::assertSame([self::ORIGIN, self::ORIGIN], $this->http->requestLines());
+        $this->entityManager()->clear();
+        self::assertNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
+    public function testASavedCopyKeepsItsNotFoundAnswerWhenTheOriginalIsDeleted(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::ORIGIN => self::statusGone()]);
+        $user = $this->signIn($client, 'counts-saved@example.test');
+        $entryId = $this->savedMastodonPostFor($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/social', $entryId));
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_post_not_found', $this->payload($client)['type']);
+        self::assertSame([self::ORIGIN], $this->http->requestLines());
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
     public function testAThrottlingOriginWithoutAnAccountSaysWhenToAskAgain(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [self::ORIGIN => new MockResponse('{}', [
@@ -185,6 +216,11 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
             'reblogs_count' => 2,
             'replies_count' => 1,
         ], \JSON_THROW_ON_ERROR));
+    }
+
+    private static function statusGone(): MockResponse
+    {
+        return new MockResponse('{}', ['http_code' => Response::HTTP_NOT_FOUND]);
     }
 
     private function plainArticleFor(User $user): int

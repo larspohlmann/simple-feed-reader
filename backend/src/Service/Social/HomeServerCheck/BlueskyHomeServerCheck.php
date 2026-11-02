@@ -44,16 +44,13 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
         } catch (SocialAccountUnresolvableException) {
             return false;
         }
+        $recordKey = BlueskyRecordUri::recordKeyOf(AtPostUri::withAuthority($address, $identity->did));
 
-        return $this->pdsHasNoRecord($identity, AtPostUri::withAuthority($address, $identity->did));
+        return null !== $recordKey && $this->pdsHasNoRecord($identity, $recordKey);
     }
 
-    private function pdsHasNoRecord(BlueskyIdentityModel $identity, string $post): bool
+    private function pdsHasNoRecord(BlueskyIdentityModel $identity, string $recordKey): bool
     {
-        $recordKey = BlueskyRecordUri::recordKeyOf($post);
-        if (null === $recordKey) {
-            return false;
-        }
         $query = http_build_query(
             ['repo' => $identity->did, 'collection' => BlueskyRecords::POST_COLLECTION, 'rkey' => $recordKey],
             '',

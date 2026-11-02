@@ -29,6 +29,8 @@ use App\Service\Social\SocialLikes;
 use App\Service\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
+use App\Tests\Support\ConfirmedDeletions;
+use App\Tests\Support\FakeHomeServerCheck;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
@@ -404,6 +406,7 @@ final class SocialLikesTest extends DbTestCase
             $this->entityManager,
             new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),
             $this->countsCache,
+            ConfirmedDeletions::askingOf($this->entityManager, new FakeHomeServerCheck()),
         );
     }
 
