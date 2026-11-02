@@ -9,6 +9,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ArticleGestures } from '../article-layer/article-gestures.service';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
+import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { articleScrollKey } from '../../scroll/list-scroll-memory';
@@ -1215,7 +1216,10 @@ describe('ReaderViewComponent', () => {
     const globals = globalThis as unknown as { CSS?: { escape: (value: string) => string } };
     globals.CSS = { escape: (value) => value };
 
-    fixture.componentInstance.scrollToHeading(heading.id);
+    (
+      fixture.debugElement.query(By.directive(ArticlePageComponent))
+        .componentInstance as ArticlePageComponent
+    ).scrollToHeading(heading.id);
     computedStyle.mockRestore();
     delete globals.CSS;
 

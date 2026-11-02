@@ -1,108 +1,62 @@
 @if (entry(); as e) {
-  <app-article-layer
+  <app-article-page
     [fullscreen]="fullscreen()"
-    [resetKey]="'entry:' + e.id"
-    [progressRail]="progressRail"
-    [withTail]="scope.hasTail()"
     [backLabel]="'reader.backToList' | transloco"
+    [trailing]="trailingParts"
     (close)="close.emit()"
-    (scrolled)="onScroll($event)"
-    (toTop)="scrollToTop()"
-    (barResized)="scope.refresh()"
+    (openOriginal)="openOriginal.emit()"
   >
-    <ng-container articleMini>
-      <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.poster?.imageUrl ?? null" [size]="14" />
-      <span class="mini-title">{{ entryDisplayTitle(e) }}</span>
-    </ng-container>
-    @if (!fullscreen()) {
-      <!-- The split pane's toolbar never retracts, so the nameplate rides
-           inside it rather than in the full-screen strip of its own.
-           aria-hidden: the h1 carries the same title, so announcing this too
-           would read the headline twice. -->
-      <span articleBar class="bar-name" aria-hidden="true">
-        <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.poster?.imageUrl ?? null" [size]="18" />
-        <span class="bar-title">{{ entryDisplayTitle(e) }}</span>
-      </span>
+    @if (readerMode.canToggle()) {
+      <button
+        pageBarLead
+        appListAction
+        class="mode"
+        type="button"
+        [attr.aria-pressed]="mode() === 'reader'"
+        [attr.aria-label]="
+          (mode() === 'reader' ? 'reader.showOriginal' : 'reader.showReader') | transloco
+        "
+        (click)="toggleMode()"
+      >
+        <app-icon [name]="mode() === 'reader' ? 'chrome_reader_mode' : 'public'" size="sm" />
+        <span class="txt">{{
+          (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco
+        }}</span>
+      </button>
     }
-    <div articleBar class="nav">
-      @if (readerMode.canToggle()) {
-        <button
-          appListAction
-          class="mode"
-          type="button"
-          [attr.aria-pressed]="mode() === 'reader'"
-          [attr.aria-label]="
-            (mode() === 'reader' ? 'reader.showOriginal' : 'reader.showReader') | transloco
-          "
-          (click)="toggleMode()"
-        >
-          <app-icon [name]="mode() === 'reader' ? 'chrome_reader_mode' : 'public'" size="sm" />
-          <span class="txt">{{
-            (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco
-          }}</span>
-        </button>
+    <button
+      pageBarFlags
+      appListAction
+      class="mobile-icon-only"
+      type="button"
+      [attr.aria-label]="'reader.keep' | transloco"
+      [appFlagToggle]="e.isKept"
+      (click)="actions.keep(e)"
+    >
+      <app-icon name="bookmark" size="sm" [fill]="e.isKept" />
+      <span class="txt">{{ 'reader.keep' | transloco }}</span>
+    </button>
+    <button
+      pageBarFlags
+      appListAction
+      class="mobile-icon-only"
+      type="button"
+      [attr.aria-label]="'reader.favorite' | transloco"
+      [appFlagToggle]="e.isFavorite"
+      (click)="actions.favorite(e)"
+    >
+      <app-icon name="star" size="sm" [fill]="e.isFavorite" />
+      <span class="txt">{{ 'reader.favorite' | transloco }}</span>
+    </button>
+    <ng-container pageByline>
+      <app-entry-source [entry]="e" layout="article" [size]="16" />
+      @if (e.author && e.author !== (e.poster?.name ?? e.source)) {
+        · {{ e.author }}
       }
-      @if (mode() === 'reader') {
-        <button
-          appListAction
-          class="mobile-icon-only"
-          type="button"
-          [attr.aria-label]="'reader.refreshArticle' | transloco"
-          (click)="refreshArticle()"
-        >
-          <app-icon name="refresh" size="sm" />
-          <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
-        </button>
-      }
-      @if (e.url) {
-        <app-share-button [url]="e.url" [title]="e.title" />
-      }
-      <button
-        appListAction
-        class="mobile-icon-only"
-        type="button"
-        [attr.aria-label]="'reader.keep' | transloco"
-        [appFlagToggle]="e.isKept"
-        (click)="actions.keep(e)"
-      >
-        <app-icon name="bookmark" size="sm" [fill]="e.isKept" />
-        <span class="txt">{{ 'reader.keep' | transloco }}</span>
-      </button>
-      <button
-        appListAction
-        class="mobile-icon-only"
-        type="button"
-        [attr.aria-label]="'reader.favorite' | transloco"
-        [appFlagToggle]="e.isFavorite"
-        (click)="actions.favorite(e)"
-      >
-        <app-icon name="star" size="sm" [fill]="e.isFavorite" />
-        <span class="txt">{{ 'reader.favorite' | transloco }}</span>
-      </button>
-    </div>
-    <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
-      <div class="title-row">
-        <h1 class="title" [class.sr-only]="isPost(e) || !e.title" #titleHeading tabindex="-1">
-          {{ entryDisplayTitle(e) }}
-        </h1>
-      </div>
-      <p class="meta">
-        <app-entry-source [entry]="e" layout="article" [size]="16" />
-        @if (e.author && e.author !== (e.poster?.name ?? e.source)) {
-          · {{ e.author }}
-        }
-        · {{ when(e) }}
-        @if (readingMinutes(); as minutes) {
-          · {{ 'reader.readingTime' | transloco: { minutes } }}
-        }
-        @if (e.url) {
-          ·
-          <a [href]="e.url" target="_blank" rel="noopener noreferrer" (click)="openOriginal.emit()"
-            >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
-          /></a>
-        }
-        <app-entry-discussion-link [entry]="e" (jump)="scrollToComments()" />
-      </p>
+      · {{ when(e) }}
+    </ng-container>
+    <app-entry-discussion-link pageMetaTail [entry]="e" (jump)="scrollToComments()" />
+    <ng-container pageHead>
       <app-entry-pills
         class="tags"
         [tags]="tags()"
@@ -119,110 +73,49 @@
         [transcript]="source.transcript()"
         [transcriptIsTheBody]="source.transcriptIsTheBody()"
       />
-      <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
-      @if (!source.loading()) {
-        @if (source.paywalled()) {
-          <app-paywall-notice class="paywall-note" [url]="source.paywallUrl()" />
-        }
-        @if (fallbackNoticeShown()) {
-          @if (source.failureReason() === 'empty') {
-            <p class="reader-fallback-quiet">
-              {{ fallbackMessageKey() | transloco }}
-              <button type="button" class="note-link reads-as-text" (click)="refreshArticle()">
-                {{ 'reader.retry' | transloco }}
-              </button>
-            </p>
-          } @else {
-            <app-warning-box class="reader-fallback">
-              <span class="warning-glyph" aria-hidden="true">⚠</span>
-              <div class="warning-text">
-                <p class="reader-note">
-                  {{ fallbackMessageKey() | transloco }}
-                  <button type="button" class="note-link reads-as-text" (click)="refreshArticle()">
-                    {{ 'reader.retry' | transloco }}
-                  </button>
-                </p>
-                @if (source.errorDetail(); as detail) {
-                  <details class="reader-error">
-                    <summary>{{ 'reader.showError' | transloco }}</summary>
-                    <pre>{{ detail }}</pre>
-                  </details>
-                }
-              </div>
-            </app-warning-box>
-          }
-        }
-        @if (source.feedBodyFailed()) {
-          <app-error-banner
-            class="body-error"
-            [message]="'reader.bodyLoadFailed' | transloco"
-            [actionLabel]="'reader.retry' | transloco"
-            (action)="retryBody()"
-          />
-        }
-        @if (source.hero(); as image) {
-          <!-- The original-feed view's lead picture (the reader view carries its own
-               inside contentHtml, #681). Width/height carry the aspect ratio so the
-               article doesn't jump; `height: auto` keeps it from overriding the fluid layout. -->
-          <img
-            appProxiedImage
-            class="lead-image"
-            [src]="image.url"
-            [attr.width]="image.width"
-            [attr.height]="image.height"
-            (imageFailed)="source.heroFailed.set(true)"
-            alt=""
-            loading="lazy"
-            decoding="async"
-            referrerpolicy="no-referrer"
-          />
-        }
-        <app-article-content
-          [html]="source.displayHtml()"
-          [pageUrl]="e.url"
-          [enclosureUrl]="audio.attachment()?.url ?? null"
-          [chapters]="source.chapters()"
-          [audioTrack]="audio.track()"
-          [origin]="embedOrigin()"
-          (decorated)="onDecorated($event)"
+    </ng-container>
+    <ng-template appArticlePageSlot="notices">
+      @if (source.feedBodyFailed()) {
+        <app-error-banner
+          class="body-error"
+          [message]="'reader.bodyLoadFailed' | transloco"
+          [actionLabel]="'reader.retry' | transloco"
+          (action)="retryBody()"
         />
-        @let media = source.postMedia();
-        @if (media.length) {
-          <app-post-media
-            [media]="media"
-            [ratio]="ratio(e, media[0])"
-            [videoLabel]="'reader.mediaVideo' | transloco"
-          />
-        }
-        @if (e.share === 'quote' && e.quote) {
-          <app-quoted-post [quote]="e.quote" layout="article" />
-        }
-        @if (e.linkCards.length || e.pending) {
-          <app-link-cards [entry]="e" />
-        }
-        @if (e.thread.length) {
-          <app-thread-replies [entry]="e" />
-        }
-        @if (e.social) {
-          <app-social-counts [entry]="e" />
-        }
       }
+    </ng-template>
+    <ng-template appArticlePageSlot="afterBody">
+      @let media = source.postMedia();
+      @if (media.length) {
+        <app-post-media
+          [media]="media"
+          [ratio]="ratio(e, media[0])"
+          [videoLabel]="'reader.mediaVideo' | transloco"
+        />
+      }
+      @if (e.share === 'quote' && e.quote) {
+        <app-quoted-post [quote]="e.quote" layout="article" />
+      }
+      @if (e.linkCards.length || e.pending) {
+        <app-link-cards [entry]="e" />
+      }
+      @if (e.thread.length) {
+        <app-thread-replies [entry]="e" />
+      }
+      @if (e.social) {
+        <app-social-counts [entry]="e" />
+      }
+    </ng-template>
+    <ng-template appArticlePageSlot="footer">
       @if (e.categories.length) {
         <p class="categories">{{ e.categories.join(', ') }}</p>
       }
       @if (!source.loading() && e.comments) {
         <app-entry-comments [entry]="e" (refreshed)="reloadSocialCounts()" />
       }
-    </article>
-    <app-selection-share articleDock [url]="e.url" [title]="e.title" />
-    <!-- Laid over the whole pane while an article loads or refetches, in place
-         of a line of text — the same overlay the feed list raises on reload. -->
-    <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
-    @if (e.url; as url) {
-      <app-share-button articleCorner appearance="corner" [url]="url" [title]="e.title" />
-    }
-    <app-entry-corner-flags articleCorner [entry]="e" />
-  </app-article-layer>
+    </ng-template>
+    <app-entry-corner-flags pageCorner [entry]="e" />
+  </app-article-page>
 } @else {
   <div class="placeholder text-scaled">
     <p>{{ 'reader.selectArticle' | transloco }}</p>
