@@ -9,7 +9,7 @@
       [attr.title]="'reader.share.button' | transloco"
       cdkOverlayOrigin
       appKeepSelection
-      (click)="press()"
+      (click)="press($event)"
     >
       <app-icon [name]="glyph" size="dense" />
     </button>
@@ -24,7 +24,7 @@
       [attr.title]="'reader.share.button' | transloco"
       cdkOverlayOrigin
       appKeepSelection
-      (click)="press()"
+      (click)="press($event)"
     >
       <app-icon [name]="glyph" size="sm" />
     </button>
@@ -39,7 +39,7 @@
       [attr.aria-label]="'reader.share.button' | transloco"
       cdkOverlayOrigin
       appKeepSelection
-      (click)="press()"
+      (click)="press($event)"
     >
       <app-icon [name]="glyph" size="sm" />
       <span class="txt">{{ 'reader.share.button' | transloco }}</span>
@@ -58,13 +58,14 @@
   cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
   (backdropClick)="open.set(false)"
   (overlayKeydown)="step($event)"
+  (attach)="focusEntry()"
   (detach)="closed()"
 >
   <div
     class="menu"
     cdkTrapFocus
-    cdkTrapFocusAutoCapture
     role="menu"
+    tabindex="-1"
     [attr.aria-label]="'reader.share.button' | transloco"
     appKeepSelection
   >

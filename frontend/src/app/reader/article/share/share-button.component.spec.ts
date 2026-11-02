@@ -114,6 +114,40 @@ describe('ShareButtonComponent', () => {
       expect(sheet.open).not.toHaveBeenCalled();
     });
 
+    it('focuses the first item without scrolling when opened by keyboard', () => {
+      const focus = jest.spyOn(HTMLElement.prototype, 'focus');
+
+      const menu = openMenu();
+
+      expect(document.activeElement).toBe(items(menu)[0]);
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+      expect(focus).not.toHaveBeenCalledWith();
+    });
+
+    it('focuses the menu itself, highlighting no item, when opened by pointer', () => {
+      const focus = jest.spyOn(HTMLElement.prototype, 'focus');
+
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('button')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      fixture.detectChanges();
+
+      expect(document.activeElement).toBe(document.querySelector('[role="menu"]'));
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    });
+
+    it('steps into the items with the arrow keys from the focused menu', () => {
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('button')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      fixture.detectChanges();
+      const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+
+      menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+      expect(document.activeElement).toBe(items(menu)[0]);
+    });
+
     it('opens a target with the article, tracking parameters removed', () => {
       const open = jest.spyOn(window, 'open').mockReturnValue(null);
 

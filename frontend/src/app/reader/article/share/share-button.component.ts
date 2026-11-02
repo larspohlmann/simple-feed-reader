@@ -102,8 +102,11 @@ export class ShareButtonComponent {
   protected readonly logoUrl = shareLogoUrl;
   protected readonly open = signal(false);
   protected readonly origin = viewChild.required(CdkOverlayOrigin);
+  private readonly overlay = viewChild.required(CdkConnectedOverlay);
   /** Caught when the menu opens: the press that opens it may collapse the selection it shares. */
   protected readonly quote = signal<SelectedQuote | null>(null);
+  /** A keyboard click has no pointer position, so `detail` is 0; only then is the first item meant to look focused. */
+  private opensByKeyboard = false;
   private readonly mode = computed((): ShareMenuMode => {
     if (this.quote() !== null) return 'quote';
     return this.selection === null ? 'link' : 'hinted';
@@ -118,7 +121,8 @@ export class ShareButtonComponent {
     });
   }
 
-  protected press(): void {
+  protected press(event: MouseEvent): void {
+    this.opensByKeyboard = event.detail === 0;
     this.quote.set(this.selectedQuote());
     if (this.screen.isCoarse()) this.openSheet();
     else this.open.update((open) => !open);
@@ -137,6 +141,16 @@ export class ShareButtonComponent {
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
     this.postActions.postLink(network, sharedLink(this.page(), this.quote()));
+  }
+
+  /** Scrolling to the focus would park the first item under the sticky quote snippet. */
+  protected focusEntry(): void {
+    const overlay = this.overlay().overlayRef.overlayElement;
+    const menu = overlay.querySelector<HTMLElement>('[role="menu"]');
+    const entry = this.opensByKeyboard
+      ? menu?.querySelector<HTMLElement>('[role="menuitem"]')
+      : menu;
+    entry?.focus({ preventScroll: true });
   }
 
   protected closed(): void {
