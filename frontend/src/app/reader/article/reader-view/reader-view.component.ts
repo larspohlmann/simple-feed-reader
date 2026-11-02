@@ -7,6 +7,7 @@ import {
   inject,
   input,
   output,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
@@ -123,34 +124,24 @@ export class ReaderViewComponent {
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   protected readonly source = inject(ArticleSource);
+  // Ahead of EntryArticlePage, whose effects read the entry this shows.
+  private readonly showsEntry = effect(() => {
+    const entry = this.entry();
+    untracked(() => this.source.show(entry));
+  });
   private readonly entryPage = inject(EntryArticlePage);
   protected readonly audio = this.entryPage.audio;
   private readonly autoplay = inject(ListAutoplayCoordinator);
 
-  // The open entry's reference changes on every optimistic flag update, but its
-  // id doesn't. Tracking the loaded id lets the load effect ignore those churns
-  // — no re-fetch, and the Reader/Original toggle survives an in-reader action.
-  private loadedId: number | null = null;
-
   // Alias the shared mode signal so the template reads it directly;
   // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
+  private readonly openId = computed(() => this.entry().id);
 
   constructor() {
-    this.source.connect(this.entry);
-
     effect(() => {
-      const entry = this.entry();
-      const id = entry.id;
-      // Only react to a genuine entry change — not to a same-entry reference
-      // churn from an optimistic flag update (which must not cancel an in-flight
-      // load, re-fetch, or reset the mode toggle).
-      if (id === this.loadedId) return;
-      this.loadedId = id;
-      // Before the source opens: a synchronous load calls enableToggle().
-      this.readerMode.reset();
-      this.autoplay.soundChanged(false);
-      this.source.open(entry);
+      this.openId();
+      untracked(() => this.autoplay.soundChanged(false));
     });
   }
 
@@ -168,7 +159,7 @@ export class ReaderViewComponent {
 
   /** The inline error's retry action — refetches the open entry's body. */
   retryBody(): void {
-    this.source.retryBody(this.entry().id);
+    this.source.retryBody();
   }
 
   toggleMode(): void {

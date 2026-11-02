@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { NEVER } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { ChapterDto, TranscriptDto } from '../../models';
@@ -14,13 +15,16 @@ describe('ArticleSource chapters', () => {
     TestBed.configureTestingModule({
       providers: [
         ArticleSource,
-        { provide: ReaderContentService, useValue: {} },
-        { provide: ReaderModeService, useValue: { mode: () => 'original' } },
+        { provide: ReaderContentService, useValue: { load: () => NEVER } },
+        {
+          provide: ReaderModeService,
+          useValue: { mode: () => 'original', reset: jest.fn(), setOriginalOnly: jest.fn() },
+        },
         { provide: EntryBodyService, useValue: { body: () => signal(body) } },
       ],
     });
     const source = TestBed.inject(ArticleSource);
-    source.connect(signal(anEntry({ id: 1 })));
+    source.show(anEntry({ id: 1 }));
     return source;
   }
 
