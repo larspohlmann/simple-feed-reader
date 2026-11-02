@@ -10,6 +10,19 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Reply, repost and quote on Bluesky and Mastodon.** Answer, repost (boost on
+Mastodon) or quote a post or any reply right from the reader, and delete your
+own posts and replies again. Posts deleted on their network are removed from
+the reader automatically.
+
+**Share to your networks.** The share menu posts a page's link to Bluesky or
+Mastodon, and selecting a passage in an article shares it as a quote with a
+link that jumps to it.
+
+**Keep a network out of For you.** A network's ⋯ menu now has a For you switch.
+
 ## [v1.6.15] - 2026-11-01
 
 ## What's Changed
