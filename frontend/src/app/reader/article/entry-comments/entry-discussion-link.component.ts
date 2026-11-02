@@ -9,6 +9,7 @@ import { EntryDto } from '../../models';
   selector: 'app-entry-discussion-link',
   imports: [TranslocoPipe, IconComponent],
   templateUrl: './entry-discussion-link.component.html',
+  styleUrl: './entry-discussion-link.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EntryDiscussionLinkComponent {

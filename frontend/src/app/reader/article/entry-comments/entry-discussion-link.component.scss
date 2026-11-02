@@ -1,0 +1,9 @@
+/* The meta line's link look: the page's `.meta a` rules stop at this component's boundary. */
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a app-icon {
+  vertical-align: super;
+}
