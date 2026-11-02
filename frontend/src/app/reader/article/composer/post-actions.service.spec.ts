@@ -148,7 +148,11 @@ describe('PostActions', () => {
     };
     composed = of(posted);
 
-    actions.postLink('bluesky', 'https://example.com/story', 'A story');
+    actions.postLink('bluesky', {
+      url: 'https://example.com/story',
+      title: 'A story',
+      quote: null,
+    });
 
     expect(dialog.open).toHaveBeenCalledWith(
       ComposerDialogComponent,
@@ -158,6 +162,7 @@ describe('PostActions', () => {
           network: 'bluesky',
           url: 'https://example.com/story',
           title: 'A story',
+          quote: null,
         },
       }),
     );
@@ -168,6 +173,21 @@ describe('PostActions', () => {
     expect(dialog.open).toHaveBeenCalledWith(
       PostSentDialogComponent,
       expect.objectContaining({ data: posted }),
+    );
+  });
+
+  it('opens the link composer on the quote the reader selected', () => {
+    const link = {
+      url: 'https://example.com/story#:~:text=A%20line',
+      title: 'A story',
+      quote: 'A line',
+    };
+
+    actions.postLink('mastodon', link);
+
+    expect(dialog.open).toHaveBeenCalledWith(
+      ComposerDialogComponent,
+      expect.objectContaining({ data: { kind: 'link', network: 'mastodon', ...link } }),
     );
   });
 

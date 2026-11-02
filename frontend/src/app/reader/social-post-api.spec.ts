@@ -162,7 +162,13 @@ describe('SocialPostApi', () => {
   it('GETs the composer context for the shared URL and its title on a network, on a chosen account', () => {
     const composerPath = 'https://api.test/api/social/link-composer';
     api
-      .composer({ kind: 'link', network: 'bluesky', url: SHARED_URL, title: 'A story' })
+      .composer({
+        kind: 'link',
+        network: 'bluesky',
+        url: SHARED_URL,
+        title: 'A story',
+        quote: null,
+      })
       .subscribe();
     const bluesky = ctrl.expectOne((request) => request.url === composerPath);
     expect(bluesky.request.method).toBe('GET');
@@ -172,7 +178,9 @@ describe('SocialPostApi', () => {
     expect(bluesky.request.params.has('accountId')).toBe(false);
     bluesky.flush({});
 
-    api.composer({ kind: 'link', network: 'mastodon', url: SHARED_URL, title: '' }, 4).subscribe();
+    api
+      .composer({ kind: 'link', network: 'mastodon', url: SHARED_URL, title: '', quote: null }, 4)
+      .subscribe();
     const mastodon = ctrl.expectOne((request) => request.url === composerPath);
     expect(mastodon.request.params.get('network')).toBe('mastodon');
     expect(mastodon.request.params.get('accountId')).toBe('4');
@@ -182,7 +190,10 @@ describe('SocialPostApi', () => {
   it('POSTs a link post with the shared URL on its network in the query and the draft as the body', () => {
     const draft = { text: 'Read this', accountId: 4, language: 'en', idempotencyKey: 'k-3' };
     api
-      .send({ kind: 'link', network: 'mastodon', url: SHARED_URL, title: 'A story' }, draft)
+      .send(
+        { kind: 'link', network: 'mastodon', url: SHARED_URL, title: 'A story', quote: null },
+        draft,
+      )
       .subscribe();
 
     const toPost = ctrl.expectOne((request) => request.url === 'https://api.test/api/social/links');
@@ -212,5 +223,34 @@ describe('SocialPostApi', () => {
     expect(testRequest.request.method).toBe('DELETE');
     testRequest.flush({ outcome: 'alreadyGone' });
     expect(answer).toEqual({ outcome: 'alreadyGone' });
+  });
+
+  it('sends the quote the composer starts from only when there is one', () => {
+    const composerPath = 'https://api.test/api/social/link-composer';
+    api
+      .composer({
+        kind: 'link',
+        network: 'mastodon',
+        url: SHARED_URL,
+        title: 'A story',
+        quote: 'A line',
+      })
+      .subscribe();
+    const quoted = ctrl.expectOne((request) => request.url === composerPath);
+    expect(quoted.request.params.get('quote')).toBe('A line');
+    quoted.flush({});
+
+    api
+      .composer({
+        kind: 'link',
+        network: 'mastodon',
+        url: SHARED_URL,
+        title: 'A story',
+        quote: null,
+      })
+      .subscribe();
+    const plain = ctrl.expectOne((request) => request.url === composerPath);
+    expect(plain.request.params.has('quote')).toBe(false);
+    plain.flush({});
   });
 });

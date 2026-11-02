@@ -10,7 +10,7 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryCommentDto } from '../../entry-comment';
 import { EntryDto } from '../../models';
-import { PostTargetDto } from '../../entry-social';
+import { PostTargetDto, SharedLinkDto } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
@@ -51,8 +51,8 @@ export class PostActions {
     });
   }
 
-  postLink(network: SocialNetworkName, url: string, title: string): void {
-    this.respond({ kind: 'link', network, url, title }).subscribe((sent) => this.announce(sent));
+  postLink(network: SocialNetworkName, link: SharedLinkDto): void {
+    this.respond({ kind: 'link', network, ...link }).subscribe((sent) => this.announce(sent));
   }
 
   delete(entryId: number, network: SocialNetworkName, comment: EntryCommentDto): void {

@@ -186,11 +186,11 @@ describe('ShareButtonComponent', () => {
       item(openMenu(), 'Post on Mastodon').click();
       fixture.detectChanges();
 
-      expect(postActions.postLink).toHaveBeenCalledWith(
-        'mastodon',
-        'https://example.com/a?id=1',
-        'First',
-      );
+      expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
+        url: 'https://example.com/a?id=1',
+        title: 'First',
+        quote: null,
+      });
       expect(document.querySelector('[role="menu"]')).toBeNull();
     });
   });
@@ -292,11 +292,11 @@ describe('ShareButtonComponent', () => {
 
       chosen.next('post-bluesky');
 
-      expect(postActions.postLink).toHaveBeenCalledWith(
-        'bluesky',
-        'https://example.com/a?id=1',
-        'First',
-      );
+      expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
+        url: 'https://example.com/a?id=1',
+        title: 'First',
+        quote: null,
+      });
     });
   });
 });

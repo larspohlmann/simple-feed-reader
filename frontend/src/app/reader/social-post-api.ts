@@ -122,9 +122,9 @@ function targetParams(target: PostTargetDto): Record<string, string> {
 }
 
 function composerParams(target: PostTargetDto): Record<string, string> {
-  return target.kind === 'link'
-    ? { ...targetParams(target), title: target.title }
-    : { kind: target.kind, ...targetParams(target) };
+  if (target.kind !== 'link') return { kind: target.kind, ...targetParams(target) };
+  const quote: Record<string, string> = target.quote === null ? {} : { quote: target.quote };
+  return { ...targetParams(target), title: target.title, ...quote };
 }
 
 function addressParam(address: string | null): Record<string, string> {

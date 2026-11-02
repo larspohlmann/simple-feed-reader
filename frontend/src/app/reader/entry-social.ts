@@ -100,7 +100,12 @@ export interface LinkTargetDto {
   network: SocialNetworkName;
   url: string;
   title: string;
+  /** The reader's selection the composer starts from; null shares the link alone. */
+  quote: string | null;
 }
+
+/** What a link post shares, before a network is chosen. */
+export type SharedLinkDto = Omit<LinkTargetDto, 'kind' | 'network'>;
 
 /** What the composer writes: a response to a post, or a post of a shared URL. */
 export type PostTargetDto = ResponseTargetDto | LinkTargetDto;

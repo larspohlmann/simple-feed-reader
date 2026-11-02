@@ -148,7 +148,11 @@ export class ShareButtonComponent {
 
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
-    this.postActions.postLink(network, stripTracking(this.url()), this.title());
+    this.postActions.postLink(network, {
+      url: stripTracking(this.url()),
+      title: this.title(),
+      quote: null,
+    });
   }
 
   protected closed(): void {
