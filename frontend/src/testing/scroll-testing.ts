@@ -18,8 +18,9 @@ export function scrollerOf(fixture: { nativeElement: unknown }): HTMLElement {
 /** jsdom ships no `CSS` namespace; the ids under test need no escaping. Returns the restore. */
 export function stubCssEscape(): () => void {
   const globals = globalThis as unknown as { CSS?: { escape: (value: string) => string } };
+  const previous = globals.CSS;
   globals.CSS = { escape: (value) => value };
   return () => {
-    delete globals.CSS;
+    globals.CSS = previous;
   };
 }

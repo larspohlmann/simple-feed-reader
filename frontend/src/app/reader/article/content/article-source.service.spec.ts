@@ -76,3 +76,25 @@ describe('ArticleSource chapters', () => {
     });
   });
 });
+
+describe('ArticleSource showing an entry', () => {
+  it('takes a new object of the shown entry without loading it again', () => {
+    const load = jest.fn(() => NEVER);
+    TestBed.configureTestingModule({
+      providers: [
+        ArticleSource,
+        { provide: ReaderContentService, useValue: { load } },
+        { provide: ReaderModeService, useValue: { mode: () => 'reader', reset: jest.fn() } },
+        { provide: EntryBodyService, useValue: { body: () => signal({ status: 'loading' }) } },
+      ],
+    });
+    const source = TestBed.inject(ArticleSource);
+    source.show(anEntry({ id: 1, url: 'https://news.test/story' }));
+
+    const kept = anEntry({ id: 1, url: 'https://news.test/story', isKept: true });
+    source.show(kept);
+
+    expect(source.entry()).toBe(kept);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+});
