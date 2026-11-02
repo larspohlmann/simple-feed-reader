@@ -21,11 +21,30 @@ final readonly class LocalPostRemoval
     ) {
     }
 
+    public function removeWithoutReplies(Entry $entry): void
+    {
+        $this->remove($entry, []);
+    }
+
     /** @param list<string> $replyGuids the guids the post's deleted thread replies may come back under */
     public function remove(Entry $entry, array $replyGuids): void
     {
-        $copies = $this->removals->copiesOf($entry);
-        $replyHashes = array_map(EntryGuid::hashOf(...), $replyGuids);
+        $this->removeCopies($entry, $this->removals->copiesOf($entry), array_map(EntryGuid::hashOf(...), $replyGuids));
+    }
+
+    /** Removes the entry alone: every other stored copy of its post stays. */
+    public function removeOnlyThisCopy(Entry $entry): void
+    {
+        $copy = new StoredPostCopy($entry->requireId(), $entry->getFeed()->requireId(), $entry->getGuidHash());
+        $this->removeCopies($entry, [$copy], []);
+    }
+
+    /**
+     * @param list<StoredPostCopy> $copies
+     * @param list<string>         $replyHashes
+     */
+    private function removeCopies(Entry $entry, array $copies, array $replyHashes): void
+    {
         foreach (self::guidHashesByFeed($copies) as $feedId => $guidHashes) {
             $this->tombstones->bury($feedId, [...$guidHashes, ...$replyHashes]);
         }

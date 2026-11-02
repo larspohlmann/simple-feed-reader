@@ -10,6 +10,8 @@ use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\SocialLikeRepository;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Model\SocialPostModel;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -22,6 +24,7 @@ final readonly class SocialLikes
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
         private SocialCountsCache $countsCache,
+        private ConfirmedDeletion $confirmedDeletion,
     ) {
     }
 
@@ -49,11 +52,21 @@ final readonly class SocialLikes
         $this->countsCache->forgetEntry($entry);
     }
 
-    /** The post as the network reports it now, the user's like on it mirrored into the stored likes. */
+    /**
+     * The post as the network reports it now, the user's like on it mirrored into the stored likes.
+     *
+     * @throws SocialPostRemovedException when the post's home server confirms it deleted; every copy here is gone
+     */
     public function syncFromNetwork(User $user, Entry $entry): SocialPostModel
     {
         $stored = $this->likes->findOneFor($user, $entry);
-        $post = $this->posts->find($user, $entry);
+        try {
+            $post = $this->posts->find($user, $entry);
+        } catch (SocialPostNotFoundException $notFound) {
+            $this->confirmedDeletion->removeIfConfirmed($entry);
+
+            throw $notFound;
+        }
         $this->mirror($stored, $user, $entry, $post);
 
         return $post;

@@ -114,6 +114,26 @@ final class LocalPostRemovalTest extends DbTestCase
         self::assertSame([], $this->tombstones->buriedIn($saved->requireId()));
     }
 
+    public function testOnlyThisCopyLeavesTheOthersUnburied(): void
+    {
+        $home = $this->feed('social:mastodon:1:home', SourceFormat::MASTODON_API);
+        $otherHome = $this->feed('social:mastodon:2:home', SourceFormat::MASTODON_API);
+        $post = $this->copy($home, self::STATUS_URL, 'hash-120');
+        $sibling = $this->copy($otherHome, self::STATUS_URL, 'hash-120');
+        $ids = [$post->requireId(), $sibling->requireId()];
+
+        $this->removal()->removeOnlyThisCopy($post);
+
+        $this->entityManager->clear();
+        self::assertSame(
+            [false, true],
+            array_map(fn (int $id): bool => null !== $this->entityManager->find(Entry::class, $id), $ids),
+        );
+        self::assertSame([EntryGuid::hashOf(self::STATUS_URL)], $this->tombstones->buriedIn($home->requireId()));
+        self::assertSame([], $this->tombstones->buriedIn($otherHome->requireId()));
+        self::assertSame([[$ids[0]]], $this->index->forgets);
+    }
+
     public function testAPostWithoutAUrlHashTakesOnlyItself(): void
     {
         $feed = $this->feed('https://mastodon.example/@alice.rss');

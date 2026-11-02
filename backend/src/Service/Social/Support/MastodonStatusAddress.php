@@ -10,8 +10,8 @@ use App\Service\Social\Model\MastodonStatusModel;
 final class MastodonStatusAddress
 {
     private const array STATUS_SHAPES = [
-        '~^(https://([a-z0-9.-]+)/users/[^/?#]+)/statuses/(\d{1,32})$~iD',
-        '~^(https://([a-z0-9.-]+)/@[^/?#]+)/(\d{1,32})$~iD',
+        '~^(?<prefix>https://(?<host>[a-z0-9.-]+)/users/(?<account>[^/?#]+))/statuses/(?<id>\d{1,32})$~iD',
+        '~^(?<prefix>https://(?<host>[a-z0-9.-]+)/@(?<account>[^/?#]+))/(?<id>\d{1,32})$~iD',
     ];
 
     private function __construct()
@@ -22,7 +22,7 @@ final class MastodonStatusAddress
     {
         foreach (self::STATUS_SHAPES as $shape) {
             if (1 === preg_match($shape, $address, $match)) {
-                return new MastodonStatusModel($match[2], $match[3], $match[1]);
+                return new MastodonStatusModel($match['host'], $match['id'], $match['prefix'], $match['account']);
             }
         }
 

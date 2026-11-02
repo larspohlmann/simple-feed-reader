@@ -1562,6 +1562,7 @@
       "confirm": "Delete",
       "alreadyGone": "Already deleted on {{ network }} — removed here."
     },
+    "postDeletedThere": "Deleted on {{ network }} — removed here.",
     "quote": {
       "bluesky": "Quote on Bluesky",
       "mastodon": "Quote on Mastodon"

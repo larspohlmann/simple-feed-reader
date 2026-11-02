@@ -16,6 +16,7 @@ use App\Service\Social\Exception\PostNotPubliclyCountableException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\SocialCounts;
@@ -23,6 +24,8 @@ use App\Service\Social\SocialCountsCache;
 use App\Service\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
+use App\Tests\Support\ConfirmedDeletions;
+use App\Tests\Support\FakeHomeServerCheck;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\FakePostCountsSource;
 use App\Tests\Support\SeedsUsers;
@@ -41,6 +44,7 @@ final class SocialCountsTest extends DbTestCase
 
     private FakePostCountsSource $publicSource;
     private FakeMastodonNetwork $mastodon;
+    private FakeHomeServerCheck $homeServer;
     private SocialCountsCache $cache;
     private User $owner;
 
@@ -49,6 +53,7 @@ final class SocialCountsTest extends DbTestCase
         parent::setUp();
         $this->publicSource = new FakePostCountsSource(new SocialCountsModel(5, 2, 1, null));
         $this->mastodon = new FakeMastodonNetwork();
+        $this->homeServer = new FakeHomeServerCheck();
         $this->cache = new SocialCountsCache(new ArrayAdapter());
         $this->owner = $this->user('social-counts-service@example.test');
     }
@@ -120,6 +125,50 @@ final class SocialCountsTest extends DbTestCase
         } catch (SocialNetworkThrottledException $caught) {
             self::assertSame($failure, $caught);
             self::assertSame([], $this->mastodon->calls);
+        }
+    }
+
+    public function testAPostNoOneFindsIsKeptWhileItsHomeServerProvesNothing(): void
+    {
+        $this->publicSource->failWith(new SocialPostNotFoundException('Gone from the origin.'));
+        $post = $this->post();
+        $postId = $post->requireId();
+
+        try {
+            $this->counts()->of($this->owner, $post);
+            self::fail('A post nothing proves deleted must stay not found.');
+        } catch (SocialPostNotFoundException) {
+            self::assertSame([self::STATUS_URL], $this->homeServer->askedAddresses);
+            $this->entityManager->clear();
+            self::assertNotNull($this->entityManager->find(Entry::class, $postId));
+        }
+    }
+
+    public function testAPostItsHomeServerConfirmsDeletedIsRemoved(): void
+    {
+        $this->publicSource->failWith(new SocialPostNotFoundException('Gone from the origin.'));
+        $this->homeServer->confirmsDeletions();
+        $post = $this->post();
+        $postId = $post->requireId();
+
+        try {
+            $this->counts()->of($this->owner, $post);
+            self::fail('A post its home server confirms deleted must be removed.');
+        } catch (SocialPostRemovedException) {
+            $this->entityManager->clear();
+            self::assertNull($this->entityManager->find(Entry::class, $postId));
+        }
+    }
+
+    public function testAnUnreachablePublicSourceWithoutAnAccountAsksNoHomeServer(): void
+    {
+        $this->publicSource->failWith(new SocialNetworkUnreachableException('The origin is down.'));
+
+        try {
+            $this->counts()->of($this->owner, $this->post());
+            self::fail('The unreachable network must reach the caller.');
+        } catch (SocialNetworkUnreachableException) {
+            self::assertSame([], $this->homeServer->askedAddresses);
         }
     }
 
@@ -229,6 +278,7 @@ final class SocialCountsTest extends DbTestCase
                 new ActingAccountGuard($this->entityManager),
                 new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
             ),
+            ConfirmedDeletions::askingOf($this->entityManager, $this->homeServer),
             new ServiceLocator(['mastodon' => static fn (): FakePostCountsSource => $publicSource]),
         );
     }

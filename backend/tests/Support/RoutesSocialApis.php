@@ -8,7 +8,9 @@ use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Service\Crypto\InstanceSecretCipher;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 
 /** For an ApiTestCase that answers the app's outbound social API calls itself. */
@@ -32,6 +34,18 @@ trait RoutesSocialApis
             self::MASTODON_POST_URL,
             '2026-10-12T10:00:00Z',
         );
+    }
+
+    private function savedMastodonPostFor(User $user): int
+    {
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
+        $saved = $fixtures->subscribe(
+            $user,
+            SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon),
+            SourceFormat::SAVED,
+        );
+
+        return $fixtures->post($saved, self::MASTODON_POST_URL, '2026-10-12T10:00:00Z')->requireId();
     }
 
     private function mastodonAccountOf(User $user): SocialAccount

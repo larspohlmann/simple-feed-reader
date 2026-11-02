@@ -26,6 +26,8 @@ use App\Service\Social\SocialCountsCache;
 use App\Service\Social\SocialPostFinder;
 use App\Service\Social\SocialRepliesSource;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ConfirmedDeletions;
+use App\Tests\Support\FakeHomeServerCheck;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -160,6 +162,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
         return new SocialCounts(
             new SocialCountsCache(new ArrayAdapter()),
             $this->finder(),
+            ConfirmedDeletions::askingOf($this->entityManager, new FakeHomeServerCheck()),
             new ServiceLocator(['bluesky' => static fn (): PostCountsSourceInterface => $source]),
         );
     }

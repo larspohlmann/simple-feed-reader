@@ -20,6 +20,9 @@ export interface PostDeletionDto {
   outcome: 'deleted' | 'alreadyGone';
 }
 
+/** The problem type of the viewer answer for a post deleted on its network and removed here (#1975). */
+export const SOCIAL_POST_REMOVED = 'social_post_removed';
+
 /** The answer of `GET /api/entries/{id}/social/viewer`: what the reader has done to the post on its network. */
 export interface SocialViewerDto {
   isLiked: boolean;
