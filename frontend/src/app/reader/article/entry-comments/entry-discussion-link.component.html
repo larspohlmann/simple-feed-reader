@@ -1,0 +1,16 @@
+@let e = entry();
+@if (e.comments) {
+  ·
+  <a class="discussion-link" href="#comments" (click)="$event.preventDefault(); jump.emit()"
+    >{{ 'reader.discussion' | transloco }}
+    @if (commentCount() !== null) {
+      ({{ commentCount() }})
+    }
+    <app-icon name="forum" size="text"
+  /></a>
+} @else if (e.discussionUrl && e.discussionUrl !== e.url) {
+  ·
+  <a class="discussion-link" [href]="e.discussionUrl" target="_blank" rel="noopener noreferrer"
+    >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
+  /></a>
+}

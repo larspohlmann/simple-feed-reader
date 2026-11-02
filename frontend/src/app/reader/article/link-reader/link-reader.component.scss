@@ -1,5 +1,5 @@
-@use '../reader-view/article-page';
-@use '../reader-view/article-toolbar';
+@use '../article-page/article-page';
+@use '../article-page/article-toolbar';
 
 :host {
   display: block;

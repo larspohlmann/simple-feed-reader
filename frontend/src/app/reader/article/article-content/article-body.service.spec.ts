@@ -17,7 +17,8 @@ import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testin
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { PlayingMedium } from '../../media/autoplay/autoplay-player';
-import { ChapterDto, EntryDto } from '../../models';
+import { ChapterDto } from '../../models';
+import { embedTrackOrigin, EmbedTrackOrigin } from '../../audio/embed-track';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
@@ -78,7 +79,7 @@ describe('ArticleBody', () => {
   const html = signal('');
   const chapters = signal<ChapterDto[]>([]);
   const audioTrack = signal<AudioTrack | null>(null);
-  const entry = signal<EntryDto | null>(null);
+  const origin = signal<EmbedTrackOrigin | null>(null);
 
   function connectBody(body: string): void {
     content = articleHost(body);
@@ -91,7 +92,7 @@ describe('ArticleBody', () => {
       enclosureUrl: () => null,
       chapters,
       audioTrack,
-      entry,
+      origin,
       decorated,
     });
     TestBed.tick();
@@ -121,7 +122,7 @@ describe('ArticleBody', () => {
     localStorage.clear();
     chapters.set([]);
     audioTrack.set(null);
-    entry.set(null);
+    origin.set(null);
     imageProxy = neverRecoveringImageProxy();
     embedDetails = jest.fn<Observable<TrackDetails>, [EmbedMedia]>(() => of(NO_DETAILS));
     TestBed.configureTestingModule({
@@ -468,15 +469,15 @@ describe('ArticleBody', () => {
     const queueToggle = (): HTMLButtonElement =>
       content.querySelector<HTMLButtonElement>('.reader-listen__button[aria-pressed]')!;
 
-    it('offers Listen under a video of the open entry', async () => {
-      entry.set(anEntry());
+    it('offers Listen under a video once the page gives a track origin', async () => {
+      origin.set(embedTrackOrigin(anEntry()));
       connectBody(YOUTUBE);
       await Promise.resolve();
 
       expect(listenButton()).not.toBeNull();
     });
 
-    it('offers no Listen before the entry is known', async () => {
+    it('offers no Listen before the page gives a track origin', async () => {
       connectBody(YOUTUBE);
       await Promise.resolve();
 
@@ -487,7 +488,7 @@ describe('ArticleBody', () => {
       const audio = TestBed.inject(AudioPlayerService);
       const play = jest.spyOn(audio, 'play').mockImplementation(() => undefined);
       const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
-      entry.set(anEntry({ title: 'The video' }));
+      origin.set(embedTrackOrigin(anEntry({ title: 'The video' })));
       chapters.set(CHAPTERS);
       connectBody(YOUTUBE);
       await Promise.resolve();
@@ -508,7 +509,7 @@ describe('ArticleBody', () => {
 
     it('shows the queue toggle pressed while the video is in the playlist', async () => {
       const audio = TestBed.inject(AudioPlayerService);
-      entry.set(anEntry());
+      origin.set(embedTrackOrigin(anEntry()));
       connectBody(YOUTUBE);
       await Promise.resolve();
       TestBed.tick();
@@ -530,7 +531,7 @@ describe('ArticleBody', () => {
         imageUrl: null,
         durationInSeconds: null,
       };
-      entry.set(anEntry());
+      origin.set(embedTrackOrigin(anEntry()));
       connectBody(YOUTUBE);
       await Promise.resolve();
       TestBed.tick();
@@ -546,7 +547,7 @@ describe('ArticleBody', () => {
 
     it('stops following the playlist once destroyed', async () => {
       const audio = TestBed.inject(AudioPlayerService);
-      entry.set(anEntry());
+      origin.set(embedTrackOrigin(anEntry()));
       connectBody(YOUTUBE);
       await Promise.resolve();
       TestBed.tick();
@@ -597,7 +598,7 @@ describe('ArticleBody', () => {
 
     it("puts a SoundCloud widget's chapter list after its player bar", async () => {
       answers({ [WIDGET_URL]: of(TRACK_DETAILS) });
-      entry.set(anEntry());
+      origin.set(embedTrackOrigin(anEntry()));
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
 
@@ -616,7 +617,7 @@ describe('ArticleBody', () => {
 
       beforeEach(async () => {
         answers({ [VIDEO_URL]: of(fetched) });
-        entry.set(anEntry({ title: 'The post' }));
+        origin.set(embedTrackOrigin(anEntry({ title: 'The post' })));
         chapters.set(CHAPTERS);
         connectBody(YOUTUBE + OTHER_YOUTUBE + SOUNDCLOUD);
         await Promise.resolve();
@@ -708,7 +709,7 @@ describe('ArticleBody', () => {
           artworkUrl: null,
         }),
       });
-      entry.set(anEntry({ url: VIDEO_URL, title: 'The post' }));
+      origin.set(embedTrackOrigin(anEntry({ url: VIDEO_URL, title: 'The post' })));
       chapters.set(CHAPTERS);
       connectBody(YOUTUBE);
       await Promise.resolve();
@@ -727,7 +728,7 @@ describe('ArticleBody', () => {
         .spyOn(TestBed.inject(AudioPlayerService), 'play')
         .mockImplementation(() => undefined);
       answers({ [WIDGET_URL]: of(TRACK_DETAILS) });
-      entry.set(anEntry());
+      origin.set(embedTrackOrigin(anEntry()));
       connectBody(YOUTUBE + SOUNDCLOUD);
       await Promise.resolve();
 
@@ -749,7 +750,7 @@ describe('ArticleBody', () => {
       const play = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'play')
         .mockImplementation(() => undefined);
-      entry.set(anEntry({ title: 'The post' }));
+      origin.set(embedTrackOrigin(anEntry({ title: 'The post' })));
       chapters.set(CHAPTERS);
       connectBody(YOUTUBE);
       await Promise.resolve();

@@ -1,4 +1,4 @@
-import { toEmbedTrack } from './embed-track';
+import { embedTrackOrigin, toEmbedTrack } from './embed-track';
 import { EmbedMedia } from './embed-media';
 import { toAudioTrack } from './audio-attachment';
 import { ChapterDto, EntryDto } from '../models';
@@ -28,8 +28,17 @@ const video = (overrides: Partial<EmbedMedia> = {}): EmbedMedia => ({
 });
 
 describe('toEmbedTrack', () => {
+  it('names, pictures and links the track from the page it plays in', () => {
+    expect(embedTrackOrigin(entry())).toEqual({
+      title: 'The entry headline',
+      faviconUrl: 'https://x.test/favicon.ico',
+      imageUrl: 'https://x.test/cover.jpg',
+      entry: expect.objectContaining({ id: 42, title: 'The entry headline' }),
+    });
+  });
+
   it('builds the track the player queues for an embedded video', () => {
-    expect(toEmbedTrack(entry(), video())).toEqual({
+    expect(toEmbedTrack(embedTrackOrigin(entry()), video())).toEqual({
       url: VIDEO_URL,
       title: 'The entry headline',
       faviconUrl: 'https://x.test/favicon.ico',
@@ -46,24 +55,29 @@ describe('toEmbedTrack', () => {
   });
 
   it('shows the entry image when the media has no poster', () => {
-    const track = toEmbedTrack(entry(), video({ kind: 'soundcloud', posterUrl: null }));
+    const track = toEmbedTrack(
+      embedTrackOrigin(entry()),
+      video({ kind: 'soundcloud', posterUrl: null }),
+    );
 
     expect(track.imageUrl).toBe('https://x.test/cover.jpg');
   });
 
   it('names the track after the source when the entry has no title', () => {
-    expect(toEmbedTrack(entry({ title: '' }), video()).title).toBe('Fixture channel');
+    expect(toEmbedTrack(embedTrackOrigin(entry({ title: '' })), video()).title).toBe(
+      'Fixture channel',
+    );
   });
 
   it('keeps the same entry block an enclosure track gets', () => {
-    const embedTrack = toEmbedTrack(entry(), video());
+    const embedTrack = toEmbedTrack(embedTrackOrigin(entry()), video());
     const enclosureTrack = toAudioTrack(entry(), { url: 'https://x.test/ep.mp3' });
 
     expect(embedTrack.entry).toEqual(enclosureTrack.entry);
   });
 
   it('has no chapters key without chapters, like an enclosure track', () => {
-    expect(toEmbedTrack(entry(), video())).not.toHaveProperty('chapters');
+    expect(toEmbedTrack(embedTrackOrigin(entry()), video())).not.toHaveProperty('chapters');
   });
 
   describe('with the embed details (#1824)', () => {
@@ -80,7 +94,7 @@ describe('toEmbedTrack', () => {
     });
 
     it("takes the embed's own title, length and chapters, keeping the post in its entry", () => {
-      const track = toEmbedTrack(entry(), video(), details());
+      const track = toEmbedTrack(embedTrackOrigin(entry()), video(), details());
 
       expect(track.title).toBe('The video itself');
       expect(track.durationInSeconds).toBe(4964);
@@ -90,7 +104,7 @@ describe('toEmbedTrack', () => {
 
     it("shows the embed's own artwork over the poster and the entry image (#1831)", () => {
       const track = toEmbedTrack(
-        entry(),
+        embedTrackOrigin(entry()),
         video(),
         details({ artworkUrl: 'https://i1.sndcdn.com/artworks-a-t500x500.jpg' }),
       );
@@ -100,7 +114,7 @@ describe('toEmbedTrack', () => {
 
     it('falls back to the post title and an unknown length for what the details lack', () => {
       const track = toEmbedTrack(
-        entry(),
+        embedTrackOrigin(entry()),
         video(),
         details({ title: null, durationSeconds: null, chapters: [] }),
       );
@@ -111,7 +125,9 @@ describe('toEmbedTrack', () => {
     });
 
     it('is the post-named track without details', () => {
-      expect(toEmbedTrack(entry(), video(), null)).toEqual(toEmbedTrack(entry(), video()));
+      expect(toEmbedTrack(embedTrackOrigin(entry()), video(), null)).toEqual(
+        toEmbedTrack(embedTrackOrigin(entry()), video()),
+      );
     });
   });
 });

@@ -9,9 +9,9 @@ export function scrollKey(selection: Selection): string {
   return `feed-reader:list-scroll:${selection.kind}:${selection.id ?? ''}:${selection.unread ? 'u' : 'a'}:${selection.term ?? ''}:${networkKey(selection)}:${selection.group ?? ''}:${listOrderOf(selection)}`;
 }
 
-/** Storage key for an open article's own scroll offset, keyed by entry id. */
-export function entryScrollKey(entryId: number): string {
-  return `feed-reader:article-scroll:${entryId}`;
+/** Storage key for an open article's own scroll offset. */
+export function articleScrollKey(pageKey: string): string {
+  return `feed-reader:article-scroll:${pageKey}`;
 }
 
 /**
@@ -35,13 +35,13 @@ export class ListScrollMemory {
     this.mutate((store) => store.removeItem(scrollKey(selection)));
   }
 
-  /** Remember the scroll offset within an open article (keyed by entry id). */
-  saveEntry(entryId: number, top: number): void {
-    this.write(entryScrollKey(entryId), top);
+  /** Remember the scroll offset within an open article. */
+  saveArticle(pageKey: string, top: number): void {
+    this.write(articleScrollKey(pageKey), top);
   }
 
-  readEntry(entryId: number): number {
-    return this.readNum(entryScrollKey(entryId));
+  readArticle(pageKey: string): number {
+    return this.readNum(articleScrollKey(pageKey));
   }
 
   private write(key: string, top: number): void {

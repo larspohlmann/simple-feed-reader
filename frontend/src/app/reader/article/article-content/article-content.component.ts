@@ -1,7 +1,8 @@
 import { Component, ElementRef, inject, input, output, signal } from '@angular/core';
-import { ArticleBody } from '../reader-view/article-body.service';
+import { ArticleBody } from './article-body.service';
 import { AudioTrack } from '../../audio-player.service';
-import { ChapterDto, EntryDto } from '../../models';
+import { EmbedTrackOrigin } from '../../audio/embed-track';
+import { ChapterDto } from '../../models';
 
 /** The article body: its typography and every decoration `ArticleBody` gives it. */
 @Component({
@@ -17,7 +18,7 @@ export class ArticleContentComponent {
   readonly enclosureUrl = input<string | null>(null);
   readonly chapters = input<ChapterDto[]>([]);
   readonly audioTrack = input<AudioTrack | null>(null);
-  readonly entry = input<EntryDto | null>(null);
+  readonly origin = input<EmbedTrackOrigin | null>(null);
   readonly decorated = output<HTMLElement>();
 
   readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -30,7 +31,7 @@ export class ArticleContentComponent {
       enclosureUrl: this.enclosureUrl,
       chapters: this.chapters,
       audioTrack: this.audioTrack,
-      entry: this.entry,
+      origin: this.origin,
       decorated: (host) => this.decorated.emit(host),
     });
   }

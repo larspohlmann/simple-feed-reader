@@ -22,7 +22,7 @@ import {
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
 import { ReaderTarget } from '../content/reader-cache.service';
-import { ArticleGestures } from '../reader-view/article-gestures.service';
+import { ArticleGestures } from './article-gestures.service';
 
 /** The reader's layer: its frame, hide-on-scroll toolbar, the one scroller, the
  *  progress rail, the to-top button and the return gestures. The article itself,

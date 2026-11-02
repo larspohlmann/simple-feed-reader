@@ -1,5 +1,5 @@
-@use 'article-page';
-@use 'article-toolbar';
+@use '../article-page/article-page';
+@use '../article-page/article-toolbar';
 
 :host {
   display: block;

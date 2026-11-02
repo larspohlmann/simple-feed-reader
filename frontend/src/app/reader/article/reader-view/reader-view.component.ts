@@ -31,6 +31,7 @@ import { ReaderModeService } from '../content/reader-mode.service';
 import { ArticleSource } from '../content/article-source.service';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { LayoutService } from '../../layout.service';
+import { entryPageKey } from '../reading/article-page-key';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
@@ -56,13 +57,15 @@ import { relativeTime } from '../../format';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { embedTrackOrigin } from '../../audio/embed-track';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 import { ShareButtonComponent } from '../share/share-button.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectionShareComponent } from '../selection-share/selection-share.component';
-import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-actions.component';
+import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
+import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
 @Component({
   selector: 'app-reader-view',
   imports: [
@@ -91,7 +94,8 @@ import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-
     ArticleContentComponent,
     ArticleLayerComponent,
     ShareButtonComponent,
-    ArticleCornerActionsComponent,
+    EntryCornerFlagsComponent,
+    EntryDiscussionLinkComponent,
     SelectionShareComponent,
   ],
   providers: [
@@ -142,12 +146,6 @@ export class ReaderViewComponent {
     this.comments,
     inject(SocialCountsService),
   );
-  protected readonly commentCount = computed(() => {
-    const entry = this.entry();
-    if (!entry?.comments) return null;
-    const state = this.comments.state(entry.id)();
-    return state.status === 'ok' ? state.comments.length + state.omitted : null;
-  });
   private readonly trailingParts: readonly TrailingPart[] = [
     { query: this.postMedia, joinsFocus: false },
     { query: this.quotedPost, joinsFocus: false },
@@ -185,6 +183,11 @@ export class ReaderViewComponent {
     inject(ListenLauncher),
   );
 
+  protected readonly embedOrigin = computed(() => {
+    const entry = this.entry();
+    return entry ? embedTrackOrigin(entry) : null;
+  });
+
   /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */
   protected readonly fallbackNoticeShown = computed(
     () =>
@@ -202,6 +205,11 @@ export class ReaderViewComponent {
   // id doesn't. Tracking the loaded id lets the load effect ignore those churns
   // — no re-fetch, and the Reader/Original toggle survives an in-reader action.
   private loadedId: number | null = null;
+
+  private readonly pageKey = computed(() => {
+    const entry = this.entry();
+    return entry ? entryPageKey(entry.id) : undefined;
+  });
 
   // Alias the shared mode signal so the template and computeds read it directly;
   // writes go through the ReaderModeService lifecycle methods below.
@@ -229,7 +237,7 @@ export class ReaderViewComponent {
       this.loadedId = id;
       // Before the source opens: a synchronous load calls enableToggle().
       this.readerMode.reset();
-      this.restore.arm(id);
+      this.restore.arm(this.pageKey());
       // This instance is reused: a new article starts with a fresh, collapsed TOC.
       this.toc.set([]);
       this.tocOpen.set(false);
@@ -257,11 +265,11 @@ export class ReaderViewComponent {
     this.toc.set(collectToc(host));
     this.scope.refresh();
     // Runs on the original render and again when the reader content swaps in.
-    this.restore.reseat(() => this.entry()?.id);
+    this.restore.reseat(this.pageKey);
   }
 
   protected onScroll(scrollTop: number): void {
-    if (!this.layer()?.leaving()) this.restore.remember(this.entry()?.id, scrollTop);
+    if (!this.layer()?.leaving()) this.restore.remember(this.pageKey(), scrollTop);
   }
 
   scrollToTop(): void {

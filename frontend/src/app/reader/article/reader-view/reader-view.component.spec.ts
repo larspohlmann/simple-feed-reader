@@ -7,11 +7,12 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
-import { ArticleGestures } from './article-gestures.service';
+import { ArticleGestures } from '../article-layer/article-gestures.service';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
-import { entryScrollKey } from '../../scroll/list-scroll-memory';
+import { articleScrollKey } from '../../scroll/list-scroll-memory';
+import { entryPageKey } from '../reading/article-page-key';
 import { ChapterDto, EntryDto, ReaderContent, TranscriptDto } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
@@ -675,7 +676,7 @@ describe('ReaderViewComponent', () => {
     function mountRemembering(top: number) {
       const load = new Subject<ReaderContent>();
       loadMock.mockReturnValue(load);
-      sessionStorage.setItem(entryScrollKey(1), String(top));
+      sessionStorage.setItem(articleScrollKey(entryPageKey(1)), String(top));
       const fixture = TestBed.createComponent(ReaderViewComponent);
       fixture.componentRef.setInput('entry', entry({ id: 1 }));
       fixture.detectChanges();

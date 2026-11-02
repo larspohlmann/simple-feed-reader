@@ -15,7 +15,7 @@ export class ArticleScrollRestore {
   private readonly scroll = inject(ListScrollMemory);
   private scroller: Signal<HTMLElement | undefined> = signal(undefined);
 
-  private pendingRestore: { id: number; top: number } | null = null;
+  private pendingRestore: { key: string; top: number } | null = null;
   private restoreRaf = 0;
 
   constructor() {
@@ -35,20 +35,20 @@ export class ArticleScrollRestore {
     this.scroller = scroller;
   }
 
-  /** Arm a restore for a newly opened entry if a position is remembered for it. */
-  arm(entryId: number | null): void {
+  /** Arm a restore for a newly opened page if a position is remembered for it. */
+  arm(pageKey: string | undefined): void {
     this.cancelRestore();
-    if (entryId === null) {
+    if (pageKey === undefined) {
       this.pendingRestore = null;
       return;
     }
-    const savedTop = this.scroll.readEntry(entryId);
-    this.pendingRestore = savedTop > 0 ? { id: entryId, top: savedTop } : null;
+    const savedTop = this.scroll.readArticle(pageKey);
+    this.pendingRestore = savedTop > 0 ? { key: pageKey, top: savedTop } : null;
   }
 
-  /** Content just (re-)rendered — re-seat a pending restore for the open entry. */
-  reseat(currentId: () => number | undefined): void {
-    if (this.pendingRestore?.id === currentId()) this.startRestore(currentId);
+  /** Content just (re-)rendered — re-seat a pending restore for the open page. */
+  reseat(currentKey: () => string | undefined): void {
+    if (this.pendingRestore?.key === currentKey()) this.startRestore(currentKey);
   }
 
   /** The user (or a jump) takes over; stop restoring. */
@@ -59,8 +59,8 @@ export class ArticleScrollRestore {
   /** Remember the reading position so a resume-reload can restore it. Skipped
    *  while a restore is in flight: the content may still be short and its
    *  clamped scrollTop would overwrite the good target. */
-  remember(id: number | undefined, top: number): void {
-    if (id != null && !this.pendingRestore) this.scroll.saveEntry(id, top);
+  remember(pageKey: string | undefined, top: number): void {
+    if (pageKey !== undefined && !this.pendingRestore) this.scroll.saveArticle(pageKey, top);
   }
 
   /**
@@ -68,7 +68,7 @@ export class ArticleScrollRestore {
    * height is still settling (original→reader swap, images loading), stopping
    * once the height holds steady, the budget is spent, or the user takes over.
    */
-  private startRestore(currentId: () => number | undefined): void {
+  private startRestore(currentKey: () => string | undefined): void {
     this.cancelRestore();
     const pending = this.pendingRestore;
     const scroller = this.scroller();
@@ -82,7 +82,7 @@ export class ArticleScrollRestore {
     let lastHeight = -1;
     const step = (): void => {
       const pending = this.pendingRestore;
-      if (!pending || pending.id !== currentId()) return; // aborted or entry changed
+      if (!pending || pending.key !== currentKey()) return; // aborted or page changed
       scroller.scrollTop = pending.top;
       const height = scroller.scrollHeight;
       stable = height === lastHeight ? stable + 1 : 0;
