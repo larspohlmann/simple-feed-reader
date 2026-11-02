@@ -1,5 +1,5 @@
 import { Component, ElementRef, inject, input, output, signal } from '@angular/core';
-import { ArticleBody } from '../reader-view/article-body.service';
+import { ArticleBody } from './article-body.service';
 import { AudioTrack } from '../../audio-player.service';
 import { ChapterDto, EntryDto } from '../../models';
 

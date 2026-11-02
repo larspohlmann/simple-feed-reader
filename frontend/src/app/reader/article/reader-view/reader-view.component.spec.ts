@@ -7,7 +7,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
-import { ArticleGestures } from './article-gestures.service';
+import { ArticleGestures } from '../article-layer/article-gestures.service';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';

@@ -1,6 +1,6 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ArticleIslands } from '../app/reader/article/reader-view/article-islands';
+import { ArticleIslands } from '../app/reader/article/article-content/article-islands';
 
 export function injectIslands(): ArticleIslands {
   return new ArticleIslands(TestBed.inject(Injector));
