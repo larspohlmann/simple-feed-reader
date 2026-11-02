@@ -61,6 +61,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 import { ShareButtonComponent } from '../share/share-button.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
+import { SelectionBarComponent } from '../selection-share/selection-bar.component';
 import { SelectionBubbleComponent } from '../selection-share/selection-bubble.component';
 import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-actions.component';
 @Component({
@@ -93,6 +94,7 @@ import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-
     ShareButtonComponent,
     ArticleCornerActionsComponent,
     SelectionBubbleComponent,
+    SelectionBarComponent,
   ],
   providers: [
     ArticleScrollRestore,

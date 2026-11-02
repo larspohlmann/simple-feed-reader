@@ -1,0 +1,20 @@
+@use '../../../theme/glass-rim';
+
+:host {
+  display: contents;
+}
+
+.selection-bar {
+  @include glass-rim.filled(var(--surface-2));
+
+  flex: 1;
+  border-radius: var(--radius-lg);
+  padding: var(--space-1) var(--space-2);
+  box-shadow: var(--panel-shadow);
+}
+
+.count {
+  margin-inline-end: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}

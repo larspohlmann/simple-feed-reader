@@ -43,6 +43,9 @@
   <div class="corner-actions">
     <ng-content select="[articleCorner]" />
   </div>
+  <div class="dock">
+    <ng-content select="[articleDock]" />
+  </div>
   @if (showToTop() && !leaving()) {
     <div class="end-corner">
       <button class="corner-back" type="button" [attr.aria-label]="backLabel()" (click)="back()">

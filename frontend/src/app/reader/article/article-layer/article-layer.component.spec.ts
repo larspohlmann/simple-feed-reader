@@ -22,6 +22,7 @@ import { ArticleLayerComponent } from './article-layer.component';
     >
       <span articleBar class="probe">x</span>
       <span articleCorner class="corner-probe">c</span>
+      <span articleDock class="dock-probe">d</span>
       <article>body</article>
     </app-article-layer>
   `,
@@ -73,6 +74,11 @@ describe('ArticleLayerComponent', () => {
   it('projects the corner slot into the corner actions, outside the scroller (#1914)', () => {
     expect(element.querySelector('.corner-actions .corner-probe')).not.toBeNull();
     expect(element.querySelector('.scroller .corner-probe')).toBeNull();
+  });
+
+  it('projects the dock slot over the pane, outside the scroller', () => {
+    expect(element.querySelector('.dock .dock-probe')).not.toBeNull();
+    expect(element.querySelector('.scroller .dock-probe')).toBeNull();
   });
 
   it('emits close from the back button in the split pane', () => {
