@@ -53,7 +53,7 @@ becomes "entry → page source + entry slots", the link reader becomes "link →
 - **Scroll restore.** `ArticleScrollRestore.arm(key)`, `reseat(currentKey)`, `remember(key, top)` take a
   string page key; `ListScrollMemory.saveEntry/readEntry` become `saveArticle/readArticle(pageKey)`, stored
   under `feed-reader:article-scroll:<pageKey>`. `entryPageKey(id)` in `article/reading/article-page-key.ts`
-  builds `entry:<id>`; #1984 adds `linkPageKey(url)` for `link:<url>`.
+  builds `entry:<id>`; #1983 adds `linkPageKey(url)` for `link:<url>`, the link source's page key.
 
 **Tests:** moved specs retargeted, a spec for the page-key helper; `npm run check` and `ng build`.
 
@@ -79,7 +79,10 @@ becomes "entry → page source + entry slots", the link reader becomes "link →
 | `bodyAudio` | enclosure url, chapters, track, `EmbedTrackOrigin` | `null` |
 | `reload()` | `source.reload(id)` | `source.reload()` |
 
-`failure` is `{ messageKey, quiet, detail, offersOriginal } | null`. `EntryArticlePage` lives in
+`failure` is `{ messageKey, quiet, detail, offersOriginal } | null`. Settled while planning #1983: `html`
+becomes `body: { html, pageUrl } | null` (null renders no body element), `shareTitle` carries the raw title
+the share buttons used, `dropLead()` replaces each source's own lead-failed flag, and the holding gate is a
+`readingAids` boolean on the source. `EntryArticlePage` lives in
 `reader-view/` and adapts the entry plus `ArticleSource`, which keeps its entry shape.
 
 **`provideArticlePage({ source, autoplayRegion })`** returns the source class, the token
