@@ -1,10 +1,9 @@
-import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { embedTrackOrigin } from '../../audio/embed-track';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
-import { EntryDto } from '../../models';
 import { ArticleSource } from '../content/article-source.service';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { entryPageKey } from '../reading/article-page-key';
@@ -21,7 +20,7 @@ import {
 export class EntryArticlePage implements ArticlePageSource {
   private readonly article = inject(ArticleSource);
   private readonly readerMode = inject(ReaderModeService);
-  private entry: Signal<EntryDto | null> = signal(null);
+  private readonly entry = this.article.openEntry;
 
   /** The entry's first playable audio enclosure, surfaced as a listen control
    *  above the article; its attachment is null when the feed declared none (#915). */
@@ -54,10 +53,13 @@ export class EntryArticlePage implements ArticlePageSource {
     const entry = this.entry();
     return entry ? { url: entry.faviconUrl, avatarUrl: entry.poster?.imageUrl ?? null } : null;
   });
-  readonly body = computed<ArticlePageBody>(() => ({
-    html: this.article.displayHtml(),
-    pageUrl: this.entry()?.url ?? null,
-  }));
+  readonly body = computed<ArticlePageBody>(
+    () => ({
+      html: this.article.displayHtml(),
+      pageUrl: this.entry()?.url ?? null,
+    }),
+    { equal: (left, right) => left.html === right.html && left.pageUrl === right.pageUrl },
+  );
   readonly bodyAudio = computed<ArticlePageBodyAudio>(() => {
     const entry = this.entry();
     return {
@@ -93,12 +95,8 @@ export class EntryArticlePage implements ArticlePageSource {
     };
   });
 
-  connect(entry: Signal<EntryDto | null>): void {
-    this.entry = entry;
-  }
-
   dropLead(): void {
-    this.article.heroFailed.set(true);
+    this.article.dropHero();
   }
 
   /** Drop the open article from the browser cache and refetch it. */

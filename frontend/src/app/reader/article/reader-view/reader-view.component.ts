@@ -140,7 +140,6 @@ export class ReaderViewComponent {
 
   constructor() {
     this.source.connect(this.entry);
-    this.entryPage.connect(this.entry);
 
     effect(() => {
       const entry = this.entry();

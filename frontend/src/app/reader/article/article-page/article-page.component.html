@@ -115,12 +115,10 @@
           referrerpolicy="no-referrer"
         />
       }
-      @if (source.failure()?.offersOriginal) {
-        @if (source.url(); as url) {
-          <a class="open-original" [href]="url" target="_blank" rel="noopener noreferrer"
-            >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="sm"
-          /></a>
-        }
+      @if (source.failure()?.offersOriginal && source.url(); as url) {
+        <a class="open-original" [href]="url" target="_blank" rel="noopener noreferrer"
+          >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="sm"
+        /></a>
       }
       @if (source.body(); as body) {
         @let audio = source.bodyAudio();

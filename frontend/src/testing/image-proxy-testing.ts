@@ -11,3 +11,8 @@ export function neverRecoveringImageProxy() {
     },
   };
 }
+
+/** A proxy whose retry settles at once as failed, so a broken image hides. */
+export function failingImageProxy() {
+  return { recover: jest.fn<Promise<ProxyOutcome>, []>().mockResolvedValue('failed') };
+}

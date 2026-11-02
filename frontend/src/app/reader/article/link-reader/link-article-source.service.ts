@@ -40,10 +40,20 @@ export class LinkArticleSource implements ArticlePageSource {
   readonly url = computed(
     () => this.card()?.url ?? this.article()?.url ?? this.load.failure()?.url ?? null,
   );
-  readonly body = computed<ArticlePageBody | null>(() => {
-    const article = this.article();
-    return article === null ? null : { html: article.contentHtml, pageUrl: article.url };
-  });
+  readonly body = computed<ArticlePageBody | null>(
+    () => {
+      const article = this.article();
+      return article === null ? null : { html: article.contentHtml, pageUrl: article.url };
+    },
+    {
+      equal: (left, right) =>
+        left === right ||
+        (left !== null &&
+          right !== null &&
+          left.html === right.html &&
+          left.pageUrl === right.pageUrl),
+    },
+  );
   readonly bodyAudio = signal<ArticlePageBodyAudio | null>(null).asReadonly();
   readonly lead = computed<HeroImageDto | null>(() => {
     const image = this.card()?.imageUrl ?? null;

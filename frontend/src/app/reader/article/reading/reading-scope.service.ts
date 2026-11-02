@@ -90,6 +90,7 @@ export class ReadingScope {
     this.scroller = parts.scroller;
     this.content = parts.content;
     this.trailing = parts.trailing;
+    const focusTrailing = computed(() => this.trailing().filter((part) => part.joinsFocus));
     // The applier is rebuilt whenever `content` itself is (re)created — per
     // article and on the reader/original swap — destroying the old one first.
     effect(
@@ -102,10 +103,9 @@ export class ReadingScope {
         this.applier = new ReadingFocusApplier({
           scroller,
           blocks: () =>
-            [
-              element,
-              ...this.presentElements(this.trailing().filter((part) => part.joinsFocus)),
-            ].flatMap((root) => readingBlocks(root)),
+            [element, ...this.presentElements(focusTrailing())].flatMap((root) =>
+              readingBlocks(root),
+            ),
           curve: ARTICLE_FOCUS_CURVE,
           isActive: () =>
             this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,

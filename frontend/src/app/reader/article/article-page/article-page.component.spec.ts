@@ -1,49 +1,32 @@
-import { Component, Injectable, signal } from '@angular/core';
+import { Component, Injectable } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
+import { provideArticlePageStubs } from '../../../../testing/article-page-testing';
+import { StubArticlePageSource } from '../../../../testing/article-page-source-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
-import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { PostActions } from '../composer/post-actions.service';
-import { HeroImageDto } from '../../models';
-import {
-  ArticlePageBody,
-  ArticlePageFailure,
-  ArticlePageFavicon,
-  ArticlePagePaywall,
-  ArticlePageSource,
-} from './article-page-source';
 import { ArticlePageSlotDirective } from './article-page-slot.directive';
 import { ArticlePageComponent } from './article-page.component';
 import { noAutoplayRegion, provideArticlePage } from './provide-article-page';
 
 @Injectable()
-class StubPageSource implements ArticlePageSource {
-  readonly key = signal<string | undefined>('link:https://news.test/a');
-  readonly url = signal<string | null>('https://news.test/a');
-  readonly title = signal('The page title');
-  readonly shareTitle = signal('The share title');
-  readonly titleHidden = signal(false);
-  readonly nameplate = signal('news.test');
-  readonly favicon = signal<ArticlePageFavicon | null>(null);
-  readonly body = signal<ArticlePageBody | null>({
-    html: '<h2 id="one">One</h2><p>Body words</p>',
-    pageUrl: 'https://news.test/a',
-  });
-  readonly bodyAudio = signal(null);
-  readonly lead = signal<HeroImageDto | null>(null);
-  readonly paywall = signal<ArticlePagePaywall | null>(null);
-  readonly loading = signal(false);
-  readonly canRefresh = signal(true);
-  readonly failure = signal<ArticlePageFailure | null>(null);
-  readonly socialPost = signal(false);
-  readingAids = true;
-  readonly dropLead = jest.fn();
-  readonly reload = jest.fn();
+class StubPageSource extends StubArticlePageSource {
+  constructor() {
+    super({
+      url: 'https://news.test/a',
+      title: 'The page title',
+      shareTitle: 'The share title',
+      nameplate: 'news.test',
+      body: {
+        html: '<h2 id="one">One</h2><p>Body words</p>',
+        pageUrl: 'https://news.test/a',
+      },
+      canRefresh: true,
+      readingAids: true,
+    });
+  }
 }
 
 @Component({
@@ -78,17 +61,7 @@ describe('ArticlePageComponent', () => {
     installMockResizeObserver();
     TestBed.configureTestingModule({
       imports: [HostComponent, provideTranslocoTesting()],
-      providers: [
-        provideAccountIdentity(),
-        NO_EMBED_DETAILS,
-        { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
-        { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
-        { provide: PostActions, useValue: {} },
-        {
-          provide: ImageProxyService,
-          useValue: { recover: jest.fn<Promise<ProxyOutcome>, []>().mockResolvedValue('failed') },
-        },
-      ],
+      providers: [provideAccountIdentity(), NO_EMBED_DETAILS, ...provideArticlePageStubs()],
     });
   });
 

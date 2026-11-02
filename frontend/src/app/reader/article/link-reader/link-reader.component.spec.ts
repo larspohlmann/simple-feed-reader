@@ -12,15 +12,12 @@ import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-conte
 import { LinkCardDto } from '../../link-card/link-card';
 import { ReaderContentService } from '../content/reader-content.service';
 import { SignedUrl } from '../../query/link-param';
-import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
-import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
 import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
+import { provideArticlePageStubs } from '../../../../testing/article-page-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { PostActions } from '../composer/post-actions.service';
 import { ShareButtonComponent } from '../share/share-button.component';
 import {
   ArticleSelection,
@@ -64,14 +61,8 @@ describe('LinkReaderComponent', () => {
         LinkArticleSource,
         { provide: ReaderRouteState, useValue: routeState },
         { provide: ReaderContentService, useValue: { load: loadTarget, reload: reloadTarget } },
-        { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
-        { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
-        { provide: PostActions, useValue: {} },
         NO_EMBED_DETAILS,
-        {
-          provide: ImageProxyService,
-          useValue: { recover: jest.fn<Promise<ProxyOutcome>, []>().mockResolvedValue('failed') },
-        },
+        ...provideArticlePageStubs(),
       ],
     });
   });
