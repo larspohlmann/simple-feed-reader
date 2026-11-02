@@ -15,7 +15,7 @@
 .selection-bar {
   @include glass-rim.filled(
     color-mix(in srgb, var(--surface-2), var(--rim-light) 10%),
-    var(--border-strong)
+    var(--accent)
   );
 
   flex: 1;
