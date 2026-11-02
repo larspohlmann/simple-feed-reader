@@ -88,7 +88,7 @@ export class ArticleLayerComponent {
   /** The toolbar's back button. Full-screen it plays the same slide-out as a
    *  back-swipe rather than cutting straight to the list; the split pane has
    *  no overlay to slide, so it closes directly. */
-  goBack(): void {
+  protected onBackButton(): void {
     if (this.fullscreen()) this.gestures.slideBack();
     else this.back.emit();
   }
