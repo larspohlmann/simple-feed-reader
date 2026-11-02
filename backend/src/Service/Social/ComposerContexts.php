@@ -37,18 +37,14 @@ final readonly class ComposerContexts
     public function ofReply(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
     {
         $defaults = $this->defaultsOn($post->account)->defaultsFor($post, $this->threadStarterOf($target, $post));
+        $text = ComposerStartingText::mentioning($defaults->mentions);
 
-        return $this->contextOf($post, ResponseKind::Reply, $defaults);
+        return $this->contextOf($post, ResponseKind::Reply, $defaults, $text);
     }
 
-    /** A quote names nobody, so it never asks for the thread's starter. */
     public function ofQuote(SocialPostModel $post): ComposerContextModel
     {
-        $defaults = $this->defaultsOn($post->account)
-            ->defaultsFor($post, static fn (): ?SocialPostModel => null)
-            ->withoutMentions();
-
-        return $this->contextOf($post, ResponseKind::Quote, $defaults);
+        return $this->quoteContextOf($post, '');
     }
 
     public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
@@ -69,15 +65,25 @@ final readonly class ComposerContexts
     /** A shared link that names a quotable post quotes it, starting with the selection the reader shares. */
     public function ofQuotedLink(SocialPostModel $post, SharedLinkModel $link): ComposerContextModel
     {
-        $context = $this->ofQuote($post);
+        return $this->quoteContextOf($post, $link->quote);
+    }
 
-        return $context->withText(ComposerStartingText::quoting($link->quote, $context->defaults->maxCharacters));
+    /** A quote names nobody, so it never asks for the thread's starter. */
+    private function quoteContextOf(SocialPostModel $post, string $quote): ComposerContextModel
+    {
+        $defaults = $this->defaultsOn($post->account)
+            ->defaultsFor($post, static fn (): ?SocialPostModel => null)
+            ->withoutMentions();
+        $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
+
+        return $this->contextOf($post, ResponseKind::Quote, $defaults, $text);
     }
 
     private function contextOf(
         SocialPostModel $post,
         ResponseKind $kind,
         ComposerDefaultsModel $defaults,
+        string $text,
     ): ComposerContextModel {
         return new ComposerContextModel(
             $this->connectedBeside($post->account),
@@ -86,7 +92,7 @@ final readonly class ComposerContexts
             $defaults,
             $post->responseContext->preview,
             ComposerKind::from($kind->value),
-            ComposerStartingText::mentioning($defaults->mentions),
+            $text,
         );
     }
 

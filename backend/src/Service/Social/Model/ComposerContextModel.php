@@ -29,17 +29,4 @@ final readonly class ComposerContextModel
         public string $text,
     ) {
     }
-
-    public function withText(string $text): self
-    {
-        return new self(
-            $this->accounts,
-            $this->account,
-            $this->canSend,
-            $this->defaults,
-            $this->target,
-            $this->kind,
-            $text,
-        );
-    }
 }
