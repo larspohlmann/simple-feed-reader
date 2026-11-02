@@ -62,6 +62,11 @@ export class ArticleSelection {
     );
   }
 
+  /** On a phone the native selection callout floats over whatever the quote opens; collapsing drops it. */
+  releasePageSelection(): void {
+    this.document.getSelection()?.removeAllRanges();
+  }
+
   private read(): void {
     const range = this.rangeInBody();
     const quote = range && this.quoteIn(range);

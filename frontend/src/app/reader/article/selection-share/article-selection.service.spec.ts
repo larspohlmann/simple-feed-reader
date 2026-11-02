@@ -151,4 +151,17 @@ describe('ArticleSelection', () => {
 
     expect(selection.remembered()?.text).toBe('One two three');
   });
+
+  it('collapses the page selection when released, and keeps the remembered quote', () => {
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+
+    selection.releasePageSelection();
+    document.dispatchEvent(new Event('selectionchange'));
+    settle();
+
+    expect(document.getSelection()?.rangeCount).toBe(0);
+    expect(selection.quote()).toBeNull();
+    expect(selection.remembered()?.text).toBe('One two three');
+  });
 });

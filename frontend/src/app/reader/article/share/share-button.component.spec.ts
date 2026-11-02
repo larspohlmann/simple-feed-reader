@@ -358,11 +358,13 @@ describe('ShareButtonComponent', () => {
   const selection = {
     quote: signal<SelectedQuote | null>(null),
     remembered: signal<SelectedQuote | null>(null),
+    releasePageSelection: jest.fn(),
   };
 
   function inArticle(coarse: boolean, appearance: ShareButtonAppearance = 'toolbar'): void {
     selection.quote.set(null);
     selection.remembered.set(null);
+    selection.releasePageSelection.mockReset();
     selectionProviders = [{ provide: ArticleSelection, useValue: selection }];
     mount(coarse, 'First', appearance);
   }
@@ -394,6 +396,12 @@ describe('ShareButtonComponent', () => {
 
     describe('with a selection', () => {
       beforeEach(() => selection.quote.set(QUOTE));
+
+      it('keeps the highlight while the menu is open', () => {
+        openMenu();
+
+        expect(selection.releasePageSelection).not.toHaveBeenCalled();
+      });
 
       it('heads the menu with the quote and quotes on the networks', () => {
         const menu = openMenu();
@@ -504,6 +512,27 @@ describe('ShareButtonComponent', () => {
           press();
 
           expect(sheetData().title).toBe('“One two three”');
+        });
+
+        it('collapses the page selection under the sheet, and the choice still carries the quote', () => {
+          selection.quote.set(QUOTE);
+          press();
+          selection.quote.set(null);
+
+          chosen.next('post-bluesky');
+
+          expect(selection.releasePageSelection).toHaveBeenCalledTimes(1);
+          expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
+            url: FRAGMENT,
+            title: 'First',
+            quote: 'One two three',
+          });
+        });
+
+        it('leaves the page selection alone when it shares only the link', () => {
+          press();
+
+          expect(selection.releasePageSelection).not.toHaveBeenCalled();
         });
       },
     );

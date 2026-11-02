@@ -19,6 +19,7 @@ describe('SelectionShareComponent', () => {
     quote: signal<SelectedQuote | null>(null),
     remembered: signal<SelectedQuote | null>(null),
     range: signal<Range | null>(null),
+    releasePageSelection: jest.fn(),
   };
   const bluesky: SocialAccountRefDto = {
     id: 1,
@@ -68,6 +69,7 @@ describe('SelectionShareComponent', () => {
 
   beforeEach(() => {
     postActions.postLink.mockReset();
+    selection.releasePageSelection.mockReset();
     selection.quote.set(null);
     selection.remembered.set(null);
     selection.range.set(null);
@@ -166,6 +168,18 @@ describe('SelectionShareComponent', () => {
     });
   });
 
+  describe('on a fine pointer, quoting from the bubble', () => {
+    beforeEach(() => mount(false));
+
+    it('keeps the page selection highlighted', () => {
+      select();
+
+      document.querySelector<HTMLButtonElement>('[aria-label="Quote on Mastodon"]')!.click();
+
+      expect(selection.releasePageSelection).not.toHaveBeenCalled();
+    });
+  });
+
   describe('on a coarse pointer', () => {
     beforeEach(() => mount(true));
 
@@ -234,6 +248,20 @@ describe('SelectionShareComponent', () => {
 
       mastodon.click();
 
+      expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
+        url: 'https://example.com/a#:~:text=One%20two%20three',
+        title: 'First',
+        quote: 'One two three',
+      });
+    });
+
+    it('collapses the page selection when a network tap opens the composer, which still gets the quote', () => {
+      select();
+      selection.releasePageSelection.mockImplementation(() => selection.remembered.set(null));
+
+      element().querySelector<HTMLButtonElement>('[aria-label="Quote on Mastodon"]')!.click();
+
+      expect(selection.releasePageSelection).toHaveBeenCalledTimes(1);
       expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
         url: 'https://example.com/a#:~:text=One%20two%20three',
         title: 'First',

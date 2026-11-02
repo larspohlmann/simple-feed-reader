@@ -3,6 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { SocialNetworkName } from '../../../core/social-network';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
+import { LayoutService } from '../../layout.service';
 import { PostActions } from '../composer/post-actions.service';
 import { PostNetworks } from '../share/post-networks.service';
 import { ShareButtonComponent } from '../share/share-button.component';
@@ -23,10 +24,13 @@ export class SelectionActionsComponent {
 
   private readonly postActions = inject(PostActions);
   protected readonly networks = inject(PostNetworks).connected;
-  protected readonly remembered = inject(ArticleSelection).remembered;
+  private readonly selection = inject(ArticleSelection);
+  private readonly screen = inject(LayoutService);
+  protected readonly remembered = this.selection.remembered;
 
   protected post(network: SocialNetworkName): void {
     const page = sharedPage(this.url(), this.title());
     this.postActions.postLink(network, sharedLink(page, this.remembered()));
+    if (this.screen.isCoarse()) this.selection.releasePageSelection();
   }
 }

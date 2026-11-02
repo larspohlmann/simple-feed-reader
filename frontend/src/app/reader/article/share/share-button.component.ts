@@ -124,7 +124,7 @@ export class ShareButtonComponent {
   protected press(event: MouseEvent): void {
     this.opensByKeyboard = event.detail === 0;
     this.quote.set(this.selectedQuote());
-    if (this.screen.isCoarse()) this.openSheet();
+    if (this.screen.isCoarse()) this.openSheetOverReleasedSelection();
     else this.open.update((open) => !open);
   }
 
@@ -178,6 +178,11 @@ export class ShareButtonComponent {
     return quote === null || item.linkOnly
       ? linkContent(this.page())
       : quoteContent(this.page(), quote);
+  }
+
+  private openSheetOverReleasedSelection(): void {
+    this.openSheet();
+    if (this.quote() !== null) this.selection?.releasePageSelection();
   }
 
   /** Not bound to this component's life: the sheet outlives a trigger in the phone bar, and `closed` completes. */
