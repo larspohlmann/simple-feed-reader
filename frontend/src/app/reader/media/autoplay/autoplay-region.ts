@@ -1,4 +1,4 @@
-import { Injectable, InjectionToken, Signal, inject, signal } from '@angular/core';
+import { Injectable, InjectionToken, inject } from '@angular/core';
 
 /** The element autoplay is confined to, while it is rendered. */
 export type AutoplayRegion = () => Element | undefined;
@@ -9,11 +9,11 @@ export const AUTOPLAY_REGION = new InjectionToken<AutoplayRegion>('AUTOPLAY_REGI
 /** A region the view hands over from its own query; nothing autoplays until it does. */
 @Injectable()
 export class HandedAutoplayRegion {
-  private element: Signal<Element | undefined> = signal(undefined);
-  readonly region: AutoplayRegion = () => this.element();
+  private handed: AutoplayRegion = () => undefined;
+  readonly region: AutoplayRegion = () => this.handed();
 
-  handOver(element: Signal<Element | undefined>): void {
-    this.element = element;
+  handOver(region: AutoplayRegion): void {
+    this.handed = region;
   }
 }
 
