@@ -214,9 +214,11 @@
   </div>
 }
 
-@if (toTopShown) {
+@let markAllShown = canMarkAllRead() && content.visibleEntryCount() > 0;
+@let markAboveShown = toTopShown && scrolling.hasAboveFold();
+@if (markAllShown || markAboveShown) {
   <div class="corner-actions">
-    @if (canMarkAllRead()) {
+    @if (markAllShown) {
       <button
         type="button"
         class="mark-all"
@@ -227,7 +229,7 @@
         <app-icon name="done_all" size="dense" />
       </button>
     }
-    @if (scrolling.hasAboveFold()) {
+    @if (markAboveShown) {
       <button
         type="button"
         class="mark-above"

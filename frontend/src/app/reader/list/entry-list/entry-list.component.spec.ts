@@ -1741,7 +1741,6 @@ describe('EntryListComponent', () => {
       const marker = element.querySelector('.end-corner .top-marker')!;
       expect(element.querySelector('app-to-top-button')).toBeNull();
       expect(marker.parentElement!.nextElementSibling!.classList).toContain('to-top-place');
-      expect(element.querySelector('.corner-actions')).toBeNull();
     });
 
     it('keeps the corner slot when marking all read empties an unread view (#1945)', () => {
@@ -1870,13 +1869,15 @@ describe('EntryListComponent', () => {
         '.corner-actions .mark-all',
       );
 
-    it('shows once scrolled down, with nothing above the fold yet', () => {
-      expect(markAll(mount())).toBeNull();
-
-      const fixture = scrolledDown();
+    it('shows before any scroll, without Mark above read (#1991)', () => {
+      const fixture = mount();
 
       expect(markAll(fixture)).not.toBeNull();
       expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+    });
+
+    it('is absent from an empty list (#1991)', () => {
+      expect(markAll(mount({ entries: [] }))).toBeNull();
     });
 
     it('sits left of Mark above read', () => {
