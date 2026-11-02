@@ -14,3 +14,15 @@ export function provideArticlePageStubs(): Provider[] {
     { provide: ImageProxyService, useValue: failingImageProxy() },
   ];
 }
+
+/** Let the content-processing microtask and any follow-up effect settle. */
+export async function settleContent(fixture: { detectChanges(): void }): Promise<void> {
+  await Promise.resolve();
+  fixture.detectChanges();
+  await Promise.resolve();
+}
+
+// 660 words read as "≈ 3 min".
+export function longArticleHtml(words = 660): string {
+  return `<p>${Array.from({ length: words }, (_, index) => `w${index}`).join(' ')}</p>`;
+}
