@@ -44,6 +44,7 @@ import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ArticlePageSlotDirective } from '../article-page/article-page-slot.directive';
 import { provideArticlePage } from '../article-page/provide-article-page';
 import { EntryArticlePage } from './entry-article-page';
+
 @Component({
   selector: 'app-reader-view',
   imports: [
@@ -124,7 +125,7 @@ export class ReaderViewComponent {
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   protected readonly source = inject(ArticleSource);
-  protected readonly entryPage = inject(EntryArticlePage);
+  private readonly entryPage = inject(EntryArticlePage);
   protected readonly audio = this.entryPage.audio;
   private readonly autoplay = inject(ListAutoplayCoordinator);
 
@@ -178,11 +179,6 @@ export class ReaderViewComponent {
 
   toggleMode(): void {
     this.readerMode.toggle();
-  }
-
-  /** Drop the open article from the browser cache and refetch it. */
-  refreshArticle(): void {
-    this.entryPage.reload();
   }
 
   when(entry: EntryDto): string {

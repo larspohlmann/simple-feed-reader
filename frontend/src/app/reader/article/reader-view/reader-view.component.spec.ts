@@ -14,6 +14,7 @@ import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { articleScrollKey } from '../../scroll/list-scroll-memory';
 import { entryPageKey } from '../reading/article-page-key';
+import { EntryArticlePage } from './entry-article-page';
 import { ChapterDto, EntryDto, ReaderContent, TranscriptDto } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
@@ -715,6 +716,7 @@ describe('ReaderViewComponent', () => {
       expect(scroll.top).toBe(0);
       fixture.destroy();
     });
+
     it('restores the remembered offset of the next article when it loads synchronously', async () => {
       loadMock.mockImplementation((id: number) =>
         of<ReaderContent>(aReaderArticle({ contentHtml: `<p>Article ${id}</p>` })),
@@ -1485,7 +1487,7 @@ describe('ReaderViewComponent', () => {
       fixture.componentInstance.toggleMode(); // reader -> original
       expect(fixture.componentInstance.mode()).toBe('original');
 
-      fixture.componentInstance.refreshArticle();
+      fixture.debugElement.injector.get(EntryArticlePage).reload();
       fixture.detectChanges();
       expect(fixture.componentInstance.mode()).toBe('original');
     });

@@ -22,9 +22,9 @@ export class LinkArticleSource implements ArticlePageSource {
   private readonly load = new ReaderLoad();
   private readonly leadFailed = signal(false);
 
-  readonly card = this.routeState.openLinkCard;
+  private readonly card = this.routeState.openLinkCard;
   readonly article = this.load.article;
-  readonly errorDetail = this.load.errorDetail;
+  private readonly errorDetail = this.load.errorDetail;
   readonly loading = this.load.loading;
   readonly readingAids = false;
 
