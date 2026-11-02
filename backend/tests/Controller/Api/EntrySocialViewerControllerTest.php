@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
 use App\Entity\SocialLike;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -16,10 +18,11 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
 {
     use RoutesSocialApis;
 
-    private const array ROUTED_HOSTS = ['mastodon.example'];
+    private const array ROUTED_HOSTS = ['mastodon.example', 'mastodon.social'];
     private const string SEARCH = 'GET https://mastodon.example/api/v2/search?q='
         . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
     private const string FAVOURITE = 'POST https://mastodon.example/api/v1/statuses/110/favourite';
+    private const string ORIGIN_STATUS = 'GET https://mastodon.social/api/v1/statuses/110';
 
     /** Must match framework.rate_limiter.social_viewer.limit in rate_limiter.yaml. */
     private const int VIEWER_BUDGET = 120;
@@ -147,6 +150,54 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testAPostItsHomeServerNoLongerHasIsRemovedHereAndSaysSo(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::noStatus(),
+            self::ORIGIN_STATUS => new MockResponse('{}', ['http_code' => Response::HTTP_NOT_FOUND]),
+        ]);
+        $user = $this->signIn($client, 'viewer-deleted@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('GET', $this->viewerPath($entryId));
+
+        $this->assertRejected($client, Response::HTTP_GONE);
+        self::assertSame('social_post_removed', $this->payload($client)['type']);
+        self::assertSame([self::SEARCH, self::ORIGIN_STATUS], $this->routesAsked());
+        $this->entityManager()->clear();
+        self::assertNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
+    #[DataProvider('unprovenDeletions')]
+    public function testAPostItsHomeServerDoesNotProveDeletedIsKept(MockResponse $originAnswer): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::noStatus(),
+            self::ORIGIN_STATUS => $originAnswer,
+        ]);
+        $user = $this->signIn($client, 'viewer-unproven@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('GET', $this->viewerPath($entryId));
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_post_not_found', $this->payload($client)['type']);
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->find(Entry::class, $entryId));
+    }
+
+    /** @return iterable<string, array{MockResponse}> */
+    public static function unprovenDeletions(): iterable
+    {
+        yield 'still there for anyone' => [new MockResponse('{"id":"110"}')];
+        yield 'closed to anonymous readers' => [new MockResponse('{}', ['http_code' => Response::HTTP_UNAUTHORIZED])];
+        yield 'forbidden' => [new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN])];
+        yield 'failing' => [new MockResponse('{}', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR])];
+        yield 'unreachable' => [new MockResponse('', ['error' => 'Connection refused'])];
+    }
+
     private function viewerPath(int $entryId): string
     {
         return sprintf('/api/entries/%d/social/viewer', $entryId);
@@ -156,6 +207,11 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
     private static function foundStatus(array $fields): MockResponse
     {
         return new MockResponse(json_encode(['statuses' => [['id' => '110', ...$fields]]], \JSON_THROW_ON_ERROR));
+    }
+
+    private static function noStatus(): MockResponse
+    {
+        return new MockResponse('{"statuses":[]}');
     }
 
     /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool}|null */

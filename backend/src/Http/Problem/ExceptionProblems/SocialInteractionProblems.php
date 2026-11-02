@@ -12,6 +12,7 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,6 +39,12 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 'social_post_not_found',
                 'Post no longer available',
                 Response::HTTP_NOT_FOUND,
+                $exception->getMessage(),
+            )),
+            $exception instanceof SocialPostRemovedException => new ResolvedProblem(new ApiProblem(
+                'social_post_removed',
+                'Post deleted on its network and removed here',
+                Response::HTTP_GONE,
                 $exception->getMessage(),
             )),
             $exception instanceof SocialPostRefusedException => new ResolvedProblem(new ApiProblem(
