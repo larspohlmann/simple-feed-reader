@@ -1562,6 +1562,7 @@
       "confirm": "Löschen",
       "alreadyGone": "Auf {{ network }} schon gelöscht – hier entfernt."
     },
+    "postDeletedThere": "Auf {{ network }} gelöscht – hier entfernt.",
     "quote": {
       "bluesky": "Auf Bluesky zitieren",
       "mastodon": "Auf Mastodon zitieren"

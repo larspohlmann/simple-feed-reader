@@ -1,10 +1,12 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { Problem } from '../../../core/problem';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Problem, parseProblem } from '../../../core/problem';
 import { OptimisticToggles, steppedCount } from '../optimistic-toggles';
 import {
   PostActionsView,
+  SOCIAL_POST_REMOVED,
   SocialCountsDto,
   SocialViewerDto,
   likeableSocial,
@@ -12,6 +14,7 @@ import {
 import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
+import { RemovedPosts } from '../../removed-posts.service';
 
 const CACHE_CAP = 50;
 const FRESH_MS = 120 * 1000;
@@ -39,6 +42,7 @@ export type SocialCountsState =
 export class SocialCountsService {
   private readonly api = inject(SocialPostApi);
   private readonly entries = inject(EntriesStore);
+  private readonly removedPosts = inject(RemovedPosts);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
   private readonly toggles = new OptimisticToggles();
   private generation = 0;
@@ -115,34 +119,32 @@ export class SocialCountsService {
     const generation = this.generation;
     const likedBefore = entry.social?.isLiked ?? false;
     state.set({ status: 'loading' });
-    forkJoin([counts$, this.networkViewer(entry)]).subscribe({
-      next: ([counts, viewer]) => {
+    // A failed count must not cancel the viewer request: its answer is what reports a deleted post.
+    forkJoin([counts$.pipe(catchError(() => of(null))), this.networkViewer(entry)]).subscribe(
+      ([counts, viewer]) => {
         if (generation !== this.generation) return;
+        if (counts === null) {
+          state.set({ status: 'failed', failedAt: Date.now() });
+          return;
+        }
         if (viewer !== null)
           this.entries.adoptLike(entry.id, { from: likedBefore, to: viewer.isLiked });
-        state.set({
-          status: 'ok',
-          counts,
-          likedAtLoad: viewer?.isLiked ?? likedBefore,
-          actions: viewer && {
-            isReposted: viewer.isReposted,
-            canRepost: viewer.canRepost,
-            canReply: viewer.canReply,
-            canQuote: viewer.canQuote,
-          },
-          loadedAt: Date.now(),
-        });
+        state.set(loadedState(counts, viewer, likedBefore));
       },
-      error: () => {
-        if (generation === this.generation) state.set({ status: 'failed', failedAt: Date.now() });
-      },
-    });
+    );
   }
 
   /** What the network says the reader did to the post; null when it cannot say. */
   private networkViewer(entry: CountedEntry): Observable<SocialViewerDto | null> {
-    if (!likeableSocial({ social: entry.social })) return of(null);
-    return this.api.viewer(entry.id).pipe(catchError(() => of(null)));
+    const social = likeableSocial({ social: entry.social });
+    if (!social) return of(null);
+    return this.api.viewer(entry.id).pipe(
+      catchError((error: unknown) => {
+        if (isPostRemoved(error))
+          this.removedPosts.announce({ id: entry.id, network: social.network });
+        return of(null);
+      }),
+    );
   }
 
   private clear(): void {
@@ -163,6 +165,29 @@ function isStale(state: SocialCountsState): boolean {
     default:
       return false;
   }
+}
+
+function loadedState(
+  counts: SocialCountsDto,
+  viewer: SocialViewerDto | null,
+  likedBefore: boolean,
+): SocialCountsState {
+  return {
+    status: 'ok',
+    counts,
+    likedAtLoad: viewer?.isLiked ?? likedBefore,
+    actions: viewer && {
+      isReposted: viewer.isReposted,
+      canRepost: viewer.canRepost,
+      canReply: viewer.canReply,
+      canQuote: viewer.canQuote,
+    },
+    loadedAt: Date.now(),
+  };
+}
+
+function isPostRemoved(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && parseProblem(error).type === SOCIAL_POST_REMOVED;
 }
 
 /** The loaded state with the reader's repost set, the reposts count following. */

@@ -1,5 +1,7 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { EntriesStore, StateSaveOutcome, localStatePatch } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
@@ -12,6 +14,8 @@ import { ToastService } from '../../shared/toast/toast.service';
 import { problemMessage } from '../../core/problem';
 import { ReaderRouteState } from './reader-route-state.service';
 import { PostActions } from '../article/composer/post-actions.service';
+import { SOCIAL_NETWORK_NAMES } from '../../core/social-network';
+import { RemovedPost, RemovedPosts } from '../removed-posts.service';
 
 @Injectable()
 export class EntryStateActions implements EntryActionHandler {
@@ -23,6 +27,7 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly routeState = inject(ReaderRouteState);
   private readonly toast = inject(ToastService);
   private readonly postActions = inject(PostActions);
+  private readonly transloco = inject(TranslocoService);
 
   private readonly viewedOnOpen = new Set<number>();
   private readonly leaving = signal<ReadonlySet<number>>(new Set());
@@ -40,6 +45,9 @@ export class EntryStateActions implements EntryActionHandler {
         this.markOpenedViewed(entry);
       });
     });
+    inject(RemovedPosts)
+      .removed$.pipe(takeUntilDestroyed())
+      .subscribe((removed) => this.dropRemovedPost(removed));
   }
 
   favorite(entry: EntryDto): void {
@@ -90,13 +98,8 @@ export class EntryStateActions implements EntryActionHandler {
     });
   }
 
-  /** The deleted post's row leaves the list as an excluded one does; its open article closes. */
   deletePost(entry: EntryDto): void {
-    this.postActions.deletePost(entry).subscribe(() => {
-      this.markLeaving(entry.id);
-      if (this.routeState.openEntryId() === entry.id) this.closeEntry();
-      this.subscriptions.reloadCountsQuietly();
-    });
+    this.postActions.deletePost(entry).subscribe(() => this.leaveGonePost(entry.id));
   }
 
   closeEntry(): void {
@@ -114,6 +117,22 @@ export class EntryStateActions implements EntryActionHandler {
 
   clearLeaving(): void {
     this.leaving.set(new Set());
+  }
+
+  /** The gone post's row leaves the list as an excluded one does; its open article closes. */
+  private leaveGonePost(id: number): void {
+    this.markLeaving(id);
+    if (this.routeState.openEntryId() === id) this.closeEntry();
+    this.subscriptions.reloadCountsQuietly();
+  }
+
+  private dropRemovedPost({ id, network }: RemovedPost): void {
+    this.toast.show({
+      message: this.transloco.translate('reader.postDeletedThere', {
+        network: SOCIAL_NETWORK_NAMES[network],
+      }),
+    });
+    this.leaveGonePost(id);
   }
 
   private markOpenedViewed(entry: EntryDto): void {

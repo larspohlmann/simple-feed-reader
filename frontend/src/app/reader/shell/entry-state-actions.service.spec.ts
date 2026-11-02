@@ -12,6 +12,8 @@ import { Problem } from '../../core/problem';
 import { EntryDto, EntryStatePatch } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 import { PostActions } from '../article/composer/post-actions.service';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { RemovedPosts } from '../removed-posts.service';
 
 describe('EntryStateActions liking (#1600)', () => {
   const setLiked = jest.fn<void, [EntryDto, boolean, (problem: Problem) => void]>();
@@ -22,6 +24,7 @@ describe('EntryStateActions liking (#1600)', () => {
     setLiked.mockReset();
     show.mockReset();
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
@@ -76,6 +79,7 @@ describe('EntryStateActions liking (#1600)', () => {
 describe('EntryStateActions opening', () => {
   it('drops a standalone link card when an entry is opened from the list', () => {
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
@@ -118,6 +122,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
     openEntryId.set(null);
     openEntry.set(null);
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
@@ -222,6 +227,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
     reloadCountsQuietly.mockReset();
     openEntryId.set(null);
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
@@ -267,5 +273,61 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
 
     expect(actions.leavingIds().size).toBe(0);
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
+  });
+});
+
+describe('EntryStateActions on a post deleted on its network (#1975)', () => {
+  const show = jest.fn();
+  const reloadCountsQuietly = jest.fn();
+  const openEntryId = signal<number | null>(null);
+  let actions: EntryStateActions;
+  let navigate: jest.SpyInstance;
+
+  beforeEach(() => {
+    show.mockReset();
+    reloadCountsQuietly.mockReset();
+    openEntryId.set(null);
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        EntryStateActions,
+        provideRouter([]),
+        { provide: EntriesStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId, openEntry: signal(null), selection: () => ({ kind: 'all' }) },
+        },
+        { provide: ToastService, useValue: { show } },
+        { provide: PostActions, useValue: {} },
+      ],
+    });
+    actions = TestBed.inject(EntryStateActions);
+    navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+  });
+
+  it('says so, lets the row leave and closes its open article as Back does', () => {
+    openEntryId.set(7);
+
+    TestBed.inject(RemovedPosts).announce({ id: 7, network: 'bluesky' });
+
+    expect(show).toHaveBeenCalledWith({ message: 'Deleted on Bluesky — removed here.' });
+    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(reloadCountsQuietly).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { entry: null, link: null } }),
+    );
+  });
+
+  it('leaves another open article alone', () => {
+    openEntryId.set(8);
+
+    TestBed.inject(RemovedPosts).announce({ id: 7, network: 'mastodon' });
+
+    expect(show).toHaveBeenCalledWith({ message: 'Deleted on Mastodon — removed here.' });
+    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
