@@ -1,5 +1,5 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, catchError, forkJoin, of } from 'rxjs';
+import { Observable, catchError, forkJoin, of, throwError } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Problem, parseProblem } from '../../../core/problem';
@@ -119,32 +119,30 @@ export class SocialCountsService {
     const generation = this.generation;
     const likedBefore = entry.social?.isLiked ?? false;
     state.set({ status: 'loading' });
-    // A failed count must not cancel the viewer request: its answer is what reports a deleted post.
-    forkJoin([counts$.pipe(catchError(() => of(null))), this.networkViewer(entry)]).subscribe(
-      ([counts, viewer]) => {
+    forkJoin([counts$, this.networkViewer(entry)]).subscribe({
+      next: ([counts, viewer]) => {
         if (generation !== this.generation) return;
-        if (counts === null) {
-          state.set({ status: 'failed', failedAt: Date.now() });
-          return;
-        }
         if (viewer !== null)
           this.entries.adoptLike(entry.id, { from: likedBefore, to: viewer.isLiked });
         state.set(loadedState(counts, viewer, likedBefore));
       },
-    );
+      error: (error: unknown) => {
+        if (generation !== this.generation) return;
+        const network = entry.social?.network;
+        if (network && isPostRemoved(error)) this.removedPosts.announce({ id: entry.id, network });
+        state.set({ status: 'failed', failedAt: Date.now() });
+      },
+    });
   }
 
   /** What the network says the reader did to the post; null when it cannot say. */
   private networkViewer(entry: CountedEntry): Observable<SocialViewerDto | null> {
-    const social = likeableSocial({ social: entry.social });
-    if (!social) return of(null);
-    return this.api.viewer(entry.id).pipe(
-      catchError((error: unknown) => {
-        if (isPostRemoved(error))
-          this.removedPosts.announce({ id: entry.id, network: social.network });
-        return of(null);
-      }),
-    );
+    if (!likeableSocial({ social: entry.social })) return of(null);
+    return this.api
+      .viewer(entry.id)
+      .pipe(
+        catchError((error: unknown) => (isPostRemoved(error) ? throwError(() => error) : of(null))),
+      );
   }
 
   private clear(): void {

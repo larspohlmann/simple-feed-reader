@@ -254,14 +254,40 @@ describe('SocialCountsService', () => {
       TestBed.inject(RemovedPosts).removed$.subscribe((removed) => announced.push(removed));
     });
 
-    it('announces the removal the viewer reports, though the counts failed first', () => {
-      api.counts.mockReturnValue(problem('social_post_not_found', 404));
+    it('announces the removal the counts report, for a reader without an account there', () => {
+      api.counts.mockReturnValue(problem('social_post_removed', 410));
+
+      service.load(
+        anEntry({
+          id: 1,
+          social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
+        }),
+      );
+
+      expect(announced).toEqual([{ id: 1, network: 'mastodon' }]);
+      expect(api.viewer).not.toHaveBeenCalled();
+      expect(service.state(1)()).toMatchObject({ status: 'failed' });
+    });
+
+    it('announces the removal the viewer reports', () => {
       api.viewer.mockReturnValue(problem('social_post_removed', 410));
 
       service.load(post(1));
 
       expect(announced).toEqual([{ id: 1, network: 'bluesky' }]);
       expect(service.state(1)()).toMatchObject({ status: 'failed' });
+    });
+
+    it('announces nothing once another account has signed in', () => {
+      const late = new Subject<SocialCountsDto>();
+      api.counts.mockReturnValue(late);
+      service.load(post(1));
+
+      tokens.set('account-b.jwt');
+      TestBed.tick();
+      late.error(new HttpErrorResponse({ status: 410, error: { type: 'social_post_removed' } }));
+
+      expect(announced).toEqual([]);
     });
 
     it('announces nothing for a post the reader merely cannot find', () => {
