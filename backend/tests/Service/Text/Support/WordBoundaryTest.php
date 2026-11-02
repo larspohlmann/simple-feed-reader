@@ -17,6 +17,8 @@ final class WordBoundaryTest extends TestCase
         yield 'a longer text ends before the last space that fits' => ['one two three', 9, 'one two'];
         yield 'a text without a space is cut hard' => ['abcdefgh', 5, 'abcde'];
         yield 'length counts characters, not bytes' => ['ää öö üü', 6, 'ää öö'];
+        yield 'no room leaves nothing' => ['one two', 0, ''];
+        yield 'less than no room leaves nothing too' => ['one two three', -4, ''];
     }
 
     #[DataProvider('texts')]

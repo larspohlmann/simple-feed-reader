@@ -88,6 +88,15 @@ final class ComposerStartingTextTest extends TestCase
         self::assertSame('“' . trim(str_repeat('word ', 94)) . "…”\n\n" . $longUrl, $text);
     }
 
+    public function testAMastodonLimitTooSmallForTheLinkLeavesAnEllipsisForTheQuote(): void
+    {
+        $link = new SharedLinkModel(self::URL, 'A story', 'one two three four five six');
+
+        $text = ComposerStartingText::sharing(SocialNetwork::Mastodon, $link, 20);
+
+        self::assertSame("“…”\n\n" . self::URL, $text);
+    }
+
     public function testAQuoteOfAPostIsTheQuoteAloneCutToTheRoomGiven(): void
     {
         self::assertSame('“A line worth sharing”', ComposerStartingText::quoting('A line worth sharing', 500));

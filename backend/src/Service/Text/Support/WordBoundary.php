@@ -16,7 +16,7 @@ final class WordBoundary
             return $text;
         }
 
-        $head = mb_substr($text, 0, $maxLength);
+        $head = mb_substr($text, 0, max(0, $maxLength));
         $lastSpace = mb_strrpos($head, ' ');
 
         return $lastSpace === false ? $head : mb_substr($head, 0, $lastSpace);
