@@ -13,8 +13,6 @@ use App\Service\Social\Support\MastodonStatusAction;
 
 final readonly class MastodonPostReposter implements PostReposterInterface
 {
-    private const string STATUSES_SCOPE = 'write:statuses';
-
     public function __construct(private MastodonAccountApi $mastodon)
     {
     }
@@ -39,6 +37,6 @@ final readonly class MastodonPostReposter implements PostReposterInterface
 
     private function actOnStatus(SocialAccount $account, string $path): void
     {
-        $this->mastodon->actOnPost($account, $path, self::STATUSES_SCOPE);
+        $this->mastodon->actOnPost($account, $path, MastodonAccountApi::STATUSES_SCOPE);
     }
 }

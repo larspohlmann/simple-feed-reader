@@ -11,9 +11,9 @@ final class BlueskyRecordUri
 {
     private const string LIST = 'app.bsky.graph.list';
     private const string FEED_GENERATOR = 'app.bsky.feed.generator';
-    private const string LIKE = 'app.bsky.feed.like';
-    private const string REPOST = 'app.bsky.feed.repost';
-    private const string POST = 'app.bsky.feed.post';
+    public const string LIKE = 'app.bsky.feed.like';
+    public const string REPOST = 'app.bsky.feed.repost';
+    public const string POST = 'app.bsky.feed.post';
     private const string RECORD_KEY = '[A-Za-z0-9._~:-]{1,512}';
     private const int MAX_RECORD_LENGTH = 512;
 
@@ -60,7 +60,7 @@ final class BlueskyRecordUri
         return BlueskyWeb::profileUrl($parts['did']) . '/' . $section . '/' . $parts['recordKey'];
     }
 
-    private static function ofCollection(?string $uri, string $collection): ?string
+    public static function ofCollection(?string $uri, string $collection): ?string
     {
         if (null === $uri || \strlen($uri) > self::MAX_RECORD_LENGTH) {
             return null;

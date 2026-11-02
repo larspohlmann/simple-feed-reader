@@ -15,12 +15,12 @@ use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\MastodonStatusAction;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class MastodonPostWriter implements PostWriterInterface
 {
     private const string STATUSES = '/api/v1/statuses';
-    private const string STATUSES_SCOPE = 'write:statuses';
 
     public function __construct(private MastodonAccountApi $mastodon)
     {
@@ -54,7 +54,8 @@ final readonly class MastodonPostWriter implements PostWriterInterface
             self::statusOf($draft, $attachment),
             null === $draft->idempotencyKey ? [] : ['Idempotency-Key' => $draft->idempotencyKey],
         );
-        $status = JsonNodeModel::of($this->mastodon->writeAs($account, $request, self::STATUSES_SCOPE)->json());
+        $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
+        $status = JsonNodeModel::of($answer->json());
         $address = AbsoluteHttpUrl::orNull($status->string('uri')) ?? AbsoluteHttpUrl::orNull($status->string('url'))
             ?? throw new SocialNetworkUnreachableException('Mastodon took the post but named no address for it.');
 
@@ -63,9 +64,9 @@ final readonly class MastodonPostWriter implements PostWriterInterface
 
     public function delete(SocialAccount $account, string $postId): PostDeletion
     {
-        $url = $account->getServiceUrl() . self::STATUSES . '/' . rawurlencode($postId);
+        $url = $account->getServiceUrl() . MastodonStatusAction::statusPath($postId);
         try {
-            $this->mastodon->writeAs($account, ApiRequestModel::delete($url), self::STATUSES_SCOPE);
+            $this->mastodon->writeAs($account, ApiRequestModel::delete($url), MastodonAccountApi::STATUSES_SCOPE);
         } catch (SocialPostNotFoundException) {
             return PostDeletion::AlreadyGone;
         }

@@ -9,14 +9,15 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\PostDeletion;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\BlueskyStrongRef;
 
 /** Writes and deletes records in an account's own repo: likes and reposts of a post, and its own posts. */
 final readonly class BlueskyRecords
 {
-    public const string POST_COLLECTION = 'app.bsky.feed.post';
     private const string CREATE_RECORD = '/xrpc/com.atproto.repo.createRecord';
     private const string DELETE_RECORD = '/xrpc/com.atproto.repo.deleteRecord';
 
@@ -53,17 +54,23 @@ final readonly class BlueskyRecords
     {
         $answer = $this->sessions->actAs($account, self::CREATE_RECORD, [
             'repo' => $account->getIdentity(),
-            'collection' => self::POST_COLLECTION,
-            'record' => ['$type' => self::POST_COLLECTION, ...$fields, 'createdAt' => $this->now()],
+            'collection' => BlueskyRecordUri::POST,
+            'record' => ['$type' => BlueskyRecordUri::POST, ...$fields, 'createdAt' => $this->now()],
         ]);
 
         return JsonNodeModel::of($answer->json())->string('uri')
             ?? throw new SocialNetworkUnreachableException('Bluesky took the post but named no address for it.');
     }
 
-    /** Bluesky answers a missing record without a commit, or with a 404. */
-    public function delete(SocialAccount $account, string $collection, string $recordKey): PostDeletion
+    /**
+     * Bluesky answers a missing record without a commit, or with a 404.
+     *
+     * @throws SocialPostRefusedException when $recordUri names no record of $collection
+     */
+    public function delete(SocialAccount $account, string $collection, string $recordUri): PostDeletion
     {
+        $recordKey = BlueskyRecordUri::recordKeyOf(BlueskyRecordUri::ofCollection($recordUri, $collection) ?? '')
+            ?? throw new SocialPostRefusedException('The address names no Bluesky record of this kind.');
         try {
             $answer = $this->sessions->actAs($account, self::DELETE_RECORD, [
                 'repo' => $account->getIdentity(),

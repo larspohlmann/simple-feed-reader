@@ -14,8 +14,6 @@ use App\Service\Social\Model\VerifiedAccountModel;
 
 final readonly class MastodonVerifier implements NetworkVerifierInterface
 {
-    private const string VERIFY_CREDENTIALS = '/api/v1/accounts/verify_credentials';
-
     public function __construct(private MastodonApiClient $mastodon)
     {
     }
@@ -28,7 +26,7 @@ final readonly class MastodonVerifier implements NetworkVerifierInterface
     public function verify(SocialCredentialsModel $credentials): VerifiedAccountModel
     {
         $session = new MastodonSessionModel($credentials->address, $credentials->secret);
-        $answer = $this->mastodon->send($session->get($session->url(self::VERIFY_CREDENTIALS)));
+        $answer = $this->mastodon->send($session->get($session->url(MastodonApiClient::VERIFY_CREDENTIALS)));
 
         $username = JsonNodeModel::of($answer->json())->string('username')
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');

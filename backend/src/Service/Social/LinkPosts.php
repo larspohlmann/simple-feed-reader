@@ -19,6 +19,7 @@ use App\Service\Social\Model\LinkShareModel;
 use App\Service\Social\Model\LinkTargetModel;
 use App\Service\Social\Model\PostDraftModel;
 use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\SharedLinkModel;
 use App\Service\Url\UrlNormalizer;
 
@@ -68,7 +69,7 @@ final readonly class LinkPosts
 
         return null === $share->quoted
             ? $this->writing->share($share->account, $share->link->url, $draft)
-            : $this->writing->quote($share->quoted, $draft);
+            : $this->writing->respond(ResponseKind::Quote, $share->quoted, $draft);
     }
 
     /**

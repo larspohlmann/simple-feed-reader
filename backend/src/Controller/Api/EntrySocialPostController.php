@@ -69,7 +69,12 @@ final readonly class EntrySocialPostController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
-        $published = $this->responses->reply($user, $request->toTarget($entry, $address), $request->toDraft());
+        $published = $this->responses->respond(
+            $user,
+            $request->toTarget($entry, $address),
+            ResponseKind::Reply,
+            $request->toDraft(),
+        );
 
         return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
     }
@@ -84,7 +89,12 @@ final readonly class EntrySocialPostController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
-        $published = $this->responses->quote($user, $request->toTarget($entry, $address), $request->toDraft());
+        $published = $this->responses->respond(
+            $user,
+            $request->toTarget($entry, $address),
+            ResponseKind::Quote,
+            $request->toDraft(),
+        );
 
         return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
     }

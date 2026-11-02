@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Bluesky\Support;
 
-use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Service\Bluesky\Model\JsonNodeModel;
@@ -43,7 +42,7 @@ final class QuotedViewRecord
             $value->text('text') ?? '',
             EntryMediaAssembler::mediaOf(self::mediaOf($embed)),
             self::nestedQuoteOf($embed),
-            self::linkCardOf($embed),
+            BlueskyExternalCard::ofEmbed($embed),
         ));
     }
 
@@ -74,20 +73,6 @@ final class QuotedViewRecord
         $url = $nested === null ? null : AtPostUri::webUrl($nested->string('uri') ?? '');
 
         return $url === null ? null : new QuotedPostReference($url, $nested->node('author')->string('handle'));
-    }
-
-    private static function linkCardOf(JsonNodeModel $embed): ?LinkCardContent
-    {
-        return match ($embed->type()) {
-            self::EXTERNAL => self::cardOfExternal($embed->node('external')),
-            self::RECORD_WITH_MEDIA => self::linkCardOf($embed->node('media')),
-            default => null,
-        };
-    }
-
-    private static function cardOfExternal(JsonNodeModel $external): ?LinkCardContent
-    {
-        return BlueskyEmbedMedia::gif($external) === null ? BlueskyExternalCard::of($external) : null;
     }
 
     private function __construct()

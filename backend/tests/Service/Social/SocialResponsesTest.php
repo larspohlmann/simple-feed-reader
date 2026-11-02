@@ -190,7 +190,7 @@ final class SocialResponsesTest extends DbTestCase
     {
         $target = new ResponseTargetModel($this->post());
 
-        $published = $this->responses()->reply($this->owner, $target, new PostDraftModel('Hi'));
+        $published = $this->responses()->respond($this->owner, $target, ResponseKind::Reply, new PostDraftModel('Hi'));
 
         self::assertSame(['resolve ' . self::STATUS_URL, 'reply 110 Hi'], $this->mastodon->calls);
         self::assertEquals(
@@ -201,9 +201,10 @@ final class SocialResponsesTest extends DbTestCase
 
     public function testAReplyToAReplyAnswersThatReply(): void
     {
-        $this->responses()->reply(
+        $this->responses()->respond(
             $this->owner,
             new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
             new PostDraftModel('Hi'),
         );
 
@@ -221,9 +222,10 @@ final class SocialResponsesTest extends DbTestCase
             $resolvedOn[] = $account->getIdentity();
         });
 
-        $this->responses()->reply(
+        $this->responses()->respond(
             $this->owner,
             new ResponseTargetModel($this->post(), accountId: $second->requireId()),
+            ResponseKind::Reply,
             new PostDraftModel('Hi'),
         );
 
@@ -241,9 +243,10 @@ final class SocialResponsesTest extends DbTestCase
 
         foreach ([$foreign, $bluesky] as $account) {
             $this->assertRefused(
-                fn (): mixed => $this->responses()->reply(
+                fn (): mixed => $this->responses()->respond(
                     $this->owner,
                     new ResponseTargetModel($entry, accountId: $account->requireId()),
+                    ResponseKind::Reply,
                     new PostDraftModel('Hi'),
                 ),
                 SocialAccountNotFoundException::class,
@@ -258,9 +261,10 @@ final class SocialResponsesTest extends DbTestCase
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
 
         $this->assertRefused(
-            fn (): mixed => $this->responses()->reply(
+            fn (): mixed => $this->responses()->respond(
                 $this->owner,
                 new ResponseTargetModel($this->post()),
+                ResponseKind::Reply,
                 new PostDraftModel('Hi'),
             ),
             SocialPostRefusedException::class,
@@ -275,7 +279,9 @@ final class SocialResponsesTest extends DbTestCase
         $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, null));
         $this->comments->load($this->owner, $entry);
 
-        $this->responses()->reply($this->owner, new ResponseTargetModel($entry), new PostDraftModel('Hi'));
+        $target = new ResponseTargetModel($entry);
+
+        $this->responses()->respond($this->owner, $target, ResponseKind::Reply, new PostDraftModel('Hi'));
         $this->comments->load($this->owner, $entry);
 
         self::assertNull($this->countsCache->find(self::address()));
@@ -285,9 +291,10 @@ final class SocialResponsesTest extends DbTestCase
     public function testAnAddressThatIsNoPostOnTheEntrysNetworkIsRefusedBeforeAnyCall(): void
     {
         $this->assertRefused(
-            fn (): mixed => $this->responses()->reply(
+            fn (): mixed => $this->responses()->respond(
                 $this->owner,
                 new ResponseTargetModel($this->post(), 'at://did:plc:x/app.bsky.feed.post/1'),
+                ResponseKind::Reply,
                 new PostDraftModel('Hi'),
             ),
             NotASocialPostException::class,
@@ -302,8 +309,9 @@ final class SocialResponsesTest extends DbTestCase
         $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, 2));
 
         $target = new ResponseTargetModel($entry);
+        $draft = new PostDraftModel('Read');
 
-        $published = $this->responses()->quote($this->owner, $target, new PostDraftModel('Read'));
+        $published = $this->responses()->respond($this->owner, $target, ResponseKind::Quote, $draft);
 
         self::assertSame(['resolve ' . self::STATUS_URL, 'quote 110 Read'], $this->mastodon->calls);
         self::assertEquals(
@@ -313,21 +321,22 @@ final class SocialResponsesTest extends DbTestCase
         self::assertNull($this->countsCache->find(self::address()));
     }
 
-    public function testAQuoteOfAReplyQuotesThatReplyDropsTheCachedThreadAndKeepsTheEntrysCounts(): void
+    public function testAQuoteOfAReplyQuotesThatReplyAndDropsTheCachedCountsAndThread(): void
     {
         $entry = $this->post();
         $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, 2));
         $this->comments->load($this->owner, $entry);
 
-        $this->responses()->quote(
+        $this->responses()->respond(
             $this->owner,
             new ResponseTargetModel($entry, self::REPLY_URI),
+            ResponseKind::Quote,
             new PostDraftModel('Read'),
         );
         $this->comments->load($this->owner, $entry);
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'quote 110 Read'], $this->mastodon->calls);
-        self::assertNotNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find(self::address()));
         self::assertCount(2, $this->thread->fetches);
     }
 
@@ -336,9 +345,10 @@ final class SocialResponsesTest extends DbTestCase
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
 
         $this->assertRefused(
-            fn (): mixed => $this->responses()->quote(
+            fn (): mixed => $this->responses()->respond(
                 $this->owner,
                 new ResponseTargetModel($this->post()),
+                ResponseKind::Quote,
                 new PostDraftModel('Read'),
             ),
             SocialPostRefusedException::class,

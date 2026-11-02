@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonApiClient
 {
+    public const string VERIFY_CREDENTIALS = '/api/v1/accounts/verify_credentials';
     private const string NETWORK = 'The Mastodon instance';
     private const array REFUSALS = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 

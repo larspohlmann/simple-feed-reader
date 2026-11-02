@@ -150,6 +150,10 @@ final class BlueskyPostResolverTest extends TestCase
             '$type' => 'app.bsky.embed.external#view',
             'external' => ['uri' => 'https://www.politico.com/news/bill'],
         ]];
+        yield 'a GIF' => [[
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://media.tenor.com/a/clap.gif?hh=237&ww=316', 'title' => 'Clap'],
+        ]];
         yield 'a quote with images' => [[
             '$type' => 'app.bsky.embed.recordWithMedia#view',
             'media' => ['$type' => 'app.bsky.embed.images#view', 'images' => []],

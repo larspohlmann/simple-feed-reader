@@ -75,35 +75,14 @@ final readonly class SocialResponses
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function reply(User $user, ResponseTargetModel $target, PostDraftModel $draft): PublishedPostModel
-    {
-        $published = $this->writing->reply($this->allowedTarget($user, $target, ResponseKind::Reply), $draft);
+    public function respond(
+        User $user,
+        ResponseTargetModel $target,
+        ResponseKind $kind,
+        PostDraftModel $draft,
+    ): PublishedPostModel {
+        $published = $this->writing->respond($kind, $this->allowedTarget($user, $target, $kind), $draft);
         $this->forgetWhatChanged($user, $target->entry);
-
-        return $published;
-    }
-
-    /**
-     * @throws NotASocialPostException
-     * @throws NoSocialAccountForNetworkException
-     * @throws SocialAccountNotFoundException
-     * @throws SocialAccountNeedsReconnectException
-     * @throws SocialPostNotFoundException
-     * @throws SocialPostRefusedException
-     * @throws SocialPostTooLongException
-     * @throws SocialTokenScopeMissingException
-     * @throws SocialCredentialsRejectedException
-     * @throws SocialNetworkThrottledException
-     * @throws SocialNetworkUnreachableException
-     */
-    public function quote(User $user, ResponseTargetModel $target, PostDraftModel $draft): PublishedPostModel
-    {
-        $published = $this->writing->quote($this->allowedTarget($user, $target, ResponseKind::Quote), $draft);
-        if (null === $target->address) {
-            $this->countsCache->forgetEntry($target->entry);
-        } else {
-            $this->comments->forget($user, $target->entry);
-        }
 
         return $published;
     }
