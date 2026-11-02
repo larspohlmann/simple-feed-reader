@@ -1198,7 +1198,9 @@ Labels and title are **already-translated strings** (shared component, no
 feature keys). `danger: true` renders the action in the danger colour. An
 action may lead with a `symbol` (a Material symbol) or a `logo: { url, color? }`
 (drawn through `<app-masked-logo>`), and `ACTION_SHEET_DIVIDER` among the
-`actions` renders a separator between groups. The head (grabber, title, the
+`actions` renders a separator between groups. A `{ note }` item renders a muted
+line of text in place among the actions — a hint no single action owns (the share
+sheet's quote hint, #1970). The head (grabber, title, the
 round close button) stays pinned while a long list scrolls. Dismissed by the
 close button, a backdrop tap, Escape, or a downward pull on a list at its top —
 all resolve `undefined`.

@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { Provider, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -14,7 +14,9 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { PostActions } from '../composer/post-actions.service';
-import { ShareButtonComponent } from './share-button.component';
+import { ArticleSelection } from '../selection-share/article-selection.service';
+import { SelectedQuote } from '../selection-share/selected-quote';
+import { ShareButtonAppearance, ShareButtonComponent } from './share-button.component';
 
 function account(
   id: number,
@@ -23,6 +25,8 @@ function account(
 ): SocialAccountRefDto {
   return { id, network, handle, status: 'connected' };
 }
+
+let selectionProviders: Provider[] = [];
 
 describe('ShareButtonComponent', () => {
   const toast = { show: jest.fn() };
@@ -35,7 +39,7 @@ describe('ShareButtonComponent', () => {
   function mount(
     coarse: boolean,
     title = 'First',
-    appearance: 'toolbar' | 'corner' = 'toolbar',
+    appearance: ShareButtonAppearance = 'toolbar',
   ): void {
     chosen = new Subject();
     sheet.open.mockReturnValue(chosen.asObservable());
@@ -47,6 +51,7 @@ describe('ShareButtonComponent', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(coarse) } },
         { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
         { provide: PostActions, useValue: postActions },
+        ...selectionProviders,
       ],
     });
     fixture = TestBed.createComponent(ShareButtonComponent);
@@ -60,6 +65,7 @@ describe('ShareButtonComponent', () => {
     toast.show.mockReset();
     sheet.open.mockReset();
     postActions.postLink.mockReset();
+    selectionProviders = [];
     accounts.set([
       account(1, 'mastodon', '@me@mastodon.social'),
       account(2, 'bluesky', 'me.bsky.social'),
@@ -297,6 +303,177 @@ describe('ShareButtonComponent', () => {
         title: 'First',
         quote: null,
       });
+    });
+  });
+
+  const QUOTE: SelectedQuote = { text: 'One two three', words: 3, anchorable: true };
+  const FRAGMENT = 'https://example.com/a?id=1#:~:text=One%20two%20three';
+  const selection = {
+    quote: signal<SelectedQuote | null>(null),
+    remembered: signal<SelectedQuote | null>(null),
+  };
+
+  function inArticle(coarse: boolean): void {
+    selection.quote.set(null);
+    selection.remembered.set(null);
+    selectionProviders = [{ provide: ArticleSelection, useValue: selection }];
+    mount(coarse);
+  }
+
+  describe('outside an article', () => {
+    beforeEach(() => mount(false));
+
+    it('hints at no quote', () => {
+      expect(openMenu().querySelector('.quote-hint')).toBeNull();
+    });
+  });
+
+  describe('in an article, on a fine pointer', () => {
+    beforeEach(() => inArticle(false));
+
+    it('hints under the network entries that a selection can be quoted', () => {
+      const hint = openMenu().querySelector('.quote-hint');
+
+      expect(hint?.textContent?.trim()).toBe('Select text in the article to share it as a quote');
+      expect(hint?.previousElementSibling?.textContent).toContain('Post on Mastodon');
+    });
+
+    it('hints at nothing without a network to post to', () => {
+      accounts.set([]);
+      fixture.detectChanges();
+
+      expect(openMenu().querySelector('.quote-hint')).toBeNull();
+    });
+
+    describe('with a selection', () => {
+      beforeEach(() => selection.quote.set(QUOTE));
+
+      it('heads the menu with the quote and quotes on the networks', () => {
+        const menu = openMenu();
+
+        expect(menu.querySelector('.snippet')?.textContent?.trim()).toBe('“One two three”');
+        expect(item(menu, 'Quote on Bluesky')).toBeTruthy();
+        expect(item(menu, 'Copy quote with link')).toBeTruthy();
+        expect(menu.querySelector('.quote-hint')).toBeNull();
+      });
+
+      it('dims a target that takes only a link and says so', () => {
+        const x = item(openMenu(), 'X');
+
+        expect(x.classList).toContain('link-only');
+        expect(x.textContent).toContain('(link only)');
+      });
+
+      it('opens the composer on the quote with a link that points at it', () => {
+        item(openMenu(), 'Quote on Mastodon').click();
+
+        expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
+          url: FRAGMENT,
+          title: 'First',
+          quote: 'One two three',
+        });
+      });
+
+      it('copies the quote above its link', async () => {
+        const writeText = jest.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, { clipboard: { writeText } });
+
+        item(openMenu(), 'Copy quote with link').click();
+        await Promise.resolve();
+
+        expect(writeText).toHaveBeenCalledWith(`“One two three”\n\n${FRAGMENT}`);
+        expect(toast.show).toHaveBeenCalledWith(
+          expect.objectContaining({ message: 'Quote copied' }),
+        );
+      });
+
+      it('fills a text target with the quote and its link', () => {
+        const open = jest.spyOn(window, 'open').mockReturnValue(null);
+
+        item(openMenu(), 'Open in Bluesky app').click();
+
+        expect(open).toHaveBeenCalledWith(
+          `https://bsky.app/intent/compose?text=${encodeURIComponent(`“One two three” ${FRAGMENT}`)}`,
+          '_blank',
+          'noopener,noreferrer',
+        );
+      });
+
+      it('shares the plain link through a link-only target', () => {
+        const open = jest.spyOn(window, 'open').mockReturnValue(null);
+
+        item(openMenu(), 'X').click();
+
+        expect(open).toHaveBeenCalledWith(
+          'https://x.com/intent/post?text=First&url=https%3A%2F%2Fexample.com%2Fa%3Fid%3D1',
+          '_blank',
+          'noopener,noreferrer',
+        );
+      });
+
+      it('keeps the quote it opened with when the selection collapses', () => {
+        const menu = openMenu();
+        selection.quote.set(null);
+        fixture.detectChanges();
+
+        expect(menu.querySelector('.snippet')).not.toBeNull();
+      });
+
+      it('keeps the selection when the trigger is pressed', () => {
+        const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        (fixture.nativeElement as HTMLElement).querySelector('button')!.dispatchEvent(press);
+
+        expect(press.defaultPrevented).toBe(true);
+      });
+    });
+  });
+
+  describe('in an article, on a coarse pointer', () => {
+    beforeEach(() => inArticle(true));
+
+    const sheetData = (): ActionSheetData => sheet.open.mock.calls[0][0] as ActionSheetData;
+
+    it('puts the hint on the sheet as a note under the network entries', () => {
+      press();
+
+      expect(sheetData().actions[2]).toEqual({
+        note: 'Select text in the article to share it as a quote',
+      });
+    });
+
+    it('opens the sheet in quote mode from the remembered selection', () => {
+      selection.remembered.set(QUOTE);
+      press();
+
+      const actions = sheetData().actions as ActionSheetAction[];
+      expect(sheetData().title).toBe('“One two three”');
+      expect(actions[0].label).toBe('Quote on Bluesky');
+      expect(actions.find((action) => action.label === 'X')?.hint).toBe('(link only)');
+    });
+
+    it('opens the composer on the remembered quote', () => {
+      selection.remembered.set(QUOTE);
+      press();
+
+      chosen.next('post-bluesky');
+
+      expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
+        url: FRAGMENT,
+        title: 'First',
+        quote: 'One two three',
+      });
+    });
+  });
+
+  describe('as a compact trigger', () => {
+    beforeEach(() => mount(false, 'First', 'compact'));
+
+    it('is an icon button that opens the same menu', () => {
+      const trigger = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+
+      expect(trigger.classList).toContain('ib');
+      expect(trigger.getAttribute('aria-label')).toBe('Share');
+      expect(item(openMenu(), 'Copy link')).toBeTruthy();
     });
   });
 });

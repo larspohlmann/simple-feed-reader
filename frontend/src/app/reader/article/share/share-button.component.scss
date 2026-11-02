@@ -34,3 +34,36 @@
   width: var(--icon-sm);
   height: var(--icon-sm);
 }
+
+/* Sized by the menu, never sizing it: a long quote ellipsises inside the items' width. */
+.snippet,
+.quote-hint {
+  inline-size: 0;
+  min-inline-size: 100%;
+  margin: 0;
+  padding: var(--row-pad-y) var(--row-pad-x);
+}
+
+.snippet {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.quote-hint {
+  padding-block-start: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.link-only .label {
+  color: var(--text-muted);
+}
+
+.link-only-note {
+  margin-inline-start: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}

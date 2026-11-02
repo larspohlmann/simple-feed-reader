@@ -1,30 +1,50 @@
-@if (appearance() === 'corner') {
-  <button
-    class="corner-share"
-    type="button"
-    aria-haspopup="menu"
-    [attr.aria-expanded]="open()"
-    [attr.aria-label]="'reader.share.button' | transloco"
-    [attr.title]="'reader.share.button' | transloco"
-    cdkOverlayOrigin
-    (click)="press()"
-  >
-    <app-icon [name]="glyph" size="dense" />
-  </button>
-} @else {
-  <button
-    appListAction
-    class="mobile-icon-only"
-    type="button"
-    aria-haspopup="menu"
-    [attr.aria-expanded]="open()"
-    [attr.aria-label]="'reader.share.button' | transloco"
-    cdkOverlayOrigin
-    (click)="press()"
-  >
-    <app-icon [name]="glyph" size="sm" />
-    <span class="txt">{{ 'reader.share.button' | transloco }}</span>
-  </button>
+@switch (appearance()) {
+  @case ('corner') {
+    <button
+      class="corner-share"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="open()"
+      [attr.aria-label]="'reader.share.button' | transloco"
+      [attr.title]="'reader.share.button' | transloco"
+      cdkOverlayOrigin
+      (mousedown)="$event.preventDefault()"
+      (click)="press()"
+    >
+      <app-icon [name]="glyph" size="dense" />
+    </button>
+  }
+  @case ('compact') {
+    <button
+      appIconButton
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="open()"
+      [attr.aria-label]="'reader.share.button' | transloco"
+      [attr.title]="'reader.share.button' | transloco"
+      cdkOverlayOrigin
+      (mousedown)="$event.preventDefault()"
+      (click)="press()"
+    >
+      <app-icon [name]="glyph" size="sm" />
+    </button>
+  }
+  @default {
+    <button
+      appListAction
+      class="mobile-icon-only"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="open()"
+      [attr.aria-label]="'reader.share.button' | transloco"
+      cdkOverlayOrigin
+      (mousedown)="$event.preventDefault()"
+      (click)="press()"
+    >
+      <app-icon [name]="glyph" size="sm" />
+      <span class="txt">{{ 'reader.share.button' | transloco }}</span>
+    </button>
+  }
 }
 <ng-template
   cdkConnectedOverlay
@@ -46,20 +66,42 @@
     cdkTrapFocusAutoCapture
     role="menu"
     [attr.aria-label]="'reader.share.button' | transloco"
+    (mousedown)="$event.preventDefault()"
   >
+    @if (quote(); as quote) {
+      <p class="snippet" role="presentation">“{{ quote.text }}”</p>
+      <hr role="separator" />
+    }
     @for (item of items(); track item.id) {
       @switch (item.kind) {
         @case ('post') {
-          <button role="menuitem" type="button" [title]="item.hint" (click)="post(item.network)">
+          <button
+            role="menuitem"
+            type="button"
+            [title]="
+              item.handles.length === 1
+                ? ('reader.share.postAs' | transloco: { handle: item.handles[0] })
+                : ('reader.share.pickAccount' | transloco)
+            "
+            (click)="post(item.network)"
+          >
             <app-network-logo [network]="item.network" />
-            <span class="label">{{ 'reader.link.' + item.network | transloco }}</span>
+            <span class="label">{{ item.labelKey | transloco }}</span>
           </button>
+        }
+        @case ('hint') {
+          <p class="quote-hint" role="presentation">{{ 'reader.share.quoteHint' | transloco }}</p>
         }
         @case ('divider') {
           <hr role="separator" />
         }
         @case ('target') {
-          <button role="menuitem" type="button" (click)="choose(item.target)">
+          <button
+            role="menuitem"
+            type="button"
+            [class.link-only]="item.linkOnly"
+            (click)="choose(item)"
+          >
             @if (item.target.icon) {
               <app-masked-logo [src]="logoUrl(item.target.icon)" [color]="item.target.color" />
             } @else {
@@ -68,6 +110,9 @@
             <span class="label">{{
               item.target.labelKey ? (item.target.labelKey | transloco) : item.target.label
             }}</span>
+            @if (item.linkOnly) {
+              <span class="link-only-note">{{ 'reader.share.linkOnly' | transloco }}</span>
+            }
             @if (item.target.external) {
               <app-icon class="external" name="open_in_new" size="sm" />
             }
