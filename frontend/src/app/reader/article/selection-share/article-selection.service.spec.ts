@@ -112,6 +112,30 @@ describe('ArticleSelection', () => {
     expect(selection.remembered()).toBeNull();
   });
 
+  it('hands out a copy of the range, so extending the selection yields a new one', () => {
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+    const first = selection.range();
+
+    select(paragraph(0), [0, 'One two three four'.length]);
+    settle();
+
+    expect(selection.range()).not.toBe(first);
+    expect(first?.toString()).toBe('One two three');
+    expect(selection.range()?.toString()).toBe('One two three four');
+  });
+
+  it('keeps the remembered quote when the reader selects text outside the article body', () => {
+    select(paragraph(0), [0, 'One two three'.length]);
+    settle();
+
+    select(outside.firstChild!, [0, 'Nine ten eleven'.length]);
+    settle();
+
+    expect(selection.quote()).toBeNull();
+    expect(selection.remembered()?.text).toBe('One two three');
+  });
+
   it('forgets the quote when another article opens', () => {
     select(paragraph(0), [0, 'One two three'.length]);
     settle();

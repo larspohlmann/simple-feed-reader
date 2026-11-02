@@ -61,10 +61,10 @@ export class ArticleSelection {
 
   private read(): void {
     const range = this.selectedRange();
-    const quote = range === null ? null : this.quoteIn(range);
-    this.liveRange.set(quote === null ? null : range);
+    const quote = range === null || !this.inBody(range) ? null : this.quoteIn(range);
+    this.liveRange.set(quote === null || range === null ? null : range.cloneRange());
     this.liveQuote.set(quote);
-    if (quote !== null || range !== null) this.keptQuote.set(quote);
+    if (range !== null && this.inBody(range)) this.keptQuote.set(quote);
   }
 
   private selectedRange(): Range | null {
@@ -73,9 +73,12 @@ export class ArticleSelection {
     return selection.getRangeAt(0);
   }
 
-  private quoteIn(range: Range): SelectedQuote | null {
+  private inBody(range: Range): boolean {
     const body = this.sources?.body()?.nativeElement;
-    if (body === undefined || !body.contains(range.commonAncestorContainer)) return null;
+    return body !== undefined && body.contains(range.commonAncestorContainer);
+  }
+
+  private quoteIn(range: Range): SelectedQuote | null {
     const { text, singleBlock } = selectionText(range);
     const words = wordCount(text);
     if (words < QUOTE_MIN_WORDS) return null;
