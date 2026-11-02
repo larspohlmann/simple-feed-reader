@@ -217,7 +217,7 @@ describe('ArticlePageComponent', () => {
     expect(element.querySelector('app-paywall-notice.paywall-note')).not.toBeNull();
   });
 
-  it('puts the share disc before the view’s corner parts while reading aids are on', () => {
+  it('puts the share disc before the view’s corner parts', () => {
     const element = mount();
 
     const corner = element.querySelector('.corner-actions')!;
