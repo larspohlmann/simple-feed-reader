@@ -9,12 +9,12 @@ use App\Enum\SocialNetwork;
 final readonly class AccountNetworkSwitchesModel
 {
     /**
-     * @param list<SocialNetwork> $savedSearchIncluded
-     * @param list<SocialNetwork> $forYouExcluded
+     * @param list<SocialNetwork> $savedSearchIncludedNetworks
+     * @param list<SocialNetwork> $forYouExcludedNetworks
      */
     public function __construct(
-        public array $savedSearchIncluded,
-        public array $forYouExcluded,
+        public array $savedSearchIncludedNetworks,
+        public array $forYouExcludedNetworks,
     ) {
     }
 }

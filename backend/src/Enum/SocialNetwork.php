@@ -25,6 +25,16 @@ enum SocialNetwork: string
         return self::caseOrRefusal($value, 'network');
     }
 
+    /**
+     * @param list<self> $networks
+     *
+     * @return list<string>
+     */
+    public static function valuesOf(array $networks): array
+    {
+        return array_map(static fn (self $network): string => $network->value, $networks);
+    }
+
     public function displayName(): string
     {
         return match ($this) {

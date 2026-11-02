@@ -63,19 +63,9 @@ final readonly class BackupLines
             'locale' => $user->getLocale(),
             'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
             'magazineStyle' => $user->getPreferences()->getMagazineStyle()->value,
-            'savedSearchIncludedNetworks' => self::networkValues($networks->savedSearchIncluded),
-            'forYouExcludedNetworks' => self::networkValues($networks->forYouExcluded),
+            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($networks->savedSearchIncludedNetworks),
+            'forYouExcludedNetworks' => SocialNetwork::valuesOf($networks->forYouExcludedNetworks),
         ]);
-    }
-
-    /**
-     * @param list<SocialNetwork> $networks
-     *
-     * @return list<string>
-     */
-    private static function networkValues(array $networks): array
-    {
-        return array_map(static fn (SocialNetwork $network): string => $network->value, $networks);
     }
 
     public function tagLine(Tag $tag): string

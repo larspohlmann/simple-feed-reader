@@ -6,7 +6,6 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Http\SocialNetworksJson;
 use App\Repository\ForYouNetworkExclusionRepository;
 use App\Service\Recommendation\Feed\ForYouNetworks;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,7 +26,7 @@ final readonly class ForYouNetworksController
     public function excludedNetworks(#[CurrentUser] User $user): JsonResponse
     {
         return new JsonResponse([
-            'excludedNetworks' => SocialNetworksJson::values(
+            'excludedNetworks' => SocialNetwork::valuesOf(
                 $this->excludedNetworks->excludedNetworksFor($user->requireId()),
             ),
         ]);

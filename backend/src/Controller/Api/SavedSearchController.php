@@ -10,7 +10,6 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Http\SavedSearchJson;
-use App\Http\SocialNetworksJson;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\SavedSearchEditor;
@@ -49,7 +48,7 @@ final readonly class SavedSearchController
                 ),
                 $rows,
             ),
-            'includedNetworks' => SocialNetworksJson::values($this->includedNetworks->includedNetworksFor($userId)),
+            'includedNetworks' => SocialNetwork::valuesOf($this->includedNetworks->includedNetworksFor($userId)),
         ]);
     }
 
