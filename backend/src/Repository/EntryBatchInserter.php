@@ -155,7 +155,7 @@ final readonly class EntryBatchInserter
     private static function quoteColumns(?QuotedPostContent $quote): array
     {
         if ($quote === null) {
-            return array_fill(0, \count(self::QUOTE_COLUMNS), null);
+            return array_pad([], \count(self::QUOTE_COLUMNS), null);
         }
 
         return [
