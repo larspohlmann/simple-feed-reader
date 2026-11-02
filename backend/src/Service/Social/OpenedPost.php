@@ -7,6 +7,7 @@ namespace App\Service\Social;
 use App\Entity\Entry;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRemovedException;
@@ -17,7 +18,6 @@ use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-/** The post an opened article shows; one the acting account cannot find and its home server confirms deleted goes. */
 final readonly class OpenedPost
 {
     public function __construct(
@@ -30,7 +30,8 @@ final readonly class OpenedPost
 
     /**
      * @throws SocialPostRemovedException when the post's home server confirms it deleted; every copy here is gone
-     * @throws SocialPostNotFoundException when the acting account cannot find the post and nothing proves it deleted
+     * @throws SocialPostNotFoundException when the acting account cannot find the post and nothing proves it deleted,
+     *                                     or the entry is a saved copy, which outlives its original
      */
     public function sync(User $user, Entry $entry): SocialPostModel
     {
@@ -46,6 +47,9 @@ final readonly class OpenedPost
     /** @throws SocialPostRemovedException */
     private function removeIfDeleted(Entry $entry): void
     {
+        if (SourceFormat::isSaved($entry->getFeed()->getSourceFormat())) {
+            return;
+        }
         $post = SocialPostAddress::ofOrRefuse($entry);
         if (!$this->confirmsDeleted($post)) {
             return;
