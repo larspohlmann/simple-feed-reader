@@ -4,6 +4,14 @@
   display: contents;
 }
 
+.selection-bubble {
+  @include glass-rim.filled(var(--surface-2));
+
+  border-radius: var(--radius-pill);
+  padding: var(--space-1);
+  box-shadow: var(--panel-shadow);
+}
+
 .selection-bar {
   @include glass-rim.filled(var(--surface-2));
 

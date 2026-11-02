@@ -1788,7 +1788,7 @@ the fold (#85).
 
 ### Selection share (#1970)
 
-A selection of three or more words in the article body offers itself as a quote. On a fine pointer a pill-shaped bubble sits under the selection's last line (CDK overlay, `--radius-pill`, glass rim, `--panel-shadow`). On a coarse pointer a bar docks at the foot of the article (the layer's `articleDock` slot). Both render `<app-selection-actions>`: one `appIconButton` per connected network, then `<app-share-button appearance="compact">`. The bubble, the share trigger and its menu wear `appKeepSelection` (`src/app/shared/keep-selection/`), so a mouse press keeps the selection.
+A selection of three or more words in the article body offers itself as a quote. On a fine pointer a pill-shaped bubble sits under the selection's last line (CDK overlay, `--radius-pill`, glass rim, `--panel-shadow`). On a coarse pointer a bar docks at the foot of the article (the layer's `articleDock` slot). One `<app-selection-share>` per article view, mounted in that slot, renders whichever the pointer calls for; both hold `<app-selection-actions>`: one `appIconButton` per connected network, then `<app-share-button appearance="compact">`. The bubble, the share trigger and its menu wear `appKeepSelection` (`src/app/shared/keep-selection/`), so a mouse press keeps the selection.
 
 ### Audio player chapters (#1810)
 

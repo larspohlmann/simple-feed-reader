@@ -17,8 +17,7 @@ import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.compone
 import { ReadingScope } from '../reading/reading-scope.service';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
-import { SelectionBarComponent } from '../selection-share/selection-bar.component';
-import { SelectionBubbleComponent } from '../selection-share/selection-bubble.component';
+import { SelectionShareComponent } from '../selection-share/selection-share.component';
 import { LinkArticleSource } from './link-article-source.service';
 
 /** Where the back button returns: the article the card sits in, or the list. */
@@ -38,8 +37,7 @@ export type LinkReaderReturn = 'article' | 'list';
     ArticleLayerComponent,
     ArticleContentComponent,
     ShareButtonComponent,
-    SelectionBubbleComponent,
-    SelectionBarComponent,
+    SelectionShareComponent,
   ],
   providers: [
     ReadingScope,

@@ -92,7 +92,6 @@
       }
     }
   </article>
-  <app-selection-bubble [url]="originalUrl()" [title]="title()" />
-  <app-selection-bar articleDock [url]="originalUrl()" [title]="title()" />
+  <app-selection-share articleDock [url]="originalUrl()" [title]="title()" />
   <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
 </app-article-layer>

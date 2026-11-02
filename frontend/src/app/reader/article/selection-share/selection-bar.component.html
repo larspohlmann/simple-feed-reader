@@ -1,9 +1,0 @@
-@if (quote(); as selected) {
-  @if (url(); as link) {
-    <app-selection-actions class="selection-bar" [url]="link" [title]="title()">
-      <span class="count">{{
-        'reader.share.selectedWords' | transloco: { count: selected.words }
-      }}</span>
-    </app-selection-actions>
-  }
-}

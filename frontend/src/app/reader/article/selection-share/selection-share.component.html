@@ -1,0 +1,27 @@
+@if (url(); as link) {
+  @if (coarse()) {
+    @if (barQuote(); as selected) {
+      <app-selection-actions class="selection-bar" [url]="link" [title]="title()">
+        <span class="count">{{
+          'reader.share.selectedWords' | transloco: { count: selected.words }
+        }}</span>
+      </app-selection-actions>
+    }
+  } @else if (bubbleOrigin(); as origin) {
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="origin"
+      [cdkConnectedOverlayOpen]="true"
+      [cdkConnectedOverlayPositions]="positions"
+      [cdkConnectedOverlayPush]="true"
+      [cdkConnectedOverlayViewportMargin]="8"
+    >
+      <app-selection-actions
+        class="selection-bubble"
+        [url]="link"
+        [title]="title()"
+        appKeepSelection
+      />
+    </ng-template>
+  }
+}

@@ -235,8 +235,7 @@
         <app-entry-comments [entry]="e" (refreshed)="reloadSocialCounts()" />
       }
     </article>
-    <app-selection-bubble [url]="e.url" [title]="e.title" />
-    <app-selection-bar articleDock [url]="e.url" [title]="e.title" />
+    <app-selection-share articleDock [url]="e.url" [title]="e.title" />
     <!-- Laid over the whole pane while an article loads or refetches, in place
          of a line of text — the same overlay the feed list raises on reload. -->
     <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
