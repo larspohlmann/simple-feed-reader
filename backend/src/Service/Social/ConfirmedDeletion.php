@@ -39,9 +39,20 @@ final readonly class ConfirmedDeletion
         if (!$this->confirmsDeleted($post)) {
             return;
         }
-        $this->localRemoval->removeWithoutReplies($entry);
+        $this->remove($entry);
 
         throw new SocialPostRemovedException(sprintf('The post was deleted on %s.', $post->network->displayName()));
+    }
+
+    private function remove(Entry $entry): void
+    {
+        // Mastodon answers a followers-only status with 404 too: a reader who lost access proves no other copy gone.
+        if (SourceFormat::MASTODON_API === $entry->getFeed()->getSourceFormat()) {
+            $this->localRemoval->removeOnlyThisCopy($entry);
+
+            return;
+        }
+        $this->localRemoval->removeWithoutReplies($entry);
     }
 
     private function confirmsDeleted(SocialPostAddressModel $post): bool

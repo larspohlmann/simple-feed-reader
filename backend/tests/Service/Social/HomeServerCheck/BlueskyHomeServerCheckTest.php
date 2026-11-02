@@ -39,7 +39,7 @@ final class BlueskyHomeServerCheckTest extends TestCase
         self::assertSame([], preg_grep('/^Authorization:/i', $http->requests[1]['headers']));
     }
 
-    public function testAPostNamedByHandleAsksThePdsByDid(): void
+    public function testAPostNamedByHandleProvesNothingAndAsksNothing(): void
     {
         $http = new RoutedHttpClient([
             self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
@@ -47,10 +47,10 @@ final class BlueskyHomeServerCheckTest extends TestCase
             self::GET_RECORD => self::recordError(Response::HTTP_BAD_REQUEST, 'RecordNotFound'),
         ]);
 
-        self::assertTrue(
+        self::assertFalse(
             $this->check($http)->confirmsDeleted('at://alice.bsky.social/app.bsky.feed.post/3kpost'),
         );
-        self::assertSame([self::RESOLVE_ALICE, self::DID_DOCUMENT, self::GET_RECORD], $http->requestLines());
+        self::assertSame([], $http->requests);
     }
 
     #[DataProvider('unprovenAnswers')]

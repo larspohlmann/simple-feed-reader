@@ -16,7 +16,10 @@ use App\Service\Social\Model\BlueskyIdentityModel;
 use App\Service\Social\Support\BlueskyRecordUri;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Asks the author's own PDS, anonymously, for the post record: only its RecordNotFound proves the post deleted. */
+/**
+ * Asks the author's own PDS, anonymously, for the post record: only its RecordNotFound proves the post deleted.
+ * A post named by handle proves nothing, as the handle may since belong to another account.
+ */
 final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
 {
     private const string GET_RECORD = '/xrpc/com.atproto.repo.getRecord?';
@@ -36,7 +39,8 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
     public function confirmsDeleted(string $address): bool
     {
         $author = AtPostUri::authorityOf($address);
-        if (null === $author) {
+        $recordKey = BlueskyRecordUri::recordKeyOf($address);
+        if (null === $author || null === $recordKey) {
             return false;
         }
         try {
@@ -44,9 +48,8 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
         } catch (SocialAccountUnresolvableException) {
             return false;
         }
-        $recordKey = BlueskyRecordUri::recordKeyOf(AtPostUri::withAuthority($address, $identity->did));
 
-        return null !== $recordKey && $this->pdsHasNoRecord($identity, $recordKey);
+        return $this->pdsHasNoRecord($identity, $recordKey);
     }
 
     private function pdsHasNoRecord(BlueskyIdentityModel $identity, string $recordKey): bool
