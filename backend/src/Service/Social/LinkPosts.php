@@ -46,7 +46,7 @@ final readonly class LinkPosts
 
         return null === $share->quoted
             ? $this->contexts->ofLink($share->account, $share->link)
-            : $this->contexts->ofQuote($share->quoted);
+            : $this->contexts->ofQuotedLink($share->quoted, $share->link);
     }
 
     /**
@@ -85,7 +85,7 @@ final readonly class LinkPosts
 
         return new LinkShareModel(
             $account,
-            new SharedLinkModel($url, $target->title),
+            new SharedLinkModel($url, $target->title, $target->quote),
             $this->quotes->quotableAt($account, $url),
         );
     }

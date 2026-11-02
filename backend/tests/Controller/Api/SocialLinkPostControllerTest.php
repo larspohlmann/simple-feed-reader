@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Dto\Social\LinkTargetQuery;
 use App\Entity\LinkCardContent;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
 use App\Tests\Support\ApiTestCase;
@@ -114,6 +115,72 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
         self::assertSame([], $this->http->requests);
+    }
+
+    public function testTheLinkComposerStartsWithTheSelectedQuoteAboveTheLinkOnMastodon(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":500}}}'),
+            self::OWN_ACCOUNT => new MockResponse('{"id":"1","source":{"privacy":"public"}}'),
+        ]);
+        $user = $this->signIn($client, 'link-composer-quote-mastodon@example.test');
+        $this->mastodonAccountOf($user);
+
+        $client->request(
+            'GET',
+            self::LINK_COMPOSER . 'mastodon&title=The+article&quote=' . rawurlencode('A line worth sharing'),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame("“A line worth sharing”\n\nhttps://example.com/article", $this->payload($client)['text']);
+    }
+
+    public function testTheLinkComposerStartsWithTheSelectedQuoteAloneOnBluesky(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-composer-quote-bluesky@example.test');
+        $this->entityManager()->persist(SocialAccounts::blueskyOf($user));
+        $this->entityManager()->flush();
+
+        $client->request(
+            'GET',
+            self::LINK_COMPOSER . 'bluesky&title=The+article&quote=' . rawurlencode('A line worth sharing'),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('“A line worth sharing”', $this->payload($client)['text']);
+    }
+
+    public function testTheLinkComposerKeepsTheTextFragmentThatPointsAtTheQuote(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":500}}}'),
+            self::OWN_ACCOUNT => new MockResponse('{"id":"1","source":{"privacy":"public"}}'),
+        ]);
+        $user = $this->signIn($client, 'link-composer-quote-fragment@example.test');
+        $this->mastodonAccountOf($user);
+        $page = 'https://example.com/article#:~:text=A%20line%20worth%20sharing';
+
+        $client->request('GET', '/api/social/link-composer?network=mastodon&url=' . rawurlencode($page)
+            . '&quote=' . rawurlencode('A line worth sharing'));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame("“A line worth sharing”\n\n" . $page, $this->payload($client)['text']);
+    }
+
+    public function testTheLinkComposerRefusesAQuoteLongerThanTheFrontendSends(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-composer-quote-long@example.test');
+        $this->entityManager()->persist(SocialAccounts::blueskyOf($user));
+        $this->entityManager()->flush();
+
+        $client->request(
+            'GET',
+            self::LINK_COMPOSER . 'bluesky&quote=' . str_repeat('a', LinkTargetQuery::QUOTE_MAX + 1),
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testTheLinkComposerStartsFromALongTitleClipped(): void

@@ -53,15 +53,25 @@ final readonly class ComposerContexts
 
     public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
+        $defaults = $this->defaultsOn($account)->forAccount($account);
+
         return new ComposerContextModel(
             $this->connectedBeside($account),
             $account,
             canSend: true,
-            defaults: $this->defaultsOn($account)->forAccount($account),
+            defaults: $defaults,
             target: $this->pageCards->cardOf($link->url),
             kind: ComposerKind::Link,
-            text: ComposerStartingText::sharing($account->getNetwork(), $link),
+            text: ComposerStartingText::sharing($account->getNetwork(), $link, $defaults->maxCharacters),
         );
+    }
+
+    /** A shared link that names a quotable post quotes it, starting with the selection the reader shares. */
+    public function ofQuotedLink(SocialPostModel $post, SharedLinkModel $link): ComposerContextModel
+    {
+        $context = $this->ofQuote($post);
+
+        return $context->withText(ComposerStartingText::quoting($link->quote, $context->defaults->maxCharacters));
     }
 
     private function contextOf(

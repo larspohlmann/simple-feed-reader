@@ -11,6 +11,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class LinkTargetQuery
 {
+    /** The longest selection the composer starts from; share-content.ts clips to the same `QUOTE_MAX`. */
+    public const int QUOTE_MAX = 1000;
+
     public function __construct(
         public SocialNetwork $network,
         #[Assert\NotBlank]
@@ -18,6 +21,8 @@ final readonly class LinkTargetQuery
         #[Assert\Length(max: LinkCardContent::URL_MAX)]
         public string $url,
         public string $title = '',
+        #[Assert\Length(max: self::QUOTE_MAX)]
+        public string $quote = '',
     ) {
     }
 
@@ -28,6 +33,7 @@ final readonly class LinkTargetQuery
             $accountId,
             $this->url,
             mb_substr($this->title, 0, LinkCardContent::TITLE_MAX),
+            $this->quote,
         );
     }
 }
