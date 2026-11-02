@@ -67,6 +67,17 @@ final class AccountLineTest extends TestCase
         self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Mastodon], $line->savedSearchIncludedNetworks);
     }
 
+    public function testAForYouExcludedNetworkListedTwiceIsExcludedOnce(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'forYouExcludedNetworks' => ['mastodon', 'mastodon', 'bluesky'],
+        ]);
+
+        self::assertSame([SocialNetwork::Mastodon, SocialNetwork::Bluesky], $line->forYouExcludedNetworks);
+    }
+
     public function testANonStringMagazineStyleIsRefused(): void
     {
         $this->expectException(InvalidBackupException::class);

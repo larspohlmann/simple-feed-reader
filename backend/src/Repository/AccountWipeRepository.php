@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\EntryState;
+use App\Entity\ForYouNetworkExclusion;
 use App\Entity\KnownSocialCollection;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
@@ -50,6 +51,7 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(Tag::class, $user);
         $this->deleteByUser(SavedSearch::class, $user);
         $this->deleteByUser(SavedSearchNetworkInclusion::class, $user);
+        $this->deleteByUser(ForYouNetworkExclusion::class, $user);
     }
 
     /** Leaves each account's sync stamp: only a kind not yet synced takes a baseline, which adds nothing back. */

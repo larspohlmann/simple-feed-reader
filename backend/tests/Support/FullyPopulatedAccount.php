@@ -12,6 +12,7 @@ use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ForYouNetworkExclusion;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
@@ -57,6 +58,7 @@ final readonly class FullyPopulatedAccount
 
         $this->entityManager->persist($this->savedSearchFor($user));
         $this->entityManager->persist(new SavedSearchNetworkInclusion($user, SocialNetwork::Mastodon));
+        $this->entityManager->persist(new ForYouNetworkExclusion($user, SocialNetwork::Bluesky));
 
         $feed = $this->feedFor($email);
         $this->entityManager->persist($feed);

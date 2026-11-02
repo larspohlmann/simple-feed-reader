@@ -6,12 +6,14 @@ namespace App\Service\Backup;
 
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Repository\ForYouNetworkExclusionRepository;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
 use App\Service\Backup\Factory\BackupPartWalkFactory;
+use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\FoundationSnapshotModel;
@@ -32,6 +34,7 @@ final readonly class AccountBackupExporter
         private TagRepository $tags,
         private SavedSearchRepository $savedSearches,
         private SavedSearchNetworkInclusionRepository $includedNetworks,
+        private ForYouNetworkExclusionRepository $forYouExcludedNetworks,
         private SubscriptionRepository $subscriptions,
         private BackupLines $lines,
         private BackupPartWalkFactory $walkFactory,
@@ -71,7 +74,10 @@ final readonly class AccountBackupExporter
         return new FoundationSnapshotModel(
             $this->lines->accountLine(
                 $this->users->getById($userId),
-                $this->includedNetworks->includedNetworksFor($userId),
+                new AccountNetworkSwitchesModel(
+                    $this->includedNetworks->includedNetworksFor($userId),
+                    $this->forYouExcludedNetworks->excludedNetworksFor($userId),
+                ),
             ),
             array_map($this->lines->tagLine(...), self::parentsFirst($this->tags->findForUser($userId))),
             array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),

@@ -168,7 +168,7 @@ file.
 | Line | What the line holds |
 |---|---|
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. See the header field table below. |
-| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), and the social networks whose feeds count in your saved searches (`savedSearchIncludedNetworks`; a network not listed is left out). |
+| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), and the social networks whose feeds count in your saved searches (`savedSearchIncludedNetworks`; a network not listed is left out), and the social networks you keep out of For you (`forYouExcludedNetworks`; a network not listed is included). |
 | `tag` | Each tag: `name`, `color`, `icon`, `position` and `parent` (the parent tag's name, or null for a root). Roots are written before their children. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. Your Saved from … feeds are included and come back as your own. |
@@ -269,7 +269,7 @@ picker.
 | `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey. It records that the app showed you the offer, not a setting you chose. A restore into a fresh account should let that account see the offer. |
 
 **On each row you own.** The preferences, each tag, each subscription, each
-article mark and each included social network all hold one pointer to their owner.
+article mark, each included social network and each social network kept out of For you all hold one pointer to their owner.
 
 | Field | Why the file leaves it out |
 |---|---|

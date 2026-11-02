@@ -16,12 +16,14 @@ final readonly class AccountLine
 {
     /**
      * @param list<SocialNetwork> $savedSearchIncludedNetworks
+     * @param list<SocialNetwork> $forYouExcludedNetworks
      */
     public function __construct(
         public string $locale,
         public bool $scrapeFallbackEnabled,
         public MagazineStyle $magazineStyle,
         public array $savedSearchIncludedNetworks,
+        public array $forYouExcludedNetworks,
     ) {
     }
 
@@ -37,10 +39,21 @@ final readonly class AccountLine
             magazineStyle: MagazineStyle::tryFrom(
                 LineFieldWithDefault::string($line, 'magazineStyle', MagazineStyle::Boxed->value),
             ) ?? MagazineStyle::Boxed,
-            savedSearchIncludedNetworks: array_values(array_filter(array_map(
-                SocialNetwork::tryFrom(...),
-                array_unique(LineFieldWithDefault::stringList($line, 'savedSearchIncludedNetworks')),
-            ))),
+            savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
+            forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
         );
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     *
+     * @return list<SocialNetwork>
+     */
+    private static function networks(array $line, string $key): array
+    {
+        return array_values(array_filter(array_map(
+            SocialNetwork::tryFrom(...),
+            array_unique(LineFieldWithDefault::stringList($line, $key)),
+        )));
     }
 }
