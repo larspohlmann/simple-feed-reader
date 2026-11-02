@@ -1786,6 +1786,10 @@ The CDK's structural overlay CSS is imported by `src/styles.scss`, not by
 as a plain block appended after the 100vh reader shell — a full viewport below
 the fold (#85).
 
+### Selection share (#1970)
+
+A selection of three or more words in the article body offers itself as a quote. On a fine pointer a pill-shaped bubble sits under the selection's last line (CDK overlay, `--radius-pill`, glass rim, `--panel-shadow`). On a coarse pointer a bar docks at the foot of the article (the layer's `articleDock` slot). Both render `<app-selection-actions>`: one `appIconButton` per connected network, then `<app-share-button appearance="compact">`. Their `mousedown` is `preventDefault`-ed so a click keeps the selection.
+
 ### Audio player chapters (#1810)
 
 Chapters are view-less data on the track (`AudioTrack.chapters`), saved and

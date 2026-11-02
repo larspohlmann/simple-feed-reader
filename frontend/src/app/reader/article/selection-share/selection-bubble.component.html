@@ -1,0 +1,17 @@
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin() ?? nowhere"
+  [cdkConnectedOverlayOpen]="origin() !== null"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+>
+  @if (url(); as link) {
+    <app-selection-actions
+      class="selection-bubble"
+      [url]="link"
+      [title]="title()"
+      (mousedown)="$event.preventDefault()"
+    />
+  }
+</ng-template>

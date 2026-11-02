@@ -1,0 +1,15 @@
+<div class="actions" role="toolbar" [attr.aria-label]="'reader.share.selection' | transloco">
+  <ng-content />
+  @for (entry of networks(); track entry.network) {
+    <button
+      appIconButton
+      type="button"
+      [attr.aria-label]="'reader.quote.' + entry.network | transloco"
+      [attr.title]="'reader.quote.' + entry.network | transloco"
+      (click)="post(entry.network)"
+    >
+      <app-network-logo [network]="entry.network" />
+    </button>
+  }
+  <app-share-button appearance="compact" [url]="url()" [title]="title()" />
+</div>

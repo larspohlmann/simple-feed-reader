@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+app-network-logo {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}

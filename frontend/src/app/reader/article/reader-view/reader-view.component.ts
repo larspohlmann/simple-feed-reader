@@ -61,6 +61,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 import { ShareButtonComponent } from '../share/share-button.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
+import { SelectionBubbleComponent } from '../selection-share/selection-bubble.component';
 import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-actions.component';
 @Component({
   selector: 'app-reader-view',
@@ -91,6 +92,7 @@ import { ArticleCornerActionsComponent } from '../corner-actions/article-corner-
     ArticleLayerComponent,
     ShareButtonComponent,
     ArticleCornerActionsComponent,
+    SelectionBubbleComponent,
   ],
   providers: [
     ArticleScrollRestore,
