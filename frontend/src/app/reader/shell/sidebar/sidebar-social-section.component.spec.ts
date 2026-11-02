@@ -465,7 +465,7 @@ describe('SidebarSocialSectionComponent', () => {
 
   it('keeps the head neutral while organising, even with its view open', () => {
     const bluesky: Selection = { kind: 'network', id: null, unread: true, network: 'bluesky' };
-    const fixture = mount(ONE_ACCOUNT, bluesky, true);
+    const fixture = mount(ONE_ACCOUNT, bluesky);
     fixture.componentRef.setInput('organising', true);
     fixture.detectChanges();
 
