@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  OnChanges,
   computed,
   effect,
   inject,
@@ -78,7 +79,7 @@ import { EntryArticlePage } from './entry-article-page';
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
 })
-export class ReaderViewComponent {
+export class ReaderViewComponent implements OnChanges {
   protected readonly ratio = entryMediumRatio;
 
   readonly entry = input.required<EntryDto>();
@@ -124,26 +125,23 @@ export class ReaderViewComponent {
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   protected readonly source = inject(ArticleSource);
-  // Ahead of EntryArticlePage, whose effects read the entry this shows.
-  private readonly showsEntry = effect(() => {
-    const entry = this.entry();
-    untracked(() => this.source.show(entry));
-  });
   private readonly entryPage = inject(EntryArticlePage);
   protected readonly audio = this.entryPage.audio;
   private readonly autoplay = inject(ListAutoplayCoordinator);
 
-  // Alias the shared mode signal so the template reads it directly;
-  // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
   private readonly openId = computed(() => this.entry().id);
 
   constructor() {
-    inject(HandedAutoplayRegion).handOver(computed(() => this.commentsSection()?.nativeElement));
+    inject(HandedAutoplayRegion).handOver(() => this.commentsSection()?.nativeElement);
     effect(() => {
       this.openId();
       untracked(() => this.autoplay.soundChanged(false));
     });
+  }
+
+  ngOnChanges(): void {
+    this.source.show(this.entry());
   }
 
   protected scrollToComments(): void {
