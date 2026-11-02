@@ -19,7 +19,7 @@ interface StubArticlePageOverrides {
 }
 
 export class StubArticlePageSource implements ArticlePageSource {
-  readonly key = signal<string | undefined>('link:https://news.test/a');
+  readonly key = signal('link:https://news.test/a');
   readonly url = signal<string | null>(null);
   readonly title = signal('');
   readonly shareTitle = signal('');

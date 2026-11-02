@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HeroImageDto, ReaderContent } from '../../models';
+import { SignedUrl } from '../../query/link-param';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { ReaderLoad } from '../content/reader-load';
@@ -26,10 +27,7 @@ export class LinkArticleSource implements ArticlePageSource {
   private readonly article = this.load.article;
   readonly loading = this.load.loading;
 
-  readonly key = computed(() => {
-    const target = this.routeState.linkTarget();
-    return target === null ? undefined : linkPageKey(target.url);
-  });
+  readonly key = computed(() => linkPageKey(this.requireTarget().url));
   readonly title = computed(() => this.card()?.title || this.article()?.title || '');
   readonly shareTitle = this.title;
   readonly titleHidden = signal(false).asReadonly();
@@ -74,6 +72,13 @@ export class LinkArticleSource implements ArticlePageSource {
   reload(): void {
     const target = this.routeState.linkTarget();
     if (target !== null) this.run(this.reader.reload(target));
+  }
+
+  /** Only the open link reader reads its page, and it is mounted only while a link is open. */
+  private requireTarget(): SignedUrl {
+    const target = this.routeState.linkTarget();
+    if (target === null) throw new Error('LinkArticleSource: no link open');
+    return target;
   }
 
   private run(source: Observable<ReaderContent>): void {

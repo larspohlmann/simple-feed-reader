@@ -106,20 +106,15 @@ export class ArticlePageComponent {
   constructor() {
     this.restore.connect(this.scroller);
     effect(() => {
-      const key = this.source.key();
+      this.source.key();
       untracked(() => {
-        this.restore.arm(key);
         this.toc.set([]);
         this.tocOpen.set(false);
       });
     });
     this.scope.connect({ scroller: this.scroller, content: this.content, trailing: this.trailing });
     this.scope.observeResizes();
-    inject(ArticleSelection).connect({
-      body: this.content,
-      key: this.source.key,
-      socialPost: this.source.socialPost,
-    });
+    inject(ArticleSelection).connect(this.content);
   }
 
   protected scrollToTop(): void {
@@ -153,11 +148,11 @@ export class ArticlePageComponent {
     this.toc.set(collectToc(host));
     this.scope.refresh();
     // Runs on the original render and again when the reader content swaps in.
-    this.restore.reseat(this.source.key);
+    this.restore.reseat();
   }
 
   protected onScroll(scrollTop: number): void {
-    if (!this.layer()?.leaving()) this.restore.remember(this.source.key(), scrollTop);
+    if (!this.layer()?.leaving()) this.restore.remember(scrollTop);
   }
 
   private slotNamed(name: ArticlePageSlotName) {

@@ -48,7 +48,7 @@ export class ArticleLayerComponent {
   readonly withTail = input(false);
   readonly backLabel = input.required<string>();
   /** The page shown; a new one starts at the top with the toolbar presented. */
-  readonly resetKey = input.required<string | undefined>();
+  readonly resetKey = input.required<string>();
 
   readonly back = output<void>();
   readonly scrolled = output<number>();
