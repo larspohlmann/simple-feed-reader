@@ -19,7 +19,9 @@ becomes "entry → page source + entry slots", the link reader becomes "link →
 2. **Providers sit on the outer view.** Content projected into the shell resolves its injector from the
    view that declares it, so comments, link cards and social counts could not see providers the shell
    declares. Each view calls `provideArticlePage({ source, autoplayRegion })` once; the shell injects
-   what it provides.
+   what it provides. The services only the shell's own template uses (`ReadingScope`, `ArticleSelection`,
+   `ArticleScrollRestore`) are the shell's providers instead, so their lifetime matches the shell's: the
+   reader view recreates the shell whenever its entry goes null and back (settled while building #1983).
 3. **Two kinds of slot.** `ng-content` for parts that are rendered today regardless of loading; an
    `<ng-template>` slot, rendered with `ngTemplateOutlet`, for parts behind the loading gate — plain
    projection would create those components while the article loads. The reader view's `viewChild`
@@ -86,8 +88,7 @@ the share buttons used, `dropLead()` replaces each source's own lead-failed flag
 `reader-view/` and adapts the entry plus `ArticleSource`, which keeps its entry shape.
 
 **`provideArticlePage({ source, autoplayRegion })`** returns the source class, the token
-(`useExisting`), `ReadingScope`, `ArticleSelection`, `ListAutoplayCoordinator`, `UnlockedVideoElements`,
-`ArticleScrollRestore` and `AUTOPLAY_REGION`. The reader keeps `ArticleSource` and its comments region;
+(`useExisting`), `ListAutoplayCoordinator`, `UnlockedVideoElements` and `AUTOPLAY_REGION`. The reader keeps `ArticleSource` and its comments region;
 the link reader passes a region that covers nothing.
 
 **`app-article-page`** in `article/article-page/`. Inputs `fullscreen`, `backLabel`,
