@@ -48,6 +48,9 @@ describe('SidebarRowActions', () => {
       handle: '@old.bsky.social',
       status: 'needs_reconnect' as const,
     };
+    const savedSearchesAction = (rows: SidebarRowActions) =>
+      rows.networkSurfaceActions(sectionOf([]))[0];
+    const forYouAction = (rows: SidebarRowActions) => rows.networkSurfaceActions(sectionOf([]))[1];
     const sectionOf = (networkAccounts: SocialSection['networkAccounts']): SocialSection => ({
       network: 'bluesky',
       accounts: [],
@@ -135,7 +138,7 @@ describe('SidebarRowActions', () => {
       const rows = TestBed.inject(SidebarRowActions);
       rows.menuFor.set('social-bluesky');
 
-      rows.toggleNetworkInSavedSearches(sectionOf([]));
+      rows.toggleNetworkSurface(sectionOf([]), 'savedSearches');
 
       expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
       expect(rows.menuFor()).toBeNull();
@@ -143,16 +146,14 @@ describe('SidebarRowActions', () => {
 
     it('labels the network item by whether the network is included', () => {
       const rows = TestBed.inject(SidebarRowActions);
-      expect(rows.networkSavedSearchesAction(sectionOf([]))).toEqual({
+      expect(savedSearchesAction(rows)).toEqual({
         id: 'savedSearches',
         label: 'Include in saved searches',
       });
 
       includedNetworks.set(new Set(['bluesky']));
 
-      expect(rows.networkSavedSearchesAction(sectionOf([])).label).toBe(
-        'Exclude from saved searches',
-      );
+      expect(savedSearchesAction(rows).label).toBe('Exclude from saved searches');
     });
 
     it('offers to exclude an included network and excludes it on that choice', () => {
@@ -174,21 +175,21 @@ describe('SidebarRowActions', () => {
 
     it('labels the network For you item by whether the network is excluded', () => {
       const rows = TestBed.inject(SidebarRowActions);
-      expect(rows.networkForYouAction(sectionOf([]))).toEqual({
+      expect(forYouAction(rows)).toEqual({
         id: 'forYou',
         label: 'Exclude from For You',
       });
 
       excludedNetworks.set(new Set(['bluesky']));
 
-      expect(rows.networkForYouAction(sectionOf([])).label).toBe('Show in For You');
+      expect(forYouAction(rows).label).toBe('Show in For You');
     });
 
     it('toggles the network in For you and closes the menu', () => {
       const rows = TestBed.inject(SidebarRowActions);
       rows.menuFor.set('social-bluesky');
 
-      rows.toggleNetworkInForYou(sectionOf([]));
+      rows.toggleNetworkSurface(sectionOf([]), 'forYou');
 
       expect(forYouToggle).toHaveBeenCalledWith('bluesky');
       expect(rows.menuFor()).toBeNull();

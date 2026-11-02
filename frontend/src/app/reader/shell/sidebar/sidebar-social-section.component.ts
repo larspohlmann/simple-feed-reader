@@ -9,8 +9,6 @@ import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
 import { ExclusionSurface, exclusionTitle } from '../../feed-exclusions';
-import { ForYouNetworksStore } from '../../state/for-you-networks.store';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -45,8 +43,6 @@ export class SidebarSocialSectionComponent {
 
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
-  private readonly savedSearches = inject(SavedSearchesStore);
-  private readonly forYouNetworks = inject(ForYouNetworksStore);
   private readonly i18n = inject(TranslocoService);
   private readonly dictionary = inject(ActiveDictionary);
 
@@ -67,13 +63,9 @@ export class SidebarSocialSectionComponent {
   );
   protected readonly selectionQueryParams = selectionQueryParams;
 
-  private readonly networkExcludedSurfaces = computed<ExclusionSurface[]>(() => {
-    const network = this.section().network;
-    const surfaces: ExclusionSurface[] = [];
-    if (this.forYouNetworks.excludedNetworks().has(network)) surfaces.push('forYou');
-    if (!this.savedSearches.includedNetworks().has(network)) surfaces.push('savedSearches');
-    return surfaces;
-  });
+  private readonly networkExcludedSurfaces = computed<ExclusionSurface[]>(() =>
+    this.rows.networkExcludedSurfaces(this.section().network),
+  );
   protected readonly networkExcluded = computed(() => this.networkExcludedSurfaces().length > 0);
   protected readonly networkExclusionTitle = computed(() => {
     this.dictionary.loaded();

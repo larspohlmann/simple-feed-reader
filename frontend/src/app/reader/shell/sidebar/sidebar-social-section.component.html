@@ -48,12 +48,11 @@
                 {{ action.label }}
               </button>
             }
-            <button role="menuitem" (click)="rows.toggleNetworkInSavedSearches(current)">
-              {{ rows.networkSavedSearchesAction(current).label }}
-            </button>
-            <button role="menuitem" (click)="rows.toggleNetworkInForYou(current)">
-              {{ rows.networkForYouAction(current).label }}
-            </button>
+            @for (action of rows.networkSurfaceActions(current); track action.id) {
+              <button role="menuitem" (click)="rows.toggleNetworkSurface(current, action.id)">
+                {{ action.label }}
+              </button>
+            }
           </ng-template>
         </app-sidebar-row-menu>
       }
