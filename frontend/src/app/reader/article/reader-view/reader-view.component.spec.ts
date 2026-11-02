@@ -715,6 +715,46 @@ describe('ReaderViewComponent', () => {
       expect(scroll.top).toBe(0);
       fixture.destroy();
     });
+    it('restores the remembered offset of the next article when it loads synchronously', async () => {
+      loadMock.mockImplementation((id: number) =>
+        of<ReaderContent>(aReaderArticle({ contentHtml: `<p>Article ${id}</p>` })),
+      );
+      sessionStorage.setItem(articleScrollKey(entryPageKey(2)), String(700));
+      const fixture = mount(entry({ id: 1 }));
+      const scroll = trackScrollTop(scrollerOf(fixture));
+      await settle(fixture);
+
+      fixture.componentRef.setInput('entry', entry({ id: 2 }));
+      fixture.detectChanges();
+      await settle(fixture);
+
+      expect(scroll.top).toBe(700);
+      fixture.destroy();
+    });
+  });
+
+  describe('article page lifetime', () => {
+    it('adds no resize listener however often the article closes and reopens', () => {
+      const added = jest.spyOn(window, 'addEventListener');
+      const removed = jest.spyOn(window, 'removeEventListener');
+      const liveResizeListeners = () =>
+        added.mock.calls.filter(([type]) => type === 'resize').length -
+        removed.mock.calls.filter(([type]) => type === 'resize').length;
+      const fixture = mount(entry({ id: 1 }));
+      const afterFirstOpen = liveResizeListeners();
+
+      for (let round = 0; round < 3; round++) {
+        fixture.componentRef.setInput('entry', null);
+        fixture.detectChanges();
+        fixture.componentRef.setInput('entry', entry({ id: 1 }));
+        fixture.detectChanges();
+      }
+
+      expect(liveResizeListeners()).toBe(afterFirstOpen);
+      added.mockRestore();
+      removed.mockRestore();
+      fixture.destroy();
+    });
   });
 
   // #107: the reading focus only fully highlights the block at the viewport
