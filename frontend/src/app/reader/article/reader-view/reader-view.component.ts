@@ -31,6 +31,7 @@ import { ReaderModeService } from '../content/reader-mode.service';
 import { ArticleSource } from '../content/article-source.service';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { LayoutService } from '../../layout.service';
+import { entryPageKey } from '../reading/article-page-key';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
@@ -209,6 +210,11 @@ export class ReaderViewComponent {
   // — no re-fetch, and the Reader/Original toggle survives an in-reader action.
   private loadedId: number | null = null;
 
+  private readonly pageKey = computed(() => {
+    const entry = this.entry();
+    return entry ? entryPageKey(entry.id) : undefined;
+  });
+
   // Alias the shared mode signal so the template and computeds read it directly;
   // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
@@ -235,7 +241,7 @@ export class ReaderViewComponent {
       this.loadedId = id;
       // Before the source opens: a synchronous load calls enableToggle().
       this.readerMode.reset();
-      this.restore.arm(id);
+      this.restore.arm(id === null ? null : entryPageKey(id));
       // This instance is reused: a new article starts with a fresh, collapsed TOC.
       this.toc.set([]);
       this.tocOpen.set(false);
@@ -263,11 +269,11 @@ export class ReaderViewComponent {
     this.toc.set(collectToc(host));
     this.scope.refresh();
     // Runs on the original render and again when the reader content swaps in.
-    this.restore.reseat(() => this.entry()?.id);
+    this.restore.reseat(this.pageKey);
   }
 
   protected onScroll(scrollTop: number): void {
-    if (!this.layer()?.leaving()) this.restore.remember(this.entry()?.id, scrollTop);
+    if (!this.layer()?.leaving()) this.restore.remember(this.pageKey(), scrollTop);
   }
 
   scrollToTop(): void {
