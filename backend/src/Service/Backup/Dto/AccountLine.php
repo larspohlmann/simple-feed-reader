@@ -70,9 +70,13 @@ final readonly class AccountLine
      */
     private static function shareTargetIds(array $line): array
     {
-        return array_values(array_unique(array_filter(
-            LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
-            static fn (string $id): bool => preg_match(Preferences::TARGET_ID_PATTERN, $id) === 1,
-        )));
+        return array_slice(
+            array_values(array_unique(array_filter(
+                LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
+                static fn (string $id): bool => preg_match(Preferences::TARGET_ID_PATTERN, $id) === 1,
+            ))),
+            0,
+            Preferences::MAX_HIDDEN_SHARE_TARGETS,
+        );
     }
 }

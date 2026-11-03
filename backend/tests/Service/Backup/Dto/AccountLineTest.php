@@ -44,6 +44,19 @@ final class AccountLineTest extends TestCase
         self::assertSame(['x', 'reddit'], $line->hiddenShareTargets);
     }
 
+    public function testMoreThanTheMaximumOfHiddenTargetsKeepsTheFirstOnes(): void
+    {
+        $ids = array_map(static fn (int $number): string => 'target-' . $number, range(1, 65));
+
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'hiddenShareTargets' => $ids,
+        ]);
+
+        self::assertSame(\array_slice($ids, 0, 64), $line->hiddenShareTargets);
+    }
+
     public function testItReadsTheMagazineStyle(): void
     {
         $line = AccountLine::fromLine([
