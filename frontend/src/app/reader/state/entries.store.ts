@@ -204,23 +204,20 @@ export class EntriesStore {
 
   /** `setState` for a mark nobody asked to see fail: it reverts, but shows no error and offers no retry. */
   setStateQuietly(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
-    this.saveState(entryId, patch, {
-      ...outcome,
-      onFailed: () => outcome.onFailed?.(),
-    });
+    this.saveState(entryId, patch, outcome);
   }
 
   private saveState(
     entryId: number,
     patch: EntryStatePatch,
-    outcome: { onSaved?: () => void; onFailed: (error: HttpErrorResponse) => void },
+    outcome: { onSaved?: () => void; onFailed?: (error: HttpErrorResponse) => void },
   ): void {
     const target = this.entryOrCopy(entryId);
     if (!target) return;
     const request$ = this.api.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
       next: () => outcome.onSaved?.(),
-      error: (error: HttpErrorResponse) => outcome.onFailed(error),
+      error: (error: HttpErrorResponse) => outcome.onFailed?.(error),
     });
   }
 

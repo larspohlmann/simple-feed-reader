@@ -21,6 +21,16 @@ import { SelectedQuote } from '../selection-share/selected-quote';
 import { ShareButtonAppearance, ShareButtonComponent } from './share-button.component';
 import { SHARE_RECORDER } from './share-recorder';
 
+async function withUnhandledErrors(handler: () => void, body: () => Promise<void>): Promise<void> {
+  const previous = config.onUnhandledError;
+  config.onUnhandledError = handler;
+  try {
+    await body();
+  } finally {
+    config.onUnhandledError = previous;
+  }
+}
+
 function account(
   id: number,
   network: SocialAccountRefDto['network'],
@@ -301,33 +311,25 @@ describe('ShareButtonComponent', () => {
     it('shares to a social network without recording', async () => {
       jest.spyOn(window, 'open').mockReturnValue(null);
       const unhandled = jest.fn();
-      const previous = config.onUnhandledError;
-      config.onUnhandledError = unhandled;
-      try {
+      await withUnhandledErrors(unhandled, async () => {
         item(openMenu(), 'Open in Bluesky app').click();
         await new Promise((resolve) => setTimeout(resolve));
+      });
 
-        expect(unhandled).not.toHaveBeenCalled();
-      } finally {
-        config.onUnhandledError = previous;
-      }
+      expect(unhandled).not.toHaveBeenCalled();
     });
 
     it('posts a link without recording', async () => {
       const unhandled = jest.fn();
-      const previous = config.onUnhandledError;
-      config.onUnhandledError = unhandled;
-      try {
+      await withUnhandledErrors(unhandled, async () => {
         item(openMenu(), 'Post on Mastodon').click();
 
         sent.next({} as SentPost);
         await Promise.resolve();
         await new Promise((resolve) => setTimeout(resolve));
+      });
 
-        expect(unhandled).not.toHaveBeenCalled();
-      } finally {
-        config.onUnhandledError = previous;
-      }
+      expect(unhandled).not.toHaveBeenCalled();
     });
   });
 

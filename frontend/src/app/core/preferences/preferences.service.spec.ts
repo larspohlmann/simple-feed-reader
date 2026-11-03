@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Observable, of } from 'rxjs';
 import { PREFERENCES_WRITER, PreferencesWriter } from './preferences-writer';
 import { PreferencesService } from './preferences.service';
+import { SHARING_EVERYTHING } from './sharing';
 
 class FakeWriter implements PreferencesWriter {
   written: boolean[] = [];
@@ -72,7 +73,7 @@ describe('PreferencesService', () => {
         },
         passkeyOfferAnswered: true,
         magazineStyle: 'boxed',
-        sharing: { enabled: true, hiddenTargets: [], rememberShares: true },
+        sharing: SHARING_EVERYTHING,
       },
       ai: { ready: false, model: null, capabilities: null },
       mail: { enabled: true },

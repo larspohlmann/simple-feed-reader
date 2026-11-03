@@ -3,6 +3,7 @@ import { UrlTree, provideRouter } from '@angular/router';
 import { firstValueFrom, isObservable, of, throwError } from 'rxjs';
 import { adminGuard } from './admin.guard';
 import { AuthService, CurrentUser } from './auth.service';
+import { SHARING_EVERYTHING } from '../preferences/sharing';
 
 // `locale` is a required field on CurrentUser (Task 9); the guard itself
 // doesn't read it — AuthService.loadMe() adopts it in one place now.
@@ -26,7 +27,7 @@ const admin: CurrentUser = {
     },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
-    sharing: { enabled: true, hiddenTargets: [], rememberShares: true },
+    sharing: SHARING_EVERYTHING,
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },

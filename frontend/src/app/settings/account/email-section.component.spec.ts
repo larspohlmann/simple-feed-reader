@@ -9,6 +9,7 @@ import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { SavedSearchDto } from '../../reader/models';
 import { EmailSectionComponent } from './email-section.component';
 import en from '../../../../public/i18n/en.json';
+import { SHARING_EVERYTHING } from '../../core/preferences/sharing';
 
 interface SavedSearchesStoreStub {
   savedSearches: WritableSignal<readonly SavedSearchDto[]>;
@@ -52,7 +53,7 @@ function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
       },
       passkeyOfferAnswered: true,
       magazineStyle: 'boxed',
-      sharing: { enabled: true, hiddenTargets: [], rememberShares: true },
+      sharing: SHARING_EVERYTHING,
     },
     ai: { ready: false, model: null, capabilities: null },
     mail: { enabled: true },

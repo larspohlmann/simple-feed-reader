@@ -25,6 +25,7 @@ import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { SHARING_EVERYTHING } from '../../../core/preferences/sharing';
 
 const manageActions = {
   createTag: jest.fn(),
@@ -64,7 +65,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
     },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
-    sharing: { enabled: true, hiddenTargets: [], rememberShares: true },
+    sharing: SHARING_EVERYTHING,
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },

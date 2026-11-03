@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { EntriesStore, StateSaveOutcome, localStatePatch } from '../state/entries.store';
+import { countFirstShare } from '../state/first-share';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { Selection } from '../query/query';
@@ -75,12 +76,10 @@ export class EntryStateActions implements EntryActionHandler {
     );
   }
 
-  /** Re-sharing refreshes when it was shared without counting it again. */
   share(entry: EntryDto): void {
-    const firstShare = !entry.isShared;
-    if (firstShare) this.subscriptions.bumpShared(1);
+    const counted = countFirstShare(this.subscriptions, entry);
     const undoCount = () => {
-      if (firstShare) this.subscriptions.bumpShared(-1);
+      if (counted) this.subscriptions.bumpShared(-1);
     };
     this.entries.setStateQuietly(entry.id, { isShared: true }, { onFailed: undoCount });
   }

@@ -74,8 +74,7 @@ import { EntryArticlePage } from './entry-article-page';
   ],
   providers: [
     ArticleSource,
-    EntryShareRecorder,
-    { provide: SHARE_RECORDER, useExisting: EntryShareRecorder },
+    { provide: SHARE_RECORDER, useClass: EntryShareRecorder },
     EntryArticlePage,
     HandedAutoplayRegion,
     provideArticlePage({ source: EntryArticlePage, autoplayRegion: handedAutoplayRegion }),

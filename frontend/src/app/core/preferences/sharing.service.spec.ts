@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, Subject, of } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
-import { SHARING_KEY, SharingSettings } from './sharing';
+import { SHARING_EVERYTHING, SHARING_KEY, SharingSettings } from './sharing';
 import { SharingService } from './sharing.service';
 import { SHARING_WRITER } from './sharing-writer';
 
@@ -173,7 +173,7 @@ describe('SharingService', () => {
 
     expect(written).toEqual([
       { enabled: false, hiddenTargets: [], rememberShares: true },
-      { enabled: true, hiddenTargets: [], rememberShares: true },
+      SHARING_EVERYTHING,
     ]);
     expect(service.saveFailed()).toBe(false);
   });
