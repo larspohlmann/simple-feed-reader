@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { NavigationEnd, Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../api';
 import { TokenStore } from './token.store';
@@ -14,6 +14,7 @@ import { PreferencesService } from '../preferences/preferences.service';
 import { DigestService } from '../preferences/digest.service';
 import { SHARING_KEY, SharingSettings } from '../preferences/sharing';
 import { SharingService } from '../preferences/sharing.service';
+import { SHARING_WRITER } from '../preferences/sharing-writer';
 import { AiAvailabilityService } from '../ai-availability.service';
 import { CatalogStore } from '../../reader/feeds/catalog/catalog.store';
 import { ReaderLocationService } from './reader-location.service';
@@ -24,11 +25,13 @@ describe('AuthService', () => {
   let tokens: TokenStore;
   let events: Subject<unknown>;
   const navigate = jest.fn();
+  let writeSharing: jest.Mock;
 
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     events = new Subject<unknown>();
+    writeSharing = jest.fn(() => of(true));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -40,6 +43,7 @@ describe('AuthService', () => {
         // no-op default: the "no write-through on adopt" test below needs an
         // actual PATCH to *not* happen, which only the real writer can prove.
         { provide: LOCALE_WRITER, useExisting: HttpLocaleWriter },
+        { provide: SHARING_WRITER, useValue: { write: writeSharing } },
       ],
     });
     service = TestBed.inject(AuthService);
@@ -238,6 +242,7 @@ describe('AuthService', () => {
     const sharing = TestBed.inject(SharingService);
     expect(sharing.enabled()).toBe(false);
     expect([...sharing.hidden()]).toEqual(['reddit']);
+    expect(writeSharing).not.toHaveBeenCalled();
   });
 
   it('logout resets the sharing settings', () => {
