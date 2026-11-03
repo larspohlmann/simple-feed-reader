@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import config from '../../../../../public/share-targets/share-targets.json';
 import {
   ConfiguredTarget,
   SHARE_TARGETS,
@@ -47,9 +48,11 @@ describe('share targets', () => {
   });
 
   it('names every target with a unique, well-formed id', () => {
-    const ids = SHARE_TARGETS.flatMap((target) => (target.kind === 'divider' ? [] : [target.id]));
+    const ids = (config as readonly { kind: string; id?: unknown }[]).flatMap((entry) =>
+      entry.kind === 'divider' ? [] : [entry.id],
+    );
 
+    expect(ids.filter((id) => typeof id !== 'string' || !TARGET_ID_PATTERN.test(id))).toStrictEqual([]);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.filter((id) => !TARGET_ID_PATTERN.test(id))).toEqual([]);
   });
 });
