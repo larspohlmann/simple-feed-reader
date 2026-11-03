@@ -7,8 +7,8 @@ import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BASE, signIn, stubAiryStyle } from './lib.mjs';
 
-const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:4200';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DOCS = join(HERE, '..', '..', '..', 'docs', 'screenshots');
 const RAW = join(tmpdir(), 'sfr-screenshots');
@@ -121,19 +121,6 @@ async function stubProxy(page) {
       : route.fallback(),
   );
 }
-// The magazine style is a server preference; answer the profile with airy instead of saving it.
-async function stubAiryStyle(page) {
-  await page.route(/\/api\/me$/, async (route) => {
-    if (route.request().method() !== 'GET') return route.fallback();
-    const response = await route.fetch();
-    const profile = await response.json();
-    await route.fulfill({
-      response,
-      json: { ...profile, preferences: { ...profile.preferences, magazineStyle: 'airy' } },
-    });
-  });
-}
-
 async function settle(page, milliseconds = 1500) {
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.evaluate(() => document.fonts.ready);
@@ -222,13 +209,6 @@ async function queueEpisodesAndOpenPlayer(page) {
   await page.locator('app-big-player').waitFor();
   await settle(page, 2000);
 }
-async function dismissPasskeyOffer(page) {
-  const offer = page.getByRole('dialog', { name: 'Set up a passkey?' });
-  if (await offer.isVisible().catch(() => false)) {
-    await offer.getByRole('button', { name: 'Not now', exact: true }).click();
-  }
-}
-
 const podcastTag = () => {
   if (!process.env.PODCAST_TAG)
     throw new Error('The listening set needs PODCAST_TAG (see podcast-setup.mjs)');
@@ -342,15 +322,6 @@ function selectShots(arguments_) {
     if (!shot) throw new Error(`No set or shot named ${key}`);
     return [shot];
   });
-}
-
-async function signIn(page) {
-  await page.goto(`${BASE}/login`);
-  await page.locator('input[type=email]').fill(process.env.SHOT_EMAIL);
-  await page.locator('input[type=password]').fill(process.env.SHOT_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
-  await dismissPasskeyOffer(page);
 }
 
 async function capture(browser, shot) {
