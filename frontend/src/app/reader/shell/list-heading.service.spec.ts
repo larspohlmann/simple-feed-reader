@@ -266,3 +266,16 @@ describe('ListHeading for a child tag (#1736)', () => {
     expect(heading.selectedTag()?.name).toBe('Long reads');
   });
 });
+
+describe('ListHeading for the Shared list (#2007)', () => {
+  const sharedHeading = () =>
+    headingWith({ kind: 'shared', id: null, unread: false }, { sharedCount: signal(3) });
+
+  it('is titled Shared', () => {
+    expect(sharedHeading().title()).toBe('Shared');
+  });
+
+  it('counts the shared entries', () => {
+    expect(sharedHeading().titleCount()).toEqual({ value: 3, counts: 'items' });
+  });
+});

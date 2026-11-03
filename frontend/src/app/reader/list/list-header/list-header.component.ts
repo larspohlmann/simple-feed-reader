@@ -36,6 +36,7 @@ const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
   all: 'inbox',
   favorites: 'star',
   kept: 'bookmark',
+  shared: 'share',
   viewed: 'history',
   'for-you': 'auto_awesome',
   'saved-searches': 'saved_search',

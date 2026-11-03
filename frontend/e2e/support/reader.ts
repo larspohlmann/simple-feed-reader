@@ -144,6 +144,7 @@ export function subscriptionsJson(
     subscriptions,
     favoritesCount: 0,
     keptCount: 0,
+    sharedCount: 0,
     viewedCount: 0,
     socialAccounts: [],
     unreadTotals: unreadTotalsOf(subscriptions),

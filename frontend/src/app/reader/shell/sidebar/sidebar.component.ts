@@ -125,6 +125,7 @@ export class SidebarComponent {
   readonly totalUnread = input.required<number>();
   readonly favoritesCount = input(0);
   readonly keptCount = input(0);
+  readonly sharedCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });

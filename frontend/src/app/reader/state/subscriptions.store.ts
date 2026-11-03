@@ -46,6 +46,7 @@ export class SubscriptionsStore {
   readonly storedSubscriptions = this.rows.stored;
   readonly favoritesCount = signal(0);
   readonly keptCount = signal(0);
+  readonly sharedCount = signal(0);
   readonly viewedCount = signal(0);
   readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
   readonly loading = signal(false);
@@ -161,6 +162,7 @@ export class SubscriptionsStore {
     this.storedSubscriptions.set([]);
     this.favoritesCount.set(0);
     this.keptCount.set(0);
+    this.sharedCount.set(0);
     this.viewedCount.set(0);
     this.socialAccounts.set([]);
     this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
@@ -274,6 +276,7 @@ export class SubscriptionsStore {
     this.storedSubscriptions.set(response.subscriptions);
     this.favoritesCount.set(response.favoritesCount);
     this.keptCount.set(response.keptCount);
+    this.sharedCount.set(response.sharedCount);
     this.viewedCount.set(response.viewedCount);
     this.socialAccounts.set(response.socialAccounts);
     this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
@@ -296,6 +299,7 @@ export class SubscriptionsStore {
 
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
+    this.setIfMoved(this.sharedCount, response.sharedCount);
     this.setIfMoved(this.viewedCount, response.viewedCount);
   }
 
@@ -311,6 +315,10 @@ export class SubscriptionsStore {
 
   bumpKept(by: number): void {
     this.bumpCount(this.keptCount, by);
+  }
+
+  bumpShared(by: number): void {
+    this.bumpCount(this.sharedCount, by);
   }
 
   /** Keep the Recently-read badge live after an article is opened, without a

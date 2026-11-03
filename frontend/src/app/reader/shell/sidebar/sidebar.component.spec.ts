@@ -115,6 +115,7 @@ function inputDefaults() {
     totalUnread: 0,
     favoritesCount: 0,
     keptCount: 0,
+    sharedCount: 0,
     groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', id: null, unread: true } as Selection,
     loading: false,
@@ -144,6 +145,7 @@ function mount(
     totalUnread: number;
     favoritesCount: number;
     keptCount: number;
+    sharedCount: number;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
     user: CurrentUser | null;
@@ -210,6 +212,37 @@ describe('SidebarComponent', () => {
     const kept = navs.find((nav) => nav.textContent?.includes('Kept'))!;
     expect(fav.querySelector('.count')?.textContent).toContain('5');
     expect(kept.querySelector('.count')).toBeNull();
+  });
+
+  describe('the Shared item (#2007)', () => {
+    const navLabels = (element: HTMLElement): string[] =>
+      [...element.querySelectorAll('.nav .name')].map((name) => name.textContent?.trim() ?? '');
+
+    it('is hidden while nothing is shared', () => {
+      const element = mount({ sharedCount: 0 }).nativeElement as HTMLElement;
+      expect(navLabels(element)).not.toContain('Shared');
+    });
+
+    it('sits right below Kept with its count once something is shared', () => {
+      const element = mount({ sharedCount: 2 }).nativeElement as HTMLElement;
+      const labels = navLabels(element);
+      expect(labels[labels.indexOf('Kept') + 1]).toBe('Shared');
+      const shared = [...element.querySelectorAll('.nav')].find((nav) =>
+        nav.querySelector('.name')?.textContent?.includes('Shared'),
+      )!;
+      expect(shared.querySelector('.count')?.textContent?.trim()).toBe('2');
+    });
+
+    it('is marked active on the shared selection', () => {
+      const element = mount({
+        sharedCount: 2,
+        selection: { kind: 'shared', id: null, unread: false },
+      }).nativeElement as HTMLElement;
+      const shared = [...element.querySelectorAll('.nav')].find((nav) =>
+        nav.querySelector('.name')?.textContent?.includes('Shared'),
+      )!;
+      expect(shared.classList).toContain('active');
+    });
   });
 
   it('emits refresh and addFeed from the action buttons', () => {

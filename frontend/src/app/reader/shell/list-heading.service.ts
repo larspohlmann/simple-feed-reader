@@ -106,6 +106,7 @@ export class ListHeading {
   private readonly titleByKind: Record<Selection['kind'], () => string> = {
     favorites: () => this.i18n.translate('reader.favorites'),
     kept: () => this.i18n.translate('reader.kept'),
+    shared: () => this.i18n.translate('reader.shared'),
     viewed: () => this.i18n.translate('reader.viewed'),
     'for-you': () => this.i18n.translate('reader.forYou'),
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
@@ -175,6 +176,7 @@ export class ListHeading {
     },
     favorites: () => items(this.subscriptions.favoritesCount()),
     kept: () => items(this.subscriptions.keptCount()),
+    shared: () => items(this.subscriptions.sharedCount()),
     viewed: () => items(this.subscriptions.viewedCount()),
     'for-you': (selection) =>
       bySwitch(selection, this.subscriptions.forYouUnread(), this.recommendations.forYouTotal()),

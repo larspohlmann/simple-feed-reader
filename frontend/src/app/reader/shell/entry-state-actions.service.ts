@@ -184,12 +184,16 @@ export class EntryStateActions implements EntryActionHandler {
 }
 
 /** The flag a saved view filters on; an entry whose patch clears it leaves the view. */
-function savedViewMembership(kind: Selection['kind']): 'isFavorite' | 'isKept' | 'isViewed' | null {
+function savedViewMembership(
+  kind: Selection['kind'],
+): 'isFavorite' | 'isKept' | 'isShared' | 'isViewed' | null {
   switch (kind) {
     case 'favorites':
       return 'isFavorite';
     case 'kept':
       return 'isKept';
+    case 'shared':
+      return 'isShared';
     case 'viewed':
       return 'isViewed';
     default:
