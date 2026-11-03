@@ -12,8 +12,8 @@ import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmente
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
-import { SharingSettingsComponent } from './sharing-settings/sharing-settings.component';
 import { ToggleComponent } from '../../shared/toggle/toggle.component';
+import { SharingSettingsComponent } from './sharing-settings/sharing-settings.component';
 
 @Component({
   selector: 'app-preferences-section',
