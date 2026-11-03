@@ -34,6 +34,10 @@ articles feed the For you profile. A switch in Settings turns the registering of
    Shared stays, still removable and still counting for For you. The server enforces it too: a mark arriving
    while it is off, or while sharing is off, is ignored, so every client gets the same rule.
 10. **A failed registration is silent.** The share already happened; the next share sends the mark again.
+11. **Reposts and quotes count.** A repost (a boost on Mastodon, a repost on Bluesky) or a quote of the entry's
+    own post registers it as shared; reposting or quoting a reply in its thread does not. The server marks it
+    when the network accepts the post, under the same switch as decision 9. Undoing a repost leaves the entry in
+    Shared: the share happened, and removing it stays a manual action.
 
 ## Shape
 
