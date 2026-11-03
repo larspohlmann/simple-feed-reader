@@ -8,7 +8,7 @@ import { EntryShareRecorder } from './entry-share-recorder';
 
 describe('EntryShareRecorder', () => {
   const share = jest.fn();
-  const rememberShares = signal(true);
+  const recordsShares = signal(true);
   const entry = signal(anEntry({ id: 3, isShared: false }));
 
   function recorder(): EntryShareRecorder {
@@ -16,7 +16,7 @@ describe('EntryShareRecorder', () => {
       providers: [
         EntryShareRecorder,
         { provide: EntryStateActions, useValue: { share } },
-        { provide: SharingService, useValue: { rememberShares } },
+        { provide: SharingService, useValue: { recordsShares } },
         { provide: ArticleSource, useValue: { entry } },
       ],
     });
@@ -25,7 +25,7 @@ describe('EntryShareRecorder', () => {
 
   beforeEach(() => {
     share.mockReset();
-    rememberShares.set(true);
+    recordsShares.set(true);
   });
 
   it('shares the open entry', () => {
@@ -34,8 +34,8 @@ describe('EntryShareRecorder', () => {
     expect(share).toHaveBeenCalledWith(entry());
   });
 
-  it('records nothing while remembering is off', () => {
-    rememberShares.set(false);
+  it('records nothing while shares are not recorded', () => {
+    recordsShares.set(false);
 
     recorder().record();
 

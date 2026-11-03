@@ -101,7 +101,6 @@ export class SocialCountsService {
     });
   }
 
-  /** Undoing a repost leaves the share: it happened, and removing it from Shared stays the reader's call. */
   private repost(entryId: number): Observable<unknown> {
     return this.api.repost(entryId).pipe(tap(() => this.shares.reflect(entryId)));
   }

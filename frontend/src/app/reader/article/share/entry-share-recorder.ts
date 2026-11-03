@@ -11,6 +11,6 @@ export class EntryShareRecorder implements ShareRecorder {
   private readonly sharing = inject(SharingService);
 
   record(): void {
-    if (this.sharing.rememberShares()) this.actions.share(this.article.entry());
+    if (this.sharing.recordsShares()) this.actions.share(this.article.entry());
   }
 }
