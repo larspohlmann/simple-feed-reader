@@ -216,6 +216,71 @@ describe('EntryStateActions reading counts (#1679)', () => {
   });
 });
 
+describe('EntryStateActions sharing (#2007)', () => {
+  const bumpShared = jest.fn();
+  const show = jest.fn();
+  const setState = jest.fn<void, [number, EntryStatePatch, StateSaveOutcome?]>();
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    bumpShared.mockReset();
+    show.mockReset();
+    setState.mockReset();
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        EntryStateActions,
+        provideRouter([]),
+        { provide: EntriesStore, useValue: { setState } },
+        { provide: SubscriptionsStore, useValue: { bumpShared } },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: {
+            openEntryId: signal(null),
+            openEntry: signal(null),
+            selection: () => ({ kind: 'all' }),
+          },
+        },
+        { provide: ToastService, useValue: { show } },
+        { provide: PostActions, useValue: {} },
+      ],
+    });
+    actions = TestBed.inject(EntryStateActions);
+  });
+
+  it('shares an unshared entry: counts it and patches isShared', () => {
+    actions.share(anEntry({ id: 7, isShared: false }));
+
+    expect(bumpShared).toHaveBeenCalledWith(1);
+    expect(setState).toHaveBeenCalledWith(7, { isShared: true }, expect.anything());
+  });
+
+  it('re-sharing a shared entry refreshes it without counting it twice', () => {
+    actions.share(anEntry({ id: 7, isShared: true }));
+
+    expect(bumpShared).not.toHaveBeenCalled();
+    expect(setState).toHaveBeenCalledWith(7, { isShared: true }, expect.anything());
+  });
+
+  it('restores the count without a toast when the save of a first share fails', () => {
+    actions.share(anEntry({ id: 7, isShared: false }));
+
+    setState.mock.calls[0][2]?.onFailed?.();
+
+    expect(bumpShared).toHaveBeenLastCalledWith(-1);
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('leaves the count alone when the save of a re-share fails', () => {
+    actions.share(anEntry({ id: 7, isShared: true }));
+
+    setState.mock.calls[0][2]?.onFailed?.();
+
+    expect(bumpShared).not.toHaveBeenCalled();
+  });
+});
+
 describe('EntryStateActions deleting my own post (#1972)', () => {
   const deletePost = jest.fn<Observable<void>, [EntryDto]>();
   const reloadCountsQuietly = jest.fn();

@@ -27,6 +27,7 @@ import { CommentsService, CommentsState } from '../entry-comments/comments.servi
 import { SocialCountsService, SocialCountsState } from '../social-counts/social-counts.service';
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { EntryStateActions } from '../../shell/entry-state-actions.service';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { PreviewProgress } from '../../link-card/preview-progress';
 import { aThreadPost } from '../../../../testing/thread-testing';
@@ -204,6 +205,7 @@ describe('ReaderViewComponent', () => {
       providers: [
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
+        { provide: EntryStateActions, useValue: { share: jest.fn() } },
         provideRouter([]),
         { provide: LinkReaderNavigation, useValue: { layer: jest.fn() } },
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },

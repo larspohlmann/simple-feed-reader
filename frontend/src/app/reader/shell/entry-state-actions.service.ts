@@ -75,6 +75,16 @@ export class EntryStateActions implements EntryActionHandler {
     );
   }
 
+  /** Re-sharing refreshes when it was shared without counting it again. */
+  share(entry: EntryDto): void {
+    const firstShare = !entry.isShared;
+    if (firstShare) this.subscriptions.bumpShared(1);
+    const undoCount = () => {
+      if (firstShare) this.subscriptions.bumpShared(-1);
+    };
+    this.entries.setState(entry.id, { isShared: true }, { onFailed: undoCount });
+  }
+
   /** Ticking also reads the entry; un-ticking lets a later reopen mark it viewed again. */
   toggleRead(entry: EntryDto): void {
     const viewed = !entry.isViewed;

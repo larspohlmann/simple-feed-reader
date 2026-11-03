@@ -11,6 +11,8 @@ interface ShareEntry {
   readonly symbol?: string;
   readonly color?: string;
   readonly external?: boolean;
+  /** Picking it records the entry as shared (#2007). */
+  readonly social?: boolean;
 }
 
 /** An entry of public/share-targets/share-targets.json. */

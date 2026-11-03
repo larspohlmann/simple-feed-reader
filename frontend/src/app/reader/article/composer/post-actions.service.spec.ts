@@ -148,11 +148,11 @@ describe('PostActions', () => {
     };
     composed = of(posted);
 
-    actions.postLink('bluesky', {
-      url: 'https://example.com/story',
-      title: 'A story',
-      quote: null,
-    });
+    const sentPosts: SentPost[] = [];
+    actions
+      .postLink('bluesky', { url: 'https://example.com/story', title: 'A story', quote: null })
+      .subscribe((sent) => sentPosts.push(sent));
+    expect(sentPosts).toEqual([posted]);
 
     expect(dialog.open).toHaveBeenCalledWith(
       ComposerDialogComponent,
@@ -183,7 +183,7 @@ describe('PostActions', () => {
       quote: 'A line',
     };
 
-    actions.postLink('mastodon', link);
+    actions.postLink('mastodon', link).subscribe();
 
     expect(dialog.open).toHaveBeenCalledWith(
       ComposerDialogComponent,

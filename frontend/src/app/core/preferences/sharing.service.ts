@@ -13,6 +13,7 @@ export class SharingService {
   private readonly settings = signal<SharingSettings>(this.cached());
 
   readonly enabled = computed(() => this.settings().enabled);
+  readonly rememberShares = computed(() => this.settings().rememberShares);
   readonly hidden = computed((): ReadonlySet<string> => new Set(this.settings().hiddenTargets));
   readonly saveFailed = signal(false);
   /** Each write carries the whole state, so they must reach the server in the order they were made. */
@@ -29,6 +30,10 @@ export class SharingService {
 
   setEnabled(enabled: boolean): void {
     this.save({ ...this.settings(), enabled });
+  }
+
+  setRememberShares(rememberShares: boolean): void {
+    this.save({ ...this.settings(), rememberShares });
   }
 
   /** Keeps ids this device does not list, so another device's hidden targets survive. */
@@ -73,5 +78,9 @@ export class SharingService {
 }
 
 function sameSettings(left: SharingSettings, right: SharingSettings): boolean {
-  return left.enabled === right.enabled && sameIds(left.hiddenTargets, right.hiddenTargets);
+  return (
+    left.enabled === right.enabled &&
+    left.rememberShares === right.rememberShares &&
+    sameIds(left.hiddenTargets, right.hiddenTargets)
+  );
 }

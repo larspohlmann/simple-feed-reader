@@ -51,8 +51,11 @@ export class PostActions {
     });
   }
 
-  postLink(network: SocialNetworkName, link: SharedLinkDto): void {
-    this.respond({ kind: 'link', network, ...link }).subscribe((sent) => this.announce(sent));
+  /** Emits once the link post went out; a closed composer emits nothing. */
+  postLink(network: SocialNetworkName, link: SharedLinkDto): Observable<SentPost> {
+    return this.respond({ kind: 'link', network, ...link }).pipe(
+      tap((sent) => this.announce(sent)),
+    );
   }
 
   delete(entryId: number, network: SocialNetworkName, comment: EntryCommentDto): void {
