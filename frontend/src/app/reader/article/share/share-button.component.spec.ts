@@ -298,10 +298,19 @@ describe('ShareButtonComponent', () => {
       mount(false);
     });
 
-    it('shares to a social network without recording', () => {
+    it('shares to a social network without recording', async () => {
       jest.spyOn(window, 'open').mockReturnValue(null);
+      const unhandled = jest.fn();
+      const previous = config.onUnhandledError;
+      config.onUnhandledError = unhandled;
+      try {
+        item(openMenu(), 'Open in Bluesky app').click();
+        await new Promise((resolve) => setTimeout(resolve));
 
-      expect(() => item(openMenu(), 'Open in Bluesky app').click()).not.toThrow();
+        expect(unhandled).not.toHaveBeenCalled();
+      } finally {
+        config.onUnhandledError = previous;
+      }
     });
 
     it('posts a link without recording', async () => {
