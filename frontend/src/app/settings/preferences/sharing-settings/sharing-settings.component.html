@@ -11,6 +11,19 @@
       (toggled)="sharing.setEnabled($event)"
     />
   </app-settings-row>
+  <app-settings-row
+    [title]="'settings.sharingRemember' | transloco"
+    [description]="'settings.sharingRememberHint' | transloco"
+    labelFor="sharing-remember-toggle"
+  >
+    <app-toggle
+      inputId="sharing-remember-toggle"
+      [checked]="sharing.rememberShares()"
+      [disabled]="!sharing.enabled()"
+      [label]="'settings.sharingRemember' | transloco"
+      (toggled)="sharing.setRememberShares($event)"
+    />
+  </app-settings-row>
   @for (target of targets; track target.id) {
     @let label = target.labelKey ? (target.labelKey | transloco) : (target.label ?? '');
     <app-settings-row [title]="label" [labelFor]="'share-target-' + target.id">

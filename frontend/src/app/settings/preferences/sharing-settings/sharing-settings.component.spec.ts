@@ -49,6 +49,31 @@ describe('SharingSettingsComponent', () => {
     expect(toggle(element, 'share-target-x').disabled).toBe(true);
   });
 
+  it('puts the remember switch directly below the master switch, on by default', () => {
+    const element = mount();
+    const rows = Array.from(element.querySelectorAll('app-settings-row'));
+
+    expect(toggle(element, 'sharing-remember-toggle').checked).toBe(true);
+    expect(rows[1].querySelector('#sharing-remember-toggle')).not.toBeNull();
+  });
+
+  it('stops remembering shares when the remember switch goes off', () => {
+    const element = mount();
+
+    toggle(element, 'sharing-remember-toggle').click();
+
+    expect(TestBed.inject(SharingService).rememberShares()).toBe(false);
+  });
+
+  it('disables the remember switch while sharing is off', () => {
+    const element = mount();
+
+    toggle(element, 'sharing-toggle').click();
+    fixture.detectChanges();
+
+    expect(toggle(element, 'sharing-remember-toggle').disabled).toBe(true);
+  });
+
   it('reports a failed save', () => {
     TestBed.inject(SharingService).saveFailed.set(true);
 

@@ -26,6 +26,8 @@
     "sharing": "Teilen",
     "sharingEnabled": "Artikel teilen",
     "sharingEnabledHint": "Der Teilen-Knopf und das Teilen einer Textauswahl. Ausgeschaltet, oder mit allen Zielen unten aus, verschwinden beide.",
+    "sharingRemember": "Geteilte Artikel merken",
+    "sharingRememberHint": "Listet, was du in einem sozialen Netzwerk teilst, unter Geteilt und lässt es in Für dich einfließen.",
     "sharingSaveFailed": "Deine Teilen-Einstellungen konnten nicht in deinem Konto gespeichert werden.",
     "magazineStyleOption": {
       "boxed": "Mit Rahmen",

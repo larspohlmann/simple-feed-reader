@@ -26,6 +26,8 @@
     "sharing": "Sharing",
     "sharingEnabled": "Share articles",
     "sharingEnabledHint": "The share button and sharing a text selection. Switched off, or with every target below off, both disappear.",
+    "sharingRemember": "Remember shared articles",
+    "sharingRememberHint": "Lists what you share to a social network under Shared and lets it shape For you.",
     "sharingSaveFailed": "Your sharing settings could not be saved to your account.",
     "magazineStyleOption": {
       "boxed": "Boxed",
