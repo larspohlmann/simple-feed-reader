@@ -33,7 +33,7 @@ final readonly class SavedPostRepository
             ->from(Entry::class, 'e')
             ->join(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere('e.feed = :feed')
-            ->andWhere('es.isFavorite = :flagged OR es.isKept = :flagged')
+            ->andWhere('es.isFavorite = :flagged OR es.isKept = :flagged OR es.sharedAt IS NOT NULL')
             ->setParameter('user', $userId)
             ->setParameter('feed', $feedId)
             ->setParameter('flagged', true, Types::BOOLEAN)

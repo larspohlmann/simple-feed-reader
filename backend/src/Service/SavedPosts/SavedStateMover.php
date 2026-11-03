@@ -59,8 +59,13 @@ final readonly class SavedStateMover
         if ($source->isKept()) {
             $target->markKept();
         }
+        $sharedAt = $source->getSharedAt();
+        if (null !== $sharedAt) {
+            $target->markShared($sharedAt);
+        }
         $source->clearFavorite();
         $source->clearKept();
+        $source->clearShared();
     }
 
     private static function copyReading(EntryState $source, EntryState $target): void

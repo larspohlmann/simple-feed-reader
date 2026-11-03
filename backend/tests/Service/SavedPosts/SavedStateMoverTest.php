@@ -61,6 +61,24 @@ final class SavedStateMoverTest extends DbTestCase
         self::assertFalse($source->isKept());
     }
 
+    public function testTheTargetTakesTheSharedInstantAndTheSourceLosesIt(): void
+    {
+        $sharedAt = new \DateTimeImmutable('2026-10-02T10:00:00Z');
+        $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
+        $state->markShared($sharedAt);
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        $target = $this->stateOf($targetId);
+        self::assertTrue($target->isShared());
+        self::assertEquals($sharedAt, $target->getSharedAt());
+        self::assertFalse($this->stateOf($sourceId)->isShared());
+    }
+
     public function testAHiddenSourceHidesTheNewTargetFromTheSameInstant(): void
     {
         $hiddenAt = new \DateTimeImmutable('2026-10-16 08:30:00');

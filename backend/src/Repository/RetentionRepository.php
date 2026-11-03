@@ -170,13 +170,13 @@ final readonly class RetentionRepository
                  OR (e.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
     }
 
-    /** An entry is protected iff any user favorited or kept it. */
+    /** An entry is protected iff any user favorited, kept or shared it. */
     private function notProtectedDql(): string
     {
         return sprintf(
             'NOT EXISTS (
                 SELECT IDENTITY(s.user) FROM %s s
-                WHERE s.entry = e AND (s.isFavorite = :true OR s.isKept = :true)
+                WHERE s.entry = e AND (s.isFavorite = :true OR s.isKept = :true OR s.sharedAt IS NOT NULL)
             )',
             EntryState::class,
         );

@@ -97,6 +97,27 @@ final class SavedPostRescueTest extends DbTestCase
         self::assertNull($this->originOf($copy));
     }
 
+    public function testASharedPostOfABlueskyProfileFeedMovesToTheCopyWithItsSharedInstant(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/did:plc:bob/rss', 'Bob');
+        $subscription = $this->subscribe($this->user, $feed);
+        $shared = $this->entry(
+            $feed,
+            'at://did:plc:bob/app.bsky.feed.post/2',
+            'https://bsky.app/profile/did:plc:bob/post/2',
+        );
+        $sharedAt = new \DateTimeImmutable('2026-10-02T10:00:00Z');
+        $this->state($this->user, $shared)->markShared($sharedAt);
+        $this->entityManager->flush();
+
+        $this->service()->unsubscribe($subscription);
+        $this->entityManager->clear();
+
+        $copy = $this->entriesOf($this->savedFeed(SocialNetwork::Bluesky))[0];
+        self::assertTrue($this->stateOf($copy)->isShared());
+        self::assertEquals($sharedAt, $this->stateOf($copy)->getSharedAt());
+    }
+
     public function testAProfileTitleLongerThanThePosterColumnIsCutTo255Characters(): void
     {
         $feed = $this->feed('https://bsky.app/profile/did:plc:long/rss', str_repeat('é', 300));

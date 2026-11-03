@@ -67,6 +67,18 @@ final class SavedPostRepositoryTest extends DbTestCase
         self::assertNull($flagged[$kept->requireId()]);
     }
 
+    public function testASharedEntryIsFlaggedToo(): void
+    {
+        $feed = $this->subscribedFeed('https://flagged-shared.example/feed.xml');
+        $shared = $this->entry($feed, 'shared', 'https://flagged-shared.example/1');
+        $this->state($shared)->markShared(new \DateTimeImmutable(self::AT));
+        $this->entityManager->flush();
+
+        $flagged = $this->repository()->flaggedIn($this->user->requireId(), $feed->requireId());
+
+        self::assertSame([$shared->requireId()], array_keys($flagged));
+    }
+
     public function testAKeptTwinIsTheLowestIdCopyInAFeedTheUserStaysWithAndNeverInALeavingFeed(): void
     {
         $leaving = $this->subscribedFeed('https://leaving.example/feed.xml');
