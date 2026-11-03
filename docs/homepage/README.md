@@ -21,6 +21,12 @@ magazine screenshot inside it, and link previews need a PNG at a fixed URL.
 `docs/screenshots/magazine-light.webp`; rerun it after retaking that
 screenshot and commit the result.
 
+The phone tour is the second exception: `tour-light.*` and `tour-dark.*` (an MP4
+and a poster each) are a screen recording, not screenshots.
+`frontend/scripts/screenshots/tour.mjs` records them against the dev stack and
+writes the scene start times into the page's scene list
+([its README](../../frontend/scripts/screenshots/README.md#tour-video)).
+
 ## Deployment
 
 `.github/workflows/deploy-homepage.yml` rsyncs this folder over SSH into

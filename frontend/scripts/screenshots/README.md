@@ -41,6 +41,23 @@ under the system temp directory. It needs `cwebp` on the PATH (`brew install web
 Desktop shots are 1440 logical pixels at 1.33x, so 1920 px wide; phone shots are 390×760 at 2x
 and pass through `frame.mjs`, which wraps them in a phone frame with a transparent outside.
 
+## Tour video
+
+The homepage's phone tour (`docs/homepage/tour-*`) is recorded by `tour.mjs`, both themes in one
+run; it borrows and returns the podcasts itself:
+
+```bash
+node --env-file=.env.screenshots scripts/screenshots/tour.mjs          # or: … tour.mjs light
+```
+
+It writes `tour-<theme>.mp4` and `tour-<theme>-poster.webp` into
+`docs/homepage/`, and each scene's start time into the `data-light` / `data-dark` attribute of the
+page's scene list. `TOUR_OUT` points a trial run elsewhere; it updates a page only if that folder
+has an `index.html`. It needs `ffmpeg` and `cwebp` on the PATH. Check each video before committing,
+for example with a contact sheet:
+`ffmpeg -i tour-light.mp4 -vf "fps=1,scale=200:-1,tile=9x5" -frames:v 1 sheet.png`.
+An aborted run can leave the podcasts borrowed; `podcast-setup.mjs teardown` returns them.
+
 The demo account's password can be reset from the stack:
 
 ```bash

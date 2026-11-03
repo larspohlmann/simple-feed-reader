@@ -7,20 +7,14 @@ import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { articles, BASE, PHONE, seedSettings, settle, signIn, stubAiryStyle } from './lib.mjs';
 
-const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:4200';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DOCS = join(HERE, '..', '..', '..', 'docs', 'screenshots');
 const RAW = join(tmpdir(), 'sfr-screenshots');
 mkdirSync(RAW, { recursive: true });
 
 const DESKTOP = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 4 / 3 };
-const PHONE = {
-  viewport: { width: 390, height: 760 },
-  deviceScaleFactor: 2,
-  isMobile: true,
-  hasTouch: true,
-};
 
 const day = (daysAgo) => {
   const date = new Date();
@@ -121,24 +115,7 @@ async function stubProxy(page) {
       : route.fallback(),
   );
 }
-// The magazine style is a server preference; answer the profile with airy instead of saving it.
-async function stubAiryStyle(page) {
-  await page.route(/\/api\/me$/, async (route) => {
-    if (route.request().method() !== 'GET') return route.fallback();
-    const response = await route.fetch();
-    const profile = await response.json();
-    await route.fulfill({
-      response,
-      json: { ...profile, preferences: { ...profile.preferences, magazineStyle: 'airy' } },
-    });
-  });
-}
 
-async function settle(page, milliseconds = 1500) {
-  await page.waitForLoadState('networkidle').catch(() => {});
-  await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(milliseconds);
-}
 async function scrollEverythingToTop(page) {
   await page.evaluate(() => {
     for (const element of document.querySelectorAll('*')) {
@@ -149,7 +126,6 @@ async function scrollEverythingToTop(page) {
   await settle(page, 1200);
 }
 
-const articles = (page) => page.locator('app-entry-list article');
 // A Guardian article: its reader extract starts with the text, not a share toast or an author bio.
 const guardianArticle = (page) => articles(page).filter({ hasText: 'The Guardian' }).first();
 
@@ -222,13 +198,6 @@ async function queueEpisodesAndOpenPlayer(page) {
   await page.locator('app-big-player').waitFor();
   await settle(page, 2000);
 }
-async function dismissPasskeyOffer(page) {
-  const offer = page.getByRole('dialog', { name: 'Set up a passkey?' });
-  if (await offer.isVisible().catch(() => false)) {
-    await offer.getByRole('button', { name: 'Not now', exact: true }).click();
-  }
-}
-
 const podcastTag = () => {
   if (!process.env.PODCAST_TAG)
     throw new Error('The listening set needs PODCAST_TAG (see podcast-setup.mjs)');
@@ -344,31 +313,11 @@ function selectShots(arguments_) {
   });
 }
 
-async function signIn(page) {
-  await page.goto(`${BASE}/login`);
-  await page.locator('input[type=email]').fill(process.env.SHOT_EMAIL);
-  await page.locator('input[type=password]').fill(process.env.SHOT_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
-  await dismissPasskeyOffer(page);
-}
-
 async function capture(browser, shot) {
   const isPhone = shot.device === 'phone';
   const context = await browser.newContext(isPhone ? PHONE : DESKTOP);
   const page = await context.newPage();
-  await page.addInitScript(
-    ({ theme, layout }) => {
-      localStorage.setItem('sfr.theme', theme);
-      localStorage.setItem('sfr.lang', 'en');
-      localStorage.setItem('sfr.readingFocus', 'false');
-      localStorage.removeItem('sfr.sidebarHidden');
-      localStorage.removeItem('sfr.textSize');
-      localStorage.removeItem('sfr.unread-only');
-      if (layout) localStorage.setItem('sfr.layout', layout);
-    },
-    { theme: shot.theme, layout: shot.layout },
-  );
+  await page.addInitScript(seedSettings, { theme: shot.theme, layout: shot.layout });
   if (shot.stub) await shot.stub(page);
   if (shot.auth !== false) await signIn(page);
   await page.goto(`${BASE}${shot.path}`);
