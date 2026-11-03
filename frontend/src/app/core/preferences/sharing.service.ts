@@ -14,6 +14,8 @@ export class SharingService {
 
   readonly enabled = computed(() => this.settings().enabled);
   readonly rememberShares = computed(() => this.settings().rememberShares);
+  /** The server's rule for registering a share, so a share it records on its own shows the same here. */
+  readonly recordsShares = computed(() => this.enabled() && this.rememberShares());
   readonly hidden = computed((): ReadonlySet<string> => new Set(this.settings().hiddenTargets));
   readonly saveFailed = signal(false);
   /** Each write carries the whole state, so they must reach the server in the order they were made. */

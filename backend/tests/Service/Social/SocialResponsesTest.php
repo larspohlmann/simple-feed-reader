@@ -8,11 +8,13 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
+use App\Service\Reading\EntryShareRecorder;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\ComposerContexts;
 use App\Service\Social\Exception\NotASocialPostException;
@@ -456,6 +458,7 @@ final class SocialResponsesTest extends DbTestCase
         $feed = new Feed(self::FEED_URL);
         $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-11-01 10:00:00');
+        $this->entityManager->persist(new Subscription($this->owner, $feed, $now));
         $entry = new Entry($feed, 'tag:mastodon.social,2026:110', self::STATUS_URL, 'Post', $now, $now);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
@@ -491,6 +494,15 @@ final class SocialResponsesTest extends DbTestCase
             $accounts,
             $this->countsCache,
             $this->comments,
+            $this->shareRecorder(),
         );
+    }
+
+    private function shareRecorder(): EntryShareRecorder
+    {
+        $recorder = self::getContainer()->get(EntryShareRecorder::class);
+        self::assertInstanceOf(EntryShareRecorder::class, $recorder);
+
+        return $recorder;
     }
 }

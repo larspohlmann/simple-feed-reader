@@ -9,6 +9,7 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { SocialCountsService } from './social-counts.service';
 import { RemovedPost, RemovedPosts } from '../../removed-posts.service';
+import { NetworkShares } from '../share/network-shares.service';
 
 describe('SocialCountsService', () => {
   let api: {
@@ -19,6 +20,7 @@ describe('SocialCountsService', () => {
   };
   let entries: { adoptLike: jest.Mock };
   let toast: { showProblem: jest.Mock };
+  let shares: { reflect: jest.Mock };
   let tokens: TokenStore;
   let service: SocialCountsService;
 
@@ -46,11 +48,13 @@ describe('SocialCountsService', () => {
     };
     entries = { adoptLike: jest.fn() };
     toast = { showProblem: jest.fn() };
+    shares = { reflect: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: SocialPostApi, useValue: api },
         { provide: EntriesStore, useValue: entries },
         { provide: ToastService, useValue: toast },
+        { provide: NetworkShares, useValue: shares },
       ],
     });
     tokens = TestBed.inject(TokenStore);
@@ -181,6 +185,25 @@ describe('SocialCountsService', () => {
       });
     });
 
+    it('shares the entry once the network takes the repost, and not again on undoing it', () => {
+      service.load(post());
+
+      service.toggleRepost(post());
+      service.toggleRepost(post());
+
+      expect(shares.reflect).toHaveBeenCalledTimes(1);
+      expect(shares.reflect).toHaveBeenCalledWith(1);
+    });
+
+    it('shares nothing while the repost is on the wire', () => {
+      api.repost.mockReturnValue(new Subject());
+      service.load(post());
+
+      service.toggleRepost(post());
+
+      expect(shares.reflect).not.toHaveBeenCalled();
+    });
+
     it('puts the repost back and reports the problem when the network refuses', () => {
       api.repost.mockReturnValue(
         throwError(
@@ -202,6 +225,7 @@ describe('SocialCountsService', () => {
       expect(toast.showProblem).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'social_post_refused' }),
       );
+      expect(shares.reflect).not.toHaveBeenCalled();
     });
 
     it('ignores a toggle while the last one is on the wire', () => {

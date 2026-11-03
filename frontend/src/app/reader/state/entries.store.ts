@@ -271,6 +271,11 @@ export class EntriesStore {
     this.patchEntries(ids, (entry) => ({ ...entry, isHidden: true }));
   }
 
+  /** Reflects a share the server already recorded, as for a repost; no request. */
+  markSharedLocally(id: number): void {
+    this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
+  }
+
   /** Reaches each target as a row and as a copy inside a row's `duplicates`. The list keeps its identity when
    *  `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {

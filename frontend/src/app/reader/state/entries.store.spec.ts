@@ -430,6 +430,18 @@ describe('EntriesStore', () => {
     ctrl.expectNone(() => true);
   });
 
+  it('marks an entry shared in place without an HTTP call', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1), entry(2)], nextCursor: null });
+
+    store.markSharedLocally(2);
+
+    expect(store.entries().map((listedEntry) => listedEntry.isShared)).toEqual([false, true]);
+    ctrl.expectNone(() => true);
+  });
+
   describe('merging completed rows (#1502)', () => {
     const card = aLinkCard({ url: 'https://news.test/', title: 'Story' });
 

@@ -87,6 +87,18 @@ describe('SharingService', () => {
     expect(make().rememberShares()).toBe(true);
   });
 
+  it('records shares only while sharing is on and remembering is on', () => {
+    const service = make();
+    expect(service.recordsShares()).toBe(true);
+
+    service.setRememberShares(false);
+    expect(service.recordsShares()).toBe(false);
+
+    service.setRememberShares(true);
+    service.setEnabled(false);
+    expect(service.recordsShares()).toBe(false);
+  });
+
   it('reads a cache written before remembering shares existed as remembering', () => {
     localStorage.setItem(SHARING_KEY, JSON.stringify({ enabled: false, hiddenTargets: ['x'] }));
 

@@ -14,6 +14,7 @@ import { PostTargetDto, SharedLinkDto } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
+import { NetworkShares } from '../share/network-shares.service';
 import { SentPost } from './composed-post';
 import { ComposerDialogComponent } from './composer-dialog.component';
 import { PostSentDialogComponent } from './post-sent-dialog.component';
@@ -28,6 +29,7 @@ import { sentComment } from './sent-comment';
 export class PostActions {
   private readonly comments = inject(CommentsService);
   private readonly counts = inject(SocialCountsService);
+  private readonly shares = inject(NetworkShares);
   private readonly api = inject(SocialPostApi);
   private readonly confirm = inject(ConfirmService);
   private readonly dialog = inject(Dialog);
@@ -45,7 +47,7 @@ export class PostActions {
   /** Quotes the entry's own post, or the reply in its thread named by `address`. */
   quote(entryId: number, network: SocialNetworkName, address: string | null): void {
     this.respond({ kind: 'quote', entryId, network, address }).subscribe((sent) => {
-      if (address === null) this.counts.stepQuotes(entryId);
+      if (address === null) this.quotedPost(entryId);
       else this.comments.countQuote(entryId, address);
       this.announce(sent);
     });
@@ -122,6 +124,11 @@ export class PostActions {
         data: target,
       })
       .closed.pipe(filter((sent): sent is SentPost => sent !== undefined));
+  }
+
+  private quotedPost(entryId: number): void {
+    this.counts.stepQuotes(entryId);
+    this.shares.reflect(entryId);
   }
 
   private deletePostTitle(replies: number): string {

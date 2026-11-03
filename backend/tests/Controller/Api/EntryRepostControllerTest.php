@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
+use App\Entity\EntryState;
+use App\Entity\Preferences;
+use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -157,6 +161,83 @@ final class EntryRepostControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_BAD_REQUEST);
     }
 
+    public function testARepostOfTheEntrysPostRecordsItAsShared(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => new MockResponse('{"statuses":[{"id":"110"}]}'),
+            self::REBLOG => new MockResponse('{"id":"220","reblogged":true}'),
+        ]);
+        $user = $this->signIn($client, 'repost-shares@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('PUT', sprintf('/api/entries/%d/repost', $entryId));
+
+        self::assertResponseIsSuccessful();
+        self::assertNotNull($this->sharedAtOf($user, $entryId));
+    }
+
+    /** @param \Closure(Preferences): void $turnOff */
+    #[DataProvider('switchesThatStopRecording')]
+    public function testARepostRecordsNothingWhileSharesAreNotRemembered(\Closure $turnOff): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => new MockResponse('{"statuses":[{"id":"110"}]}'),
+            self::REBLOG => new MockResponse('{"id":"220","reblogged":true}'),
+        ]);
+        $user = $this->signIn($client, sprintf('repost-forgetful-%s@example.test', md5((string) $this->dataName())));
+        $turnOff($user->getPreferences());
+        $this->entityManager()->flush();
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('PUT', sprintf('/api/entries/%d/repost', $entryId));
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->sharedAtOf($user, $entryId));
+    }
+
+    /** @return iterable<string, array{\Closure(Preferences): void}> */
+    public static function switchesThatStopRecording(): iterable
+    {
+        yield 'remembering off' => [static fn (Preferences $preferences) => $preferences->setRememberingShares(false)];
+        yield 'sharing off' => [static fn (Preferences $preferences) => $preferences->setSharingEnabled(false)];
+    }
+
+    public function testAReplyRepostLeavesTheEntryUnshared(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::REPLY_SEARCH => new MockResponse('{"statuses":[{"id":"200"}]}'),
+            self::REPLY_REBLOG => new MockResponse('{"id":"300","reblogged":true}'),
+        ]);
+        $user = $this->signIn($client, 'repost-reply-unshared@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('PUT', $this->replyPath($entryId));
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->sharedAtOf($user, $entryId));
+    }
+
+    public function testUndoingARepostKeepsTheEntryShared(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => new MockResponse('{"statuses":[{"id":"110","reblogged":true}]}'),
+            self::UNREBLOG => new MockResponse('{"id":"110","reblogged":false}'),
+        ]);
+        $user = $this->signIn($client, 'unrepost-keeps-share@example.test');
+        $this->mastodonAccountOf($user);
+        $entry = $this->mastodonPostOf($user);
+        $sharedAt = new \DateTimeImmutable('2026-10-12 11:00:00');
+        $this->shareAt($user, $entry, $sharedAt);
+
+        $client->request('DELETE', sprintf('/api/entries/%d/repost', $entry->requireId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertEquals($sharedAt, $this->sharedAtOf($user, $entry->requireId()));
+    }
+
     public function testAnotherUsersEntryReadsAsMissing(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
@@ -197,5 +278,21 @@ final class EntryRepostControllerTest extends ApiTestCase
     private function replyPath(int $entryId): string
     {
         return sprintf('/api/entries/%d/comments/repost?address=%s', $entryId, rawurlencode(self::REPLY));
+    }
+
+    private function shareAt(User $user, Entry $entry, \DateTimeImmutable $when): void
+    {
+        $state = new EntryState($user, $entry);
+        $state->markShared($when);
+        $this->entityManager()->persist($state);
+        $this->entityManager()->flush();
+    }
+
+    private function sharedAtOf(User $user, int $entryId): ?\DateTimeImmutable
+    {
+        $state = $this->entityManager()->getRepository(EntryState::class)
+            ->findOneBy(['user' => $user, 'entry' => $entryId]);
+
+        return $state?->getSharedAt();
     }
 }

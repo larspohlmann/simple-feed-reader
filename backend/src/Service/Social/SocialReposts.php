@@ -7,6 +7,7 @@ namespace App\Service\Social;
 use App\Entity\Entry;
 use App\Entity\User;
 use App\Service\Comments\CommentsLoader;
+use App\Service\Reading\EntryShareRecorder;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
@@ -18,7 +19,7 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\SocialPostModel;
 
-/** Reposts an entry's post or a reply in its thread; the network keeps the repost, so nothing is stored here. */
+/** Reposts an entry's post or a reply in its thread; the network keeps the repost, and a repost of the entry's post shares it. */
 final readonly class SocialReposts
 {
     public function __construct(
@@ -26,6 +27,7 @@ final readonly class SocialReposts
         private PostReposting $reposting,
         private SocialCountsCache $countsCache,
         private CommentsLoader $comments,
+        private EntryShareRecorder $shares,
     ) {
     }
 
@@ -44,6 +46,7 @@ final readonly class SocialReposts
     {
         $this->repostIfNot($this->posts->find($user, $entry));
         $this->countsCache->forgetEntry($entry);
+        $this->shares->record($user, $entry);
     }
 
     /**

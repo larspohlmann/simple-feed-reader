@@ -1,5 +1,5 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, catchError, forkJoin, of, throwError } from 'rxjs';
+import { Observable, catchError, forkJoin, of, tap, throwError } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { HttpErrorResponse } from '@angular/common/http';
 import { parseProblem } from '../../../core/problem';
@@ -16,6 +16,7 @@ import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
 import { RemovedPosts } from '../../removed-posts.service';
+import { NetworkShares } from '../share/network-shares.service';
 
 const CACHE_CAP = 50;
 const FRESH_MS = 120 * 1000;
@@ -44,6 +45,7 @@ export class SocialCountsService {
   private readonly api = inject(SocialPostApi);
   private readonly entries = inject(EntriesStore);
   private readonly removedPosts = inject(RemovedPosts);
+  private readonly shares = inject(NetworkShares);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
   private readonly toggles = new OptimisticToggles(inject(ToastService));
   private generation = 0;
@@ -76,7 +78,7 @@ export class SocialCountsService {
     const isReposted = !current.actions.isReposted;
     this.toggles.run(entry.id, {
       key: 'repost',
-      send: () => (isReposted ? this.api.repost(entry.id) : this.api.unrepost(entry.id)),
+      send: () => (isReposted ? this.repost(entry.id) : this.api.unrepost(entry.id)),
       to: isReposted,
       show: (reposted) => state.update((loaded) => withRepost(loaded, reposted)),
     });
@@ -97,6 +99,11 @@ export class SocialCountsService {
       const counts = steppedCounts(state.counts, kind, up);
       return counts === state.counts ? state : { ...state, counts };
     });
+  }
+
+  /** Undoing a repost leaves the share: it happened, and removing it from Shared stays the reader's call. */
+  private repost(entryId: number): Observable<unknown> {
+    return this.api.repost(entryId).pipe(tap(() => this.shares.reflect(entryId)));
   }
 
   private stateFor(id: number): WritableSignal<SocialCountsState> {
