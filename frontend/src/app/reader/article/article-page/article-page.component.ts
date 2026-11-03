@@ -26,6 +26,7 @@ import { ArticleLayerComponent } from '../article-layer/article-layer.component'
 import { ArticleContentComponent } from '../article-content/article-content.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
+import { ShareAvailability } from '../share/share-availability';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { SelectionShareComponent } from '../selection-share/selection-share.component';
 import { ArticleSelection } from '../selection-share/article-selection.service';
@@ -74,6 +75,7 @@ export class ArticlePageComponent {
 
   protected readonly source = inject(ARTICLE_PAGE_SOURCE);
   protected readonly scope = inject(ReadingScope);
+  protected readonly sharing = inject(ShareAvailability);
   private readonly restore = inject(ArticleScrollRestore);
   private readonly reduceMotion = prefersReducedMotion();
 

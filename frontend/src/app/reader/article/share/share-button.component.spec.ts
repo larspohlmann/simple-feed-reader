@@ -10,6 +10,7 @@ import {
   ActionSheetData,
   ActionSheetItem,
 } from '../../../shared/action-sheet/action-sheet.component';
+import { SharingService } from '../../../core/preferences/sharing.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -66,6 +67,7 @@ describe('ShareButtonComponent', () => {
     sheet.open.mockReset();
     postActions.postLink.mockReset();
     selectionProviders = [];
+    localStorage.clear();
     accounts.set([
       account(1, 'mastodon', '@me@mastodon.social'),
       account(2, 'bluesky', 'me.bsky.social'),
@@ -112,6 +114,15 @@ describe('ShareButtonComponent', () => {
       expect(item(menu, 'Open in Bluesky app').querySelector('app-masked-logo')).not.toBeNull();
       expect(menu.querySelectorAll('hr').length).toBeGreaterThan(0);
       expect(sheet.open).not.toHaveBeenCalled();
+    });
+
+    it('leaves out a target the account has hidden', () => {
+      TestBed.inject(SharingService).setTargetShown('x', false);
+
+      const menu = openMenu();
+
+      expect(item(menu, 'X')).toBeUndefined();
+      expect(item(menu, 'Copy link')).toBeTruthy();
     });
 
     it('focuses the first item without scrolling when opened by keyboard', () => {

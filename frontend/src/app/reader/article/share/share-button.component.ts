@@ -26,6 +26,7 @@ import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.
 import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { TOOLBAR_MENU_POSITIONS, stepMenu } from '../../../shared/menu-keys';
+import { SharingService } from '../../../core/preferences/sharing.service';
 import { SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
 import { PostActions } from '../composer/post-actions.service';
@@ -93,6 +94,7 @@ export class ShareButtonComponent {
   private readonly postActions = inject(PostActions);
   private readonly selection = inject(ArticleSelection, { optional: true });
   private readonly networks = inject(PostNetworks).connected;
+  private readonly sharing = inject(SharingService);
 
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
@@ -112,7 +114,9 @@ export class ShareButtonComponent {
     if (this.quote() !== null) return 'quote';
     return this.selection === null ? 'link' : 'hinted';
   });
-  protected readonly items = computed(() => shareMenuItems(this.networks(), this.mode()));
+  protected readonly items = computed(() =>
+    shareMenuItems(this.networks(), this.mode(), this.sharing.hidden()),
+  );
   private readonly itemsById = computed(() => new Map(this.items().map((item) => [item.id, item])));
 
   constructor() {
