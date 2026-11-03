@@ -446,7 +446,7 @@ final class EntryJsonTest extends TestCase
                 'comments',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
-                'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
+                'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',
                 'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'duplicates',
             ],
             array_keys($json),

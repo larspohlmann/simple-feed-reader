@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -32,6 +33,44 @@ final class EntrySharedTest extends ApiTestCase
         $cleared = $this->patchState($headers, $entryId, ['isShared' => false]);
         self::assertFalse($cleared['isShared']);
         self::assertNull($cleared['sharedAt']);
+    }
+
+    public function testTheSharedListHoldsSharedEntriesNewestShareFirst(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('share-list@example.com');
+        $first = $this->subscribedEntry($user, 'shared-first');
+        $second = $this->subscribedEntry($user, 'shared-second');
+        $this->subscribedEntry($user, 'never-shared');
+        $this->shareAt($user, $first, '2026-10-02T10:00:00Z');
+        $this->shareAt($user, $second, '2026-10-02T09:00:00Z');
+
+        $this->client->request('GET', '/api/entries?view=shared', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $entries = $this->payload($this->client)['entries'];
+        self::assertIsArray($entries);
+        self::assertSame([$first, $second], array_column($entries, 'id'));
+        self::assertSame([true, true], array_column($entries, 'isShared'));
+    }
+
+    public function testTheSharedListPagesBySharedAt(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('share-pages@example.com');
+        $older = $this->subscribedEntry($user, 'share-older');
+        $newer = $this->subscribedEntry($user, 'share-newer');
+        $this->shareAt($user, $older, '2026-10-02T08:00:00Z');
+        $this->shareAt($user, $newer, '2026-10-02T09:00:00Z');
+
+        $this->client->request('GET', '/api/entries?view=shared&limit=1', server: $headers);
+        $nextCursor = $this->payload($this->client)['nextCursor'];
+        self::assertIsString($nextCursor);
+        $this->client->request(
+            'GET',
+            '/api/entries?view=shared&limit=1&cursor=' . urlencode($nextCursor),
+            server: $headers,
+        );
+
+        self::assertSame([$older], array_column((array) $this->payload($this->client)['entries'], 'id'));
     }
 
     public function testAPatchWithoutIsSharedLeavesTheShareUnchanged(): void
@@ -109,5 +148,15 @@ final class EntrySharedTest extends ApiTestCase
 
         /** @var array<string, mixed> $state */
         return $state;
+    }
+
+    private function shareAt(User $user, int $entryId, string $when): void
+    {
+        $entry = $this->entityManager()->find(Entry::class, $entryId);
+        self::assertInstanceOf(Entry::class, $entry);
+        $state = new EntryState($user, $entry);
+        $state->markShared(new \DateTimeImmutable($when));
+        $this->entityManager()->persist($state);
+        $this->entityManager()->flush();
     }
 }

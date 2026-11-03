@@ -74,6 +74,7 @@ final readonly class EntryProjection
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
             ->addSelect('es.viewedAt AS esViewedAt')
+            ->addSelect('es.sharedAt AS esSharedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->setParameter('user', $userId);
     }

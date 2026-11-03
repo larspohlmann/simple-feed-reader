@@ -54,6 +54,10 @@ final class StateCountsTest extends DbTestCase
         $both->markKept();
         $this->entityManager->persist($both);
 
+        $shared = new EntryState($user, $this->entry($feed, 'shared'));
+        $shared->markShared($when);
+        $this->entityManager->persist($shared);
+
         // Opened, so it counts as viewed but neither favourite nor kept.
         $viewed = new EntryState($user, $this->entry($feed, 'viewed'));
         $viewed->markViewed($when);
@@ -70,6 +74,7 @@ final class StateCountsTest extends DbTestCase
         $counts = $this->repository()->stateCountsForUser($user->requireId());
         self::assertSame(2, $counts['favorites']); // fav + both
         self::assertSame(2, $counts['kept']); // kept + both
+        self::assertSame(1, $counts['shared']); // shared only
         self::assertSame(1, $counts['viewed']); // viewed only
     }
 
@@ -109,6 +114,7 @@ final class StateCountsTest extends DbTestCase
         $orphan = new EntryState($user, $this->entry($feed, 'orphan'));
         $orphan->markFavorite();
         $orphan->markKept();
+        $orphan->markShared($when);
         $orphan->markViewed($when);
         $this->entityManager->persist($orphan);
         $this->entityManager->flush();
@@ -116,6 +122,7 @@ final class StateCountsTest extends DbTestCase
         $counts = $this->repository()->stateCountsForUser($user->requireId());
         self::assertSame(0, $counts['favorites']);
         self::assertSame(0, $counts['kept']);
+        self::assertSame(0, $counts['shared']);
         self::assertSame(0, $counts['viewed']);
     }
 
@@ -165,7 +172,7 @@ final class StateCountsTest extends DbTestCase
         $plainCounts = $this->repository()->plainFeedStateCountsForUser($user->requireId());
         $allCounts = $this->repository()->stateCountsForUser($user->requireId());
 
-        self::assertSame(['favorites' => 1, 'kept' => 0, 'viewed' => 1], $plainCounts);
-        self::assertSame(['favorites' => 2, 'kept' => 0, 'viewed' => 2], $allCounts);
+        self::assertSame(['favorites' => 1, 'kept' => 0, 'shared' => 0, 'viewed' => 1], $plainCounts);
+        self::assertSame(['favorites' => 2, 'kept' => 0, 'shared' => 0, 'viewed' => 2], $allCounts);
     }
 }

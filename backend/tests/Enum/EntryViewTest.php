@@ -33,7 +33,7 @@ final class EntryViewTest extends TestCase
                 self::fail("The view '{$value}' must be rejected.");
             } catch (ValidationException $exception) {
                 self::assertSame(
-                    ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
+                    ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, shared, viewed, for-you.']],
                     $exception->errors,
                 );
             }

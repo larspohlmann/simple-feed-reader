@@ -65,6 +65,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
+            ->addSelect('es.sharedAt AS esSharedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->addSelect('r.completedAt AS runCompletedAt');
     }
@@ -198,7 +199,11 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             isKept: (bool) ($row['esKept'] ?? false),
             // The for-you feed ranks by score, never by view time, so its rows
             // carry no viewedAt — nothing reads it on this path.
-            viewState: new EntryListRowViewState(isViewed: (bool) ($row['esViewed'] ?? false), viewedAt: null),
+            viewState: new EntryListRowViewState(
+                isViewed: (bool) ($row['esViewed'] ?? false),
+                viewedAt: null,
+                sharedAt: $row['esSharedAt'] instanceof \DateTimeImmutable ? $row['esSharedAt'] : null,
+            ),
             markedReadUntil: $markedReadUntil instanceof \DateTimeImmutable ? $markedReadUntil : null,
         );
 

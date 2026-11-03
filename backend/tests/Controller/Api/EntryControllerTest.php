@@ -491,7 +491,7 @@ final class EntryControllerTest extends ApiTestCase
         self::assertSame('validation_error', $body['type']); // uniform with every other invalid field
         self::assertIsArray($body['errors']);
         self::assertSame(
-            ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
+            ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, shared, viewed, for-you.']],
             $body['errors'],
         );
     }
