@@ -1,0 +1,5 @@
+@if (target().icon; as icon) {
+  <app-masked-logo [src]="logoUrl(icon)" [color]="target().color" />
+} @else {
+  <app-icon [name]="target().symbol ?? glyph" size="sm" />
+}

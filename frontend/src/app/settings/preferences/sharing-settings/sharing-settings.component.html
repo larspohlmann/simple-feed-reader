@@ -1,0 +1,30 @@
+<app-settings-group icon="share" [title]="'settings.sharing' | transloco">
+  <app-settings-row
+    [title]="'settings.sharingEnabled' | transloco"
+    [description]="'settings.sharingEnabledHint' | transloco"
+    labelFor="sharing-toggle"
+  >
+    <app-toggle
+      inputId="sharing-toggle"
+      [checked]="sharing.enabled()"
+      [label]="'settings.sharingEnabled' | transloco"
+      (toggled)="sharing.setEnabled($event)"
+    />
+  </app-settings-row>
+  @for (target of targets; track target.id) {
+    @let label = target.labelKey ? (target.labelKey | transloco) : (target.label ?? '');
+    <app-settings-row [title]="label" [labelFor]="'share-target-' + target.id">
+      <app-share-target-logo rowTitleTip [target]="target" />
+      <app-toggle
+        [inputId]="'share-target-' + target.id"
+        [checked]="!sharing.hidden().has(target.id)"
+        [disabled]="!sharing.enabled()"
+        [label]="label"
+        (toggled)="sharing.setTargetShown(target.id, $event)"
+      />
+    </app-settings-row>
+  }
+  @if (sharing.saveFailed()) {
+    <app-error-banner class="state" [message]="'settings.sharingSaveFailed' | transloco" />
+  }
+</app-settings-group>

@@ -21,7 +21,6 @@ import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
-import { MaskedLogoComponent } from '../../../shared/masked-logo/masked-logo.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
@@ -44,6 +43,7 @@ import {
   sharedPage,
 } from './share-content';
 import { ShareItem, ShareMenuMode, TargetItem, shareMenuItems } from './share-menu';
+import { ShareTargetLogoComponent } from './share-target-logo/share-target-logo.component';
 import { SHARE_GLYPH, shareLogoUrl, shareUrl } from './share-targets';
 
 /** Where the trigger sits: in the article toolbar, as a disc in the article's corner, or among a selection's actions. */
@@ -70,7 +70,7 @@ const SHEET_SNIPPET_LENGTH = 60;
     IconButtonDirective,
     KeepSelectionDirective,
     ListActionDirective,
-    MaskedLogoComponent,
+    ShareTargetLogoComponent,
     NetworkLogoComponent,
     CdkConnectedOverlay,
     CdkOverlayOrigin,
@@ -98,7 +98,6 @@ export class ShareButtonComponent {
 
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
-  protected readonly logoUrl = shareLogoUrl;
   protected readonly step = stepMenu;
   protected readonly compactIconSize = computed((): IconSize =>
     this.screen.isCoarse() ? 'md' : 'sm',

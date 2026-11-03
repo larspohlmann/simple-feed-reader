@@ -99,11 +99,7 @@
             [class.link-only]="item.linkOnly"
             (click)="choose(item)"
           >
-            @if (item.target.icon) {
-              <app-masked-logo [src]="logoUrl(item.target.icon)" [color]="item.target.color" />
-            } @else {
-              <app-icon [name]="item.target.symbol ?? glyph" size="sm" />
-            }
+            <app-share-target-logo [target]="item.target" />
             <span class="label">{{
               item.target.labelKey ? (item.target.labelKey | transloco) : item.target.label
             }}</span>
