@@ -921,7 +921,15 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheDistillRoleWeighsSavedSearchesWithFavourites(): void
     {
         self::assertStringContainsString(
-            'SAVED SEARCHES and FAVORITES weigh strongest, KEPT next, VIEWED least',
+            'SAVED SEARCHES and FAVORITES weigh strongest, SHARED next, then KEPT, VIEWED least',
+            RecommendationPromptText::DISTILL_ROLE,
+        );
+    }
+
+    public function testTheDistillRoleNamesTheSharedSection(): void
+    {
+        self::assertStringContainsString(
+            'FAVORITES, SHARED, KEPT and VIEWED',
             RecommendationPromptText::DISTILL_ROLE,
         );
     }
@@ -940,6 +948,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             favorites: [self::line(1, 'Fav one', 10)],
             kept: [self::line(2, 'Kept one', 10)],
             viewed: [self::line(3, 'Viewed one', 10)],
+            shared: [self::line(4, 'Shared one', 10)],
         );
 
         $messages = $this->builder->distillMessages(new ProfileInputsModel($history, []));
@@ -948,6 +957,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT;
         $expectedUser = implode("\n\n", [
             "FAVORITES (newest first):\n- Fav one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "SHARED (newest first):\n- Shared one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
             "KEPT (newest first):\n- Kept one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
             "VIEWED (newest first):\n- Viewed one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
         ]);

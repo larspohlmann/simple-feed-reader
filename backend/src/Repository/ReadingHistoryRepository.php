@@ -11,8 +11,10 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * The reader's history in still-subscribed feeds, each entry only in its highest section (favorite, kept, viewed).
- * Favorites and kept order by effectiveDate, since EntryState has no favorited-at; viewed orders by viewedAt.
+ * The reader's history in still-subscribed feeds, each entry only in its highest section (favorite, shared, kept,
+ * viewed).
+ * Favorites and kept order by effectiveDate, since EntryState has no favorited-at; shared orders by sharedAt and
+ * viewed by viewedAt.
  */
 final readonly class ReadingHistoryRepository
 {
@@ -34,10 +36,22 @@ final readonly class ReadingHistoryRepository
     }
 
     /** @return list<TitledEntry> */
+    public function shared(int $userId, int $cap): array
+    {
+        $qb = $this->historyQueryBuilder($userId)
+            ->andWhere('es.sharedAt IS NOT NULL AND es.isFavorite = :false')
+            ->orderBy('es.sharedAt', 'DESC')
+            ->setMaxResults($cap)
+            ->setParameter('false', false, Types::BOOLEAN);
+
+        return $this->titledEntries($qb);
+    }
+
+    /** @return list<TitledEntry> */
     public function kept(int $userId, int $cap): array
     {
         $qb = $this->historyQueryBuilder($userId)
-            ->andWhere('es.isKept = :true AND es.isFavorite = :false')
+            ->andWhere('es.isKept = :true AND es.isFavorite = :false AND es.sharedAt IS NULL')
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -51,7 +65,8 @@ final readonly class ReadingHistoryRepository
     public function viewed(int $userId, int $cap): array
     {
         $qb = $this->historyQueryBuilder($userId)
-            ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false')
+            ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false'
+                . ' AND es.sharedAt IS NULL')
             ->orderBy('es.viewedAt', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('true', true, Types::BOOLEAN)

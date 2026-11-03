@@ -101,6 +101,19 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
+    public function testAnUnreadSharedEntryIsExcluded(): void
+    {
+        $shared = $this->entry('shared-entry', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $shared);
+        $state->markShared(new \DateTimeImmutable('2026-07-11T00:00:00Z'));
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
     public function testAnUnreadViewedEntryIsExcluded(): void
     {
         $viewed = $this->entry('viewed-entry', '2026-07-10T00:00:00Z');

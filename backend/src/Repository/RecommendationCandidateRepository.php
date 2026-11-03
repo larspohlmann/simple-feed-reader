@@ -85,7 +85,8 @@ final readonly class RecommendationCandidateRepository
         $inner->andWhere(\sprintf(
             '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
             . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
-            . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)',
+            . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)'
+            . ' AND %1$s.sharedAt IS NULL',
             $aliases->state,
         ));
         $inner->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
