@@ -63,6 +63,8 @@ final readonly class BackupLines
             'locale' => $user->getLocale(),
             'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
             'magazineStyle' => $user->getPreferences()->getMagazineStyle()->value,
+            'sharingEnabled' => $user->getPreferences()->isSharingEnabled(),
+            'hiddenShareTargets' => $user->getPreferences()->getHiddenShareTargets(),
             'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($networks->savedSearchIncludedNetworks),
             'forYouExcludedNetworks' => SocialNetwork::valuesOf($networks->forYouExcludedNetworks),
         ]);

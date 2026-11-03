@@ -13,6 +13,7 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../../shared/toggle/toggle.component';
+import { SharingSettingsComponent } from './sharing-settings/sharing-settings.component';
 
 @Component({
   selector: 'app-preferences-section',
@@ -22,6 +23,7 @@ import { ToggleComponent } from '../../shared/toggle/toggle.component';
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsStackComponent,
+    SharingSettingsComponent,
     ToggleComponent,
     TranslocoPipe,
   ],

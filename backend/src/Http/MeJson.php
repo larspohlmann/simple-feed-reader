@@ -34,6 +34,10 @@ final class MeJson
                 'scrapeFallbackEnabled' => $preferences->isScrapeFallbackEnabled(),
                 'magazineStyle' => $preferences->getMagazineStyle()->value,
                 'passkeyOfferAnswered' => null !== $preferences->getPasskeyOfferAnsweredAt(),
+                'sharing' => [
+                    'enabled' => $preferences->isSharingEnabled(),
+                    'hiddenTargets' => $preferences->getHiddenShareTargets(),
+                ],
                 'digest' => [
                     'enabled' => $preferences->isDigestEnabled(),
                     'cadence' => $preferences->getDigestCadence()->value,

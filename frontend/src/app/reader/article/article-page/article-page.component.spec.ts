@@ -6,6 +6,7 @@ import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { provideArticlePageStubs } from '../../../../testing/article-page-testing';
 import { StubArticlePageSource } from '../../../../testing/article-page-source-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { SharingService } from '../../../core/preferences/sharing.service';
 import { ArticlePageSlotDirective } from './article-page-slot.directive';
 import { ArticlePageComponent } from './article-page.component';
 import { scrollerOf, stubCssEscape } from '../../../../testing/scroll-testing';
@@ -57,6 +58,7 @@ describe('ArticlePageComponent', () => {
   let source: StubPageSource;
 
   beforeEach(() => {
+    localStorage.clear();
     installMockResizeObserver();
     TestBed.configureTestingModule({
       imports: [HostComponent, provideTranslocoTesting()],
@@ -73,6 +75,15 @@ describe('ArticlePageComponent', () => {
   }
 
   const rerender = (): void => fixture.detectChanges();
+
+  it('offers no sharing at all while sharing is switched off', () => {
+    TestBed.inject(SharingService).setEnabled(false);
+
+    const element = mount();
+
+    expect(element.querySelector('app-share-button')).toBeNull();
+    expect(element.querySelector('app-selection-share')).toBeNull();
+  });
 
   it('heads the page with the source’s title, nameplate and meta line', () => {
     const element = mount();

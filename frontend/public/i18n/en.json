@@ -23,6 +23,10 @@
     "magazineStyle": "Magazine style",
     "magazineStyleHint": "How the magazine view draws an entry.",
     "magazineStyleSaveFailed": "The magazine style could not be saved to your account.",
+    "sharing": "Sharing",
+    "sharingEnabled": "Share articles",
+    "sharingEnabledHint": "The share button and sharing a text selection. Switched off, or with every target below off, both disappear.",
+    "sharingSaveFailed": "Your sharing settings could not be saved to your account.",
     "magazineStyleOption": {
       "boxed": "Boxed",
       "airy": "Airy"

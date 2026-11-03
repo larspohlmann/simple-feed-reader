@@ -50,6 +50,8 @@ final readonly class FullyPopulatedAccount
         $user = (new UserFactory($this->entityManager, $this->hasher))->create($email, locale: 'de');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
+        $user->getPreferences()->setSharingEnabled(false);
+        $user->getPreferences()->setHiddenShareTargets(['facebook', 'x']);
 
         $parentTag = $this->parentTagFor($user);
         $this->entityManager->persist($parentTag);

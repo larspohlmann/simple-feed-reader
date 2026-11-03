@@ -35,13 +35,30 @@ const QUOTE_LABELS: Partial<Record<ConfiguredTarget['kind'], string>> = {
   copy: 'reader.share.quoteCopy',
 };
 
-export function shareMenuItems(networks: readonly PostNetwork[], mode: ShareMenuMode): ShareItem[] {
+export function shareMenuItems(
+  networks: readonly PostNetwork[],
+  mode: ShareMenuMode,
+  hidden: ReadonlySet<string> = new Set(),
+): ShareItem[] {
   const posts = networks.map((network) => postItem(network, mode));
   const hint: ShareItem[] =
     mode === 'hinted' && posts.length > 0 ? [{ kind: 'hint', id: 'quote-hint' }] : [];
   const divider: ShareItem[] = posts.length === 0 ? [] : [{ kind: 'divider', id: 'post-divider' }];
-  const targets = SHARE_TARGETS.map((target, index) => configuredItem(target, index, mode));
-  return [...posts, ...hint, ...divider, ...targets];
+  const targets = SHARE_TARGETS.filter(
+    (target) => target.kind === 'divider' || !hidden.has(target.id),
+  ).map((target, index) => configuredItem(target, index, mode));
+  return withoutStrayDividers([...posts, ...hint, ...divider, ...targets]);
+}
+
+function withoutStrayDividers(items: readonly ShareItem[]): ShareItem[] {
+  const kept: ShareItem[] = [];
+  for (const item of items) {
+    const previous = kept.at(-1);
+    if (item.kind === 'divider' && (previous === undefined || previous.kind === 'divider'))
+      continue;
+    kept.push(item);
+  }
+  return kept.at(-1)?.kind === 'divider' ? kept.slice(0, -1) : kept;
 }
 
 function postItem({ network, handles }: PostNetwork, mode: ShareMenuMode): ShareItem {
@@ -56,8 +73,8 @@ function postHint(handles: readonly string[]): MenuText {
 }
 
 function configuredItem(target: ShareTarget, index: number, mode: ShareMenuMode): ShareItem {
-  const id = String(index);
-  if (target.kind === 'divider') return { kind: 'divider', id };
+  if (target.kind === 'divider') return { kind: 'divider', id: `divider-${index}` };
+  const id = `target-${target.id}`;
   if (mode !== 'quote') return { kind: 'target', id, target, linkOnly: false };
   const labelKey = QUOTE_LABELS[target.kind] ?? target.labelKey;
   return { kind: 'target', id, target: { ...target, labelKey }, linkOnly: !carriesText(target) };

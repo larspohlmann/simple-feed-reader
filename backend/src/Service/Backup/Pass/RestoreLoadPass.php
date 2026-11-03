@@ -93,6 +93,8 @@ final class RestoreLoadPass
         $this->user->setLocale($line->locale);
         $this->user->getPreferences()->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
         $this->user->getPreferences()->setMagazineStyle($line->magazineStyle);
+        $this->user->getPreferences()->setSharingEnabled($line->sharingEnabled);
+        $this->user->getPreferences()->setHiddenShareTargets($line->hiddenShareTargets);
         foreach ($line->savedSearchIncludedNetworks as $network) {
             $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, $network));
         }

@@ -1,7 +1,8 @@
 [
-  { "kind": "system", "labelKey": "reader.share.system" },
-  { "kind": "copy", "labelKey": "reader.share.copyLink", "symbol": "link" },
+  { "id": "system", "kind": "system", "labelKey": "reader.share.system" },
+  { "id": "copy", "kind": "copy", "labelKey": "reader.share.copyLink", "symbol": "link" },
   {
+    "id": "email",
     "kind": "link",
     "label": "E-Mail",
     "symbol": "mail",
@@ -9,6 +10,7 @@
   },
   { "kind": "divider" },
   {
+    "id": "bluesky",
     "kind": "link",
     "labelKey": "reader.share.blueskyApp",
     "icon": "bluesky.svg",
@@ -17,18 +19,21 @@
     "external": true
   },
   {
+    "id": "threads",
     "kind": "link",
     "label": "Threads",
     "icon": "threads.svg",
     "url": "https://www.threads.net/intent/post?text={text}"
   },
   {
+    "id": "x",
     "kind": "link",
     "label": "X",
     "icon": "x.svg",
     "url": "https://x.com/intent/post?text={title}&url={url}"
   },
   {
+    "id": "facebook",
     "kind": "link",
     "label": "Facebook",
     "icon": "facebook.svg",
@@ -36,6 +41,7 @@
     "url": "https://www.facebook.com/sharer/sharer.php?u={url}"
   },
   {
+    "id": "linkedin",
     "kind": "link",
     "label": "LinkedIn",
     "icon": "linkedin.svg",
@@ -43,6 +49,7 @@
     "url": "https://www.linkedin.com/sharing/share-offsite/?url={url}"
   },
   {
+    "id": "reddit",
     "kind": "link",
     "label": "Reddit",
     "icon": "reddit.svg",
@@ -51,6 +58,7 @@
   },
   { "kind": "divider" },
   {
+    "id": "whatsapp",
     "kind": "link",
     "label": "WhatsApp",
     "icon": "whatsapp.svg",
@@ -58,6 +66,7 @@
     "url": "https://wa.me/?text={text}"
   },
   {
+    "id": "telegram",
     "kind": "link",
     "label": "Telegram",
     "icon": "telegram.svg",
@@ -66,6 +75,7 @@
   },
   { "kind": "divider" },
   {
+    "id": "instapaper",
     "kind": "link",
     "label": "Instapaper",
     "icon": "instapaper.svg",

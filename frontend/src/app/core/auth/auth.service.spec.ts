@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { NavigationEnd, Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../api';
 import { TokenStore } from './token.store';
@@ -12,6 +12,9 @@ import { LOCALE_WRITER } from '../i18n/locale-writer';
 import { HttpLocaleWriter } from '../i18n/http-locale-writer';
 import { PreferencesService } from '../preferences/preferences.service';
 import { DigestService } from '../preferences/digest.service';
+import { SHARING_KEY, SharingSettings } from '../preferences/sharing';
+import { SharingService } from '../preferences/sharing.service';
+import { SHARING_WRITER } from '../preferences/sharing-writer';
 import { AiAvailabilityService } from '../ai-availability.service';
 import { CatalogStore } from '../../reader/feeds/catalog/catalog.store';
 import { ReaderLocationService } from './reader-location.service';
@@ -22,11 +25,13 @@ describe('AuthService', () => {
   let tokens: TokenStore;
   let events: Subject<unknown>;
   const navigate = jest.fn();
+  let writeSharing: jest.Mock;
 
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     events = new Subject<unknown>();
+    writeSharing = jest.fn(() => of(true));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -38,6 +43,7 @@ describe('AuthService', () => {
         // no-op default: the "no write-through on adopt" test below needs an
         // actual PATCH to *not* happen, which only the real writer can prove.
         { provide: LOCALE_WRITER, useExisting: HttpLocaleWriter },
+        { provide: SHARING_WRITER, useValue: { write: writeSharing } },
       ],
     });
     service = TestBed.inject(AuthService);
@@ -49,7 +55,7 @@ describe('AuthService', () => {
   // A minimal /api/me body for the two tests below, which care only about
   // the passkey-offer flag, not the rest of the account shape loadMe() above
   // already exercises in full.
-  function meFixture(preferences: { passkeyOfferAnswered: boolean }) {
+  function meFixture(preferences: { passkeyOfferAnswered: boolean; sharing?: SharingSettings }) {
     return {
       id: 1,
       email: 'a@b.c',
@@ -61,6 +67,7 @@ describe('AuthService', () => {
       preferences: {
         scrapeFallbackEnabled: false,
         digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+        sharing: { enabled: true, hiddenTargets: [] },
         ...preferences,
       },
       ai: { ready: false, model: null, capabilities: null },
@@ -96,6 +103,7 @@ describe('AuthService', () => {
           timezone: 'Europe/Berlin',
         },
         passkeyOfferAnswered: true,
+        sharing: { enabled: true, hiddenTargets: [] },
       },
       ai: { ready: true, model: 'gpt-4o', capabilities: null },
       mail: { enabled: true },
@@ -220,6 +228,31 @@ describe('AuthService', () => {
 
     expect(ai.ready()).toBe(false);
     expect(ai.model()).toBeNull();
+  });
+
+  it('loadMe adopts the account sharing settings, without writing them back', () => {
+    service.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(
+      meFixture({
+        passkeyOfferAnswered: true,
+        sharing: { enabled: false, hiddenTargets: ['reddit'] },
+      }),
+    );
+
+    const sharing = TestBed.inject(SharingService);
+    expect(sharing.enabled()).toBe(false);
+    expect([...sharing.hidden()]).toEqual(['reddit']);
+    expect(writeSharing).not.toHaveBeenCalled();
+  });
+
+  it('logout resets the sharing settings', () => {
+    const sharing = TestBed.inject(SharingService);
+    sharing.setEnabled(false);
+
+    service.logout();
+
+    expect(sharing.enabled()).toBe(true);
+    expect(localStorage.getItem(SHARING_KEY)).toBeNull();
   });
 
   it('answerPasskeyOffer posts the answer and marks the local user answered on success', () => {

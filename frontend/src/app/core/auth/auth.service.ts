@@ -9,6 +9,8 @@ import { DigestConfig } from '../preferences/digest-writer';
 import { LanguageService } from '../i18n/language.service';
 import { MagazineStyleService } from '../preferences/magazine-style.service';
 import { PreferencesService } from '../preferences/preferences.service';
+import { SharingSettings } from '../preferences/sharing';
+import { SharingService } from '../preferences/sharing.service';
 import { ReaderLocationService } from './reader-location.service';
 import { TokenStore } from './token.store';
 
@@ -25,6 +27,7 @@ export interface UserPreferences {
    *  Never reset once true: the offer must never ask twice. */
   passkeyOfferAnswered: boolean;
   magazineStyle: string;
+  sharing: SharingSettings;
 }
 
 export interface CurrentUser {
@@ -50,6 +53,7 @@ export class AuthService {
   private readonly language = inject(LanguageService);
   private readonly preferences = inject(PreferencesService);
   private readonly magazineStyle = inject(MagazineStyleService);
+  private readonly sharing = inject(SharingService);
   private readonly digest = inject(DigestService);
   private readonly ai = inject(AiAvailabilityService);
   private readonly readerLocation = inject(ReaderLocationService);
@@ -77,6 +81,7 @@ export class AuthService {
           this.language.adopt(user.locale);
           this.preferences.adopt(user);
           this.magazineStyle.adopt(user);
+          this.sharing.adopt(user);
           this.digest.adopt(user);
           this.ai.adopt(user);
         },
@@ -114,6 +119,7 @@ export class AuthService {
     // loadMe() resolves.
     this.preferences.reset();
     this.magazineStyle.reset();
+    this.sharing.reset();
     this.digest.reset();
     this.ai.reset();
     this.readerLocation.clearSignInReturnUrl();

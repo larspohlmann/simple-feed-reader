@@ -149,6 +149,7 @@ final class MeControllerTest extends ApiTestCase
                 'scrapeFallbackEnabled' => true,
                 'magazineStyle' => 'boxed',
                 'passkeyOfferAnswered' => false,
+                'sharing' => ['enabled' => true, 'hiddenTargets' => []],
                 'digest' => [
                     'enabled' => false,
                     'cadence' => 'daily',
@@ -226,6 +227,7 @@ final class MeControllerTest extends ApiTestCase
                 'scrapeFallbackEnabled' => false,
                 'magazineStyle' => 'boxed',
                 'passkeyOfferAnswered' => false,
+                'sharing' => ['enabled' => true, 'hiddenTargets' => []],
                 'digest' => [
                     'enabled' => false,
                     'cadence' => 'daily',

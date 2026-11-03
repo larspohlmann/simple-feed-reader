@@ -6,6 +6,7 @@ namespace App\Service\Account;
 
 use App\Entity\User;
 use App\Enum\MagazineStyle;
+use App\Service\Account\Model\SharingSettingsModel;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Service\Passkey\PasskeyOffer;
@@ -35,6 +36,13 @@ final readonly class AccountPreferencesWriter
     public function changeMagazineStyle(User $user, MagazineStyle $magazineStyle): void
     {
         $user->getPreferences()->setMagazineStyle($magazineStyle);
+        $this->entityManager->flush();
+    }
+
+    public function changeSharing(User $user, SharingSettingsModel $sharing): void
+    {
+        $user->getPreferences()->setSharingEnabled($sharing->enabled);
+        $user->getPreferences()->setHiddenShareTargets($sharing->hiddenTargets);
         $this->entityManager->flush();
     }
 

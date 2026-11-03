@@ -1,6 +1,10 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import config from '../../../../../public/share-targets/share-targets.json';
 import { ConfiguredTarget, SHARE_TARGETS, carriesText, shareUrl } from './share-targets';
+
+/** The format the account stores hidden target ids in; `Preferences::TARGET_ID_PATTERN` on the server. */
+const TARGET_ID_PATTERN = /^[a-z0-9-]{1,32}$/;
 
 describe('share targets', () => {
   it('fills the url, the title and the text, encoded', () => {
@@ -22,7 +26,7 @@ describe('share targets', () => {
         (target): target is ConfiguredTarget => target.kind !== 'divider' && target.label === label,
       )!;
 
-    expect(carriesText({ kind: 'copy' })).toBe(true);
+    expect(carriesText({ kind: 'copy', id: 'copy' })).toBe(true);
     expect(carriesText(byLabel('E-Mail'))).toBe(true);
     expect(carriesText(byLabel('WhatsApp'))).toBe(true);
     expect(carriesText(byLabel('X'))).toBe(false);
@@ -38,5 +42,16 @@ describe('share targets', () => {
     );
 
     expect(missing).toEqual([]);
+  });
+
+  it('names every target with a unique, well-formed id', () => {
+    const ids = (config as readonly { kind: string; id?: unknown }[]).flatMap((entry) =>
+      entry.kind === 'divider' ? [] : [entry.id],
+    );
+
+    expect(ids.filter((id) => typeof id !== 'string' || !TARGET_ID_PATTERN.test(id))).toStrictEqual(
+      [],
+    );
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

@@ -17,11 +17,14 @@ final readonly class AccountLine
     /**
      * @param list<SocialNetwork> $savedSearchIncludedNetworks
      * @param list<SocialNetwork> $forYouExcludedNetworks
+     * @param list<string>        $hiddenShareTargets
      */
     public function __construct(
         public string $locale,
         public bool $scrapeFallbackEnabled,
         public MagazineStyle $magazineStyle,
+        public bool $sharingEnabled,
+        public array $hiddenShareTargets,
         public array $savedSearchIncludedNetworks,
         public array $forYouExcludedNetworks,
     ) {
@@ -39,6 +42,8 @@ final readonly class AccountLine
             magazineStyle: MagazineStyle::tryFrom(
                 LineFieldWithDefault::string($line, 'magazineStyle', MagazineStyle::Boxed->value),
             ) ?? MagazineStyle::Boxed,
+            sharingEnabled: LineFieldWithDefault::bool($line, 'sharingEnabled', true),
+            hiddenShareTargets: LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
             savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
             forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
         );

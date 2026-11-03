@@ -2,6 +2,8 @@ import config from '../../../../../public/share-targets/share-targets.json';
 import { ShareContent } from './share-content';
 
 interface ShareEntry {
+  /** Stored per account to hide the target, so it never changes once shipped. */
+  readonly id: string;
   readonly label?: string;
   readonly labelKey?: string;
   /** A logo file next to the config, drawn in `color`. */
@@ -32,6 +34,10 @@ export function shareLogoUrl(file: string): string {
 
 /** A target the menu lists, as against a divider between them. */
 export type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
+
+export const CONFIGURED_TARGETS = SHARE_TARGETS.filter(
+  (target): target is ConfiguredTarget => target.kind !== 'divider',
+);
 
 /** Whether a target can carry a quote: the system sheet and the clipboard can, an address only through `{text}`. */
 export function carriesText(target: ConfiguredTarget): boolean {

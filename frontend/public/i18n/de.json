@@ -23,6 +23,10 @@
     "magazineStyle": "Magazin-Stil",
     "magazineStyleHint": "Wie die Magazinansicht einen Eintrag darstellt.",
     "magazineStyleSaveFailed": "Der Magazin-Stil konnte nicht in deinem Konto gespeichert werden.",
+    "sharing": "Teilen",
+    "sharingEnabled": "Artikel teilen",
+    "sharingEnabledHint": "Der Teilen-Knopf und das Teilen einer Textauswahl. Ausgeschaltet, oder mit allen Zielen unten aus, verschwinden beide.",
+    "sharingSaveFailed": "Deine Teilen-Einstellungen konnten nicht in deinem Konto gespeichert werden.",
     "magazineStyleOption": {
       "boxed": "Mit Rahmen",
       "airy": "Luftig"
