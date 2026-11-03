@@ -48,9 +48,17 @@ final class EntryShareRepository extends ServiceEntityRepository implements
         }
 
         $connection->executeStatement(
-            'UPDATE entry_share SET shared_at = ? WHERE user_id = ? AND entry_id = ?',
-            [$when, $userId, $entryId],
-            [Types::DATETIME_IMMUTABLE, Types::INTEGER, Types::INTEGER],
+            'UPDATE entry_share SET shared_at = ? WHERE user_id = ? AND entry_id = ? AND EXISTS ('
+            . 'SELECT 1 FROM entry e JOIN subscription s ON s.feed_id = e.feed_id AND s.user_id = ?'
+            . ' WHERE e.id = ?)',
+            [$when, $userId, $entryId, $userId, $entryId],
+            [
+                Types::DATETIME_IMMUTABLE,
+                Types::INTEGER,
+                Types::INTEGER,
+                Types::INTEGER,
+                Types::INTEGER,
+            ],
         );
     }
 

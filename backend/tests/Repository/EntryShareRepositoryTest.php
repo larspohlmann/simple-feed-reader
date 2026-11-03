@@ -60,6 +60,23 @@ final class EntryShareRepositoryTest extends DbTestCase
         self::assertNull($this->sharedAtOf($entry));
     }
 
+    public function testAnOrphanedShareIsNotMovedOnByARecord(): void
+    {
+        $feed = new Feed('https://orphan-record.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $entry = $this->entryIn($feed, 'a');
+        EntryShareFixtures::share($this->entityManager, $this->user, $entry, new \DateTimeImmutable(self::AT));
+        $this->entityManager->flush();
+
+        $this->shares()->record(
+            $this->user->requireId(),
+            $entry->requireId(),
+            new \DateTimeImmutable('2026-10-09T10:00:00Z'),
+        );
+
+        self::assertEquals(new \DateTimeImmutable(self::AT), $this->sharedAtOf($entry));
+    }
+
     public function testRemovingDeletesOnlyThatShare(): void
     {
         $feed = $this->subscribedFeed('https://remove.example/feed.xml');
