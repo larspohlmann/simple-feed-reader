@@ -291,6 +291,24 @@ describe('EntriesStore', () => {
     expect(store.error()).not.toBeNull();
   });
 
+  it('reverts a quiet state PATCH that fails without surfacing an error', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+    const onFailed = jest.fn();
+
+    store.setStateQuietly(1, { isShared: true }, { onFailed });
+    expect(store.entries()[0].isShared).toBe(true);
+    ctrl
+      .expectOne('https://api.test/api/entries/1/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+    expect(store.entries()[0].isShared).toBe(false);
+    expect(store.error()).toBeNull();
+    expect(onFailed).toHaveBeenCalledTimes(1);
+  });
+
   // #432: the client marks the words Meilisearch actually matched, not only
   // the literal term typed. `matchedWords` is a page-level field, present
   // only on a search response, and empty whenever the database LIKE

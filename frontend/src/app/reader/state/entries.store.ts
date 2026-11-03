@@ -190,16 +190,32 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime), surfaces the error, and reports to `outcome`. */
   setState(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
-    const target = this.entryOrCopy(entryId);
-    if (!target) return;
     this.error.set(null);
     this.failedOperation.set(null);
+    this.saveState(entryId, patch, outcome, (error) => {
+      this.error.set(parseProblem(error));
+      this.failedOperation.set(() => this.setState(entryId, patch, outcome));
+    });
+  }
+
+  /** `setState` for a mark nobody asked to see fail: it reverts, but shows no error and offers no retry. */
+  setStateQuietly(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
+    this.saveState(entryId, patch, outcome, () => undefined);
+  }
+
+  private saveState(
+    entryId: number,
+    patch: EntryStatePatch,
+    outcome: StateSaveOutcome,
+    surfaceFailure: (error: HttpErrorResponse) => void,
+  ): void {
+    const target = this.entryOrCopy(entryId);
+    if (!target) return;
     const request$ = this.api.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
-        this.error.set(parseProblem(error));
-        this.failedOperation.set(() => this.setState(entryId, patch, outcome));
+        surfaceFailure(error);
         outcome.onFailed?.();
       },
     });

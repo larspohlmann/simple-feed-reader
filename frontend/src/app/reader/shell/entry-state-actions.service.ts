@@ -82,7 +82,7 @@ export class EntryStateActions implements EntryActionHandler {
     const undoCount = () => {
       if (firstShare) this.subscriptions.bumpShared(-1);
     };
-    this.entries.setState(entry.id, { isShared: true }, { onFailed: undoCount });
+    this.entries.setStateQuietly(entry.id, { isShared: true }, { onFailed: undoCount });
   }
 
   unshare(entry: EntryDto): void {
