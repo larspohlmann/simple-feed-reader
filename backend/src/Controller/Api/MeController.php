@@ -9,6 +9,7 @@ use App\Dto\Me\UpdateDigestRequest;
 use App\Dto\Me\UpdateLocaleRequest;
 use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
+use App\Dto\Me\UpdateSharingRequest;
 use App\Entity\User;
 use App\Http\MeProfileJson;
 use App\Service\Account\AccountDeleter;
@@ -79,6 +80,17 @@ final readonly class MeController
         #[MapRequestPayload] UpdateMagazineStyleRequest $request,
     ): JsonResponse {
         $this->preferences->changeMagazineStyle($user, $request->magazineStyle);
+
+        return new JsonResponse($this->profile->of($user));
+    }
+
+    /** Its own PATCH for the reason updatePreferences() gives. */
+    #[Route('/api/me/sharing', name: 'api_me_update_sharing', methods: ['PATCH'])]
+    public function updateSharing(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdateSharingRequest $request,
+    ): JsonResponse {
+        $this->preferences->changeSharing($user, $request->toSettings());
 
         return new JsonResponse($this->profile->of($user));
     }
