@@ -192,32 +192,35 @@ export class EntriesStore {
   setState(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
     this.error.set(null);
     this.failedOperation.set(null);
-    this.saveState(entryId, patch, outcome, (error) => {
-      this.error.set(parseProblem(error));
-      this.failedOperation.set(() => this.setState(entryId, patch, outcome));
+    this.saveState(entryId, patch, {
+      ...outcome,
+      onFailed: (error) => {
+        this.error.set(parseProblem(error));
+        this.failedOperation.set(() => this.setState(entryId, patch, outcome));
+        outcome.onFailed?.();
+      },
     });
   }
 
   /** `setState` for a mark nobody asked to see fail: it reverts, but shows no error and offers no retry. */
   setStateQuietly(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
-    this.saveState(entryId, patch, outcome, () => undefined);
+    this.saveState(entryId, patch, {
+      ...outcome,
+      onFailed: () => outcome.onFailed?.(),
+    });
   }
 
   private saveState(
     entryId: number,
     patch: EntryStatePatch,
-    outcome: StateSaveOutcome,
-    surfaceFailure: (error: HttpErrorResponse) => void,
+    outcome: { onSaved?: () => void; onFailed: (error: HttpErrorResponse) => void },
   ): void {
     const target = this.entryOrCopy(entryId);
     if (!target) return;
     const request$ = this.api.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
       next: () => outcome.onSaved?.(),
-      error: (error: HttpErrorResponse) => {
-        surfaceFailure(error);
-        outcome.onFailed?.();
-      },
+      error: (error: HttpErrorResponse) => outcome.onFailed(error),
     });
   }
 
