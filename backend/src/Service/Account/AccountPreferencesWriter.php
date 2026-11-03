@@ -43,6 +43,7 @@ final readonly class AccountPreferencesWriter
     {
         $user->getPreferences()->setSharingEnabled($sharing->enabled);
         $user->getPreferences()->setHiddenShareTargets($sharing->hiddenTargets);
+        $user->getPreferences()->setRememberingShares($sharing->rememberShares);
         $this->entityManager->flush();
     }
 

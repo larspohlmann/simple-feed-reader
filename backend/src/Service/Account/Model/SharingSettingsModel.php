@@ -10,6 +10,7 @@ final readonly class SharingSettingsModel
     public function __construct(
         public bool $enabled,
         public array $hiddenTargets,
+        public bool $rememberShares,
     ) {
     }
 }

@@ -29,17 +29,18 @@ final readonly class EntryStateUpdater
     public function apply(User $user, EntryListRow $row, EntryStateChangeModel $change): EntryState
     {
         $state = $this->states->resolve($user, $row);
-        $this->applyTo($state, $change);
+        $this->applyTo($user, $state, $change);
         $this->mirror($user, $row, $change);
         $this->entityManager->flush();
 
         return $state;
     }
 
-    private function applyTo(EntryState $state, EntryStateChangeModel $change): void
+    private function applyTo(User $user, EntryState $state, EntryStateChangeModel $change): void
     {
         $this->applyReadFlags($state, $change);
         $this->applyMarks($state, $change);
+        $this->applyShared($user, $state, $change->isShared);
     }
 
     private function applyReadFlags(EntryState $state, EntryStateChangeModel $change): void
@@ -63,8 +64,15 @@ final readonly class EntryStateUpdater
         if ($change->isKept !== null) {
             $change->isKept ? $state->markKept() : $state->clearKept();
         }
-        if ($change->isShared !== null) {
-            $change->isShared ? $state->markShared($this->clock->now()) : $state->clearShared();
+    }
+
+    private function applyShared(User $user, EntryState $state, ?bool $isShared): void
+    {
+        if ($isShared === false) {
+            $state->clearShared();
+        }
+        if ($isShared === true && $user->getPreferences()->recordsShares()) {
+            $state->markShared($this->clock->now());
         }
     }
 

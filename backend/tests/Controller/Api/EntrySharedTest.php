@@ -47,6 +47,35 @@ final class EntrySharedTest extends ApiTestCase
         self::assertTrue($other['isShared']);
     }
 
+    public function testAShareIsIgnoredWhileRememberingIsOff(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('share-off@example.com');
+        $user->getPreferences()->setRememberingShares(false);
+        $entryId = $this->subscribedEntry($user, 'share-off');
+
+        self::assertFalse($this->patchState($headers, $entryId, ['isShared' => true])['isShared']);
+    }
+
+    public function testAShareIsIgnoredWhileSharingIsOff(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('share-disabled@example.com');
+        $user->getPreferences()->setSharingEnabled(false);
+        $entryId = $this->subscribedEntry($user, 'share-disabled');
+
+        self::assertFalse($this->patchState($headers, $entryId, ['isShared' => true])['isShared']);
+    }
+
+    public function testRemovingStillWorksWhileRememberingIsOff(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('share-remove-off@example.com');
+        $entryId = $this->subscribedEntry($user, 'share-remove-off');
+        $this->patchState($headers, $entryId, ['isShared' => true]);
+        $user->getPreferences()->setRememberingShares(false);
+        $this->entityManager()->flush();
+
+        self::assertFalse($this->patchState($headers, $entryId, ['isShared' => false])['isShared']);
+    }
+
     private function subscribedEntry(User $user, string $guid): int
     {
         $when = new \DateTimeImmutable('2026-10-01T00:00:00Z');
