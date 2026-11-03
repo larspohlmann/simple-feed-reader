@@ -36,6 +36,8 @@ final class BackupFieldDeclarations
         Preferences::class => [
             'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
             'magazineStyle' => 'magazineStyle',
+            'sharingEnabled' => 'sharingEnabled',
+            'hiddenShareTargets' => 'hiddenShareTargets',
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',

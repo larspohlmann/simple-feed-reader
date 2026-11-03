@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\Preferences;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Backup\Support\LineField;
@@ -17,11 +18,14 @@ final readonly class AccountLine
     /**
      * @param list<SocialNetwork> $savedSearchIncludedNetworks
      * @param list<SocialNetwork> $forYouExcludedNetworks
+     * @param list<string>        $hiddenShareTargets
      */
     public function __construct(
         public string $locale,
         public bool $scrapeFallbackEnabled,
         public MagazineStyle $magazineStyle,
+        public bool $sharingEnabled,
+        public array $hiddenShareTargets,
         public array $savedSearchIncludedNetworks,
         public array $forYouExcludedNetworks,
     ) {
@@ -39,6 +43,8 @@ final readonly class AccountLine
             magazineStyle: MagazineStyle::tryFrom(
                 LineFieldWithDefault::string($line, 'magazineStyle', MagazineStyle::Boxed->value),
             ) ?? MagazineStyle::Boxed,
+            sharingEnabled: LineFieldWithDefault::bool($line, 'sharingEnabled', true),
+            hiddenShareTargets: self::shareTargetIds($line),
             savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
             forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
         );
@@ -54,6 +60,19 @@ final readonly class AccountLine
         return array_values(array_filter(array_map(
             SocialNetwork::tryFrom(...),
             array_unique(LineFieldWithDefault::stringList($line, $key)),
+        )));
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     *
+     * @return list<string>
+     */
+    private static function shareTargetIds(array $line): array
+    {
+        return array_values(array_unique(array_filter(
+            LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
+            static fn (string $id): bool => preg_match(Preferences::TARGET_ID_PATTERN, $id) === 1,
         )));
     }
 }

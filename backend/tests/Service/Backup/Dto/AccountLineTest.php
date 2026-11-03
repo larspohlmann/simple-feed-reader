@@ -12,6 +12,38 @@ use PHPUnit\Framework\TestCase;
 
 final class AccountLineTest extends TestCase
 {
+    public function testAnOlderBackupSharesEverything(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertTrue($line->sharingEnabled);
+        self::assertSame([], $line->hiddenShareTargets);
+    }
+
+    public function testItReadsSharing(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'sharingEnabled' => false,
+            'hiddenShareTargets' => ['facebook', 'x'],
+        ]);
+
+        self::assertFalse($line->sharingEnabled);
+        self::assertSame(['facebook', 'x'], $line->hiddenShareTargets);
+    }
+
+    public function testMalformedAndRepeatedTargetIdsAreDroppedRatherThanRefused(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'hiddenShareTargets' => ['x', 'Not An Id', 'x', '', 'reddit'],
+        ]);
+
+        self::assertSame(['x', 'reddit'], $line->hiddenShareTargets);
+    }
+
     public function testItReadsTheMagazineStyle(): void
     {
         $line = AccountLine::fromLine([
