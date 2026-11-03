@@ -33,6 +33,24 @@ final class AccountLineTest extends TestCase
         self::assertSame(['facebook', 'x'], $line->hiddenShareTargets);
     }
 
+    public function testAnOlderBackupRemembersShares(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertTrue($line->rememberShares);
+    }
+
+    public function testItReadsTheRememberSharesSetting(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'rememberShares' => false,
+        ]);
+
+        self::assertFalse($line->rememberShares);
+    }
+
     public function testItReadsTheMagazineStyle(): void
     {
         $line = AccountLine::fromLine([

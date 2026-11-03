@@ -65,6 +65,7 @@ final readonly class BackupLines
             'magazineStyle' => $user->getPreferences()->getMagazineStyle()->value,
             'sharingEnabled' => $user->getPreferences()->isSharingEnabled(),
             'hiddenShareTargets' => $user->getPreferences()->getHiddenShareTargets(),
+            'rememberShares' => $user->getPreferences()->isRememberingShares(),
             'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($networks->savedSearchIncludedNetworks),
             'forYouExcludedNetworks' => SocialNetwork::valuesOf($networks->forYouExcludedNetworks),
         ]);
@@ -197,6 +198,7 @@ final readonly class BackupLines
             'hiddenAt' => $this->formatDateOrNull($state->getHiddenAt()),
             'isViewed' => $state->isViewed(),
             'viewedAt' => $this->formatDateOrNull($state->getViewedAt()),
+            'sharedAt' => $this->formatDateOrNull($state->getSharedAt()),
         ]);
     }
 

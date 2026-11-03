@@ -52,6 +52,7 @@ final readonly class FullyPopulatedAccount
         $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
         $user->getPreferences()->setSharingEnabled(false);
         $user->getPreferences()->setHiddenShareTargets(['facebook', 'x']);
+        $user->getPreferences()->setRememberingShares(false);
 
         $parentTag = $this->parentTagFor($user);
         $this->entityManager->persist($parentTag);
@@ -214,6 +215,7 @@ final readonly class FullyPopulatedAccount
         $state->markKept();
         $state->hide(new \DateTimeImmutable('2026-08-04T10:00:00Z'));
         $state->markViewed(new \DateTimeImmutable('2026-08-05T10:00:00Z'));
+        $state->markShared(new \DateTimeImmutable('2026-08-06T10:00:00Z'));
 
         return $state;
     }

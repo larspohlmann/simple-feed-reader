@@ -88,6 +88,7 @@ final class RestoreEntryLoaderTest extends TestCase
             null,
             false,
             null,
+            null,
         );
 
         $this->expectException(InvalidBackupException::class);

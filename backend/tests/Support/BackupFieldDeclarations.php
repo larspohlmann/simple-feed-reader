@@ -38,6 +38,7 @@ final class BackupFieldDeclarations
             'magazineStyle' => 'magazineStyle',
             'sharingEnabled' => 'sharingEnabled',
             'hiddenShareTargets' => 'hiddenShareTargets',
+            'rememberingShares' => 'rememberShares',
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
@@ -112,6 +113,7 @@ final class BackupFieldDeclarations
             'entry' => ['feedUrl', 'guidHash'],
             'isHidden' => 'isHidden', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
             'hiddenAt' => 'hiddenAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
+            'sharedAt' => 'sharedAt',
         ],
     ];
 
