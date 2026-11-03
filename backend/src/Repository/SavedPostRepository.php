@@ -8,12 +8,14 @@ use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryGuid;
 use App\Entity\EntryOrigin;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Service\SavedPosts\Model\SavedCopyModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 
 /** The rescue's queries (#1666): an INSERT … SELECT copies every entry column, so a column added later is copied too. */
 final readonly class SavedPostRepository
@@ -27,28 +29,40 @@ final readonly class SavedPostRepository
     /** @return array<int, ?string> */
     public function flaggedIn(int $userId, int $feedId): array
     {
-        /** @var list<array{id: int, urlHash: ?string}> $rows */
-        $rows = $this->entityManager->createQueryBuilder()
-            ->select('e.id AS id', 'e.location.urlHash AS urlHash')
-            ->from(Entry::class, 'e')
-            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->andWhere('e.feed = :feed')
-            ->andWhere(
-                'es.isFavorite = :flagged OR es.isKept = :flagged OR ' . EntryShareDql::exists(EntryAliases::primary()),
-            )
-            ->setParameter('user', $userId)
-            ->setParameter('feed', $feedId)
-            ->setParameter('flagged', true, Types::BOOLEAN)
-            ->orderBy('e.id', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
-
-        $flagged = [];
-        foreach ($rows as $row) {
-            $flagged[(int) $row['id']] = $row['urlHash'];
-        }
+        $flaggedStates = $this->entriesOfFeedWith($userId, $feedId, EntryState::class, 'mark')
+            ->andWhere('mark.isFavorite = :flagged OR mark.isKept = :flagged')
+            ->setParameter('flagged', true, Types::BOOLEAN);
+        $flagged = $this->urlHashesById($flaggedStates) + $this->urlHashesById(
+            $this->entriesOfFeedWith($userId, $feedId, EntryShare::class, 'mark'),
+        );
+        ksort($flagged);
 
         return $flagged;
+    }
+
+    private function entriesOfFeedWith(int $userId, int $feedId, string $markClass, string $markAlias): QueryBuilder
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('e.id AS id', 'e.location.urlHash AS urlHash')
+            ->from(Entry::class, 'e')
+            ->join($markClass, $markAlias, 'ON', \sprintf('%1$s.entry = e AND %1$s.user = :user', $markAlias))
+            ->andWhere('e.feed = :feed')
+            ->setParameter('user', $userId)
+            ->setParameter('feed', $feedId);
+    }
+
+    /** @return array<int, ?string> */
+    private function urlHashesById(QueryBuilder $query): array
+    {
+        /** @var list<array{id: int, urlHash: ?string}> $rows */
+        $rows = $query->getQuery()->getArrayResult();
+
+        $urlHashesById = [];
+        foreach ($rows as $row) {
+            $urlHashesById[(int) $row['id']] = $row['urlHash'];
+        }
+
+        return $urlHashesById;
     }
 
     /**

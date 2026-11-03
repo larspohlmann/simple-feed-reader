@@ -11,13 +11,18 @@ final class EntryShareDql
 {
     public static function exists(EntryAliases $aliases): string
     {
-        $share = 'share' . ucfirst($aliases->entry);
+        return self::existsFor($aliases->entry);
+    }
+
+    public static function existsFor(string $entryAlias): string
+    {
+        $share = 'share' . ucfirst($entryAlias);
 
         return \sprintf(
             'EXISTS (SELECT 1 FROM %1$s %2$s WHERE %2$s.entry = %3$s AND %2$s.user = :user)',
             EntryShare::class,
             $share,
-            $aliases->entry,
+            $entryAlias,
         );
     }
 }

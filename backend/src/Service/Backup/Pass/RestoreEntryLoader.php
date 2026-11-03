@@ -257,7 +257,6 @@ final class RestoreEntryLoader
         $this->flushStates();
     }
 
-    /** An existing share wins over the file, as an existing state row does. */
     private function writeHeldShares(): void
     {
         $held = $this->heldShares;

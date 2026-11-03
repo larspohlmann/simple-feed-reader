@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,6 +31,7 @@ final readonly class DuplicateCollapseDql
             ->from(Entry::class, 'e2')
             ->join(Subscription::class, 's2', 'ON', 's2.feed = e2.feed AND s2.user = :user')
             ->leftJoin(EntryState::class, 'es2', 'ON', 'es2.entry = e2 AND es2.user = :user')
+            ->leftJoin(EntryShare::class, 'esh2', 'ON', 'esh2.entry = e2 AND esh2.user = :user')
             ->andWhere('e2.location.urlHash = e.location.urlHash')
             ->andWhere('e2.id < e.id');
         $applyScope($inner, EntryAliases::collapse());

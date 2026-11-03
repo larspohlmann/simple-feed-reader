@@ -96,15 +96,15 @@ final class BackupPartWalk
     {
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $batch);
         $statesByEntryId = $this->entryStates->forUserByEntryIds($this->userId, $entryIds);
-        $sharesByEntryId = $this->entryShares->forUserByEntryIds($this->userId, $entryIds);
+        $sharedAtByEntryId = $this->entryShares->sharedAtByEntryIds($this->userId, $entryIds);
         $cardsByEntryId = $this->linkCards->contentsByEntryIds($entryIds);
         $originsByEntryId = $this->savedOrigins->originsByEntryIds($entryIds);
 
         foreach ($batch as $entry) {
             $state = $statesByEntryId[$entry->requireId()] ?? null;
-            $share = $sharesByEntryId[$entry->requireId()] ?? null;
-            if (null !== $share) {
-                $this->buffer->addShare(EntryMarkLines::share($share, $feedUrl));
+            $sharedAt = $sharedAtByEntryId[$entry->requireId()] ?? null;
+            if (null !== $sharedAt) {
+                $this->buffer->addShare(EntryMarkLines::share($entry, $sharedAt, $feedUrl));
             }
             yield from $this->bufferLines(
                 $this->lines->entryLine($entry, $feedUrl, new EntryCompanionsModel(

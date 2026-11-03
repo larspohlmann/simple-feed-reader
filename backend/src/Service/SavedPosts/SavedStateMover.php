@@ -57,7 +57,6 @@ final readonly class SavedStateMover
         }
     }
 
-    /** The later of the two shares survives on the target. */
     private function shareOnto(EntryShare $source, ?EntryShare $target, int $targetId): EntryShare
     {
         if (null !== $target) {

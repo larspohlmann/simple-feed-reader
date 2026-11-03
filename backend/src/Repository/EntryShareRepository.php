@@ -24,11 +24,7 @@ final class EntryShareRepository extends ServiceEntityRepository implements
         parent::__construct($registry, EntryShare::class);
     }
 
-    /**
-     * Shares a subscribed entry at $when, or moves an earlier share on. Plain SQL rather than ORM new+persist, which
-     * would race two shares of one entry into a duplicate-key flush; an entry the user no longer subscribes to is
-     * left unshared.
-     */
+    /** Plain SQL, not ORM persist, which would race two shares of one entry into a duplicate-key flush. */
     public function record(int $userId, int $entryId, \DateTimeImmutable $when): void
     {
         $connection = $this->getEntityManager()->getConnection();
@@ -38,7 +34,7 @@ final class EntryShareRepository extends ServiceEntityRepository implements
                 . ' SELECT s.user_id, e.id, ? FROM entry e'
                 . ' JOIN subscription s ON s.feed_id = e.feed_id AND s.user_id = ?'
                 . ' WHERE e.id = ?',
-                DatabasePlatform::isMySql($connection) ? 'IGNORE' : 'OR IGNORE',
+                DatabasePlatform::insertIgnoreClause($connection),
             ),
             [$when, $userId, $entryId],
             [Types::DATETIME_IMMUTABLE, Types::INTEGER, Types::INTEGER],
@@ -101,7 +97,7 @@ final class EntryShareRepository extends ServiceEntityRepository implements
     }
 
     /**
-     * The user's shares of the given entries keyed by entry id, the entry fetch-joined for the backup's guidHash.
+     * The user's shares of the given entries keyed by entry id.
      *
      * @param list<int> $entryIds
      *
@@ -115,10 +111,8 @@ final class EntryShareRepository extends ServiceEntityRepository implements
 
         /** @var list<EntryShare> $shares */
         $shares = $this->createQueryBuilder('share')
-            ->addSelect('e')
-            ->join('share.entry', 'e')
             ->andWhere('IDENTITY(share.user) = :user')
-            ->andWhere('e.id IN (:entryIds)')
+            ->andWhere('IDENTITY(share.entry) IN (:entryIds)')
             ->setParameter('user', $userId)
             ->setParameter('entryIds', $entryIds)
             ->getQuery()
@@ -132,19 +126,52 @@ final class EntryShareRepository extends ServiceEntityRepository implements
         return $sharesByEntryId;
     }
 
+    /**
+     * The instants of the user's shares of the given entries, keyed by entry id.
+     *
+     * @param list<int> $entryIds
+     *
+     * @return array<int, \DateTimeImmutable>
+     */
+    public function sharedAtByEntryIds(int $userId, array $entryIds): array
+    {
+        if ([] === $entryIds) {
+            return [];
+        }
+
+        /** @var list<array{entryId: int|string, sharedAt: \DateTimeImmutable}> $rows */
+        $rows = $this->createQueryBuilder('share')
+            ->select('IDENTITY(share.entry) AS entryId', 'share.sharedAt AS sharedAt')
+            ->andWhere('IDENTITY(share.user) = :user')
+            ->andWhere('IDENTITY(share.entry) IN (:entryIds)')
+            ->setParameter('user', $userId)
+            ->setParameter('entryIds', $entryIds)
+            ->getQuery()
+            ->getResult();
+
+        $sharedAtByEntryId = [];
+        foreach ($rows as $row) {
+            $sharedAtByEntryId[(int) $row['entryId']] = $row['sharedAt'];
+        }
+
+        return $sharedAtByEntryId;
+    }
+
     public function addMissingForUser(int $userId, array $sharedAtByEntryId): void
     {
         $connection = $this->getEntityManager()->getConnection();
         $statement = sprintf(
             'INSERT %s INTO entry_share (user_id, entry_id, shared_at) VALUES (?, ?, ?)',
-            DatabasePlatform::isMySql($connection) ? 'IGNORE' : 'OR IGNORE',
+            DatabasePlatform::insertIgnoreClause($connection),
         );
-        foreach ($sharedAtByEntryId as $entryId => $sharedAt) {
-            $connection->executeStatement(
-                $statement,
-                [$userId, $entryId, $sharedAt],
-                [Types::INTEGER, Types::INTEGER, Types::DATETIME_IMMUTABLE],
-            );
-        }
+        $connection->transactional(static function () use ($connection, $statement, $userId, $sharedAtByEntryId): void {
+            foreach ($sharedAtByEntryId as $entryId => $sharedAt) {
+                $connection->executeStatement(
+                    $statement,
+                    [$userId, $entryId, $sharedAt],
+                    [Types::INTEGER, Types::INTEGER, Types::DATETIME_IMMUTABLE],
+                );
+            }
+        });
     }
 }
