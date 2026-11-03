@@ -74,6 +74,8 @@ describe('ArticlePageComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  const rerender = (): void => fixture.detectChanges();
+
   it('offers no sharing at all while sharing is switched off', () => {
     TestBed.inject(SharingService).setEnabled(false);
 
@@ -82,8 +84,6 @@ describe('ArticlePageComponent', () => {
     expect(element.querySelector('app-share-button')).toBeNull();
     expect(element.querySelector('app-selection-share')).toBeNull();
   });
-
-  const rerender = (): void => fixture.detectChanges();
 
   it('heads the page with the source’s title, nameplate and meta line', () => {
     const element = mount();
