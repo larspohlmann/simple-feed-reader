@@ -10,6 +10,19 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.7.1] - 2026-11-03
+
+## What's Changed
+* fix(#2002): article corner — 'to top' left of 'back', and 'back' always shown by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2003
+* feat(#2004): the sidebar version opens its GitHub release page by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2005
+* feat(#2006): remove share targets and switch sharing off by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2008
+* fix(#2009): lift an expanded section head's ⋯ menu above the rows below by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2010
+* feat(#2007): a Shared list of what you share to social networks by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2011
+* feat(#2012): homepage phone tour video by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2013
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.7.0...v1.7.1
+
 ## [v1.7.0] - 2026-11-02
 
 ### Highlights
