@@ -20,9 +20,10 @@ articles feed the For you profile. A switch in Settings turns the registering of
    social target is the share. "Post as @handle" posts a bare link the server cannot tie to an entry, so the
    client registers it once the composer reports the post sent; a cancelled composer registers nothing.
 4. **Only entries.** The link reader shows a page that is no entry, so a share there registers nothing.
-5. **A timestamp on `EntryState`, not a share log.** `sharedAt` (nullable, naive UTC); shared means not null.
-   Sharing again refreshes it. Per copy, like kept: not mirrored onto duplicates. Nothing asks for per-share
-   history, so no `entry_share` table.
+5. **Its own entity, `EntryShare`** (user, entry, `sharedAt`; table `entry_share`, cascade-deleted with the user
+   and the entry). Sharing again refreshes `sharedAt`. Per copy, like kept: not mirrored onto duplicates.
+   Revised 2026-11-03: a `sharedAt` column on `EntryState` pushed that entity past PHPMD's public-method limit,
+   and Lars ruled the suppression unacceptable, so the share moved out; `EntryState` keeps its pre-#2007 shape.
 6. **Removable by hand.** "Remove from shared" clears `sharedAt`, which also takes the article out of the For
    you history. There is no manual "mark as shared".
 7. **Protected like kept.** Retention never deletes a shared entry, and an unsubscribe rescues it as it rescues
@@ -42,8 +43,9 @@ articles feed the For you profile. A switch in Settings turns the registering of
 ## Shape
 
 - **Backend**
-  - `EntryState::$sharedAt` (`shared_at`) with `markShared(\DateTimeImmutable)`, `clearShared()`,
-    `isShared()`, `getSharedAt()`. Migration for SQLite and MySQL.
+  - `App\Entity\EntryShare` (composite id user + entry, `sharedAt`, `reshare(\DateTimeImmutable)`) and its
+    `EntryShareRepository`; table `entry_share` with cascading foreign keys and an index on
+    (`user_id`, `shared_at`). Migration for SQLite and MySQL. `EntryState` is unchanged.
   - `Preferences::$rememberingShares` (`remember_shares`, default true) with `isRememberingShares()`,
     `setRememberingShares()` and `recordsShares()` (sharing on and remembering on). Migration for both.
   - `UpdateEntryStateRequest`/`EntryStateChangeModel` gain `isShared`; `EntryStateUpdater` marks with the
@@ -52,14 +54,15 @@ articles feed the For you profile. A switch in Settings turns the registering of
   - `UpdateSharingRequest`/`SharingSettingsModel` gain the required `rememberShares`; `MeJson` exposes
     `preferences.sharing.rememberShares`.
   - `EntryView::Shared` (`shared`), filtered by `sharedAt IS NOT NULL`; `EntryListSort::SharedAt` orders and
-    keyset-pages on `es.sharedAt`. `EntryListRowViewState` and `EntryListRow` carry `sharedAt`.
+    keyset-pages on the share row's `sharedAt`, left-joined into the list query. `EntryListRow` carries `sharedAt`.
     `SubscriptionCountsJson` gains `sharedCount`.
   - `ReadingHistoryRepository::shared()` excludes favorites; `kept` and `viewed` exclude shared.
     `RecommendationHistoryModel::$shared`, `RecommendationHistoryCaps::$shared` (`SHARED_CAP = 40`), a SHARED
     prompt section and wording, the fingerprint. `RecommendationCandidateRepository` excludes shared entries.
   - `RetentionRepository` protects shared entries; `SavedPostRepository::flaggedIn()` and `SavedStateMover`
     rescue them.
-  - Backup: the entry-state line carries `sharedAt` (missing means not shared); the account line carries
+  - Backup: a line kind of its own for each share (feed, guid hash, `sharedAt`); a backup without such lines
+    restores no shares. The account line carries
     `rememberShares` (missing means on).
 - **Frontend**
   - `share-targets.json`: `"social": true` on the six networks; `ShareTarget` types it.
