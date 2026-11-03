@@ -60,10 +60,14 @@ describe('shareMenuItems', () => {
   });
 
   const targetIds = (items: ShareItem[]) =>
-    items.flatMap((item) => (item.kind === 'target' ? [item.id] : []));
+    items.flatMap((item) => (item.kind === 'target' ? [item.target.id] : []));
 
-  it('keys the targets by their id, not their position', () => {
-    expect(targetIds(shareMenuItems([], 'link'))).toContain('x');
+  it('keys the targets by their id, not their position, apart from the other menu items', () => {
+    const items = shareMenuItems([], 'link');
+
+    expect(items.find((item) => item.kind === 'target' && item.target.id === 'x')?.id).toBe(
+      'target-x',
+    );
   });
 
   it('leaves the hidden targets out', () => {

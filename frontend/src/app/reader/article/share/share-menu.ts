@@ -73,8 +73,8 @@ function postHint(handles: readonly string[]): MenuText {
 }
 
 function configuredItem(target: ShareTarget, index: number, mode: ShareMenuMode): ShareItem {
-  const id = target.kind === 'divider' ? `divider-${index}` : target.id;
-  if (target.kind === 'divider') return { kind: 'divider', id };
+  if (target.kind === 'divider') return { kind: 'divider', id: `divider-${index}` };
+  const id = `target-${target.id}`;
   if (mode !== 'quote') return { kind: 'target', id, target, linkOnly: false };
   const labelKey = QUOTE_LABELS[target.kind] ?? target.labelKey;
   return { kind: 'target', id, target: { ...target, labelKey }, linkOnly: !carriesText(target) };
