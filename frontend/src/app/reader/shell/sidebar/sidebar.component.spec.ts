@@ -64,6 +64,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
     },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
+    sharing: { enabled: true, hiddenTargets: [] },
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
