@@ -12,6 +12,7 @@ final readonly class EntryStateChangeModel
         public ?bool $isFavorite = null,
         public ?bool $isKept = null,
         public ?bool $isViewed = null,
+        public ?bool $isShared = null,
     ) {
     }
 }

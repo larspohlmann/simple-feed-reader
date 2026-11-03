@@ -11,7 +11,8 @@ final class EntryStateJson
     /**
      * @return array{
      *   entryId: int, isHidden: bool, isFavorite: bool, isKept: bool,
-     *   hiddenAt: string|null, isViewed: bool, viewedAt: string|null
+     *   hiddenAt: string|null, isViewed: bool, viewedAt: string|null,
+     *   isShared: bool, sharedAt: string|null
      * }
      */
     public static function one(EntryState $state, int $entryId): array
@@ -24,6 +25,8 @@ final class EntryStateJson
             'hiddenAt' => $state->getHiddenAt()?->format(\DateTimeInterface::ATOM),
             'isViewed' => $state->isViewed(),
             'viewedAt' => $state->getViewedAt()?->format(\DateTimeInterface::ATOM),
+            'isShared' => $state->isShared(),
+            'sharedAt' => $state->getSharedAt()?->format(\DateTimeInterface::ATOM),
         ];
     }
 }

@@ -61,8 +61,9 @@ final class EntryStateUpdaterTest extends DbTestCase
         ?bool $isFavorite = null,
         ?bool $isKept = null,
         ?bool $isViewed = null,
+        ?bool $isShared = null,
     ): EntryStateChangeModel {
-        return new EntryStateChangeModel($isHidden, $isFavorite, $isKept, $isViewed);
+        return new EntryStateChangeModel($isHidden, $isFavorite, $isKept, $isViewed, $isShared);
     }
 
     /**
@@ -136,6 +137,17 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertTrue($this->stateOf($user, $target)->isKept());
         self::assertFalse($this->stateOf($user, $sibling)->isKept());
         self::assertNull($this->persistedStateOf($user, $sibling));
+    }
+
+    public function testSharingOneCopyDoesNotMarkTheSibling(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isShared: true));
+
+        self::assertTrue($this->stateOf($user, $target)->isShared());
+        self::assertFalse($this->stateOf($user, $sibling)->isShared());
     }
 
     public function testUnfavouritingAndUnkeepingClearBothFlags(): void

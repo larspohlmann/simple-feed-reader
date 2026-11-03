@@ -14,7 +14,7 @@ use Psr\Clock\ClockInterface;
 
 /**
  * Mirrors isHidden/isViewed onto every other subscribed copy of the same article, so a collapse-hidden duplicate
- * cannot resurface as unread; isFavorite/isKept stay per copy.
+ * cannot resurface as unread; isFavorite/isKept/isShared stay per copy.
  */
 final readonly class EntryStateUpdater
 {
@@ -38,20 +38,33 @@ final readonly class EntryStateUpdater
 
     private function applyTo(EntryState $state, EntryStateChangeModel $change): void
     {
+        $this->applyReadFlags($state, $change);
+        $this->applyMarks($state, $change);
+    }
+
+    private function applyReadFlags(EntryState $state, EntryStateChangeModel $change): void
+    {
         if ($change->isHidden !== null) {
             // EntryState::markUnread() also clears "opened", so the rule reaches every client, not just the web app.
             $change->isHidden ? $state->hide($this->clock->now()) : $state->markUnread();
         }
+        if ($change->isViewed !== null) {
+            // markViewed sets only the viewed flag; ViewedImpliesHiddenListener
+            // adds the hidden flag on flush. clearViewed leaves the entry hidden.
+            $change->isViewed ? $state->markViewed($this->clock->now()) : $state->clearViewed();
+        }
+    }
+
+    private function applyMarks(EntryState $state, EntryStateChangeModel $change): void
+    {
         if ($change->isFavorite !== null) {
             $change->isFavorite ? $state->markFavorite() : $state->clearFavorite();
         }
         if ($change->isKept !== null) {
             $change->isKept ? $state->markKept() : $state->clearKept();
         }
-        if ($change->isViewed !== null) {
-            // markViewed sets only the viewed flag; ViewedImpliesHiddenListener
-            // adds the hidden flag on flush. clearViewed leaves the entry hidden.
-            $change->isViewed ? $state->markViewed($this->clock->now()) : $state->clearViewed();
+        if ($change->isShared !== null) {
+            $change->isShared ? $state->markShared($this->clock->now()) : $state->clearShared();
         }
     }
 

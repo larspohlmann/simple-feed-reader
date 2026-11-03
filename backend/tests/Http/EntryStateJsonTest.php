@@ -22,6 +22,7 @@ final class EntryStateJsonTest extends TestCase
         );
         $state->hide($when);
         $state->markViewed($when);
+        $state->markShared($when);
         $entryId = 483;
 
         $json = EntryStateJson::one($state, $entryId);
@@ -34,6 +35,8 @@ final class EntryStateJsonTest extends TestCase
             'hiddenAt' => $when->format(\DateTimeInterface::ATOM),
             'isViewed' => true,
             'viewedAt' => $when->format(\DateTimeInterface::ATOM),
+            'isShared' => true,
+            'sharedAt' => $when->format(\DateTimeInterface::ATOM),
         ], $json);
     }
 }
