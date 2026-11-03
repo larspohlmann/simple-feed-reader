@@ -58,8 +58,8 @@ final class Entry
     #[ORM\Embedded(class: EntryDiscussion::class, columnPrefix: false)]
     private EntryDiscussion $discussion;
 
-    #[ORM\Embedded(class: EntryShare::class, columnPrefix: false)]
-    private EntryShare $share;
+    #[ORM\Embedded(class: EntrySharedContent::class, columnPrefix: false)]
+    private EntrySharedContent $share;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
@@ -95,7 +95,7 @@ final class Entry
         $this->mediaSet = new EntryMedia();
         $this->author = new EntryAuthor();
         $this->discussion = new EntryDiscussion();
-        $this->share = new EntryShare();
+        $this->share = new EntrySharedContent();
     }
 
     public function getId(): ?int

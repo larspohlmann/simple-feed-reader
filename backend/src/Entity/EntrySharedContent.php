@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /** What an entry shares: its kind, and for a quote the post it quotes. */
 #[ORM\Embeddable]
-final class EntryShare
+final class EntrySharedContent
 {
     #[ORM\Column(name: 'share_kind', length: 8, nullable: true, enumType: ShareKind::class)]
     private ?ShareKind $kind = null;
