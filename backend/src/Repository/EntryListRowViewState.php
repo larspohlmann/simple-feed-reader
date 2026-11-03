@@ -10,7 +10,7 @@ final readonly class EntryListRowViewState
     public function __construct(
         public bool $isViewed,
         public ?\DateTimeImmutable $viewedAt,
-        public ?\DateTimeImmutable $sharedAt = null,
+        public ?\DateTimeImmutable $sharedAt,
     ) {
     }
 }

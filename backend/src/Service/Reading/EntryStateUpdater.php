@@ -33,11 +33,11 @@ final readonly class EntryStateUpdater
         $state = $this->states->resolve($user, $row);
         $this->applyReadFlags($state, $change);
         $this->applyMarks($state, $change);
-        $this->applyShared($user, $row, $change);
+        $sharedAt = $this->applyShared($user, $row, $change);
         $this->mirror($user, $row, $change);
         $this->entityManager->flush();
 
-        return new UpdatedEntryStateModel($state, $this->shares->sharedAtOf($user, $row->entry));
+        return new UpdatedEntryStateModel($state, $sharedAt);
     }
 
     private function applyReadFlags(EntryState $state, EntryStateChangeModel $change): void
@@ -63,14 +63,18 @@ final readonly class EntryStateUpdater
         }
     }
 
-    private function applyShared(User $user, EntryListRow $row, EntryStateChangeModel $change): void
+    private function applyShared(User $user, EntryListRow $row, EntryStateChangeModel $change): ?\DateTimeImmutable
     {
-        if ($change->isShared === false) {
+        if (null === $change->isShared) {
+            return $row->sharedAt;
+        }
+        if (!$change->isShared) {
             $this->shares->remove($user, $row->entry);
+
+            return null;
         }
-        if ($change->isShared === true) {
-            $this->shares->record($user, $row->entry);
-        }
+
+        return $this->shares->record($user, $row->entry) ?? $row->sharedAt;
     }
 
     private function mirror(User $user, EntryListRow $row, EntryStateChangeModel $change): void

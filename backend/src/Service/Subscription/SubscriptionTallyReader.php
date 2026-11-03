@@ -43,13 +43,9 @@ final readonly class SubscriptionTallyReader
     /** @return array{favorites: int, kept: int, shared: int, viewed: int} */
     private function flagCounts(int $userId): array
     {
-        $states = $this->entryStates->stateCountsForUser($userId);
-
         return [
-            'favorites' => $states['favorites'],
-            'kept' => $states['kept'],
+            ...$this->entryStates->stateCountsForUser($userId),
             'shared' => $this->entryShares->countForUser($userId),
-            'viewed' => $states['viewed'],
         ];
     }
 }

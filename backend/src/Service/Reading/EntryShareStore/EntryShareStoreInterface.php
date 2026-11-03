@@ -17,6 +17,4 @@ interface EntryShareStoreInterface
     public function record(int $userId, int $entryId, \DateTimeImmutable $when): void;
 
     public function remove(int $userId, int $entryId): void;
-
-    public function sharedAtFor(int $userId, int $entryId): ?\DateTimeImmutable;
 }

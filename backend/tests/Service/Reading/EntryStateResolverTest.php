@@ -90,7 +90,7 @@ final class EntryStateResolverTest extends DbTestCase
             $isHidden,
             false,
             false,
-            new EntryListRowViewState(false, null),
+            new EntryListRowViewState(false, null, null),
             $markedReadUntil,
         );
     }

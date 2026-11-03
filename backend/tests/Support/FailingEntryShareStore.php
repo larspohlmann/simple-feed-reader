@@ -18,9 +18,4 @@ final class FailingEntryShareStore implements EntryShareStoreInterface
     {
         throw DuplicateKeyViolation::exception();
     }
-
-    public function sharedAtFor(int $userId, int $entryId): ?\DateTimeImmutable
-    {
-        return null;
-    }
 }

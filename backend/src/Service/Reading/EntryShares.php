@@ -20,26 +20,24 @@ final readonly class EntryShares
     }
 
     /**
-     * Ignored while the user does not record shares; what is already shared stays.
+     * Ignored while the user does not record shares (null); what is already shared stays.
      *
      * @throws DbalException
      */
-    public function record(User $user, Entry $entry): void
+    public function record(User $user, Entry $entry): ?\DateTimeImmutable
     {
         if (!$user->getPreferences()->recordsShares()) {
-            return;
+            return null;
         }
 
-        $this->shares->record($user->requireId(), $entry->requireId(), $this->clock->now());
+        $when = $this->clock->now();
+        $this->shares->record($user->requireId(), $entry->requireId(), $when);
+
+        return $when;
     }
 
     public function remove(User $user, Entry $entry): void
     {
         $this->shares->remove($user->requireId(), $entry->requireId());
-    }
-
-    public function sharedAtOf(User $user, Entry $entry): ?\DateTimeImmutable
-    {
-        return $this->shares->sharedAtFor($user->requireId(), $entry->requireId());
     }
 }

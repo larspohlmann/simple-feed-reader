@@ -427,7 +427,7 @@ final class EntryJsonTest extends TestCase
             false,
             false,
             false,
-            new EntryListRowViewState(false, null),
+            new EntryListRowViewState(false, null, null),
             null,
             enrichment: new EntryListRowEnrichment(
                 ['Politics'],
@@ -784,7 +784,7 @@ final class EntryJsonTest extends TestCase
             false,
             false,
             false,
-            new EntryListRowViewState(false, null),
+            new EntryListRowViewState(false, null, null),
             null,
             enrichment: $enrichment,
         );

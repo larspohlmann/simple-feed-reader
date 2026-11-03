@@ -249,7 +249,7 @@ final class EntryPageTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
-            viewState: new EntryListRowViewState(isViewed: $viewedAt !== null, viewedAt: $viewedAt),
+            viewState: new EntryListRowViewState(isViewed: $viewedAt !== null, viewedAt: $viewedAt, sharedAt: null),
             markedReadUntil: null,
         );
     }
