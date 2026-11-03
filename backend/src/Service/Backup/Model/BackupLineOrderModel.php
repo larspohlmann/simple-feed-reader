@@ -21,7 +21,8 @@ final readonly class BackupLineOrderModel
         BackupSchema::KIND_SUBSCRIPTION => 5,
         BackupSchema::KIND_ENTRY => 6,
         BackupSchema::KIND_ENTRY_STATE => 7,
-        BackupSchema::KIND_FOOTER => 8,
+        BackupSchema::KIND_ENTRY_SHARE => 8,
+        BackupSchema::KIND_FOOTER => 9,
     ];
 
     private const array SINGLETON_KINDS = [

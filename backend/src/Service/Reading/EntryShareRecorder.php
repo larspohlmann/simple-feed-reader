@@ -6,29 +6,31 @@ namespace App\Service\Reading;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Repository\EntryListRepository;
-use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
+use Doctrine\DBAL\Exception as DbalException;
+use Psr\Log\LoggerInterface;
 
-/** Registers an entry as shared when the user shared it on a network outside the share sheet, as a repost or quote. */
+/**
+ * Registers an entry as shared once a network accepted its repost or quote. A failure here never fails the request:
+ * the post is out, and a retry would post it twice.
+ */
 final readonly class EntryShareRecorder
 {
     public function __construct(
-        private EntryListRepository $rows,
-        private EntryStateResolver $states,
-        private EntityManagerInterface $entityManager,
-        private ClockInterface $clock,
+        private EntryShares $shares,
+        private LoggerInterface $logger,
     ) {
     }
 
     public function record(User $user, Entry $entry): void
     {
-        if (!$user->getPreferences()->recordsShares()) {
-            return;
+        try {
+            $this->shares->record($user, $entry);
+        } catch (DbalException $exception) {
+            $this->logger->warning('Recording a network share failed after the network accepted the post.', [
+                'userId' => $user->requireId(),
+                'entryId' => $entry->requireId(),
+                'exception' => $exception,
+            ]);
         }
-
-        $row = $this->rows->getRowForUser($user->requireId(), $entry->requireId());
-        $this->states->resolve($user, $row)->markShared($this->clock->now());
-        $this->entityManager->flush();
     }
 }

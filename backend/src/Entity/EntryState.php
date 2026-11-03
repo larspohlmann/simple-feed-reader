@@ -8,7 +8,6 @@ use App\Repository\EntryStateRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** @SuppressWarnings("PHPMD.TooManyPublicMethods") one flag pair per independent per-reader mark. */
 #[ORM\Entity(repositoryClass: EntryStateRepository::class)]
 #[ORM\Table(name: 'entry_state')]
 final class EntryState
@@ -41,9 +40,6 @@ final class EntryState
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $viewedAt = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $sharedAt = null;
 
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, Entry $entry)
@@ -95,26 +91,6 @@ final class EntryState
     public function clearKept(): void
     {
         $this->isKept = false;
-    }
-
-    public function isShared(): bool
-    {
-        return null !== $this->sharedAt;
-    }
-
-    public function getSharedAt(): ?\DateTimeImmutable
-    {
-        return $this->sharedAt;
-    }
-
-    public function markShared(\DateTimeImmutable $when): void
-    {
-        $this->sharedAt = $when;
-    }
-
-    public function clearShared(): void
-    {
-        $this->sharedAt = null;
     }
 
     public function getHiddenAt(): ?\DateTimeImmutable

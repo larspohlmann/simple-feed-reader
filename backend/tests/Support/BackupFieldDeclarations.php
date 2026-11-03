@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
@@ -113,6 +114,9 @@ final class BackupFieldDeclarations
             'entry' => ['feedUrl', 'guidHash'],
             'isHidden' => 'isHidden', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
             'hiddenAt' => 'hiddenAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
+        ],
+        EntryShare::class => [
+            'entry' => ['feedUrl', 'guidHash'],
             'sharedAt' => 'sharedAt',
         ],
     ];
@@ -132,6 +136,7 @@ final class BackupFieldDeclarations
         LinkCard::class => BackupSchema::KIND_ENTRY,
         SavedEntryOrigin::class => BackupSchema::KIND_ENTRY,
         EntryState::class => BackupSchema::KIND_ENTRY_STATE,
+        EntryShare::class => BackupSchema::KIND_ENTRY_SHARE,
     ];
 
     private function __construct()

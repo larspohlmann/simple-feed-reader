@@ -50,25 +50,6 @@ final class RestoredEntryStateFactoryTest extends TestCase
         );
     }
 
-    public function testASharedLineRestoresTheShareInstant(): void
-    {
-        $sharedAt = new \DateTimeImmutable('2026-08-06 10:00:00');
-
-        $line = $this->line(favorite: false, kept: false, viewedAt: null, viewed: false, sharedAt: $sharedAt);
-        $state = $this->factory()->create($this->user(), $this->entry(), $line);
-
-        self::assertTrue($state->isShared());
-        self::assertSame($sharedAt, $state->getSharedAt());
-    }
-
-    public function testALineWithoutAShareInstantRestoresNoShare(): void
-    {
-        $line = $this->line(favorite: false, kept: false, viewedAt: null);
-        $state = $this->factory()->create($this->user(), $this->entry(), $line);
-
-        self::assertFalse($state->isShared());
-    }
-
     private function factory(): RestoredEntryStateFactory
     {
         return new RestoredEntryStateFactory(new MockClock(self::RESTORED_AT, 'UTC'));
@@ -91,7 +72,6 @@ final class RestoredEntryStateFactoryTest extends TestCase
         bool $kept,
         ?\DateTimeImmutable $viewedAt,
         bool $viewed = true,
-        ?\DateTimeImmutable $sharedAt = null,
     ): EntryStateLine {
         return new EntryStateLine(
             feedUrl: 'https://restored.example/feed.xml',
@@ -102,7 +82,6 @@ final class RestoredEntryStateFactoryTest extends TestCase
             hiddenAt: null,
             isViewed: $viewed,
             viewedAt: $viewedAt,
-            sharedAt: $sharedAt,
         );
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\SocialLike;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -36,9 +37,12 @@ final class EntryTwinRepository extends ServiceEntityRepository
                 '(EXISTS (SELECT IDENTITY(userState.entry) FROM %s userState'
                 . ' WHERE userState.entry = sourceEntry AND userState.user = :user)'
                 . ' OR EXISTS (SELECT userLike.id FROM %s userLike'
-                . ' WHERE userLike.entry = sourceEntry AND userLike.user = :user))',
+                . ' WHERE userLike.entry = sourceEntry AND userLike.user = :user)'
+                . ' OR EXISTS (SELECT IDENTITY(userShare.entry) FROM %s userShare'
+                . ' WHERE userShare.entry = sourceEntry AND userShare.user = :user))',
                 EntryState::class,
                 SocialLike::class,
+                EntryShare::class,
             ))
             ->setParameter('targetFeed', $targetFeedId)
             ->setParameter('sourceFeed', $sourceFeedId)

@@ -27,10 +27,10 @@ articles, the read marks and the settings.
 The archive holds one or more parts. Each part is a gzip-compressed NDJSON
 document. Each line of a part is one JSON object. Each object has a `kind`
 field that tells you what the line is: `header`, `account`, `tag`,
-`savedSearch`, `feed`, `subscription`, `entry`, `entryState` or `footer`. One
-part carries the account, the tags, the saved searches, the feeds and the
-subscriptions. The other parts carry the articles and the read marks, split
-across as many parts as the account needs.
+`savedSearch`, `feed`, `subscription`, `entry`, `entryState`, `entryShare` or
+`footer`. One part carries the account, the tags, the saved searches, the feeds
+and the subscriptions. The other parts carry the articles, the read marks and
+the shares, split across as many parts as the account needs.
 
 A backup holds no database identifiers. A restore makes new identifiers.
 Therefore you can restore a backup into a different account, and into a
@@ -174,7 +174,8 @@ file.
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. Your Saved from … feeds are included and come back as your own. |
 | `subscription` | Each subscription, with the address of its feed: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), whether its articles show in All items (`includeInAllItems`), in "For you" (`includeInForYou`) and in saved searches (`includeInSavedSearches`), and the tags on the subscription with their order. |
 | `entry` | Each article, with the address of the feed it came from: `guid`, `guidHash`, `url`, `title`, `titleDerived` (the title was taken from the text, the feed gave none), `author`, the author's profile and picture (`authorUrl`, `authorAvatarUrl`; a restore drops one that is not an http(s) address or is longer than 2048 characters), `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`, and its renditions at other widths, `imageRenditions`), its embedded media and attachments (`media`, `attachments`), its podcast chapters (`chapters`: each with `startSeconds` and `title`) and the address of a chapters file still to fetch (`chaptersUrl`), the preview cards of the links a post shares, in order (`linkCards`: each with `url`, `title`, `description`, `imageUrl` and `siteName`), its origin when it is an article saved from a feed you left (`origin`: `title`, `faviconUrl`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`), and what it shares (`shareKind`, `link`, `media` or `quote`, and `shareUrl`, its target; for a quote the post it quotes as one `quote` object: `url`, `authorName`, `authorHandle`, `authorAvatarUrl`, `postedAt`, `text`, `media`, `nestedQuote`, the post that one quotes in turn, with its `url` and `handle`, and `linkCard`, the quoted post's link card with the same fields as a `linkCards` entry (a restore drops a card no card may hold, and keeps the quote); a restore drops a quote whose address is not an http(s) address or is longer than 2048 characters, and a quote share left without one comes back as a `link`). |
-| `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt`, `viewedAt` and `sharedAt` (when you shared it, or null; a file without it restores the article as not shared). Each mark names its article by feed and by article identifier. |
+| `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
+| `entryShare` | Each article you shared to a social network: `sharedAt`, when you last shared it. Each share names its article by feed and by article identifier, like a mark. A file without these lines restores no shares, and a share you already hold keeps its own date. |
 | `footer` | The number of lines of each kind, counting the lines of that part only. The restore uses these numbers to show you what the part holds. |
 
 Every part carries its own `header` line. The header holds these fields in

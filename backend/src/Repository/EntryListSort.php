@@ -40,7 +40,7 @@ enum EntryListSort
         return match ($this) {
             self::PublishedDate => 'e.effectiveDate',
             self::ViewedAt => 'es.viewedAt',
-            self::SharedAt => 'es.sharedAt',
+            self::SharedAt => 'esh.sharedAt',
         };
     }
 

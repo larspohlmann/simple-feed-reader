@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Service\Reading\Model\EntryStateChangeModel;
+use App\Service\Reading\Model\UpdatedEntryStateModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -23,24 +24,20 @@ final readonly class EntryStateUpdater
         private EntryListRepository $rows,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
+        private EntryShares $shares,
     ) {
     }
 
-    public function apply(User $user, EntryListRow $row, EntryStateChangeModel $change): EntryState
+    public function apply(User $user, EntryListRow $row, EntryStateChangeModel $change): UpdatedEntryStateModel
     {
         $state = $this->states->resolve($user, $row);
-        $this->applyTo($user, $state, $change);
+        $this->applyReadFlags($state, $change);
+        $this->applyMarks($state, $change);
+        $this->applyShared($user, $row, $change);
         $this->mirror($user, $row, $change);
         $this->entityManager->flush();
 
-        return $state;
-    }
-
-    private function applyTo(User $user, EntryState $state, EntryStateChangeModel $change): void
-    {
-        $this->applyReadFlags($state, $change);
-        $this->applyMarks($state, $change);
-        $this->applyShared($user, $state, $change);
+        return new UpdatedEntryStateModel($state, $this->shares->sharedAtOf($user, $row->entry));
     }
 
     private function applyReadFlags(EntryState $state, EntryStateChangeModel $change): void
@@ -66,13 +63,13 @@ final readonly class EntryStateUpdater
         }
     }
 
-    private function applyShared(User $user, EntryState $state, EntryStateChangeModel $change): void
+    private function applyShared(User $user, EntryListRow $row, EntryStateChangeModel $change): void
     {
         if ($change->isShared === false) {
-            $state->clearShared();
+            $this->shares->remove($user, $row->entry);
         }
-        if ($change->isShared === true && $user->getPreferences()->recordsShares()) {
-            $state->markShared($this->clock->now());
+        if ($change->isShared === true) {
+            $this->shares->record($user, $row->entry);
         }
     }
 

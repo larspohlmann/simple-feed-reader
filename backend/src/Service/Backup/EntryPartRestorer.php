@@ -6,6 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\User;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Dto\EntryShareLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
 use App\Service\Backup\Model\RestoreResultModel;
@@ -30,6 +31,7 @@ final readonly class EntryPartRestorer
             match (true) {
                 $line instanceof EntryLine => $loader->bufferEntry($line),
                 $line instanceof EntryStateLine => $loader->loadState($line),
+                $line instanceof EntryShareLine => $loader->loadShare($line),
                 default => null,
             };
         }

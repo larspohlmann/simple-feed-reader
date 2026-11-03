@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
-use App\Entity\EntryState;
+use App\Entity\EntryShare;
 use App\Entity\Preferences;
 use App\Entity\User;
+use App\Repository\EntryShareRepository;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -282,17 +283,15 @@ final class EntryRepostControllerTest extends ApiTestCase
 
     private function shareAt(User $user, Entry $entry, \DateTimeImmutable $when): void
     {
-        $state = new EntryState($user, $entry);
-        $state->markShared($when);
-        $this->entityManager()->persist($state);
+        $this->entityManager()->persist(new EntryShare($user, $entry, $when));
         $this->entityManager()->flush();
     }
 
     private function sharedAtOf(User $user, int $entryId): ?\DateTimeImmutable
     {
-        $state = $this->entityManager()->getRepository(EntryState::class)
-            ->findOneBy(['user' => $user, 'entry' => $entryId]);
+        $shares = $this->entityManager()->getRepository(EntryShare::class);
+        self::assertInstanceOf(EntryShareRepository::class, $shares);
 
-        return $state?->getSharedAt();
+        return $shares->sharedAtFor($user->requireId(), $entryId);
     }
 }

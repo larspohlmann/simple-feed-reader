@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -176,9 +177,10 @@ final readonly class RetentionRepository
         return sprintf(
             'NOT EXISTS (
                 SELECT IDENTITY(s.user) FROM %s s
-                WHERE s.entry = e AND (s.isFavorite = :true OR s.isKept = :true OR s.sharedAt IS NOT NULL)
-            )',
+                WHERE s.entry = e AND (s.isFavorite = :true OR s.isKept = :true)
+            ) AND NOT EXISTS (SELECT IDENTITY(share.user) FROM %s share WHERE share.entry = e)',
             EntryState::class,
+            EntryShare::class,
         );
     }
 

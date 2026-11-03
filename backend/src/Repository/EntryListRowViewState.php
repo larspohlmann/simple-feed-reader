@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/** A row's viewed flag and instant (`EntryState::markViewed()` stamps both) and when it was shared. */
+/** A row's viewed flag and the instants its reading histories sort by: when it was viewed and when shared. */
 final readonly class EntryListRowViewState
 {
     public function __construct(

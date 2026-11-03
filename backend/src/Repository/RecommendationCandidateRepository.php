@@ -86,8 +86,9 @@ final readonly class RecommendationCandidateRepository
             '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
             . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
             . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)'
-            . ' AND %1$s.sharedAt IS NULL',
+            . ' AND NOT %2$s',
             $aliases->state,
+            EntryShareDql::exists($aliases),
         ));
         $inner->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
     }

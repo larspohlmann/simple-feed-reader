@@ -31,9 +31,11 @@ final readonly class SavedPostRepository
         $rows = $this->entityManager->createQueryBuilder()
             ->select('e.id AS id', 'e.location.urlHash AS urlHash')
             ->from(Entry::class, 'e')
-            ->join(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere('e.feed = :feed')
-            ->andWhere('es.isFavorite = :flagged OR es.isKept = :flagged OR es.sharedAt IS NOT NULL')
+            ->andWhere(
+                'es.isFavorite = :flagged OR es.isKept = :flagged OR ' . EntryShareDql::exists(EntryAliases::primary()),
+            )
             ->setParameter('user', $userId)
             ->setParameter('feed', $feedId)
             ->setParameter('flagged', true, Types::BOOLEAN)

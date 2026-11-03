@@ -7,12 +7,14 @@ namespace App\Tests\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Repository\EntryRepository;
+use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\SubscribedEntryCountRepository;
 use App\Repository\FeedRepository;
@@ -202,6 +204,34 @@ final class EntryPartRestorerTest extends DbTestCase
         $reloaded = $this->stateFor($this->reload($user), $entry);
         self::assertNotNull($reloaded);
         self::assertFalse($reloaded->isFavorite());
+    }
+
+    public function testAShareLineSharesTheRestoredEntryAtItsInstant(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $gzip = $this->entryPart([
+            $this->entryLine('a'),
+            $this->entryLine('b'),
+            $this->entryShareLine('a', '2026-08-06T10:00:00+00:00'),
+        ]);
+
+        $this->restorer()->load($user, $gzip);
+
+        self::assertEquals(new \DateTimeImmutable('2026-08-06T10:00:00Z'), $this->sharedAtOf($user, 'a'));
+        self::assertNull($this->sharedAtOf($user, 'b'));
+    }
+
+    public function testAnExistingShareKeepsItsOwnInstant(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $entry = $this->makeEntry($this->feedByUrl(self::FEED_URL), 'a', 'Title');
+        $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-09-01T10:00:00Z')));
+        $this->entityManager->flush();
+
+        $gzip = $this->entryPart([$this->entryShareLine('a', '2026-08-06T10:00:00+00:00')]);
+        $this->restorer()->load($this->reload($user), $gzip);
+
+        self::assertEquals(new \DateTimeImmutable('2026-09-01T10:00:00Z'), $this->sharedAtOf($user, 'a'));
     }
 
     public function testAFeedAnotherAccountReadsGetsNoNewEntries(): void
@@ -461,6 +491,8 @@ final class EntryPartRestorerTest extends DbTestCase
         $subscribedEntryCounts = self::getContainer()->get(SubscribedEntryCountRepository::class);
         /** @var EntryStateRepository $entryStates */
         $entryStates = self::getContainer()->get(EntryStateRepository::class);
+        /** @var EntryShareRepository $entryShares */
+        $entryShares = self::getContainer()->get(EntryShareRepository::class);
         /** @var EntryBatchInserter $inserter */
         $inserter = self::getContainer()->get(EntryBatchInserter::class);
 
@@ -469,6 +501,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $this->entityManager,
             $entries,
             $entryStates,
+            $entryShares,
             $inserter,
             EntryIndexers::with($this->indexWriter),
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
@@ -548,6 +581,16 @@ final class EntryPartRestorerTest extends DbTestCase
         return $state;
     }
 
+    private function sharedAtOf(User $user, string $token): ?\DateTimeImmutable
+    {
+        $entry = $this->findEntry($token);
+        self::assertNotNull($entry);
+        /** @var EntryShareRepository $shares */
+        $shares = $this->entityManager->getRepository(EntryShare::class);
+
+        return $shares->sharedAtFor($user->requireId(), $entry->requireId());
+    }
+
     private function restoredStateOf(User $user, string $token): EntryState
     {
         $entry = $this->findEntry($token);
@@ -602,10 +645,19 @@ final class EntryPartRestorerTest extends DbTestCase
         ];
     }
 
+    /** @return array<string, mixed> */
+    private function entryShareLine(string $token, string $sharedAt): array
+    {
+        return [
+            'kind' => 'entryShare', 'feedUrl' => self::FEED_URL, 'guidHash' => $this->guidHash($token),
+            'sharedAt' => $sharedAt,
+        ];
+    }
+
     /** @param list<array<string, mixed>> $lines */
     private function entryPart(array $lines): string
     {
-        $counts = ['entry' => 0, 'entryState' => 0];
+        $counts = ['entry' => 0, 'entryState' => 0, 'entryShare' => 0];
         foreach ($lines as $line) {
             $kind = $line['kind'];
             self::assertIsString($kind);

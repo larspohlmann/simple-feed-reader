@@ -15,6 +15,7 @@ use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
 use App\Service\Reading\EntryShareRecorder;
+use App\Service\Reading\EntryShares;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\ComposerContexts;
 use App\Service\Social\Exception\NotASocialPostException;
@@ -42,6 +43,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeCommentsSource;
 use App\Tests\Support\FakeComposerDefaults;
+use App\Tests\Support\FailingEntryShareStore;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
@@ -323,6 +325,21 @@ final class SocialResponsesTest extends DbTestCase
         self::assertNull($this->countsCache->find(self::address()));
     }
 
+    public function testAQuoteTheNetworkAcceptedStillSucceedsWhenRecordingTheShareFails(): void
+    {
+        $responses = $this->responses(self::failingShareRecorder());
+
+        $published = $responses->respond(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Quote,
+            new PostDraftModel('Read'),
+        );
+
+        self::assertSame(FakeMastodonNetwork::REPLY_URI, $published->url);
+        self::assertSame(['resolve ' . self::STATUS_URL, 'quote 110 Read'], $this->mastodon->calls);
+    }
+
     public function testAQuoteOfAReplyQuotesThatReplyAndDropsTheCachedCountsAndThread(): void
     {
         $entry = $this->post();
@@ -471,7 +488,7 @@ final class SocialResponsesTest extends DbTestCase
         return new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL);
     }
 
-    private function responses(): SocialResponses
+    private function responses(?EntryShareRecorder $shareRecorder = null): SocialResponses
     {
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
@@ -494,7 +511,15 @@ final class SocialResponsesTest extends DbTestCase
             $accounts,
             $this->countsCache,
             $this->comments,
-            $this->shareRecorder(),
+            $shareRecorder ?? $this->shareRecorder(),
+        );
+    }
+
+    private static function failingShareRecorder(): EntryShareRecorder
+    {
+        return new EntryShareRecorder(
+            new EntryShares(new FailingEntryShareStore(), new MockClock('2026-11-01 12:00:00')),
+            new NullLogger(),
         );
     }
 

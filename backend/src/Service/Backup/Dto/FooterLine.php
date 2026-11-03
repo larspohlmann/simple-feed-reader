@@ -13,7 +13,7 @@ use App\Service\Backup\Exception\InvalidBackupException;
 final readonly class FooterLine
 {
     /**
-     * @param array<string, int> $counts kind => count over tag/feed/subscription/entry/entryState
+     * @param array<string, int> $counts kind => count over tag/feed/subscription/entry/entryState/entryShare
      */
     public function __construct(
         public array $counts,

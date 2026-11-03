@@ -7,6 +7,7 @@ namespace App\Tests\Service\SavedPosts;
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
 use App\Entity\EntryOrigin;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SavedEntryOrigin;
@@ -16,6 +17,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryRepository;
+use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\SavedPostRepository;
 use App\Repository\SavedEntryOriginRepository;
@@ -27,6 +29,7 @@ use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
+use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -107,15 +110,14 @@ final class SavedPostRescueTest extends DbTestCase
             'https://bsky.app/profile/did:plc:bob/post/2',
         );
         $sharedAt = new \DateTimeImmutable('2026-10-02T10:00:00Z');
-        $this->state($this->user, $shared)->markShared($sharedAt);
+        EntryShareFixtures::share($this->entityManager, $this->user, $shared, $sharedAt);
         $this->entityManager->flush();
 
         $this->service()->unsubscribe($subscription);
         $this->entityManager->clear();
 
         $copy = $this->entriesOf($this->savedFeed(SocialNetwork::Bluesky))[0];
-        self::assertTrue($this->stateOf($copy)->isShared());
-        self::assertEquals($sharedAt, $this->stateOf($copy)->getSharedAt());
+        self::assertEquals($sharedAt, $this->sharedAtOf($copy->requireId()));
     }
 
     public function testAProfileTitleLongerThanThePosterColumnIsCutTo255Characters(): void
@@ -484,6 +486,14 @@ final class SavedPostRescueTest extends DbTestCase
     {
         return $this->entityManager->getRepository(Entry::class)
             ->findBy(['feed' => $feed], ['id' => 'ASC']);
+    }
+
+    private function sharedAtOf(int $entryId): ?\DateTimeImmutable
+    {
+        /** @var EntryShareRepository $shares */
+        $shares = $this->entityManager->getRepository(EntryShare::class);
+
+        return $shares->sharedAtFor($this->user->requireId(), $entryId);
     }
 
     private function stateOf(Entry $entry): EntryState

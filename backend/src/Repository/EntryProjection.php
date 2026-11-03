@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Pagination\EntryCursor;
@@ -65,6 +66,7 @@ final readonly class EntryProjection
             // feed, and the caller's optional per-entry state row.
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->leftJoin(EntryShare::class, 'esh', 'ON', 'esh.entry = e AND esh.user = :user')
             ->addSelect('s.id AS subscriptionId')
             ->addSelect('s.customTitle AS customTitle')
             ->addSelect('f.title AS feedTitle')
@@ -74,7 +76,7 @@ final readonly class EntryProjection
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
             ->addSelect('es.viewedAt AS esViewedAt')
-            ->addSelect('es.sharedAt AS esSharedAt')
+            ->addSelect('esh.sharedAt AS eshSharedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->setParameter('user', $userId);
     }

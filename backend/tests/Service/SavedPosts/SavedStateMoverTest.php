@@ -6,13 +6,16 @@ namespace App\Tests\Service\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SocialLike;
 use App\Entity\User;
+use App\Repository\EntryShareRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Tests\DbTestCase;
+use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
@@ -64,8 +67,7 @@ final class SavedStateMoverTest extends DbTestCase
     public function testTheTargetTakesTheSharedInstantAndTheSourceLosesIt(): void
     {
         $sharedAt = new \DateTimeImmutable('2026-10-02T10:00:00Z');
-        $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
-        $state->markShared($sharedAt);
+        EntryShareFixtures::share($this->entityManager, $this->user, $this->source, $sharedAt);
         $this->entityManager->flush();
         $sourceId = $this->source->requireId();
         $targetId = $this->target->requireId();
@@ -73,19 +75,20 @@ final class SavedStateMoverTest extends DbTestCase
         $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
         $this->entityManager->clear();
 
-        $target = $this->stateOf($targetId);
-        self::assertTrue($target->isShared());
-        self::assertEquals($sharedAt, $target->getSharedAt());
-        self::assertFalse($this->stateOf($sourceId)->isShared());
+        self::assertEquals($sharedAt, $this->sharedAtOf($targetId));
+        self::assertNull($this->sharedAtOf($sourceId));
     }
 
     public function testATargetSharedLaterKeepsItsLaterShareInstant(): void
     {
         $laterShare = new \DateTimeImmutable('2026-10-09T10:00:00Z');
-        $sourceState = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
-        $sourceState->markShared(new \DateTimeImmutable('2026-10-02T10:00:00Z'));
-        $targetState = SavedPostFixtures::state($this->entityManager, $this->user, $this->target);
-        $targetState->markShared($laterShare);
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $this->source,
+            new \DateTimeImmutable('2026-10-02T10:00:00Z'),
+        );
+        EntryShareFixtures::share($this->entityManager, $this->user, $this->target, $laterShare);
         $this->entityManager->flush();
         $sourceId = $this->source->requireId();
         $targetId = $this->target->requireId();
@@ -93,7 +96,27 @@ final class SavedStateMoverTest extends DbTestCase
         $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
         $this->entityManager->clear();
 
-        self::assertEquals($laterShare, $this->stateOf($targetId)->getSharedAt());
+        self::assertEquals($laterShare, $this->sharedAtOf($targetId));
+        self::assertNull($this->sharedAtOf($sourceId));
+    }
+
+    public function testASourceSharedLaterMovesItsLaterShareInstantOntoTheTarget(): void
+    {
+        $laterShare = new \DateTimeImmutable('2026-10-09T10:00:00Z');
+        EntryShareFixtures::share($this->entityManager, $this->user, $this->source, $laterShare);
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $this->target,
+            new \DateTimeImmutable('2026-10-02T10:00:00Z'),
+        );
+        $this->entityManager->flush();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$this->source->requireId() => $targetId]);
+        $this->entityManager->clear();
+
+        self::assertEquals($laterShare, $this->sharedAtOf($targetId));
     }
 
     public function testAHiddenSourceHidesTheNewTargetFromTheSameInstant(): void
@@ -215,6 +238,14 @@ final class SavedStateMoverTest extends DbTestCase
         self::assertInstanceOf(EntryState::class, $state);
 
         return $state;
+    }
+
+    private function sharedAtOf(int $entryId): ?\DateTimeImmutable
+    {
+        /** @var EntryShareRepository $shares */
+        $shares = $this->entityManager->getRepository(EntryShare::class);
+
+        return $shares->sharedAtFor($this->user->requireId(), $entryId);
     }
 
     private function mover(): SavedStateMover

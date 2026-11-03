@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
-use App\Entity\EntryState;
+use App\Entity\EntryShare;
+use App\Entity\Preferences;
 use App\Entity\User;
+use App\Repository\EntryShareRepository;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
@@ -279,14 +281,16 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertNotNull($this->sharedAtOf($user, $entryId));
     }
 
-    public function testAQuoteRecordsNothingWhileSharesAreNotRemembered(): void
+    /** @param \Closure(Preferences): void $turnOff */
+    #[DataProvider('switchesThatStopRecording')]
+    public function testAQuoteRecordsNothingWhileSharesAreNotRemembered(\Closure $turnOff): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'automatic']]),
             self::STATUSES => self::published('201'),
         ]);
-        $user = $this->signIn($client, 'quote-forgetful@example.test');
-        $user->getPreferences()->setRememberingShares(false);
+        $user = $this->signIn($client, sprintf('quote-forgetful-%s@example.test', md5((string) $this->dataName())));
+        $turnOff($user->getPreferences());
         $this->entityManager()->flush();
         $this->mastodonAccountOf($user);
         $entryId = $this->mastodonPostFor($user);
@@ -295,6 +299,13 @@ final class EntrySocialPostControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertNull($this->sharedAtOf($user, $entryId));
+    }
+
+    /** @return iterable<string, array{\Closure(Preferences): void}> */
+    public static function switchesThatStopRecording(): iterable
+    {
+        yield 'remembering off' => [static fn (Preferences $preferences) => $preferences->setRememberingShares(false)];
+        yield 'sharing off' => [static fn (Preferences $preferences) => $preferences->setSharingEnabled(false)];
     }
 
     public function testAQuoteOfAReplyInTheThreadLeavesTheEntryUnshared(): void
@@ -530,9 +541,9 @@ final class EntrySocialPostControllerTest extends ApiTestCase
 
     private function sharedAtOf(User $user, int $entryId): ?\DateTimeImmutable
     {
-        $state = $this->entityManager()->getRepository(EntryState::class)
-            ->findOneBy(['user' => $user, 'entry' => $entryId]);
+        $shares = $this->entityManager()->getRepository(EntryShare::class);
+        self::assertInstanceOf(EntryShareRepository::class, $shares);
 
-        return $state?->getSharedAt();
+        return $shares->sharedAtFor($user->requireId(), $entryId);
     }
 }

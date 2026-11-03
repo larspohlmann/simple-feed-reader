@@ -6,7 +6,6 @@ namespace App\Service\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedia;
-use App\Entity\EntryState;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
@@ -20,6 +19,7 @@ use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\EntryCompanionsModel;
+use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
 use App\Service\Social\Model\ExportedSubscriptionModel;
 
@@ -36,11 +36,12 @@ final readonly class BackupLines
         BackupSchema::KIND_SUBSCRIPTION => 0,
         BackupSchema::KIND_ENTRY => 0,
         BackupSchema::KIND_ENTRY_STATE => 0,
+        BackupSchema::KIND_ENTRY_SHARE => 0,
     ];
 
     public function foundationHeader(BackupProvenanceModel $provenance, int $parts, BackupTotals $totals): string
     {
-        return $this->encode([
+        return BackupLineFormat::encode([
             ...$this->headerFields($provenance, 0),
             'parts' => $parts,
             'totals' => ['entries' => $totals->entries, 'entryStates' => $totals->entryStates],
@@ -49,7 +50,7 @@ final readonly class BackupLines
 
     public function entryPartHeader(BackupProvenanceModel $provenance, int $part): string
     {
-        return $this->encode([
+        return BackupLineFormat::encode([
             ...$this->headerFields($provenance, $part),
             'parts' => null,
             'totals' => null,
@@ -58,7 +59,7 @@ final readonly class BackupLines
 
     public function accountLine(User $user, AccountNetworkSwitchesModel $networks): string
     {
-        return $this->encode([
+        return BackupLineFormat::encode([
             'kind' => BackupSchema::KIND_ACCOUNT,
             'locale' => $user->getLocale(),
             'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
@@ -73,7 +74,7 @@ final readonly class BackupLines
 
     public function tagLine(Tag $tag): string
     {
-        return $this->encode([
+        return BackupLineFormat::encode([
             'kind' => BackupSchema::KIND_TAG,
             'name' => $tag->getName(),
             'color' => $tag->getColor(),
@@ -85,7 +86,7 @@ final readonly class BackupLines
 
     public function savedSearchLine(SavedSearch $savedSearch): string
     {
-        return $this->encode([
+        return BackupLineFormat::encode([
             'kind' => BackupSchema::KIND_SAVED_SEARCH,
             'term' => $savedSearch->getTerm(),
             'wholeWord' => $savedSearch->isWholeWord(),
@@ -98,7 +99,7 @@ final readonly class BackupLines
     {
         $feed = $exported->subscription->getFeed();
 
-        return $this->encode([
+        return BackupLineFormat::encode([
             'kind' => BackupSchema::KIND_FEED,
             'url' => $exported->feedUrl,
             'siteUrl' => $feed->getSiteUrl(),
@@ -114,13 +115,13 @@ final readonly class BackupLines
     {
         $subscription = $exported->subscription;
 
-        return $this->encode([
+        return BackupLineFormat::encode([
             'kind' => BackupSchema::KIND_SUBSCRIPTION,
             'feedUrl' => $exported->feedUrl,
             'customTitle' => $subscription->getCustomTitle(),
             'position' => $subscription->getPosition(),
-            'markedReadUntil' => $this->formatDateOrNull($subscription->getMarkedReadUntil()),
-            'createdAt' => $this->formatDate($subscription->getCreatedAt()),
+            'markedReadUntil' => BackupLineFormat::dateOrNull($subscription->getMarkedReadUntil()),
+            'createdAt' => BackupLineFormat::date($subscription->getCreatedAt()),
             'tags' => $this->subscriptionTagRefs($subscription),
             'includeInAllItems' => $subscription->isIncludeInAllItems(),
             'includeInForYou' => $subscription->isIncludeInForYou(),
@@ -146,7 +147,7 @@ final readonly class BackupLines
     {
         $discussion = $entry->getDiscussion();
 
-        return $this->encode([
+        return BackupLineFormat::encode([
             'kind' => BackupSchema::KIND_ENTRY,
             'feedUrl' => $feedUrl,
             'guid' => $entry->getGuid(),
@@ -180,25 +181,9 @@ final readonly class BackupLines
                 'title' => $companions->origin->title,
                 'faviconUrl' => $companions->origin->faviconUrl,
             ],
-            'publishedAt' => $this->formatDateOrNull($entry->getPublishedAt()),
-            'createdAt' => $this->formatDate($entry->getCreatedAt()),
-            'effectiveDate' => $this->formatDate($entry->getEffectiveDate()),
-        ]);
-    }
-
-    public function entryStateLine(EntryState $state, string $feedUrl): string
-    {
-        return $this->encode([
-            'kind' => BackupSchema::KIND_ENTRY_STATE,
-            'feedUrl' => $feedUrl,
-            'guidHash' => $state->getEntry()->getGuidHash(),
-            'isHidden' => $state->isHidden(),
-            'isFavorite' => $state->isFavorite(),
-            'isKept' => $state->isKept(),
-            'hiddenAt' => $this->formatDateOrNull($state->getHiddenAt()),
-            'isViewed' => $state->isViewed(),
-            'viewedAt' => $this->formatDateOrNull($state->getViewedAt()),
-            'sharedAt' => $this->formatDateOrNull($state->getSharedAt()),
+            'publishedAt' => BackupLineFormat::dateOrNull($entry->getPublishedAt()),
+            'createdAt' => BackupLineFormat::date($entry->getCreatedAt()),
+            'effectiveDate' => BackupLineFormat::date($entry->getEffectiveDate()),
         ]);
     }
 
@@ -215,22 +200,12 @@ final readonly class BackupLines
             'authorName' => $quote->authorName,
             'authorHandle' => $quote->authorHandle,
             'authorAvatarUrl' => $quote->authorAvatarUrl,
-            'postedAt' => $this->formatDateOrNull($quote->postedAt),
+            'postedAt' => BackupLineFormat::dateOrNull($quote->postedAt),
             'text' => $quote->text,
             'media' => EntryMedia::toJsonList($quote->media),
             'nestedQuote' => $nested === null ? null : ['url' => $nested->url, 'handle' => $nested->handle],
             'linkCard' => $quote->linkCard?->toStored(),
         ];
-    }
-
-    private function formatDate(\DateTimeImmutable $date): string
-    {
-        return $date->setTimezone(new \DateTimeZone('UTC'))->format(\DateTimeInterface::ATOM);
-    }
-
-    private function formatDateOrNull(?\DateTimeImmutable $date): ?string
-    {
-        return null === $date ? null : $this->formatDate($date);
     }
 
     /**
@@ -241,7 +216,7 @@ final readonly class BackupLines
         return [
             'kind' => BackupSchema::KIND_HEADER,
             'schemaVersion' => BackupSchema::VERSION,
-            'createdAt' => $this->formatDate($provenance->createdAt),
+            'createdAt' => BackupLineFormat::date($provenance->createdAt),
             'sourceUrl' => $provenance->sourceUrl,
             'sourceEmail' => $provenance->sourceEmail,
             'backupId' => $provenance->backupId,
@@ -254,17 +229,9 @@ final readonly class BackupLines
      */
     public function footerLine(array $counts): string
     {
-        return $this->encode([
+        return BackupLineFormat::encode([
             'kind' => BackupSchema::KIND_FOOTER,
             'counts' => array_replace(self::NO_COUNTS, $counts),
         ]);
-    }
-
-    /**
-     * @param array<string, mixed> $line
-     */
-    private function encode(array $line): string
-    {
-        return json_encode($line, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
     }
 }

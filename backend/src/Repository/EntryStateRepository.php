@@ -15,7 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<EntryState>
  *
- * @phpstan-type StateCounts array{favorites: int, kept: int, shared: int, viewed: int}
+ * @phpstan-type StateCounts array{favorites: int, kept: int, viewed: int}
  */
 final class EntryStateRepository extends ServiceEntityRepository implements RestoreEntryStatesInterface
 {
@@ -200,7 +200,6 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
         return $this->createQueryBuilder('es')
             ->select('SUM(CASE WHEN es.isFavorite = :true THEN 1 ELSE 0 END) AS favorites')
             ->addSelect('SUM(CASE WHEN es.isKept = :true THEN 1 ELSE 0 END) AS kept')
-            ->addSelect('SUM(CASE WHEN es.sharedAt IS NOT NULL THEN 1 ELSE 0 END) AS shared')
             ->addSelect('SUM(CASE WHEN es.isViewed = :true THEN 1 ELSE 0 END) AS viewed')
             ->join('es.entry', 'e')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
@@ -212,20 +211,12 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     /** @return StateCounts */
     private function stateCounts(QueryBuilder $query): array
     {
-        /**
-         * @var array{
-         *     favorites: int|string|null,
-         *     kept: int|string|null,
-         *     shared: int|string|null,
-         *     viewed: int|string|null
-         * } $row
-         */
+        /** @var array{favorites: int|string|null, kept: int|string|null, viewed: int|string|null} $row */
         $row = $query->getQuery()->getSingleResult();
 
         return [
             'favorites' => (int) $row['favorites'],
             'kept' => (int) $row['kept'],
-            'shared' => (int) $row['shared'],
             'viewed' => (int) $row['viewed'],
         ];
     }

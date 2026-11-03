@@ -7,6 +7,7 @@ namespace App\Service\Backup\Factory;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Repository\EntryRepository;
+use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Pass\RestoreDestination;
@@ -25,6 +26,7 @@ final readonly class RestoreEntryLoaderFactory
         private EntityManagerInterface $entityManager,
         private EntryRepository $entries,
         private EntryStateRepository $entryStates,
+        private EntryShareRepository $entryShares,
         private EntryBatchInserter $inserter,
         private EntryIndexer $indexer,
         private RestoredEntryStateFactory $stateFactory,
@@ -41,6 +43,7 @@ final readonly class RestoreEntryLoaderFactory
             $this->entityManager,
             $this->entries,
             $this->entryStates,
+            $this->entryShares,
             $this->inserter,
             $this->indexer,
             $this->stateFactory,

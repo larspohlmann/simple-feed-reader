@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reading;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -78,6 +79,12 @@ final class EntryStateUpdaterTest extends DbTestCase
             ?? new EntryState($user, $entry);
     }
 
+    private function sharedAtOf(User $user, Entry $entry): ?\DateTimeImmutable
+    {
+        return $this->entityManager->getRepository(EntryShare::class)
+            ->sharedAtFor($user->requireId(), $entry->requireId());
+    }
+
     /**
      * Null when no row was ever created. stateOf() cannot tell that apart from a row created but never written
      * to: its unpersisted fallback reads all-false too.
@@ -146,8 +153,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isShared: true));
 
-        self::assertTrue($this->stateOf($user, $target)->isShared());
-        self::assertFalse($this->stateOf($user, $sibling)->isShared());
+        self::assertNotNull($this->sharedAtOf($user, $target));
+        self::assertNull($this->sharedAtOf($user, $sibling));
     }
 
     public function testUnfavouritingAndUnkeepingClearBothFlags(): void

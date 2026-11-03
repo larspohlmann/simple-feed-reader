@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
-use App\Entity\EntryState;
+use App\Entity\EntryShare;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -154,9 +154,7 @@ final class EntrySharedTest extends ApiTestCase
     {
         $entry = $this->entityManager()->find(Entry::class, $entryId);
         self::assertInstanceOf(Entry::class, $entry);
-        $state = new EntryState($user, $entry);
-        $state->markShared(new \DateTimeImmutable($when));
-        $this->entityManager()->persist($state);
+        $this->entityManager()->persist(new EntryShare($user, $entry, new \DateTimeImmutable($when)));
         $this->entityManager()->flush();
     }
 }

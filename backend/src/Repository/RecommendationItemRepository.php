@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\Subscription;
@@ -57,6 +58,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         return $this->applyForYouCriteria($this->createQueryBuilder('i')->addSelect('e'), $userId)
             ->leftJoin('e.feed', 'f')->addSelect('f')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->leftJoin(EntryShare::class, 'esh', 'ON', 'esh.entry = e AND esh.user = :user')
             ->addSelect('s.id AS subscriptionId')
             ->addSelect('s.customTitle AS customTitle')
             ->addSelect('f.title AS feedTitle')
@@ -65,7 +67,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
-            ->addSelect('es.sharedAt AS esSharedAt')
+            ->addSelect('esh.sharedAt AS eshSharedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->addSelect('r.completedAt AS runCompletedAt');
     }
@@ -202,7 +204,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             viewState: new EntryListRowViewState(
                 isViewed: (bool) ($row['esViewed'] ?? false),
                 viewedAt: null,
-                sharedAt: $row['esSharedAt'] instanceof \DateTimeImmutable ? $row['esSharedAt'] : null,
+                sharedAt: $row['eshSharedAt'] instanceof \DateTimeImmutable ? $row['eshSharedAt'] : null,
             ),
             markedReadUntil: $markedReadUntil instanceof \DateTimeImmutable ? $markedReadUntil : null,
         );

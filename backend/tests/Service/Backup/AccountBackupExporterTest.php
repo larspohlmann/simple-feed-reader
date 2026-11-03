@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationPoolLimits;
@@ -138,13 +139,17 @@ final class AccountBackupExporterTest extends DbTestCase
         $state->markFavorite();
         $state->markViewed(new \DateTimeImmutable('2026-08-03T00:00:00Z'));
         $this->entityManager->persist($state);
+        $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-04T00:00:00Z')));
         $this->entityManager->flush();
 
         $parts = $this->decodedParts($user);
         self::assertCount(2, $parts);
         [$entriesPart, $foundationPart] = $parts;
 
-        self::assertSame(['header', 'entry', 'entryState', 'footer'], array_column($entriesPart, 'kind'));
+        self::assertSame(
+            ['header', 'entry', 'entryState', 'entryShare', 'footer'],
+            array_column($entriesPart, 'kind'),
+        );
         self::assertSame(
             ['header', 'account', 'tag', 'savedSearch', 'feed', 'subscription', 'footer'],
             array_column($foundationPart, 'kind'),
@@ -172,12 +177,20 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertSame('<p>body</p>', $entriesPart[1]['contentHtml']);
         self::assertTrue($entriesPart[2]['isFavorite']);
         self::assertTrue($entriesPart[2]['isViewed']);
+        self::assertSame(hash('sha256', 'guid-1'), $entriesPart[3]['guidHash']);
+        self::assertSame('2026-08-04T00:00:00+00:00', $entriesPart[3]['sharedAt']);
         self::assertSame(
-            ['tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 1, 'entryState' => 1],
+            [
+                'tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0,
+                'entry' => 1, 'entryState' => 1, 'entryShare' => 1,
+            ],
             self::footerOf($entriesPart)['counts'],
         );
         self::assertSame(
-            ['tag' => 1, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 0, 'entryState' => 0],
+            [
+                'tag' => 1, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1,
+                'entry' => 0, 'entryState' => 0, 'entryShare' => 0,
+            ],
             self::footerOf($foundationPart)['counts'],
         );
     }

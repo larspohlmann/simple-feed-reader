@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Repository\ReadingHistoryRepository;
 use App\Repository\TitledEntry;
 use App\Tests\DbTestCase;
+use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 
 /** The reader's history reads break a tie on the instant by the newest entry (#2007). */
@@ -37,8 +38,8 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         $at = new \DateTimeImmutable('2026-10-02T10:00:00Z');
         $older = SavedPostFixtures::entry($this->entityManager, $this->feed, 'a', 'https://history.example.com/a');
         $newer = SavedPostFixtures::entry($this->entityManager, $this->feed, 'b', 'https://history.example.com/b');
-        SavedPostFixtures::state($this->entityManager, $this->user, $older)->markShared($at);
-        SavedPostFixtures::state($this->entityManager, $this->user, $newer)->markShared($at);
+        EntryShareFixtures::share($this->entityManager, $this->user, $older, $at);
+        EntryShareFixtures::share($this->entityManager, $this->user, $newer, $at);
         $this->entityManager->flush();
 
         $shared = $this->history()->shared($this->user->requireId(), 10);

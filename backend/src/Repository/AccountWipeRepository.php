@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\KnownSocialCollection;
@@ -46,6 +47,7 @@ final readonly class AccountWipeRepository
     public function deleteOwnedRows(User $user): void
     {
         $this->deleteByUser(EntryState::class, $user);
+        $this->deleteByUser(EntryShare::class, $user);
         // subscription_tag rows die with their subscription and tag through both join columns' ON DELETE CASCADE.
         $this->deleteByUser(Subscription::class, $user);
         $this->deleteByUser(Tag::class, $user);

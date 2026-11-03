@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Pool;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationHistoryCaps;
@@ -306,12 +307,13 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         return $entry;
     }
 
+    /** The share is persisted here; the returned state row is the caller's to flag and persist. */
     private function sharedState(string $guid, string $published, string $sharedAt): EntryState
     {
-        $state = new EntryState($this->user, $this->entry($guid, $published));
-        $state->markShared(new \DateTimeImmutable($sharedAt));
+        $entry = $this->entry($guid, $published);
+        $this->entityManager->persist(new EntryShare($this->user, $entry, new \DateTimeImmutable($sharedAt)));
 
-        return $state;
+        return new EntryState($this->user, $entry);
     }
 
     private function settings(

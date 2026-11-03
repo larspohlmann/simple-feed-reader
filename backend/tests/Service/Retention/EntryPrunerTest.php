@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Retention;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -391,9 +392,7 @@ final class EntryPrunerTest extends DbTestCase
         $old = $this->daysAgo(120);
         $this->seedEntry($feed, 'old-plain', $old);
         $shared = $this->seedEntry($feed, 'old-shared', $old);
-        $sharedState = new EntryState($user, $shared);
-        $sharedState->markShared(new \DateTimeImmutable('2026-10-02T10:00:00Z'));
-        $this->entityManager->persist($sharedState);
+        $this->entityManager->persist(new EntryShare($user, $shared, new \DateTimeImmutable('2026-10-02T10:00:00Z')));
         $this->entityManager->flush();
 
         $pruned = $this->pruner->prune();

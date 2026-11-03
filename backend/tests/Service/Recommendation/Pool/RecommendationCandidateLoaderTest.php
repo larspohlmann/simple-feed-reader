@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Pool;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -104,9 +105,9 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     public function testAnUnreadSharedEntryIsExcluded(): void
     {
         $shared = $this->entry('shared-entry', '2026-07-10T00:00:00Z');
-        $state = new EntryState($this->user, $shared);
-        $state->markShared(new \DateTimeImmutable('2026-07-11T00:00:00Z'));
-        $this->entityManager->persist($state);
+        $this->entityManager->persist(
+            new EntryShare($this->user, $shared, new \DateTimeImmutable('2026-07-11T00:00:00Z')),
+        );
         $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());

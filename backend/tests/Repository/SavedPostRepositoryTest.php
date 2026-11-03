@@ -29,6 +29,7 @@ use App\Repository\SocialLikeRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -71,7 +72,7 @@ final class SavedPostRepositoryTest extends DbTestCase
     {
         $feed = $this->subscribedFeed('https://flagged-shared.example/feed.xml');
         $shared = $this->entry($feed, 'shared', 'https://flagged-shared.example/1');
-        $this->state($shared)->markShared(new \DateTimeImmutable(self::AT));
+        EntryShareFixtures::share($this->entityManager, $this->user, $shared, new \DateTimeImmutable(self::AT));
         $this->entityManager->flush();
 
         $flagged = $this->repository()->flaggedIn($this->user->requireId(), $feed->requireId());

@@ -67,7 +67,7 @@ articles feed the For you profile. A switch in Settings turns the registering of
 - **Frontend**
   - `share-targets.json`: `"social": true` on the six networks; `ShareTarget` types it.
   - `SHARE_RECORDER` token; `EntryShareRecorder`, provided by the reader view, records the open entry when
-    `SharingService.rememberShares()` holds. The share button and the selection actions call it for a social
+    `SharingService.recordsShares()` holds. The share button and the selection actions call it for a social
     target and after a link post is sent; `PostActions.postLink()` returns the sent post.
   - `EntryStateActions.share()`/`unshare()`; `SubscriptionsStore.sharedCount` with `bumpShared()`.
   - Selection kind and view `shared`, its heading, icon and count; a "Shared" sidebar item below Kept,

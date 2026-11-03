@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use Doctrine\DBAL\Types\Types;
@@ -37,9 +38,18 @@ final readonly class ReadingHistoryRepository
     /** @return list<TitledEntry> */
     public function shared(int $userId, int $cap): array
     {
-        $qb = $this->historyQueryBuilder($userId)
-            ->andWhere('es.sharedAt IS NOT NULL AND es.isFavorite = :false')
-            ->orderBy('es.sharedAt', 'DESC')
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('share', 'e', 'f')
+            ->addSelect('s.customTitle AS customTitle')
+            ->from(EntryShare::class, 'share')
+            ->join('share.entry', 'e')
+            ->join('e.feed', 'f')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->andWhere('IDENTITY(share.user) = :user')
+            ->andWhere('es.isFavorite IS NULL OR es.isFavorite = :false')
+            ->setParameter('user', $userId)
+            ->orderBy('share.sharedAt', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('false', false, Types::BOOLEAN);
@@ -51,7 +61,8 @@ final readonly class ReadingHistoryRepository
     public function kept(int $userId, int $cap): array
     {
         $qb = $this->historyQueryBuilder($userId)
-            ->andWhere('es.isKept = :true AND es.isFavorite = :false AND es.sharedAt IS NULL')
+            ->andWhere('es.isKept = :true AND es.isFavorite = :false')
+            ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -65,8 +76,8 @@ final readonly class ReadingHistoryRepository
     public function viewed(int $userId, int $cap): array
     {
         $qb = $this->historyQueryBuilder($userId)
-            ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false'
-                . ' AND es.sharedAt IS NULL')
+            ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false')
+            ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
             ->orderBy('es.viewedAt', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -92,7 +103,7 @@ final readonly class ReadingHistoryRepository
     /** @return list<TitledEntry> */
     private function titledEntries(QueryBuilder $qb): array
     {
-        /** @var list<array{0: EntryState, customTitle: ?string}> $rows entry and feed fold into the EntryState graph */
+        /** @var list<array{0: EntryState|EntryShare, customTitle: ?string}> $rows entry and feed fold into row 0's graph */
         $rows = $qb->getQuery()->getResult();
 
         return array_map(

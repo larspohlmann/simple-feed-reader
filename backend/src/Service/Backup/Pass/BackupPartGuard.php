@@ -27,6 +27,7 @@ final class BackupPartGuard
     private const array ENTRY_PART_KINDS = [
         BackupSchema::KIND_ENTRY,
         BackupSchema::KIND_ENTRY_STATE,
+        BackupSchema::KIND_ENTRY_SHARE,
     ];
 
     private int $entryLines = 0;

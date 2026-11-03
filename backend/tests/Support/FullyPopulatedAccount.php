@@ -10,6 +10,7 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
@@ -70,6 +71,7 @@ final readonly class FullyPopulatedAccount
         $entry = $this->entryFor($feed);
         $this->entityManager->persist($entry);
         $this->entityManager->persist($this->stateFor($user, $entry));
+        $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-06T10:00:00Z')));
         $this->entityManager->persist(new LinkCard($entry, 0, new LinkCardContent(
             'https://shared.example/story',
             'The shared story',
@@ -215,7 +217,6 @@ final readonly class FullyPopulatedAccount
         $state->markKept();
         $state->hide(new \DateTimeImmutable('2026-08-04T10:00:00Z'));
         $state->markViewed(new \DateTimeImmutable('2026-08-05T10:00:00Z'));
-        $state->markShared(new \DateTimeImmutable('2026-08-06T10:00:00Z'));
 
         return $state;
     }
