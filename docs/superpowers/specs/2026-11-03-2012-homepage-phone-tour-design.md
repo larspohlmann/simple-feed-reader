@@ -54,8 +54,8 @@ recorded tap renders at once.
 
 ### Scenes
 
-Roughly 40 s, in order. Each scene's start time is recorded and written to
-`docs/homepage/tour-scenes.json` as `{ light: [{ name, label, copy, seconds }], dark: [...] }`.
+Roughly 40 s, in order. Each scene's start time is recorded and written into the homepage's
+scene list (below).
 
 1. **Magazine** (~5 s): hold, eased scroll down about two screens, hold. The borrowed podcast
    episode shows near the top; accepted.
@@ -76,10 +76,10 @@ Roughly 40 s, in order. Each scene's start time is recorded and written to
   (the account is back at 19 feeds; `podcast-setup.mjs teardown` repairs an aborted run).
   Playback state and the theme live in the recording context only.
 - Encoding with ffmpeg from the raw WebM, into `docs/homepage/`: `tour-light.mp4` /
-  `tour-dark.mp4` (H.264, `-preset slow`, CRF 30, yuv420p, `-movflags +faststart`),
-  `tour-light.webm` / `tour-dark.webm` (VP9, CRF 33, `-row-mt 1`), and
+  `tour-dark.mp4` (H.264, `-preset slow`, CRF 30, yuv420p, `-movflags +faststart`) and
   `tour-light-poster.webp` / `tour-dark-poster.webp` (the first frame, `cwebp -q 85`). Budget:
-  each MP4 under 4.5 MB; if an encode is larger, raise the CRF before anything else.
+  each MP4 under 4.5 MB; if an encode is larger, raise the CRF before anything else. No WebM:
+  every current browser plays the H.264 file, and the VP9 encode came out larger.
 - The raw recordings stay under the system temp directory like the raw screenshots.
 - Operational: the frontend container has been OOM-killed once during a run (exit 137);
   `docker compose up -d frontend` and wait for :4200.
@@ -90,11 +90,12 @@ Roughly 40 s, in order. Each scene's start time is recorded and written to
   desktop (phone left, scene list right), stacked on a phone.
 - The phone frame is CSS modelled on `frame.mjs`: dark bezel, rounded screen, dynamic island.
   The `<video>` is the screen: `width="780" height="1520"`, `muted playsinline
-  preload="metadata" controls`, `poster`, two `<source>` elements (WebM first, MP4 second).
+  preload="metadata" controls`, `poster`, one MP4 `<source>`.
   One `<video>` per theme with the hero's `light-only` / `dark-only` classes; the hidden one
   has `preload="none"` so only the shown version loads metadata. No autoplay.
-- The scene list is an `<ol>` with one `<li>` per scene (label plus one line of copy, from
-  `tour-scenes.json` baked into the markup, not fetched). The page script listens to
+- The scene list is an `<ol>` with one `<button>` per scene (label plus one line of copy), each
+  carrying `data-scene` and its start per theme in `data-light` / `data-dark`, which `tour.mjs`
+  rewrites after each recording; nothing is fetched. The page script listens to
   `timeupdate` on the visible video and sets `aria-current="true"` on the scene whose start
   time is the latest one not after `currentTime`; a tap on a scene seeks the video there and
   plays it. With no JS the list is still a readable caption list.
