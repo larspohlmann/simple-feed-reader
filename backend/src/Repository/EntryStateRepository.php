@@ -212,7 +212,14 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     /** @return StateCounts */
     private function stateCounts(QueryBuilder $query): array
     {
-        /** @var array{favorites: int|string|null, kept: int|string|null, shared: int|string|null, viewed: int|string|null} $row */
+        /**
+         * @var array{
+         *     favorites: int|string|null,
+         *     kept: int|string|null,
+         *     shared: int|string|null,
+         *     viewed: int|string|null
+         * } $row
+         */
         $row = $query->getQuery()->getSingleResult();
 
         return [

@@ -7,9 +7,9 @@ namespace App\Service\Backup\Dto;
 use App\Service\Backup\Support\LineField;
 
 /**
- * The account's per-entry state: read/favourite/kept/viewed flags, the share
- * instant and their timestamps, matched to a restored entry by (feed, guidHash) — never by
- * guid, since hashing it outside the Entry constructor is forbidden.
+ * The account's per-entry state: the read, favourite, kept and viewed flags with their timestamps, and the
+ * share instant. Matched to a restored entry by (feed, guidHash) — never by guid, since hashing it outside
+ * the Entry constructor is forbidden.
  */
 final readonly class EntryStateLine
 {

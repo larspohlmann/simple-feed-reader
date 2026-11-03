@@ -47,7 +47,10 @@ final class SharingControllerTest extends ApiTestCase
         $client->request('GET', '/api/me');
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true], $this->sharing($client));
+        self::assertSame(
+            ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true],
+            $this->sharing($client),
+        );
     }
 
     public function testChangingSharingPersistsIt(): void
@@ -56,18 +59,16 @@ final class SharingControllerTest extends ApiTestCase
         $this->signIn($client, 'quiet-sharer@example.test');
 
         $this->patchSharing($client, [
-                'enabled' => false,
-                'hiddenTargets' => ['facebook',
-                'x'],
-                'rememberShares' => true,
+            'enabled' => false,
+            'hiddenTargets' => ['facebook', 'x'],
+            'rememberShares' => true,
         ]);
 
         self::assertResponseIsSuccessful();
         self::assertSame([
-                'enabled' => false,
-                'hiddenTargets' => ['facebook',
-                'x'],
-                'rememberShares' => true,
+            'enabled' => false,
+            'hiddenTargets' => ['facebook', 'x'],
+            'rememberShares' => true,
         ], $this->sharing($client));
         $stored = $this->storedPreferences('quiet-sharer@example.test');
         self::assertFalse($stored->isSharingEnabled());
@@ -80,11 +81,9 @@ final class SharingControllerTest extends ApiTestCase
         $this->signIn($client, 'twice-hidden@example.test');
 
         $this->patchSharing($client, [
-                'enabled' => true,
-                'hiddenTargets' => ['x',
-                'reddit',
-                'x'],
-                'rememberShares' => true,
+            'enabled' => true,
+            'hiddenTargets' => ['x', 'reddit', 'x'],
+            'rememberShares' => true,
         ]);
 
         self::assertResponseIsSuccessful();

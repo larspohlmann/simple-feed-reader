@@ -14,7 +14,7 @@ use App\Service\SavedPosts\Pass\SavedCopyPlan;
 use App\Service\SavedPosts\Support\SavedOrigin;
 use App\Service\Search\EntryIndexer;
 
-/** Runs before a subscription goes (#1666): a favourite, kept or shared post moves to a feed the user keeps, else to a copy. */
+/** Runs before a subscription goes (#1666): a favourite, kept or shared post moves to a kept feed, else a copy. */
 final readonly class SavedPostRescue
 {
     public function __construct(

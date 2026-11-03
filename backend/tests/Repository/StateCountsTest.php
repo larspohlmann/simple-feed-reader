@@ -74,7 +74,7 @@ final class StateCountsTest extends DbTestCase
         $counts = $this->repository()->stateCountsForUser($user->requireId());
         self::assertSame(2, $counts['favorites']); // fav + both
         self::assertSame(2, $counts['kept']); // kept + both
-        self::assertSame(1, $counts['shared']); // shared only
+        self::assertSame(1, $counts['shared']);
         self::assertSame(1, $counts['viewed']); // viewed only
     }
 
