@@ -135,6 +135,7 @@ final class SharingControllerTest extends ApiTestCase
         $this->patchSharing($client, ['enabled' => true, 'hiddenTargets' => $ids]);
 
         self::assertResponseIsSuccessful();
+        self::assertSame($ids, $this->storedPreferences('many-hidden@example.test')->getHiddenShareTargets());
     }
 
     public function testASignedOutClientIsRejected(): void
