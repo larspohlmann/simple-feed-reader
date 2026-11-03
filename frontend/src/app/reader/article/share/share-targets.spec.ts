@@ -1,6 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ConfiguredTarget, SHARE_TARGETS, carriesText, shareUrl } from './share-targets';
+import {
+  ConfiguredTarget,
+  SHARE_TARGETS,
+  TARGET_ID_PATTERN,
+  carriesText,
+  shareUrl,
+} from './share-targets';
 
 describe('share targets', () => {
   it('fills the url, the title and the text, encoded', () => {
@@ -22,7 +28,7 @@ describe('share targets', () => {
         (target): target is ConfiguredTarget => target.kind !== 'divider' && target.label === label,
       )!;
 
-    expect(carriesText({ kind: 'copy' })).toBe(true);
+    expect(carriesText({ kind: 'copy', id: 'copy' })).toBe(true);
     expect(carriesText(byLabel('E-Mail'))).toBe(true);
     expect(carriesText(byLabel('WhatsApp'))).toBe(true);
     expect(carriesText(byLabel('X'))).toBe(false);
@@ -38,5 +44,12 @@ describe('share targets', () => {
     );
 
     expect(missing).toEqual([]);
+  });
+
+  it('names every target with a unique, well-formed id', () => {
+    const ids = SHARE_TARGETS.flatMap((target) => (target.kind === 'divider' ? [] : [target.id]));
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.filter((id) => !TARGET_ID_PATTERN.test(id))).toEqual([]);
   });
 });

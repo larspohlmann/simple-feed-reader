@@ -58,4 +58,49 @@ describe('shareMenuItems', () => {
     expect(target(items, 'WhatsApp').linkOnly).toBe(false);
     expect(items.some((item) => item.kind === 'hint')).toBe(false);
   });
+
+  const targetIds = (items: ShareItem[]) =>
+    items.flatMap((item) => (item.kind === 'target' ? [item.id] : []));
+
+  it('keys the targets by their id, not their position', () => {
+    expect(targetIds(shareMenuItems([], 'link'))).toContain('x');
+  });
+
+  it('leaves the hidden targets out', () => {
+    const ids = targetIds(shareMenuItems(NETWORKS, 'link', new Set(['x', 'facebook'])));
+
+    expect(ids).not.toContain('x');
+    expect(ids).not.toContain('facebook');
+    expect(ids).toContain('reddit');
+  });
+
+  it('never starts, ends or doubles up on a divider', () => {
+    const hidden = new Set([
+      'bluesky',
+      'threads',
+      'x',
+      'facebook',
+      'linkedin',
+      'reddit',
+      'instapaper',
+    ]);
+    const items = shareMenuItems([], 'link', hidden);
+    const shape = items.map((item) => item.kind);
+
+    expect(shape[0]).not.toBe('divider');
+    expect(shape.at(-1)).not.toBe('divider');
+    expect(shape.join(' ')).not.toContain('divider divider');
+    expect(targetIds(items)).toEqual(
+      expect.arrayContaining(['copy', 'email', 'whatsapp', 'telegram']),
+    );
+  });
+
+  it('drops the divider after the posts when every target is hidden', () => {
+    const all = new Set(targetIds(shareMenuItems([], 'link')));
+
+    expect(shareMenuItems(NETWORKS, 'link', all).map((item) => item.kind)).toEqual([
+      'post',
+      'post',
+    ]);
+  });
 });

@@ -2,6 +2,8 @@ import config from '../../../../../public/share-targets/share-targets.json';
 import { ShareContent } from './share-content';
 
 interface ShareEntry {
+  /** Stored per account to hide the target, so it never changes once shipped. */
+  readonly id: string;
   readonly label?: string;
   readonly labelKey?: string;
   /** A logo file next to the config, drawn in `color`. */
@@ -16,6 +18,9 @@ export type ShareTarget =
   | { readonly kind: 'divider' }
   | (ShareEntry & { readonly kind: 'system' | 'copy' })
   | (ShareEntry & { readonly kind: 'link'; readonly url: string });
+
+/** The format the account stores hidden target ids in; `Preferences::TARGET_ID_PATTERN` on the server. */
+export const TARGET_ID_PATTERN = /^[a-z0-9-]{1,32}$/;
 
 export const SHARE_TARGETS = (config as readonly ShareTarget[]).filter(
   (target) => target.kind !== 'system' || typeof navigator.share === 'function',
