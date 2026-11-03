@@ -1364,6 +1364,7 @@
       "mastodon": "Die Sichtbarkeit dieses Beitrags erlaubt keine Boosts"
     },
     "keep": "Merken",
+    "unshare": "Aus Geteilt entfernen",
     "toggleRead": "Gelesen umschalten",
     "actionHint": {
       "favoriteAdd": "Zu Favoriten hinzufügen",
@@ -1378,6 +1379,7 @@
       },
       "keepAdd": "Merken — wird beim Aufräumen alter Einträge nie gelöscht",
       "keepRemove": "Nicht mehr merken — das Aufräumen alter Einträge darf ihn wieder löschen",
+      "unshare": "Geteilt — aus der Liste Geteilt entfernen",
       "readAdd": "Als gelesen markieren — landet in „Zuletzt gelesen“",
       "readRemove": "Aus „Zuletzt gelesen“ entfernen"
     },

@@ -1,6 +1,6 @@
 import { Provider, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Subject } from 'rxjs';
+import { Subject, config } from 'rxjs';
 import { SentPost } from '../composer/composed-post';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
@@ -294,8 +294,6 @@ describe('ShareButtonComponent', () => {
 
   describe('without a recorder, as in the link reader', () => {
     beforeEach(() => {
-      withRecorder = true;
-      TestBed.resetTestingModule();
       withRecorder = false;
       mount(false);
     });
@@ -306,10 +304,21 @@ describe('ShareButtonComponent', () => {
       expect(() => item(openMenu(), 'Open in Bluesky app').click()).not.toThrow();
     });
 
-    it('posts a link without recording', () => {
-      item(openMenu(), 'Post on Mastodon').click();
+    it('posts a link without recording', async () => {
+      const unhandled = jest.fn();
+      const previous = config.onUnhandledError;
+      config.onUnhandledError = unhandled;
+      try {
+        item(openMenu(), 'Post on Mastodon').click();
 
-      expect(() => sent.next({} as SentPost)).not.toThrow();
+        sent.next({} as SentPost);
+        await Promise.resolve();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect(unhandled).not.toHaveBeenCalled();
+      } finally {
+        config.onUnhandledError = previous;
+      }
     });
   });
 

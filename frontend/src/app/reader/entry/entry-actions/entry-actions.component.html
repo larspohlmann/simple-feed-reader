@@ -71,6 +71,19 @@
 >
   <app-icon name="bookmark" [size]="size()" [fill]="entry().isKept" />
 </button>
+@if (entry().isShared) {
+  <button
+    type="button"
+    [attr.aria-label]="'reader.unshare' | transloco"
+    [attr.title]="'reader.actionHint.unshare' | transloco"
+    [appFlagToggle]="true"
+    (click)="$event.stopPropagation(); actions.unshare(entry())"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon name="share" [size]="size()" [fill]="true" />
+  </button>
+}
 <button
   type="button"
   [attr.aria-label]="'reader.toggleRead' | transloco"

@@ -85,6 +85,15 @@ export class EntryStateActions implements EntryActionHandler {
     this.entries.setState(entry.id, { isShared: true }, { onFailed: undoCount });
   }
 
+  unshare(entry: EntryDto): void {
+    this.subscriptions.bumpShared(-1);
+    this.patchInList(
+      entry,
+      { isShared: false },
+      { onFailed: () => this.subscriptions.bumpShared(1) },
+    );
+  }
+
   /** Ticking also reads the entry; un-ticking lets a later reopen mark it viewed again. */
   toggleRead(entry: EntryDto): void {
     const viewed = !entry.isViewed;

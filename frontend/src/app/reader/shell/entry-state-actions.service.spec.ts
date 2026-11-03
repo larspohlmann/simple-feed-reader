@@ -281,6 +281,62 @@ describe('EntryStateActions sharing (#2007)', () => {
   });
 });
 
+describe('EntryStateActions unsharing (#2007)', () => {
+  const bumpShared = jest.fn();
+  const setState = jest.fn();
+  const selection = signal<{ kind: string }>({ kind: 'all' });
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    bumpShared.mockReset();
+    setState.mockReset();
+    selection.set({ kind: 'all' });
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        EntryStateActions,
+        provideRouter([]),
+        { provide: EntriesStore, useValue: { setState } },
+        { provide: SubscriptionsStore, useValue: { bumpShared } },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId: signal(null), openEntry: signal(null), selection },
+        },
+        { provide: ToastService, useValue: { show: jest.fn() } },
+        { provide: PostActions, useValue: {} },
+      ],
+    });
+    actions = TestBed.inject(EntryStateActions);
+  });
+
+  it('uncounts the entry and clears isShared', () => {
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+
+    expect(bumpShared).toHaveBeenCalledWith(-1);
+    expect(setState).toHaveBeenCalledWith(9, { isShared: false }, expect.anything());
+    expect(actions.leavingIds().has(9)).toBe(false);
+  });
+
+  it('leaves the Shared list', () => {
+    selection.set({ kind: 'shared' });
+
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+
+    expect(actions.leavingIds().has(9)).toBe(true);
+  });
+
+  it('restores the count and the row when the save fails', () => {
+    selection.set({ kind: 'shared' });
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+
+    setState.mock.calls[0][2]?.onFailed?.();
+
+    expect(bumpShared).toHaveBeenLastCalledWith(1);
+    expect(actions.leavingIds().has(9)).toBe(false);
+  });
+});
+
 describe('EntryStateActions deleting my own post (#1972)', () => {
   const deletePost = jest.fn<Observable<void>, [EntryDto]>();
   const reloadCountsQuietly = jest.fn();
