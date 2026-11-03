@@ -302,7 +302,9 @@
   // the inset pill (::before) at a collapsed head's size; hover tints deeper, as surface-0 vanishes on the band.
   .section-head:has(> [aria-expanded='true']) {
     position: relative;
-    isolation: isolate;
+
+    // Also the stacking context the ::before pill sits in: the ⋯ menu inside must rise above the rows below.
+    z-index: 1;
     box-sizing: content-box;
     margin: calc(var(--card-pad-y) * -1) calc(var(--sidebar-card-pad) * -1) 0;
     padding: var(--sidebar-head-pad) calc(var(--space-2) + var(--sidebar-card-pad))
