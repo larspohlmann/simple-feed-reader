@@ -1,4 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, concatMap } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
 import { SHARING_EVERYTHING, SHARING_KEY, SharingSettings, asSharingSettings } from './sharing';
 import { SHARING_WRITER } from './sharing-writer';
@@ -12,6 +14,17 @@ export class SharingService {
   readonly enabled = computed(() => this.settings().enabled);
   readonly hidden = computed((): ReadonlySet<string> => new Set(this.settings().hiddenTargets));
   readonly saveFailed = signal(false);
+  /** Each write carries the whole state, so they must reach the server in the order they were made. */
+  private readonly writes = new Subject<SharingSettings>();
+
+  constructor() {
+    this.writes
+      .pipe(
+        concatMap((settings) => this.writer.write(settings)),
+        takeUntilDestroyed(),
+      )
+      .subscribe((ok) => this.saveFailed.set(!ok));
+  }
 
   setEnabled(enabled: boolean): void {
     this.save({ ...this.settings(), enabled });
@@ -38,9 +51,7 @@ export class SharingService {
   private save(settings: SharingSettings): void {
     this.cache(settings);
     this.saveFailed.set(false);
-    this.writer.write(settings).subscribe((ok) => {
-      if (!ok) this.saveFailed.set(true);
-    });
+    this.writes.next(settings);
   }
 
   private cache(settings: SharingSettings): void {

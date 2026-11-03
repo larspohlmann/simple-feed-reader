@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
 import { SHARING_KEY, SharingSettings } from './sharing';
 import { SharingService } from './sharing.service';
@@ -102,6 +102,26 @@ describe('SharingService', () => {
 
     result = of(true);
     service.setEnabled(true);
+    expect(service.saveFailed()).toBe(false);
+  });
+
+  it('sends the writes in order and lets a later success clear an earlier failure', () => {
+    const first = new Subject<boolean>();
+    const service = make();
+    result = first;
+    service.setEnabled(false);
+    result = of(true);
+    service.setEnabled(true);
+
+    expect(written).toEqual([{ enabled: false, hiddenTargets: [] }]);
+
+    first.next(false);
+    first.complete();
+
+    expect(written).toEqual([
+      { enabled: false, hiddenTargets: [] },
+      { enabled: true, hiddenTargets: [] },
+    ]);
     expect(service.saveFailed()).toBe(false);
   });
 
