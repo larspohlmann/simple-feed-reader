@@ -38,17 +38,9 @@ final readonly class ReadingHistoryRepository
     /** @return list<TitledEntry> */
     public function shared(int $userId, int $cap): array
     {
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select('share', 'e', 'f')
-            ->addSelect('s.customTitle AS customTitle')
-            ->from(EntryShare::class, 'share')
-            ->join('share.entry', 'e')
-            ->join('e.feed', 'f')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+        $qb = $this->subscribedEntriesQueryBuilder($userId, EntryShare::class, 'share')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->andWhere('IDENTITY(share.user) = :user')
             ->andWhere('es.isFavorite IS NULL OR es.isFavorite = :false')
-            ->setParameter('user', $userId)
             ->orderBy('share.sharedAt', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -89,14 +81,20 @@ final readonly class ReadingHistoryRepository
 
     private function historyQueryBuilder(int $userId): QueryBuilder
     {
+        return $this->subscribedEntriesQueryBuilder($userId, EntryState::class, 'es');
+    }
+
+    /** @param class-string $rootClass */
+    private function subscribedEntriesQueryBuilder(int $userId, string $rootClass, string $rootAlias): QueryBuilder
+    {
         return $this->entityManager->createQueryBuilder()
-            ->select('es', 'e', 'f')
+            ->select($rootAlias, 'e', 'f')
             ->addSelect('s.customTitle AS customTitle')
-            ->from(EntryState::class, 'es')
-            ->join('es.entry', 'e')
+            ->from($rootClass, $rootAlias)
+            ->join($rootAlias . '.entry', 'e')
             ->join('e.feed', 'f')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->andWhere('IDENTITY(es.user) = :user')
+            ->andWhere(sprintf('IDENTITY(%s.user) = :user', $rootAlias))
             ->setParameter('user', $userId);
     }
 
