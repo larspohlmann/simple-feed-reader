@@ -40,7 +40,7 @@ final readonly class EntryStateUpdater
     {
         $this->applyReadFlags($state, $change);
         $this->applyMarks($state, $change);
-        $this->applyShared($user, $state, $change->isShared);
+        $this->applyShared($user, $state, $change);
     }
 
     private function applyReadFlags(EntryState $state, EntryStateChangeModel $change): void
@@ -66,12 +66,12 @@ final readonly class EntryStateUpdater
         }
     }
 
-    private function applyShared(User $user, EntryState $state, ?bool $isShared): void
+    private function applyShared(User $user, EntryState $state, EntryStateChangeModel $change): void
     {
-        if ($isShared === false) {
+        if ($change->isShared === false) {
             $state->clearShared();
         }
-        if ($isShared === true && $user->getPreferences()->recordsShares()) {
+        if ($change->isShared === true && $user->getPreferences()->recordsShares()) {
             $state->markShared($this->clock->now());
         }
     }
