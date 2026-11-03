@@ -10,6 +10,7 @@ import { LayoutService } from '../../layout.service';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { buildVersion } from '../../../../environments/version';
+import { releasePageUrl } from '../../../core/repository';
 
 const account = (trialEndsAt: string | null): CurrentUser => ({
   id: 1,
@@ -74,11 +75,12 @@ function mount(
 }
 
 describe('SidebarFootComponent', () => {
-  it('shows the running build as a link into settings', () => {
+  it('shows the running build as a link to its GitHub release page', () => {
     const version = (mount().nativeElement as HTMLElement).querySelector('.version');
 
     expect(version?.textContent?.trim()).toBe(buildVersion.version);
-    expect(version?.getAttribute('href')).toBe('/settings');
+    expect(version?.getAttribute('href')).toBe(releasePageUrl(buildVersion.version));
+    expect(version?.getAttribute('target')).toBe('_blank');
   });
 
   it('shows an update badge linking to the release notes when an update is available', () => {

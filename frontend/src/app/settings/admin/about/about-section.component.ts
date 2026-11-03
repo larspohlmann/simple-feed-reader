@@ -10,13 +10,12 @@ import { SettingsStackComponent } from '../../../shared/settings/stack/settings-
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SelfUpdateComponent } from './self-update.component';
+import { REPOSITORY_URL } from '../../../core/repository';
 
 interface VersionRow {
   labelKey: string;
   release: ReleaseVersion | null;
 }
-
-const REPOSITORY_URL = 'https://github.com/larspohlmann/simple-feed-reader';
 
 @Component({
   selector: 'app-about-section',

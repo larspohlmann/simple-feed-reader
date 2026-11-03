@@ -10,6 +10,7 @@ import { VersionService } from '../../../core/version.service';
 import { LayoutService } from '../../layout.service';
 import { buildVersion } from '../../../../environments/version';
 import { trialDaysRemaining } from '../../format';
+import { REPOSITORY_URL, releasePageUrl } from '../../../core/repository';
 
 /**
  * The sidebar drawer's foot: Organise switch (coarse pointers only), text-size
@@ -34,6 +35,8 @@ import { trialDaysRemaining } from '../../format';
 export class SidebarFootComponent {
   /** Baked in at build time, so it names the bundle actually running. */
   readonly version = buildVersion.version;
+  readonly releasePage = releasePageUrl(this.version);
+  readonly issuesPage = `${REPOSITORY_URL}/issues`;
 
   private readonly versions = inject(VersionService);
   readonly auth = inject(AuthService);

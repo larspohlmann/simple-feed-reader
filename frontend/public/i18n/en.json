@@ -1467,7 +1467,7 @@
       "value": "{{value}}%",
       "readout": "Text size {{value}}%"
     },
-    "versionLabel": "Version {{version}} — open settings",
+    "versionLabel": "Version {{version}} — open the release notes",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update available: version {{version}} — open the release notes",
     "updateAvailableAdminLabel": "Update available: version {{version}} — open About",
