@@ -30,4 +30,11 @@ final class UpdateEntryStateRequestTest extends TestCase
             get_object_vars($change),
         );
     }
+
+    public function testToChangeCarriesAnIsSharedFlag(): void
+    {
+        $change = (new UpdateEntryStateRequest(isShared: true))->toChange();
+
+        self::assertTrue($change->isShared);
+    }
 }

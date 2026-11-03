@@ -34,6 +34,19 @@ final class EntrySharedTest extends ApiTestCase
         self::assertNull($cleared['sharedAt']);
     }
 
+    public function testAPatchWithoutIsSharedLeavesTheShareUnchanged(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('share-keep@example.com');
+        $entryId = $this->subscribedEntry($user, 'share-keep');
+        $shared = $this->patchState($headers, $entryId, ['isShared' => true]);
+
+        $other = $this->patchState($headers, $entryId, ['isFavorite' => true]);
+
+        self::assertNotNull($other['sharedAt']);
+        self::assertSame($shared['sharedAt'], $other['sharedAt']);
+        self::assertTrue($other['isShared']);
+    }
+
     private function subscribedEntry(User $user, string $guid): int
     {
         $when = new \DateTimeImmutable('2026-10-01T00:00:00Z');
