@@ -11,10 +11,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * The reader's history in still-subscribed feeds, each entry only in its highest section (favorite, shared, kept,
- * viewed).
- * Favorites and kept order by effectiveDate, since EntryState has no favorited-at; shared orders by sharedAt and
- * viewed by viewedAt.
+ * The reader's history in still-subscribed feeds, each entry only in its highest section (favorite, shared,
+ * kept, viewed). Favorites and kept order by effectiveDate, since EntryState has no favorited-at; shared
+ * orders by sharedAt and viewed by viewedAt.
  */
 final readonly class ReadingHistoryRepository
 {
@@ -41,6 +40,7 @@ final readonly class ReadingHistoryRepository
         $qb = $this->historyQueryBuilder($userId)
             ->andWhere('es.sharedAt IS NOT NULL AND es.isFavorite = :false')
             ->orderBy('es.sharedAt', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('false', false, Types::BOOLEAN);
 
@@ -68,6 +68,7 @@ final readonly class ReadingHistoryRepository
             ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false'
                 . ' AND es.sharedAt IS NULL')
             ->orderBy('es.viewedAt', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('true', true, Types::BOOLEAN)
             ->setParameter('false', false, Types::BOOLEAN);
