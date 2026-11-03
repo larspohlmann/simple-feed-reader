@@ -177,6 +177,25 @@ section + section{border-top:1px solid var(--border)}
 .split li strong{color:var(--text-primary)}
 .split.flip .shot{order:-1}
 
+/* tour: the phone frame follows scripts/screenshots/frame.mjs at half its 2x sizes */
+.tour{display:grid;grid-template-columns:340px minmax(0,460px);justify-content:center;gap:var(--space-8);align-items:center}
+.phone-frame{width:min(340px,100%);margin:0 auto;padding:12px;border-radius:59px;background:#101012;box-shadow:0 30px 60px -20px rgb(0 0 0/.45),inset 0 0 0 1.5px #3a3a3e,inset 0 0 0 2.5px #0b0b0c}
+.phone-frame .screen{position:relative;border-radius:47px;overflow:hidden;background:var(--surface-1)}
+.phone-frame .status{height:46px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 27px 8px 32px;font-weight:600;font-size:15px;line-height:1;letter-spacing:-.02em;color:var(--text-primary)}
+.phone-frame .status svg{display:inline-block;height:12px;width:auto;margin-left:5px;fill:currentColor}
+.phone-frame .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:36%;height:34px;border-radius:20px;background:#000}
+.phone-frame video{vertical-align:top;width:100%;height:auto}
+.phone-frame .home{height:30px;display:grid;place-items:center}
+.phone-frame .home::after{content:"";width:36%;height:5px;border-radius:3px;background:var(--text-primary)}
+.tour-scenes{margin:0;padding:0;list-style:none;display:grid;gap:var(--space-2)}
+.tour-scenes button{display:grid;gap:2px;width:100%;padding:var(--space-3) var(--space-4);border:0;border-left:3px solid var(--border);border-radius:0 var(--radius) var(--radius) 0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background-color .2s}
+.tour-scenes button:hover{background:var(--surface-1)}
+.tour-scenes button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tour-scenes button[aria-current="true"]{border-left-color:var(--accent);background:var(--accent-soft)}
+.tour-scenes strong{transition:color .2s}
+.tour-scenes button[aria-current="true"] strong{color:var(--accent)}
+.tour-scenes span{color:var(--text-secondary);font-size:14px}
+
 /* install */
 .install{background:var(--surface-1)}
 pre{margin:var(--space-5) 0 0;padding:var(--space-4) var(--space-5);background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--radius-lg);font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto;color:var(--text-primary)}
@@ -196,7 +215,8 @@ footer nav a{color:var(--text-secondary)}
 footer .copy{margin-left:auto}
 
 @media (max-width:900px){
-  .hero .wrap,.split{grid-template-columns:1fr}
+  .hero .wrap,.split,.tour{grid-template-columns:1fr}
+  .tour .phone-frame{order:1}
   .split.flip .shot{order:0}
   .hero h1{font-size:36px}
   .layouts,.grid,.pkgs{grid-template-columns:1fr 1fr}
@@ -267,6 +287,38 @@ footer .copy{margin-left:auto}
     <div class="shot">
       <a class="zoom" href="screenshots/magazine-light.webp"><img fetchpriority="high" class="light-only" src="screenshots/magazine-light.webp" width="1920" height="1200" alt="The magazine layout: one reading column of varied cards, with the sidebar of feeds, tags and saved searches"></a>
       <a class="zoom" href="screenshots/magazine-dark.webp"><img decoding="async" class="dark-only" src="screenshots/magazine-dark.webp" width="1920" height="1200" alt="The magazine layout, dark theme"></a>
+    </div>
+  </div>
+</section>
+
+<section id="tour">
+  <div class="wrap tour">
+    <div class="phone-frame">
+      <div class="screen">
+        <div class="status"><span>9:41</span><span aria-hidden="true"><svg viewBox="0 0 19 12"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg><svg viewBox="0 0 17 12"><path d="M8.5 11.6 6.3 9.3a3.1 3.1 0 0 1 4.4 0Zm3.7-3.8a5.3 5.3 0 0 0-7.4 0L3.3 6.3a7.4 7.4 0 0 1 10.4 0ZM15.3 4.8a10 10 0 0 0-13.6 0L.2 3.3a12.2 12.2 0 0 1 16.6 0Z"/></svg><svg viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2"/><path d="M25 4.5v4a2 2 0 0 0 0-4Z" fill-opacity=".4"/></svg></span></div>
+        <div class="island"></div>
+        <video class="light-only" width="780" height="1520" muted playsinline controls preload="metadata" poster="tour-light-poster.webp" aria-label="A tour of the app on a phone, light theme">
+          <source src="tour-light.mp4" type="video/mp4">
+        </video>
+        <video class="dark-only" width="780" height="1520" muted playsinline controls preload="none" poster="tour-dark-poster.webp" aria-label="A tour of the app on a phone, dark theme">
+          <source src="tour-dark.mp4" type="video/mp4">
+        </video>
+        <div class="home"></div>
+      </div>
+    </div>
+    <div>
+      <div class="sect-head">
+        <p class="eyebrow">Tour</p>
+        <h2>See it in action.</h2>
+        <p class="muted">Forty seconds on a phone: from the magazine into an article, through the sidebar to a podcast, and over to the other theme.</p>
+      </div>
+      <ol class="tour-scenes">
+        <li><button type="button" data-scene="magazine" data-light="0.4" data-dark="0.4"><strong>The magazine</strong><span>Articles, podcasts and posts in one column.</span></button></li>
+        <li><button type="button" data-scene="reader" data-light="6.51" data-dark="6.38"><strong>Reader view</strong><span>The full text, extracted and readable.</span></button></li>
+        <li><button type="button" data-scene="sidebar" data-light="16.28" data-dark="16.59"><strong>Feeds and tags</strong><span>The drawer holds every feed, tag and saved search.</span></button></li>
+        <li><button type="button" data-scene="podcast" data-light="21.57" data-dark="21.84"><strong>Listening</strong><span>A player that stays with the reader.</span></button></li>
+        <li><button type="button" data-scene="theme" data-light="29.34" data-dark="29.57"><strong>Light and dark</strong><span>Each theme is one tap away.</span></button></li>
+      </ol>
     </div>
   </div>
 </section>
@@ -433,6 +485,32 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
   lightbox.addEventListener('click', (event) => {
     if (event.target === lightbox || event.target === lightbox.querySelector('figure')) close();
   });
+})();
+(() => {
+  const videos = [...document.querySelectorAll('#tour video')];
+  const scenes = [...document.querySelectorAll('.tour-scenes button')];
+  const shown = () => videos.find((video) => video.offsetParent !== null) ?? videos[0];
+  const theme = (video) => (video.classList.contains('dark-only') ? 'dark' : 'light');
+  const start = (scene, video) => Number(scene.dataset[theme(video)]);
+  let highlighted = null;
+  const highlight = (video) => {
+    const current = scenes.filter((scene) => start(scene, video) <= video.currentTime).pop() ?? scenes[0];
+    if (current === highlighted) return;
+    highlighted = current;
+    scenes.forEach((scene) => scene.setAttribute('aria-current', String(scene === current)));
+  };
+  videos.forEach((video) => video.addEventListener('timeupdate', () => { if (video === shown()) highlight(video); }));
+  scenes.forEach((scene) => scene.addEventListener('click', () => {
+    const video = shown();
+    video.currentTime = start(scene, video);
+    highlight(video);
+    video.play();
+  }));
+  // A theme switch hides the playing video; it should not keep playing out of sight.
+  const pauseHidden = () => videos.forEach((video) => { if (video !== shown()) video.pause(); });
+  new MutationObserver(pauseHidden).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', pauseHidden);
+  highlight(shown());
 })();
 </script>
 </body>
