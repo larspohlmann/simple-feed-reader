@@ -11,6 +11,7 @@
   { "kind": "divider" },
   {
     "id": "bluesky",
+    "social": true,
     "kind": "link",
     "labelKey": "reader.share.blueskyApp",
     "icon": "bluesky.svg",
@@ -20,6 +21,7 @@
   },
   {
     "id": "threads",
+    "social": true,
     "kind": "link",
     "label": "Threads",
     "icon": "threads.svg",
@@ -27,6 +29,7 @@
   },
   {
     "id": "x",
+    "social": true,
     "kind": "link",
     "label": "X",
     "icon": "x.svg",
@@ -34,6 +37,7 @@
   },
   {
     "id": "facebook",
+    "social": true,
     "kind": "link",
     "label": "Facebook",
     "icon": "facebook.svg",
@@ -42,6 +46,7 @@
   },
   {
     "id": "linkedin",
+    "social": true,
     "kind": "link",
     "label": "LinkedIn",
     "icon": "linkedin.svg",
@@ -50,6 +55,7 @@
   },
   {
     "id": "reddit",
+    "social": true,
     "kind": "link",
     "label": "Reddit",
     "icon": "reddit.svg",

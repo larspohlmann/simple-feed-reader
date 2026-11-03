@@ -23,6 +23,8 @@ import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ArticleSource } from '../content/article-source.service';
+import { EntryShareRecorder } from '../share/entry-share-recorder';
+import { SHARE_RECORDER } from '../share/share-recorder';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { type TrailingPart } from '../reading/reading-scope.service';
 import { EpisodePanelsComponent } from '../episode-panels/episode-panels.component';
@@ -72,6 +74,7 @@ import { EntryArticlePage } from './entry-article-page';
   ],
   providers: [
     ArticleSource,
+    { provide: SHARE_RECORDER, useClass: EntryShareRecorder },
     EntryArticlePage,
     HandedAutoplayRegion,
     provideArticlePage({ source: EntryArticlePage, autoplayRegion: handedAutoplayRegion }),

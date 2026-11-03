@@ -12,6 +12,7 @@ import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
+import { NetworkShares } from '../share/network-shares.service';
 import { SentPost } from './composed-post';
 import { ComposerDialogComponent } from './composer-dialog.component';
 import { PostActions } from './post-actions.service';
@@ -23,6 +24,7 @@ describe('PostActions', () => {
   let composed: Observable<SentPost | undefined>;
   let comments: { insertReply: jest.Mock; removeReply: jest.Mock; countQuote: jest.Mock };
   let counts: { stepReplies: jest.Mock; stepQuotes: jest.Mock };
+  let shares: { reflect: jest.Mock };
   let api: { deleteReply: jest.Mock; deletePost: jest.Mock };
   let confirm: { ask: jest.Mock };
   let toast: { show: jest.Mock; showProblem: jest.Mock };
@@ -51,6 +53,7 @@ describe('PostActions', () => {
     composed = of(sent);
     comments = { insertReply: jest.fn(), removeReply: jest.fn(), countQuote: jest.fn() };
     counts = { stepReplies: jest.fn(), stepQuotes: jest.fn() };
+    shares = { reflect: jest.fn() };
     api = {
       deleteReply: jest.fn(() => of(undefined)),
       deletePost: jest.fn(() => of({ outcome: 'deleted' })),
@@ -67,6 +70,7 @@ describe('PostActions', () => {
       providers: [
         { provide: CommentsService, useValue: comments },
         { provide: SocialCountsService, useValue: counts },
+        { provide: NetworkShares, useValue: shares },
         { provide: SocialPostApi, useValue: api },
         { provide: ConfirmService, useValue: confirm },
         { provide: ToastService, useValue: toast },
@@ -116,6 +120,7 @@ describe('PostActions', () => {
     );
     expect(comments.insertReply).not.toHaveBeenCalled();
     expect(counts.stepQuotes).toHaveBeenCalledWith(7);
+    expect(shares.reflect).toHaveBeenCalledWith(7);
     expect(dialog.open).toHaveBeenCalledWith(
       PostSentDialogComponent,
       expect.objectContaining({ data: posted }),
@@ -127,7 +132,16 @@ describe('PostActions', () => {
 
     expect(counts.stepQuotes).not.toHaveBeenCalled();
     expect(comments.countQuote).toHaveBeenCalledWith(7, ADDRESS);
+    expect(shares.reflect).not.toHaveBeenCalled();
     expect(sentOverlays()).toHaveLength(1);
+  });
+
+  it('shares nothing when the quote composer closes unsent', () => {
+    composed = of(undefined);
+
+    actions.quote(7, 'mastodon', null);
+
+    expect(shares.reflect).not.toHaveBeenCalled();
   });
 
   it('shows a link post as posted, leaving the counts and the thread alone', () => {
@@ -148,11 +162,11 @@ describe('PostActions', () => {
     };
     composed = of(posted);
 
-    actions.postLink('bluesky', {
-      url: 'https://example.com/story',
-      title: 'A story',
-      quote: null,
-    });
+    const sentPosts: SentPost[] = [];
+    actions
+      .postLink('bluesky', { url: 'https://example.com/story', title: 'A story', quote: null })
+      .subscribe((sent) => sentPosts.push(sent));
+    expect(sentPosts).toEqual([posted]);
 
     expect(dialog.open).toHaveBeenCalledWith(
       ComposerDialogComponent,
@@ -183,7 +197,7 @@ describe('PostActions', () => {
       quote: 'A line',
     };
 
-    actions.postLink('mastodon', link);
+    actions.postLink('mastodon', link).subscribe();
 
     expect(dialog.open).toHaveBeenCalledWith(
       ComposerDialogComponent,

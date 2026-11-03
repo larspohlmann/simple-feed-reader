@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsLoader;
+use App\Service\Reading\EntryShareRecorder;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
@@ -40,6 +41,7 @@ final readonly class SocialResponses
         private SocialAccountRepository $socialAccounts,
         private SocialCountsCache $countsCache,
         private CommentsLoader $comments,
+        private EntryShareRecorder $shares,
     ) {
     }
 
@@ -83,6 +85,9 @@ final readonly class SocialResponses
     ): PublishedPostModel {
         $published = $this->writing->respond($kind, $this->allowedTarget($user, $target, $kind), $draft);
         $this->forgetWhatChanged($user, $target->entry);
+        if (ResponseKind::Quote === $kind && null === $target->address) {
+            $this->shares->record($user, $target->entry);
+        }
 
         return $published;
     }

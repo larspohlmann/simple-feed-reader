@@ -18,6 +18,7 @@ import { SHARING_WRITER } from '../preferences/sharing-writer';
 import { AiAvailabilityService } from '../ai-availability.service';
 import { CatalogStore } from '../../reader/feeds/catalog/catalog.store';
 import { ReaderLocationService } from './reader-location.service';
+import { SHARING_EVERYTHING } from '../preferences/sharing';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -67,7 +68,7 @@ describe('AuthService', () => {
       preferences: {
         scrapeFallbackEnabled: false,
         digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
-        sharing: { enabled: true, hiddenTargets: [] },
+        sharing: SHARING_EVERYTHING,
         ...preferences,
       },
       ai: { ready: false, model: null, capabilities: null },
@@ -103,7 +104,7 @@ describe('AuthService', () => {
           timezone: 'Europe/Berlin',
         },
         passkeyOfferAnswered: true,
-        sharing: { enabled: true, hiddenTargets: [] },
+        sharing: SHARING_EVERYTHING,
       },
       ai: { ready: true, model: 'gpt-4o', capabilities: null },
       mail: { enabled: true },
@@ -235,7 +236,7 @@ describe('AuthService', () => {
     ctrl.expectOne('https://api.test/api/me').flush(
       meFixture({
         passkeyOfferAnswered: true,
-        sharing: { enabled: false, hiddenTargets: ['reddit'] },
+        sharing: { enabled: false, hiddenTargets: ['reddit'], rememberShares: true },
       }),
     );
 

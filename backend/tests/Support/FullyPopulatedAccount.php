@@ -10,6 +10,7 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
@@ -52,6 +53,7 @@ final readonly class FullyPopulatedAccount
         $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
         $user->getPreferences()->setSharingEnabled(false);
         $user->getPreferences()->setHiddenShareTargets(['facebook', 'x']);
+        $user->getPreferences()->setRememberingShares(false);
 
         $parentTag = $this->parentTagFor($user);
         $this->entityManager->persist($parentTag);
@@ -69,6 +71,7 @@ final readonly class FullyPopulatedAccount
         $entry = $this->entryFor($feed);
         $this->entityManager->persist($entry);
         $this->entityManager->persist($this->stateFor($user, $entry));
+        $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-06T10:00:00Z')));
         $this->entityManager->persist(new LinkCard($entry, 0, new LinkCardContent(
             'https://shared.example/story',
             'The shared story',

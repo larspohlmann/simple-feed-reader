@@ -68,6 +68,7 @@ const sub = (id: number, unread: number, tags = [] as SubscriptionTagDto[]): Sub
 interface CountTotals {
   favorites?: number;
   kept?: number;
+  shared?: number;
   viewed?: number;
   unreadTotals?: Partial<UnreadTotalsDto>;
 }
@@ -85,6 +86,7 @@ const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
   subscriptions,
   favoritesCount: totals.favorites ?? 0,
   keptCount: totals.kept ?? 0,
+  sharedCount: totals.shared ?? 0,
   viewedCount: totals.viewed ?? 0,
   unreadTotals: unreadTotalsDto(totals.unreadTotals),
 });
@@ -355,11 +357,13 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 4,
       unreadTotals: unreadTotalsDto({ allItems: 4, tags: [{ id: 20, unreadCount: 4 }] }),
       keptCount: 2,
+      sharedCount: 3,
     });
     expect(store.totalUnread()).toBe(4);
     expect(store.tagTree()[0].unreadCount).toBe(4);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(2);
+    expect(store.sharedCount()).toBe(3);
     expect(store.loading()).toBe(false);
   });
 
@@ -373,6 +377,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 5)],
       favoritesCount: 0,
       keptCount: 0,
+      sharedCount: 0,
       unreadTotals: unreadTotalsDto({ allItems: 5 }),
     });
 
@@ -389,6 +394,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 5)],
       favoritesCount: 0,
       keptCount: 0,
+      sharedCount: 0,
       unreadTotals: unreadTotalsDto(),
     });
     tokens.clear();
@@ -404,6 +410,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
+      sharedCount: 0,
       viewedCount: 0,
     });
     expect(store.resolved()).toBe(true);
@@ -416,6 +423,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
+      sharedCount: 0,
       viewedCount: 0,
     });
     expect(store.resolved()).toBe(true);
@@ -429,6 +437,7 @@ describe('SubscriptionsStore', () => {
         favoritesCount: 2,
         unreadTotals: unreadTotalsDto(),
         keptCount: 1,
+        sharedCount: 2,
         viewedCount: 4,
       });
 
@@ -438,6 +447,7 @@ describe('SubscriptionsStore', () => {
       expect(store.subscriptions()).toEqual([]);
       expect(store.favoritesCount()).toBe(0);
       expect(store.keptCount()).toBe(0);
+      expect(store.sharedCount()).toBe(0);
       expect(store.viewedCount()).toBe(0);
       expect(store.resolved()).toBe(false);
     });
@@ -462,6 +472,7 @@ describe('SubscriptionsStore', () => {
         favoritesCount: 0,
         unreadTotals: unreadTotalsDto(),
         keptCount: 0,
+        sharedCount: 0,
         viewedCount: 0,
       });
 
@@ -475,6 +486,7 @@ describe('SubscriptionsStore', () => {
         favoritesCount: 0,
         unreadTotals: unreadTotalsDto(),
         keptCount: 0,
+        sharedCount: 0,
         viewedCount: 0,
       });
       expect(store.subscriptions().map((subscription) => subscription.id)).toEqual([2]);
@@ -491,6 +503,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
+      sharedCount: 0,
     });
     store.loadIfStale();
     ctrl.expectNone('https://api.test/api/subscriptions');
@@ -506,6 +519,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
+      sharedCount: 0,
     });
 
     jest.useRealTimers();
@@ -517,6 +531,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 3)],
       favoritesCount: 1,
       keptCount: 0,
+      sharedCount: 0,
       unreadTotals: unreadTotalsDto(),
     });
     store.bumpFavorites(1);
@@ -527,6 +542,21 @@ describe('SubscriptionsStore', () => {
     expect(store.keptCount()).toBe(1);
   });
 
+  it('bumps the shared total, clamped at zero', () => {
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3)],
+      favoritesCount: 0,
+      keptCount: 0,
+      sharedCount: 0,
+      unreadTotals: unreadTotalsDto(),
+    });
+    store.bumpShared(-1);
+    expect(store.sharedCount()).toBe(0);
+    store.bumpShared(1);
+    expect(store.sharedCount()).toBe(1);
+  });
+
   it('optimistically decrements unread', () => {
     store.load();
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
@@ -534,6 +564,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
+      sharedCount: 0,
     });
     store.markArticleRead(anEntry({ subscriptionId: 1 }));
     expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
@@ -596,6 +627,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
+      sharedCount: 0,
     });
     store.patchLocal(1, { includeInAllItems: false });
     expect(
@@ -803,6 +835,7 @@ describe('SubscriptionsStore quiet reload', () => {
       counts([sub(1, 7)], {
         favorites: 4,
         kept: 5,
+        shared: 4,
         viewed: 6,
         unreadTotals: { allItems: 7 },
       }),
@@ -810,6 +843,7 @@ describe('SubscriptionsStore quiet reload', () => {
     expect(store.totalUnread()).toBe(7);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(5);
+    expect(store.sharedCount()).toBe(4);
     expect(store.viewedCount()).toBe(6);
     expect(store.loading()).toBe(false);
   });
@@ -965,6 +999,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     favoritesCount: 0,
     unreadTotals: unreadTotalsDto({ allItems: unread }),
     keptCount: 0,
+    sharedCount: 0,
     viewedCount: 0,
   });
 

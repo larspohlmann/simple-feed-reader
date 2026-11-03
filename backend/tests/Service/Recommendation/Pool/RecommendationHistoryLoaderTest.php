@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Pool;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationHistoryCaps;
@@ -80,6 +81,72 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         self::assertSame(['B'], array_map(static fn ($line) => $line->title, $history->kept));
         self::assertSame(['C'], array_map(static fn ($line) => $line->title, $history->viewed));
         self::assertSame($entryE->requireId(), $history->favorites[0]->entryId);
+    }
+
+    public function testASharedEntryAppearsInSharedNewestSharedFirst(): void
+    {
+        $older = $this->sharedState('Older', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z');
+        $newer = $this->sharedState('Newer', '2026-07-09T00:00:00Z', '2026-07-13T00:00:00Z');
+        $this->entityManager->persist($older);
+        $this->entityManager->persist($newer);
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame(['Newer', 'Older'], array_map(static fn ($line) => $line->title, $history->shared));
+    }
+
+    public function testAFavoriteThatIsAlsoSharedAppearsInFavoritesOnly(): void
+    {
+        $state = $this->sharedState('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z');
+        $state->markFavorite();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame(['Both'], array_map(static fn ($line) => $line->title, $history->favorites));
+        self::assertSame([], $history->shared);
+    }
+
+    public function testASharedAndKeptEntryAppearsInSharedNotKept(): void
+    {
+        $state = $this->sharedState('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z');
+        $state->markKept();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame(['Both'], array_map(static fn ($line) => $line->title, $history->shared));
+        self::assertSame([], $history->kept);
+    }
+
+    public function testASharedAndViewedEntryAppearsInSharedNotViewed(): void
+    {
+        $state = $this->sharedState('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z');
+        $state->markViewed(new \DateTimeImmutable('2026-07-12T01:00:00Z'));
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame(['Both'], array_map(static fn ($line) => $line->title, $history->shared));
+        self::assertSame([], $history->viewed);
+    }
+
+    public function testTheSharedSectionReadsItsOwnCap(): void
+    {
+        foreach (['A', 'B', 'C'] as $index => $guid) {
+            $this->entityManager->persist(
+                $this->sharedState($guid, '2026-07-10T00:00:00Z', '2026-07-1' . $index . 'T00:00:00Z'),
+            );
+        }
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings(sharedCap: 2));
+
+        self::assertSame(['C', 'B'], array_map(static fn ($line) => $line->title, $history->shared));
     }
 
     public function testCapsApplyNewestFirst(): void
@@ -240,14 +307,24 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         return $entry;
     }
 
+    /** The share is persisted here; the returned state row is the caller's to flag and persist. */
+    private function sharedState(string $guid, string $published, string $sharedAt): EntryState
+    {
+        $entry = $this->entry($guid, $published);
+        $this->entityManager->persist(new EntryShare($this->user, $entry, new \DateTimeImmutable($sharedAt)));
+
+        return new EntryState($this->user, $entry);
+    }
+
     private function settings(
         int $favoritesCap = 40,
         int $keptCap = 40,
         int $viewedCap = 80,
+        int $sharedCap = 40,
     ): EffectiveRecommendationSettingsModel {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
-            historyCaps: new RecommendationHistoryCaps($favoritesCap, $keptCap, $viewedCap),
+            historyCaps: new RecommendationHistoryCaps($favoritesCap, $keptCap, $viewedCap, $sharedCap),
             poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: 32768,

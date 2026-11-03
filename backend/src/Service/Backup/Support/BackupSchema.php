@@ -20,6 +20,7 @@ final class BackupSchema
     public const string KIND_SUBSCRIPTION = 'subscription';
     public const string KIND_ENTRY = 'entry';
     public const string KIND_ENTRY_STATE = 'entryState';
+    public const string KIND_ENTRY_SHARE = 'entryShare';
     public const string KIND_FOOTER = 'footer';
 
     private function __construct()

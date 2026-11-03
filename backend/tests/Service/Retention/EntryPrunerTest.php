@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Retention;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -380,6 +381,26 @@ final class EntryPrunerTest extends DbTestCase
         );
         sort($remainingGuids);
         self::assertSame(['old-favorite', 'old-kept'], $remainingGuids);
+    }
+
+    public function testASharedEntryIsProtectedFromPruning(): void
+    {
+        $user = new User('sharer@example.com', $this->clock->now());
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
+        $old = $this->daysAgo(120);
+        $this->seedEntry($feed, 'old-plain', $old);
+        $shared = $this->seedEntry($feed, 'old-shared', $old);
+        $this->entityManager->persist(new EntryShare($user, $shared, new \DateTimeImmutable('2026-10-02T10:00:00Z')));
+        $this->entityManager->flush();
+
+        $pruned = $this->pruner->prune();
+
+        self::assertSame(1, $pruned);
+        $guids = array_map(static fn (Entry $entry): string => $entry->getGuid(), $this->findAllEntries($feed));
+        self::assertContains('old-shared', $guids);
+        self::assertNotContains('old-plain', $guids);
     }
 
     public function testProtectionAppliesAcrossUsers(): void

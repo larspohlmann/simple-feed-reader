@@ -37,6 +37,7 @@ final class MeJson
                 'sharing' => [
                     'enabled' => $preferences->isSharingEnabled(),
                     'hiddenTargets' => $preferences->getHiddenShareTargets(),
+                    'rememberShares' => $preferences->isRememberingShares(),
                 ],
                 'digest' => [
                     'enabled' => $preferences->isDigestEnabled(),

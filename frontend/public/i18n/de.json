@@ -26,6 +26,8 @@
     "sharing": "Teilen",
     "sharingEnabled": "Artikel teilen",
     "sharingEnabledHint": "Der Teilen-Knopf und das Teilen einer Textauswahl. Ausgeschaltet, oder mit allen Zielen unten aus, verschwinden beide.",
+    "sharingRemember": "Geteilte Artikel merken",
+    "sharingRememberHint": "Listet, was du in einem sozialen Netzwerk teilst, unter Geteilt und lässt es in Für dich einfließen.",
     "sharingSaveFailed": "Deine Teilen-Einstellungen konnten nicht in deinem Konto gespeichert werden.",
     "magazineStyleOption": {
       "boxed": "Mit Rahmen",
@@ -1159,6 +1161,7 @@
     "allItems": "Alle Einträge",
     "favorites": "Favoriten",
     "kept": "Gemerkt",
+    "shared": "Geteilt",
     "viewed": "Zuletzt gelesen",
     "forYou": "Für dich",
     "narrationPlayer": "Anhören — KI-generierte Vorlesung",
@@ -1363,6 +1366,7 @@
       "mastodon": "Die Sichtbarkeit dieses Beitrags erlaubt keine Boosts"
     },
     "keep": "Merken",
+    "unshare": "Aus Geteilt entfernen",
     "toggleRead": "Gelesen umschalten",
     "actionHint": {
       "favoriteAdd": "Zu Favoriten hinzufügen",
@@ -1377,6 +1381,7 @@
       },
       "keepAdd": "Merken — wird beim Aufräumen alter Einträge nie gelöscht",
       "keepRemove": "Nicht mehr merken — das Aufräumen alter Einträge darf ihn wieder löschen",
+      "unshare": "Geteilt — aus der Liste Geteilt entfernen",
       "readAdd": "Als gelesen markieren — landet in „Zuletzt gelesen“",
       "readRemove": "Aus „Zuletzt gelesen“ entfernen"
     },

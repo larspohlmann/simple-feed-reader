@@ -7,11 +7,14 @@ namespace App\Tests\Service\Social;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
+use App\Service\Reading\EntryShareRecorder;
+use App\Service\Reading\EntryShares;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -25,10 +28,12 @@ use App\Service\Social\SocialReposts;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeCommentsSource;
+use App\Tests\Support\FailingEntryShareStore;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -75,6 +80,13 @@ final class SocialRepostsTest extends DbTestCase
         $this->reposts()->repost($this->owner, $this->post());
 
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testARepostTheNetworkAcceptedStillSucceedsWhenRecordingTheShareFails(): void
+    {
+        $this->reposts(self::failingShareRecorder())->repost($this->owner, $this->post());
+
+        self::assertSame(['resolve ' . self::STATUS_URL, 'repost 110'], $this->mastodon->calls);
     }
 
     public function testAnUnrepostUndoesTheRepostTheNetworkReports(): void
@@ -195,6 +207,7 @@ final class SocialRepostsTest extends DbTestCase
         $feed = new Feed(self::FEED_URL);
         $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-11-01 10:00:00');
+        $this->entityManager->persist(new Subscription($this->owner, $feed, $now));
         $entry = new Entry($feed, 'tag:mastodon.social,2026:110', self::STATUS_URL, 'Post', $now, $now);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
@@ -207,7 +220,7 @@ final class SocialRepostsTest extends DbTestCase
         return new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL);
     }
 
-    private function reposts(): SocialReposts
+    private function reposts(?EntryShareRecorder $shareRecorder = null): SocialReposts
     {
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
@@ -224,6 +237,23 @@ final class SocialRepostsTest extends DbTestCase
             new PostReposting($guard, $network),
             $this->countsCache,
             $this->comments,
+            $shareRecorder ?? $this->shareRecorder(),
         );
+    }
+
+    private static function failingShareRecorder(): EntryShareRecorder
+    {
+        return new EntryShareRecorder(
+            new EntryShares(new FailingEntryShareStore(), new MockClock('2026-11-01 12:00:00')),
+            new NullLogger(),
+        );
+    }
+
+    private function shareRecorder(): EntryShareRecorder
+    {
+        $recorder = self::getContainer()->get(EntryShareRecorder::class);
+        self::assertInstanceOf(EntryShareRecorder::class, $recorder);
+
+        return $recorder;
     }
 }

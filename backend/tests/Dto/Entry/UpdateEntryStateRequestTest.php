@@ -15,7 +15,7 @@ final class UpdateEntryStateRequestTest extends TestCase
             ->toChange();
 
         self::assertSame(
-            ['isHidden' => true, 'isFavorite' => false, 'isKept' => null, 'isViewed' => false],
+            ['isHidden' => true, 'isFavorite' => false, 'isKept' => null, 'isViewed' => false, 'isShared' => null],
             get_object_vars($change),
         );
     }
@@ -26,8 +26,15 @@ final class UpdateEntryStateRequestTest extends TestCase
             ->toChange();
 
         self::assertSame(
-            ['isHidden' => null, 'isFavorite' => true, 'isKept' => false, 'isViewed' => null],
+            ['isHidden' => null, 'isFavorite' => true, 'isKept' => false, 'isViewed' => null, 'isShared' => null],
             get_object_vars($change),
         );
+    }
+
+    public function testToChangeCarriesAnIsSharedFlag(): void
+    {
+        $change = (new UpdateEntryStateRequest(isShared: true))->toChange();
+
+        self::assertTrue($change->isShared);
     }
 }

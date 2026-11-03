@@ -29,6 +29,7 @@ use App\Repository\SocialLikeRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -65,6 +66,18 @@ final class SavedPostRepositoryTest extends DbTestCase
         self::assertSame([$favourite->requireId(), $kept->requireId()], array_keys($flagged));
         self::assertSame($favourite->getUrlHash(), $flagged[$favourite->requireId()]);
         self::assertNull($flagged[$kept->requireId()]);
+    }
+
+    public function testASharedEntryIsFlaggedToo(): void
+    {
+        $feed = $this->subscribedFeed('https://flagged-shared.example/feed.xml');
+        $shared = $this->entry($feed, 'shared', 'https://flagged-shared.example/1');
+        EntryShareFixtures::share($this->entityManager, $this->user, $shared, new \DateTimeImmutable(self::AT));
+        $this->entityManager->flush();
+
+        $flagged = $this->repository()->flaggedIn($this->user->requireId(), $feed->requireId());
+
+        self::assertSame([$shared->requireId()], array_keys($flagged));
     }
 
     public function testAKeptTwinIsTheLowestIdCopyInAFeedTheUserStaysWithAndNeverInALeavingFeed(): void

@@ -106,7 +106,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
             false,
             false,
             false,
-            new EntryListRowViewState(false, null),
+            new EntryListRowViewState(false, null, null),
             null,
         );
 

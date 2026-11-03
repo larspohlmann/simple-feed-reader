@@ -18,6 +18,7 @@ export interface Selection {
     | 'subscription'
     | 'favorites'
     | 'kept'
+    | 'shared'
     | 'viewed'
     | 'for-you'
     | 'saved-searches'
@@ -299,7 +300,7 @@ export function selectionFromParams(paramMap: ParamMap): {
   }
 
   let selection: Selection;
-  if (view === 'favorites' || view === 'kept' || view === 'viewed') {
+  if (view === 'favorites' || view === 'kept' || view === 'shared' || view === 'viewed') {
     // Each of these IS a filter on entry state, so a second one would be a
     // contradiction: "kept, but only unread" is not a list this reader offers.
     selection = { kind: view, id: null, unread: false };
@@ -360,6 +361,7 @@ type SelectionKind = Selection['kind'];
 const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = {
   favorites: () => ({ view: 'favorites' }),
   kept: () => ({ view: 'kept' }),
+  shared: () => ({ view: 'shared' }),
   viewed: () => ({ view: 'viewed' }),
   // The one list whose unread filter is not a view of its own: the ranked
   // feed IS the view, so the filter travels beside it (#710).

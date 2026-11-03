@@ -10,6 +10,7 @@ use App\Repository\SubscribedEntryCountRepository;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Dto\EntryShareLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
@@ -57,7 +58,7 @@ final readonly class EntryPartInspector
                 continue;
             }
 
-            if ($line instanceof EntryLine || $line instanceof EntryStateLine) {
+            if ($line instanceof EntryLine || $line instanceof EntryStateLine || $line instanceof EntryShareLine) {
                 $feedUrls[$line->feedUrl] = true;
             }
 

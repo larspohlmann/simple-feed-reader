@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\User;
 use App\Http\EntryStateJson;
+use App\Service\Reading\Model\UpdatedEntryStateModel;
 use PHPUnit\Framework\TestCase;
 
 final class EntryStateJsonTest extends TestCase
@@ -24,7 +25,7 @@ final class EntryStateJsonTest extends TestCase
         $state->markViewed($when);
         $entryId = 483;
 
-        $json = EntryStateJson::one($state, $entryId);
+        $json = EntryStateJson::one(new UpdatedEntryStateModel($state, $when), $entryId);
 
         self::assertSame([
             'entryId' => $entryId,
@@ -34,6 +35,8 @@ final class EntryStateJsonTest extends TestCase
             'hiddenAt' => $when->format(\DateTimeInterface::ATOM),
             'isViewed' => true,
             'viewedAt' => $when->format(\DateTimeInterface::ATOM),
+            'isShared' => true,
+            'sharedAt' => $when->format(\DateTimeInterface::ATOM),
         ], $json);
     }
 }

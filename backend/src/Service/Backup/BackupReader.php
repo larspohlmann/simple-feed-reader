@@ -7,6 +7,7 @@ namespace App\Service\Backup;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Dto\EntryShareLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\FooterLine;
@@ -37,6 +38,7 @@ final readonly class BackupReader
         BackupSchema::KIND_SUBSCRIPTION,
         BackupSchema::KIND_ENTRY,
         BackupSchema::KIND_ENTRY_STATE,
+        BackupSchema::KIND_ENTRY_SHARE,
     ];
 
     public function __construct(
@@ -209,6 +211,7 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
+            BackupSchema::KIND_ENTRY_SHARE => EntryShareLine::fromLine($decoded),
             default => throw new \LogicException(sprintf('BackupLineOrderModel admitted unknown kind "%s".', $kind)),
         };
     }

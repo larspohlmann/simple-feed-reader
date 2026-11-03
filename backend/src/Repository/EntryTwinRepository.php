@@ -36,9 +36,11 @@ final class EntryTwinRepository extends ServiceEntityRepository
                 '(EXISTS (SELECT IDENTITY(userState.entry) FROM %s userState'
                 . ' WHERE userState.entry = sourceEntry AND userState.user = :user)'
                 . ' OR EXISTS (SELECT userLike.id FROM %s userLike'
-                . ' WHERE userLike.entry = sourceEntry AND userLike.user = :user))',
+                . ' WHERE userLike.entry = sourceEntry AND userLike.user = :user)'
+                . ' OR %s)',
                 EntryState::class,
                 SocialLike::class,
+                EntryShareDql::existsFor('sourceEntry'),
             ))
             ->setParameter('targetFeed', $targetFeedId)
             ->setParameter('sourceFeed', $sourceFeedId)

@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
 import { DIGEST_WRITER, DigestConfig, DigestTestMailResult, DigestWriter } from './digest-writer';
 import { DigestService } from './digest.service';
+import { SHARING_EVERYTHING } from './sharing';
 
 class FakeWriter implements DigestWriter {
   written: DigestConfig[] = [];
@@ -34,7 +35,7 @@ const user = (digest: DigestConfig, timezone = 'UTC'): CurrentUser => ({
     digest: { ...digest, timezone },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
-    sharing: { enabled: true, hiddenTargets: [] },
+    sharing: SHARING_EVERYTHING,
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },

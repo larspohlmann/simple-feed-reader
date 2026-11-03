@@ -96,6 +96,13 @@ describe('selectionFromParams', () => {
     });
     expect(selectionFromParams(pm({ view: 'kept' })).selection.kind).toBe('kept');
   });
+  it('reads view=shared into the shared selection', () => {
+    expect(selectionFromParams(pm({ view: 'shared' })).selection).toEqual({
+      kind: 'shared',
+      id: null,
+      unread: false,
+    });
+  });
   it('reads for-you', () => {
     expect(selectionFromParams(pm({ view: 'for-you' })).selection).toEqual({
       kind: 'for-you',
@@ -328,6 +335,9 @@ describe('queryFromSelection', () => {
       view: 'favorites',
     });
     expect(queryFromSelection({ kind: 'kept', id: null, unread: false })).toEqual({ view: 'kept' });
+    expect(queryFromSelection({ kind: 'shared', id: null, unread: false })).toEqual({
+      view: 'shared',
+    });
     expect(queryFromSelection({ kind: 'for-you', id: null, unread: false })).toEqual({
       view: 'for-you',
     });

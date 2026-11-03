@@ -94,6 +94,19 @@
             <span class="count">{{ keptCount() }}</span>
           }
         </a>
+        @if (sharedCount() > 0) {
+          <a
+            class="nav"
+            [class.active]="selection().kind === 'shared'"
+            [routerLink]="['/']"
+            [queryParams]="selectionQueryParams({ view: 'shared' })"
+            queryParamsHandling="merge"
+          >
+            <app-icon name="share" size="md" />
+            <span class="name">{{ 'reader.shared' | transloco }}</span>
+            <span class="count">{{ sharedCount() }}</span>
+          </a>
+        }
         <a
           class="nav"
           [class.active]="selection().kind === 'viewed'"

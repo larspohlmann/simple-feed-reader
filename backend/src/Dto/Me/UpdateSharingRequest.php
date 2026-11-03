@@ -21,11 +21,12 @@ final readonly class UpdateSharingRequest
             new Assert\Regex(Preferences::TARGET_ID_PATTERN),
         ])]
         public array $hiddenTargets,
+        public bool $rememberShares,
     ) {
     }
 
     public function toSettings(): SharingSettingsModel
     {
-        return new SharingSettingsModel($this->enabled, $this->hiddenTargets);
+        return new SharingSettingsModel($this->enabled, $this->hiddenTargets, $this->rememberShares);
     }
 }

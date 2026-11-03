@@ -113,6 +113,9 @@ final readonly class EntryScopePredicates
             case EntryView::Kept:
                 $this->stateFlagIsSet($qb, $aliases, 'isKept');
                 break;
+            case EntryView::Shared:
+                $qb->andWhere($aliases->share . '.sharedAt IS NOT NULL');
+                break;
             case EntryView::Viewed:
                 $this->stateFlagIsSet($qb, $aliases, 'isViewed');
                 break;

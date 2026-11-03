@@ -13,6 +13,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\EntryTwinRepository;
 use App\Repository\RefusedProfileSubscriptionRepository;
@@ -536,6 +537,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
             self::service(EntryTwinRepository::class),
             new SavedStateMover(
                 self::service(EntryStateRepository::class),
+                self::service(EntryShareRepository::class),
                 self::service(SocialLikeRepository::class),
                 $this->entityManager,
             ),

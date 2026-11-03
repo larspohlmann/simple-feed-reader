@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { EntriesStore, StateSaveOutcome, localStatePatch } from '../state/entries.store';
+import { countFirstShare } from '../state/first-share';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { Selection } from '../query/query';
@@ -72,6 +73,23 @@ export class EntryStateActions implements EntryActionHandler {
       entry,
       { isKept: !entry.isKept },
       { onFailed: () => this.subscriptions.bumpKept(-delta) },
+    );
+  }
+
+  share(entry: EntryDto): void {
+    const counted = countFirstShare(this.subscriptions, entry);
+    const undoCount = () => {
+      if (counted) this.subscriptions.bumpShared(-1);
+    };
+    this.entries.setStateQuietly(entry.id, { isShared: true }, { onFailed: undoCount });
+  }
+
+  unshare(entry: EntryDto): void {
+    this.subscriptions.bumpShared(-1);
+    this.patchInList(
+      entry,
+      { isShared: false },
+      { onFailed: () => this.subscriptions.bumpShared(1) },
     );
   }
 
@@ -184,12 +202,16 @@ export class EntryStateActions implements EntryActionHandler {
 }
 
 /** The flag a saved view filters on; an entry whose patch clears it leaves the view. */
-function savedViewMembership(kind: Selection['kind']): 'isFavorite' | 'isKept' | 'isViewed' | null {
+function savedViewMembership(
+  kind: Selection['kind'],
+): 'isFavorite' | 'isKept' | 'isShared' | 'isViewed' | null {
   switch (kind) {
     case 'favorites':
       return 'isFavorite';
     case 'kept':
       return 'isKept';
+    case 'shared':
+      return 'isShared';
     case 'viewed':
       return 'isViewed';
     default:

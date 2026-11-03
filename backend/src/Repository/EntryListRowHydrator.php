@@ -29,6 +29,7 @@ final readonly class EntryListRowHydrator
             viewState: new EntryListRowViewState(
                 isViewed: (bool) ($row['esViewed'] ?? false),
                 viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable ? $row['esViewedAt'] : null,
+                sharedAt: $row['eshSharedAt'] instanceof \DateTimeImmutable ? $row['eshSharedAt'] : null,
             ),
             markedReadUntil: $row['markedReadUntil'] instanceof \DateTimeImmutable
                 ? $row['markedReadUntil']

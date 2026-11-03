@@ -11,6 +11,7 @@ use App\Entity\CatalogFeed;
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
@@ -100,7 +101,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
         BackupSchema::KIND_FOOTER => [
             'counts', 'counts.tag', 'counts.savedSearch', 'counts.feed', 'counts.subscription',
-            'counts.entry', 'counts.entryState',
+            'counts.entry', 'counts.entryState', 'counts.entryShare',
         ],
     ];
 
@@ -299,6 +300,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',
         ],
         EntryState::class => [
+            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+        ],
+        EntryShare::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
     ];

@@ -47,7 +47,10 @@ final class SharingControllerTest extends ApiTestCase
         $client->request('GET', '/api/me');
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['enabled' => true, 'hiddenTargets' => []], $this->sharing($client));
+        self::assertSame(
+            ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true],
+            $this->sharing($client),
+        );
     }
 
     public function testChangingSharingPersistsIt(): void
@@ -55,10 +58,18 @@ final class SharingControllerTest extends ApiTestCase
         $client = static::createClient();
         $this->signIn($client, 'quiet-sharer@example.test');
 
-        $this->patchSharing($client, ['enabled' => false, 'hiddenTargets' => ['facebook', 'x']]);
+        $this->patchSharing($client, [
+            'enabled' => false,
+            'hiddenTargets' => ['facebook', 'x'],
+            'rememberShares' => true,
+        ]);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['enabled' => false, 'hiddenTargets' => ['facebook', 'x']], $this->sharing($client));
+        self::assertSame([
+            'enabled' => false,
+            'hiddenTargets' => ['facebook', 'x'],
+            'rememberShares' => true,
+        ], $this->sharing($client));
         $stored = $this->storedPreferences('quiet-sharer@example.test');
         self::assertFalse($stored->isSharingEnabled());
         self::assertSame(['facebook', 'x'], $stored->getHiddenShareTargets());
@@ -69,7 +80,11 @@ final class SharingControllerTest extends ApiTestCase
         $client = static::createClient();
         $this->signIn($client, 'twice-hidden@example.test');
 
-        $this->patchSharing($client, ['enabled' => true, 'hiddenTargets' => ['x', 'reddit', 'x']]);
+        $this->patchSharing($client, [
+            'enabled' => true,
+            'hiddenTargets' => ['x', 'reddit', 'x'],
+            'rememberShares' => true,
+        ]);
 
         self::assertResponseIsSuccessful();
         $stored = $this->storedPreferences('twice-hidden@example.test');
@@ -81,7 +96,11 @@ final class SharingControllerTest extends ApiTestCase
         $client = static::createClient();
         $this->signIn($client, 'future-target@example.test');
 
-        $this->patchSharing($client, ['enabled' => true, 'hiddenTargets' => ['mastodon-app']]);
+        $this->patchSharing($client, [
+                'enabled' => true,
+                'hiddenTargets' => ['mastodon-app'],
+                'rememberShares' => true,
+        ]);
 
         self::assertResponseIsSuccessful();
         $stored = $this->storedPreferences('future-target@example.test');
@@ -92,15 +111,21 @@ final class SharingControllerTest extends ApiTestCase
     public static function invalidBodies(): iterable
     {
         yield 'empty body' => [[]];
-        yield 'no list' => [['enabled' => false]];
-        yield 'no flag' => [['hiddenTargets' => []]];
-        yield 'upper case id' => [['enabled' => true, 'hiddenTargets' => ['Facebook']]];
-        yield 'id with a space' => [['enabled' => true, 'hiddenTargets' => ['face book']]];
-        yield 'empty id' => [['enabled' => true, 'hiddenTargets' => ['']]];
-        yield 'id over 32 characters' => [['enabled' => true, 'hiddenTargets' => [str_repeat('a', 33)]]];
-        yield 'non-string id' => [['enabled' => true, 'hiddenTargets' => [['x']]]];
+        yield 'no list' => [['enabled' => false, 'rememberShares' => true]];
+        yield 'no flag' => [['hiddenTargets' => [], 'rememberShares' => true]];
+        yield 'no remember flag' => [['enabled' => true, 'hiddenTargets' => []]];
+        yield 'upper case id' => [['enabled' => true, 'hiddenTargets' => ['Facebook'], 'rememberShares' => true]];
+        yield 'id with a space' => [['enabled' => true, 'hiddenTargets' => ['face book'], 'rememberShares' => true]];
+        yield 'empty id' => [['enabled' => true, 'hiddenTargets' => [''], 'rememberShares' => true]];
+        yield 'id over 32 characters' => [[
+            'enabled' => true,
+            'hiddenTargets' => [str_repeat('a', 33)],
+            'rememberShares' => true,
+        ]];
+        yield 'non-string id' => [['enabled' => true, 'hiddenTargets' => [['x']], 'rememberShares' => true]];
         yield 'too many ids' => [[
             'enabled' => true,
+            'rememberShares' => true,
             'hiddenTargets' => array_map(
                 static fn (int $index): string => 'target-' . $index,
                 range(1, Preferences::MAX_HIDDEN_SHARE_TARGETS + 1),
@@ -132,17 +157,32 @@ final class SharingControllerTest extends ApiTestCase
             range(1, Preferences::MAX_HIDDEN_SHARE_TARGETS),
         );
 
-        $this->patchSharing($client, ['enabled' => true, 'hiddenTargets' => $ids]);
+        $this->patchSharing($client, ['enabled' => true, 'hiddenTargets' => $ids, 'rememberShares' => true]);
 
         self::assertResponseIsSuccessful();
         self::assertSame($ids, $this->storedPreferences('many-hidden@example.test')->getHiddenShareTargets());
+    }
+
+    public function testRememberSharesIsStoredAndEchoed(): void
+    {
+        $client = static::createClient();
+        $this->signIn($client, 'forgetful-sharer@example.test');
+
+        $this->patchSharing($client, ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => false]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => false],
+            $this->sharing($client),
+        );
+        self::assertFalse($this->storedPreferences('forgetful-sharer@example.test')->isRememberingShares());
     }
 
     public function testASignedOutClientIsRejected(): void
     {
         $client = static::createClient();
 
-        $this->patchSharing($client, ['enabled' => false, 'hiddenTargets' => []]);
+        $this->patchSharing($client, ['enabled' => false, 'hiddenTargets' => [], 'rememberShares' => true]);
 
         self::assertResponseStatusCodeSame(401);
     }

@@ -9,6 +9,7 @@ import { EntrySocialDto } from './entry-social';
 import { ChapterDto, TranscriptDto } from './episode-detail';
 
 export type { ChapterDto, TranscriptDto, TranscriptParagraphDto } from './episode-detail';
+export type { HeroImageDto, ReaderArticle, ReaderContent, ReaderFailure } from './reader-content';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
@@ -131,12 +132,13 @@ export interface SubscriptionDto {
 }
 
 /** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
- *  kept and viewed totals shown as badges on the Favorites/Kept/Recently-read
+ *  kept, shared and viewed totals shown as badges on the Favorites/Kept/Shared/Recently-read
  *  nav items. */
 export interface SubscriptionsResponse {
   subscriptions: SubscriptionDto[];
   favoritesCount: number;
   keptCount: number;
+  sharedCount: number;
   viewedCount: number;
   socialAccounts: SocialAccountRefDto[];
   unreadTotals: UnreadTotalsDto;
@@ -149,6 +151,7 @@ export interface SubscriptionCountsResponse {
   subscriptions: { id: number; unreadCount: number; entryCount: number }[];
   favoritesCount: number;
   keptCount: number;
+  sharedCount: number;
   viewedCount: number;
   unreadTotals: UnreadTotalsDto;
 }
@@ -222,6 +225,7 @@ export interface EntryDto {
   isHidden: boolean;
   isFavorite: boolean;
   isKept: boolean;
+  isShared: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
   /** The nocookie player of the YouTube Short the entry links (`…/embed/<id>#shorts`); null for any other entry. */
@@ -288,6 +292,8 @@ export interface EntryStateDto {
   isHidden: boolean;
   isFavorite: boolean;
   isKept: boolean;
+  isShared: boolean;
+  sharedAt: string | null;
   hiddenAt: string | null;
   isViewed: boolean;
   viewedAt: string | null;
@@ -361,7 +367,7 @@ export type SubscribeResult =
   | { candidates: FeedCandidate[]; scrapeFailureReason?: ScrapeFailureReason };
 
 export type EntryView =
-  'all' | 'unread' | 'favorites' | 'kept' | 'viewed' | 'for-you' | 'saved-searches';
+  'all' | 'unread' | 'favorites' | 'kept' | 'shared' | 'viewed' | 'for-you' | 'saved-searches';
 
 export type ListOrder = 'newest' | 'oldest';
 
@@ -395,6 +401,7 @@ export interface EntryStatePatch {
   isHidden?: boolean;
   isFavorite?: boolean;
   isKept?: boolean;
+  isShared?: boolean;
   isViewed?: boolean;
 }
 
@@ -424,47 +431,6 @@ export interface MoveFeedToTag {
   toTagId: number | null;
   position: number | null;
 }
-
-/** A picture the backend chose to lead the article, with the dimensions its
- *  source declared. Null width/height mean unknown, so no space is reserved. */
-export interface HeroImageDto {
-  url: string;
-  width: number | null;
-  height: number | null;
-}
-
-/** A successfully extracted reader-mode article (GET /api/entries/{id}/reader). */
-export interface ReaderArticle {
-  status: 'ok';
-  url: string;
-  title: string;
-  byline: string | null;
-  siteName: string | null;
-  contentHtml: string;
-  excerpt: string | null;
-  /** True when contentHtml is the free preview of a paywalled article (#785). */
-  paywalled: boolean;
-  /** The picture to lead the original-feed view, resolved against the feed's own
-   *  body server-side. The reader view needs no field of its own: its lead
-   *  picture is restored into contentHtml during extraction (#681). */
-  originalHero: HeroImageDto | null;
-  extractedAt: string;
-}
-
-type ExtractionFailureReason = 'no_url' | 'fetch' | 'unextractable' | 'empty' | 'mismatch';
-
-/** Extraction could not produce an article; the client falls back to feed content. */
-export interface ReaderFailure {
-  status: 'failed';
-  url: string | null;
-  reason: ExtractionFailureReason | 'player_page' | 'feed_body_is_post';
-  /** The underlying cause in words when one exists — a fetch carries the HTTP
-   *  status or transport message; a reason with no such cause is null. */
-  detail: string | null;
-  originalHero: HeroImageDto | null;
-}
-
-export type ReaderContent = ReaderArticle | ReaderFailure;
 
 /** Progress of a for-you recommendation run (POST/GET /api/recommendations/runs*). */
 export interface RecommendationRunReport {

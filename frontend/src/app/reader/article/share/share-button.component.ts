@@ -44,6 +44,7 @@ import {
 } from './share-content';
 import { ShareItem, ShareMenuMode, TargetItem, shareMenuItems } from './share-menu';
 import { ShareTargetLogoComponent } from './share-target-logo/share-target-logo.component';
+import { SHARE_RECORDER } from './share-recorder';
 import { SHARE_GLYPH, shareLogoUrl, shareUrl } from './share-targets';
 
 /** Where the trigger sits: in the article toolbar, as a disc in the article's corner, or among a selection's actions. */
@@ -95,6 +96,7 @@ export class ShareButtonComponent {
   private readonly selection = inject(ArticleSelection, { optional: true });
   private readonly networks = inject(PostNetworks).connected;
   private readonly sharing = inject(SharingService);
+  private readonly recorder = inject(SHARE_RECORDER, { optional: true });
 
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
@@ -140,11 +142,14 @@ export class ShareButtonComponent {
     if (target.kind === 'system') this.shareThroughSystem(content);
     if (target.kind === 'copy') this.copy(content);
     if (target.kind === 'link') this.visit(shareUrl(target.url, content));
+    if (target.social) this.recorder?.record();
   }
 
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
-    this.postActions.postLink(network, sharedLink(this.page(), this.quote()));
+    this.postActions
+      .postLink(network, sharedLink(this.page(), this.quote()))
+      .subscribe(() => this.recorder?.record());
   }
 
   /** Scrolling to the focus would park the first item under the sticky quote snippet. */

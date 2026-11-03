@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Entity\EntryState;
+use App\Service\Reading\Model\UpdatedEntryStateModel;
 
 final class EntryStateJson
 {
     /**
      * @return array{
      *   entryId: int, isHidden: bool, isFavorite: bool, isKept: bool,
-     *   hiddenAt: string|null, isViewed: bool, viewedAt: string|null
+     *   hiddenAt: string|null, isViewed: bool, viewedAt: string|null,
+     *   isShared: bool, sharedAt: string|null
      * }
      */
-    public static function one(EntryState $state, int $entryId): array
+    public static function one(UpdatedEntryStateModel $updated, int $entryId): array
     {
+        $state = $updated->state;
+
         return [
             'entryId' => $entryId,
             'isHidden' => $state->isHidden(),
@@ -24,6 +27,8 @@ final class EntryStateJson
             'hiddenAt' => $state->getHiddenAt()?->format(\DateTimeInterface::ATOM),
             'isViewed' => $state->isViewed(),
             'viewedAt' => $state->getViewedAt()?->format(\DateTimeInterface::ATOM),
+            'isShared' => null !== $updated->sharedAt,
+            'sharedAt' => $updated->sharedAt?->format(\DateTimeInterface::ATOM),
         ];
     }
 }

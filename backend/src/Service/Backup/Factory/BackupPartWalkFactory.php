@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Factory;
 
 use App\Repository\EntryRepository;
+use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
@@ -19,6 +20,7 @@ final readonly class BackupPartWalkFactory
         private EntityManagerInterface $entityManager,
         private EntryRepository $entries,
         private EntryStateRepository $entryStates,
+        private EntryShareRepository $entryShares,
         private LinkCardRepository $linkCards,
         private SavedEntryOriginRepository $savedOrigins,
         private BackupLines $lines,
@@ -31,6 +33,7 @@ final readonly class BackupPartWalkFactory
             $this->entityManager,
             $this->entries,
             $this->entryStates,
+            $this->entryShares,
             $this->linkCards,
             $this->savedOrigins,
             $this->lines,

@@ -1,6 +1,7 @@
 import { Provider, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Subject } from 'rxjs';
+import { Subject, config } from 'rxjs';
+import { SentPost } from '../composer/composed-post';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
@@ -18,6 +19,17 @@ import { PostActions } from '../composer/post-actions.service';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectedQuote } from '../selection-share/selected-quote';
 import { ShareButtonAppearance, ShareButtonComponent } from './share-button.component';
+import { SHARE_RECORDER } from './share-recorder';
+
+async function withUnhandledErrors(handler: () => void, body: () => Promise<void>): Promise<void> {
+  const previous = config.onUnhandledError;
+  config.onUnhandledError = handler;
+  try {
+    await body();
+  } finally {
+    config.onUnhandledError = previous;
+  }
+}
 
 function account(
   id: number,
@@ -33,6 +45,9 @@ describe('ShareButtonComponent', () => {
   const toast = { show: jest.fn() };
   const sheet = { open: jest.fn() };
   const postActions = { postLink: jest.fn() };
+  const recorder = { record: jest.fn() };
+  let sent: Subject<SentPost>;
+  let withRecorder = true;
   const accounts = signal<SocialAccountRefDto[]>([]);
   let chosen: Subject<string | undefined>;
   let fixture: ComponentFixture<ShareButtonComponent>;
@@ -52,6 +67,7 @@ describe('ShareButtonComponent', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(coarse) } },
         { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
         { provide: PostActions, useValue: postActions },
+        ...(withRecorder ? [{ provide: SHARE_RECORDER, useValue: recorder }] : []),
         ...selectionProviders,
       ],
     });
@@ -65,7 +81,11 @@ describe('ShareButtonComponent', () => {
   beforeEach(() => {
     toast.show.mockReset();
     sheet.open.mockReset();
+    sent = new Subject<SentPost>();
     postActions.postLink.mockReset();
+    postActions.postLink.mockImplementation(() => sent.asObservable());
+    recorder.record.mockReset();
+    withRecorder = true;
     selectionProviders = [];
     localStorage.clear();
     accounts.set([
@@ -169,6 +189,32 @@ describe('ShareButtonComponent', () => {
       expect(document.querySelector('[role="menu"]')).toBeNull();
     });
 
+    it('records a share when a social network is picked', () => {
+      jest.spyOn(window, 'open').mockReturnValue(null);
+
+      item(openMenu(), 'Open in Bluesky app').click();
+
+      expect(recorder.record).toHaveBeenCalledTimes(1);
+    });
+
+    it('records nothing for the clipboard', () => {
+      Object.assign(navigator, {
+        clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+      });
+
+      item(openMenu(), 'Copy link').click();
+
+      expect(recorder.record).not.toHaveBeenCalled();
+    });
+
+    it('records nothing for a messenger', () => {
+      jest.spyOn(window, 'open').mockReturnValue(null);
+
+      item(openMenu(), 'WhatsApp').click();
+
+      expect(recorder.record).not.toHaveBeenCalled();
+    });
+
     it('copies the link and confirms it', async () => {
       const writeText = jest.fn().mockResolvedValue(undefined);
       Object.assign(navigator, { clipboard: { writeText } });
@@ -243,6 +289,47 @@ describe('ShareButtonComponent', () => {
         quote: null,
       });
       expect(document.querySelector('[role="menu"]')).toBeNull();
+    });
+
+    it('records a link post only once it is sent', () => {
+      item(openMenu(), 'Post on Mastodon').click();
+
+      expect(recorder.record).not.toHaveBeenCalled();
+
+      sent.next({} as SentPost);
+
+      expect(recorder.record).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('without a recorder, as in the link reader', () => {
+    beforeEach(() => {
+      withRecorder = false;
+      mount(false);
+    });
+
+    it('shares to a social network without recording', async () => {
+      jest.spyOn(window, 'open').mockReturnValue(null);
+      const unhandled = jest.fn();
+      await withUnhandledErrors(unhandled, async () => {
+        item(openMenu(), 'Open in Bluesky app').click();
+        await new Promise((resolve) => setTimeout(resolve));
+      });
+
+      expect(unhandled).not.toHaveBeenCalled();
+    });
+
+    it('posts a link without recording', async () => {
+      const unhandled = jest.fn();
+      await withUnhandledErrors(unhandled, async () => {
+        item(openMenu(), 'Post on Mastodon').click();
+
+        sent.next({} as SentPost);
+        await Promise.resolve();
+        await new Promise((resolve) => setTimeout(resolve));
+      });
+
+      expect(unhandled).not.toHaveBeenCalled();
     });
   });
 

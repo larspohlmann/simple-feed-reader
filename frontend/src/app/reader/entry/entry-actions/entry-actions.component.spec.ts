@@ -29,6 +29,7 @@ class HostComponent implements EntryActionHandler {
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
+  unshared: EntryDto | null = null;
   marked: EntryDto | null = null;
   liked: EntryDto | null = null;
   deleted: EntryDto | null = null;
@@ -43,6 +44,10 @@ class HostComponent implements EntryActionHandler {
 
   keep(entry: EntryDto): void {
     this.kept = entry;
+  }
+
+  unshare(entry: EntryDto): void {
+    this.unshared = entry;
   }
 
   toggleRead(entry: EntryDto): void {
@@ -110,6 +115,20 @@ describe('EntryActionsComponent', () => {
         provideAccountIdentity(),
       ],
     });
+  });
+
+  it('offers Remove from shared only on a shared entry', () => {
+    const label = 'Remove from shared';
+    const offered = (fixture: ReturnType<typeof mount>) =>
+      buttons(fixture).find((button) => button.getAttribute('aria-label') === label);
+    expect(offered(mount(anEntry({ isShared: false })))).toBeUndefined();
+
+    const shared = anEntry({ isShared: true });
+    const fixture = mount(shared);
+    offered(fixture)!.click();
+
+    expect(fixture.componentInstance.unshared).toBe(shared);
+    expect(fixture.componentInstance.cardOpened).toBe(false);
   });
 
   it('renders the three actions with their labels', () => {

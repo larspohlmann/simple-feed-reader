@@ -11,6 +11,7 @@ import { SidebarFootComponent } from './sidebar-foot.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { buildVersion } from '../../../../environments/version';
 import { releasePageUrl } from '../../../core/repository';
+import { SHARING_EVERYTHING } from '../../../core/preferences/sharing';
 
 const account = (trialEndsAt: string | null): CurrentUser => ({
   id: 1,
@@ -32,7 +33,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
     },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
-    sharing: { enabled: true, hiddenTargets: [] },
+    sharing: SHARING_EVERYTHING,
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },

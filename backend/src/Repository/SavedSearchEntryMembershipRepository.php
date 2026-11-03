@@ -62,7 +62,7 @@ final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
     private function insertIgnoringStored(array $pairs, \DateTimeImmutable $matchedAt): int
     {
         $connection = $this->getEntityManager()->getConnection();
-        $conflictClause = DatabasePlatform::isMySql($connection) ? 'IGNORE' : 'OR IGNORE';
+        $conflictClause = DatabasePlatform::insertIgnoreClause($connection);
 
         $parameters = [];
         foreach ($pairs as [$savedSearchId, $entryId]) {

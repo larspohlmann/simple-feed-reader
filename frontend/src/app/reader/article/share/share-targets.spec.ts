@@ -33,6 +33,14 @@ describe('share targets', () => {
     expect(carriesText(byLabel('Facebook'))).toBe(false);
   });
 
+  it('marks exactly the six social networks', () => {
+    const social = SHARE_TARGETS.filter(
+      (target): target is ConfiguredTarget => target.kind !== 'divider' && target.social === true,
+    ).map((target) => target.id);
+
+    expect(social).toEqual(['bluesky', 'threads', 'x', 'facebook', 'linkedin', 'reddit']);
+  });
+
   it('names only icon files that exist next to the config', () => {
     const folder = join(__dirname, '../../../../../public/share-targets');
     const missing = SHARE_TARGETS.flatMap((target) =>

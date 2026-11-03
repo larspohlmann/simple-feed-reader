@@ -13,6 +13,7 @@ const entryActions = {
   favorite: jest.fn(),
   like: jest.fn(),
   keep: jest.fn(),
+  unshare: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
   deletePost: jest.fn(),
@@ -126,6 +127,18 @@ it("deletes the row's post from a copy and closes the popover (#1972)", () => {
 
   expect(entryActions.deletePost).toHaveBeenCalledWith(row);
   expect(overlay.querySelector('.dup-popover')).toBeNull();
+});
+
+it('removes a shared copy from Shared through the shell', () => {
+  const dup = entry({ id: 2, title: 'Copy', isShared: true });
+  const fixture = mount(entry({ duplicates: [dup] }));
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  (overlay.querySelector('.dup-popover [aria-label="Remove from shared"]') as HTMLElement).click();
+
+  expect(entryActions.unshare).toHaveBeenCalledWith(dup);
 });
 
 it('re-emits favorite for the copy and shows the flag the store then holds', () => {

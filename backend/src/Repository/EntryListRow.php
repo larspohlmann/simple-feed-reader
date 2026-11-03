@@ -17,6 +17,7 @@ final readonly class EntryListRow
     public string $subscriptionTitle;
     public bool $isViewed;
     public ?\DateTimeImmutable $viewedAt;
+    public ?\DateTimeImmutable $sharedAt;
 
     public function __construct(
         public Entry $entry,
@@ -38,6 +39,7 @@ final readonly class EntryListRow
         $this->subscriptionTitle = $subscription->title;
         $this->isViewed = $viewState->isViewed;
         $this->viewedAt = $viewState->viewedAt;
+        $this->sharedAt = $viewState->sharedAt;
     }
 
     /**
@@ -75,7 +77,7 @@ final readonly class EntryListRow
             $this->isHidden,
             $this->isFavorite,
             $this->isKept,
-            new EntryListRowViewState($this->isViewed, $this->viewedAt),
+            new EntryListRowViewState($this->isViewed, $this->viewedAt, $this->sharedAt),
             $this->markedReadUntil,
             $duplicates,
             $enrichment,

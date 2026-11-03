@@ -190,18 +190,34 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime), surfaces the error, and reports to `outcome`. */
   setState(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
-    const target = this.entryOrCopy(entryId);
-    if (!target) return;
     this.error.set(null);
     this.failedOperation.set(null);
-    const request$ = this.api.updateState(entryId, patch);
-    this.optimistic(target, localStatePatch(patch), request$).subscribe({
-      next: () => outcome.onSaved?.(),
-      error: (error: HttpErrorResponse) => {
+    this.saveState(entryId, patch, {
+      ...outcome,
+      onFailed: (error) => {
         this.error.set(parseProblem(error));
         this.failedOperation.set(() => this.setState(entryId, patch, outcome));
         outcome.onFailed?.();
       },
+    });
+  }
+
+  /** `setState` for a mark nobody asked to see fail: it reverts, but shows no error and offers no retry. */
+  setStateQuietly(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
+    this.saveState(entryId, patch, outcome);
+  }
+
+  private saveState(
+    entryId: number,
+    patch: EntryStatePatch,
+    outcome: { onSaved?: () => void; onFailed?: (error: HttpErrorResponse) => void },
+  ): void {
+    const target = this.entryOrCopy(entryId);
+    if (!target) return;
+    const request$ = this.api.updateState(entryId, patch);
+    this.optimistic(target, localStatePatch(patch), request$).subscribe({
+      next: () => outcome.onSaved?.(),
+      error: (error: HttpErrorResponse) => outcome.onFailed?.(error),
     });
   }
 
@@ -269,6 +285,11 @@ export class EntriesStore {
    *  all-items list, where the rows stay visible. */
   markHiddenLocally(ids: number[]): void {
     this.patchEntries(ids, (entry) => ({ ...entry, isHidden: true }));
+  }
+
+  /** Reflects a share the server already recorded, as for a repost; no request. */
+  markSharedLocally(id: number): void {
+    this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
   /** Reaches each target as a row and as a copy inside a row's `duplicates`. The list keeps its identity when

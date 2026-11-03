@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reading;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -61,8 +62,9 @@ final class EntryStateUpdaterTest extends DbTestCase
         ?bool $isFavorite = null,
         ?bool $isKept = null,
         ?bool $isViewed = null,
+        ?bool $isShared = null,
     ): EntryStateChangeModel {
-        return new EntryStateChangeModel($isHidden, $isFavorite, $isKept, $isViewed);
+        return new EntryStateChangeModel($isHidden, $isFavorite, $isKept, $isViewed, $isShared);
     }
 
     /**
@@ -75,6 +77,12 @@ final class EntryStateUpdaterTest extends DbTestCase
         return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $entry->requireId())
             ?? new EntryState($user, $entry);
+    }
+
+    private function sharedAtOf(User $user, Entry $entry): ?\DateTimeImmutable
+    {
+        return $this->entityManager->getRepository(EntryShare::class)
+            ->sharedAtFor($user->requireId(), $entry->requireId());
     }
 
     /**
@@ -136,6 +144,17 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertTrue($this->stateOf($user, $target)->isKept());
         self::assertFalse($this->stateOf($user, $sibling)->isKept());
         self::assertNull($this->persistedStateOf($user, $sibling));
+    }
+
+    public function testSharingOneCopyDoesNotMarkTheSibling(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isShared: true));
+
+        self::assertNotNull($this->sharedAtOf($user, $target));
+        self::assertNull($this->sharedAtOf($user, $sibling));
     }
 
     public function testUnfavouritingAndUnkeepingClearBothFlags(): void

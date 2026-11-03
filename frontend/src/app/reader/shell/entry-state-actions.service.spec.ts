@@ -15,6 +15,31 @@ import { PostActions } from '../article/composer/post-actions.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { RemovedPosts } from '../removed-posts.service';
 
+interface Collaborators {
+  entries: object;
+  subscriptions: object;
+  routeState: object;
+  savedSearches?: object;
+  toast?: object;
+}
+
+function createActions(collaborators: Collaborators): EntryStateActions {
+  TestBed.configureTestingModule({
+    imports: [provideTranslocoTesting()],
+    providers: [
+      EntryStateActions,
+      provideRouter([]),
+      { provide: EntriesStore, useValue: collaborators.entries },
+      { provide: SubscriptionsStore, useValue: collaborators.subscriptions },
+      { provide: SavedSearchesStore, useValue: collaborators.savedSearches ?? {} },
+      { provide: ReaderRouteState, useValue: collaborators.routeState },
+      { provide: ToastService, useValue: collaborators.toast ?? { show: jest.fn() } },
+      { provide: PostActions, useValue: {} },
+    ],
+  });
+  return TestBed.inject(EntryStateActions);
+}
+
 describe('EntryStateActions liking (#1600)', () => {
   const setLiked = jest.fn<void, [EntryDto, boolean, (problem: Problem) => void]>();
   const showProblem = jest.fn();
@@ -122,38 +147,17 @@ describe('EntryStateActions reading counts (#1679)', () => {
     setState.mockReset();
     openEntryId.set(null);
     openEntry.set(null);
-    TestBed.configureTestingModule({
-      imports: [provideTranslocoTesting()],
-      providers: [
-        EntryStateActions,
-        provideRouter([]),
-        { provide: EntriesStore, useValue: { setState } },
-        {
-          provide: SubscriptionsStore,
-          useValue: {
-            bumpViewed: jest.fn(),
-            markArticleRead,
-            markArticleUnread,
-            reloadCountsQuietly,
-          },
-        },
-        {
-          provide: SavedSearchesStore,
-          useValue: { markEntryRead: jest.fn(), markEntryUnread: jest.fn() },
-        },
-        {
-          provide: ReaderRouteState,
-          useValue: {
-            openEntryId,
-            openEntry,
-            selection: () => ({ kind: 'all' }),
-          },
-        },
-        { provide: ToastService, useValue: { show: jest.fn() } },
-        { provide: PostActions, useValue: {} },
-      ],
+    actions = createActions({
+      entries: { setState },
+      subscriptions: {
+        bumpViewed: jest.fn(),
+        markArticleRead,
+        markArticleUnread,
+        reloadCountsQuietly,
+      },
+      savedSearches: { markEntryRead: jest.fn(), markEntryUnread: jest.fn() },
+      routeState: { openEntryId, openEntry, selection: () => ({ kind: 'all' }) },
     });
-    actions = TestBed.inject(EntryStateActions);
   });
 
   const outcome = (call = 0): StateSaveOutcome => setState.mock.calls[call][2] ?? {};
@@ -213,6 +217,107 @@ describe('EntryStateActions reading counts (#1679)', () => {
     outcome().onSaved?.();
 
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
+  });
+});
+
+describe('EntryStateActions sharing (#2007)', () => {
+  const bumpShared = jest.fn();
+  const show = jest.fn();
+  const setStateQuietly = jest.fn<void, [number, EntryStatePatch, StateSaveOutcome?]>();
+  const setState = jest.fn();
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    bumpShared.mockReset();
+    show.mockReset();
+    setStateQuietly.mockReset();
+    setState.mockReset();
+    actions = createActions({
+      entries: { setState, setStateQuietly },
+      subscriptions: { bumpShared },
+      routeState: {
+        openEntryId: signal(null),
+        openEntry: signal(null),
+        selection: () => ({ kind: 'all' }),
+      },
+      toast: { show },
+    });
+  });
+
+  it('shares an unshared entry: counts it and patches isShared', () => {
+    actions.share(anEntry({ id: 7, isShared: false }));
+
+    expect(bumpShared).toHaveBeenCalledWith(1);
+    expect(setStateQuietly).toHaveBeenCalledWith(7, { isShared: true }, expect.anything());
+  });
+
+  it('re-sharing a shared entry refreshes it without counting it twice', () => {
+    actions.share(anEntry({ id: 7, isShared: true }));
+
+    expect(bumpShared).not.toHaveBeenCalled();
+    expect(setStateQuietly).toHaveBeenCalledWith(7, { isShared: true }, expect.anything());
+  });
+
+  it('restores the count without a toast when the save of a first share fails', () => {
+    actions.share(anEntry({ id: 7, isShared: false }));
+
+    setStateQuietly.mock.calls[0][2]?.onFailed?.();
+
+    expect(bumpShared).toHaveBeenLastCalledWith(-1);
+    expect(show).not.toHaveBeenCalled();
+    expect(setState).not.toHaveBeenCalled();
+  });
+
+  it('leaves the count alone when the save of a re-share fails', () => {
+    actions.share(anEntry({ id: 7, isShared: true }));
+
+    setStateQuietly.mock.calls[0][2]?.onFailed?.();
+
+    expect(bumpShared).not.toHaveBeenCalled();
+  });
+});
+
+describe('EntryStateActions unsharing (#2007)', () => {
+  const bumpShared = jest.fn();
+  const setState = jest.fn();
+  const selection = signal<{ kind: string }>({ kind: 'all' });
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    bumpShared.mockReset();
+    setState.mockReset();
+    selection.set({ kind: 'all' });
+    actions = createActions({
+      entries: { setState },
+      subscriptions: { bumpShared },
+      routeState: { openEntryId: signal(null), openEntry: signal(null), selection },
+    });
+  });
+
+  it('uncounts the entry and clears isShared', () => {
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+
+    expect(bumpShared).toHaveBeenCalledWith(-1);
+    expect(setState).toHaveBeenCalledWith(9, { isShared: false }, expect.anything());
+    expect(actions.leavingIds().has(9)).toBe(false);
+  });
+
+  it('leaves the Shared list', () => {
+    selection.set({ kind: 'shared' });
+
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+
+    expect(actions.leavingIds().has(9)).toBe(true);
+  });
+
+  it('restores the count and the row when the save fails', () => {
+    selection.set({ kind: 'shared' });
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+
+    setState.mock.calls[0][2]?.onFailed?.();
+
+    expect(bumpShared).toHaveBeenLastCalledWith(1);
+    expect(actions.leavingIds().has(9)).toBe(false);
   });
 });
 

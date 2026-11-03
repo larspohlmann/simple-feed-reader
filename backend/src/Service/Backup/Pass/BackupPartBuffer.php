@@ -21,6 +21,9 @@ final class BackupPartBuffer
     /** @var list<string> */
     private array $entryStateLines = [];
 
+    /** @var list<string> */
+    private array $entryShareLines = [];
+
     private int $bytes = 0;
 
     public function add(string $entryLine, ?string $entryStateLine): void
@@ -32,6 +35,12 @@ final class BackupPartBuffer
             $this->entryStateLines[] = $entryStateLine;
             $this->bytes += \strlen($entryStateLine);
         }
+    }
+
+    public function addShare(string $entryShareLine): void
+    {
+        $this->entryShareLines[] = $entryShareLine;
+        $this->bytes += \strlen($entryShareLine);
     }
 
     public function isFull(): bool
@@ -54,9 +63,14 @@ final class BackupPartBuffer
         return \count($this->entryStateLines);
     }
 
+    public function entryShareCount(): int
+    {
+        return \count($this->entryShareLines);
+    }
+
     public function drain(string $headerLine, string $footerLine): string
     {
-        $lines = [$headerLine, ...$this->entryLines, ...$this->entryStateLines, $footerLine];
+        $lines = [$headerLine, ...$this->entryLines, ...$this->entryStateLines, ...$this->entryShareLines, $footerLine];
         $gzipBytes = BackupPartModel::gzip(implode("\n", $lines) . "\n");
         $this->reset();
 
@@ -67,6 +81,7 @@ final class BackupPartBuffer
     {
         $this->entryLines = [];
         $this->entryStateLines = [];
+        $this->entryShareLines = [];
         $this->bytes = 0;
     }
 }

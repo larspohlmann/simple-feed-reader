@@ -14,6 +14,7 @@ use App\Service\Backup\Pass\RestoreDestination;
 use App\Service\Backup\Pass\RestoreEntryLoader;
 use App\Service\Backup\Pass\RestoreFeedTargets;
 use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -101,6 +102,7 @@ final class RestoreEntryLoaderTest extends TestCase
             $this->createStub(EntityManagerInterface::class),
             $entries,
             $this->createStub(RestoreEntryStatesInterface::class),
+            $this->createStub(RestoreEntrySharesInterface::class),
             new EntryBatchInserter(
                 $this->createStub(Connection::class),
                 EntryUrlHashes::production(),

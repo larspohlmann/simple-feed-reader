@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
@@ -6,7 +7,9 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { LayoutService } from '../../layout.service';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { SentPost } from '../composer/composed-post';
 import { PostActions } from '../composer/post-actions.service';
+import { SHARE_RECORDER } from '../share/share-recorder';
 import { ArticleSelection } from './article-selection.service';
 import { SelectedQuote } from './selected-quote';
 import { SelectionShareComponent } from './selection-share.component';
@@ -15,6 +18,8 @@ const QUOTE: SelectedQuote = { text: 'One two three', words: 3, anchorable: true
 
 describe('SelectionShareComponent', () => {
   const postActions = { postLink: jest.fn() };
+  const recorder = { record: jest.fn() };
+  let sent: Subject<SentPost>;
   const selection = {
     quote: signal<SelectedQuote | null>(null),
     remembered: signal<SelectedQuote | null>(null),
@@ -68,7 +73,10 @@ describe('SelectionShareComponent', () => {
   }
 
   beforeEach(() => {
+    sent = new Subject<SentPost>();
     postActions.postLink.mockReset();
+    postActions.postLink.mockImplementation(() => sent.asObservable());
+    recorder.record.mockReset();
     selection.releasePageSelection.mockReset();
     selection.quote.set(null);
     selection.remembered.set(null);
@@ -79,6 +87,7 @@ describe('SelectionShareComponent', () => {
       providers: [
         { provide: ArticleSelection, useValue: selection },
         { provide: PostActions, useValue: postActions },
+        { provide: SHARE_RECORDER, useValue: recorder },
         { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
         { provide: LayoutService, useValue: { isCoarse: coarse } },
         { provide: ActionSheet, useValue: { open: jest.fn() } },
@@ -117,6 +126,16 @@ describe('SelectionShareComponent', () => {
         title: 'First',
         quote: 'One two three',
       });
+    });
+
+    it('records a share once the quote post is sent', () => {
+      select();
+      bubble()!.querySelector<HTMLButtonElement>('[aria-label="Quote on Bluesky"]')!.click();
+      expect(recorder.record).not.toHaveBeenCalled();
+
+      sent.next({} as SentPost);
+
+      expect(recorder.record).toHaveBeenCalledTimes(1);
     });
 
     it('keeps the selection when pressed', () => {

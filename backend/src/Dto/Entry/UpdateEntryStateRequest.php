@@ -19,6 +19,7 @@ final readonly class UpdateEntryStateRequest
         // True opens the entry, false un-ticks it. Setting viewed also hides it
         // (ViewedImpliesHiddenListener); un-ticking leaves the entry hidden.
         public ?bool $isViewed = null,
+        public ?bool $isShared = null,
     ) {
     }
 
@@ -29,6 +30,7 @@ final readonly class UpdateEntryStateRequest
             isFavorite: $this->isFavorite,
             isKept: $this->isKept,
             isViewed: $this->isViewed,
+            isShared: $this->isShared,
         );
     }
 }

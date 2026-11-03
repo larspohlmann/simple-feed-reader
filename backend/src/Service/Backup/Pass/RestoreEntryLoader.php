@@ -9,10 +9,12 @@ use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Dto\EntryShareLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Backup\Support\PrivateFeedRefusal;
 use App\Service\Search\EntryIndexer;
@@ -20,7 +22,7 @@ use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Loads one entry part's entries and entry states. Constructed per request,
+ * Loads one entry part's entries, entry states and shares. Constructed per request,
  * never shared: every field is per-run working state, and the User is a
  * reference re-acquired after every clear().
  */
@@ -40,6 +42,9 @@ final class RestoreEntryLoader
     /** @var list<array{EntryStateLine, int}> states resolved to an entry id, not yet persisted */
     private array $heldStates = [];
 
+    /** @var array<int, \DateTimeImmutable> shares resolved to an entry id, not yet written */
+    private array $heldShares = [];
+
     /** @var array<int, true> ids this restore created, as a set */
     private array $createdEntryIds = [];
 
@@ -51,6 +56,7 @@ final class RestoreEntryLoader
         private readonly EntityManagerInterface $entityManager,
         private readonly RestoreEntriesInterface $entries,
         private readonly RestoreEntryStatesInterface $entryStates,
+        private readonly RestoreEntrySharesInterface $entryShares,
         private readonly EntryBatchInserter $inserter,
         private readonly EntryIndexer $indexer,
         private readonly RestoredEntryStateFactory $stateFactory,
@@ -94,10 +100,27 @@ final class RestoreEntryLoader
         }
     }
 
+    public function loadShare(EntryShareLine $line): void
+    {
+        PrivateFeedRefusal::ofUrl($line->feedUrl);
+        $this->closeBufferedFeed();
+
+        $entryId = $this->target($line->feedUrl)->entryId($line->guidHash);
+        if (null === $entryId) {
+            return;
+        }
+
+        $this->heldShares[$entryId] = $line->sharedAt;
+        if (\count($this->heldShares) >= self::BATCH) {
+            $this->writeHeldShares();
+        }
+    }
+
     public function finish(): void
     {
         $this->closeBufferedFeed();
         $this->writeHeldStates();
+        $this->writeHeldShares();
         $this->indexCreatedEntries();
     }
 
@@ -232,6 +255,21 @@ final class RestoreEntryLoader
         }
 
         $this->flushStates();
+    }
+
+    private function writeHeldShares(): void
+    {
+        $held = $this->heldShares;
+        $this->heldShares = [];
+        if ([] === $held) {
+            return;
+        }
+
+        try {
+            $this->entryShares->addMissingForUser($this->user->requireId(), $held);
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::duringEntries($exception);
+        }
     }
 
     private function flushStates(): void

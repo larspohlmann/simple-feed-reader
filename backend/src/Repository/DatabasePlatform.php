@@ -14,4 +14,10 @@ final readonly class DatabasePlatform
     {
         return $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform;
     }
+
+    /** The keyword that turns an INSERT into one that skips rows already stored. */
+    public static function insertIgnoreClause(Connection $connection): string
+    {
+        return self::isMySql($connection) ? 'IGNORE' : 'OR IGNORE';
+    }
 }

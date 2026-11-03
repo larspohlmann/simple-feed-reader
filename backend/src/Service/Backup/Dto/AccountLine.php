@@ -25,6 +25,7 @@ final readonly class AccountLine
         public MagazineStyle $magazineStyle,
         public bool $sharingEnabled,
         public array $hiddenShareTargets,
+        public bool $rememberShares,
         public array $savedSearchIncludedNetworks,
         public array $forYouExcludedNetworks,
     ) {
@@ -44,6 +45,7 @@ final readonly class AccountLine
             ) ?? MagazineStyle::Boxed,
             sharingEnabled: LineFieldWithDefault::bool($line, 'sharingEnabled', true),
             hiddenShareTargets: LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
+            rememberShares: LineFieldWithDefault::bool($line, 'rememberShares', true),
             savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
             forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
         );

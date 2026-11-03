@@ -25,14 +25,17 @@ final class SubscriptionJsonListTest extends DbTestCase
         $tallies = new SubscriptionTalliesModel(
             [$counted->requireId() => 3],
             [$counted->requireId() => 40],
-            ['favorites' => 8, 'kept' => 2, 'viewed' => 41],
+            ['favorites' => 8, 'kept' => 2, 'shared' => 0, 'viewed' => 41],
             new UnreadTotalsModel(7, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
         );
 
         $payload = SubscriptionJson::list([$counted, $silent], $tallies, []);
 
         self::assertSame(
-            ['subscriptions', 'favoritesCount', 'keptCount', 'viewedCount', 'unreadTotals', 'socialAccounts'],
+            [
+                'subscriptions', 'favoritesCount', 'keptCount', 'sharedCount', 'viewedCount', 'unreadTotals',
+                'socialAccounts',
+            ],
             array_keys($payload),
         );
         self::assertSame(
@@ -61,7 +64,7 @@ final class SubscriptionJsonListTest extends DbTestCase
             new SubscriptionTalliesModel(
                 [],
                 [],
-                ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
+                ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
             ),
             [$bluesky, $mastodon],
@@ -101,7 +104,7 @@ final class SubscriptionJsonListTest extends DbTestCase
             new SubscriptionTalliesModel(
                 [],
                 [],
-                ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
+                ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
             ),
             [$bluesky],

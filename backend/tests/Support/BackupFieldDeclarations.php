@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
@@ -38,6 +39,7 @@ final class BackupFieldDeclarations
             'magazineStyle' => 'magazineStyle',
             'sharingEnabled' => 'sharingEnabled',
             'hiddenShareTargets' => 'hiddenShareTargets',
+            'rememberingShares' => 'rememberShares',
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
@@ -113,6 +115,10 @@ final class BackupFieldDeclarations
             'isHidden' => 'isHidden', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
             'hiddenAt' => 'hiddenAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
         ],
+        EntryShare::class => [
+            'entry' => ['feedUrl', 'guidHash'],
+            'sharedAt' => 'sharedAt',
+        ],
     ];
 
     /** Doctrine class => the `kind` of the line its fields are written on. */
@@ -130,6 +136,7 @@ final class BackupFieldDeclarations
         LinkCard::class => BackupSchema::KIND_ENTRY,
         SavedEntryOrigin::class => BackupSchema::KIND_ENTRY,
         EntryState::class => BackupSchema::KIND_ENTRY_STATE,
+        EntryShare::class => BackupSchema::KIND_ENTRY_SHARE,
     ];
 
     private function __construct()

@@ -8,6 +8,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../core/api';
 import { AccountSectionComponent } from './account-section.component';
 import { AuthService, CurrentUser } from '../../core/auth/auth.service';
+import { SHARING_EVERYTHING } from '../../core/preferences/sharing';
 
 const user: CurrentUser = {
   id: 1,
@@ -29,7 +30,7 @@ const user: CurrentUser = {
     },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
-    sharing: { enabled: true, hiddenTargets: [] },
+    sharing: SHARING_EVERYTHING,
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },

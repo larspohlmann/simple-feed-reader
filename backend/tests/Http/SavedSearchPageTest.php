@@ -69,7 +69,7 @@ final class SavedSearchPageTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
-            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null),
+            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null, sharedAt: null),
             markedReadUntil: null,
             enrichment: $enrichment,
         );

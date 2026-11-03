@@ -45,8 +45,7 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     public function ensureRow(int $userId, int $entryId, ?\DateTimeImmutable $hiddenSince): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $isMysql = DatabasePlatform::isMySql($connection);
-        $conflictClause = $isMysql ? 'IGNORE' : 'OR IGNORE';
+        $conflictClause = DatabasePlatform::insertIgnoreClause($connection);
 
         $connection->executeStatement(
             sprintf(

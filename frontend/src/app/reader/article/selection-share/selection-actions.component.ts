@@ -8,6 +8,7 @@ import { PostActions } from '../composer/post-actions.service';
 import { PostNetworks } from '../share/post-networks.service';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { sharedLink, sharedPage } from '../share/share-content';
+import { SHARE_RECORDER } from '../share/share-recorder';
 import { ArticleSelection } from './article-selection.service';
 
 /** What a selection offers, in the bubble and the phone bar alike: a quote per network, and the share menu. */
@@ -24,6 +25,7 @@ export class SelectionActionsComponent {
   readonly title = input('');
 
   private readonly postActions = inject(PostActions);
+  private readonly recorder = inject(SHARE_RECORDER, { optional: true });
   protected readonly networks = inject(PostNetworks).connected;
   private readonly selection = inject(ArticleSelection);
   protected readonly screen = inject(LayoutService);
@@ -31,7 +33,9 @@ export class SelectionActionsComponent {
 
   protected post(network: SocialNetworkName): void {
     const page = sharedPage(this.url(), this.title());
-    this.postActions.postLink(network, sharedLink(page, this.remembered()));
+    this.postActions
+      .postLink(network, sharedLink(page, this.remembered()))
+      .subscribe(() => this.recorder?.record());
     if (this.screen.isCoarse()) this.selection.releasePageSelection();
   }
 }

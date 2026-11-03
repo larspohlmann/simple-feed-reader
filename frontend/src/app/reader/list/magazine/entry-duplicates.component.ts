@@ -80,6 +80,10 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     this.shellActions.keep(copy);
   }
 
+  unshare(copy: EntryDto): void {
+    this.shellActions.unshare(copy);
+  }
+
   toggleRead(copy: EntryDto): void {
     this.shellActions.toggleRead(copy);
   }

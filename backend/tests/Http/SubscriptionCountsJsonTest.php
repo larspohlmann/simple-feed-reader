@@ -16,7 +16,7 @@ final class SubscriptionCountsJsonTest extends TestCase
         $payload = SubscriptionCountsJson::from(new SubscriptionTalliesModel(
             [12 => 3],
             [12 => 40, 8 => 5],
-            ['favorites' => 8, 'kept' => 2, 'viewed' => 41],
+            ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41],
             new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
         ));
 
@@ -27,6 +27,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             ],
             'favoritesCount' => 8,
             'keptCount' => 2,
+            'sharedCount' => 6,
             'viewedCount' => 41,
             'unreadTotals' => [
                 'allItems' => 7,
@@ -44,7 +45,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             new SubscriptionTalliesModel(
                 [],
                 [],
-                ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
+                ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
             ),
         );

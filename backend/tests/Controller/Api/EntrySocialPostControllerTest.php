@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
+use App\Entity\Preferences;
 use App\Entity\User;
+use App\Repository\EntryShareRepository;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
@@ -262,6 +265,83 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[1]['headers']);
     }
 
+    public function testAQuoteOfTheEntrysPostRecordsItAsShared(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::STATUSES => self::published('201'),
+        ]);
+        $user = $this->signIn($client, 'quote-shares@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $this->send($client, 'POST', $this->quotePath($entryId), ['text' => 'Worth reading']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertNotNull($this->sharedAtOf($user, $entryId));
+    }
+
+    /** @param \Closure(Preferences): void $turnOff */
+    #[DataProvider('switchesThatStopRecording')]
+    public function testAQuoteRecordsNothingWhileSharesAreNotRemembered(\Closure $turnOff): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::STATUSES => self::published('201'),
+        ]);
+        $user = $this->signIn($client, sprintf('quote-forgetful-%s@example.test', md5((string) $this->dataName())));
+        $turnOff($user->getPreferences());
+        $this->entityManager()->flush();
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $this->send($client, 'POST', $this->quotePath($entryId), ['text' => 'Worth reading']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertNull($this->sharedAtOf($user, $entryId));
+    }
+
+    /** @return iterable<string, array{\Closure(Preferences): void}> */
+    public static function switchesThatStopRecording(): iterable
+    {
+        yield 'remembering off' => [static fn (Preferences $preferences) => $preferences->setRememberingShares(false)];
+        yield 'sharing off' => [static fn (Preferences $preferences) => $preferences->setSharingEnabled(false)];
+    }
+
+    public function testAQuoteOfAReplyInTheThreadLeavesTheEntryUnshared(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::REPLY_SEARCH => self::statuses(['id' => '200', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::STATUSES => self::published('201'),
+        ]);
+        $user = $this->signIn($client, 'quote-reply-unshared@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $this->send($client, 'POST', $this->quotePath($entryId) . '?address=' . rawurlencode(self::REPLY), [
+            'text' => 'Worth reading',
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertNull($this->sharedAtOf($user, $entryId));
+    }
+
+    public function testAReplyToTheEntrysPostLeavesItUnshared(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::statuses(['id' => '110']),
+            self::STATUSES => self::published('200'),
+        ]);
+        $user = $this->signIn($client, 'reply-unshared@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $this->postReply($client, $entryId, ['text' => 'Thanks']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertNull($this->sharedAtOf($user, $entryId));
+    }
+
     public function testAPostOnAnInstanceBeforeQuotesIsRefusedWithoutAWrite(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [self::SEARCH => self::statuses(['id' => '110'])]);
@@ -449,5 +529,21 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     private static function statuses(array $status): MockResponse
     {
         return new MockResponse(json_encode(['statuses' => [$status]], \JSON_THROW_ON_ERROR));
+    }
+
+    private static function published(string $statusId): MockResponse
+    {
+        return new MockResponse(json_encode(
+            ['id' => $statusId, 'uri' => 'https://mastodon.example/users/alice/statuses/' . $statusId],
+            \JSON_THROW_ON_ERROR,
+        ));
+    }
+
+    private function sharedAtOf(User $user, int $entryId): ?\DateTimeImmutable
+    {
+        $shares = $this->entityManager()->getRepository(EntryShare::class);
+        self::assertInstanceOf(EntryShareRepository::class, $shares);
+
+        return $shares->sharedAtFor($user->requireId(), $entryId);
     }
 }

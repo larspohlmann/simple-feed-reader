@@ -4,45 +4,55 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Enum\ShareKind;
+use App\Repository\EntryShareRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** What an entry shares: its kind, and for a quote the post it quotes. */
-#[ORM\Embeddable]
+/** The reader shared this entry to a social network (#2007); sharing it again moves `sharedAt` on. */
+#[ORM\Entity(repositoryClass: EntryShareRepository::class)]
+#[ORM\Table(name: 'entry_share')]
+#[ORM\Index(name: 'idx_entry_share_user_shared_at', columns: ['user_id', 'shared_at'])]
 final class EntryShare
 {
-    #[ORM\Column(name: 'share_kind', length: 8, nullable: true, enumType: ShareKind::class)]
-    private ?ShareKind $kind = null;
+    // No `nullable: false` on these identifier join columns: Doctrine forces them NOT NULL and deprecates saying so.
+    #[ORM\Id]
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(onDelete: 'CASCADE')]
+    private User $user;
 
-    #[ORM\Embedded(class: EntryQuotedPost::class, columnPrefix: false)]
-    private EntryQuotedPost $quotedPost;
+    #[ORM\Id]
+    #[ORM\ManyToOne(targetEntity: Entry::class)]
+    #[ORM\JoinColumn(onDelete: 'CASCADE')]
+    private Entry $entry;
 
-    public function __construct()
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    private \DateTimeImmutable $sharedAt;
+
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
+    public function __construct(User $user, Entry $entry, \DateTimeImmutable $sharedAt)
     {
-        $this->quotedPost = new EntryQuotedPost();
+        $this->user = $user;
+        $this->entry = $entry;
+        $this->sharedAt = $sharedAt;
     }
 
-    public function kind(): ?ShareKind
+    public function getUser(): User
     {
-        return $this->kind;
+        return $this->user;
     }
 
-    public function classify(?ShareKind $kind): void
+    public function getEntry(): Entry
     {
-        if ($kind !== ShareKind::Quote) {
-            $this->quotedPost = new EntryQuotedPost();
-        }
-        $this->kind = $kind;
+        return $this->entry;
     }
 
-    public function quotedPost(): ?QuotedPostContent
+    public function getSharedAt(): \DateTimeImmutable
     {
-        return $this->quotedPost->read();
+        return $this->sharedAt;
     }
 
-    public function quote(QuotedPostContent $quote): void
+    public function reshare(\DateTimeImmutable $when): void
     {
-        $this->quotedPost->store($quote);
-        $this->kind = ShareKind::Quote;
+        $this->sharedAt = $when;
     }
 }

@@ -76,6 +76,9 @@ final class Preferences
     #[ORM\Column(name: 'hidden_share_targets', type: Types::JSON, nullable: true)]
     private ?array $hiddenShareTargets = null;
 
+    #[ORM\Column(name: 'remember_shares', options: ['default' => true])]
+    private bool $rememberingShares = true;
+
     public function __construct(User $user)
     {
         $this->user = $user;
@@ -214,5 +217,20 @@ final class Preferences
             static fn (string $id): bool => preg_match(self::TARGET_ID_PATTERN, $id) === 1,
         );
         $this->hiddenShareTargets = \array_slice(array_unique($wellFormed), 0, self::MAX_HIDDEN_SHARE_TARGETS);
+    }
+
+    public function isRememberingShares(): bool
+    {
+        return $this->rememberingShares;
+    }
+
+    public function setRememberingShares(bool $rememberingShares): void
+    {
+        $this->rememberingShares = $rememberingShares;
+    }
+
+    public function recordsShares(): bool
+    {
+        return $this->sharingEnabled && $this->rememberingShares;
     }
 }

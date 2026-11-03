@@ -6,6 +6,7 @@ namespace App\Service\Backup\Pass;
 
 use App\Entity\Entry;
 use App\Repository\EntryRepository;
+use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
@@ -15,6 +16,7 @@ use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupSchema;
+use App\Service\Backup\Support\EntryMarkLines;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -34,6 +36,7 @@ final class BackupPartWalk
         private readonly EntityManagerInterface $entityManager,
         private readonly EntryRepository $entries,
         private readonly EntryStateRepository $entryStates,
+        private readonly EntryShareRepository $entryShares,
         private readonly LinkCardRepository $linkCards,
         private readonly SavedEntryOriginRepository $savedOrigins,
         private readonly BackupLines $lines,
@@ -93,17 +96,22 @@ final class BackupPartWalk
     {
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $batch);
         $statesByEntryId = $this->entryStates->forUserByEntryIds($this->userId, $entryIds);
+        $sharedAtByEntryId = $this->entryShares->sharedAtByEntryIds($this->userId, $entryIds);
         $cardsByEntryId = $this->linkCards->contentsByEntryIds($entryIds);
         $originsByEntryId = $this->savedOrigins->originsByEntryIds($entryIds);
 
         foreach ($batch as $entry) {
             $state = $statesByEntryId[$entry->requireId()] ?? null;
+            $sharedAt = $sharedAtByEntryId[$entry->requireId()] ?? null;
+            if (null !== $sharedAt) {
+                $this->buffer->addShare(EntryMarkLines::share($entry, $sharedAt, $feedUrl));
+            }
             yield from $this->bufferLines(
                 $this->lines->entryLine($entry, $feedUrl, new EntryCompanionsModel(
                     $cardsByEntryId[$entry->requireId()] ?? [],
                     $originsByEntryId[$entry->requireId()] ?? null,
                 )),
-                null !== $state ? $this->lines->entryStateLine($state, $feedUrl) : null,
+                null !== $state ? EntryMarkLines::state($state, $feedUrl) : null,
             );
         }
     }
@@ -131,6 +139,7 @@ final class BackupPartWalk
         $footer = $this->lines->footerLine([
             BackupSchema::KIND_ENTRY => $this->buffer->entryCount(),
             BackupSchema::KIND_ENTRY_STATE => $this->buffer->entryStateCount(),
+            BackupSchema::KIND_ENTRY_SHARE => $this->buffer->entryShareCount(),
         ]);
 
         return BackupPartModel::entries($this->partsWritten, $this->buffer->drain($header, $footer));

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
@@ -170,15 +171,16 @@ final readonly class RetentionRepository
                  OR (e.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
     }
 
-    /** An entry is protected iff any user favorited or kept it. */
+    /** An entry is protected iff any user favorited, kept or shared it. */
     private function notProtectedDql(): string
     {
         return sprintf(
             'NOT EXISTS (
                 SELECT IDENTITY(s.user) FROM %s s
                 WHERE s.entry = e AND (s.isFavorite = :true OR s.isKept = :true)
-            )',
+            ) AND NOT EXISTS (SELECT IDENTITY(share.user) FROM %s share WHERE share.entry = e)',
             EntryState::class,
+            EntryShare::class,
         );
     }
 
