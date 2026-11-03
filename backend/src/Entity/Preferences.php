@@ -213,7 +213,6 @@ final class Preferences
             $hiddenShareTargets,
             static fn (string $id): bool => preg_match(self::TARGET_ID_PATTERN, $id) === 1,
         );
-        $unique = array_values(array_unique($wellFormed));
-        $this->hiddenShareTargets = \array_slice($unique, 0, self::MAX_HIDDEN_SHARE_TARGETS);
+        $this->hiddenShareTargets = \array_slice(array_unique($wellFormed), 0, self::MAX_HIDDEN_SHARE_TARGETS);
     }
 }
