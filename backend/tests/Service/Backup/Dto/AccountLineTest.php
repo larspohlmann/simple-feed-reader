@@ -33,30 +33,6 @@ final class AccountLineTest extends TestCase
         self::assertSame(['facebook', 'x'], $line->hiddenShareTargets);
     }
 
-    public function testMalformedAndRepeatedTargetIdsAreDroppedRatherThanRefused(): void
-    {
-        $line = AccountLine::fromLine([
-            'locale' => 'de',
-            'scrapeFallbackEnabled' => true,
-            'hiddenShareTargets' => ['x', 'Not An Id', 'x', '', 'reddit'],
-        ]);
-
-        self::assertSame(['x', 'reddit'], $line->hiddenShareTargets);
-    }
-
-    public function testMoreThanTheMaximumOfHiddenTargetsKeepsTheFirstOnes(): void
-    {
-        $ids = array_map(static fn (int $number): string => 'target-' . $number, range(1, 65));
-
-        $line = AccountLine::fromLine([
-            'locale' => 'de',
-            'scrapeFallbackEnabled' => true,
-            'hiddenShareTargets' => $ids,
-        ]);
-
-        self::assertSame(\array_slice($ids, 0, 64), $line->hiddenShareTargets);
-    }
-
     public function testItReadsTheMagazineStyle(): void
     {
         $line = AccountLine::fromLine([

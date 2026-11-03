@@ -26,6 +26,6 @@ final readonly class UpdateSharingRequest
 
     public function toSettings(): SharingSettingsModel
     {
-        return new SharingSettingsModel($this->enabled, array_values(array_unique($this->hiddenTargets)));
+        return new SharingSettingsModel($this->enabled, $this->hiddenTargets);
     }
 }

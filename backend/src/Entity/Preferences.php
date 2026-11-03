@@ -199,12 +199,21 @@ final class Preferences
     /** @return list<string> */
     public function getHiddenShareTargets(): array
     {
-        return array_values(array_filter($this->hiddenShareTargets ?? [], \is_string(...)));
+        return $this->hiddenShareTargets ?? [];
     }
 
-    /** @param list<string> $hiddenShareTargets */
+    /**
+     * Drops malformed and repeated ids and keeps the first MAX_HIDDEN_SHARE_TARGETS, for the API and a restore alike.
+     *
+     * @param list<string> $hiddenShareTargets
+     */
     public function setHiddenShareTargets(array $hiddenShareTargets): void
     {
-        $this->hiddenShareTargets = $hiddenShareTargets;
+        $wellFormed = array_filter(
+            $hiddenShareTargets,
+            static fn (string $id): bool => preg_match(self::TARGET_ID_PATTERN, $id) === 1,
+        );
+        $unique = array_values(array_unique($wellFormed));
+        $this->hiddenShareTargets = \array_slice($unique, 0, self::MAX_HIDDEN_SHARE_TARGETS);
     }
 }
