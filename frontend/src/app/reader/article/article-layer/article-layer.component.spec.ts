@@ -108,24 +108,29 @@ describe('ArticleLayerComponent', () => {
     expect(fixture.componentInstance.toTops).toBe(1);
   });
 
-  it('shows a back circle left of the to-top button, closing like the toolbar back (#1939)', () => {
+  it('shows a back circle right of the to-top button, closing like the toolbar back (#2002)', () => {
     scrollTo(BACK_TO_TOP_AFTER_PX + 1);
     const back = element.querySelector('.end-corner .corner-back') as HTMLButtonElement;
-    expect(back.nextElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
+    expect(back.previousElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
     expect(back.getAttribute('aria-label')).toBe('Back');
     back.click();
 
     expect(fixture.componentInstance.closes).toBe(1);
   });
 
-  it('hides the to-top button the moment the article starts to leave (#1901)', () => {
+  it('shows the back circle before the to-top button appears (#2002)', () => {
+    expect(element.querySelector('app-to-top-button')).toBeNull();
+    expect(element.querySelector('.end-corner .corner-back')).not.toBeNull();
+  });
+
+  it('hides the corner the moment the article starts to leave (#1901)', () => {
     goFullscreen();
     scrollTo(BACK_TO_TOP_AFTER_PX + 1);
 
     (element.querySelector('.bar .close') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(element.querySelector('app-to-top-button')).toBeNull();
+    expect(element.querySelector('.end-corner')).toBeNull();
     expect(fixture.componentInstance.closes).toBe(0);
   });
 
