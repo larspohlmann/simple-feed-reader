@@ -47,16 +47,12 @@
   }
   <a
     class="version"
-    routerLink="/settings"
+    [href]="releasePage"
+    target="_blank"
+    rel="noopener noreferrer"
     [attr.aria-label]="'reader.versionLabel' | transloco: { version }"
     >{{ version }}</a
   >
   <span class="separator" aria-hidden="true">·</span>
-  <a
-    class="feedback"
-    href="https://github.com/larspohlmann/simple-feed-reader/issues"
-    target="_blank"
-    rel="noopener noreferrer"
-    >Feedback</a
-  >
+  <a class="feedback" [href]="issuesPage" target="_blank" rel="noopener noreferrer">Feedback</a>
 </div>
