@@ -23,6 +23,7 @@ describe('highlightCodeBlocks', () => {
     const code = element.querySelector('pre > code');
     expect(code?.classList.contains('hljs')).toBe(true);
     expect(code?.querySelector('[class^="hljs-"]')).not.toBeNull();
+    expect(element.querySelector('pre')?.classList.contains('reader-preformatted')).toBe(false);
   });
 
   it('highlights a bare <pre> block that has no <code> child', async () => {
@@ -64,6 +65,32 @@ describe('highlightCodeBlocks', () => {
     const code = element.querySelector('pre > code');
     expect(code?.classList.contains('hljs')).toBe(false);
     expect(code?.querySelector('[class^="hljs-"]')).toBeNull();
+  });
+
+  it('leaves a <pre> broken with <br> alone: that is preformatted text, not code', async () => {
+    const element = attachedArticleHost(
+      block(
+        'Themen/ Stichworte:<br><br>Nazivergangenheit des Vaters: 100.000 Mann Heer<br>Giftskandal in Hamburg, Rudern, Notstandsgesetze',
+      ),
+    );
+
+    await highlightCodeBlocks(element);
+
+    const pre = element.querySelector('pre');
+    expect(pre?.querySelectorAll('br')).toHaveLength(3);
+    expect(pre?.classList.contains('reader-preformatted')).toBe(true);
+  });
+
+  it('leaves a <pre> holding a link alone and keeps the link', async () => {
+    const element = attachedArticleHost(
+      '<pre>Spenden für den Podcast: <a href="https://www.goodcrowd.org/podcast">https://www.goodcrowd.org/podcast</a></pre>',
+    );
+
+    await highlightCodeBlocks(element);
+
+    const pre = element.querySelector('pre');
+    expect(pre?.querySelector('a[href="https://www.goodcrowd.org/podcast"]')).not.toBeNull();
+    expect(pre?.classList.contains('reader-preformatted')).toBe(true);
   });
 
   it('does not re-process an already-highlighted block', async () => {

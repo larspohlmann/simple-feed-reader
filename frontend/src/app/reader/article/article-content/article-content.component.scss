@@ -252,6 +252,10 @@ $prose: ':where(:not(.reader-island *))';
   line-height: 1.5;
 }
 
+:host ::ng-deep pre.reader-preformatted#{$prose} {
+  white-space: pre-wrap;
+}
+
 :host ::ng-deep pre code#{$prose} {
   padding: 0;
   background: none;

@@ -11,8 +11,12 @@ import type { HLJSApi, LanguageFn } from 'highlight.js';
  * publisher-pretokenised markup whose classes the sanitiser stripped) put the tokens
  * straight in the `<pre>`; either way the `<pre>` is the unit, so highlight its
  * `<code>` child when present and the `<pre>` itself otherwise.
+ *
+ * A `<pre>` holding `<br>` or `<a>` is publisher-formatted text, not code (WordPress'
+ * Preformatted block, #2014): highlighting would drop every break and link.
  */
 const HIGHLIGHTED = 'hljs';
+const PREFORMATTED_TEXT = 'reader-preformatted';
 
 // A multi-line block gives the detector enough shape to trust. A lone line only
 // earns highlighting once it is long enough that the guess is not a coin flip;
@@ -36,9 +40,9 @@ const LANGUAGE_LOADERS: Record<string, () => Promise<{ default: LanguageFn }>> =
 let enginePromise: Promise<HLJSApi> | null = null;
 
 export async function highlightCodeBlocks(host: HTMLElement): Promise<void> {
-  const pending = Array.from(host.querySelectorAll<HTMLElement>('pre'))
-    .map(codeContainer)
-    .filter(worthHighlighting);
+  const blocks = Array.from(host.querySelectorAll<HTMLElement>('pre'));
+  markPreformattedText(blocks);
+  const pending = blocks.filter(isCodeBlock).map(codeContainer).filter(worthHighlighting);
   if (pending.length === 0) return;
   const hljs = await loadEngine();
   for (const block of pending) {
@@ -46,6 +50,16 @@ export async function highlightCodeBlocks(host: HTMLElement): Promise<void> {
     block.innerHTML = hljs.highlightAuto(block.textContent ?? '').value;
     block.classList.add(HIGHLIGHTED);
   }
+}
+
+function markPreformattedText(blocks: HTMLElement[]): void {
+  for (const pre of blocks) {
+    if (pre.querySelector('br, a') !== null) pre.classList.add(PREFORMATTED_TEXT);
+  }
+}
+
+function isCodeBlock(pre: HTMLElement): boolean {
+  return !pre.classList.contains(PREFORMATTED_TEXT);
 }
 
 function codeContainer(pre: HTMLElement): HTMLElement {
