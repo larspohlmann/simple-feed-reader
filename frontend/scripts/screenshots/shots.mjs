@@ -7,7 +7,7 @@ import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BASE, signIn, stubAiryStyle } from './lib.mjs';
+import { articles, BASE, PHONE, seedSettings, settle, signIn, stubAiryStyle } from './lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DOCS = join(HERE, '..', '..', '..', 'docs', 'screenshots');
@@ -15,12 +15,6 @@ const RAW = join(tmpdir(), 'sfr-screenshots');
 mkdirSync(RAW, { recursive: true });
 
 const DESKTOP = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 4 / 3 };
-const PHONE = {
-  viewport: { width: 390, height: 760 },
-  deviceScaleFactor: 2,
-  isMobile: true,
-  hasTouch: true,
-};
 
 const day = (daysAgo) => {
   const date = new Date();
@@ -121,11 +115,7 @@ async function stubProxy(page) {
       : route.fallback(),
   );
 }
-async function settle(page, milliseconds = 1500) {
-  await page.waitForLoadState('networkidle').catch(() => {});
-  await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(milliseconds);
-}
+
 async function scrollEverythingToTop(page) {
   await page.evaluate(() => {
     for (const element of document.querySelectorAll('*')) {
@@ -136,7 +126,6 @@ async function scrollEverythingToTop(page) {
   await settle(page, 1200);
 }
 
-const articles = (page) => page.locator('app-entry-list article');
 // A Guardian article: its reader extract starts with the text, not a share toast or an author bio.
 const guardianArticle = (page) => articles(page).filter({ hasText: 'The Guardian' }).first();
 
@@ -328,18 +317,7 @@ async function capture(browser, shot) {
   const isPhone = shot.device === 'phone';
   const context = await browser.newContext(isPhone ? PHONE : DESKTOP);
   const page = await context.newPage();
-  await page.addInitScript(
-    ({ theme, layout }) => {
-      localStorage.setItem('sfr.theme', theme);
-      localStorage.setItem('sfr.lang', 'en');
-      localStorage.setItem('sfr.readingFocus', 'false');
-      localStorage.removeItem('sfr.sidebarHidden');
-      localStorage.removeItem('sfr.textSize');
-      localStorage.removeItem('sfr.unread-only');
-      if (layout) localStorage.setItem('sfr.layout', layout);
-    },
-    { theme: shot.theme, layout: shot.layout },
-  );
+  await page.addInitScript(seedSettings, { theme: shot.theme, layout: shot.layout });
   if (shot.stub) await shot.stub(page);
   if (shot.auth !== false) await signIn(page);
   await page.goto(`${BASE}${shot.path}`);

@@ -1,6 +1,31 @@
 // Helpers shared by the screenshot and tour scripts.
 
 export const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:4200';
+export const PHONE = {
+  viewport: { width: 390, height: 760 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+};
+
+export const articles = (page) => page.locator('app-entry-list article');
+
+// An init script: the same reading settings on every page, whatever an earlier run left behind.
+export function seedSettings({ theme, layout }) {
+  localStorage.setItem('sfr.theme', theme);
+  localStorage.setItem('sfr.lang', 'en');
+  localStorage.setItem('sfr.readingFocus', 'false');
+  localStorage.removeItem('sfr.sidebarHidden');
+  localStorage.removeItem('sfr.textSize');
+  localStorage.removeItem('sfr.unread-only');
+  if (layout) localStorage.setItem('sfr.layout', layout);
+}
+
+export async function settle(page, milliseconds = 1500) {
+  await page.waitForLoadState('networkidle').catch(() => {});
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(milliseconds);
+}
 
 // The magazine style is a server preference; answer the profile with airy instead of saving it.
 export async function stubAiryStyle(pageOrContext) {
