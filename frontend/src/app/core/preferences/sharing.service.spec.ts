@@ -135,6 +135,17 @@ describe('SharingService', () => {
     expect(written).toEqual([]);
   });
 
+  it('leaves the cache alone when the account already matches it', () => {
+    localStorage.setItem(SHARING_KEY, JSON.stringify({ enabled: false, hiddenTargets: ['x'] }));
+    const service = make();
+    const setItem = jest.spyOn(Storage.prototype, 'setItem');
+
+    service.adopt(userWith({ enabled: false, hiddenTargets: ['x'] }));
+
+    expect(setItem).not.toHaveBeenCalled();
+    setItem.mockRestore();
+  });
+
   it('resets to sharing everything and forgets the cache', () => {
     const service = make();
     service.setEnabled(false);

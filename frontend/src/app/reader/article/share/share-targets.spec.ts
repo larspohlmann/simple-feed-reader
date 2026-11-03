@@ -1,13 +1,10 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import config from '../../../../../public/share-targets/share-targets.json';
-import {
-  ConfiguredTarget,
-  SHARE_TARGETS,
-  TARGET_ID_PATTERN,
-  carriesText,
-  shareUrl,
-} from './share-targets';
+import { ConfiguredTarget, SHARE_TARGETS, carriesText, shareUrl } from './share-targets';
+
+/** The format the account stores hidden target ids in; `Preferences::TARGET_ID_PATTERN` on the server. */
+const TARGET_ID_PATTERN = /^[a-z0-9-]{1,32}$/;
 
 describe('share targets', () => {
   it('fills the url, the title and the text, encoded', () => {

@@ -76,6 +76,9 @@ export class ArticlePageComponent {
   protected readonly source = inject(ARTICLE_PAGE_SOURCE);
   protected readonly scope = inject(ReadingScope);
   protected readonly sharing = inject(ShareAvailability);
+  protected readonly shareUrl = computed(() =>
+    this.sharing.available() ? this.source.url() : null,
+  );
   private readonly restore = inject(ArticleScrollRestore);
   private readonly reduceMotion = prefersReducedMotion();
 

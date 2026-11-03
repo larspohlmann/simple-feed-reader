@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { SharingService } from '../../../core/preferences/sharing.service';
 import { ShareAvailability } from './share-availability';
-import { SHARE_TARGETS } from './share-targets';
+import { CONFIGURED_TARGETS } from './share-targets';
 
 describe('ShareAvailability', () => {
   beforeEach(() => {
@@ -9,8 +9,7 @@ describe('ShareAvailability', () => {
     TestBed.resetTestingModule();
   });
 
-  const allIds = (): string[] =>
-    SHARE_TARGETS.flatMap((target) => (target.kind === 'divider' ? [] : [target.id]));
+  const allIds = (): string[] => CONFIGURED_TARGETS.map((target) => target.id);
 
   it('is available while sharing is on and a target is left', () => {
     TestBed.inject(SharingService).setTargetShown('x', false);

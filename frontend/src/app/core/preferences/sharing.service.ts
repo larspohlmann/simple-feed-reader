@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, concatMap } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
+import { sameIds } from '../same-ids';
 import { SHARING_EVERYTHING, SHARING_KEY, SharingSettings, asSharingSettings } from './sharing';
 import { SHARING_WRITER } from './sharing-writer';
 
@@ -39,7 +40,7 @@ export class SharingService {
   /** Caches only: a value that just arrived from the server is never written straight back. */
   adopt(user: CurrentUser): void {
     const settings = asSharingSettings(user.preferences.sharing);
-    if (settings !== null) this.cache(settings);
+    if (settings !== null && !sameSettings(settings, this.settings())) this.cache(settings);
   }
 
   reset(): void {
@@ -69,4 +70,8 @@ export class SharingService {
       return SHARING_EVERYTHING;
     }
   }
+}
+
+function sameSettings(left: SharingSettings, right: SharingSettings): boolean {
+  return left.enabled === right.enabled && sameIds(left.hiddenTargets, right.hiddenTargets);
 }

@@ -19,9 +19,6 @@ export type ShareTarget =
   | (ShareEntry & { readonly kind: 'system' | 'copy' })
   | (ShareEntry & { readonly kind: 'link'; readonly url: string });
 
-/** The format the account stores hidden target ids in; `Preferences::TARGET_ID_PATTERN` on the server. */
-export const TARGET_ID_PATTERN = /^[a-z0-9-]{1,32}$/;
-
 export const SHARE_TARGETS = (config as readonly ShareTarget[]).filter(
   (target) => target.kind !== 'system' || typeof navigator.share === 'function',
 );
@@ -37,6 +34,10 @@ export function shareLogoUrl(file: string): string {
 
 /** A target the menu lists, as against a divider between them. */
 export type ConfiguredTarget = Exclude<ShareTarget, { kind: 'divider' }>;
+
+export const CONFIGURED_TARGETS = SHARE_TARGETS.filter(
+  (target): target is ConfiguredTarget => target.kind !== 'divider',
+);
 
 /** Whether a target can carry a quote: the system sheet and the clipboard can, an address only through `{text}`. */
 export function carriesText(target: ConfiguredTarget): boolean {
