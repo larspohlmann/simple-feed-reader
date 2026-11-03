@@ -52,7 +52,9 @@ describe('share targets', () => {
       entry.kind === 'divider' ? [] : [entry.id],
     );
 
-    expect(ids.filter((id) => typeof id !== 'string' || !TARGET_ID_PATTERN.test(id))).toStrictEqual([]);
+    expect(ids.filter((id) => typeof id !== 'string' || !TARGET_ID_PATTERN.test(id))).toStrictEqual(
+      [],
+    );
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
