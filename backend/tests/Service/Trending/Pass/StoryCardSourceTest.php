@@ -4,23 +4,46 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Trending\Pass;
 
+use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
+use App\Repository\EntryListRowViewState;
 use App\Service\Trending\Model\RankedStoryModel;
 use App\Service\Trending\Pass\StoryCardSource;
-use PHPUnit\Framework\TestCase;
+use App\Tests\DbTestCase;
+use App\Tests\Support\TrendingFixtures;
 
-final class StoryCardSourceTest extends TestCase
+final class StoryCardSourceTest extends DbTestCase
 {
-    public function testAStoryWhoseRowsVanishedBetweenTheQueriesGetsNoCard(): void
+    public function testAStoryWhoseRowsVanishedBetweenTheQueriesGetsNoCardAndTheNextOneStillDoes(): void
     {
-        $source = new StoryCardSource([5 => [101, 102]], [], [5 => 0]);
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $entry = $fixtures->entry($fixtures->feed('alpha'), 'Alpha', '2031-05-14 08:00:00');
+        $fixtures->flush();
+        $row = new EntryListRow(
+            $entry,
+            new EntryListRowSubscription(1, 'Alpha'),
+            false,
+            false,
+            false,
+            new EntryListRowViewState(false, null, null),
+            null,
+        );
+        $source = new StoryCardSource(
+            [5 => [101, 102], 6 => [$entry->requireId()]],
+            [$entry->requireId() => $row],
+            [6 => 0],
+        );
 
-        self::assertSame([], $source->cardsOf([new RankedStoryModel(5, 3)]));
+        $cards = $source->cardsOf([new RankedStoryModel(5, 3), new RankedStoryModel(6, 4)]);
+
+        self::assertCount(1, $cards);
+        self::assertSame($row, $cards[0]->lead);
+        self::assertSame(4, $cards[0]->outletCount);
+        self::assertTrue($cards[0]->viewed);
     }
 
     public function testAStoryWithoutAnyEntryIdsGetsNoCard(): void
     {
-        $source = new StoryCardSource([], [], []);
-
-        self::assertSame([], $source->cardsOf([new RankedStoryModel(7, 3)]));
+        self::assertSame([], (new StoryCardSource([], [], []))->cardsOf([new RankedStoryModel(7, 3)]));
     }
 }

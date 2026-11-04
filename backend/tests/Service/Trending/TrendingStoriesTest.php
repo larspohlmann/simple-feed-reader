@@ -123,6 +123,62 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
     }
 
+    public function testTheRankingIsCutAtTheLimit(): void
+    {
+        [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
+        $wider = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $delta]);
+        $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
+
+        $ranked = $this->storyRepository()->rankedForUser($this->reader->requireId(), TrendingWindow::Day, 1);
+
+        self::assertSame([$wider->requireId()], array_map(static fn ($story): int => $story->storyId, $ranked));
+        self::assertSame([4], array_map(static fn ($story): int => $story->outletCount, $ranked));
+    }
+
+    public function testOnlyArticlesOfFeedsTheReaderFollowsAreListedPerStory(): void
+    {
+        [$followed, $stranger] = $this->articleFeeds('followed', 'stranger');
+        $social = $this->fixtures->feed('social', SocialNetwork::Bluesky);
+        $this->fixtures->subscribe($this->reader, $followed, $social);
+        $article = $this->fixtures->entry($followed, 'Followed', '2031-05-14 08:00:00');
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $article,
+            $this->fixtures->entry($stranger, 'Stranger', '2031-05-14 09:00:00'),
+            $this->fixtures->entry($social, 'Post', '2031-05-14 07:00:00'),
+        );
+        $otherStory = $this->storyOf('2031-05-14 11:00:00', [$followed]);
+        $userId = $this->reader->requireId();
+
+        self::assertSame(
+            [$story->requireId() => [$article->requireId()]],
+            $this->storyRepository()->articleEntryIdsByStory($userId, [$story->requireId()]),
+        );
+        self::assertSame([$otherStory->requireId()], array_keys(
+            $this->storyRepository()->articleEntryIdsByStory($userId, [$otherStory->requireId()]),
+        ));
+        self::assertSame([], $this->storyRepository()->articleEntryIdsByStory($userId, []));
+    }
+
+    public function testViewedStoriesAreLimitedToTheAskedStories(): void
+    {
+        [$alpha] = $this->articleFeeds('alpha');
+        $this->fixtures->subscribe($this->reader, $alpha);
+        $askedEntry = $this->fixtures->entry($alpha, 'Asked', '2031-05-14 08:00:00');
+        $otherEntry = $this->fixtures->entry($alpha, 'Other', '2031-05-14 09:00:00');
+        $asked = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $askedEntry);
+        $this->fixtures->story(TrendingWindow::Day, '2031-05-14 11:00:00', $otherEntry);
+        $this->markViewed($this->reader, $askedEntry);
+        $this->markViewed($this->reader, $otherEntry);
+
+        self::assertSame(
+            [$asked->requireId()],
+            $this->storyRepository()->viewedStoryIds($this->reader->requireId(), [$asked->requireId()]),
+        );
+    }
+
     public function testEveryOutletSharingOneArticleSurfacesOnTheCardNewestFirst(): void
     {
         [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
