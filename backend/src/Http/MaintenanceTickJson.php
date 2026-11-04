@@ -15,6 +15,7 @@ use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Trending\Model\TrendingRebuildReportModel;
 
 /** The /maintenance/tick response: every half under a stable key; a skipped sweep says why. */
 final class MaintenanceTickJson
@@ -44,8 +45,9 @@ final class MaintenanceTickJson
             'privateFeedSync' => self::markedIfSkipped($sweeps, self::privateFeedSync($sweeps->privateFeedSync)),
             'savedSearchMemberships' => self::markedIfSkipped(
                 $sweeps,
-                self::memberships($sweeps->savedSearchMemberships),
+                self::memberships($sweeps->derivedViews->savedSearchMemberships),
             ),
+            'trending' => self::markedIfSkipped($sweeps, self::trending($sweeps->derivedViews->trending)),
             'logShipping' => self::logShipping($report->logShipping),
         ];
     }
@@ -125,6 +127,12 @@ final class MaintenanceTickJson
             'matchesInserted' => $report->matchesInserted,
             'caughtUp' => $report->caughtUp,
         ];
+    }
+
+    /** @return array{windowsRebuilt: int, storiesBuilt: int} */
+    private static function trending(TrendingRebuildReportModel $report): array
+    {
+        return ['windowsRebuilt' => \count($report->builds), 'storiesBuilt' => $report->storyCount()];
     }
 
     /** @return array{shipped: int, failed: int} */

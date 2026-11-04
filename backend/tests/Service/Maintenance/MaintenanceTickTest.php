@@ -7,6 +7,7 @@ namespace App\Tests\Service\Maintenance;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\TrendingWindow;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\LinkCard\LinkCardSweep;
@@ -20,6 +21,7 @@ use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
+use App\Service\Maintenance\DerivedViewSweeps;
 use App\Service\Maintenance\FollowUpFetchSweeps;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
@@ -51,10 +53,12 @@ use App\Service\Social\ProfileImageSweep;
 use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Social\SocialMaintenance;
 use App\Service\Transcript\TranscriptSweep;
+use App\Service\Trending\Model\TrendingBuildReportModel;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\StubSocialCandidates;
+use App\Tests\Support\TrendingWiring;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -303,6 +307,39 @@ final class MaintenanceTickTest extends DbTestCase
         );
     }
 
+    public function testRebuildsTheDueTrendingWindowsAfterTheOtherSweeps(): void
+    {
+        $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
+        $now = $clock->now();
+        $subscriber = new User('tick-trending@example.com', $now);
+        $this->entityManager->persist($subscriber);
+        $feed = new Feed('https://one.example.com/feed');
+        $feed->scheduleNextFetchAt($now->modify('-1 hour'));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($subscriber, $feed, $now));
+        $this->entityManager->flush();
+        $passes = new StubPassFetcher($clock);
+        $passes->willReturnBody(
+            'https://one.example.com/feed',
+            /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title></channel></rss>',
+        );
+        $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+            ->build($passes, new StubFeedFetcher());
+        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
+        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
+        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock);
+
+        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
+
+        self::assertSame(
+            [TrendingWindow::Day, TrendingWindow::Week],
+            array_map(
+                static fn (TrendingBuildReportModel $build): TrendingWindow => $build->window,
+                $report->sweeps->derivedViews->trending->builds,
+            ),
+        );
+    }
+
     private function tickAround(
         RefreshRunner $refreshRunner,
         SendDueDigests $sendDueDigests,
@@ -329,10 +366,14 @@ final class MaintenanceTickTest extends DbTestCase
                 ),
                 $clock,
             ),
-            MembershipSweepFactory::fromContainer(
-                self::getContainer(),
-                $this->entityManager,
-                new RecordingSavedSearchMatcher(),
+            new DerivedViewSweeps(
+                MembershipSweepFactory::fromContainer(
+                    self::getContainer(),
+                    $this->entityManager,
+                    new RecordingSavedSearchMatcher(),
+                    $clock,
+                ),
+                TrendingWiring::rebuild($this->entityManager, $clock),
                 $clock,
             ),
             new LokiSpoolShipper(

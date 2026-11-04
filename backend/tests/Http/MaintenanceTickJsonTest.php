@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\MaintenanceTickJson;
+use App\Enum\TrendingWindow;
 use App\Service\Image\Model\ImageVerificationReportModel;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Maintenance\Model\DerivedViewsReportModel;
 use App\Service\Maintenance\Model\FollowUpFetchesReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
@@ -19,6 +21,8 @@ use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Trending\Model\TrendingBuildReportModel;
+use App\Service\Trending\Model\TrendingRebuildReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class MaintenanceTickJsonTest extends TestCase
@@ -38,7 +42,27 @@ final class MaintenanceTickJsonTest extends TestCase
                 new ProfileImageSweepReportModel(18, 19),
                 new HiddenProfileSwitchReportModel(24, 25),
                 new PrivateFeedSyncReportModel(20, 21, 22, 23),
-                new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
+                new DerivedViewsReportModel(
+                    new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
+                    new TrendingRebuildReportModel([
+                        new TrendingBuildReportModel(
+                            TrendingWindow::Day,
+                            new \DateTimeImmutable('2031-05-14 12:00:00'),
+                            300,
+                            28,
+                            400,
+                            5_000,
+                        ),
+                        new TrendingBuildReportModel(
+                            TrendingWindow::Week,
+                            new \DateTimeImmutable('2031-05-14 12:00:00'),
+                            900,
+                            29,
+                            800,
+                            9_000,
+                        ),
+                    ]),
+                ),
             ),
             new LokiSpoolReportModel(14, 15),
         );
@@ -77,6 +101,7 @@ final class MaintenanceTickJsonTest extends TestCase
                     'matchesInserted' => 13,
                     'caughtUp' => true,
                 ],
+                'trending' => ['windowsRebuilt' => 2, 'storiesBuilt' => 57],
                 'logShipping' => ['shipped' => 14, 'failed' => 15],
             ],
             MaintenanceTickJson::report($report),
@@ -140,6 +165,7 @@ final class MaintenanceTickJsonTest extends TestCase
                     'caughtUp' => false,
                     'skipped' => $reason,
                 ],
+                'trending' => ['windowsRebuilt' => 0, 'storiesBuilt' => 0, 'skipped' => $reason],
                 'logShipping' => ['shipped' => 0, 'failed' => 0],
             ],
             MaintenanceTickJson::report($report),

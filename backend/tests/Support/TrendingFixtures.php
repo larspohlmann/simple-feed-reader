@@ -6,6 +6,8 @@ namespace App\Tests\Support;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\Subscription;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
@@ -18,6 +20,15 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Feeds, entries and stored stories for the Trending integration tests; dates are naive UTC strings. */
 final readonly class TrendingFixtures
 {
+    /** @var list<string> headlines that pairwise share enough stems to link into one story */
+    private const array HAFENSTREIK = [
+        'Hafenstreik legt Hamburg lahm',
+        'Hafenstreik in Hamburg: Terminals lahm',
+        'Hamburg: Hafenstreik macht Terminals lahm',
+        'Hafenstreik: Hamburg lahm, Terminals zu',
+        'Hamburg Terminals lahm: Hafenstreik',
+    ];
+
     public function __construct(private EntityManagerInterface $entityManager)
     {
     }
@@ -38,6 +49,26 @@ final readonly class TrendingFixtures
                 new Subscription($user, $feed, new \DateTimeImmutable('2031-01-01 00:00:00')),
             );
         }
+    }
+
+    /** Variants 0 to 4 of one recurring story; any three link, all five make a week-sized story. */
+    public function hafenstreik(Feed $feed, int $variant, string $effectiveDate): Entry
+    {
+        return $this->entry($feed, self::HAFENSTREIK[$variant], $effectiveDate);
+    }
+
+    /** A post whose only link to a story is the card carrying $cardUrl; flushes first, a card copies its entry's id. */
+    public function postSharing(Feed $feed, string $title, string $effectiveDate, string $cardUrl): Entry
+    {
+        $post = $this->entry($feed, $title, $effectiveDate);
+        $this->entityManager->flush();
+        $this->entityManager->persist(new LinkCard(
+            $post,
+            0,
+            new LinkCardContent($cardUrl, 'Card', null, null, (string) parse_url($cardUrl, PHP_URL_HOST)),
+        ));
+
+        return $post;
     }
 
     public function entry(Feed $feed, string $title, string $effectiveDate): Entry
