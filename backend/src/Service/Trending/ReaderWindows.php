@@ -32,11 +32,17 @@ final readonly class ReaderWindows
             $userId,
             $window,
             $window->minimumOutletsFor($this->windowEntries->activeFeedCount($userId, $since)),
-            array_merge([], ...array_map(
-                fn (TrendingWindow $shorter): array => $this->shownStoryIds($userId, $shorter),
-                $window->leavesOutTheStoriesOf(),
-            )),
+            $this->storyIdsLeftOutOf($userId, $window),
         );
+    }
+
+    /** @return list<int> */
+    private function storyIdsLeftOutOf(int $userId, TrendingWindow $window): array
+    {
+        return array_merge([], ...array_map(
+            fn (TrendingWindow $shorter): array => $this->shownStoryIds($userId, $shorter),
+            $window->leavesOutTheStoriesOf(),
+        ));
     }
 
     /** @return list<int> */

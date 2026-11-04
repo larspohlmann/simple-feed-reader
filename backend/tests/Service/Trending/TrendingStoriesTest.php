@@ -571,12 +571,10 @@ final class TrendingStoriesTest extends DbTestCase
      */
     private function rankedDayStoryIdsOf(User $user): array
     {
-        $ranked = $this->storyRepository()->rankedForUser(
+        return RankedStoryModel::storyIdsOf($this->storyRepository()->rankedForUser(
             $this->readerWindows()->of($user->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
-        );
-
-        return array_map(static fn (RankedStoryModel $story): int => $story->storyId, $ranked);
+        ));
     }
 
     /** @return list<int> */

@@ -23,16 +23,15 @@ final readonly class TrendingStoryHiding
     }
 
     /**
-     * Nothing written means the story was hidden before or a rebuild replaced it in between: asked again, the entry
-     * names its new story, or none.
+     * Nothing written means the story was hidden before or a rebuild replaced it in between: asked again, with the
+     * reader's cut taken afresh, the entry names its new story, or none.
      *
      * @throws TrendingStoryNotFoundException
      */
     public function hide(int $userId, TrendingWindow $window, int $entryId): void
     {
-        $reader = $this->readerWindows->of($userId, $window);
-        if ($this->hideStoryHolding($reader, $entryId) === 0) {
-            $this->hideStoryHolding($reader, $entryId);
+        if ($this->hideStoryHolding($this->readerWindows->of($userId, $window), $entryId) === 0) {
+            $this->hideStoryHolding($this->readerWindows->of($userId, $window), $entryId);
         }
     }
 
