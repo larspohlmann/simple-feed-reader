@@ -1173,7 +1173,7 @@
     "trendingSources": "{{count}} Quellen",
     "trendingWindow": { "label": "Zeitraum", "day": "24 Std.", "week": "7 Tage" },
     "trendingEmptyDay": "Eine Geschichte erscheint hier, sobald mehrere deiner Feeds innerhalb von 24 Stunden darüber berichten.",
-    "trendingEmptyWeek": "Eine Geschichte erscheint hier, sobald mehrere deiner Feeds innerhalb von 7 Tagen darüber berichten.",
+    "trendingEmptyWeek": "Eine Geschichte erscheint hier, sobald mehrere deiner Feeds innerhalb von 7 Tagen darüber berichten. Was in deiner 24-Stunden-Liste steht, kommt hier nicht noch einmal.",
     "narrationPlayer": "Anhören — KI-generierte Vorlesung",
     "slideshowPrevious": "Vorheriges Bild",
     "slideshowNext": "Nächstes Bild",

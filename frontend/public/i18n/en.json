@@ -1173,7 +1173,7 @@
     "trendingSources": "{{count}} sources",
     "trendingWindow": { "label": "Time window", "day": "24 h", "week": "7 days" },
     "trendingEmptyDay": "A story shows up here once several of your feeds cover it within 24 hours.",
-    "trendingEmptyWeek": "A story shows up here once several of your feeds cover it within 7 days.",
+    "trendingEmptyWeek": "A story shows up here once several of your feeds cover it within 7 days. Stories in your 24 h list don't repeat here.",
     "narrationPlayer": "Listen — machine-generated narration",
     "slideshowPrevious": "Previous slide",
     "slideshowNext": "Next slide",
