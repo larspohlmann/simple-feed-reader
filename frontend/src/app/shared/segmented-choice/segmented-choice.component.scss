@@ -39,6 +39,12 @@
   font-weight: 600;
 }
 
+@media (pointer: coarse) {
+  .seg {
+    min-height: var(--tap-target);
+  }
+}
+
 .count {
   margin-left: var(--space-1);
   color: var(--text-muted);

@@ -1020,6 +1020,10 @@ The selected option takes the accent treatment of the pill toggles: `--accent-so
 fill, `--accent` text, semibold, so it reads in light and dark alike. `aria-pressed`
 stays the semantic state; the `on` class only draws it.
 
+On a coarse pointer the control is at least `--tap-target` tall, like the view-controls
+groups (`theme/_segmented.scss`); in the list header that matches the 44px actions of
+the other lists, so Trending's header is as tall as theirs.
+
 The control sizes to its labels; a consumer that wants it full width makes
 the host `display: flex` and the buttons share the width (the social import
 dialog's tabs).
