@@ -1208,4 +1208,65 @@ describe('EntriesStore', () => {
       expect(store.entries()[0].social?.isLiked).toBe(false);
     });
   });
+
+  describe('hiding a Trending story (#2017)', () => {
+    const listed = () => store.entries().map((row) => row.id);
+    const hideRequest = () => ctrl.expectOne('https://api.test/api/trending/hidden');
+    const loadThree = () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
+    };
+
+    it('takes the card off the list at once and reports once the server hid the story', () => {
+      loadThree();
+      const onSaved = jest.fn();
+
+      store.hideTrendingStory('week', 2, { onSaved });
+
+      expect(listed()).toEqual([1, 3]);
+      const request = hideRequest();
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({ window: 'week', entryId: 2 });
+      expect(onSaved).not.toHaveBeenCalled();
+      request.flush(null, { status: 204, statusText: 'No Content' });
+      expect(onSaved).toHaveBeenCalledTimes(1);
+      expect(listed()).toEqual([1, 3]);
+    });
+
+    it('puts a card whose hide failed back where it was, with the error banner and its retry', () => {
+      loadThree();
+
+      store.hideTrendingStory('day', 2);
+      hideRequest().flush(
+        { type: 'x', title: 't', status: 500 },
+        { status: 500, statusText: 'err' },
+      );
+
+      expect(listed()).toEqual([1, 2, 3]);
+      expect(store.error()).not.toBeNull();
+
+      store.retry();
+      expect(listed()).toEqual([1, 3]);
+      hideRequest().flush(null, { status: 204, statusText: 'No Content' });
+      expect(store.error()).toBeNull();
+    });
+
+    it('does not double a card a reload brought back before the hide failed', () => {
+      loadThree();
+      store.hideTrendingStory('day', 2);
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
+
+      hideRequest().flush(
+        { type: 'x', title: 't', status: 500 },
+        { status: 500, statusText: 'err' },
+      );
+
+      expect(listed()).toEqual([1, 2, 3]);
+    });
+  });
 });

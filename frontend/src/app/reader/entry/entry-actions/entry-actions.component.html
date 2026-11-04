@@ -97,6 +97,18 @@
 >
   <app-icon name="check" [size]="size()" />
 </button>
+@if (entry().coverage && storyHide()) {
+  <button
+    type="button"
+    [attr.aria-label]="'reader.hideStory' | transloco"
+    [attr.title]="'reader.actionHint.hideStory' | transloco"
+    (click)="$event.stopPropagation(); actions.hideStory(entry())"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon name="visibility_off" [size]="size()" />
+  </button>
+}
 @if (entry().social?.isOwn) {
   <button
     type="button"

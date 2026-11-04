@@ -6,8 +6,9 @@ import { accountSignal, onIdentityChange } from '../../core/auth/session-identit
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
-import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
+import { EntryDto, EntryQuery, EntryStatePatch, TrendingWindow } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
+import { withCardBack, withPatchedRow } from './entry-rows';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -293,6 +294,26 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
+  /** Takes a Trending card off the list at once (#2017); a failed hide puts it back where it was, with the banner
+   *  and its retry. */
+  hideTrendingStory(window: TrendingWindow, entryId: number, outcome: StateSaveOutcome = {}): void {
+    const index = this.rawEntries().findIndex((entry) => entry.id === entryId);
+    if (index < 0) return;
+    const card = this.rawEntries()[index];
+    this.error.set(null);
+    this.failedOperation.set(null);
+    this.rawEntries.update((current) => current.filter((entry) => entry.id !== entryId));
+    this.api.hideTrendingStory(window, entryId).subscribe({
+      next: () => outcome.onSaved?.(),
+      error: (error: HttpErrorResponse) => {
+        this.rawEntries.update((current) => withCardBack(current, card, index));
+        this.error.set(parseProblem(error));
+        this.failedOperation.set(() => this.hideTrendingStory(window, entryId, outcome));
+        outcome.onFailed?.();
+      },
+    });
+  }
+
   /** Reaches each target as a row and as a copy inside a row's footer (`duplicates`, `coverage.others`).
    *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
@@ -337,39 +358,6 @@ export class EntriesStore {
 function valuesBefore(entry: EntryDto, patch: RowPatch): RowPatch {
   const keys = Object.keys(patch) as (keyof RowPatch)[];
   return Object.fromEntries(keys.map((key) => [key, entry[key]]));
-}
-
-/** `row` itself when neither it nor a copy in its footer is targeted. */
-function withPatchedRow(
-  row: EntryDto,
-  targets: ReadonlySet<number>,
-  patch: (entry: EntryDto) => EntryDto,
-): EntryDto {
-  const patched = targets.has(row.id) ? patch(row) : row;
-  return withPatchedCoverage(withPatchedDuplicates(patched, targets, patch), targets, patch);
-}
-
-function withPatchedDuplicates(
-  row: EntryDto,
-  targets: ReadonlySet<number>,
-  patch: (entry: EntryDto) => EntryDto,
-): EntryDto {
-  if (!row.duplicates?.some((copy) => targets.has(copy.id))) return row;
-  return {
-    ...row,
-    duplicates: row.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
-  };
-}
-
-function withPatchedCoverage(
-  row: EntryDto,
-  targets: ReadonlySet<number>,
-  patch: (entry: EntryDto) => EntryDto,
-): EntryDto {
-  const coverage = row.coverage;
-  if (!coverage?.others.some((other) => targets.has(other.id))) return row;
-  const others = coverage.others.map((other) => (targets.has(other.id) ? patch(other) : other));
-  return { ...row, coverage: { ...coverage, others } };
 }
 
 function copiesOf(row: EntryDto): EntryDto[] {

@@ -39,6 +39,8 @@ export class EntryActionsComponent {
   readonly audio = input(true);
   /** Off in the article view, whose counts row below the post carries the like (#1615). */
   readonly like = input(true);
+  /** Off in the article view: hiding takes a card off a list, and the article page is none. */
+  readonly storyHide = input(true);
   protected readonly likeable = computed(() => {
     return this.like() ? likeableSocial(this.entry()) : null;
   });

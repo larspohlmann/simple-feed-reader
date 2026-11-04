@@ -79,6 +79,10 @@ export class ReaderApi {
     });
   }
 
+  hideTrendingStory(window: TrendingWindow, entryId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/trending/hidden`, { window, entryId });
+  }
+
   /** A single entry by id, full body included — lets a deep link open an entry
    *  not in the loaded page, and backs the reader body store. */
   entry(id: number): Observable<EntryDetailResponse> {

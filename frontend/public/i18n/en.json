@@ -1375,6 +1375,7 @@
     "keep": "Keep",
     "unshare": "Remove from shared",
     "toggleRead": "Toggle read",
+    "hideStory": "Hide story",
     "actionHint": {
       "favoriteAdd": "Add to favourites",
       "favoriteRemove": "Remove from favourites",
@@ -1390,7 +1391,8 @@
       "keepRemove": "Stop keeping — old-entry cleanup may delete it again",
       "unshare": "Shared — remove it from the Shared list",
       "readAdd": "Mark as read — adds it to Recently read",
-      "readRemove": "Remove from Recently read"
+      "readRemove": "Remove from Recently read",
+      "hideStory": "Hide this story from Trending — it stays hidden as it grows"
     },
     "filterByTag": "Filter by {{name}}",
     "shortBadge": "Short",

@@ -1375,6 +1375,7 @@
     "keep": "Merken",
     "unshare": "Aus Geteilt entfernen",
     "toggleRead": "Gelesen umschalten",
+    "hideStory": "Geschichte ausblenden",
     "actionHint": {
       "favoriteAdd": "Zu Favoriten hinzufügen",
       "favoriteRemove": "Aus Favoriten entfernen",
@@ -1390,7 +1391,8 @@
       "keepRemove": "Nicht mehr merken — das Aufräumen alter Einträge darf ihn wieder löschen",
       "unshare": "Geteilt — aus der Liste Geteilt entfernen",
       "readAdd": "Als gelesen markieren — landet in „Zuletzt gelesen“",
-      "readRemove": "Aus „Zuletzt gelesen“ entfernen"
+      "readRemove": "Aus „Zuletzt gelesen“ entfernen",
+      "hideStory": "Diese Geschichte in „Im Trend“ ausblenden — sie bleibt verborgen, auch wenn sie wächst"
     },
     "filterByTag": "Nach {{name}} filtern",
     "shortBadge": "Short",
