@@ -37,6 +37,15 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
         ], $this->wiredSweeps());
     }
 
+    /** Reads priority() without the compiled container, which a changed priority does not rebuild under Infection. */
+    public function testTheDeclaredPrioritiesGiveTheWiredOrder(): void
+    {
+        $declared = self::declaredImplementations();
+        usort($declared, static fn (string $left, string $right): int => $right::priority() <=> $left::priority());
+
+        self::assertSame(array_values($this->wiredSweeps()), $declared);
+    }
+
     public function testEveryImplementationIsTagged(): void
     {
         $wired = array_values($this->wiredSweeps());
