@@ -297,7 +297,12 @@ final class MaintenanceTickTest extends DbTestCase
             ->build($passes, new StubFeedFetcher());
 
         $report = $this->tickAround(
-            new MaintenanceTickDoubles($refreshRunner, $clock, self::TICK_WINDOW_SECONDS, linkCardSweep: $linkCardSweep),
+            new MaintenanceTickDoubles(
+                $refreshRunner,
+                $clock,
+                self::TICK_WINDOW_SECONDS,
+                linkCardSweep: $linkCardSweep,
+            ),
         )->run();
 
         self::assertFalse($report->refresh->isAborted());
@@ -437,7 +442,8 @@ final class MaintenanceTickTest extends DbTestCase
                 ),
                 new TranscriptsTickSweep($transcriptSweep, $clock),
                 new LinkCardsTickSweep(
-                    $doubles->linkCardSweep ?? LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock),
+                    $doubles->linkCardSweep
+                        ?? LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock),
                     $clock,
                 ),
                 new ImageVerificationTickSweep($imageVerificationSweep, $clock),

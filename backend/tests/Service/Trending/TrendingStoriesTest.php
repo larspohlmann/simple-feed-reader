@@ -73,7 +73,11 @@ final class TrendingStoriesTest extends DbTestCase
             [$gammaNewest->requireId(), $alphaNew->requireId()],
             self::idsOf($stories[0]->lead->duplicates),
         );
-        self::assertSame(4, $stories[0]->story->outletCount, 'the social account counts, the unsubscribed feed does not');
+        self::assertSame(
+            4,
+            $stories[0]->story->outletCount,
+            'the social account counts, the unsubscribed feed does not',
+        );
         self::assertFalse($stories[0]->viewed);
     }
 
