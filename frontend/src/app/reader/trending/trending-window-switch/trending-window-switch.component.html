@@ -1,7 +1,7 @@
 <app-segmented-choice
   [options]="windows"
-  [selected]="trendingWindow.window()"
+  [selected]="window()"
+  [links]="links"
   ariaLabelKey="reader.trendingWindow.label"
   labelPrefix="reader.trendingWindow."
-  (pick)="trendingWindow.set($event)"
 />

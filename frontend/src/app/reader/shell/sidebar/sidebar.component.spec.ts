@@ -18,7 +18,7 @@ import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { TrendingCounts } from '../../trending/trending.models';
+import { TrendingUnopened } from '../../trending/trending.models';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
@@ -121,7 +121,7 @@ function inputDefaults() {
     favoritesCount: 0,
     keptCount: 0,
     sharedCount: 0,
-    trendingCounts: { day: 0, week: 0 } as TrendingCounts,
+    trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
     groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', id: null, unread: true } as Selection,
     loading: false,
@@ -152,7 +152,7 @@ function mount(
     favoritesCount: number;
     keptCount: number;
     sharedCount: number;
-    trendingCounts: TrendingCounts;
+    trendingUnopened: TrendingUnopened;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
     user: CurrentUser | null;
@@ -284,30 +284,32 @@ describe('SidebarComponent', () => {
       expect(labels[labels.indexOf('Trending') + 1]).toBe('For you');
     });
 
-    it("counts the day's unopened stories by default", () => {
-      const element = mount({ trendingCounts: { day: 4, week: 9 } }).nativeElement as HTMLElement;
-
-      expect(trendingNav(element).querySelector('.count')?.textContent?.trim()).toBe('4');
-    });
-
-    it("counts the week's once the account chose the week", () => {
-      localStorage.setItem('sfr.user.1.trending-window', 'week');
-      const element = mount({ trendingCounts: { day: 4, week: 9 } }).nativeElement as HTMLElement;
+    it('counts the unopened stories the server reported', () => {
+      const element = mount({ trendingUnopened: { window: 'week', unopened: 9 } })
+        .nativeElement as HTMLElement;
 
       expect(trendingNav(element).querySelector('.count')?.textContent?.trim()).toBe('9');
     });
 
     it('links to the Trending view and is marked active on it', () => {
       const element = mount({
-        selection: { kind: 'trending', id: null, unread: false },
+        selection: { kind: 'trending', id: null, unread: false, window: 'day' },
       }).nativeElement as HTMLElement;
 
       expect(trendingNav(element).getAttribute('href')).toContain('view=trending');
+      expect(trendingNav(element).getAttribute('href')).not.toContain('window=');
       expect(trendingNav(element).classList).toContain('active');
     });
 
+    it('opens the window the account last opened (D40)', () => {
+      localStorage.setItem('sfr.user.1.trending-window', 'week');
+      const element = mount().nativeElement as HTMLElement;
+
+      expect(trendingNav(element).getAttribute('href')).toContain('window=week');
+    });
+
     it('is gone, badge and all, once the account switched Trending off (D39)', () => {
-      const fixture = mount({ trendingCounts: { day: 4, week: 9 } });
+      const fixture = mount({ trendingUnopened: { window: 'day', unopened: 4 } });
       TestBed.inject(PreferencesService).setTrendingEnabled(false);
       fixture.detectChanges();
       const element = fixture.nativeElement as HTMLElement;

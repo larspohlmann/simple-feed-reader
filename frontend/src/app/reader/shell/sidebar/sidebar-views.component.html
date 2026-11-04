@@ -69,13 +69,13 @@
       class="nav trending"
       [class.active]="selection().kind === 'trending'"
       [routerLink]="['/']"
-      [queryParams]="selectionQueryParams({ view: 'trending' })"
+      [queryParams]="trendingParams()"
       queryParamsHandling="merge"
     >
       <app-icon name="trending_up" size="md" />
       <span class="name">{{ 'reader.trending' | transloco }}</span>
-      @if (trendingUnopened() > 0) {
-        <span class="count">{{ trendingUnopened() }}</span>
+      @if (trendingUnopened().unopened > 0) {
+        <span class="count">{{ trendingUnopened().unopened }}</span>
       }
     </a>
   }

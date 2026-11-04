@@ -1,6 +1,10 @@
 export type TrendingWindow = 'day' | 'week';
 
-export type TrendingCounts = Readonly<Record<TrendingWindow, number>>;
+/** The sidebar badge: the stories of one window the reader has not opened (#2017). */
+export interface TrendingUnopened {
+  window: TrendingWindow;
+  unopened: number;
+}
 
 /** What a Trending row stands for beyond its lead (#2017). */
 export interface TrendingStory {

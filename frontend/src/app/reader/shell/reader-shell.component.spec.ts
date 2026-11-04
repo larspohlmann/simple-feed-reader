@@ -20,6 +20,7 @@ import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
+import { TrendingWindowService } from '../trending/trending-window.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -99,7 +100,7 @@ describe('ReaderShellComponent', () => {
     favoritesCount: 0,
     keptCount: 0,
     viewedCount: 0,
-    trending: { day: 0, week: 0 },
+    trending: { window: 'day', unopened: 0 },
     unreadTotals: NO_UNREAD_TOTALS_DTO,
   };
 
@@ -126,7 +127,7 @@ describe('ReaderShellComponent', () => {
     ],
     socialAccounts: [],
     unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 2 },
-    trending: { day: 0, week: 0 },
+    trending: { window: 'day', unopened: 0 },
   };
   const entry = anEntry({
     title: 'e1',
@@ -305,6 +306,33 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('the Trending window in the URL (#2017, D40)', () => {
+    const openTrending = (params: Record<string, string>) => {
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      qp.next(convertToParamMap({ view: 'trending', ...params }));
+      const fixture = boot();
+      TestBed.inject(PreferencesService).setTrendingEnabled(true);
+      fixture.detectChanges();
+      return ctrl.expectOne((request) => request.url === 'https://api.test/api/trending');
+    };
+
+    it('opens the window a deep link names, and remembers it for the sidebar link', () => {
+      const request = openTrending({ window: 'week' });
+
+      expect(request.request.params.get('window')).toBe('week');
+      expect(TestBed.inject(TrendingWindowService).window()).toBe('week');
+      request.flush({ window: 'week', builtAt: null, stories: [] });
+    });
+
+    it('opens the day when the URL names no window', () => {
+      const request = openTrending({});
+
+      expect(request.request.params.get('window')).toBe('day');
+      request.flush({ window: 'day', builtAt: null, stories: [] });
+    });
+  });
+
   describe('previews still loading (#1502)', () => {
     const status = (element: HTMLElement) => element.querySelector('.previews-status')!;
 
@@ -352,7 +380,7 @@ describe('ReaderShellComponent', () => {
       keptCount: 0,
       socialAccounts: [],
       unreadTotals: NO_UNREAD_TOTALS_DTO,
-      trending: { day: 0, week: 0 },
+      trending: { window: 'day', unopened: 0 },
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
@@ -1026,7 +1054,7 @@ describe('ReaderShellComponent', () => {
       favoritesCount: 0,
       keptCount: 0,
       viewedCount: 1,
-      trending: { day: 0, week: 0 },
+      trending: { window: 'day', unopened: 0 },
       unreadTotals: { ...subscriptionsBody.unreadTotals, forYou: 0 },
     });
 
@@ -1634,7 +1662,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
-            trending: { day: 0, week: 0 },
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
           }),
@@ -1671,7 +1699,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
-            trending: { day: 0, week: 0 },
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             tags: [],
@@ -2267,6 +2295,7 @@ describe('ReaderShellComponent', () => {
             entry: null,
             link: null,
             q: null,
+            window: null,
           },
         }),
       );
@@ -2764,7 +2793,7 @@ describe('ReaderShellComponent', () => {
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
-        trending: { day: 0, week: 0 },
+        trending: { window: 'day', unopened: 0 },
       });
 
       tokens.set('user-b.jwt');
@@ -2808,7 +2837,7 @@ describe('ReaderShellComponent', () => {
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
-        trending: { day: 0, week: 0 },
+        trending: { window: 'day', unopened: 0 },
       });
       await fixture.whenStable();
       fixture.detectChanges();
@@ -3221,7 +3250,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
-            trending: { day: 0, week: 0 },
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3273,7 +3302,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
-            trending: { day: 0, week: 0 },
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3354,7 +3383,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
-            trending: { day: 0, week: 0 },
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -4518,7 +4547,7 @@ describe('ReaderShellComponent', () => {
       socialAccounts: [],
       keptCount: 0,
       viewedCount: 0,
-      trending: { day: 0, week: 0 },
+      trending: { window: 'day', unopened: 0 },
     };
 
     afterEach(() => {

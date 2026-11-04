@@ -38,7 +38,7 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         self::assertSame([$kept[0]->requireId()], $this->leadIdsOfTheDay());
         $this->client->request('GET', '/api/subscriptions/counts');
-        self::assertSame(['day' => 1, 'week' => 0], $this->payload($this->client)['trending']);
+        self::assertSame(['window' => 'day', 'unopened' => 1], $this->payload($this->client)['trending']);
         self::assertSame(self::idsOf($hidden), $this->hiddenEntryIdsOf($reader));
     }
 

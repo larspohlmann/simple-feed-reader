@@ -4,6 +4,7 @@ import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
+import { TrendingApi } from '../trending/trending-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
@@ -44,6 +45,7 @@ export interface StateSaveOutcome {
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
+  private readonly trendingApi = inject(TrendingApi);
 
   private readonly rawEntries = accountSignal<EntryDto[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
@@ -303,7 +305,7 @@ export class EntriesStore {
     this.error.set(null);
     this.failedOperation.set(null);
     this.rawEntries.update((current) => current.filter((entry) => entry.id !== entryId));
-    this.api.hideTrendingStory(window, entryId).subscribe({
+    this.trendingApi.hideStory(window, entryId).subscribe({
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
         this.rawEntries.update((current) => withCardBack(current, card, index));

@@ -13,10 +13,8 @@ import {
   sameSelection,
   selectionFromParams,
   selectionQueryParams,
-  trendingWindowOf,
   visibleSearchTerm,
   withListOrder,
-  withTrendingWindow,
   withUnreadPreference,
   type Selection,
 } from './query';
@@ -198,7 +196,18 @@ describe('listSelectionFrom (#579)', () => {
 describe('selectionQueryParams', () => {
   it('pins the selection vocabulary — this must not shrink silently', () => {
     expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
-      ['entry', 'feedKind', 'group', 'link', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
+      [
+        'entry',
+        'feedKind',
+        'group',
+        'link',
+        'network',
+        'q',
+        'subscription',
+        'tag',
+        'view',
+        'window',
+      ].sort(),
     );
   });
   it('nulls every selection parameter the caller did not set', () => {
@@ -212,6 +221,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
   });
   it('keeps only the params the caller set, nulling the rest', () => {
@@ -225,6 +235,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
     expect(selectionQueryParams({ subscription: 7 })).toEqual({
       view: null,
@@ -236,6 +247,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
     expect(selectionQueryParams({ view: 'favorites' })).toEqual({
       view: 'favorites',
@@ -247,6 +259,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
   });
   it('clears q along with everything else when nothing is set', () => {
@@ -260,6 +273,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
   });
   // The results are cached so that a [queryParams] binding — one per sidebar
@@ -299,6 +313,7 @@ describe('selectionQueryParams', () => {
         entry: null,
         link: null,
         q: null,
+        window: null,
       });
     });
   });
@@ -314,6 +329,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: 'angular',
+      window: null,
     });
   });
 });
@@ -875,10 +891,35 @@ describe("a network's profile feeds", () => {
 });
 
 describe('the Trending view (#2017)', () => {
-  const trending = { kind: 'trending', id: null, unread: false } as const;
+  const trending = { kind: 'trending', id: null, unread: false, window: 'day' } as const;
 
-  it('reads view=trending', () => {
+  it('reads view=trending, the day when the URL names no window', () => {
     expect(selectionFromParams(pm({ view: 'trending' })).selection).toEqual(trending);
+  });
+
+  it('reads the window from the URL (D40)', () => {
+    expect(selectionFromParams(pm({ view: 'trending', window: 'week' })).selection).toEqual({
+      ...trending,
+      window: 'week',
+    });
+  });
+
+  it('reads an unknown window as the day', () => {
+    expect(selectionFromParams(pm({ view: 'trending', window: 'month' })).selection).toEqual(
+      trending,
+    );
+  });
+
+  it('reads a window only on the Trending view', () => {
+    expect(selectionFromParams(pm({ view: 'kept', window: 'week' })).selection).toEqual({
+      kind: 'kept',
+      id: null,
+      unread: false,
+    });
+  });
+
+  it('clears the window when a link selects another list', () => {
+    expect(selectionQueryParams({ view: 'kept' }).window).toBeNull();
   });
 
   it('opens All items for view=trending on an account that switched Trending off (D39)', () => {
@@ -896,21 +937,8 @@ describe('the Trending view (#2017)', () => {
     });
   });
 
-  it('asks for the day when the selection carries no window', () => {
-    expect(queryFromSelection(trending)).toEqual({ view: 'trending', window: 'day' });
-    expect(trendingWindowOf(trending)).toBe('day');
-  });
-
-  it('takes a window only on the Trending view', () => {
-    expect(withTrendingWindow(trending, 'week')).toEqual({ ...trending, window: 'week' });
-    const tag = { kind: 'tag', id: 3, unread: false } as const;
-    expect(withTrendingWindow(tag, 'week')).toBe(tag);
-  });
-
   it('names a different list for a different window', () => {
-    expect(sameSelection({ ...trending, window: 'day' }, { ...trending, window: 'week' })).toBe(
-      false,
-    );
+    expect(sameSelection(trending, { ...trending, window: 'week' })).toBe(false);
   });
 
   it('offers no unread switch, no order, no mark-all-read and no mark-above-read', () => {

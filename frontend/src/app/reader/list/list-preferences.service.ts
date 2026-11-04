@@ -1,23 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AccountIdentity } from '../../core/auth/account-identity';
 import { ListOrderService } from './list-order.service';
-import {
-  Selection,
-  isDirectSearch,
-  withListOrder,
-  withTrendingWindow,
-  withUnreadPreference,
-} from '../query/query';
+import { Selection, isDirectSearch, withListOrder, withUnreadPreference } from '../query/query';
 import { UnreadFilterService } from './unread-filter.service';
-import { TrendingWindowService } from '../trending/trending-window.service';
 
-/** The list a URL names, as this account reads it: neither the unread filter, the order
- *  nor the Trending window rides in the URL, so all three are applied here. */
+/** The list a URL names, as this account reads it: neither the unread filter nor the order
+ *  rides in the URL, so both are applied here. */
 @Injectable({ providedIn: 'root' })
 export class ListPreferences {
   private readonly unreadFilter = inject(UnreadFilterService);
   private readonly listOrder = inject(ListOrderService);
-  private readonly trendingWindow = inject(TrendingWindowService);
 
   /** A search hunts for a post, often one already read, so it never takes the account's
    *  unread filter: each opens on All posts, and a flip lasts until the search ends (#1922). */
@@ -34,17 +26,15 @@ export class ListPreferences {
         this.unreadFilter.unreadOnly(),
         this.searchUnreadFlips(),
         this.listOrder.oldestFirstViews(),
-        this.trendingWindow.window(),
       ] as const,
     { equal: (left, right) => left.every((value, index) => value === right[index]) },
   );
 
   appliedTo(selection: Selection): Selection {
-    const ordered = withListOrder(
+    return withListOrder(
       withUnreadPreference(selection, this.unreadOnlyFor(selection)),
       this.listOrder.orderFor(selection),
     );
-    return withTrendingWindow(ordered, this.trendingWindow.window());
   }
 
   setUnreadOnly(selection: Selection, unreadOnly: boolean): void {

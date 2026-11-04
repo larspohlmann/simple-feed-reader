@@ -32,30 +32,11 @@ describe('ListPreferences', () => {
     expect(applied).toEqual({ kind: 'tag', id: 9, unread: true, order: 'oldest' });
   });
 
-  it("applies the account's Trending window to the Trending view only (#2017)", () => {
+  it('leaves the Trending window to the URL (#2017, D40)', () => {
     TestBed.inject(TrendingWindowService).set('week');
-    const preferences = TestBed.inject(ListPreferences);
+    const trending = { kind: 'trending', id: null, unread: false, window: 'day' } as const;
 
-    expect(preferences.appliedTo({ kind: 'trending', id: null, unread: false })).toEqual({
-      kind: 'trending',
-      id: null,
-      unread: false,
-      window: 'week',
-    });
-    expect(preferences.appliedTo({ kind: 'favorites', id: null, unread: false })).toEqual({
-      kind: 'favorites',
-      id: null,
-      unread: false,
-    });
-  });
-
-  it('reports a window flip as a preference change (#2017)', () => {
-    const preferences = TestBed.inject(ListPreferences);
-    const before = preferences.values();
-
-    TestBed.inject(TrendingWindowService).set('week');
-
-    expect(preferences.values()).not.toEqual(before);
+    expect(TestBed.inject(ListPreferences).appliedTo(trending)).toEqual(trending);
   });
 
   describe('a direct search (#1922)', () => {

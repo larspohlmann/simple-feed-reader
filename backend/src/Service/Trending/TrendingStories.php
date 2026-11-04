@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Trending;
 
+use App\Entity\User;
 use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
@@ -11,7 +12,7 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Trending\Model\RankedStoryModel;
-use App\Service\Trending\Model\TrendingCountsModel;
+use App\Service\Trending\Model\TrendingUnopenedModel;
 use App\Service\Trending\Model\TrendingPageModel;
 use App\Service\Trending\Pass\StoryCardSource;
 
@@ -40,19 +41,20 @@ final readonly class TrendingStories
         );
     }
 
-    public function unopenedCounts(int $userId): TrendingCountsModel
+    /** Runs no query for a reader who switched Trending off (D39). */
+    public function unopenedFor(User $user, TrendingWindow $window): TrendingUnopenedModel
     {
-        return new TrendingCountsModel(
-            $this->unopenedIn($userId, TrendingWindow::Day),
-            $this->unopenedIn($userId, TrendingWindow::Week),
-        );
-    }
+        if (!$user->getPreferences()->isTrendingEnabled()) {
+            return new TrendingUnopenedModel($window, 0);
+        }
 
-    private function unopenedIn(int $userId, TrendingWindow $window): int
-    {
+        $userId = $user->requireId();
         $storyIds = self::storyIdsOf($this->ranked($userId, $window));
 
-        return \count($storyIds) - \count($this->stories->viewedStoryIds($userId, $storyIds));
+        return new TrendingUnopenedModel(
+            $window,
+            \count($storyIds) - \count($this->stories->viewedStoryIds($userId, $storyIds)),
+        );
     }
 
     /** @return list<RankedStoryModel> */

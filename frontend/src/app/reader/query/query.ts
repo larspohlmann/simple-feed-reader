@@ -4,7 +4,7 @@ import { TrendingWindow } from '../trending/trending.models';
 import { FeedGroupName, isFeedGroupName } from '../../core/feed-group';
 import { entryIdFromParam } from './slug';
 import { isSearchableTerm, normalizeSearchInput, phraseWithin } from './search-term';
-import { DEFAULT_TRENDING_WINDOW } from '../trending/trending-window';
+import { DEFAULT_TRENDING_WINDOW, isTrendingWindow } from '../trending/trending-window';
 import {
   NetworkFeedKind,
   SocialNetworkName,
@@ -41,7 +41,7 @@ export interface Selection {
   group?: FeedGroupName;
   /** Absent means newest first; only a list `hasListOrder` accepts ever carries one. */
   order?: ListOrder;
-  /** Only Trending carries one; applied from the account's device setting, never from the URL. */
+  /** Only Trending carries one, read from the URL's `window` (#2017, D40). */
   window?: TrendingWindow;
 }
 
@@ -118,15 +118,6 @@ export function withListOrder(selection: Selection, order: ListOrder): Selection
   return hasListOrder(selection) && order === 'oldest' ? { ...selection, order } : selection;
 }
 
-export function trendingWindowOf(selection: Selection): TrendingWindow {
-  return selection.window ?? DEFAULT_TRENDING_WINDOW;
-}
-
-/** Applies the account's window to a Trending selection parsed from the URL, which never carries one. */
-export function withTrendingWindow(selection: Selection, window: TrendingWindow): Selection {
-  return selection.kind === 'trending' ? { ...selection, window } : selection;
-}
-
 /** Trending is a picture of the news, not an inbox: nothing in it is marked read in bulk (#2017). */
 export function offersMarkAboveRead(selection: Selection): boolean {
   return selection.kind !== 'trending';
@@ -178,6 +169,7 @@ const SELECTION_PARAM_NAMES = [
   'entry',
   'link',
   'q',
+  'window',
 ] as const;
 
 type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
@@ -236,7 +228,6 @@ export function selectionFromParams(
   selection: Selection;
   entryId: number | null;
 } {
-  const view = selectionParam(paramMap, 'view');
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(paramMap, 'entry'));
 
@@ -250,7 +241,10 @@ export function selectionFromParams(
     return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
   }
 
-  return { selection: namedViewSelection(view, offered) ?? feedScopedSelection(paramMap), entryId };
+  return {
+    selection: namedViewSelection(paramMap, offered) ?? feedScopedSelection(paramMap),
+    entryId,
+  };
 }
 
 /** The views that name no feed and carry nothing beyond their name. */
@@ -263,10 +257,21 @@ function isNamedView(view: string | null): view is NamedView {
 }
 
 /** Null for a feed-scoped list, and for a view this account does not offer. */
-function namedViewSelection(view: string | null, offered: OfferedViews): Selection | null {
-  if (view === 'trending')
-    return offered.trending ? { kind: 'trending', id: null, unread: false } : null;
+function namedViewSelection(paramMap: ParamMap, offered: OfferedViews): Selection | null {
+  const view = selectionParam(paramMap, 'view');
+  if (view === 'trending') return offered.trending ? trendingSelection(paramMap) : null;
   return isNamedView(view) ? { kind: view, id: null, unread: false } : null;
+}
+
+/** The day when the URL names no window, or one Trending does not know. */
+function trendingSelection(paramMap: ParamMap): Selection {
+  const window = selectionParam(paramMap, 'window');
+  return {
+    kind: 'trending',
+    id: null,
+    unread: false,
+    window: isTrendingWindow(window) ? window : DEFAULT_TRENDING_WINDOW,
+  };
 }
 
 /** The lists drawn from feeds: one subscription, a tag, a network's feeds, a feed group, or all of them. */
@@ -321,7 +326,7 @@ const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = 
   // The one list whose unread filter is not a view of its own: the ranked
   // feed IS the view, so the filter travels beside it (#710).
   'for-you': (selection) => withUnread({ view: 'for-you' }, selection.unread),
-  trending: (selection) => ({ view: 'trending', window: trendingWindowOf(selection) }),
+  trending: (selection) => ({ view: 'trending', window: selection.window }),
   tag: (selection) => ({ view: listView(selection), tag: selection.id ?? undefined }),
   network: (selection) => ({
     view: listView(selection),

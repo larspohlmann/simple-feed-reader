@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Subscription;
 
 use App\Entity\User;
+use App\Enum\TrendingWindow;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationItemRepository;
@@ -12,7 +13,6 @@ use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Subscription\Model\UnreadTotalsModel;
-use App\Service\Trending\Model\TrendingCountsModel;
 use App\Service\Trending\TrendingStories;
 
 final readonly class SubscriptionTallyReader
@@ -27,7 +27,7 @@ final readonly class SubscriptionTallyReader
     ) {
     }
 
-    public function forUser(User $user): SubscriptionTalliesModel
+    public function forUser(User $user, TrendingWindow $trendingWindow): SubscriptionTalliesModel
     {
         $userId = $user->requireId();
 
@@ -43,17 +43,8 @@ final readonly class SubscriptionTallyReader
                 $this->recommendationItems->countForYou($userId),
                 $this->unreadCounts->perFeedGroup($userId),
             ),
-            $this->trendingCounts($user),
+            $this->trendingStories->unopenedFor($user, $trendingWindow),
         );
-    }
-
-    private function trendingCounts(User $user): TrendingCountsModel
-    {
-        if (!$user->getPreferences()->isTrendingEnabled()) {
-            return new TrendingCountsModel(0, 0);
-        }
-
-        return $this->trendingStories->unopenedCounts($user->requireId());
     }
 
     /** @return array{favorites: int, kept: int, shared: int, viewed: int} */

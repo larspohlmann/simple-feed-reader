@@ -46,8 +46,8 @@ import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { TrendingCounts } from '../../trending/trending.models';
-import { NO_TRENDING_COUNTS } from '../../trending/trending-window';
+import { TrendingUnopened } from '../../trending/trending.models';
+import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
 import { LayoutService } from '../../layout.service';
@@ -130,7 +130,7 @@ export class SidebarComponent {
   readonly sharedCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
-  readonly trendingCounts = input<TrendingCounts>(NO_TRENDING_COUNTS);
+  readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell

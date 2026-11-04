@@ -29,11 +29,24 @@ describe('ReaderApi', () => {
   afterEach(() => ctrl.verify());
 
   it('GETs subscriptions', () => {
-    api.subscriptions().subscribe();
+    api.subscriptions('day').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush({ subscriptions: [] });
   });
+
+  it.each([
+    ['subscriptions', () => api.subscriptions('week'), 'https://api.test/api/subscriptions'],
+    ['counts', () => api.subscriptionCounts('week'), 'https://api.test/api/subscriptions/counts'],
+  ])(
+    'asks the sidebar %s read for the week of Trending, and names no day (#2017)',
+    (_name, read, url) => {
+      read().subscribe();
+      const testRequest = ctrl.expectOne((request) => request.url === url);
+      expect(testRequest.request.params.get('trendingWindow')).toBe('week');
+      testRequest.flush({});
+    },
+  );
 
   it('POSTs the ids to complete and answers with the finished rows', () => {
     let rows: unknown;
@@ -51,8 +64,8 @@ describe('ReaderApi', () => {
     afterEach(() => jest.useRealTimers());
 
     it.each<[string, () => Observable<unknown>, string]>([
-      ['subscriptions', () => api.subscriptions(), 'https://api.test/api/subscriptions'],
-      ['counts', () => api.subscriptionCounts(), 'https://api.test/api/subscriptions/counts'],
+      ['subscriptions', () => api.subscriptions('day'), 'https://api.test/api/subscriptions'],
+      ['counts', () => api.subscriptionCounts('day'), 'https://api.test/api/subscriptions/counts'],
       ['saved searches', () => api.savedSearches(), 'https://api.test/api/saved-searches'],
     ])('retries the sidebar %s read after a 503', (_name, read, url) => {
       const responses: unknown[] = [];
@@ -307,15 +320,6 @@ describe('ReaderApi', () => {
     );
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush({ entries: [], nextCursor: null });
-  });
-
-  it('reads a Trending window from its own endpoint (#2017)', () => {
-    api.trending('week').subscribe();
-    const testRequest = ctrl.expectOne(
-      (request) => request.url === 'https://api.test/api/trending',
-    );
-    expect(testRequest.request.params.get('window')).toBe('week');
-    testRequest.flush({ window: 'week', builtAt: null, stories: [] });
   });
 
   it('answers the Trending list query with the stories as their leads (#2017)', () => {

@@ -691,7 +691,7 @@ describe('ManageActions', () => {
       },
       keptCount: 0,
       viewedCount: 0,
-      trending: { day: 0, week: 0 },
+      trending: { window: 'day', unopened: 0 },
     });
     const flushReload = (http: HttpTestingController): void => {
       http.expectOne(`${BASE}/api/subscriptions`).flush(emptyResponse());

@@ -7,7 +7,7 @@ import { FeedGroupName } from '../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 import { ChapterDto, TranscriptDto } from './episode-detail';
-import { TrendingCounts, TrendingStory, TrendingWindow } from './trending/trending.models';
+import { TrendingStory, TrendingUnopened, TrendingWindow } from './trending/trending.models';
 
 export type { ChapterDto, TranscriptDto, TranscriptParagraphDto } from './episode-detail';
 export type { HeroImageDto, ReaderArticle, ReaderContent, ReaderFailure } from './reader-content';
@@ -143,8 +143,8 @@ export interface SubscriptionsResponse {
   viewedCount: number;
   socialAccounts: SocialAccountRefDto[];
   unreadTotals: UnreadTotalsDto;
-  /** Unopened Trending stories per window (#2017). */
-  trending: TrendingCounts;
+  /** Unopened Trending stories in the window the request asked for (#2017). */
+  trending: TrendingUnopened;
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
@@ -157,8 +157,8 @@ export interface SubscriptionCountsResponse {
   sharedCount: number;
   viewedCount: number;
   unreadTotals: UnreadTotalsDto;
-  /** Unopened Trending stories per window (#2017). */
-  trending: TrendingCounts;
+  /** Unopened Trending stories in the window the request asked for (#2017). */
+  trending: TrendingUnopened;
 }
 
 /** Unread per scope, each article counted once within its scope (#1679). */

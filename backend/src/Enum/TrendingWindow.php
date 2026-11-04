@@ -17,15 +17,17 @@ enum TrendingWindow: string
     private const int PER_MILLE = 1_000;
 
     /**
+     * @param string $parameter the query parameter a refusal names
+     *
      * @throws ValidationException when the value names neither window
      */
-    public static function fromRequestValue(?string $value): self
+    public static function fromRequestValue(?string $value, string $parameter = 'window'): self
     {
         if ($value === null || $value === '') {
             return self::Day;
         }
 
-        return self::caseOrRefusal($value, 'window');
+        return self::caseOrRefusal($value, $parameter);
     }
 
     public function startBefore(\DateTimeImmutable $now): \DateTimeImmutable

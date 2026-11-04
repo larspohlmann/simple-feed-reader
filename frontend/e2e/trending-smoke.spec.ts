@@ -120,16 +120,14 @@ for (const layout of ['magazine', 'list'] as const) {
     await expect(story.getByText('Trending fixture day story')).toBeVisible();
 
     const weekLoaded = page.waitForRequest(trendingRequest('week'));
-    await header.getByRole('button', { name: '7 days' }).click();
+    await header.getByRole('link', { name: '7 days' }).click();
     await weekLoaded;
     await expect(page.getByText('Trending fixture week story')).toBeVisible();
-    await expect(header.getByRole('button', { name: '7 days' })).toHaveAttribute(
-      'aria-pressed',
+    expect(new URL(page.url()).searchParams.get('window')).toBe('week');
+    await expect(header.getByRole('link', { name: '7 days' })).toHaveAttribute(
+      'aria-current',
       'true',
     );
-    await expect(header.getByRole('button', { name: '24 h' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    await expect(header.getByRole('link', { name: '24 h' })).not.toHaveAttribute('aria-current');
   });
 }

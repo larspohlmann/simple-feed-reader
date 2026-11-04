@@ -11,6 +11,7 @@ import { PreferencesService } from '../../core/preferences/preferences.service';
 import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
+import { TrendingWindowService } from '../trending/trending-window.service';
 
 @Injectable()
 export class ReaderRouteState {
@@ -22,6 +23,7 @@ export class ReaderRouteState {
   private readonly listPreferences = inject(ListPreferences);
   private readonly linkNavigation = inject(LinkReaderNavigation);
   private readonly preferences = inject(PreferencesService);
+  private readonly trendingWindow = inject(TrendingWindowService);
 
   private readonly queryParameters = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -84,6 +86,12 @@ export class ReaderRouteState {
       if (!this.namesRefusedView()) return;
       untracked(() => this.dropViewFromUrl());
     });
+    // The window last opened is the one the sidebar's Trending link and badge default to.
+    effect(() => {
+      const window = this.selection().window;
+      if (window === undefined) return;
+      untracked(() => this.trendingWindow.set(window));
+    });
     // Warm the body store for the entries beside the one just opened. Keyed on
     // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
     effect(() => {
@@ -97,7 +105,7 @@ export class ReaderRouteState {
   private dropViewFromUrl(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { view: null },
+      queryParams: { view: null, window: null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });

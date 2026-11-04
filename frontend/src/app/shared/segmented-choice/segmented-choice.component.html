@@ -5,17 +5,36 @@
   [attr.aria-describedby]="describedBy()"
 >
   @for (option of options(); track option) {
-    <button
-      type="button"
-      [class.on]="selected() === option"
-      [attr.aria-pressed]="selected() === option"
-      [disabled]="disabledOptions().includes(option)"
-      (click)="pick.emit(option)"
-    >
-      {{ labelPrefix() + option | transloco }}
-      @if (counts()[option] !== undefined) {
-        <span class="count">{{ counts()[option] }}</span>
-      }
-    </button>
+    @if (links(); as links) {
+      <a
+        class="option"
+        [class.on]="selected() === option"
+        [attr.aria-current]="selected() === option ? 'true' : null"
+        [routerLink]="[]"
+        [queryParams]="links[option]"
+        queryParamsHandling="merge"
+      >
+        <ng-container *ngTemplateOutlet="label; context: { $implicit: option }" />
+      </a>
+    } @else {
+      <button
+        type="button"
+        class="option"
+        [class.on]="selected() === option"
+        [attr.aria-pressed]="selected() === option"
+        [disabled]="disabledOptions().includes(option)"
+        (click)="pick.emit(option)"
+      >
+        <ng-container *ngTemplateOutlet="label; context: { $implicit: option }" />
+      </button>
+    }
   }
 </div>
+
+<ng-template #label let-option>
+  {{ labelPrefix() + option | transloco }}
+  @let count = countOf(option);
+  @if (count !== undefined) {
+    <span class="count">{{ count }}</span>
+  }
+</ng-template>

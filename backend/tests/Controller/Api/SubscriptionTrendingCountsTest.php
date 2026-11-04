@@ -11,57 +11,70 @@ use App\Entity\User;
 use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\TrendingFixtures;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Component\HttpFoundation\Response;
 
 final class SubscriptionTrendingCountsTest extends ApiTestCase
 {
-    public function testTheCountsPollCarriesTheUnopenedTrendingStoriesPerWindow(): void
+    /** @return iterable<string, array{string}> */
+    public static function sidebarEndpoints(): iterable
     {
-        $client = self::createClient();
-        [$headers, $user] = $this->bearerAndUser('trending-counts@example.com');
-        $this->seedStories($user);
-
-        $client->request('GET', '/api/subscriptions/counts', server: $headers);
-
-        self::assertResponseIsSuccessful();
-        self::assertSame(['day' => 2, 'week' => 1], $this->payload($client)['trending']);
+        yield 'the counts poll' => ['/api/subscriptions/counts'];
+        yield 'the sidebar list' => ['/api/subscriptions'];
     }
 
-    public function testTheSidebarListCarriesTheSameCounts(): void
+    #[DataProvider('sidebarEndpoints')]
+    public function testCarriesTheUnopenedStoriesOfTheDayWhenNoWindowIsAsked(string $endpoint): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->bearerAndUser('trending-list@example.com');
+        [$headers, $user] = $this->bearerAndUser('trending-counts-day@example.com');
         $this->seedStories($user);
 
-        $client->request('GET', '/api/subscriptions', server: $headers);
+        $client->request('GET', $endpoint, server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['day' => 2, 'week' => 1], $this->payload($client)['trending']);
+        self::assertSame(['window' => 'day', 'unopened' => 2], $this->payload($client)['trending']);
     }
 
-    public function testTheCountsPollReportsNoTrendingStoriesWhenTheReaderSwitchedTrendingOff(): void
+    #[DataProvider('sidebarEndpoints')]
+    public function testCarriesTheUnopenedStoriesOfTheAskedWindow(string $endpoint): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('trending-counts-week@example.com');
+        $this->seedStories($user);
+
+        $client->request('GET', $endpoint . '?trendingWindow=week', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['window' => 'week', 'unopened' => 1], $this->payload($client)['trending']);
+    }
+
+    #[DataProvider('sidebarEndpoints')]
+    public function testReportsNoUnopenedStoryWhenTheReaderSwitchedTrendingOff(string $endpoint): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->bearerAndUser('trending-counts-off@example.com');
         $this->seedStories($user);
         $this->switchTrendingOff($user);
 
-        $client->request('GET', '/api/subscriptions/counts', server: $headers);
+        $client->request('GET', $endpoint . '?trendingWindow=week', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['day' => 0, 'week' => 0], $this->payload($client)['trending']);
+        self::assertSame(['window' => 'week', 'unopened' => 0], $this->payload($client)['trending']);
     }
 
-    public function testTheSidebarListReportsNoTrendingStoriesWhenTheReaderSwitchedTrendingOff(): void
+    #[DataProvider('sidebarEndpoints')]
+    public function testAnUnknownWindowIsAValidationProblem(string $endpoint): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->bearerAndUser('trending-list-off@example.com');
-        $this->seedStories($user);
-        $this->switchTrendingOff($user);
+        [$headers] = $this->bearerAndUser('trending-counts-unknown@example.com');
 
-        $client->request('GET', '/api/subscriptions', server: $headers);
+        $client->request('GET', $endpoint . '?trendingWindow=month', server: $headers);
 
-        self::assertResponseIsSuccessful();
-        self::assertSame(['day' => 0, 'week' => 0], $this->payload($client)['trending']);
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $errors = $this->payload($client)['errors'] ?? null;
+        self::assertIsArray($errors);
+        self::assertArrayHasKey('trendingWindow', $errors);
     }
 
     private function switchTrendingOff(User $user): void

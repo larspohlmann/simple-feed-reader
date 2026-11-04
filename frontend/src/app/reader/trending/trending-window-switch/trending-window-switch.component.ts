@@ -1,9 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, input } from '@angular/core';
+import { Params } from '@angular/router';
 import { SegmentedChoiceComponent } from '../../../shared/segmented-choice/segmented-choice.component';
 import { TrendingWindow } from '../trending.models';
-import { TrendingWindowService } from '../trending-window.service';
 
-/** The Trending list's window choice, both options visible (#2017, decision 27). */
+/** The Trending list's window choice, both options visible, as links: the URL owns the window (#2017, D27, D40). */
 @Component({
   selector: 'app-trending-window-switch',
   imports: [SegmentedChoiceComponent],
@@ -11,6 +11,10 @@ import { TrendingWindowService } from '../trending-window.service';
   styleUrl: './trending-window-switch.component.scss',
 })
 export class TrendingWindowSwitchComponent {
-  protected readonly trendingWindow = inject(TrendingWindowService);
+  readonly window = input.required<TrendingWindow>();
   protected readonly windows: readonly TrendingWindow[] = ['day', 'week'];
+  protected readonly links: Readonly<Record<TrendingWindow, Params>> = {
+    day: { window: null },
+    week: { window: 'week' },
+  };
 }

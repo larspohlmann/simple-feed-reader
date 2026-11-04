@@ -1000,6 +1000,7 @@ clicked option; the consumer owns the selection and passes it back as
 | `disabledOptions` | `readonly T[]` | `[]` — options that cannot be picked now |
 | `describedBy` | `string \| null` | `null` — the id of the text that says why an option is disabled |
 | `counts` | `Partial<Record<T, number>>` | `{}` — a number shown after an option's label, such as how many items a tab holds |
+| `links` | `Readonly<Record<T, Params>> \| null` | `null` — link mode: each option is a link merging these query params into the URL |
 
 ```html
 <app-segmented-choice
@@ -1010,6 +1011,11 @@ clicked option; the consumer owns the selection and passes it back as
   (pick)="language.set($event)"
 />
 ```
+
+In link mode the options are `<a>` elements in the same look, the URL owns the
+selection (pass the URL's value back as `selected`; `pick` never fires), and the
+selected link carries `aria-current="true"` instead of `aria-pressed`. Trending's
+`24 h | 7 days` switch uses it, so the window rides in `?window=` (#2017, D40).
 
 A disabled option stays visible at the shared disabled look; say why in a
 hint beside the control (the AI model picker's "This provider offers no

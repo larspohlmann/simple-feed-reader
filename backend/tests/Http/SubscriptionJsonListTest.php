@@ -7,11 +7,12 @@ namespace App\Tests\Http;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\TrendingWindow;
 use App\Http\SubscriptionJson;
 use App\Http\UnreadTotalsJson;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Subscription\Model\UnreadTotalsModel;
-use App\Service\Trending\Model\TrendingCountsModel;
+use App\Service\Trending\Model\TrendingUnopenedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 
@@ -28,7 +29,7 @@ final class SubscriptionJsonListTest extends DbTestCase
             [$counted->requireId() => 40],
             ['favorites' => 8, 'kept' => 2, 'shared' => 0, 'viewed' => 41],
             new UnreadTotalsModel(7, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
-            new TrendingCountsModel(0, 0),
+            new TrendingUnopenedModel(TrendingWindow::Day, 0),
         );
 
         $payload = SubscriptionJson::list([$counted, $silent], $tallies, []);
@@ -68,7 +69,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 [],
                 ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
-                new TrendingCountsModel(0, 0),
+                new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),
             [$bluesky, $mastodon],
         );
@@ -109,7 +110,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 [],
                 ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
-                new TrendingCountsModel(0, 0),
+                new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),
             [$bluesky],
         );

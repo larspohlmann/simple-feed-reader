@@ -12,6 +12,7 @@ use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\TrendingWindow;
 use App\Http\SubscribeOutcomeJson;
 use App\Http\SubscriptionCountsJson;
 use App\Http\SubscriptionJson;
@@ -25,6 +26,7 @@ use App\Service\Subscription\SubscriptionService;
 use App\Service\Subscription\SubscriptionTallyReader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -45,19 +47,27 @@ final readonly class SubscriptionController
     }
 
     #[Route('', name: 'api_subscriptions_list', methods: ['GET'])]
-    public function list(#[CurrentUser] User $user): JsonResponse
-    {
+    public function list(
+        #[CurrentUser] User $user,
+        #[MapQueryParameter] ?string $trendingWindow = null,
+    ): JsonResponse {
+        $window = TrendingWindow::fromRequestValue($trendingWindow, 'trendingWindow');
+
         return new JsonResponse(SubscriptionJson::list(
             $this->subscriptions->findForUserWithTags($user->requireId()),
-            $this->tallies->forUser($user),
+            $this->tallies->forUser($user, $window),
             $this->socialAccounts->findAllForUser($user),
         ));
     }
 
     #[Route('/counts', name: 'api_subscriptions_counts', methods: ['GET'])]
-    public function counts(#[CurrentUser] User $user): JsonResponse
-    {
-        return new JsonResponse(SubscriptionCountsJson::from($this->tallies->forUser($user)));
+    public function counts(
+        #[CurrentUser] User $user,
+        #[MapQueryParameter] ?string $trendingWindow = null,
+    ): JsonResponse {
+        $window = TrendingWindow::fromRequestValue($trendingWindow, 'trendingWindow');
+
+        return new JsonResponse(SubscriptionCountsJson::from($this->tallies->forUser($user, $window)));
     }
 
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]

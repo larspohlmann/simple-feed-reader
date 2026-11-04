@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Enum\TrendingWindow;
 use App\Http\SubscriptionCountsJson;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Subscription\Model\UnreadTotalsModel;
-use App\Service\Trending\Model\TrendingCountsModel;
+use App\Service\Trending\Model\TrendingUnopenedModel;
 use PHPUnit\Framework\TestCase;
 
 final class SubscriptionCountsJsonTest extends TestCase
@@ -19,7 +20,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             [12 => 40, 8 => 5],
             ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41],
             new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
-            new TrendingCountsModel(2, 7),
+            new TrendingUnopenedModel(TrendingWindow::Week, 7),
         ));
 
         self::assertSame([
@@ -31,7 +32,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             'keptCount' => 2,
             'sharedCount' => 6,
             'viewedCount' => 41,
-            'trending' => ['day' => 2, 'week' => 7],
+            'trending' => ['window' => 'week', 'unopened' => 7],
             'unreadTotals' => [
                 'allItems' => 7,
                 'forYou' => 3,
@@ -50,13 +51,13 @@ final class SubscriptionCountsJsonTest extends TestCase
                 [],
                 ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
-                new TrendingCountsModel(0, 0),
+                new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),
         );
 
         self::assertSame([], $payload['subscriptions']);
         self::assertSame(0, $payload['favoritesCount']);
-        self::assertSame(['day' => 0, 'week' => 0], $payload['trending']);
+        self::assertSame(['window' => 'day', 'unopened' => 0], $payload['trending']);
         self::assertSame(0, $payload['unreadTotals']['allItems']);
         self::assertSame(0, $payload['unreadTotals']['forYou']);
     }

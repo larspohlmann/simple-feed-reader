@@ -32,7 +32,7 @@ import {
 } from './models';
 import { TrendingWindow } from './trending/trending.models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
-import { TrendingResponseDto, trendingPage } from './trending/trending-page';
+import { TrendingApi } from './trending/trending-api';
 import { DEFAULT_TRENDING_WINDOW } from './trending/trending-window';
 
 export interface SubscribeRequest {
@@ -46,16 +46,20 @@ export interface SubscribeRequest {
 export class ReaderApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
+  private readonly trendingApi = inject(TrendingApi);
 
-  subscriptions(): Observable<SubscriptionsResponse> {
+  /** `trendingWindow` picks the window whose unopened Trending stories the answer counts. */
+  subscriptions(trendingWindow: TrendingWindow): Observable<SubscriptionsResponse> {
     return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`, {
+      params: trendingWindowParams(trendingWindow),
       context: retryingTransientGatewayErrors(),
     });
   }
 
   /** The sidebar poll's cheap tick (#720): counts only, no feeds or tags. */
-  subscriptionCounts(): Observable<SubscriptionCountsResponse> {
+  subscriptionCounts(trendingWindow: TrendingWindow): Observable<SubscriptionCountsResponse> {
     return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`, {
+      params: trendingWindowParams(trendingWindow),
       context: retryingTransientGatewayErrors(),
     });
   }
@@ -71,17 +75,6 @@ export class ReaderApi {
     return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, body);
   }
 
-  trending(window: TrendingWindow = DEFAULT_TRENDING_WINDOW): Observable<TrendingResponseDto> {
-    return this.http.get<TrendingResponseDto>(`${this.base}/api/trending`, {
-      params: new HttpParams().set('window', window),
-      context: retryingTransientGatewayErrors(),
-    });
-  }
-
-  hideTrendingStory(window: TrendingWindow, entryId: number): Observable<void> {
-    return this.http.post<void>(`${this.base}/api/trending/hidden`, { window, entryId });
-  }
-
   /** A single entry by id, full body included — lets a deep link open an entry
    *  not in the loaded page, and backs the reader body store. */
   entry(id: number): Observable<EntryDetailResponse> {
@@ -90,7 +83,7 @@ export class ReaderApi {
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
     if (query.view === 'trending') {
-      return this.trending(query.window).pipe(map(trendingPage));
+      return this.trendingApi.page(query.window);
     }
     const params = this.pageParams(query, cursor);
     const context = retryingTransientGatewayErrors();
@@ -376,4 +369,12 @@ export class ReaderApi {
   purgeRecommendations(): Observable<RecommendationRunReport> {
     return this.http.delete<RecommendationRunReport>(`${this.base}/api/recommendations/runs`);
   }
+}
+
+/** The server counts the day when no window is named, so the day is left out of the URL. */
+function trendingWindowParams(trendingWindow: TrendingWindow): HttpParams {
+  const params = new HttpParams();
+  return trendingWindow === DEFAULT_TRENDING_WINDOW
+    ? params
+    : params.set('trendingWindow', trendingWindow);
 }

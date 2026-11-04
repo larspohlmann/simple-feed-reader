@@ -175,7 +175,7 @@ final class TrendingStoriesTest extends DbTestCase
         }
 
         self::assertCount(15, $this->storiesFor(TrendingWindow::Day));
-        self::assertSame(15, $this->stories()->unopenedCounts($this->reader->requireId())->day);
+        self::assertSame(15, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
     }
 
     public function testOnlyArticlesOfFeedsTheReaderFollowsAreListedPerStory(): void
@@ -393,13 +393,13 @@ final class TrendingStoriesTest extends DbTestCase
         $story = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
 
         self::assertSame([$story->requireId()], $this->rankedDayStoryIdsOf($this->reader));
-        self::assertSame(1, $this->stories()->unopenedCounts($this->reader->requireId())->day);
+        self::assertSame(1, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
 
         $this->followFeedsPostingAt(98, '2031-05-13 12:00:00');
 
         self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
-        self::assertSame(0, $this->stories()->unopenedCounts($this->reader->requireId())->day);
+        self::assertSame(0, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
     }
 
     public function testFeedsThatPostedOnlyBeforeTheWindowAreNotActive(): void

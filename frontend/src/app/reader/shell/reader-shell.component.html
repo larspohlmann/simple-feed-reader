@@ -77,7 +77,7 @@
       [keptCount]="subs.keptCount()"
       [sharedCount]="subs.sharedCount()"
       [viewedCount]="subs.viewedCount()"
-      [trendingCounts]="subs.trendingCounts()"
+      [trendingUnopened]="subs.trendingUnopened()"
       [savedSearches]="savedSearchesStore.savedSearches()"
       [activeSavedSearchId]="heading.activeSavedSearchId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
@@ -292,8 +292,8 @@
 </ng-template>
 
 <ng-template #headerActions>
-  @if (selection().kind === 'trending') {
-    <app-trending-window-switch />
+  @if (selection().window; as window) {
+    <app-trending-window-switch [window]="window" />
   }
   @if (savedSearch.canToggle()) {
     <!-- Save/unsave the search being looked at. It lives here, beside the For You

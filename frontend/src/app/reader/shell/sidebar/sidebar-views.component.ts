@@ -4,10 +4,10 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { TrendingCounts } from '../../trending/trending.models';
+import { TrendingUnopened } from '../../trending/trending.models';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
-import { NO_TRENDING_COUNTS } from '../../trending/trending-window';
+import { DEFAULT_TRENDING_WINDOW, NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 import { TrendingWindowService } from '../../trending/trending-window.service';
 
 /** The sidebar's first card: All items and the lists drawn from entry state, Trending and For you. */
@@ -32,9 +32,14 @@ export class SidebarViewsComponent {
   readonly sharedCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
-  readonly trendingCounts = input<TrendingCounts>(NO_TRENDING_COUNTS);
-  /** Unopened stories in the window the Trending list shows (#2017, decision 8). */
-  protected readonly trendingUnopened = computed(
-    () => this.trendingCounts()[this.trendingWindow.window()],
-  );
+  /** Unopened stories in the window the Trending link opens (#2017, decision 8). */
+  readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
+  /** The link opens the window last opened on this device (D40). */
+  protected readonly trendingParams = computed(() => {
+    const window = this.trendingWindow.window();
+    return selectionQueryParams({
+      view: 'trending',
+      window: window === DEFAULT_TRENDING_WINDOW ? null : window,
+    });
+  });
 }
