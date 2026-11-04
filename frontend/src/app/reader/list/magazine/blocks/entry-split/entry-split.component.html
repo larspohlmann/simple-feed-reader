@@ -33,5 +33,5 @@
        card's edge rather than to the text column's — which lands mid-card when
        the image is on the right (#486). -->
   <app-entry-meta [entry]="entry()" [tags]="tags()" [imageShown]="showImage()" />
-  <app-entry-duplicates [entry]="entry()" />
+  <app-entry-duplicates [entry]="entry()" [copies]="alsoFoot().copies" [label]="alsoFoot().label" />
 </article>

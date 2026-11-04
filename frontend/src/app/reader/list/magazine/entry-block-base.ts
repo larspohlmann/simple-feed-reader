@@ -2,6 +2,7 @@ import { Directive, computed, inject, input } from '@angular/core';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { relativeTime } from '../../format';
 import { entryDek, entryHeadline, isPost } from '../../entry/entry-text';
+import { alsoFootOf } from './also-foot';
 import { LanguageService } from '../../../core/i18n/language.service';
 
 /** The signal inputs/outputs every magazine block shares, whether or not it
@@ -22,4 +23,5 @@ export abstract class EntryBlockBase {
   readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
+  readonly alsoFoot = computed(() => alsoFootOf(this.entry()));
 }

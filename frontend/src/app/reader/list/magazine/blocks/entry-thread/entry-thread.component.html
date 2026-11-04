@@ -56,7 +56,7 @@
     }
   </app-thread-line>
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
-  <app-entry-duplicates [entry]="entry()" />
+  <app-entry-duplicates [entry]="entry()" [copies]="alsoFoot().copies" [label]="alsoFoot().label" />
 </article>
 
 <ng-template #postMedia let-media let-label="label">

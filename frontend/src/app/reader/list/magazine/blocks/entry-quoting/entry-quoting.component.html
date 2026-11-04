@@ -18,5 +18,5 @@
     <app-quoted-post [quote]="quote" layout="block" />
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
-  <app-entry-duplicates [entry]="entry()" />
+  <app-entry-duplicates [entry]="entry()" [copies]="alsoFoot().copies" [label]="alsoFoot().label" />
 </article>
