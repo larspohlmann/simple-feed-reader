@@ -126,6 +126,16 @@ export function withTrendingWindow(selection: Selection, window: TrendingWindow)
   return selection.kind === 'trending' ? { ...selection, window } : selection;
 }
 
+/** A Trending selection on an account that switched Trending off opens All items, as an unknown view does (D39). */
+export function withTrendingAvailability(
+  selection: Selection,
+  trendingEnabled: boolean,
+): Selection {
+  return selection.kind === 'trending' && !trendingEnabled
+    ? { kind: 'all', id: null, unread: false }
+    : selection;
+}
+
 /** Trending is a picture of the news, not an inbox: nothing in it is marked read in bulk (#2017). */
 export function offersMarkAboveRead(selection: Selection): boolean {
   return selection.kind !== 'trending';

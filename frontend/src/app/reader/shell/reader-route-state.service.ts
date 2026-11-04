@@ -6,7 +6,8 @@ import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
-import { isDirectSearch, sameSelection } from '../query/query';
+import { isDirectSearch, sameSelection, withTrendingAvailability } from '../query/query';
+import { PreferencesService } from '../../core/preferences/preferences.service';
 import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
@@ -19,6 +20,7 @@ export class ReaderRouteState {
   private readonly entries = inject(EntriesStore);
   private readonly listPreferences = inject(ListPreferences);
   private readonly linkNavigation = inject(LinkReaderNavigation);
+  private readonly preferences = inject(PreferencesService);
 
   private readonly queryParameters = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -31,9 +33,13 @@ export class ReaderRouteState {
   );
 
   /** Structural equality: an entry-only URL change keeps the reference, so the list does not reload. */
-  readonly selection = computed(() => this.listPreferences.appliedTo(this.parsed().selection), {
-    equal: sameSelection,
-  });
+  readonly selection = computed(
+    () =>
+      this.listPreferences.appliedTo(
+        withTrendingAvailability(this.parsed().selection, this.preferences.trendingEnabled()),
+      ),
+    { equal: sameSelection },
+  );
   private readonly inSearch = computed(() => isDirectSearch(this.parsed().selection));
   readonly entryId = computed(() => this.parsed().entryId);
   readonly linkTarget = computed(() => signedUrlFromParam(this.queryParameters().get('link')), {

@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../../core/api';
 import { AuthService, CurrentUser } from '../../../core/auth/auth.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
+import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
@@ -73,6 +74,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
     sharing: SHARING_EVERYTHING,
+    trendingEnabled: true,
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
@@ -307,6 +309,16 @@ describe('SidebarComponent', () => {
 
       expect(trendingNav(element).getAttribute('href')).toContain('view=trending');
       expect(trendingNav(element).classList).toContain('active');
+    });
+
+    it('is gone, badge and all, once the account switched Trending off (D39)', () => {
+      const fixture = mount({ trendingCounts: { day: 4, week: 9 } });
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(navLabels(element)).not.toContain('Trending');
+      expect(element.querySelector('.nav.trending')).toBeNull();
     });
   });
 

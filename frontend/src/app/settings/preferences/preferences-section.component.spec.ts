@@ -118,6 +118,37 @@ describe('PreferencesSectionComponent', () => {
     expect(preferences.scrapeFallbackEnabled()).toBe(true);
   });
 
+  it('offers Trending, shown by default, right after reading focus', () => {
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
+    const toggle = element.querySelector('#trending-toggle') as HTMLInputElement;
+    const toggleIds = Array.from(element.querySelectorAll('app-toggle input')).map(
+      (input) => input.id,
+    );
+
+    expect(element.textContent).toContain(en.settings.trendingHint);
+    expect(toggle.checked).toBe(true);
+    expect(toggleIds[toggleIds.indexOf('reading-focus-toggle') + 1]).toBe('trending-toggle');
+  });
+
+  it('writes the Trending preference when toggled', () => {
+    const fixture = mount();
+    const toggle = fixture.nativeElement.querySelector('#trending-toggle') as HTMLInputElement;
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(preferences.trendingEnabled()).toBe(false);
+  });
+
+  it('surfaces a banner when the Trending write failed', () => {
+    const fixture = mount();
+    preferences.trendingSaveFailed.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(en.settings.trendingSaveFailed);
+  });
+
   it('offers list autoplay, switched on by default', () => {
     const fixture = mount();
     const toggle = fixture.nativeElement.querySelector('#list-autoplay-toggle') as HTMLInputElement;

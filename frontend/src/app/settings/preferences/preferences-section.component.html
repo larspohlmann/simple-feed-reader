@@ -44,6 +44,22 @@
     </app-settings-row>
 
     <app-settings-row
+      [title]="'settings.trending' | transloco"
+      [description]="'settings.trendingHint' | transloco"
+      labelFor="trending-toggle"
+    >
+      <app-toggle
+        inputId="trending-toggle"
+        [checked]="preferences.trendingEnabled()"
+        [label]="'settings.trending' | transloco"
+        (toggled)="preferences.setTrendingEnabled($event)"
+      />
+    </app-settings-row>
+    @if (preferences.trendingSaveFailed()) {
+      <app-error-banner class="state" [message]="'settings.trendingSaveFailed' | transloco" />
+    }
+
+    <app-settings-row
       [title]="'settings.listAutoplay' | transloco"
       [description]="'settings.listAutoplayHint' | transloco"
       labelFor="list-autoplay-toggle"

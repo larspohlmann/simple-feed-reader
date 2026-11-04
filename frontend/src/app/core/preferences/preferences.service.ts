@@ -26,12 +26,26 @@ export class PreferencesService {
   /** True when the value applied locally but the account write failed. */
   readonly saveFailed = signal(false);
 
+  /** `true` until `adopt()`: a reader whose account has it off sees Trending for that window, never loses a list. */
+  readonly trendingEnabled = signal(true);
+
+  readonly trendingSaveFailed = signal(false);
+
   setScrapeFallbackEnabled(enabled: boolean): void {
     this.scrapeFallbackEnabled.set(enabled);
     this.saveFailed.set(false);
 
     this.writer.write(enabled).subscribe((ok) => {
       if (!ok) this.saveFailed.set(true);
+    });
+  }
+
+  setTrendingEnabled(enabled: boolean): void {
+    this.trendingEnabled.set(enabled);
+    this.trendingSaveFailed.set(false);
+
+    this.writer.writeTrending(enabled).subscribe((ok) => {
+      if (!ok) this.trendingSaveFailed.set(true);
     });
   }
 
@@ -42,6 +56,7 @@ export class PreferencesService {
    */
   adopt(user: CurrentUser): void {
     this.scrapeFallbackEnabled.set(user.preferences.scrapeFallbackEnabled);
+    this.trendingEnabled.set(user.preferences.trendingEnabled);
   }
 
   /**
@@ -54,5 +69,7 @@ export class PreferencesService {
   reset(): void {
     this.scrapeFallbackEnabled.set(false);
     this.saveFailed.set(false);
+    this.trendingEnabled.set(true);
+    this.trendingSaveFailed.set(false);
   }
 }

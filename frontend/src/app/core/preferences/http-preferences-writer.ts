@@ -20,4 +20,11 @@ export class HttpPreferencesWriter implements PreferencesWriter {
       catchError(() => of(false)),
     );
   }
+
+  writeTrending(trendingEnabled: boolean): Observable<boolean> {
+    return this.http.patch(`${this.base}/api/me/trending`, { trendingEnabled }).pipe(
+      map(() => true),
+      catchError(() => of(false)),
+    );
+  }
 }

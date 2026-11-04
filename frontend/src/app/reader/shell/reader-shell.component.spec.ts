@@ -20,6 +20,7 @@ import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
+import { PreferencesService } from '../../core/preferences/preferences.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { TokenStore } from '../../core/auth/token.store';
@@ -255,6 +256,41 @@ describe('ReaderShellComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  describe('Trending switched off on the account (#2017, D39)', () => {
+    const trendingRequests = () =>
+      ctrl.match((request) => request.url === 'https://api.test/api/trending');
+
+    beforeEach(() => {
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      qp.next(convertToParamMap({ view: 'trending' }));
+    });
+
+    it('opens All items for a Trending link', () => {
+      const fixture = boot();
+
+      expect(trendingRequests()).toHaveLength(0);
+      expect(fixture.componentInstance.selection().kind).toBe('all');
+    });
+
+    it('moves an open Trending list to All items when the switch goes off', () => {
+      const fixture = boot();
+      TestBed.inject(PreferencesService).setTrendingEnabled(true);
+      fixture.detectChanges();
+      trendingRequests().forEach((request) =>
+        request.flush({ window: 'day', builtAt: null, stories: [] }),
+      );
+      expect(fixture.componentInstance.selection().kind).toBe('trending');
+
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.selection().kind).toBe('all');
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+    });
+  });
 
   describe('previews still loading (#1502)', () => {
     const status = (element: HTMLElement) => element.querySelector('.previews-status')!;

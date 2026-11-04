@@ -9,9 +9,11 @@ import { Observable, of } from 'rxjs';
 export interface PreferencesWriter {
   /** Resolves `true` on success, `false` on failure. Never errors. */
   write(scrapeFallbackEnabled: boolean): Observable<boolean>;
+  /** Resolves `true` on success, `false` on failure. Never errors. */
+  writeTrending(trendingEnabled: boolean): Observable<boolean>;
 }
 
 export const PREFERENCES_WRITER = new InjectionToken<PreferencesWriter>('PREFERENCES_WRITER', {
   providedIn: 'root',
-  factory: (): PreferencesWriter => ({ write: () => of(true) }),
+  factory: (): PreferencesWriter => ({ write: () => of(true), writeTrending: () => of(true) }),
 });

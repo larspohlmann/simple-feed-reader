@@ -39,6 +39,7 @@ import { SidebarSubtagPillComponent } from './sidebar-subtag-pill.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
 import { SidebarTagsHeadMenuComponent } from './sidebar-tags-head-menu.component';
+import { SidebarViewsComponent } from './sidebar-views.component';
 import { TagNode, tagNodesById } from '../../state/subscription-derivations';
 import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
@@ -52,11 +53,8 @@ import {
   TrendingCounts,
 } from '../../models';
 import { NO_TRENDING_COUNTS } from '../../trending/trending-window';
-import { TrendingWindowService } from '../../trending/trending-window.service';
 import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
-import { RecommendationsService } from '../../state/recommendations.service';
-import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -111,6 +109,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     CdkDragHandle,
     SidebarTagRowMenuComponent,
     SidebarTagsHeadMenuComponent,
+    SidebarViewsComponent,
     NgTemplateOutlet,
     ScrollOutsideZoneDirective,
   ],
@@ -137,11 +136,6 @@ export class SidebarComponent {
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
   readonly trendingCounts = input<TrendingCounts>(NO_TRENDING_COUNTS);
-  private readonly trendingWindow = inject(TrendingWindowService);
-  /** Unopened stories in the window the Trending list shows (#2017, decision 8). */
-  protected readonly trendingUnopened = computed(
-    () => this.trendingCounts()[this.trendingWindow.window()],
-  );
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
@@ -185,8 +179,6 @@ export class SidebarComponent {
   readonly isFeedDrag = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
 
   readonly refreshSvc = inject(RefreshService);
-  readonly ai = inject(AiAvailabilityService);
-  readonly recs = inject(RecommendationsService);
   readonly screen = inject(LayoutService);
   readonly visibility = inject(SidebarVisibilityService);
   private readonly tagsStore = inject(TagsStore);

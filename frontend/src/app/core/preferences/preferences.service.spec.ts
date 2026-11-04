@@ -6,10 +6,16 @@ import { SHARING_EVERYTHING } from './sharing';
 
 class FakeWriter implements PreferencesWriter {
   written: boolean[] = [];
+  trendingWritten: boolean[] = [];
   result = true;
 
   write(enabled: boolean): Observable<boolean> {
     this.written.push(enabled);
+    return of(this.result);
+  }
+
+  writeTrending(enabled: boolean): Observable<boolean> {
+    this.trendingWritten.push(enabled);
     return of(this.result);
   }
 }
@@ -74,6 +80,7 @@ describe('PreferencesService', () => {
         passkeyOfferAnswered: true,
         magazineStyle: 'boxed',
         sharing: SHARING_EVERYTHING,
+        trendingEnabled: false,
       },
       ai: { ready: false, model: null, capabilities: null },
       mail: { enabled: true },
@@ -81,6 +88,47 @@ describe('PreferencesService', () => {
     });
 
     expect(preferencesService.scrapeFallbackEnabled()).toBe(true);
+    expect(preferencesService.trendingEnabled()).toBe(false);
     expect(writer.written).toEqual([]);
+    expect(writer.trendingWritten).toEqual([]);
+  });
+
+  describe('Trending (#2017, D39)', () => {
+    it('defaults to shown', () => {
+      expect(service().trendingEnabled()).toBe(true);
+    });
+
+    it('applies the value locally and writes only Trending through', () => {
+      const preferencesService = service();
+
+      preferencesService.setTrendingEnabled(false);
+
+      expect(preferencesService.trendingEnabled()).toBe(false);
+      expect(writer.trendingWritten).toEqual([false]);
+      expect(writer.written).toEqual([]);
+      expect(preferencesService.trendingSaveFailed()).toBe(false);
+    });
+
+    it('flags a failed write on its own banner, keeping the local value', () => {
+      writer.result = false;
+      const preferencesService = service();
+
+      preferencesService.setTrendingEnabled(false);
+
+      expect(preferencesService.trendingEnabled()).toBe(false);
+      expect(preferencesService.trendingSaveFailed()).toBe(true);
+      expect(preferencesService.saveFailed()).toBe(false);
+    });
+
+    it('shows Trending again for the next account after a sign-out', () => {
+      writer.result = false;
+      const preferencesService = service();
+      preferencesService.setTrendingEnabled(false);
+
+      preferencesService.reset();
+
+      expect(preferencesService.trendingEnabled()).toBe(true);
+      expect(preferencesService.trendingSaveFailed()).toBe(false);
+    });
   });
 });
