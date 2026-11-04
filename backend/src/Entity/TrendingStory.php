@@ -51,14 +51,4 @@ final class TrendingStory
     {
         return $this->id;
     }
-
-    public function getWindow(): TrendingWindow
-    {
-        return $this->window;
-    }
-
-    public function getOutletCount(): int
-    {
-        return $this->outletCount;
-    }
 }

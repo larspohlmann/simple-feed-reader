@@ -115,24 +115,12 @@ final class TrendingStoriesTest extends DbTestCase
         $this->fixtures->subscribe($this->reader, ...$socials);
         $this->storyOf('2031-05-14 10:00:00', $socials);
 
-        self::assertSame([], $this->storiesFor(TrendingWindow::Day));
-    }
-
-    public function testAStoryWithoutAnArticleTheReaderCanSeeIsNotRanked(): void
-    {
-        $socials = [
-            $this->fixtures->feed('ann', SocialNetwork::Bluesky),
-            $this->fixtures->feed('ben', SocialNetwork::Mastodon),
-            $this->fixtures->feed('cat', SocialNetwork::Bluesky),
-        ];
-        $this->fixtures->subscribe($this->reader, ...$socials);
-        $this->storyOf('2031-05-14 10:00:00', $socials);
-
         self::assertSame([], $this->storyRepository()->rankedForUser(
             $this->reader->requireId(),
             TrendingWindow::Day,
             TrendingStories::MAX_STORIES,
         ));
+        self::assertSame([], $this->storiesFor(TrendingWindow::Day));
     }
 
     public function testEveryOutletSharingOneArticleSurfacesOnTheCardNewestFirst(): void

@@ -14,12 +14,12 @@ final readonly class StoryCardSource
     /**
      * @param array<int, list<int>> $entryIdsByStory
      * @param array<int, EntryListRow> $rowsByEntryId newest first
-     * @param array<int, int> $viewedStoryIds flipped: story id => position
+     * @param array<int, int> $viewedStories
      */
     public function __construct(
         private array $entryIdsByStory,
         private array $rowsByEntryId,
-        private array $viewedStoryIds,
+        private array $viewedStories,
     ) {
     }
 
@@ -42,7 +42,7 @@ final readonly class StoryCardSource
             $cards[] = TrendingStoryCardModel::fromRows(
                 $rows,
                 $story->outletCount,
-                isset($this->viewedStoryIds[$story->storyId]),
+                isset($this->viewedStories[$story->storyId]),
             );
         }
 

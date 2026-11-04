@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -53,6 +54,25 @@ final class TrendingControllerTest extends ApiTestCase
         );
         self::assertSame(3, $story['outletCount']);
         self::assertFalse($story['viewed']);
+    }
+
+    public function testBuiltAtIsSerialisedAsAtomInUtc(): void
+    {
+        [$headers] = $this->bearerAndUser('trending-built@example.com');
+        $this->entityManager()->persist(new TrendingSnapshot(
+            TrendingWindow::Week,
+            new \DateTimeImmutable('2031-05-14 12:30:00'),
+            10,
+            0,
+            5,
+            1_000,
+        ));
+        $this->entityManager()->flush();
+
+        $this->client->request('GET', '/api/trending?window=week', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('2031-05-14T12:30:00+00:00', $this->payload($this->client)['builtAt']);
     }
 
     public function testAMissingWindowMeansTheDay(): void
