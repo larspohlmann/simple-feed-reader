@@ -253,9 +253,23 @@ final class MaintenanceControllerTest extends WebTestCase
         self::assertResponseHeaderSame('Content-Type', 'application/json');
         /** @var array<string, mixed> $payload */
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertArrayHasKey('refresh', $payload);
-        self::assertArrayHasKey('recommendations', $payload);
-        self::assertArrayHasKey('logShipping', $payload);
+        self::assertSame(
+            [
+                'refresh',
+                'recommendations',
+                'digests',
+                'imageVerification',
+                'linkCards',
+                'transcripts',
+                'profileImages',
+                'hiddenProfiles',
+                'savedSearchMemberships',
+                'privateFeedSync',
+                'trending',
+                'logShipping',
+            ],
+            array_keys($payload),
+        );
         /** @var array<string, mixed> $refresh */
         $refresh = $payload['refresh'];
         self::assertSame('completed', $refresh['status']);

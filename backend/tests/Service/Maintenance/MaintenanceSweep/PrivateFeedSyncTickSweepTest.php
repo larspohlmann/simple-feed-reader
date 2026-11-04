@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\HiddenProfileSwitchSweep;
+use App\Service\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\ProfileImageSweep;
-use App\Service\Social\SocialMaintenance;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;
@@ -17,11 +15,11 @@ use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class SocialMaintenanceTest extends DbTestCase
+final class PrivateFeedSyncTickSweepTest extends DbTestCase
 {
     private MockClock $clock;
     private StubSocialCandidates $network;
-    private SocialMaintenance $maintenance;
+    private PrivateFeedSyncTickSweep $sweep;
 
     protected function setUp(): void
     {
@@ -31,37 +29,34 @@ final class SocialMaintenanceTest extends DbTestCase
             new NetworkCandidatesModel([], [], [], false),
             new NetworkCollectionsModel([], []),
         );
-        $profileImages = self::getContainer()->get(ProfileImageSweep::class);
-        self::assertInstanceOf(ProfileImageSweep::class, $profileImages);
-        $switches = self::getContainer()->get(HiddenProfileSwitchSweep::class);
-        self::assertInstanceOf(HiddenProfileSwitchSweep::class, $switches);
-        $this->maintenance = new SocialMaintenance(
-            $profileImages,
-            $switches,
+        $this->sweep = new PrivateFeedSyncTickSweep(
             PrivateFeedSyncWiring::sweep(self::getContainer(), $this->entityManager, $this->clock, $this->network),
             $this->clock,
         );
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $user = (new UserFactory($this->entityManager, $hasher))->create('social-maintenance@example.test');
-        $this->entityManager->persist(SocialAccounts::blueskyAs($user, 'did:plc:maintenance-1'));
+        $user = new UserFactory($this->entityManager, $hasher)->create('tick-sweep-private-feeds@example.test');
+        $this->entityManager->persist(SocialAccounts::blueskyAs($user, 'did:plc:tick-sweep-1'));
         $this->entityManager->flush();
     }
 
     public function testADeadlineLessThanOneAccountAwayAsksTheNetworkNothing(): void
     {
-        $report = $this->maintenance->syncPrivateFeeds($this->clock->now()->modify('+4 seconds'));
+        $report = $this->sweep->run($this->clock->now()->modify('+4 seconds'));
 
-        self::assertSame(0, $report->checked);
+        self::assertSame(
+            ['accountsChecked' => 0, 'accountsSkipped' => 0, 'added' => 0, 'removed' => 0],
+            $report->outcome,
+        );
         self::assertSame(0, $this->network->calls);
     }
 
     public function testADeadlineOneAccountAwayChecksOneDueAccount(): void
     {
-        $report = $this->maintenance->syncPrivateFeeds($this->clock->now()->modify('+5 seconds'));
+        $report = $this->sweep->run($this->clock->now()->modify('+5 seconds'));
 
-        self::assertSame(1, $report->checked);
+        self::assertSame(1, $report->outcome['accountsChecked']);
         self::assertSame(1, $this->network->calls);
     }
 }
