@@ -27,13 +27,15 @@ final readonly class TrendingSnapshotBuilder
         $stopwatch = BuildStopwatch::start();
         $run = $this->grouping->collect($window);
         $stories = $this->grouping->stories($run);
+        $entryCount = $run->entryCount();
+        unset($run);
 
-        return $this->entityManager->wrapInTransaction(function () use ($window, $run, $stories, $stopwatch) {
+        return $this->entityManager->wrapInTransaction(function () use ($window, $entryCount, $stories, $stopwatch) {
             $this->snapshots->replaceStories($window, $stories);
             $report = new TrendingBuildReportModel(
                 $window,
                 $this->clock->now(),
-                \count($run->entryIds()),
+                $entryCount,
                 \count($stories),
                 $stopwatch->elapsedMilliseconds(),
                 $stopwatch->peakMemoryBytes(),

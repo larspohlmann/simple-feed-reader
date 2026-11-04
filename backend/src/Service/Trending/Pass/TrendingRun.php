@@ -48,6 +48,11 @@ final class TrendingRun
         return array_keys($this->feedOfEntry);
     }
 
+    public function entryCount(): int
+    {
+        return \count($this->feedOfEntry);
+    }
+
     public function feedOf(int $entryId): int
     {
         return $this->feedOfEntry[$entryId];

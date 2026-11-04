@@ -18,11 +18,8 @@ final readonly class SharedUrlLinks implements StoryLinkSourceInterface
     {
         $links = [];
         foreach ($run->entriesSharingAUrl() as $entryIds) {
-            foreach (self::pairsOf($entryIds) as [$oneEntryId, $otherEntryId]) {
-                if ($run->mayLink($oneEntryId, $otherEntryId)) {
-                    $link = StoryLinkModel::sameUrl($oneEntryId, $otherEntryId);
-                    $links[$link->pairKey()] = $link;
-                }
+            foreach (self::linksAmong($run, $entryIds) as $link) {
+                $links[$link->pairKey()] = $link;
             }
         }
 
@@ -32,17 +29,19 @@ final readonly class SharedUrlLinks implements StoryLinkSourceInterface
     /**
      * @param list<int> $entryIds
      *
-     * @return list<array{int, int}>
+     * @return list<StoryLinkModel>
      */
-    private static function pairsOf(array $entryIds): array
+    private static function linksAmong(TrendingRun $run, array $entryIds): array
     {
-        $pairs = [];
+        $links = [];
         foreach ($entryIds as $index => $oneEntryId) {
             foreach (\array_slice($entryIds, $index + 1) as $otherEntryId) {
-                $pairs[] = [$oneEntryId, $otherEntryId];
+                if ($run->mayLink($oneEntryId, $otherEntryId)) {
+                    $links[] = StoryLinkModel::sameUrl($oneEntryId, $otherEntryId);
+                }
             }
         }
 
-        return $pairs;
+        return $links;
     }
 }
