@@ -25,6 +25,12 @@ final class HeadlineStemsTest extends TestCase
         self::assertSame(['abcdef', 'ukrain'], HeadlineStems::of('abcdef abcdefg Ukraine Ukrainian'));
     }
 
+    public function testAWordInAnotherScriptIsCutAndMeasuredInCharacters(): void
+    {
+        self::assertSame(['αθηναι'], HeadlineStems::of('Το Αθηναϊκό'));
+        self::assertSame(['zołtos'], HeadlineStems::of('Żółtość'));
+    }
+
     public function testWordsUnderThreeLettersAreDropped(): void
     {
         self::assertSame(['ban'], HeadlineStems::of('EU to ban AI'));

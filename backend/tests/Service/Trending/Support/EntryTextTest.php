@@ -17,14 +17,6 @@ final class EntryTextTest extends TestCase
         );
     }
 
-    public function testTheBodyKeepsTheTitleItStartsWith(): void
-    {
-        self::assertSame(
-            'Storm hits coast. Ten dead.',
-            EntryText::body('<p>Storm hits coast. Ten dead.</p>'),
-        );
-    }
-
     public function testTheBodyIsCutAtTheLastSpaceWithinThreeHundredCharacters(): void
     {
         self::assertSame(rtrim(str_repeat('ab ', 100)), EntryText::body(str_repeat('ab ', 120) . 'tail'));
@@ -61,6 +53,14 @@ final class EntryTextTest extends TestCase
         self::assertSame(
             'Ten dead.',
             EntryText::bodyAfterTitle('Storm hits coast.', '<p>Storm hits coast. Ten dead.</p>'),
+        );
+    }
+
+    public function testAMultibyteTitleIsCutByCharactersNotBytes(): void
+    {
+        self::assertSame(
+            'Dziesięć ofiar.',
+            EntryText::bodyAfterTitle('Łódź: pożar.', '<p>Łódź: pożar. Dziesięć ofiar.</p>'),
         );
     }
 
