@@ -137,10 +137,9 @@ describe('ReaderShellComponent', () => {
   });
 
   // A jest.fn() double, not the real HTTP-backed service: this suite asserts
-  // the shell CALLS prefetch/seed correctly, not the store's own caching —
+  // the shell CALLS seed correctly, not the store's own caching —
   // that belongs to entry-body.service.spec.ts.
   let bodyStore: {
-    prefetch: jest.Mock;
     seed: jest.Mock;
     body: jest.Mock;
     retry: jest.Mock;
@@ -148,7 +147,6 @@ describe('ReaderShellComponent', () => {
 
   beforeEach(() => {
     bodyStore = {
-      prefetch: jest.fn(),
       seed: jest.fn(),
       body: jest.fn(() => signal({ status: 'ok', html: null, chapters: [], transcript: null })),
       retry: jest.fn(),
@@ -1552,62 +1550,6 @@ describe('ReaderShellComponent', () => {
     expect(TestBed.inject(EntriesStore).entries()[0].share).toBe('media');
     expect(fixture.debugElement.injector.get(ReaderRouteState).openEntry()?.share).toBe('media');
     jest.useRealTimers();
-  });
-
-  describe('neighbour prefetch on open (#1100)', () => {
-    it('warms the body store for the previous and next entries in list order', () => {
-      const fixture = TestBed.createComponent(ReaderShellComponent);
-      fixture.detectChanges();
-      ctrl
-        .match('https://api.test/api/subscriptions')
-        .forEach((testRequest) => testRequest.flush(subscriptionsBody));
-      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
-      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-      ctrl
-        .expectOne('https://api.test/api/for-you/excluded-networks')
-        .flush({ excludedNetworks: [] });
-      ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries')
-        .flush({
-          entries: [
-            { ...entry, id: 1 },
-            // Already viewed/hidden, so opening it fires no on-open state PATCH.
-            { ...entry, id: 2, isHidden: true, isViewed: true },
-            { ...entry, id: 3 },
-          ],
-          nextCursor: null,
-        });
-      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
-        status: 'none',
-        batchesTotal: null,
-        batchesDone: 0,
-        error: null,
-        background: false,
-        streamedChars: 0,
-        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
-      });
-      ctrl.expectOne('https://api.test/api/version').flush({
-        version: 'dev',
-        commit: 'local',
-        builtAt: '',
-        latest: null,
-      });
-
-      qp.next(convertToParamMap({ entry: '2' }));
-      fixture.detectChanges();
-
-      expect(bodyStore.prefetch).toHaveBeenCalledWith(1);
-      expect(bodyStore.prefetch).toHaveBeenCalledWith(3);
-      ctrl.verify();
-    });
-
-    it('prefetches only the side with a neighbour, for an edge entry', () => {
-      const fixture = boot(); // a single-entry list — no neighbour on either side
-      qp.next(convertToParamMap({ entry: '1' }));
-      fixture.detectChanges();
-
-      expect(bodyStore.prefetch).not.toHaveBeenCalled();
-    });
   });
 
   it('ignores a stale cold-entry fetch that resolves after navigating to another', () => {

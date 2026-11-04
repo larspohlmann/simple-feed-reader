@@ -71,10 +71,6 @@ class FakeEntryBodyService {
     return this.stateFor(id).asReadonly();
   }
 
-  prefetch(id: number): void {
-    this.stateFor(id);
-  }
-
   seed(id: number, html: string | null, chapters: ChapterDto[] = []): void {
     this.stateFor(id).set({ status: 'ok', html, chapters, transcript: null });
   }
