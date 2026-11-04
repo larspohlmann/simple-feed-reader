@@ -120,6 +120,19 @@
             <span class="count">{{ viewedCount() }}</span>
           }
         </a>
+        <a
+          class="nav trending"
+          [class.active]="selection().kind === 'trending'"
+          [routerLink]="['/']"
+          [queryParams]="selectionQueryParams({ view: 'trending' })"
+          queryParamsHandling="merge"
+        >
+          <app-icon name="trending_up" size="md" />
+          <span class="name">{{ 'reader.trending' | transloco }}</span>
+          @if (trendingUnopened() > 0) {
+            <span class="count">{{ trendingUnopened() }}</span>
+          }
+        </a>
         @if (ai.ready()) {
           <a
             class="nav for-you"

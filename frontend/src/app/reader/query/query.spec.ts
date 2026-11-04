@@ -2,26 +2,32 @@ import { convertToParamMap } from '@angular/router';
 import {
   canScopedRefresh,
   hasListOrder,
-  isSearchableTerm,
-  isTooShortToSearch,
-  isWholeWordTerm,
-  isPhraseTerm,
   listOrderKey,
   listOrderOf,
   listSelectionFrom,
   hasUnreadFilter,
+  isSingleStreamView,
   markReadTarget,
-  normalizeSearchInput,
+  offersMarkAboveRead,
   queryFromSelection,
   sameSelection,
-  searchWords,
   selectionFromParams,
   selectionQueryParams,
+  trendingWindowOf,
   visibleSearchTerm,
   withListOrder,
+  withTrendingWindow,
   withUnreadPreference,
   type Selection,
 } from './query';
+import {
+  isPhraseTerm,
+  isSearchableTerm,
+  isTooShortToSearch,
+  isWholeWordTerm,
+  normalizeSearchInput,
+  searchWords,
+} from './search-term';
 import { selectionFromRoute } from './reader-matcher';
 
 const pm = (params: Record<string, string>) => convertToParamMap(params);
@@ -865,5 +871,49 @@ describe("a network's profile feeds", () => {
       feedKind: 'profile',
     });
     expect(selectionQueryParams({ network: 'mastodon' }).feedKind).toBeNull();
+  });
+});
+
+describe('the Trending view (#2017)', () => {
+  const trending = { kind: 'trending', id: null, unread: false } as const;
+
+  it('reads view=trending', () => {
+    expect(selectionFromParams(pm({ view: 'trending' })).selection).toEqual(trending);
+  });
+
+  it('asks for the window the selection carries', () => {
+    expect(queryFromSelection({ ...trending, window: 'week' })).toEqual({
+      view: 'trending',
+      window: 'week',
+    });
+  });
+
+  it('asks for the day when the selection carries no window', () => {
+    expect(queryFromSelection(trending)).toEqual({ view: 'trending', window: 'day' });
+    expect(trendingWindowOf(trending)).toBe('day');
+  });
+
+  it('takes a window only on the Trending view', () => {
+    expect(withTrendingWindow(trending, 'week')).toEqual({ ...trending, window: 'week' });
+    const tag = { kind: 'tag', id: 3, unread: false } as const;
+    expect(withTrendingWindow(tag, 'week')).toBe(tag);
+  });
+
+  it('names a different list for a different window', () => {
+    expect(sameSelection({ ...trending, window: 'day' }, { ...trending, window: 'week' })).toBe(
+      false,
+    );
+  });
+
+  it('offers no unread switch, no order, no mark-all-read and no mark-above-read', () => {
+    expect(hasUnreadFilter(trending)).toBe(false);
+    expect(hasListOrder(trending)).toBe(false);
+    expect(markReadTarget(trending)).toBeNull();
+    expect(offersMarkAboveRead(trending)).toBe(false);
+    expect(offersMarkAboveRead({ kind: 'all', id: null, unread: false })).toBe(true);
+  });
+
+  it('never files its leads under one source', () => {
+    expect(isSingleStreamView(trending)).toBe(true);
   });
 });

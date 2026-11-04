@@ -30,7 +30,8 @@ import { ListEmptyStateComponent } from '../list-empty-state/list-empty-state.co
 import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.directive';
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
-import { Selection, canScopedRefresh, searchWords } from '../../query/query';
+import { Selection, canScopedRefresh } from '../../query/query';
+import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
 import { prefetchMargin } from '../paging';

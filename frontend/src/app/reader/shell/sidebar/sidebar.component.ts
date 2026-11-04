@@ -44,7 +44,15 @@ import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
-import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import {
+  MoveFeedToTag,
+  SavedSearchDto,
+  SubscriptionDto,
+  TagDto,
+  TrendingCounts,
+} from '../../models';
+import { NO_TRENDING_COUNTS } from '../../trending/trending-window';
+import { TrendingWindowService } from '../../trending/trending-window.service';
 import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
@@ -128,6 +136,12 @@ export class SidebarComponent {
   readonly sharedCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
+  readonly trendingCounts = input<TrendingCounts>(NO_TRENDING_COUNTS);
+  private readonly trendingWindow = inject(TrendingWindowService);
+  /** Unopened stories in the window the Trending list shows (#2017, decision 8). */
+  protected readonly trendingUnopened = computed(
+    () => this.trendingCounts()[this.trendingWindow.window()],
+  );
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell

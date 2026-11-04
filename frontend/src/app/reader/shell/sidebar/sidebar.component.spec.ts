@@ -16,7 +16,14 @@ import { TagsStore } from '../../state/tags.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
-import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import {
+  MoveFeedToTag,
+  SavedSearchDto,
+  SubscriptionDto,
+  TagDto,
+  TrendingCounts,
+} from '../../models';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
@@ -117,6 +124,7 @@ function inputDefaults() {
     favoritesCount: 0,
     keptCount: 0,
     sharedCount: 0,
+    trendingCounts: { day: 0, week: 0 } as TrendingCounts,
     groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', id: null, unread: true } as Selection,
     loading: false,
@@ -147,6 +155,7 @@ function mount(
     favoritesCount: number;
     keptCount: number;
     sharedCount: number;
+    trendingCounts: TrendingCounts;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
     user: CurrentUser | null;
@@ -168,6 +177,7 @@ function mount(
       provideRouter([{ path: '**', children: [] }]),
       provideHttpClient(),
       provideHttpClientTesting(),
+      provideAccountIdentity(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
       {
@@ -243,6 +253,60 @@ describe('SidebarComponent', () => {
         nav.querySelector('.name')?.textContent?.includes('Shared'),
       )!;
       expect(shared.classList).toContain('active');
+    });
+  });
+
+  describe('the Trending item (#2017)', () => {
+    beforeEach(() => localStorage.clear());
+
+    const navLabels = (element: HTMLElement): string[] =>
+      [...element.querySelectorAll('.nav .name')].map((name) => name.textContent?.trim() ?? '');
+    const trendingNav = (element: HTMLElement): HTMLAnchorElement =>
+      [...element.querySelectorAll<HTMLAnchorElement>('.nav')].find(
+        (nav) => nav.querySelector('.name')?.textContent?.trim() === 'Trending',
+      )!;
+
+    it('shows right after Recently read even while nothing trends, with no badge', () => {
+      const element = mount().nativeElement as HTMLElement;
+      const labels = navLabels(element);
+
+      expect(labels[labels.indexOf('Recently read') + 1]).toBe('Trending');
+      expect(trendingNav(element).querySelector('.count')).toBeNull();
+    });
+
+    it('sits directly above For you', () => {
+      const fixture = mount();
+      TestBed.inject(AiAvailabilityService).apply({
+        ready: true,
+        model: 'model',
+        capabilities: null,
+      });
+      fixture.detectChanges();
+      const labels = navLabels(fixture.nativeElement as HTMLElement);
+
+      expect(labels[labels.indexOf('Trending') + 1]).toBe('For you');
+    });
+
+    it("counts the day's unopened stories by default", () => {
+      const element = mount({ trendingCounts: { day: 4, week: 9 } }).nativeElement as HTMLElement;
+
+      expect(trendingNav(element).querySelector('.count')?.textContent?.trim()).toBe('4');
+    });
+
+    it("counts the week's once the account chose the week", () => {
+      localStorage.setItem('sfr.user.1.trending-window', 'week');
+      const element = mount({ trendingCounts: { day: 4, week: 9 } }).nativeElement as HTMLElement;
+
+      expect(trendingNav(element).querySelector('.count')?.textContent?.trim()).toBe('9');
+    });
+
+    it('links to the Trending view and is marked active on it', () => {
+      const element = mount({
+        selection: { kind: 'trending', id: null, unread: false },
+      }).nativeElement as HTMLElement;
+
+      expect(trendingNav(element).getAttribute('href')).toContain('view=trending');
+      expect(trendingNav(element).classList).toContain('active');
     });
   });
 

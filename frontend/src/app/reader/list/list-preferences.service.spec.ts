@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
 import { UnreadFilterService } from './unread-filter.service';
+import { TrendingWindowService } from '../trending/trending-window.service';
 
 describe('ListPreferences', () => {
   let user: WritableSignal<{ id: number } | null>;
@@ -29,6 +30,32 @@ describe('ListPreferences', () => {
     });
 
     expect(applied).toEqual({ kind: 'tag', id: 9, unread: true, order: 'oldest' });
+  });
+
+  it("applies the account's Trending window to the Trending view only (#2017)", () => {
+    TestBed.inject(TrendingWindowService).set('week');
+    const preferences = TestBed.inject(ListPreferences);
+
+    expect(preferences.appliedTo({ kind: 'trending', id: null, unread: false })).toEqual({
+      kind: 'trending',
+      id: null,
+      unread: false,
+      window: 'week',
+    });
+    expect(preferences.appliedTo({ kind: 'favorites', id: null, unread: false })).toEqual({
+      kind: 'favorites',
+      id: null,
+      unread: false,
+    });
+  });
+
+  it('reports a window flip as a preference change (#2017)', () => {
+    const preferences = TestBed.inject(ListPreferences);
+    const before = preferences.values();
+
+    TestBed.inject(TrendingWindowService).set('week');
+
+    expect(preferences.values()).not.toEqual(before);
   });
 
   describe('a direct search (#1922)', () => {

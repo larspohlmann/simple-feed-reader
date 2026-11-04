@@ -18,7 +18,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { isTextEntryTarget } from '../../../shared/text-entry-target';
-import { isTooShortToSearch, normalizeSearchInput } from '../../query/query';
+import { isTooShortToSearch, normalizeSearchInput } from '../../query/search-term';
 
 const DEBOUNCE_MS = 300;
 

@@ -109,6 +109,7 @@ export class ListHeading {
     shared: () => this.i18n.translate('reader.shared'),
     viewed: () => this.i18n.translate('reader.viewed'),
     'for-you': () => this.i18n.translate('reader.forYou'),
+    trending: () => this.i18n.translate('reader.trending'),
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
@@ -180,6 +181,7 @@ export class ListHeading {
     viewed: () => items(this.subscriptions.viewedCount()),
     'for-you': (selection) =>
       bySwitch(selection, this.subscriptions.forYouUnread(), this.recommendations.forYouTotal()),
+    trending: () => items(this.entries.entries().length),
     'saved-searches': (selection) =>
       bySwitch(selection, this.savedSearchesUnread(), this.savedSearchesTotal()),
     'saved-search': (selection) => {
