@@ -116,11 +116,10 @@ final class HeadlineWindow
     {
         foreach ($headlineIds as $stemId) {
             $this->headlinePostings[$stemId][] = $entryId;
+            $this->documentFrequencies[$stemId] = ($this->documentFrequencies[$stemId] ?? 0) + 1;
         }
         foreach ($bodyIds as $stemId) {
             $this->bodyPostings[$stemId][] = $entryId;
-        }
-        foreach ([...$headlineIds, ...$bodyIds] as $stemId) {
             $this->documentFrequencies[$stemId] = ($this->documentFrequencies[$stemId] ?? 0) + 1;
         }
     }
@@ -138,48 +137,43 @@ final class HeadlineWindow
     /** @return array<int, float> stem id => place weight, filler left out */
     private function placedStemsOf(int $entryId): array
     {
-        $placed = array_fill_keys($this->bodyStems[$entryId], self::BODY_WEIGHT)
-            + array_fill_keys($this->headlineStems[$entryId], self::HEADLINE_WEIGHT);
+        $placed = [];
+        foreach ($this->bodyStems[$entryId] as $stemId) {
+            if (!$this->isFillerFor($entryId, $stemId)) {
+                $placed[$stemId] = self::BODY_WEIGHT;
+            }
+        }
+        foreach ($this->headlineStems[$entryId] as $stemId) {
+            if (!$this->isFillerFor($entryId, $stemId)) {
+                $placed[$stemId] = self::HEADLINE_WEIGHT;
+            }
+        }
 
-        return array_filter(
-            $placed,
-            fn (int $stemId): bool => !$this->isFillerFor($entryId, $stemId),
-            \ARRAY_FILTER_USE_KEY,
-        );
+        return $placed;
     }
 
     /** @return array<int, float> earlier entry id => the stem's place weight there, filler for its feed left out */
     private function earlierHoldersOf(int $stemId, int $entryId): array
     {
-        $holders = array_fill_keys($this->idsBefore($this->bodyPostings[$stemId] ?? [], $entryId), self::BODY_WEIGHT)
-            + array_fill_keys(
-                $this->idsBefore($this->headlinePostings[$stemId] ?? [], $entryId),
-                self::HEADLINE_WEIGHT,
-            );
-
-        return array_filter(
-            $holders,
-            fn (int $holderId): bool => !$this->isFillerFor($holderId, $stemId),
-            \ARRAY_FILTER_USE_KEY,
-        );
-    }
-
-    /**
-     * @param list<int> $ascendingIds
-     *
-     * @return list<int>
-     */
-    private function idsBefore(array $ascendingIds, int $entryId): array
-    {
-        $before = [];
-        foreach ($ascendingIds as $id) {
-            if ($id >= $entryId) {
+        $holders = [];
+        foreach ($this->bodyPostings[$stemId] ?? [] as $holderId) {
+            if ($holderId >= $entryId) {
                 break;
             }
-            $before[] = $id;
+            if (!$this->isFillerFor($holderId, $stemId)) {
+                $holders[$holderId] = self::BODY_WEIGHT;
+            }
+        }
+        foreach ($this->headlinePostings[$stemId] ?? [] as $holderId) {
+            if ($holderId >= $entryId) {
+                break;
+            }
+            if (!$this->isFillerFor($holderId, $stemId)) {
+                $holders[$holderId] = self::HEADLINE_WEIGHT;
+            }
         }
 
-        return $before;
+        return $holders;
     }
 
     private function isFillerFor(int $entryId, int $stemId): bool

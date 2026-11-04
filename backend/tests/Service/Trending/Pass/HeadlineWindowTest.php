@@ -93,6 +93,18 @@ final class HeadlineWindowTest extends TestCase
         );
     }
 
+    public function testAFeedFillerStemInTheBodyIsIgnoredToo(): void
+    {
+        $this->window->add(1, 7, 'Koalition', 'Fleischhauer');
+        $this->window->add(2, 7, 'Haushalt', 'Fleischhauer');
+        $this->window->add(3, 7, 'Bahnstreik', '');
+        $this->window->add(4, 7, 'Wetter', '');
+        $this->window->add(5, 8, 'Fleischhauer kommentiert Koalition', '');
+
+        self::assertEqualsWithDelta(self::TWICE, $this->window->totalWeight(1), 0.0001, 'koalit alone');
+        self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(5)[1], 0.0001);
+    }
+
     public function testAFeedWithThreeEntriesKeepsAStemTheyAllHold(): void
     {
         $this->window->add(1, 7, 'Fleischhauer: Koalition', '');
