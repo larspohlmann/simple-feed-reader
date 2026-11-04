@@ -18,7 +18,9 @@ import {
   UnreadTotalsDto,
   SubscriptionDto,
   SubscriptionsResponse,
+  TrendingCounts,
 } from '../models';
+import { NO_TRENDING_COUNTS, sameTrendingCounts } from '../trending/trending-window';
 import {
   FeedGroupCounts,
   buildTagTree,
@@ -48,6 +50,10 @@ export class SubscriptionsStore {
   readonly keptCount = signal(0);
   readonly sharedCount = signal(0);
   readonly viewedCount = signal(0);
+  /** Unopened Trending stories per window; only the server moves them (#2017). */
+  readonly trendingCounts = signal<TrendingCounts>(NO_TRENDING_COUNTS, {
+    equal: sameTrendingCounts,
+  });
   readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
@@ -164,6 +170,7 @@ export class SubscriptionsStore {
     this.keptCount.set(0);
     this.sharedCount.set(0);
     this.viewedCount.set(0);
+    this.trendingCounts.set(NO_TRENDING_COUNTS);
     this.socialAccounts.set([]);
     this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
     this.loading.set(false);
@@ -225,7 +232,7 @@ export class SubscriptionsStore {
   /** The shared body of every silent tick: refresh only when worth a request,
    *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
    *  The `apply` closure is the only difference between full and counts-only. */
-  private quietReload<T extends { unreadTotals: UnreadTotalsDto }>(
+  private quietReload<T extends { unreadTotals: UnreadTotalsDto; trending: TrendingCounts }>(
     fetch: () => Observable<T>,
     apply: (response: T) => void,
   ): void {
@@ -246,7 +253,7 @@ export class SubscriptionsStore {
    *  through `whenOvertaken`, since only its answer carries the change; a poll
    *  tick waits for the next one. The gates that decide WHEN to fire belong to
    *  each caller. */
-  private quietFetch<T extends { unreadTotals: UnreadTotalsDto }>(
+  private quietFetch<T extends { unreadTotals: UnreadTotalsDto; trending: TrendingCounts }>(
     fetch: () => Observable<T>,
     apply: (response: T) => void,
     whenOvertaken: () => void,
@@ -257,8 +264,9 @@ export class SubscriptionsStore {
       fetch().subscribe({
         next: (response) => {
           if (!this.settle(request)) return;
-          // Only the server edits the totals, so even an overtaken answer carries the latest ones.
+          // Only the server edits the totals and the Trending counts, so even an overtaken answer carries the latest.
           this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+          this.trendingCounts.set(response.trending);
           // The user changed a feed count while this was on the wire. The server
           // counted before that, so adopting those counts now would put the badge back up.
           if (this.localEdits !== editsWhenSent) {
@@ -278,6 +286,7 @@ export class SubscriptionsStore {
     this.keptCount.set(response.keptCount);
     this.sharedCount.set(response.sharedCount);
     this.viewedCount.set(response.viewedCount);
+    this.trendingCounts.set(response.trending);
     this.socialAccounts.set(response.socialAccounts);
     this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }

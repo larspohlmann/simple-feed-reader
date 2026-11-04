@@ -194,6 +194,7 @@ describe('DiscoverComponent', () => {
           networks: [],
           groups: { tags: 0, feeds: 0 },
         },
+        trending: { day: 0, week: 0 },
       }),
     );
     http
@@ -228,6 +229,7 @@ describe('DiscoverComponent', () => {
           networks: [],
           groups: { tags: 0, feeds: 0 },
         },
+        trending: { day: 0, week: 0 },
       }),
     );
     http

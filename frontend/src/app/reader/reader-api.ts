@@ -29,8 +29,12 @@ import {
   EntryStateDto,
   TagDto,
   TagInput,
+  TrendingResponseDto,
+  TrendingWindow,
 } from './models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
+import { trendingPage } from './trending/trending-page';
+import { DEFAULT_TRENDING_WINDOW } from './trending/trending-window';
 
 export interface SubscribeRequest {
   url: string;
@@ -68,6 +72,13 @@ export class ReaderApi {
     return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, body);
   }
 
+  trending(window: TrendingWindow = DEFAULT_TRENDING_WINDOW): Observable<TrendingResponseDto> {
+    return this.http.get<TrendingResponseDto>(`${this.base}/api/trending`, {
+      params: new HttpParams().set('window', window),
+      context: retryingTransientGatewayErrors(),
+    });
+  }
+
   /** A single entry by id, full body included — lets a deep link open an entry
    *  not in the loaded page, and backs the reader body store. */
   entry(id: number): Observable<EntryDetailResponse> {
@@ -75,6 +86,9 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
+    if (query.view === 'trending') {
+      return this.trending(query.window).pipe(map(trendingPage));
+    }
     const params = this.pageParams(query, cursor);
     const context = retryingTransientGatewayErrors();
     if (query.savedSearchId != null) {

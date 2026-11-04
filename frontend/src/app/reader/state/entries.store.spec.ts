@@ -1044,6 +1044,61 @@ describe('EntriesStore', () => {
       expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
     });
 
+    describe("an outlet shown inside a Trending story's footer (#2017)", () => {
+      const other = (over: Partial<EntryDto> = {}): EntryDto => entry(2, over);
+
+      const loadStory = (): void => {
+        store.load({ view: 'trending', window: 'day' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/trending')
+          .flush({
+            window: 'day',
+            builtAt: null,
+            stories: [{ lead: entry(1), others: [other()], outletCount: 4, viewed: false }],
+          });
+      };
+
+      it('holds the leads only', () => {
+        loadStory();
+
+        expect(store.entries().map((listed) => listed.id)).toEqual([1]);
+        expect(store.entry(2)).toBeNull();
+      });
+
+      it('marks the outlet viewed inside the story that holds it', () => {
+        loadStory();
+
+        store.setState(2, { isViewed: true });
+
+        expect(store.entries()[0].coverage?.others[0].isViewed).toBe(true);
+        ctrl.expectOne('https://api.test/api/entries/2/state').flush({ state: {} });
+        expect(store.entries()[0].coverage?.others[0].isViewed).toBe(true);
+      });
+
+      it('puts the outlet back when the PATCH fails', () => {
+        loadStory();
+
+        store.setState(2, { isFavorite: true });
+        expect(store.entries()[0].coverage?.others[0].isFavorite).toBe(true);
+        ctrl
+          .expectOne('https://api.test/api/entries/2/state')
+          .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+        expect(store.entries()[0].coverage?.others[0].isFavorite).toBe(false);
+      });
+
+      it('keeps the outlet count and the verdict while patching an outlet', () => {
+        loadStory();
+
+        store.setState(2, { isViewed: true });
+
+        expect(store.entries()[0].coverage).toEqual(
+          expect.objectContaining({ outletCount: 4, viewed: false }),
+        );
+        ctrl.expectOne('https://api.test/api/entries/2/state').flush({ state: {} });
+      });
+    });
+
     describe('a copy shown inside another row (duplicates)', () => {
       const copy = (isLiked = false): EntryDto =>
         entry(2, { social: { network: 'mastodon', isLiked, canLike: true, isOwn: false } });

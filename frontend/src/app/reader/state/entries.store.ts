@@ -264,13 +264,14 @@ export class EntriesStore {
     return false;
   }
 
-  /** The entry with `id`, or its copy inside a row's `duplicates`, which the duplicates popover acts on. */
+  /** The entry with `id`, or a copy inside a row — a duplicate, or an outlet of a Trending story — which the
+   *  footer popover acts on. */
   private entryOrCopy(id: number): EntryDto | null {
     const listed = this.entry(id);
     if (listed) return listed;
     const held = this.unlisted();
     const rows = held ? [...this.rawEntries(), held] : this.rawEntries();
-    return rows.flatMap((row) => row.duplicates ?? []).find((copy) => copy.id === id) ?? null;
+    return rows.flatMap(copiesOf).find((copy) => copy.id === id) ?? null;
   }
 
   mergeCompleted(rows: CompletedEntryDto[]): void {
@@ -292,7 +293,7 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Reaches each target as a row and as a copy inside a row's `duplicates`. The list keeps its identity when
+  /** Reaches each target as a row and as a copy inside a row's footer (`duplicates`, `coverage.others`). The list keeps its identity when
    *  `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
@@ -338,18 +339,41 @@ function valuesBefore(entry: EntryDto, patch: RowPatch): RowPatch {
   return Object.fromEntries(keys.map((key) => [key, entry[key]]));
 }
 
-/** `row` itself when neither it nor a copy in its `duplicates` is targeted. */
+/** `row` itself when neither it nor a copy in its footer is targeted. */
 function withPatchedRow(
   row: EntryDto,
   targets: ReadonlySet<number>,
   patch: (entry: EntryDto) => EntryDto,
 ): EntryDto {
   const patched = targets.has(row.id) ? patch(row) : row;
-  if (!patched.duplicates?.some((copy) => targets.has(copy.id))) return patched;
+  return withPatchedCoverage(withPatchedDuplicates(patched, targets, patch), targets, patch);
+}
+
+function withPatchedDuplicates(
+  row: EntryDto,
+  targets: ReadonlySet<number>,
+  patch: (entry: EntryDto) => EntryDto,
+): EntryDto {
+  if (!row.duplicates?.some((copy) => targets.has(copy.id))) return row;
   return {
-    ...patched,
-    duplicates: patched.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
+    ...row,
+    duplicates: row.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
   };
+}
+
+function withPatchedCoverage(
+  row: EntryDto,
+  targets: ReadonlySet<number>,
+  patch: (entry: EntryDto) => EntryDto,
+): EntryDto {
+  const coverage = row.coverage;
+  if (!coverage?.others.some((other) => targets.has(other.id))) return row;
+  const others = coverage.others.map((other) => (targets.has(other.id) ? patch(other) : other));
+  return { ...row, coverage: { ...coverage, others } };
+}
+
+function copiesOf(row: EntryDto): EntryDto[] {
+  return [...(row.duplicates ?? []), ...(row.coverage?.others ?? [])];
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

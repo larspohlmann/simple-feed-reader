@@ -98,6 +98,7 @@ describe('ReaderShellComponent', () => {
     favoritesCount: 0,
     keptCount: 0,
     viewedCount: 0,
+    trending: { day: 0, week: 0 },
     unreadTotals: NO_UNREAD_TOTALS_DTO,
   };
 
@@ -124,6 +125,7 @@ describe('ReaderShellComponent', () => {
     ],
     socialAccounts: [],
     unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 2 },
+    trending: { day: 0, week: 0 },
   };
   const entry = anEntry({
     title: 'e1',
@@ -301,6 +303,7 @@ describe('ReaderShellComponent', () => {
       keptCount: 0,
       socialAccounts: [],
       unreadTotals: NO_UNREAD_TOTALS_DTO,
+      trending: { day: 0, week: 0 },
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
@@ -974,6 +977,7 @@ describe('ReaderShellComponent', () => {
       favoritesCount: 0,
       keptCount: 0,
       viewedCount: 1,
+      trending: { day: 0, week: 0 },
       unreadTotals: { ...subscriptionsBody.unreadTotals, forYou: 0 },
     });
 
@@ -1581,6 +1585,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { day: 0, week: 0 },
             socialAccounts: [],
             keptCount: 0,
           }),
@@ -1617,6 +1622,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { day: 0, week: 0 },
             socialAccounts: [],
             keptCount: 0,
             tags: [],
@@ -2709,6 +2715,7 @@ describe('ReaderShellComponent', () => {
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
+        trending: { day: 0, week: 0 },
       });
 
       tokens.set('user-b.jwt');
@@ -2752,6 +2759,7 @@ describe('ReaderShellComponent', () => {
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
+        trending: { day: 0, week: 0 },
       });
       await fixture.whenStable();
       fixture.detectChanges();
@@ -3164,6 +3172,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { day: 0, week: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3215,6 +3224,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { day: 0, week: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3295,6 +3305,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { day: 0, week: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -4458,6 +4469,7 @@ describe('ReaderShellComponent', () => {
       socialAccounts: [],
       keptCount: 0,
       viewedCount: 0,
+      trending: { day: 0, week: 0 },
     };
 
     afterEach(() => {

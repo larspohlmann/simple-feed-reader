@@ -7,7 +7,7 @@ import { ReaderApi } from './reader-api';
 import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
 import { Observable } from 'rxjs';
-import { A_READER_TOKEN } from '../../testing/entry-testing';
+import { A_READER_TOKEN, anEntry } from '../../testing/entry-testing';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
@@ -307,6 +307,42 @@ describe('ReaderApi', () => {
     );
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush({ entries: [], nextCursor: null });
+  });
+
+  it('reads a Trending window from its own endpoint (#2017)', () => {
+    api.trending('week').subscribe();
+    const testRequest = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/trending',
+    );
+    expect(testRequest.request.params.get('window')).toBe('week');
+    testRequest.flush({ window: 'week', builtAt: null, stories: [] });
+  });
+
+  it('answers the Trending list query with the stories as their leads (#2017)', () => {
+    let ids: number[] = [];
+    api.entries({ view: 'trending', window: 'day' }).subscribe((page) => {
+      ids = page.entries.map((entry) => entry.id);
+    });
+    const testRequest = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/trending',
+    );
+    expect(testRequest.request.params.get('window')).toBe('day');
+    expect(testRequest.request.params.get('limit')).toBeNull();
+    testRequest.flush({
+      window: 'day',
+      builtAt: null,
+      stories: [{ lead: anEntry({ id: 9 }), others: [], outletCount: 3, viewed: false }],
+    });
+    expect(ids).toEqual([9]);
+  });
+
+  it('asks for the day when the Trending query names no window (#2017)', () => {
+    api.entries({ view: 'trending' }).subscribe();
+    const testRequest = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/trending',
+    );
+    expect(testRequest.request.params.get('window')).toBe('day');
+    testRequest.flush({ window: 'day', builtAt: null, stories: [] });
   });
 
   it('asks every list endpoint for oldest first only when the query says so', () => {
