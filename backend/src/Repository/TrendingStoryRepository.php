@@ -19,11 +19,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class TrendingStoryRepository extends ServiceEntityRepository
 {
-    /** A story the reader can see holds at least one entry of a non-social feed they follow. */
-    private const string HOLDS_A_SHOWN_ARTICLE = 'SELECT 1 FROM trending_story_entry shown'
-        . ' JOIN feed article_feed ON article_feed.id = shown.feed_id AND article_feed.network IS NULL'
-        . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
-        . ' WHERE shown.story_id = story.id';
+    /** A story is shown to a reader only when at least this many article feeds they follow cover it. */
+    private const int MINIMUM_ARTICLE_FEEDS = 2;
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -31,8 +28,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The window's stories at least its threshold of the reader's feeds took part in (social ones count), holding an
-     * article the reader can see: widest first, then newest.
+     * The window's stories at least its threshold of the reader's feeds took part in (social ones count), covered by
+     * at least two article feeds the reader follows: widest first, then newest.
      *
      * @return list<RankedStoryModel>
      */
@@ -44,18 +41,29 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 'SELECT story.id AS story_id, COUNT(DISTINCT story_member.feed_id) AS outlet_count'
                 . ' FROM trending_story story'
                 . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
+                . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
                 . ' JOIN subscription subscribed'
                 . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
-                . ' WHERE story.time_window = :window AND EXISTS (%s)'
+                . ' WHERE story.time_window = :window'
                 . ' GROUP BY story.id, story.last_seen'
                 . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
+                . ' AND COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
+                . ' >= :minimumArticleFeeds'
                 . ' ORDER BY outlet_count DESC, story.last_seen DESC, story.id DESC'
                 . ' LIMIT %d',
-                self::HOLDS_A_SHOWN_ARTICLE,
                 $limit,
             ),
-            ['user' => $userId, 'window' => $window->value, 'minimum' => $window->minSubscribedFeeds()],
-            ['user' => ParameterType::INTEGER, 'minimum' => ParameterType::INTEGER],
+            [
+                'user' => $userId,
+                'window' => $window->value,
+                'minimum' => $window->minSubscribedFeeds(),
+                'minimumArticleFeeds' => self::MINIMUM_ARTICLE_FEEDS,
+            ],
+            [
+                'user' => ParameterType::INTEGER,
+                'minimum' => ParameterType::INTEGER,
+                'minimumArticleFeeds' => ParameterType::INTEGER,
+            ],
         );
 
         return array_map(

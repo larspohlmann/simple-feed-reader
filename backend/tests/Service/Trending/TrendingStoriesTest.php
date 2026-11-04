@@ -123,6 +123,27 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
     }
 
+    public function testAStoryNeedsTwoArticleFeedsTheReaderFollowsAndSocialOnesOnlyWidenIt(): void
+    {
+        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
+        $socials = [
+            $this->fixtures->feed('ann', SocialNetwork::Bluesky),
+            $this->fixtures->feed('ben', SocialNetwork::Mastodon),
+        ];
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, ...$socials);
+        $this->storyOf('2031-05-14 10:00:00', [$alpha, ...$socials]);
+        $userId = $this->reader->requireId();
+
+        self::assertSame([], $this->storyRepository()->rankedForUser($userId, TrendingWindow::Day, 10));
+        self::assertSame([], $this->storiesFor(TrendingWindow::Day));
+
+        $covered = $this->storyOf('2031-05-14 11:00:00', [$alpha, $beta, ...$socials]);
+
+        $ranked = $this->storyRepository()->rankedForUser($userId, TrendingWindow::Day, 10);
+        self::assertSame([$covered->requireId()], array_map(static fn ($story): int => $story->storyId, $ranked));
+        self::assertSame([4], array_map(static fn ($story): int => $story->outletCount, $ranked));
+    }
+
     public function testTheRankingIsCutAtTheLimit(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
