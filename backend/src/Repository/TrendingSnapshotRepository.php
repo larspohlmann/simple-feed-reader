@@ -8,6 +8,7 @@ use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
 use App\Service\Trending\Model\StoryMemberModel;
 use App\Service\Trending\Model\TrendingBuildReportModel;
+use App\Service\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Trending\Model\TrendingStoryModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
@@ -28,34 +29,20 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
         parent::__construct($registry, TrendingSnapshot::class);
     }
 
-    /** @return array<string, \DateTimeImmutable> built_at in UTC, by window value; a window never built is absent */
-    public function builtAtByWindow(): array
+    public function lastBuilds(): TrendingLastBuildsModel
     {
-        /** @var list<array{time_window: string, built_at: string}> $rows */
+        /** @var list<array{time_window: string, built_at: string, duration_ms: int|string}> $rows */
         $rows = $this->getEntityManager()->getConnection()
-            ->fetchAllAssociative('SELECT time_window, built_at FROM trending_snapshot');
+            ->fetchAllAssociative('SELECT time_window, built_at, duration_ms FROM trending_snapshot');
 
         $builtAt = [];
-        foreach ($rows as $row) {
-            $builtAt[$row['time_window']] = new \DateTimeImmutable($row['built_at'], new \DateTimeZone('UTC'));
-        }
-
-        return $builtAt;
-    }
-
-    /** @return array<string, int> duration_ms of each window's last build, by window value; absent if never built */
-    public function durationMillisecondsByWindow(): array
-    {
-        /** @var list<array{time_window: string, duration_ms: int|string}> $rows */
-        $rows = $this->getEntityManager()->getConnection()
-            ->fetchAllAssociative('SELECT time_window, duration_ms FROM trending_snapshot');
-
         $durations = [];
         foreach ($rows as $row) {
+            $builtAt[$row['time_window']] = new \DateTimeImmutable($row['built_at'], new \DateTimeZone('UTC'));
             $durations[$row['time_window']] = (int) $row['duration_ms'];
         }
 
-        return $durations;
+        return new TrendingLastBuildsModel($builtAt, $durations);
     }
 
     /**

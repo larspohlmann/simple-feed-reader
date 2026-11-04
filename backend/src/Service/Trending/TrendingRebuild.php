@@ -7,6 +7,7 @@ namespace App\Service\Trending;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingSnapshotRepository;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Trending\Model\TrendingRebuildReportModel;
 
 /** Rebuilds every window whose snapshot is missing or as old as its interval; the worker and the tick call it. */
@@ -21,30 +22,32 @@ final readonly class TrendingRebuild
 
     public function rebuildDue(): TrendingRebuildReportModel
     {
-        return $this->rebuildDueWindowsWhere(static fn (): bool => true);
+        return $this->rebuildDueWindowsWhere($this->snapshots->lastBuilds(), static fn (): bool => true);
     }
 
     /** Starts a due window only while time is left for it: at least as much as its last build took. */
     public function rebuildDueBefore(\DateTimeImmutable $deadline): TrendingRebuildReportModel
     {
-        $lastDurations = $this->snapshots->durationMillisecondsByWindow();
+        $lastBuilds = $this->snapshots->lastBuilds();
 
         return $this->rebuildDueWindowsWhere(
-            function (TrendingWindow $window) use ($deadline, $lastDurations): bool {
+            $lastBuilds,
+            function (TrendingWindow $window) use ($deadline, $lastBuilds): bool {
                 $remaining = $this->remainingMilliseconds($deadline);
 
-                return $remaining > 0 && $remaining >= ($lastDurations[$window->value] ?? 0);
+                return $remaining > 0 && $remaining >= $lastBuilds->durationMilliseconds($window);
             },
         );
     }
 
     /** @param \Closure(TrendingWindow): bool $mayStart asked just before each due window */
-    private function rebuildDueWindowsWhere(\Closure $mayStart): TrendingRebuildReportModel
-    {
-        $builtAt = $this->snapshots->builtAtByWindow();
+    private function rebuildDueWindowsWhere(
+        TrendingLastBuildsModel $lastBuilds,
+        \Closure $mayStart,
+    ): TrendingRebuildReportModel {
         $builds = [];
         foreach (TrendingWindow::cases() as $window) {
-            if ($this->isDue($window, $builtAt[$window->value] ?? null) && $mayStart($window)) {
+            if ($this->isDue($window, $lastBuilds->builtAt($window)) && $mayStart($window)) {
                 $builds[] = $this->builder->build($window);
             }
         }

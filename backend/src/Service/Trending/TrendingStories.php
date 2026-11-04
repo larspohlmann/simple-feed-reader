@@ -31,11 +31,11 @@ final readonly class TrendingStories
 
     public function forReader(int $userId, TrendingWindow $window): TrendingPageModel
     {
-        $ranked = $this->stories->rankedForUser($this->readerWindows->of($userId, $window), self::MAX_STORIES);
+        $ranked = $this->ranked($userId, $window);
 
         return new TrendingPageModel(
             $window,
-            $this->snapshots->builtAtByWindow()[$window->value] ?? null,
+            $this->snapshots->lastBuilds()->builtAt($window),
             $this->sourceFor($userId, $ranked)->cardsOf($ranked),
         );
     }
@@ -50,11 +50,15 @@ final readonly class TrendingStories
 
     private function unopenedIn(int $userId, TrendingWindow $window): int
     {
-        $storyIds = self::storyIdsOf(
-            $this->stories->rankedForUser($this->readerWindows->of($userId, $window), self::MAX_STORIES),
-        );
+        $storyIds = self::storyIdsOf($this->ranked($userId, $window));
 
         return \count($storyIds) - \count($this->stories->viewedStoryIds($userId, $storyIds));
+    }
+
+    /** @return list<RankedStoryModel> */
+    private function ranked(int $userId, TrendingWindow $window): array
+    {
+        return $this->stories->rankedForUser($this->readerWindows->of($userId, $window), self::MAX_STORIES);
     }
 
     /**

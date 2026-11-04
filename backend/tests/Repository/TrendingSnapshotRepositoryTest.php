@@ -60,10 +60,13 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     {
         $this->replace(self::report(TrendingWindow::Week, 0), []);
 
-        $builtAt = $this->snapshots()->builtAtByWindow();
+        $lastBuilds = $this->snapshots()->lastBuilds();
 
-        self::assertSame(['week'], array_keys($builtAt));
-        self::assertSame('2031-05-14T12:00:00+00:00', $builtAt['week']->format(\DateTimeInterface::ATOM));
+        self::assertNull($lastBuilds->builtAt(TrendingWindow::Day));
+        self::assertSame(
+            '2031-05-14T12:00:00+00:00',
+            $lastBuilds->builtAt(TrendingWindow::Week)?->format(\DateTimeInterface::ATOM),
+        );
     }
 
     public function testAStoryLargerThanOneInsertChunkKeepsEveryMember(): void
@@ -111,7 +114,10 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     {
         $this->replace(self::report(TrendingWindow::Week, 0), []);
 
-        self::assertSame(['week' => 311], $this->snapshots()->durationMillisecondsByWindow());
+        $lastBuilds = $this->snapshots()->lastBuilds();
+
+        self::assertSame(0, $lastBuilds->durationMilliseconds(TrendingWindow::Day));
+        self::assertSame(311, $lastBuilds->durationMilliseconds(TrendingWindow::Week));
     }
 
     /** @param list<TrendingStoryModel> $stories */
