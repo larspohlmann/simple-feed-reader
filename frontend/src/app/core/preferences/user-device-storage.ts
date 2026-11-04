@@ -1,6 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AccountIdentity } from '../auth/account-identity';
 
+export function userDeviceKey(userId: number, name: string): string {
+  return `sfr.user.${userId}.${name}`;
+}
+
 /** Per-account values that stay on this device: `sfr.user.<id>.<name>` in localStorage. */
 @Injectable({ providedIn: 'root' })
 export class UserDeviceStorage {
@@ -33,6 +37,6 @@ export class UserDeviceStorage {
 
   private keyFor(name: string): string | null {
     const userId = this.identity.userId();
-    return userId === null ? null : `sfr.user.${userId}.${name}`;
+    return userId === null ? null : userDeviceKey(userId, name);
   }
 }

@@ -1,6 +1,11 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { userIdClaim } from '../auth/account-identity';
 import { CurrentUser } from '../auth/auth.service';
+import { TokenStore } from '../auth/token.store';
 import { PREFERENCES_WRITER } from './preferences-writer';
+import { userDeviceKey } from './user-device-storage';
+
+const TRENDING_HIDDEN = 'trending-hidden';
 
 /**
  * Per-account settings, mirroring `LanguageService`: the account is the source
@@ -10,24 +15,29 @@ import { PREFERENCES_WRITER } from './preferences-writer';
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
   private readonly writer = inject(PREFERENCES_WRITER);
+  /** The token, not `UserDeviceStorage`: that one reaches `AuthService`, which injects this service. */
+  private readonly tokens = inject(TokenStore);
 
   /**
    * No "not loaded yet" state: a deep link to /settings renders this at its
    * `false` default before `AuthService.loadMe()` resolves and `adopt()`
    * overwrites it — a real window, not hypothetical (settings-shell only
    * fetches when `auth.user()` is null). Benign only because `false` is the
-   * safe default for THIS preference: the next one added here must not
-   * assume that — a `true` default could PATCH the wrong value during the
-   * loading window. Give it a proper loaded/unloaded state instead of
-   * repeating this coincidence.
+   * safe default for THIS preference. Trending, on by default, paints from a
+   * per-account cache instead, so its window shows the account's last choice.
    */
   readonly scrapeFallbackEnabled = signal(false);
 
   /** True when the value applied locally but the account write failed. */
   readonly saveFailed = signal(false);
 
-  /** `true` until `adopt()`: a reader whose account has it off sees Trending for that window, never loses a list. */
-  readonly trendingEnabled = signal(true);
+  /** This session's value; null until `adopt()` or a toggle, when the account's cached choice paints instead. */
+  private readonly trendingChoice = signal<boolean | null>(null);
+  private readonly trendingCacheKey = computed(() => {
+    const userId = userIdClaim(this.tokens.token());
+    return userId === null ? null : userDeviceKey(userId, TRENDING_HIDDEN);
+  });
+  readonly trendingEnabled = computed(() => this.trendingChoice() ?? !this.trendingCachedHidden());
 
   readonly trendingSaveFailed = signal(false);
 
@@ -41,7 +51,7 @@ export class PreferencesService {
   }
 
   setTrendingEnabled(enabled: boolean): void {
-    this.trendingEnabled.set(enabled);
+    this.applyTrending(enabled);
     this.trendingSaveFailed.set(false);
 
     this.writer.writeTrending(enabled).subscribe((ok) => {
@@ -56,7 +66,7 @@ export class PreferencesService {
    */
   adopt(user: CurrentUser): void {
     this.scrapeFallbackEnabled.set(user.preferences.scrapeFallbackEnabled);
-    this.trendingEnabled.set(user.preferences.trendingEnabled);
+    this.applyTrending(user.preferences.trendingEnabled ?? true);
   }
 
   /**
@@ -69,7 +79,20 @@ export class PreferencesService {
   reset(): void {
     this.scrapeFallbackEnabled.set(false);
     this.saveFailed.set(false);
-    this.trendingEnabled.set(true);
+    this.trendingChoice.set(null);
     this.trendingSaveFailed.set(false);
+  }
+
+  private applyTrending(enabled: boolean): void {
+    this.trendingChoice.set(enabled);
+    const key = this.trendingCacheKey();
+    if (key === null) return;
+    if (enabled) localStorage.removeItem(key);
+    else localStorage.setItem(key, 'true');
+  }
+
+  private trendingCachedHidden(): boolean {
+    const key = this.trendingCacheKey();
+    return key !== null && localStorage.getItem(key) === 'true';
   }
 }

@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
+import { PREFERENCES_WRITER } from '../../core/preferences/preferences-writer';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { PreferencesSectionComponent } from './preferences-section.component';
@@ -133,12 +134,14 @@ describe('PreferencesSectionComponent', () => {
 
   it('writes the Trending preference when toggled', () => {
     const fixture = mount();
+    const writeTrending = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'writeTrending');
     const toggle = fixture.nativeElement.querySelector('#trending-toggle') as HTMLInputElement;
 
     toggle.click();
     fixture.detectChanges();
 
     expect(preferences.trendingEnabled()).toBe(false);
+    expect(writeTrending).toHaveBeenCalledWith(false);
   });
 
   it('surfaces a banner when the Trending write failed', () => {
