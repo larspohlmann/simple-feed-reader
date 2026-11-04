@@ -12,19 +12,23 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_trending_story_entry_feed', columns: ['feed_id'])]
 final class TrendingStoryEntry
 {
+    /** @noinspection PhpPropertyOnlyWrittenInspection Doctrine maps it; the rows are read in SQL */
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: TrendingStory::class)]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private TrendingStory $story;
 
+    /** @noinspection PhpPropertyOnlyWrittenInspection Doctrine maps it; the rows are read in SQL */
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: Entry::class)]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private Entry $entry;
 
+    /** @noinspection PhpPropertyOnlyWrittenInspection Doctrine maps it; the rows are read in SQL */
     #[ORM\Column(name: 'feed_id')]
     private int $feedId;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(TrendingStory $story, Entry $entry)
     {
         $this->story = $story;

@@ -82,6 +82,7 @@ final class Preferences
     #[ORM\Column(name: 'trending_enabled', options: ['default' => true])]
     private bool $trendingEnabled = true;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user)
     {
         $this->user = $user;
