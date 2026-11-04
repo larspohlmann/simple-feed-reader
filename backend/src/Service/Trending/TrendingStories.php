@@ -107,7 +107,8 @@ final readonly class TrendingStories
     }
 
     /**
-     * Every other subscribed copy of a lead's article is one more outlet, inside the story or not.
+     * Every other subscribed copy of a lead's article is one more outlet, inside the story or not; the cards are
+     * ranked again on the counts that gives.
      *
      * @param list<TrendingStoryCardModel> $cards
      *
@@ -126,11 +127,18 @@ final readonly class TrendingStories
             $copiesByUrlHash[(string) $copy->entry->getUrlHash()][] = $copy;
         }
 
-        return array_map(
+        $withCopies = array_map(
             static fn (TrendingStoryCardModel $card): TrendingStoryCardModel => $card->withCopies(
                 $copiesByUrlHash[$card->lead->entry->getUrlHash() ?? ''] ?? [],
             ),
             $cards,
         );
+        usort(
+            $withCopies,
+            static fn (TrendingStoryCardModel $left, TrendingStoryCardModel $right): int
+                => RankedStoryModel::compare($left->story, $right->story),
+        );
+
+        return $withCopies;
     }
 }

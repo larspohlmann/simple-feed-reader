@@ -34,16 +34,21 @@ final class StoryCardSourceTest extends DbTestCase
             [6 => 0],
         );
 
-        $cards = $source->cardsOf([new RankedStoryModel(5, 3), new RankedStoryModel(6, 4)]);
+        $lastSeen = new \DateTimeImmutable('2031-05-14 10:00:00');
+        $wider = new RankedStoryModel(6, 4, $lastSeen);
+
+        $cards = $source->cardsOf([new RankedStoryModel(5, 3, $lastSeen), $wider]);
 
         self::assertCount(1, $cards);
         self::assertSame($entry, $cards[0]->lead->entry);
-        self::assertSame(4, $cards[0]->outletCount);
+        self::assertSame($wider, $cards[0]->story);
         self::assertTrue($cards[0]->viewed);
     }
 
     public function testAStoryWithoutAnyEntryIdsGetsNoCard(): void
     {
-        self::assertSame([], (new StoryCardSource([], [], []))->cardsOf([new RankedStoryModel(7, 3)]));
+        self::assertSame([], (new StoryCardSource([], [], []))->cardsOf([
+            new RankedStoryModel(7, 3, new \DateTimeImmutable('2031-05-14 10:00:00')),
+        ]));
     }
 }

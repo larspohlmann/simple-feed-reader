@@ -41,7 +41,7 @@ final readonly class StoryCardSource
             }
             $cards[] = TrendingStoryCardModel::fromRows(
                 $rows,
-                $story->outletCount,
+                $story,
                 isset($this->viewedStories[$story->storyId]),
             );
         }

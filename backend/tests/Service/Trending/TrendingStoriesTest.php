@@ -73,7 +73,7 @@ final class TrendingStoriesTest extends DbTestCase
             [$gammaNewest->requireId(), $alphaNew->requireId()],
             self::idsOf($stories[0]->lead->duplicates),
         );
-        self::assertSame(4, $stories[0]->outletCount, 'the social account counts, the unsubscribed feed does not');
+        self::assertSame(4, $stories[0]->story->outletCount, 'the social account counts, the unsubscribed feed does not');
         self::assertFalse($stories[0]->viewed);
     }
 
@@ -110,7 +110,7 @@ final class TrendingStoriesTest extends DbTestCase
             array_map(fn (TrendingStoryCardModel $card): int => $this->storyIdOf($card), $stories),
         );
         self::assertSame([4, 3, 3], array_map(
-            static fn (TrendingStoryCardModel $card): int => $card->outletCount,
+            static fn (TrendingStoryCardModel $card): int => $card->story->outletCount,
             $stories,
         ));
     }
@@ -257,7 +257,60 @@ final class TrendingStoriesTest extends DbTestCase
             [$betaEntry->requireId(), $copy->requireId(), $gammaEntry->requireId()],
             self::idsOf($stories[0]->lead->duplicates),
         );
-        self::assertSame(4, $stories[0]->outletCount, "the copy's feed is one more source");
+        self::assertSame(4, $stories[0]->story->outletCount, "the copy's feed is one more source");
+    }
+
+    public function testCopiesThatWidenAStoryPastTheOneAboveItMoveItUp(): void
+    {
+        [$alpha, $beta, $gamma, $delta, $epsilon] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'epsilon');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta, $epsilon);
+        $wider = $this->storyOf('2031-05-14 11:00:00', [$alpha, $beta, $gamma, $delta]);
+        $url = 'https://news.example.com/widened';
+        $narrowerLead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 09:00:00', $url);
+        $this->fixtures->article($delta, 'Lead at delta', '2031-05-14 08:30:00', $url);
+        $this->fixtures->article($epsilon, 'Lead at epsilon', '2031-05-14 08:45:00', $url);
+        $narrower = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $narrowerLead,
+            $this->fixtures->entry($beta, 'Beta', '2031-05-14 08:00:00'),
+            $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 07:00:00'),
+        );
+
+        $stories = $this->storiesFor(TrendingWindow::Day);
+
+        self::assertSame(
+            [$narrower->requireId(), $wider->requireId()],
+            array_map(fn (TrendingStoryCardModel $card): int => $this->storyIdOf($card), $stories),
+        );
+        self::assertSame([5, 4], array_map(
+            static fn (TrendingStoryCardModel $card): int => $card->story->outletCount,
+            $stories,
+        ));
+    }
+
+    public function testCopiesThatEvenAStoryWithTheOneAboveItRankTheNewerFirst(): void
+    {
+        [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
+        $url = 'https://news.example.com/evened';
+        $newerLead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 11:00:00', $url);
+        $this->fixtures->article($delta, 'Lead at delta', '2031-05-14 10:45:00', $url);
+        $newer = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 11:00:00',
+            $newerLead,
+            $this->fixtures->entry($beta, 'Beta', '2031-05-14 10:00:00'),
+            $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 10:30:00'),
+        );
+        $olderWider = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $delta]);
+
+        $stories = $this->storiesFor(TrendingWindow::Day);
+
+        self::assertSame(
+            [$newer->requireId(), $olderWider->requireId()],
+            array_map(fn (TrendingStoryCardModel $card): int => $this->storyIdOf($card), $stories),
+        );
     }
 
     public function testACopyOfTheLeadFromAFeedAlreadyInTheStoryOrFromTheLeadsOwnFeedDoesNotRepeat(): void
@@ -279,7 +332,7 @@ final class TrendingStoriesTest extends DbTestCase
             [$betaCopy->requireId(), $gammaInStory->requireId()],
             self::idsOf($stories[0]->lead->duplicates),
         );
-        self::assertSame(3, $stories[0]->outletCount, 'feeds the story already counted count once');
+        self::assertSame(3, $stories[0]->story->outletCount, 'feeds the story already counted count once');
     }
 
     public function testAStoryIsViewedOnceTheReaderOpenedAnyOfItsEntriesASocialOneIncluded(): void

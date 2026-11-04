@@ -26,11 +26,11 @@ final readonly class TrendingJson
     }
 
     /** @return array<string, mixed> the lead's list row; its duplicates are the story's other outlets */
-    private function story(TrendingStoryCardModel $story): array
+    private function story(TrendingStoryCardModel $card): array
     {
         return [
-            ...$this->entryJson->listRow($story->lead),
-            'story' => ['outletCount' => $story->outletCount, 'viewed' => $story->viewed],
+            ...$this->entryJson->listRow($card->lead),
+            'story' => ['outletCount' => $card->story->outletCount, 'viewed' => $card->viewed],
         ];
     }
 }

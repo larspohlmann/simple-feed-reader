@@ -11,20 +11,20 @@ final readonly class TrendingStoryCardModel
 {
     public function __construct(
         public EntryListRow $lead,
-        public int $outletCount,
+        public RankedStoryModel $story,
         public bool $viewed,
     ) {
     }
 
     /** @param non-empty-list<EntryListRow> $rows the story's article rows the reader can see */
-    public static function fromRows(array $rows, int $outletCount, bool $viewed): self
+    public static function fromRows(array $rows, RankedStoryModel $story, bool $viewed): self
     {
         $onePerFeed = self::newestPerFeed($rows);
         $lead = self::leadOf($onePerFeed);
 
         return new self(
             $lead->withDuplicates(self::otherFeedsThan($lead, $onePerFeed)),
-            $outletCount,
+            $story,
             $viewed,
         );
     }
@@ -45,7 +45,7 @@ final readonly class TrendingStoryCardModel
 
         return new self(
             $this->lead->withDuplicates($outlets),
-            $this->outletCount + \count(array_diff(self::feedIdsOf($outlets), $countedFeedIds)),
+            $this->story->withMoreOutlets(\count(array_diff(self::feedIdsOf($outlets), $countedFeedIds))),
             $this->viewed,
         );
     }

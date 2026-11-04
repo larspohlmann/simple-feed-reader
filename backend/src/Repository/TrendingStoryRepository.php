@@ -30,7 +30,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     ];
 
     /** The window's stories, counting only feeds the reader follows; an `AND` on `story`, then VISIBLE_COVERAGE. */
-    private const string VISIBLE_STORIES = 'SELECT story.id AS story_id,'
+    private const string VISIBLE_STORIES = 'SELECT story.id AS story_id, story.last_seen,'
         . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
         . ' FROM trending_story story'
         . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
@@ -57,7 +57,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      */
     public function rankedForUser(ReaderWindowModel $reader, int $limit): array
     {
-        /** @var list<array{story_id: int|string, outlet_count: int|string}> $rows */
+        /** @var list<array{story_id: int|string, outlet_count: int|string, last_seen: string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             self::VISIBLE_STORIES
             . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry hidden_member'
@@ -74,13 +74,14 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             static fn (array $row): RankedStoryModel => new RankedStoryModel(
                 (int) $row['story_id'],
                 (int) $row['outlet_count'],
+                new \DateTimeImmutable($row['last_seen'], new \DateTimeZone('UTC')),
             ),
             $rows,
         );
     }
 
     /**
-     * @throws TrendingStoryNotFoundException when no story the reader is shown, hidden ones aside, holds the entry
+     * @throws TrendingStoryNotFoundException when no story the reader is shown, hidden or not, holds the entry
      *                                        through a feed they follow
      */
     public function storyIdContaining(ReaderWindowModel $reader, int $entryId): int
