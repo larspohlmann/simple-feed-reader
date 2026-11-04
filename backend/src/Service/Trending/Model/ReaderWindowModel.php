@@ -13,6 +13,8 @@ final readonly class ReaderWindowModel
         public int $userId,
         public TrendingWindow $window,
         public int $minimumOutlets,
+        /** @var list<int> a story sharing an entry with one of these is left out (D41) */
+        public array $shorterWindowStoryIds,
     ) {
     }
 }

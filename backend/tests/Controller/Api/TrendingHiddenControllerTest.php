@@ -74,6 +74,29 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         self::assertSame([], $this->hiddenEntryIdsOf($reader));
     }
 
+    public function testAWeekStorySharingAnEntryWithAShownDayStoryIsNotFoundThroughTheWeek(): void
+    {
+        $reader = $this->signIn($this->client, 'trending-hide-overlap@example.com');
+        $feeds = $this->followedFeeds($reader);
+        $moreFeeds = [$this->fixtures->feed('delta'), $this->fixtures->feed('omega')];
+        $this->fixtures->subscribe($reader, ...$moreFeeds);
+        $dayMembers = $this->story($feeds);
+        $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-14 10:00:00',
+            $dayMembers[0],
+            ...array_map(
+                fn (Feed $feed): Entry => $this->fixtures->entry($feed, 'Story', '2031-05-14 08:00:00'),
+                [$feeds[1], $feeds[2], ...$moreFeeds],
+            ),
+        );
+
+        $this->hide('week', $dayMembers[0]);
+
+        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
+        self::assertSame([], $this->hiddenEntryIdsOf($reader));
+    }
+
     public function testAStoryTooFewOfTheReadersFeedsCoverIsNotFoundAndHidesNothing(): void
     {
         $reader = $this->signIn($this->client, 'trending-hide-narrow@example.com');

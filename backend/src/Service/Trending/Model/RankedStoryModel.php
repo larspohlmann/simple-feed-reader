@@ -18,6 +18,16 @@ final readonly class RankedStoryModel
             <=> [$left->outletCount, $left->lastSeen, $left->storyId];
     }
 
+    /**
+     * @param list<self> $stories
+     *
+     * @return list<int>
+     */
+    public static function storyIdsOf(array $stories): array
+    {
+        return array_map(static fn (self $story): int => $story->storyId, $stories);
+    }
+
     public function withMoreOutlets(int $added): self
     {
         return new self($this->storyId, $this->outletCount + $added, $this->lastSeen);

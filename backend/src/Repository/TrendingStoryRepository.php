@@ -27,9 +27,14 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         'user' => ParameterType::INTEGER,
         'minimum' => ParameterType::INTEGER,
         'minimumArticleFeeds' => ParameterType::INTEGER,
+        'shorterWindowStoryIds' => ArrayParameterType::INTEGER,
     ];
 
-    /** The window's stories, counting only feeds the reader follows; an `AND` on `story`, then VISIBLE_COVERAGE. */
+    /**
+     * The window's stories, counting only feeds the reader follows, leaving out any sharing an entry with a story the
+     * reader is shown in a shorter window; an `AND` on `story`, then VISIBLE_COVERAGE. An empty id list expands to
+     * `IN (NULL)`, which leaves nothing out.
+     */
     private const string VISIBLE_STORIES = 'SELECT story.id AS story_id, story.last_seen,'
         . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
         . ' FROM trending_story story'
@@ -37,7 +42,10 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
         . ' JOIN subscription subscribed'
         . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
-        . ' WHERE story.time_window = :window';
+        . ' WHERE story.time_window = :window'
+        . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry overlap_member'
+        . ' JOIN trending_story_entry shorter_member ON shorter_member.entry_id = overlap_member.entry_id'
+        . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
 
     /** At least the reader's threshold of their feeds took part (social ones count), two of them article feeds. */
     private const string VISIBLE_COVERAGE = ' GROUP BY story.id, story.last_seen'
@@ -157,7 +165,15 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $viewed);
     }
 
-    /** @return array{user: int, window: string, minimum: int, minimumArticleFeeds: int} */
+    /**
+     * @return array{
+     *     user: int,
+     *     window: string,
+     *     minimum: int,
+     *     minimumArticleFeeds: int,
+     *     shorterWindowStoryIds: list<int>,
+     * }
+     */
     private static function visibilityParameters(ReaderWindowModel $reader): array
     {
         return [
@@ -165,6 +181,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             'window' => $reader->window->value,
             'minimum' => $reader->minimumOutlets,
             'minimumArticleFeeds' => self::MINIMUM_ARTICLE_FEEDS,
+            'shorterWindowStoryIds' => $reader->shorterWindowStoryIds,
         ];
     }
 }

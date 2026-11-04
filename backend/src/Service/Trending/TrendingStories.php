@@ -50,7 +50,7 @@ final readonly class TrendingStories
         }
 
         $userId = $user->requireId();
-        $storyIds = self::storyIdsOf($this->ranked($userId, $window));
+        $storyIds = RankedStoryModel::storyIdsOf($this->ranked($userId, $window));
 
         return new TrendingUnopenedModel(
             $window,
@@ -64,20 +64,10 @@ final readonly class TrendingStories
         return $this->stories->rankedForUser($this->readerWindows->of($userId, $window), self::MAX_STORIES);
     }
 
-    /**
-     * @param list<RankedStoryModel> $ranked
-     *
-     * @return list<int>
-     */
-    private static function storyIdsOf(array $ranked): array
-    {
-        return array_map(static fn (RankedStoryModel $story): int => $story->storyId, $ranked);
-    }
-
     /** @param list<RankedStoryModel> $ranked */
     private function sourceFor(int $userId, array $ranked): StoryCardSource
     {
-        $storyIds = self::storyIdsOf($ranked);
+        $storyIds = RankedStoryModel::storyIdsOf($ranked);
         $entryIdsByStory = $this->stories->articleEntryIdsByStory($userId, $storyIds);
 
         return new StoryCardSource(

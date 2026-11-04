@@ -49,6 +49,12 @@ final class TrendingWindowTest extends TestCase
         yield '3.5 percent of 190' => [TrendingWindow::Week, 190, 7];
     }
 
+    public function testTheWeekLeavesOutTheDaysStoriesAndTheDayLeavesOutNone(): void
+    {
+        self::assertSame([TrendingWindow::Day], TrendingWindow::Week->leavesOutTheStoriesOf());
+        self::assertSame([], TrendingWindow::Day->leavesOutTheStoriesOf());
+    }
+
     public function testAMissingOrEmptyWindowMeansTheDay(): void
     {
         self::assertSame(TrendingWindow::Day, TrendingWindow::fromRequestValue(null));

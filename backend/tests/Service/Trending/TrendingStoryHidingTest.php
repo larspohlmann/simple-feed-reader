@@ -81,6 +81,7 @@ final class TrendingStoryHidingTest extends DbTestCase
             $stories,
             new ReaderWindows(
                 new TrendingEntryRepository($this->entityManager),
+                $stories,
                 new NaiveUtcClock(new MockClock(self::NOW, 'UTC')),
             ),
             $hiddenEntries,

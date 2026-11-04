@@ -6,14 +6,20 @@ namespace App\Service\Trending;
 
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
+use App\Repository\TrendingStoryRepository;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Trending\Model\RankedStoryModel;
 use App\Service\Trending\Model\ReaderWindowModel;
 
-/** Sets a reader's Trending threshold from how many of their feeds posted within the window (D38). */
+/**
+ * Cuts a window to one reader: the threshold from how many of their feeds posted within it (D38), and the stories
+ * they are shown in a shorter window, which this one leaves out (D41).
+ */
 final readonly class ReaderWindows
 {
     public function __construct(
         private TrendingEntryRepository $windowEntries,
+        private TrendingStoryRepository $stories,
         private NaiveUtcClock $clock,
     ) {
     }
@@ -26,6 +32,18 @@ final readonly class ReaderWindows
             $userId,
             $window,
             $window->minimumOutletsFor($this->windowEntries->activeFeedCount($userId, $since)),
+            array_merge([], ...array_map(
+                fn (TrendingWindow $shorter): array => $this->shownStoryIds($userId, $shorter),
+                $window->leavesOutTheStoriesOf(),
+            )),
+        );
+    }
+
+    /** @return list<int> */
+    private function shownStoryIds(int $userId, TrendingWindow $window): array
+    {
+        return RankedStoryModel::storyIdsOf(
+            $this->stories->rankedForUser($this->of($userId, $window), TrendingStories::MAX_STORIES),
         );
     }
 }

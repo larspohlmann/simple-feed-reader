@@ -43,6 +43,19 @@ enum TrendingWindow: string
         };
     }
 
+    /**
+     * A story sharing an entry with one the reader is shown in these windows is left out of this one (D41).
+     *
+     * @return list<self>
+     */
+    public function leavesOutTheStoriesOf(): array
+    {
+        return match ($this) {
+            self::Day => [],
+            self::Week => [self::Day],
+        };
+    }
+
     public function rebuildIntervalSeconds(): int
     {
         return match ($this) {

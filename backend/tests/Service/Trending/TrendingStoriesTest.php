@@ -390,6 +390,63 @@ final class TrendingStoriesTest extends DbTestCase
         ));
     }
 
+    public function testAWeekStorySharingAnEntryWithAShownDayStoryIsLeftOutOfTheListAndTheBadge(): void
+    {
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        $shared = $this->fixtures->entry($feeds[0], 'Shared', '2031-05-14 11:00:00');
+        $this->storySharing($shared, TrendingWindow::Day, \array_slice($feeds, 1, 2));
+        $this->storySharing($shared, TrendingWindow::Week, \array_slice($feeds, 1));
+        $earlier = $this->storyOf('2031-05-12 10:00:00', $feeds, TrendingWindow::Week);
+
+        self::assertSame([$earlier->requireId()], $this->storyIdsFor(TrendingWindow::Week));
+        self::assertSame(1, $this->stories()->unopenedFor($this->reader, TrendingWindow::Week)->unopened);
+    }
+
+    public function testADayStoryTheReaderIsNotShownLeavesTheWeekAlone(): void
+    {
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        $inANarrowDayStory = $this->fixtures->entry($feeds[0], 'Narrow', '2031-05-14 11:00:00');
+        $this->storySharing($inANarrowDayStory, TrendingWindow::Day, \array_slice($feeds, 1, 1));
+        $narrowWeek = $this->storySharing($inANarrowDayStory, TrendingWindow::Week, \array_slice($feeds, 1));
+        $inAHiddenDayStory = $this->fixtures->entry($feeds[0], 'Hidden', '2031-05-14 10:00:00');
+        $hiddenDayMember = $this->fixtures->entry($feeds[1], 'Hidden', '2031-05-14 09:00:00');
+        $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $inAHiddenDayStory,
+            $hiddenDayMember,
+            $this->fixtures->entry($feeds[2], 'Hidden', '2031-05-14 09:00:00'),
+        );
+        $this->hideFor($this->reader, $hiddenDayMember);
+        $hiddenWeek = $this->storySharing($inAHiddenDayStory, TrendingWindow::Week, \array_slice($feeds, 1));
+
+        self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
+        self::assertSame(
+            [$narrowWeek->requireId(), $hiddenWeek->requireId()],
+            $this->storyIdsFor(TrendingWindow::Week),
+        );
+    }
+
+    public function testTheWeekCapCountsAfterTheExclusion(): void
+    {
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        $shared = $this->fixtures->entry($feeds[0], 'Shared', '2031-05-14 11:00:00');
+        $this->storySharing($shared, TrendingWindow::Day, \array_slice($feeds, 1, 2));
+        $excluded = $this->storySharing($shared, TrendingWindow::Week, \array_slice($feeds, 1));
+        for ($hour = 0; $hour < 15; ++$hour) {
+            $this->storyOf(\sprintf('2031-05-13 %02d:30:00', $hour + 5), $feeds, TrendingWindow::Week);
+        }
+
+        $shown = $this->storyIdsFor(TrendingWindow::Week);
+
+        self::assertCount(15, $shown);
+        self::assertNotContains($excluded->requireId(), $shown);
+        self::assertSame(15, $this->stories()->unopenedFor($this->reader, TrendingWindow::Week)->unopened);
+    }
+
     public function testThePageCarriesTheWindowAndWhenItsSnapshotWasBuilt(): void
     {
         $this->entityManager->persist(new TrendingSnapshot(
@@ -522,6 +579,32 @@ final class TrendingStoriesTest extends DbTestCase
         return array_map(static fn (RankedStoryModel $story): int => $story->storyId, $ranked);
     }
 
+    /** @return list<int> */
+    private function storyIdsFor(TrendingWindow $window): array
+    {
+        return array_map(
+            static fn (TrendingStoryCardModel $card): int => $card->story->storyId,
+            $this->storiesFor($window),
+        );
+    }
+
+    /**
+     * $shared, the newest member, and one older entry per other feed, last seen when $shared was published.
+     *
+     * @param list<Feed> $otherFeeds
+     */
+    private function storySharing(Entry $shared, TrendingWindow $window, array $otherFeeds): TrendingStory
+    {
+        $lastSeen = $shared->getEffectiveDate()->format('Y-m-d H:i:s');
+        $members = [$shared];
+        foreach ($otherFeeds as $index => $feed) {
+            $published = $shared->getEffectiveDate()->modify(\sprintf('-%d hours', $index + 1));
+            $members[] = $this->fixtures->entry($feed, 'Story entry', $published->format('Y-m-d H:i:s'));
+        }
+
+        return $this->fixtures->story($window, $lastSeen, ...$members);
+    }
+
     /** @return list<TrendingStoryCardModel> */
     private function storiesFor(TrendingWindow $window): array
     {
@@ -553,6 +636,7 @@ final class TrendingStoriesTest extends DbTestCase
     {
         return new ReaderWindows(
             new TrendingEntryRepository($this->entityManager),
+            $this->storyRepository(),
             new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC')),
         );
     }
