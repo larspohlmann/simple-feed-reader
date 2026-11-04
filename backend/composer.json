@@ -12,6 +12,7 @@
         "ext-iconv": "*",
         "ext-intl": "*",
         "ext-libxml": "*",
+        "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-sodium": "*",
         "ext-xmlreader": "*",
