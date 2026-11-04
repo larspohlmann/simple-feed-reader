@@ -7,7 +7,6 @@ namespace App\Service\Maintenance\MaintenanceSweep;
 use App\Service\LinkCard\LinkCardSweep;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
-use App\Service\Maintenance\Model\SweepReportModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class LinkCardsTickSweep implements MaintenanceSweepInterface
@@ -28,20 +27,15 @@ final readonly class LinkCardsTickSweep implements MaintenanceSweepInterface
         return 70;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public function run(\DateTimeImmutable $deadline): LinkCardSweepReportModel
     {
-        return self::reportOf($this->linkCardSweep->sweep(
+        return $this->linkCardSweep->sweep(
             LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), LinkCardBudgetModel::largestPass()),
-        ));
+        );
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): LinkCardSweepReportModel
     {
-        return self::reportOf(LinkCardSweepReportModel::none());
-    }
-
-    private static function reportOf(LinkCardSweepReportModel $report): SweepReportModel
-    {
-        return new SweepReportModel(['considered' => $report->considered, 'completed' => $report->completed]);
+        return LinkCardSweepReportModel::none();
     }
 }

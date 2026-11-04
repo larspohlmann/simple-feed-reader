@@ -7,7 +7,6 @@ namespace App\Service\Maintenance\MaintenanceSweep;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\Model\ImageVerificationBudgetModel;
 use App\Service\Image\Model\ImageVerificationReportModel;
-use App\Service\Maintenance\Model\SweepReportModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class ImageVerificationTickSweep implements MaintenanceSweepInterface
@@ -30,25 +29,15 @@ final readonly class ImageVerificationTickSweep implements MaintenanceSweepInter
         return 80;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public function run(\DateTimeImmutable $deadline): ImageVerificationReportModel
     {
-        return self::reportOf($this->imageVerificationSweep->verifyDue(
+        return $this->imageVerificationSweep->verifyDue(
             ImageVerificationBudgetModel::halfOfWhatIsLeft($deadline, $this->clock->now(), self::MAX_SECONDS),
-        ));
+        );
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): ImageVerificationReportModel
     {
-        return self::reportOf(ImageVerificationReportModel::none());
-    }
-
-    private static function reportOf(ImageVerificationReportModel $report): SweepReportModel
-    {
-        return new SweepReportModel([
-            'measured' => $report->measured,
-            'kept' => $report->kept,
-            'dropped' => $report->dropped,
-            'retried' => $report->retried,
-        ]);
+        return ImageVerificationReportModel::none();
     }
 }

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Trending\Model\TrendingBuildReportModel;
+use App\Enum\TrendingWindow;
 use App\Service\Maintenance\MaintenanceSweep\TrendingTickSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingWiring;
@@ -17,7 +20,10 @@ final class TrendingTickSweepTest extends DbTestCase
 
         $report = $this->sweep($clock)->run($clock->now()->modify('+1 second'));
 
-        self::assertSame(['windowsRebuilt' => 2, 'storiesBuilt' => 0], $report->outcome);
+        self::assertSame(
+            [TrendingWindow::Day, TrendingWindow::Week],
+            array_map(static fn (TrendingBuildReportModel $build): TrendingWindow => $build->window, $report->builds),
+        );
     }
 
     public function testLeavesTrendingForTheNextTickOnceTheDeadlineIsReached(): void
@@ -26,7 +32,7 @@ final class TrendingTickSweepTest extends DbTestCase
 
         $report = $this->sweep($clock)->run($clock->now());
 
-        self::assertSame(['windowsRebuilt' => 0, 'storiesBuilt' => 0], $report->outcome);
+        self::assertEquals(TrendingRebuildReportModel::none(), $report);
     }
 
     private function sweep(MockClock $clock): TrendingTickSweep

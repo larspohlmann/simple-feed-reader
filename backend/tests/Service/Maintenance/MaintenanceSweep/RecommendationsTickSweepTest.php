@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Entity\ProfileSettingsValues;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
@@ -29,32 +30,12 @@ final class RecommendationsTickSweepTest extends DbTestCase
 
         $report = $this->sweep()->run(new \DateTimeImmutable('2000-01-01 00:00:00'));
 
-        self::assertSame(
-            [
-                'startedRuns' => 0,
-                'advancedRuns' => 0,
-                'activeRuns' => 0,
-                'startedProfileRuns' => 1,
-                'advancedProfileRuns' => 1,
-                'activeProfileRuns' => 0,
-            ],
-            $report->outcome,
-        );
+        self::assertEquals(new ForYouSweepReportModel(0, 0, 0, 1, 1, 0), $report);
     }
 
-    public function testASkippedTickReportsNoRuns(): void
+    public function testAnIdleTickReportsNoRuns(): void
     {
-        self::assertSame(
-            [
-                'startedRuns' => 0,
-                'advancedRuns' => 0,
-                'activeRuns' => 0,
-                'startedProfileRuns' => 0,
-                'advancedProfileRuns' => 0,
-                'activeProfileRuns' => 0,
-            ],
-            $this->sweep()->skippedReport()->outcome,
-        );
+        self::assertEquals(new ForYouSweepReportModel(0, 0, 0, 0, 0, 0), $this->sweep()->idleReport());
     }
 
     private function sweep(): RecommendationsTickSweep

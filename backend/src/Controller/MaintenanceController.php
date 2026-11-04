@@ -26,6 +26,7 @@ final readonly class MaintenanceController
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
         private MaintenanceTick $maintenanceTick,
+        private MaintenanceTickJson $maintenanceTickJson,
     ) {
     }
 
@@ -76,6 +77,6 @@ final readonly class MaintenanceController
             return $rejection;
         }
 
-        return new JsonResponse(MaintenanceTickJson::report($this->maintenanceTick->run()));
+        return new JsonResponse($this->maintenanceTickJson->report($this->maintenanceTick->run()));
     }
 }

@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\LinkCard\LinkCardSweep;
+use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
@@ -29,7 +30,6 @@ use App\Service\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\TrendingTickSweep;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Maintenance\Model\SweepReportModel;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
@@ -57,10 +57,13 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\ProfileImageSweep;
 use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Transcript\TranscriptSweep;
+use App\Service\Trending\Model\TrendingRebuildReportModel;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
@@ -101,7 +104,7 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertTrue($report->refresh->isAborted());
         self::assertTrue($report->sweeps->skipped);
         self::assertSame([], $sweep->deadlines);
-        self::assertEquals(['recording' => new SweepReportModel(['ran' => false])], $report->sweeps->reports);
+        self::assertEquals(['recording' => RecordingMaintenanceSweep::idle()], $report->sweeps->reports);
         self::assertEquals(new LokiSpoolReportModel(0, 0), $report->logShipping);
     }
 
@@ -118,7 +121,7 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertEquals([
             new \DateTimeImmutable('2026-08-10 12:00:25', new \DateTimeZone('UTC')),
         ], $sweep->deadlines);
-        self::assertEquals(['recording' => new SweepReportModel(['ran' => true])], $report->sweeps->reports);
+        self::assertEquals(['recording' => RecordingMaintenanceSweep::ran()], $report->sweeps->reports);
     }
 
     private function abortingRefreshRunner(MockClock $clock): RefreshRunner
@@ -175,12 +178,12 @@ final class MaintenanceTickTest extends DbTestCase
 
     public function testCardsTheQueuedLinkPostsInTheSpareWindowOfATickWhoseRefreshTakesNoTime(): void
     {
-        $this->assertLinkCardSweepOfATickWhoseRefreshTakes(0, ['considered' => 1, 'completed' => 1], 1);
+        $this->assertLinkCardSweepOfATickWhoseRefreshTakes(0, new LinkCardSweepReportModel(1, 1), 1);
     }
 
     public function testLeavesTheLinkPostsQueuedWhenTheRefreshSpentTheWindow(): void
     {
-        $this->assertLinkCardSweepOfATickWhoseRefreshTakes(18, ['considered' => 0, 'completed' => 0], 0);
+        $this->assertLinkCardSweepOfATickWhoseRefreshTakes(18, LinkCardSweepReportModel::none(), 0);
     }
 
     public function testAsksForProfilePicturesInTheSpareWindowOfATickWhoseRefreshTakesNoTime(): void
@@ -227,7 +230,7 @@ final class MaintenanceTickTest extends DbTestCase
 
         $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock, $appView)->run();
 
-        return self::outcomeOf($report, 'profileImages', 'checked');
+        return self::reportOf($report, 'profileImages', ProfileImageSweepReportModel::class)->checked;
     }
 
     public function testMovesHiddenProfilesInTheSpareWindowOfATickWhoseRefreshTakesNoTime(): void
@@ -275,13 +278,12 @@ final class MaintenanceTickTest extends DbTestCase
 
         $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
 
-        return self::outcomeOf($report, 'hiddenProfiles', 'started');
+        return self::reportOf($report, 'hiddenProfiles', HiddenProfileSwitchReportModel::class)->started;
     }
 
-    /** @param array<string, int> $expectedSweep */
     private function assertLinkCardSweepOfATickWhoseRefreshTakes(
         int $refreshSeconds,
-        array $expectedSweep,
+        LinkCardSweepReportModel $expectedSweep,
         int $expectedPageFetches,
     ): void {
         $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
@@ -302,7 +304,7 @@ final class MaintenanceTickTest extends DbTestCase
         $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
 
         self::assertFalse($report->refresh->isAborted());
-        self::assertSame($expectedSweep, $report->sweeps->reports['linkCards']->outcome);
+        self::assertEquals($expectedSweep, $report->sweeps->reports['linkCards']);
         self::assertSame($expectedPageFetches, $pages->getRequestsCount());
     }
 
@@ -348,7 +350,7 @@ final class MaintenanceTickTest extends DbTestCase
 
         $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
 
-        self::assertSame(2, self::outcomeOf($report, 'trending', 'windowsRebuilt'));
+        self::assertCount(2, self::reportOf($report, 'trending', TrendingRebuildReportModel::class)->builds);
     }
 
     public function testSweepsMembershipsThenSyncsPrivateFeedsThenRebuildsTrending(): void
@@ -483,12 +485,19 @@ final class MaintenanceTickTest extends DbTestCase
         return $keyed;
     }
 
-    private static function outcomeOf(MaintenanceTickReportModel $report, string $sweep, string $figure): int
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return T
+     */
+    private static function reportOf(MaintenanceTickReportModel $report, string $sweep, string $class): object
     {
-        $value = $report->sweeps->reports[$sweep]->outcome[$figure];
-        self::assertIsInt($value);
+        $sweepReport = $report->sweeps->reports[$sweep];
+        self::assertInstanceOf($class, $sweepReport);
 
-        return $value;
+        return $sweepReport;
     }
 
     private function hiddenProfileSwitchSweep(): HiddenProfileSwitchSweep

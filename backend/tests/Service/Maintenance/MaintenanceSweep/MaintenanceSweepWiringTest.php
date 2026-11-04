@@ -15,7 +15,12 @@ use App\Service\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\SavedSearchMembershipsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\TrendingTickSweep;
+use App\Http\MaintenanceTickJson;
+use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Maintenance\MaintenanceTick;
+use App\Service\Maintenance\Model\MaintenanceSweepsModel;
+use App\Service\Maintenance\Model\MaintenanceTickReportModel;
+use App\Service\Refresh\Model\RefreshReportModel;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class MaintenanceSweepWiringTest extends KernelTestCase
@@ -41,7 +46,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
     public function testTheDeclaredPrioritiesGiveTheWiredOrder(): void
     {
         $declared = self::declaredImplementations();
-        usort($declared, static fn (string $left, string $right): int => $right::priority() <=> $left::priority());
+        usort($declared, self::byPriority(...));
 
         self::assertSame(array_values($this->wiredSweeps()), $declared);
     }
@@ -61,8 +66,35 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
         }
     }
 
+    public function testATickJsonMapperClaimsEverySweepsReport(): void
+    {
+        $idleReports = array_map(
+            static fn (MaintenanceSweepInterface $sweep): object => $sweep->idleReport(),
+            $this->wiredSweepServices(),
+        );
+        $json = self::getContainer()->get(MaintenanceTickJson::class);
+        self::assertInstanceOf(MaintenanceTickJson::class, $json);
+
+        $body = $json->report(new MaintenanceTickReportModel(
+            RefreshReportModel::finished(0, 0, 0, 0, 0, 0, 0, 0),
+            MaintenanceSweepsModel::ran($idleReports),
+            new LokiSpoolReportModel(0, 0),
+        ));
+
+        self::assertSame(['refresh', ...array_keys($idleReports), 'logShipping'], array_keys($body));
+    }
+
     /** @return array<string, class-string<MaintenanceSweepInterface>> */
     private function wiredSweeps(): array
+    {
+        return array_map(
+            static fn (MaintenanceSweepInterface $sweep): string => $sweep::class,
+            $this->wiredSweepServices(),
+        );
+    }
+
+    /** @return array<string, MaintenanceSweepInterface> */
+    private function wiredSweepServices(): array
     {
         $tick = self::getContainer()->get(MaintenanceTick::class);
         self::assertInstanceOf(MaintenanceTick::class, $tick);
@@ -72,10 +104,19 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
         foreach ($sweeps as $name => $sweep) {
             self::assertIsString($name);
             self::assertInstanceOf(MaintenanceSweepInterface::class, $sweep);
-            $wired[$name] = $sweep::class;
+            $wired[$name] = $sweep;
         }
 
         return $wired;
+    }
+
+    /**
+     * @param class-string<MaintenanceSweepInterface> $left
+     * @param class-string<MaintenanceSweepInterface> $right
+     */
+    private static function byPriority(string $left, string $right): int
+    {
+        return $right::priority() <=> $left::priority();
     }
 
     /** @return list<class-string<MaintenanceSweepInterface>> */

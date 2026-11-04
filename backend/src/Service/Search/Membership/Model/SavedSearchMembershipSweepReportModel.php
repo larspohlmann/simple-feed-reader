@@ -14,6 +14,11 @@ final readonly class SavedSearchMembershipSweepReportModel
     ) {
     }
 
+    public static function none(): self
+    {
+        return new self(0, 0, 0, false);
+    }
+
     /**
      * @return array{searchesSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool}
      */

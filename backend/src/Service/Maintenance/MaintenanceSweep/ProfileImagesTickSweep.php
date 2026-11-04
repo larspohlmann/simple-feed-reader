@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance\MaintenanceSweep;
 
-use App\Service\Maintenance\Model\SweepReportModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\ProfileImageSweep;
@@ -30,20 +29,15 @@ final readonly class ProfileImagesTickSweep implements MaintenanceSweepInterface
         return 50;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public function run(\DateTimeImmutable $deadline): ProfileImageSweepReportModel
     {
-        return self::reportOf($this->profileImageSweep->sweep(
+        return $this->profileImageSweep->sweep(
             ProfileCallBudgetModel::fittingBefore($deadline, $this->clock->now(), self::MAX_CALLS),
-        ));
+        );
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): ProfileImageSweepReportModel
     {
-        return self::reportOf(ProfileImageSweepReportModel::none());
-    }
-
-    private static function reportOf(ProfileImageSweepReportModel $report): SweepReportModel
-    {
-        return new SweepReportModel(['checked' => $report->checked, 'changed' => $report->changed]);
+        return ProfileImageSweepReportModel::none();
     }
 }

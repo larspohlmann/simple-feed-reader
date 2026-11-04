@@ -55,7 +55,7 @@ final readonly class MaintenanceTick
     {
         $reports = [];
         foreach ($this->sweeps as $name => $sweep) {
-            $reports[$name] = $sweep->skippedReport();
+            $reports[$name] = $sweep->idleReport();
         }
 
         return MaintenanceSweepsModel::skippedAfterAbortedRefresh($reports);

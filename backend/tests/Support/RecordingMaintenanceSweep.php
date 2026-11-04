@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
-use App\Service\Maintenance\Model\SweepReportModel;
 
 /** A maintenance sweep that records the deadlines it was run with. */
 final class RecordingMaintenanceSweep implements MaintenanceSweepInterface
@@ -23,15 +22,25 @@ final class RecordingMaintenanceSweep implements MaintenanceSweepInterface
         return 0;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public static function ran(): \stdClass
+    {
+        return (object) ['ran' => true];
+    }
+
+    public static function idle(): \stdClass
+    {
+        return (object) ['ran' => false];
+    }
+
+    public function run(\DateTimeImmutable $deadline): \stdClass
     {
         $this->deadlines[] = $deadline;
 
-        return new SweepReportModel(['ran' => true]);
+        return self::ran();
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): \stdClass
     {
-        return new SweepReportModel(['ran' => false]);
+        return self::idle();
     }
 }

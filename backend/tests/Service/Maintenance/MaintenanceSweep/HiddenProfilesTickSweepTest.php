@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -19,16 +20,15 @@ final class HiddenProfilesTickSweepTest extends DbTestCase
 {
     public function testMovesTheHiddenProfileWhenOneCallFitsBeforeTheDeadline(): void
     {
-        self::assertSame(['started' => 1, 'finished' => 0], $this->outcomeWithinSecondsOfTheDeadline(20));
+        self::assertSame(1, $this->reportWithinSecondsOfTheDeadline(20)->started);
     }
 
     public function testLeavesTheHiddenProfileForLaterWhenLessThanOneCallIsLeft(): void
     {
-        self::assertSame(['started' => 0, 'finished' => 0], $this->outcomeWithinSecondsOfTheDeadline(19));
+        self::assertTrue($this->reportWithinSecondsOfTheDeadline(19)->isIdle());
     }
 
-    /** @return array<string, int|bool> */
-    private function outcomeWithinSecondsOfTheDeadline(int $seconds): array
+    private function reportWithinSecondsOfTheDeadline(int $seconds): HiddenProfileSwitchReportModel
     {
         $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
         $now = $clock->now();
@@ -49,7 +49,6 @@ final class HiddenProfilesTickSweepTest extends DbTestCase
         self::assertInstanceOf(HiddenProfileSwitchSweep::class, $switches);
 
         return new HiddenProfilesTickSweep($switches, $clock)
-            ->run($now->modify(\sprintf('+%d seconds', $seconds)))
-            ->outcome;
+            ->run($now->modify(\sprintf('+%d seconds', $seconds)));
     }
 }

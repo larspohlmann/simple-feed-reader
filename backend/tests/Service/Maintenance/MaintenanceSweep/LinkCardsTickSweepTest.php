@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Entity\Feed;
 use App\Service\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
 use App\Tests\DbTestCase;
@@ -16,16 +17,15 @@ final class LinkCardsTickSweepTest extends DbTestCase
 {
     public function testCardsTheQueuedPostWhenOneFetchFitsBeforeTheDeadline(): void
     {
-        self::assertSame(['considered' => 1, 'completed' => 1], $this->outcomeWithinSecondsOfTheDeadline(60));
+        self::assertEquals(new LinkCardSweepReportModel(1, 1), $this->reportWithinSecondsOfTheDeadline(60));
     }
 
     public function testLeavesThePostQueuedWhenLessThanOneFetchIsLeft(): void
     {
-        self::assertSame(['considered' => 0, 'completed' => 0], $this->outcomeWithinSecondsOfTheDeadline(7));
+        self::assertEquals(LinkCardSweepReportModel::none(), $this->reportWithinSecondsOfTheDeadline(7));
     }
 
-    /** @return array<string, int|bool> */
-    private function outcomeWithinSecondsOfTheDeadline(int $seconds): array
+    private function reportWithinSecondsOfTheDeadline(int $seconds): LinkCardSweepReportModel
     {
         $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
         $feed = new Feed('https://one.example.com/feed');
@@ -43,6 +43,6 @@ final class LinkCardsTickSweepTest extends DbTestCase
             $clock,
         );
 
-        return $sweep->run($clock->now()->modify(\sprintf('+%d seconds', $seconds)))->outcome;
+        return $sweep->run($clock->now()->modify(\sprintf('+%d seconds', $seconds)));
     }
 }

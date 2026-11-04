@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\NetworkCollectionsModel;
@@ -45,10 +46,7 @@ final class PrivateFeedSyncTickSweepTest extends DbTestCase
     {
         $report = $this->sweep->run($this->clock->now()->modify('+4 seconds'));
 
-        self::assertSame(
-            ['accountsChecked' => 0, 'accountsSkipped' => 0, 'added' => 0, 'removed' => 0],
-            $report->outcome,
-        );
+        self::assertEquals(PrivateFeedSyncReportModel::none(), $report);
         self::assertSame(0, $this->network->calls);
     }
 
@@ -56,7 +54,7 @@ final class PrivateFeedSyncTickSweepTest extends DbTestCase
     {
         $report = $this->sweep->run($this->clock->now()->modify('+5 seconds'));
 
-        self::assertSame(1, $report->outcome['accountsChecked']);
+        self::assertSame(1, $report->checked);
         self::assertSame(1, $this->network->calls);
     }
 }

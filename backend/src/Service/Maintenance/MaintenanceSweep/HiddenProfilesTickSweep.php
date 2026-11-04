@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance\MaintenanceSweep;
 
-use App\Service\Maintenance\Model\SweepReportModel;
 use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
@@ -30,20 +29,15 @@ final readonly class HiddenProfilesTickSweep implements MaintenanceSweepInterfac
         return 40;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public function run(\DateTimeImmutable $deadline): HiddenProfileSwitchReportModel
     {
-        return self::reportOf($this->hiddenProfileSwitchSweep->sweep(
+        return $this->hiddenProfileSwitchSweep->sweep(
             ProfileCallBudgetModel::fittingBefore($deadline, $this->clock->now(), self::MAX_CALLS),
-        ));
+        );
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): HiddenProfileSwitchReportModel
     {
-        return self::reportOf(HiddenProfileSwitchReportModel::none());
-    }
-
-    private static function reportOf(HiddenProfileSwitchReportModel $report): SweepReportModel
-    {
-        return new SweepReportModel(['started' => $report->started, 'finished' => $report->finished]);
+        return HiddenProfileSwitchReportModel::none();
     }
 }

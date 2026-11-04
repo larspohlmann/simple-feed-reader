@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance\MaintenanceSweep;
 
-use App\Service\Maintenance\Model\SweepReportModel;
 use App\Service\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Trending\TrendingRebuild;
 
@@ -24,21 +23,13 @@ final readonly class TrendingTickSweep implements MaintenanceSweepInterface
         return 10;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public function run(\DateTimeImmutable $deadline): TrendingRebuildReportModel
     {
-        return self::reportOf($this->trendingRebuild->rebuildDueBefore($deadline));
+        return $this->trendingRebuild->rebuildDueBefore($deadline);
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): TrendingRebuildReportModel
     {
-        return self::reportOf(TrendingRebuildReportModel::none());
-    }
-
-    private static function reportOf(TrendingRebuildReportModel $report): SweepReportModel
-    {
-        return new SweepReportModel([
-            'windowsRebuilt' => \count($report->builds),
-            'storiesBuilt' => $report->storyCount(),
-        ]);
+        return TrendingRebuildReportModel::none();
     }
 }

@@ -14,6 +14,11 @@ final readonly class DigestSweepReportModel
     ) {
     }
 
+    public static function none(): self
+    {
+        return new self(0, 0, 0);
+    }
+
     /** @return array{considered: int, sent: int, skippedEmpty: int} */
     public function toLogContext(): array
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -24,16 +25,15 @@ final class ProfileImagesTickSweepTest extends DbTestCase
 {
     public function testAsksForThePicturesWhenOneCallFitsBeforeTheDeadline(): void
     {
-        self::assertSame(['checked' => 1, 'changed' => 0], $this->outcomeWithinSecondsOfTheDeadline(20));
+        self::assertEquals(new ProfileImageSweepReportModel(1, 0), $this->reportWithinSecondsOfTheDeadline(20));
     }
 
     public function testLeavesThePicturesForLaterWhenLessThanOneCallIsLeft(): void
     {
-        self::assertSame(['checked' => 0, 'changed' => 0], $this->outcomeWithinSecondsOfTheDeadline(19));
+        self::assertEquals(ProfileImageSweepReportModel::none(), $this->reportWithinSecondsOfTheDeadline(19));
     }
 
-    /** @return array<string, int|bool> */
-    private function outcomeWithinSecondsOfTheDeadline(int $seconds): array
+    private function reportWithinSecondsOfTheDeadline(int $seconds): ProfileImageSweepReportModel
     {
         $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
         $now = $clock->now();
@@ -63,6 +63,6 @@ final class ProfileImagesTickSweepTest extends DbTestCase
             $clock,
         );
 
-        return $sweep->run($now->modify(\sprintf('+%d seconds', $seconds)))->outcome;
+        return $sweep->run($now->modify(\sprintf('+%d seconds', $seconds)));
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance\MaintenanceSweep;
 
-use App\Service\Maintenance\Model\SweepReportModel;
 use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
 use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\PrivateFeedSyncSweep;
@@ -30,25 +29,15 @@ final readonly class PrivateFeedSyncTickSweep implements MaintenanceSweepInterfa
         return 20;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public function run(\DateTimeImmutable $deadline): PrivateFeedSyncReportModel
     {
-        return self::reportOf($this->privateFeedSyncSweep->sweep(
+        return $this->privateFeedSyncSweep->sweep(
             PrivateFeedSyncBudgetModel::fittingBefore($deadline, $this->clock->now(), self::MAX_ACCOUNTS),
-        ));
+        );
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): PrivateFeedSyncReportModel
     {
-        return self::reportOf(PrivateFeedSyncReportModel::none());
-    }
-
-    private static function reportOf(PrivateFeedSyncReportModel $report): SweepReportModel
-    {
-        return new SweepReportModel([
-            'accountsChecked' => $report->checked,
-            'accountsSkipped' => $report->skipped,
-            'added' => $report->added,
-            'removed' => $report->removed,
-        ]);
+        return PrivateFeedSyncReportModel::none();
     }
 }

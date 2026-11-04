@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
@@ -26,18 +27,15 @@ final class DigestsTickSweepTest extends DbTestCase
 
         $report = $this->sweep($recipients)->run(new \DateTimeImmutable('2000-01-01 00:00:00'));
 
-        self::assertSame(['considered' => 0, 'sent' => 0, 'skippedEmpty' => 0], $report->outcome);
+        self::assertEquals(DigestSweepReportModel::none(), $report);
     }
 
-    public function testASkippedTickReportsNoDigests(): void
+    public function testAnIdleTickReportsNoDigests(): void
     {
         $recipients = $this->createMock(DigestRecipientsInterface::class);
         $recipients->expects($this->never())->method('findWithDigestEnabled');
 
-        self::assertSame(
-            ['considered' => 0, 'sent' => 0, 'skippedEmpty' => 0],
-            $this->sweep($recipients)->skippedReport()->outcome,
-        );
+        self::assertEquals(DigestSweepReportModel::none(), $this->sweep($recipients)->idleReport());
     }
 
     private function sweep(DigestRecipientsInterface $recipients): DigestsTickSweep

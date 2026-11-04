@@ -6,7 +6,6 @@ namespace App\Service\Maintenance\MaintenanceSweep;
 
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Mail\Digest\SendDueDigests;
-use App\Service\Maintenance\Model\SweepReportModel;
 
 final readonly class DigestsTickSweep implements MaintenanceSweepInterface
 {
@@ -24,22 +23,13 @@ final readonly class DigestsTickSweep implements MaintenanceSweepInterface
         return 90;
     }
 
-    public function run(\DateTimeImmutable $deadline): SweepReportModel
+    public function run(\DateTimeImmutable $deadline): DigestSweepReportModel
     {
-        return self::reportOf($this->sendDueDigests->run());
+        return $this->sendDueDigests->run();
     }
 
-    public function skippedReport(): SweepReportModel
+    public function idleReport(): DigestSweepReportModel
     {
-        return self::reportOf(new DigestSweepReportModel(0, 0, 0));
-    }
-
-    private static function reportOf(DigestSweepReportModel $report): SweepReportModel
-    {
-        return new SweepReportModel([
-            'considered' => $report->considered,
-            'sent' => $report->sent,
-            'skippedEmpty' => $report->skippedEmpty,
-        ]);
+        return DigestSweepReportModel::none();
     }
 }

@@ -19,4 +19,9 @@ final readonly class ForYouSweepReportModel
         public int $activeProfileRuns = 0,
     ) {
     }
+
+    public static function none(): self
+    {
+        return new self(0, 0, 0);
+    }
 }

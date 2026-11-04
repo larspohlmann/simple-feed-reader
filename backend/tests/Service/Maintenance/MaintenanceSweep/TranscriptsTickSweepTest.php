@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Transcript\Model\TranscriptSweepReportModel;
 use App\Service\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
 use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
 use App\Service\Transcript\TranscriptSweep;
@@ -23,7 +24,7 @@ final class TranscriptsTickSweepTest extends DbTestCase
 
         $report = $this->sweep($clock)->run($clock->now()->modify('+9 seconds'));
 
-        self::assertSame(['claimed' => 2, 'filled' => 2], $report->outcome);
+        self::assertEquals(new TranscriptSweepReportModel(2, 2), $report);
         self::assertCount(2, $source->fetchedUrls);
     }
 
@@ -34,7 +35,7 @@ final class TranscriptsTickSweepTest extends DbTestCase
 
         $report = $this->sweep($clock)->run($clock->now()->modify('+3 seconds'));
 
-        self::assertSame(['claimed' => 0, 'filled' => 0], $report->outcome);
+        self::assertEquals(TranscriptSweepReportModel::none(), $report);
     }
 
     private function sweep(MockClock $clock): TranscriptsTickSweep

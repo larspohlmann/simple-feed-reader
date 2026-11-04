@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
@@ -23,8 +24,8 @@ final class SavedSearchMembershipsTickSweepTest extends DbTestCase
 
         $report = $this->sweep($clock)->run($clock->now()->modify('+1 minute'));
 
-        self::assertTrue($report->outcome['caughtUp']);
-        self::assertGreaterThanOrEqual(1, $report->outcome['entriesScanned']);
+        self::assertTrue($report->caughtUp);
+        self::assertGreaterThanOrEqual(1, $report->entriesScanned);
     }
 
     public function testScansNothingOnceTheDeadlineHasPassed(): void
@@ -33,15 +34,15 @@ final class SavedSearchMembershipsTickSweepTest extends DbTestCase
 
         $report = $this->sweep($clock)->run($clock->now()->modify('-1 second'));
 
-        self::assertSame(0, $report->outcome['entriesScanned']);
-        self::assertFalse($report->outcome['caughtUp']);
+        self::assertSame(0, $report->entriesScanned);
+        self::assertFalse($report->caughtUp);
     }
 
-    public function testASkippedTickReportsNoSweep(): void
+    public function testAnIdleTickReportsNoSweep(): void
     {
-        self::assertSame(
-            ['searchesSwept' => 0, 'entriesScanned' => 0, 'matchesInserted' => 0, 'caughtUp' => false],
-            $this->sweep(new MockClock())->skippedReport()->outcome,
+        self::assertEquals(
+            SavedSearchMembershipSweepReportModel::none(),
+            $this->sweep(new MockClock())->idleReport(),
         );
     }
 
