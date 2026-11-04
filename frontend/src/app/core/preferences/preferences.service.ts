@@ -42,6 +42,12 @@ export class PreferencesService {
   /** The account's cached choice, read once per account, until `adopt()` or a toggle overrides it. */
   private readonly trending = linkedSignal(() => cachedTrendingEnabled(this.trendingCacheKey()));
   readonly trendingEnabled = this.trending.asReadonly();
+  /** Whether `trendingEnabled` is the account's value rather than this device's cache of it. */
+  private readonly trendingFromAccount = linkedSignal(() => {
+    this.trendingCacheKey();
+    return false;
+  });
+  readonly trendingConfirmed = this.trendingFromAccount.asReadonly();
 
   readonly trendingSaveFailed = signal(false);
 
@@ -84,11 +90,13 @@ export class PreferencesService {
     this.scrapeFallbackEnabled.set(false);
     this.saveFailed.set(false);
     this.trending.set(cachedTrendingEnabled(this.trendingCacheKey()));
+    this.trendingFromAccount.set(false);
     this.trendingSaveFailed.set(false);
   }
 
   private applyTrending(enabled: boolean): void {
     this.trending.set(enabled);
+    this.trendingFromAccount.set(true);
     const key = this.trendingCacheKey();
     if (key !== null) writeDeviceValue(key, enabled ? null : 'false');
   }

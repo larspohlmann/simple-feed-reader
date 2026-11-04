@@ -22,7 +22,7 @@ import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService, CurrentUser } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { TokenStore } from '../../core/auth/token.store';
 import { OnboardingSkip } from '../feeds/catalog/onboarding-skip';
@@ -304,6 +304,31 @@ describe('ReaderShellComponent', () => {
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
     });
+  });
+
+  it("keeps a Trending link in the URL while only this device's stale cache says Trending is off (#2017)", () => {
+    const claims = btoa(JSON.stringify({ userId: 7 })).replace(/=+$/, '');
+    localStorage.setItem('sfr.user.7.trending-enabled', 'false');
+    TestBed.inject(TokenStore).set(`header.${claims}.signature`);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const leftTrending = () =>
+      navigate.mock.calls.filter(([, extras]) => extras?.queryParams?.['view'] === null);
+    qp.next(convertToParamMap({ view: 'trending' }));
+    const fixture = boot();
+    expect(fixture.componentInstance.selection().kind).toBe('all');
+
+    const preferences = TestBed.inject(PreferencesService);
+    preferences.adopt({
+      ...auth.user(),
+      preferences: { scrapeFallbackEnabled: false, trendingEnabled: true },
+    } as unknown as CurrentUser);
+    fixture.detectChanges();
+
+    expect(leftTrending()).toHaveLength(0);
+    expect(fixture.componentInstance.selection().kind).toBe('trending');
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/trending')
+      .flush({ window: 'day', builtAt: null, stories: [] });
   });
 
   describe('the Trending window in the URL (#2017, D40)', () => {

@@ -174,6 +174,20 @@ describe('PreferencesService', () => {
       });
     });
 
+    it("confirms the switch once the account's value or a toggle sets it, until a sign-out", () => {
+      const preferencesService = service();
+      expect(preferencesService.trendingConfirmed()).toBe(false);
+
+      preferencesService.adopt(account({ trendingEnabled: false }));
+      expect(preferencesService.trendingConfirmed()).toBe(true);
+
+      preferencesService.reset();
+      expect(preferencesService.trendingConfirmed()).toBe(false);
+
+      preferencesService.setTrendingEnabled(true);
+      expect(preferencesService.trendingConfirmed()).toBe(true);
+    });
+
     it('shows Trending again for the next account after a sign-out', () => {
       writer.result = false;
       const preferencesService = service();

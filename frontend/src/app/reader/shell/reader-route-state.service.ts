@@ -12,6 +12,7 @@ import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { TrendingWindowService } from '../trending/trending-window.service';
+import { PreferencesService } from '../../core/preferences/preferences.service';
 
 @Injectable()
 export class ReaderRouteState {
@@ -24,6 +25,7 @@ export class ReaderRouteState {
   private readonly linkNavigation = inject(LinkReaderNavigation);
   private readonly viewContext = inject(AccountViewContext);
   private readonly trendingWindow = inject(TrendingWindowService);
+  private readonly preferences = inject(PreferencesService);
 
   private readonly queryParameters = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -75,10 +77,12 @@ export class ReaderRouteState {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
     });
-    // Waits for the account, whose stored window a bare Trending link opens.
+    // Waits for the account, whose stored window a bare Trending link opens; only the
+    // account's own switch, never a stale device cache, may take Trending out of the URL.
     effect(() => {
       const correction = this.parsed().urlCorrection;
       if (correction === null || !this.listPreferences.ready()) return;
+      if (correction['view'] === null && !this.preferences.trendingConfirmed()) return;
       untracked(() => this.correctUrl(correction));
     });
     // A bare link opened the stored window, so only a window the URL names changes what is stored.
