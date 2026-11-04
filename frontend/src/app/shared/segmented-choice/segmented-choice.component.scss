@@ -34,8 +34,9 @@
 }
 
 .seg button.on {
-  background: var(--surface-0);
-  color: var(--text-primary);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .count {

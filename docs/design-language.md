@@ -1016,6 +1016,10 @@ hint beside the control (the AI model picker's "This provider offers no
 LLMs.") and pass that hint's id as `describedBy`, since a disabled button
 takes no focus and a keyboard user would otherwise never hear the reason.
 
+The selected option takes the accent treatment of the pill toggles: `--accent-soft`
+fill, `--accent` text, semibold, so it reads in light and dark alike. `aria-pressed`
+stays the semantic state; the `on` class only draws it.
+
 The control sizes to its labels; a consumer that wants it full width makes
 the host `display: flex` and the buttons share the width (the social import
 dialog's tabs).
