@@ -2869,7 +2869,7 @@ describe('EntryListComponent', () => {
       const fixture = mount({ selection: trending('day'), entries: [] });
 
       expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
-        '3 of your feeds',
+        'several of your feeds cover it within 24 hours',
       );
     });
 
@@ -2877,7 +2877,7 @@ describe('EntryListComponent', () => {
       const fixture = mount({ selection: trending('week'), entries: [] });
 
       expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
-        '5 of your feeds',
+        'several of your feeds cover it within 7 days',
       );
     });
   });
