@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance\MaintenanceSweep;
 
+use App\Http\MaintenanceTickJson;
+use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Maintenance\MaintenanceSweep\DigestsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
@@ -15,8 +17,6 @@ use App\Service\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\SavedSearchMembershipsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
 use App\Service\Maintenance\MaintenanceSweep\TrendingTickSweep;
-use App\Http\MaintenanceTickJson;
-use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;

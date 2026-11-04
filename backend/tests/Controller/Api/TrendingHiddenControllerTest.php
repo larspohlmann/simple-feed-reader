@@ -11,8 +11,8 @@ use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\TrendingFixtures;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
 final class TrendingHiddenControllerTest extends ApiTestCase
