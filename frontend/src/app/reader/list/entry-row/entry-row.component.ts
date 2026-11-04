@@ -26,7 +26,6 @@ import { ThreadLineComponent } from '../../../shared/thread-line/thread-line.com
 import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line-post.component';
 import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
 import { threadTotal } from '../../thread-post';
-import { alsoFootOf } from '../magazine/also-foot';
 import { showsUnreadMark } from '../../trending/story';
 import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 
@@ -79,7 +78,6 @@ export class EntryRowComponent {
   readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
-  readonly alsoFoot = computed(() => alsoFootOf(this.entry()));
   readonly unreadMark = computed(() => showsUnreadMark(this.entry()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>

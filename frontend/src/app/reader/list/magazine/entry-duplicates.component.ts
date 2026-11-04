@@ -9,6 +9,7 @@ import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
+import { alsoFootOf } from './also-foot';
 
 let nextId = 0;
 
@@ -38,8 +39,9 @@ export const ALSO_FOOT_NAMES = 4;
 export class EntryDuplicatesComponent implements EntryActionHandler {
   /** The row the footer sits on; deleting from a copy's card deletes this row's post (#1972). */
   readonly entry = input.required<EntryDto>();
-  readonly copies = input.required<readonly EntryDto[]>();
-  readonly label = input.required<string>();
+  private readonly foot = computed(() => alsoFootOf(this.entry()));
+  protected readonly copies = computed(() => this.foot().copies);
+  protected readonly label = computed(() => this.foot().label);
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);

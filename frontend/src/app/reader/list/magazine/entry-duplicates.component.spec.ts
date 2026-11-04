@@ -32,7 +32,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto, arrange?: () => void, label = 'reader.alsoIn') {
+function mount(testEntry: EntryDto, arrange?: () => void) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
@@ -43,19 +43,12 @@ function mount(testEntry: EntryDto, arrange?: () => void, label = 'reader.alsoIn
   });
   arrange?.();
   const fixture = TestBed.createComponent(EntryDuplicatesComponent);
-  hold(fixture, testEntry, label);
+  hold(fixture, testEntry);
   return fixture;
 }
 
-/** What a host binds: the row, and its duplicates as the copies. */
-function hold(
-  fixture: ComponentFixture<EntryDuplicatesComponent>,
-  row: EntryDto,
-  label = 'reader.alsoIn',
-): void {
+function hold(fixture: ComponentFixture<EntryDuplicatesComponent>, row: EntryDto): void {
   fixture.componentRef.setInput('entry', row);
-  fixture.componentRef.setInput('copies', row.duplicates ?? []);
-  fixture.componentRef.setInput('label', label);
   fixture.detectChanges();
 }
 
@@ -283,23 +276,17 @@ it('reopens the popover on the like the store wrote into the row copy (#1600)', 
   expect(reopened.getAttribute('aria-pressed')).toBe('true');
 });
 
-it('heads the chips with the label it is given', () => {
-  const dup = entry({ id: 2 });
-  const element = mount(entry({ duplicates: [dup] }), undefined, 'reader.alsoPublishedAs')
-    .nativeElement as HTMLElement;
+it("heads a row's duplicates as the places it also ran in", () => {
+  const element = mount(entry({ duplicates: [entry({ id: 2 })] })).nativeElement as HTMLElement;
 
-  expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also published as');
+  expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also in');
 });
 
-it("lists the copies it is given, not the row's own duplicates", () => {
-  const fixture = mount(entry({ duplicates: [entry({ id: 2, source: 'Row copy' })] }));
-  fixture.componentRef.setInput('copies', [entry({ id: 3, source: 'Given copy' })]);
-  fixture.detectChanges();
+it("heads a Trending story's other outlets as the feeds that also covered it", () => {
+  const lead = entry({ duplicates: [entry({ id: 2 })], story: { outletCount: 3, viewed: false } });
+  const element = mount(lead).nativeElement as HTMLElement;
 
-  const chips = (fixture.nativeElement as HTMLElement).querySelectorAll('.also-entry');
-  expect([...chips].map((chip) => chip.textContent)).toEqual([
-    expect.stringContaining('Given copy'),
-  ]);
+  expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also covered by');
 });
 
 describe('more than four copies', () => {
@@ -318,16 +305,20 @@ describe('more than four copies', () => {
     expect(element.querySelector('.also-more')!.textContent!.trim()).toBe('+2 more');
   });
 
-  it('reveals the rest in place, without opening the row', () => {
+  it('reveals the rest in place, without the click reaching the row around it', () => {
     const fixture = mount(entry({ duplicates: six() }));
     const element = fixture.nativeElement as HTMLElement;
+    const row = document.createElement('div');
+    const rowOpened = jest.fn();
+    row.addEventListener('click', rowOpened);
+    row.appendChild(element);
 
     element.querySelector<HTMLButtonElement>('.also-more')!.click();
     fixture.detectChanges();
 
     expect(element.querySelectorAll('.also-entry')).toHaveLength(6);
     expect(element.querySelector('.also-more')).toBeNull();
-    expect(entryActions.open).not.toHaveBeenCalled();
+    expect(rowOpened).not.toHaveBeenCalled();
   });
 
   it('offers no "+N more" for exactly four', () => {
