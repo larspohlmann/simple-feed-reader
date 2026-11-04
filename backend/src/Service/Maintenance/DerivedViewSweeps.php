@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance;
 
-use App\Service\Maintenance\Model\DerivedViewsReportModel;
+use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Trending\TrendingRebuild;
 use Psr\Clock\ClockInterface;
 
-/** The tick's last sweeps: they recompute views of the entries the earlier sweeps may have changed. */
+/** The tick's sweeps that recompute views of the entries the earlier sweeps may have changed. */
 final readonly class DerivedViewSweeps
 {
     /** The membership sweep's own cap inside the tick window: enough for ~50 chunks on Strato. */
@@ -24,20 +24,15 @@ final readonly class DerivedViewSweeps
     ) {
     }
 
-    public function sweep(\DateTimeImmutable $deadline): DerivedViewsReportModel
+    public function sweepMemberships(\DateTimeImmutable $deadline): SavedSearchMembershipSweepReportModel
     {
         $budget = SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
-        $memberships = $this->membershipSweep->sweep($budget);
 
-        return new DerivedViewsReportModel($memberships, $this->trendingWhileTimeIsLeft($deadline));
+        return $this->membershipSweep->sweep($budget);
     }
 
-    private function trendingWhileTimeIsLeft(\DateTimeImmutable $deadline): TrendingRebuildReportModel
+    public function rebuildTrending(\DateTimeImmutable $deadline): TrendingRebuildReportModel
     {
-        if ($this->clock->now() >= $deadline) {
-            return TrendingRebuildReportModel::none();
-        }
-
-        return $this->trendingRebuild->rebuildDue();
+        return $this->trendingRebuild->rebuildDueBefore($deadline);
     }
 }

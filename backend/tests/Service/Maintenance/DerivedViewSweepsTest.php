@@ -19,13 +19,13 @@ final class DerivedViewSweepsTest extends DbTestCase
     {
         $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
 
-        $report = $this->sweeps($clock)->sweep($clock->now()->modify('+1 second'));
+        $report = $this->sweeps($clock)->rebuildTrending($clock->now()->modify('+1 second'));
 
         self::assertSame(
             [TrendingWindow::Day, TrendingWindow::Week],
             array_map(
                 static fn (TrendingBuildReportModel $build): TrendingWindow => $build->window,
-                $report->trending->builds,
+                $report->builds,
             ),
         );
     }
@@ -34,9 +34,18 @@ final class DerivedViewSweepsTest extends DbTestCase
     {
         $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
 
-        $report = $this->sweeps($clock)->sweep($clock->now());
+        $report = $this->sweeps($clock)->rebuildTrending($clock->now());
 
-        self::assertSame([], $report->trending->builds);
+        self::assertSame([], $report->builds);
+    }
+
+    public function testSweepsTheSavedSearchMembershipsWithinTheDeadline(): void
+    {
+        $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
+
+        $report = $this->sweeps($clock)->sweepMemberships($clock->now()->modify('+1 minute'));
+
+        self::assertTrue($report->caughtUp);
     }
 
     private function sweeps(MockClock $clock): DerivedViewSweeps

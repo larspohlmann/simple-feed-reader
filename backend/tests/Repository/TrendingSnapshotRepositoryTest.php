@@ -20,7 +20,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     {
         [$one, $two] = $this->twoEntries();
 
-        $this->snapshots()->replace(self::report(TrendingWindow::Day, 2), [self::story($one, $two)]);
+        $this->replace(self::report(TrendingWindow::Day, 2), [self::story($one, $two)]);
         $this->entityManager->clear();
 
         self::assertSame(1, $this->storyCount(TrendingWindow::Day));
@@ -36,10 +36,10 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     public function testReplacingADayLeavesTheWeekAndDropsTheOldDay(): void
     {
         [$one, $two] = $this->twoEntries();
-        $this->snapshots()->replace(self::report(TrendingWindow::Day, 1), [self::story($one, $two)]);
-        $this->snapshots()->replace(self::report(TrendingWindow::Week, 1), [self::story($one, $two)]);
+        $this->replace(self::report(TrendingWindow::Day, 1), [self::story($one, $two)]);
+        $this->replace(self::report(TrendingWindow::Week, 1), [self::story($one, $two)]);
 
-        $this->snapshots()->replace(self::report(TrendingWindow::Day, 0), []);
+        $this->replace(self::report(TrendingWindow::Day, 0), []);
 
         self::assertSame(0, $this->storyCount(TrendingWindow::Day));
         self::assertSame(1, $this->storyCount(TrendingWindow::Week));
@@ -49,7 +49,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     public function testPurgingAnEntryRemovesItsStoryLink(): void
     {
         [$one, $two] = $this->twoEntries();
-        $this->snapshots()->replace(self::report(TrendingWindow::Day, 1), [self::story($one, $two)]);
+        $this->replace(self::report(TrendingWindow::Day, 1), [self::story($one, $two)]);
 
         $this->entityManager->getConnection()->executeStatement('DELETE FROM entry WHERE id = ?', [$one]);
 
@@ -58,7 +58,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
 
     public function testBuiltAtIsReadBackAsUtcPerWindow(): void
     {
-        $this->snapshots()->replace(self::report(TrendingWindow::Week, 0), []);
+        $this->replace(self::report(TrendingWindow::Week, 0), []);
 
         $builtAt = $this->snapshots()->builtAtByWindow();
 
@@ -80,7 +80,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
             $entries,
         );
 
-        $this->snapshots()->replace(
+        $this->replace(
             self::report(TrendingWindow::Day, 1),
             [new TrendingStoryModel($members, self::utc('2031-05-14 08:00:00'), self::utc('2031-05-14 09:00:00'))],
         );
@@ -97,7 +97,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
             self::utc('2031-05-14 09:00:00'),
         );
 
-        $this->snapshots()->replace(self::report(TrendingWindow::Day, 1), [$story]);
+        $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
 
         $row = $this->entityManager->getConnection()
             ->fetchAssociative('SELECT outlet_count, first_seen, last_seen FROM trending_story');
@@ -105,6 +105,20 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         self::assertEquals(1, $row['outlet_count']);
         self::assertSame('2031-05-14 08:00:00', $row['first_seen']);
         self::assertSame('2031-05-14 09:00:00', $row['last_seen']);
+    }
+
+    public function testDurationsAreReadBackPerWindow(): void
+    {
+        $this->replace(self::report(TrendingWindow::Week, 0), []);
+
+        self::assertSame(['week' => 311], $this->snapshots()->durationMillisecondsByWindow());
+    }
+
+    /** @param list<TrendingStoryModel> $stories */
+    private function replace(TrendingBuildReportModel $report, array $stories): void
+    {
+        $this->snapshots()->replaceStories($report->window, $stories);
+        $this->snapshots()->recordSnapshot($report);
     }
 
     private static function utc(string $moment): \DateTimeImmutable

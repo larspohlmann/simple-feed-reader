@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
-use App\Http\MaintenanceTickJson;
 use App\Enum\TrendingWindow;
+use App\Http\MaintenanceTickJson;
 use App\Service\Image\Model\ImageVerificationReportModel;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;

@@ -43,19 +43,39 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
         return $builtAt;
     }
 
+    /** @return array<string, int> duration_ms of each window's last build, by window value; absent if never built */
+    public function durationMillisecondsByWindow(): array
+    {
+        /** @var list<array{time_window: string, duration_ms: int|string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()
+            ->fetchAllAssociative('SELECT time_window, duration_ms FROM trending_snapshot');
+
+        $durations = [];
+        foreach ($rows as $row) {
+            $durations[$row['time_window']] = (int) $row['duration_ms'];
+        }
+
+        return $durations;
+    }
+
     /**
-     * Deleting the window's stories cascades to their members. The caller wraps this in its transaction, so readers
-     * keep the old snapshot until the commit (#2017).
+     * Deleting the window's stories cascades to their members. The caller wraps this and recordSnapshot() in one
+     * transaction, so readers keep the old snapshot until the commit (#2017).
      *
      * @param list<TrendingStoryModel> $stories
      */
-    public function replace(TrendingBuildReportModel $report, array $stories): void
+    public function replaceStories(TrendingWindow $window, array $stories): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement('DELETE FROM trending_story WHERE time_window = ?', [$report->window->value]);
+        $connection->executeStatement('DELETE FROM trending_story WHERE time_window = ?', [$window->value]);
         foreach ($stories as $story) {
-            $this->insertStory($connection, $report->window, $story);
+            $this->insertStory($connection, $window, $story);
         }
+    }
+
+    public function recordSnapshot(TrendingBuildReportModel $report): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
         $connection->executeStatement('DELETE FROM trending_snapshot WHERE time_window = ?', [$report->window->value]);
         $connection->insert('trending_snapshot', [
             'time_window' => $report->window->value,

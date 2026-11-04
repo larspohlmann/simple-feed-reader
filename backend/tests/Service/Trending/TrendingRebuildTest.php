@@ -10,6 +10,7 @@ use App\Service\Trending\Model\TrendingBuildReportModel;
 use App\Service\Trending\Model\TrendingRebuildReportModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingWiring;
+use App\Tests\Support\TickingClock;
 use Symfony\Component\Clock\MockClock;
 
 final class TrendingRebuildTest extends DbTestCase
@@ -43,6 +44,28 @@ final class TrendingRebuildTest extends DbTestCase
         self::assertSame([TrendingWindow::Day], self::windowsOf($this->rebuildDue()));
     }
 
+    public function testBeforeADeadlineAWindowStartsOnlyIfItsLastBuildFitsInTheTimeLeft(): void
+    {
+        $this->snapshotBuiltAt(TrendingWindow::Day, '2031-05-14 11:00:00', 2_000);
+        $this->snapshotBuiltAt(TrendingWindow::Week, '2031-05-14 10:00:00', 1_000);
+        $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
+
+        $report = TrendingWiring::rebuild($this->entityManager, $clock)
+            ->rebuildDueBefore($clock->now()->modify('+1 second'));
+
+        self::assertSame([TrendingWindow::Week], self::windowsOf($report));
+    }
+
+    public function testBeforeADeadlineTheNextWindowWaitsWhenTheBuildBeforeItUsedUpTheTime(): void
+    {
+        $clock = new TickingClock(new \DateTimeImmutable('2031-05-14 12:00:00', new \DateTimeZone('UTC')), 1);
+
+        $report = TrendingWiring::rebuild($this->entityManager, $clock)
+            ->rebuildDueBefore($clock->now()->modify('+4 seconds'));
+
+        self::assertSame([TrendingWindow::Day], self::windowsOf($report));
+    }
+
     private function rebuildDue(): TrendingRebuildReportModel
     {
         $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
@@ -50,9 +73,11 @@ final class TrendingRebuildTest extends DbTestCase
         return TrendingWiring::rebuild($this->entityManager, $clock)->rebuildDue();
     }
 
-    private function snapshotBuiltAt(TrendingWindow $window, string $builtAt): void
+    private function snapshotBuiltAt(TrendingWindow $window, string $builtAt, int $durationMilliseconds = 0): void
     {
-        $this->entityManager->persist(new TrendingSnapshot($window, new \DateTimeImmutable($builtAt), 0, 0, 0, 0));
+        $this->entityManager->persist(
+            new TrendingSnapshot($window, new \DateTimeImmutable($builtAt), 0, 0, $durationMilliseconds, 0),
+        );
         $this->entityManager->flush();
     }
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Trending\Pass;
 
-/** One build's wall time and peak memory, both recorded with its snapshot (#2017). */
 final readonly class BuildStopwatch
 {
     private function __construct(private int $startedAtNanoseconds)

@@ -21,10 +21,30 @@ final readonly class TrendingRebuild
 
     public function rebuildDue(): TrendingRebuildReportModel
     {
+        return $this->rebuildDueWindowsWhere(static fn (): bool => true);
+    }
+
+    /** Starts a due window only while time is left for it: at least as much as its last build took. */
+    public function rebuildDueBefore(\DateTimeImmutable $deadline): TrendingRebuildReportModel
+    {
+        $lastDurations = $this->snapshots->durationMillisecondsByWindow();
+
+        return $this->rebuildDueWindowsWhere(
+            function (TrendingWindow $window) use ($deadline, $lastDurations): bool {
+                $remaining = $this->remainingMilliseconds($deadline);
+
+                return $remaining > 0 && $remaining >= ($lastDurations[$window->value] ?? 0);
+            },
+        );
+    }
+
+    /** @param \Closure(TrendingWindow): bool $mayStart asked just before each due window */
+    private function rebuildDueWindowsWhere(\Closure $mayStart): TrendingRebuildReportModel
+    {
         $builtAt = $this->snapshots->builtAtByWindow();
         $builds = [];
         foreach (TrendingWindow::cases() as $window) {
-            if ($this->isDue($window, $builtAt[$window->value] ?? null)) {
+            if ($this->isDue($window, $builtAt[$window->value] ?? null) && $mayStart($window)) {
                 $builds[] = $this->builder->build($window);
             }
         }
@@ -36,5 +56,10 @@ final readonly class TrendingRebuild
     {
         return $builtAt === null
             || $this->clock->now()->getTimestamp() - $builtAt->getTimestamp() >= $window->rebuildIntervalSeconds();
+    }
+
+    private function remainingMilliseconds(\DateTimeImmutable $deadline): int
+    {
+        return intdiv((int) $deadline->format('Uu') - (int) $this->clock->now()->format('Uu'), 1_000);
     }
 }

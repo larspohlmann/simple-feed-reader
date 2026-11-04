@@ -9,7 +9,7 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Clock\MockClock;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /** ImageVerificationSweep over a stub downloader and no rendition probes, on one shared clock. */
@@ -23,7 +23,7 @@ final class ImageVerificationSweepWiring
         ContainerInterface $container,
         EntityManagerInterface $entityManager,
         StubGuardedImageDownloader $downloader,
-        MockClock $clock,
+        ClockInterface $clock,
     ): ImageVerificationSweep {
         $pendingVerifications = $container->get(PendingImageVerificationRepository::class);
         $verifier = new ImageVerifier(

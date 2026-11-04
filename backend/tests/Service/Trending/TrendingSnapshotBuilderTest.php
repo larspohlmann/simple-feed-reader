@@ -10,6 +10,7 @@ use App\Enum\TrendingWindow;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Trending\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SimulatedFailure;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
@@ -123,8 +124,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         try {
             $builder->build(TrendingWindow::Day);
             self::fail('the failure after the replacement must surface');
-        } catch (\RuntimeException) {
-            // expected: the transaction rolls back
+        } catch (SimulatedFailure) {
         }
 
         self::assertSame(
@@ -145,7 +145,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
                     static function (EntityManagerInterface $entityManager) use ($func): never {
                         $func($entityManager);
 
-                        throw new \RuntimeException('Simulated failure after the replacement.');
+                        throw new SimulatedFailure('Simulated failure after the replacement.');
                     },
                 );
             }

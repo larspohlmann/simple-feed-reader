@@ -6,6 +6,7 @@ namespace App\Service\Maintenance;
 
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\SendDueDigests;
+use App\Service\Maintenance\Model\DerivedViewsReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Recommendation\Run\ForYouSweep;
@@ -53,7 +54,9 @@ final readonly class MaintenanceTick
         $followUpFetches = $this->followUpFetchSweeps->sweep($deadline);
         $profileImages = $this->socialMaintenance->refreshProfileImages($deadline);
         $hiddenProfiles = $this->socialMaintenance->switchHiddenProfiles($deadline);
+        $memberships = $this->derivedViewSweeps->sweepMemberships($deadline);
         $privateFeedSync = $this->socialMaintenance->syncPrivateFeeds($deadline);
+        $trending = $this->derivedViewSweeps->rebuildTrending($deadline);
 
         return new MaintenanceSweepsModel(
             $recommendations,
@@ -62,7 +65,7 @@ final readonly class MaintenanceTick
             $profileImages,
             $hiddenProfiles,
             $privateFeedSync,
-            $this->derivedViewSweeps->sweep($deadline),
+            new DerivedViewsReportModel($memberships, $trending),
         );
     }
 }
