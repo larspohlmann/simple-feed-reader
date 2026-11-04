@@ -37,6 +37,11 @@ async function stubPost(page: Page, counts: CountsAnswer): Promise<void> {
     (url) => url.pathname === '/api/entries/1/social',
     (route) => route.fulfill(counts),
   );
+  // No viewer: the row shows plain counts, not the reply and repost buttons (#1962).
+  await page.route(
+    (url) => url.pathname === '/api/entries/1/social/viewer',
+    (route) => route.fulfill({ status: 404 }),
+  );
   await page.route(
     (url) => url.pathname === '/api/entries/1/like',
     (route) => route.fulfill({ json: { isLiked: route.request().method() === 'PUT' } }),
