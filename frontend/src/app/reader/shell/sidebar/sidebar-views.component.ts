@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
@@ -7,8 +7,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { TrendingUnopened } from '../../trending/trending.models';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
-import { DEFAULT_TRENDING_WINDOW, NO_TRENDING_UNOPENED } from '../../trending/trending-window';
-import { TrendingWindowService } from '../../trending/trending-window.service';
+import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 
 /** The sidebar's first card: All items and the lists drawn from entry state, Trending and For you. */
 @Component({
@@ -23,7 +22,6 @@ export class SidebarViewsComponent {
   protected readonly ai = inject(AiAvailabilityService);
   protected readonly recs = inject(RecommendationsService);
   protected readonly preferences = inject(PreferencesService);
-  private readonly trendingWindow = inject(TrendingWindowService);
 
   readonly selection = input.required<Selection>();
   readonly totalUnread = input.required<number>();
@@ -34,12 +32,4 @@ export class SidebarViewsComponent {
   readonly forYouUnread = input(0);
   /** Unopened stories in the window the Trending link opens (#2017, decision 8). */
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
-  /** The link opens the window last opened on this device (D40). */
-  protected readonly trendingParams = computed(() => {
-    const window = this.trendingWindow.window();
-    return selectionQueryParams({
-      view: 'trending',
-      window: window === DEFAULT_TRENDING_WINDOW ? null : window,
-    });
-  });
 }

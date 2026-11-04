@@ -4,6 +4,7 @@ import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
+import { DEFAULT_TRENDING_WINDOW } from '../trending/trending-window';
 import { TrendingApi } from '../trending/trending-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
@@ -298,9 +299,10 @@ export class EntriesStore {
   /** Takes a card off the loaded Trending list at once, hiding its story in that list's window (#2017); a failed
    *  hide puts it back where it was, with the banner and its retry. */
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
-    const window = this.query()?.window;
+    const query = this.query();
     const index = this.rawEntries().findIndex((entry) => entry.id === entryId);
-    if (!window || index < 0) return;
+    if (query?.view !== 'trending' || index < 0) return;
+    const window = query.window ?? DEFAULT_TRENDING_WINDOW;
     const card = this.rawEntries()[index];
     this.error.set(null);
     this.failedOperation.set(null);

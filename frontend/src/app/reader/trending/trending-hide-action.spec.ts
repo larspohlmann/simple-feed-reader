@@ -24,13 +24,6 @@ describe('TrendingHideAction (#2017)', () => {
     reloadCountsQuietly.mockReset();
   });
 
-  it('applies to a Trending card only', () => {
-    const hide = action();
-
-    expect(hide.appliesTo(anEntry({ story: { outletCount: 3, viewed: false } }))).toBe(true);
-    expect(hide.appliesTo(anEntry())).toBe(false);
-  });
-
   it('hides the story and recounts once the server took it', () => {
     action().run(anEntry({ id: 7 }));
 

@@ -257,6 +257,7 @@ final class TrendingStoriesTest extends DbTestCase
             [$betaEntry->requireId(), $copy->requireId(), $gammaEntry->requireId()],
             self::idsOf($stories[0]->lead->duplicates),
         );
+        self::assertSame(4, $stories[0]->outletCount, "the copy's feed is one more source");
     }
 
     public function testACopyOfTheLeadFromAFeedAlreadyInTheStoryOrFromTheLeadsOwnFeedDoesNotRepeat(): void
@@ -278,6 +279,7 @@ final class TrendingStoriesTest extends DbTestCase
             [$betaCopy->requireId(), $gammaInStory->requireId()],
             self::idsOf($stories[0]->lead->duplicates),
         );
+        self::assertSame(3, $stories[0]->outletCount, 'feeds the story already counted count once');
     }
 
     public function testAStoryIsViewedOnceTheReaderOpenedAnyOfItsEntriesASocialOneIncluded(): void

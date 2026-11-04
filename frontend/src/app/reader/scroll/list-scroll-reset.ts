@@ -11,6 +11,7 @@ import {
 import { distinctUntilChanged, skip, startWith } from 'rxjs';
 import { ListPreferences } from '../list/list-preferences.service';
 import { ListScrollMemory } from './list-scroll-memory';
+import { AccountViewContext } from '../query/account-view-context';
 import { Selection, listSelectionFrom, sameSelection } from '../query/query';
 import { readerMatcher, selectionFromRoute } from '../query/reader-matcher';
 
@@ -79,6 +80,7 @@ export class ListScrollReset {
   private readonly router = inject(Router);
   private readonly memory = inject(ListScrollMemory);
   private readonly listPreferences = inject(ListPreferences);
+  private readonly viewContext = inject(AccountViewContext);
 
   /** Where the user was last, or null before the first list is seen. */
   private previous: ReaderPlace | null = null;
@@ -124,8 +126,12 @@ export class ListScrollReset {
     const match = readerMatcher(tree.root.children[PRIMARY_OUTLET]?.segments ?? []);
     if (match === null) return null;
     const pathParams = pathParamsOf(match);
-    const shown = selectionFromRoute(pathParams, convertToParamMap(tree.queryParams)).selection;
-    const list = pathParams.has('savedSearch') ? shown : listSelectionFrom(tree.queryParams);
+    const context = this.viewContext.context();
+    const queryParams = convertToParamMap(tree.queryParams);
+    const shown = selectionFromRoute(pathParams, queryParams, context).selection;
+    const list = pathParams.has('savedSearch')
+      ? shown
+      : listSelectionFrom(tree.queryParams, context);
     return { list, shown };
   }
 }

@@ -11,7 +11,6 @@ import { CatalogStore } from '../../feeds/catalog/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto, ListOrder, SubscriptionDto } from '../../models';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { EntriesStore } from '../../state/entries.store';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { MagazineBlock } from '../magazine/magazine-block';
@@ -78,7 +77,6 @@ function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
       { provide: ListScrollMemory, useValue: memory },
       { provide: CatalogStore, useValue: catalog },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
-      { provide: EntriesStore, useValue: {} },
       { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
       ...providers,
     ],

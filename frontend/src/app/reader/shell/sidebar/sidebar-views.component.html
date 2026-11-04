@@ -69,7 +69,7 @@
       class="nav trending"
       [class.active]="selection().kind === 'trending'"
       [routerLink]="['/']"
-      [queryParams]="trendingParams()"
+      [queryParams]="selectionQueryParams({ view: 'trending' })"
       queryParamsHandling="merge"
     >
       <app-icon name="trending_up" size="md" />

@@ -1,4 +1,4 @@
-import { Component, forwardRef } from '@angular/core';
+import { Component, forwardRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslocoService } from '@jsverse/transloco';
@@ -468,26 +468,34 @@ describe('EntryActionsComponent', () => {
       icon: 'visibility_off',
       label: 'reader.hideStory',
       hint: 'reader.actionHint.hideStory',
-      appliesTo: (entry) => entry.id === 7,
       run: (entry) => ran.push(entry),
     };
+    const listAction = signal<EntryRowAction | null>(rowAction);
     const withRowAction = (entry: EntryDto) => {
       TestBed.configureTestingModule({
-        providers: [{ provide: ENTRY_ROW_ACTION, useValue: rowAction }],
+        providers: [{ provide: ENTRY_ROW_ACTION, useValue: listAction }],
       });
       return mount(entry);
     };
     const labels = (fixture: ReturnType<typeof mount>) =>
       buttons(fixture).map((button) => button.getAttribute('aria-label'));
 
-    beforeEach(() => (ran.length = 0));
+    beforeEach(() => {
+      ran.length = 0;
+      listAction.set(rowAction);
+    });
 
-    it('is offered last, on the entries it applies to', () => {
+    it('is offered last', () => {
       expect(labels(withRowAction(anEntry({ id: 7 }))).at(-1)).toBe('Hide story');
     });
 
-    it('stays out on an entry it does not apply to', () => {
-      expect(labels(withRowAction(anEntry({ id: 8 })))).not.toContain('Hide story');
+    it('leaves once the list on screen has none', () => {
+      const fixture = withRowAction(anEntry({ id: 7 }));
+
+      listAction.set(null);
+      fixture.detectChanges();
+
+      expect(labels(fixture)).not.toContain('Hide story');
     });
 
     it('stays out where no list provides one', () => {

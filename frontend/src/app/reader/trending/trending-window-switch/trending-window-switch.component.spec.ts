@@ -30,11 +30,11 @@ describe('TrendingWindowSwitchComponent', () => {
     expect(option(fixture, '7 days').getAttribute('aria-current')).toBeNull();
   });
 
-  it('links the week by its window and the day by none (D40)', () => {
+  it('links each window by name, so picking one stores it (D40)', () => {
     const fixture = mount('week');
 
     expect(option(fixture, '7 days').getAttribute('href')).toBe('/?window=week');
     expect(option(fixture, '7 days').getAttribute('aria-current')).toBe('true');
-    expect(option(fixture, '24 h').getAttribute('href')).toBe('/');
+    expect(option(fixture, '24 h').getAttribute('href')).toBe('/?window=day');
   });
 });

@@ -73,7 +73,10 @@ describe('ListScrollMemory', () => {
 
   it('keeps saved-search and direct-search positions separate through a reload', () => {
     const saved = sel({ kind: 'saved-search', id: 7, unread: false });
-    const direct = selectionFromParams(convertToParamMap({ q: 'climate' })).selection;
+    const direct = selectionFromParams(convertToParamMap({ q: 'climate' }), {
+      trending: true,
+      trendingWindow: 'day',
+    }).selection;
     mem.save(saved, 640);
     mem.save(direct, 120);
 

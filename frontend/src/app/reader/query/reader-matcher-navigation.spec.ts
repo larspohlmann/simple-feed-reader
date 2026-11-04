@@ -37,7 +37,10 @@ describe('reader navigation off a saved-search path (#1118)', () => {
 
     expect(router.url).toBe('/');
     const leaf = leafRoute(router);
-    const { selection } = selectionFromRoute(leaf.snapshot.paramMap, leaf.snapshot.queryParamMap);
+    const { selection } = selectionFromRoute(leaf.snapshot.paramMap, leaf.snapshot.queryParamMap, {
+      trending: true,
+      trendingWindow: 'day',
+    });
     expect(selection.kind).toBe('all');
   });
 
@@ -53,7 +56,10 @@ describe('reader navigation off a saved-search path (#1118)', () => {
 
     expect(router.url).toBe('/searches/saved/4-climate');
     const leaf = leafRoute(router);
-    const { selection } = selectionFromRoute(leaf.snapshot.paramMap, leaf.snapshot.queryParamMap);
+    const { selection } = selectionFromRoute(leaf.snapshot.paramMap, leaf.snapshot.queryParamMap, {
+      trending: true,
+      trendingWindow: 'day',
+    });
     expect(selection.kind).toBe('saved-search');
   });
 });

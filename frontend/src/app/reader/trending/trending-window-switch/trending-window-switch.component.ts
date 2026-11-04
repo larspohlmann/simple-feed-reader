@@ -14,7 +14,7 @@ export class TrendingWindowSwitchComponent {
   readonly window = input.required<TrendingWindow>();
   protected readonly windows: readonly TrendingWindow[] = ['day', 'week'];
   protected readonly links: Readonly<Record<TrendingWindow, Params>> = {
-    day: { window: null },
+    day: { window: 'day' },
     week: { window: 'week' },
   };
 }

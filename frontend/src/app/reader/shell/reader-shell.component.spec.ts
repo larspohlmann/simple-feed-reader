@@ -307,30 +307,70 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('the Trending window in the URL (#2017, D40)', () => {
+    let navigate: jest.SpyInstance;
     const openTrending = (params: Record<string, string>) => {
       TestBed.inject(PreferencesService).setTrendingEnabled(false);
-      jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       qp.next(convertToParamMap({ view: 'trending', ...params }));
       const fixture = boot();
+      navigate.mockClear();
       TestBed.inject(PreferencesService).setTrendingEnabled(true);
       fixture.detectChanges();
-      return ctrl.expectOne((request) => request.url === 'https://api.test/api/trending');
+      const request = ctrl.expectOne((each) => each.url === 'https://api.test/api/trending');
+      return { fixture, request };
     };
+    const windowsWritten = () =>
+      navigate.mock.calls
+        .filter(([, extras]) => extras?.replaceUrl === true)
+        .map(([, extras]) => extras.queryParams);
+    const story = () => ({ ...entry, id: 77, story: { outletCount: 3, viewed: false } });
+    const hideButtons = (fixture: { nativeElement: HTMLElement }) =>
+      fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]');
 
-    it('opens the window a deep link names, and remembers it for the sidebar link', () => {
-      const request = openTrending({ window: 'week' });
+    it('opens the window a deep link names, remembers it, and leaves the URL alone', () => {
+      const { request } = openTrending({ window: 'week' });
 
       expect(request.request.params.get('window')).toBe('week');
+      expect(TestBed.inject(TrendingWindowService).window()).toBe('week');
+      expect(windowsWritten()).toEqual([]);
+      request.flush({ window: 'week', builtAt: null, stories: [] });
+    });
+
+    it('lets a named day win over a stored week, and remembers the day', () => {
+      TestBed.inject(TrendingWindowService).set('week');
+      const { request } = openTrending({ window: 'day' });
+
+      expect(request.request.params.get('window')).toBe('day');
+      expect(TestBed.inject(TrendingWindowService).window()).toBe('day');
+      request.flush({ window: 'day', builtAt: null, stories: [] });
+    });
+
+    it('opens the stored week for a bare link, names it in the URL, and keeps it stored', () => {
+      TestBed.inject(TrendingWindowService).set('week');
+      const { request } = openTrending({});
+
+      expect(request.request.params.get('window')).toBe('week');
+      expect(windowsWritten()).toEqual([{ window: 'week' }]);
       expect(TestBed.inject(TrendingWindowService).window()).toBe('week');
       request.flush({ window: 'week', builtAt: null, stories: [] });
     });
 
-    it('opens the day when the URL names no window', () => {
-      const request = openTrending({});
+    it("ends every Trending card's action row in Hide", () => {
+      const { fixture, request } = openTrending({ window: 'day' });
+      request.flush({ window: 'day', builtAt: null, stories: [story()] });
+      fixture.detectChanges();
 
-      expect(request.request.params.get('window')).toBe('day');
-      request.flush({ window: 'day', builtAt: null, stories: [] });
+      expect(hideButtons(fixture)).toHaveLength(1);
     });
+  });
+
+  it('offers no Hide on a list that is not Trending (#2017, D40)', () => {
+    const fixture = boot({ story: { outletCount: 3, viewed: false } });
+
+    expect(fixture.nativeElement.querySelectorAll('.row, app-entry-row').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]')).toHaveLength(
+      0,
+    );
   });
 
   describe('previews still loading (#1502)', () => {

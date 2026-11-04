@@ -14,6 +14,7 @@ use App\Repository\TrendingStoryRepository;
 use App\Service\Trending\Model\RankedStoryModel;
 use App\Service\Trending\Model\TrendingUnopenedModel;
 use App\Service\Trending\Model\TrendingPageModel;
+use App\Service\Trending\Model\TrendingStoryCardModel;
 use App\Service\Trending\Pass\StoryCardSource;
 
 /** One reader's Trending: the shared snapshot cut to their subscriptions and their threshold (#2017). */
@@ -37,7 +38,7 @@ final readonly class TrendingStories
         return new TrendingPageModel(
             $window,
             $this->snapshots->lastBuilds()->builtAt($window),
-            $this->sourceFor($userId, $ranked)->cardsOf($ranked),
+            $this->withLeadCopies($userId, $this->sourceFor($userId, $ranked)->cardsOf($ranked)),
         );
     }
 
@@ -78,13 +79,11 @@ final readonly class TrendingStories
     {
         $storyIds = self::storyIdsOf($ranked);
         $entryIdsByStory = $this->stories->articleEntryIdsByStory($userId, $storyIds);
-        $rowsByEntryId = $this->rowsByEntryId($userId, array_merge([], ...array_values($entryIdsByStory)));
 
         return new StoryCardSource(
             $entryIdsByStory,
-            $rowsByEntryId,
+            $this->rowsByEntryId($userId, array_merge([], ...array_values($entryIdsByStory))),
             array_flip($this->stories->viewedStoryIds($userId, $storyIds)),
-            $this->copiesByUrlHash($userId, $rowsByEntryId),
         );
     }
 
@@ -108,15 +107,17 @@ final readonly class TrendingStories
     }
 
     /**
-     * @param array<int, EntryListRow> $rowsByEntryId
+     * Every other subscribed copy of a lead's article is one more outlet, inside the story or not.
      *
-     * @return array<string, list<EntryListRow>>
+     * @param list<TrendingStoryCardModel> $cards
+     *
+     * @return list<TrendingStoryCardModel>
      */
-    private function copiesByUrlHash(int $userId, array $rowsByEntryId): array
+    private function withLeadCopies(int $userId, array $cards): array
     {
         $urlHashes = array_values(array_unique(array_filter(array_map(
-            static fn (EntryListRow $row): ?string => $row->entry->getUrlHash(),
-            array_values($rowsByEntryId),
+            static fn (TrendingStoryCardModel $card): ?string => $card->lead->entry->getUrlHash(),
+            $cards,
         ))));
 
         $copiesByUrlHash = [];
@@ -125,6 +126,11 @@ final readonly class TrendingStories
             $copiesByUrlHash[(string) $copy->entry->getUrlHash()][] = $copy;
         }
 
-        return $copiesByUrlHash;
+        return array_map(
+            static fn (TrendingStoryCardModel $card): TrendingStoryCardModel => $card->withCopies(
+                $copiesByUrlHash[$card->lead->entry->getUrlHash() ?? ''] ?? [],
+            ),
+            $cards,
+        );
     }
 }

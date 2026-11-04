@@ -301,13 +301,6 @@ describe('SidebarComponent', () => {
       expect(trendingNav(element).classList).toContain('active');
     });
 
-    it('opens the window the account last opened (D40)', () => {
-      localStorage.setItem('sfr.user.1.trending-window', 'week');
-      const element = mount().nativeElement as HTMLElement;
-
-      expect(trendingNav(element).getAttribute('href')).toContain('window=week');
-    });
-
     it('is gone, badge and all, once the account switched Trending off (D39)', () => {
       const fixture = mount({ trendingUnopened: { window: 'day', unopened: 4 } });
       TestBed.inject(PreferencesService).setTrendingEnabled(false);

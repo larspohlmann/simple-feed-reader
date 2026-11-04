@@ -1,13 +1,13 @@
 import { DestroyRef, Injectable, computed, effect, inject, untracked } from '@angular/core';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Params, Router, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
-import { OfferedViews, isDirectSearch, sameSelection } from '../query/query';
-import { PreferencesService } from '../../core/preferences/preferences.service';
+import { isDirectSearch, sameSelection } from '../query/query';
+import { AccountViewContext } from '../query/account-view-context';
 import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
@@ -22,7 +22,7 @@ export class ReaderRouteState {
   private readonly entries = inject(EntriesStore);
   private readonly listPreferences = inject(ListPreferences);
   private readonly linkNavigation = inject(LinkReaderNavigation);
-  private readonly preferences = inject(PreferencesService);
+  private readonly viewContext = inject(AccountViewContext);
   private readonly trendingWindow = inject(TrendingWindowService);
 
   private readonly queryParameters = toSignal(this.route.queryParamMap, {
@@ -31,15 +31,8 @@ export class ReaderRouteState {
   private readonly pathParameters = toSignal(this.route.paramMap, {
     initialValue: convertToParamMap({}),
   });
-  private readonly offered = computed<OfferedViews>(() => ({
-    trending: this.preferences.trendingEnabled(),
-  }));
   private readonly parsed = computed(() =>
-    selectionFromRoute(this.pathParameters(), this.queryParameters(), this.offered()),
-  );
-  /** The URL names Trending on an account that switched it off; the parse already opened All items. */
-  private readonly namesRefusedView = computed(
-    () => this.queryParameters().get('view') === 'trending' && !this.offered().trending,
+    selectionFromRoute(this.pathParameters(), this.queryParameters(), this.viewContext.context()),
   );
 
   /** Structural equality: an entry-only URL change keeps the reference, so the list does not reload. */
@@ -82,11 +75,13 @@ export class ReaderRouteState {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
     });
+    // Waits for the account, whose stored window a bare Trending link opens.
     effect(() => {
-      if (!this.namesRefusedView()) return;
-      untracked(() => this.dropViewFromUrl());
+      const correction = this.parsed().urlCorrection;
+      if (correction === null || !this.listPreferences.ready()) return;
+      untracked(() => this.correctUrl(correction));
     });
-    // The window last opened is the one the sidebar's Trending link and badge default to.
+    // A bare link opened the stored window, so only a window the URL names changes what is stored.
     effect(() => {
       const window = this.selection().window;
       if (window === undefined) return;
@@ -101,11 +96,11 @@ export class ReaderRouteState {
     });
   }
 
-  /** So the URL agrees with the All items list the parse opened in its place. */
-  private dropViewFromUrl(): void {
+  /** So the URL says what the parse opened. */
+  private correctUrl(correction: Params): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { view: null, window: null },
+      queryParams: correction,
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });

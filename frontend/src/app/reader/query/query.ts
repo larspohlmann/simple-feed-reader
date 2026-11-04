@@ -4,7 +4,7 @@ import { TrendingWindow } from '../trending/trending.models';
 import { FeedGroupName, isFeedGroupName } from '../../core/feed-group';
 import { entryIdFromParam } from './slug';
 import { isSearchableTerm, normalizeSearchInput, phraseWithin } from './search-term';
-import { DEFAULT_TRENDING_WINDOW, isTrendingWindow } from '../trending/trending-window';
+import { isTrendingWindow } from '../trending/trending-window';
 import {
   NetworkFeedKind,
   SocialNetworkName,
@@ -214,20 +214,23 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   return params;
 }
 
-/** The views an account may switch off (D39); a URL naming one that is off opens All items, as an unknown view does. */
-export interface OfferedViews {
+/** What the account brings to reading a URL: whether it offers Trending (D39), and the window a Trending link that
+ *  names none opens (D40). */
+export interface ViewContext {
   trending: boolean;
+  trendingWindow: TrendingWindow;
 }
 
-const EVERY_VIEW: OfferedViews = { trending: true };
-
-export function selectionFromParams(
-  paramMap: ParamMap,
-  offered: OfferedViews = EVERY_VIEW,
-): {
+/** What a URL names, and how the URL must change to say the same; null when it already does. */
+export interface ParsedRoute {
   selection: Selection;
   entryId: number | null;
-} {
+  urlCorrection: Params | null;
+}
+
+type ParsedView = Omit<ParsedRoute, 'entryId'>;
+
+export function selectionFromParams(paramMap: ParamMap, context: ViewContext): ParsedRoute {
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(paramMap, 'entry'));
 
@@ -238,13 +241,11 @@ export function selectionFromParams(
   if (isSearchableTerm(term)) {
     // A `?q=` search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
-    return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
+    const selection: Selection = { kind: 'search', id: null, unread: false, term };
+    return { selection, entryId, urlCorrection: null };
   }
 
-  return {
-    selection: namedViewSelection(paramMap, offered) ?? feedScopedSelection(paramMap),
-    entryId,
-  };
+  return { ...viewFromParams(paramMap, context), entryId };
 }
 
 /** The views that name no feed and carry nothing beyond their name. */
@@ -256,21 +257,29 @@ function isNamedView(view: string | null): view is NamedView {
   return (NAMED_VIEWS as readonly (string | null)[]).includes(view);
 }
 
-/** Null for a feed-scoped list, and for a view this account does not offer. */
-function namedViewSelection(paramMap: ParamMap, offered: OfferedViews): Selection | null {
+function viewFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
   const view = selectionParam(paramMap, 'view');
-  if (view === 'trending') return offered.trending ? trendingSelection(paramMap) : null;
-  return isNamedView(view) ? { kind: view, id: null, unread: false } : null;
+  if (view === 'trending') return trendingFromParams(paramMap, context);
+  const selection: Selection = isNamedView(view)
+    ? { kind: view, id: null, unread: false }
+    : feedScopedSelection(paramMap);
+  return { selection, urlCorrection: null };
 }
 
-/** The day when the URL names no window, or one Trending does not know. */
-function trendingSelection(paramMap: ParamMap): Selection {
-  const window = selectionParam(paramMap, 'window');
+/** Switched off, Trending opens All items, as an unknown view does, and leaves the URL. A URL naming no window
+ *  (or an unknown one) opens the account's window and gains it. */
+function trendingFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
+  if (!context.trending) {
+    return {
+      selection: feedScopedSelection(paramMap),
+      urlCorrection: { view: null, window: null },
+    };
+  }
+  const named = selectionParam(paramMap, 'window');
+  const window = isTrendingWindow(named) ? named : context.trendingWindow;
   return {
-    kind: 'trending',
-    id: null,
-    unread: false,
-    window: isTrendingWindow(window) ? window : DEFAULT_TRENDING_WINDOW,
+    selection: { kind: 'trending', id: null, unread: false, window },
+    urlCorrection: named === window ? null : { window },
   };
 }
 
@@ -303,8 +312,8 @@ export function networkKey(selection: Selection): string {
  *  over, and the one that clearing the search returns to. `selectionFromParams`
  *  gives a searchable `q` priority, so the covered list is invisible in the
  *  resulting selection even though the URL still carries it (#542). */
-export function listSelectionFrom(params: Params): Selection {
-  return selectionFromParams(convertToParamMap({ ...params, q: null })).selection;
+export function listSelectionFrom(params: Params, context: ViewContext): Selection {
+  return selectionFromParams(convertToParamMap({ ...params, q: null }), context).selection;
 }
 
 export function queryFromSelection(selection: Selection): EntryQuery {

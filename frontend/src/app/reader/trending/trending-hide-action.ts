@@ -14,10 +14,6 @@ export class TrendingHideAction implements EntryRowAction {
   private readonly entries = inject(EntriesStore);
   private readonly subscriptions = inject(SubscriptionsStore);
 
-  appliesTo(entry: EntryDto): boolean {
-    return entry.story !== undefined;
-  }
-
   run(entry: EntryDto): void {
     this.entries.hideTrendingStory(entry.id, {
       onSaved: () => this.subscriptions.reloadCountsQuietly(),
