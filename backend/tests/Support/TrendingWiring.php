@@ -15,7 +15,7 @@ use App\Service\Trending\StoryLinkSource\HeadlineLinks;
 use App\Service\Trending\StoryLinkSource\SharedUrlLinks;
 use App\Service\Trending\TrendingGrouping;
 use App\Service\Trending\TrendingRebuild;
-use App\Service\Trending\TrendingSnapshotBuilder;
+use App\Service\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Trending\SnapshotBuilder;
 
 use App\Entity\TrendingSnapshot;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\TrendingSnapshotBuilder;
+use App\Service\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SimulatedFailure;
 use App\Tests\Support\TrendingFixtures;

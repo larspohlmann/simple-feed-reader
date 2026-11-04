@@ -6,7 +6,7 @@ namespace App\Service\Trending\Model;
 
 use App\Enum\TrendingWindow;
 
-/** When each window's snapshot was last built and how long that took; a window never built has neither. */
+/** When each window's snapshot was last built and how long that took. */
 final readonly class TrendingLastBuildsModel
 {
     /**
@@ -22,8 +22,9 @@ final readonly class TrendingLastBuildsModel
         return $this->builtAtByWindow[$window->value] ?? null;
     }
 
-    public function durationMilliseconds(TrendingWindow $window): int
+    /** The last build's duration, or the window's estimate when it was never built. */
+    public function expectedDurationMilliseconds(TrendingWindow $window): int
     {
-        return $this->durationMillisecondsByWindow[$window->value] ?? 0;
+        return $this->durationMillisecondsByWindow[$window->value] ?? $window->firstBuildEstimateMilliseconds();
     }
 }

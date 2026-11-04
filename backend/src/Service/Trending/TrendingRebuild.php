@@ -9,12 +9,13 @@ use App\Repository\TrendingSnapshotRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Trending\SnapshotBuilder\SnapshotBuilderInterface;
 
 /** Rebuilds every window whose snapshot is missing or as old as its interval; the worker and the tick call it. */
 final readonly class TrendingRebuild
 {
     public function __construct(
-        private TrendingSnapshotBuilder $builder,
+        private SnapshotBuilderInterface $builder,
         private TrendingSnapshotRepository $snapshots,
         private NaiveUtcClock $clock,
     ) {
@@ -25,7 +26,7 @@ final readonly class TrendingRebuild
         return $this->rebuildDueWindowsWhere($this->snapshots->lastBuilds(), static fn (): bool => true);
     }
 
-    /** Starts a due window only while time is left for it: at least as much as its last build took. */
+    /** Starts a due window only while time is left for it: at least as much as its last build took, or its estimate. */
     public function rebuildDueBefore(\DateTimeImmutable $deadline): TrendingRebuildReportModel
     {
         $lastBuilds = $this->snapshots->lastBuilds();
@@ -35,7 +36,7 @@ final readonly class TrendingRebuild
             function (TrendingWindow $window) use ($deadline, $lastBuilds): bool {
                 $remaining = $this->remainingMilliseconds($deadline);
 
-                return $remaining > 0 && $remaining >= $lastBuilds->durationMilliseconds($window);
+                return $remaining > 0 && $remaining >= $lastBuilds->expectedDurationMilliseconds($window);
             },
         );
     }

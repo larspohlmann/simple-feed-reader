@@ -116,8 +116,8 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
 
         $lastBuilds = $this->snapshots()->lastBuilds();
 
-        self::assertSame(0, $lastBuilds->durationMilliseconds(TrendingWindow::Day));
-        self::assertSame(311, $lastBuilds->durationMilliseconds(TrendingWindow::Week));
+        self::assertSame(5_000, $lastBuilds->expectedDurationMilliseconds(TrendingWindow::Day), 'never built');
+        self::assertSame(311, $lastBuilds->expectedDurationMilliseconds(TrendingWindow::Week));
     }
 
     /** @param list<TrendingStoryModel> $stories */

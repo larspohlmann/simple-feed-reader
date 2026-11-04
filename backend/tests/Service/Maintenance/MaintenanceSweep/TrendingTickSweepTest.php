@@ -14,11 +14,11 @@ use Symfony\Component\Clock\MockClock;
 
 final class TrendingTickSweepTest extends DbTestCase
 {
-    public function testRebuildsTheDueWindowsWhileTimeIsLeft(): void
+    public function testRebuildsTheDueWindowsWhileTimeForTheirFirstBuildsIsLeft(): void
     {
         $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
 
-        $report = $this->sweep($clock)->run($clock->now()->modify('+1 second'));
+        $report = $this->sweep($clock)->run($clock->now()->modify('+30 seconds'));
 
         self::assertSame(
             [TrendingWindow::Day, TrendingWindow::Week],
