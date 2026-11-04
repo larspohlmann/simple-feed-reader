@@ -18,6 +18,8 @@ those feeds ran it. A switch in the list header picks the window.
    displays only entries of non-social feeds (`feed.network IS NULL`). YouTube and podcast feeds are ordinary
    feeds here: their episodes carry real headlines and show like articles. A story with no displayable entry
    is left out.
+   **Amended 2026-11-04:** a story shows only when at least **two** article feeds the reader follows cover it,
+   so a card is never a lone article whose other sources are invisible social posts.
 3. **Reposts count.** Three followed accounts reposting one post are three outlets: reposts are attention.
 4. **One snapshot per window, rebuilt in the background.** Grouping runs once for the whole instance over the
    window's entries and is stored; reading Trending is one query. Entries belong to feeds, not users, so the
@@ -27,8 +29,9 @@ those feeds ran it. A switch in the list header picks the window.
    week build does not fit Strato's tick: build the week alone and derive the day view from it.
 6. **No stable story ids.** A rebuild throws the old snapshot away. Read state stays where it lives: a story is
    *viewed* when any of its entries, social ones included, has `entry_state.is_viewed`.
-7. **Cards stay, dimmed.** Trending is a picture of what the news is about, not an inbox: a viewed story keeps
-   its place and is dimmed. No unread switch and no mark-all-read in the Trending header.
+7. **Cards stay.** Trending is a picture of what the news is about, not an inbox: a viewed story keeps its place
+   with the normal read-state mark only. **Amended 2026-11-04:** no dimming (it did not look good). No unread
+   switch and no mark-all-read in the Trending header.
 8. **The badge counts unopened stories** in the selected window.
 9. **The window is a device setting**, stored per account like the unread switch:
    `sfr.user.<userId>.trending-window`, default `day`.
@@ -120,8 +123,8 @@ those feeds ran it. A switch in the list header picks the window.
 27. **List header:** title and a `24 h | 7 days` switch with both options visible (`<app-segmented-choice>`).
 28. **Card.** In the magazine layout the lead goes through the normal magazine block, the kicker line shows
     "7 sources", and the footer lists the other outlets. In the list layout the same on an `entry-row`. A viewed
-    story uses the existing read-state styling. Opening the lead opens the article page; next and previous walk
-    the leads.
+    story uses the existing read-state styling, nothing more (decision 7). Opening the lead opens the article
+    page; next and previous walk the leads.
 29. **"Also in" is generalised.** `entry-duplicates` takes its copies and its label as inputs instead of reading
     `entry().duplicates`: duplicates pass "Also in", Trending passes "Also covered by". The footer shows at most
     4 names and "+N more", so the magazine planner's block height stays predictable.
@@ -151,6 +154,16 @@ those feeds ran it. A switch in the list header picks the window.
     generalised footer (the duplicates footer unchanged) and its 4-name cap. One Playwright smoke that stubs
     `/api/trending`. Live check on :4200: magazine and list layouts at phone and desktop width, Trending cards
     beside ordinary duplicates, dark mode.
+
+## Additions
+
+37. **Hide a story (added 2026-11-04).** A *Hide* icon in a Trending card's action row (Trending only, no undo)
+    records every entry of that story, social ones included, as hidden for the reader
+    (`trending_hidden_entry`: `user_id`, `entry_id`, `hidden_at`; PK both ids; both foreign keys `ON DELETE
+    CASCADE`, so retention clears it). A story containing any hidden entry is left out of the reader's list and
+    badge, so the event stays hidden after rebuilds even as it grows. `POST /api/trending/hidden` with
+    `{ window, entryId }` (the lead) answers 204; an entry in no story of that window is a 404 `problem+json`.
+    The card leaves the list at once; on failure it comes back.
 
 ## Out of scope
 
