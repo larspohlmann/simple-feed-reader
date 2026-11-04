@@ -30,7 +30,6 @@ final readonly class DigestSettingsController
     ) {
     }
 
-    /** Its own PATCH for the reason ReaderPreferencesController::updatePreferences() gives. */
     #[Route('/api/me/digest', name: 'api_me_update_digest', methods: ['PATCH'])]
     public function updateDigest(
         #[CurrentUser] User $user,

@@ -72,7 +72,7 @@ export function isTooShortToSearch(term: string): boolean {
 
 /** The individual words of a term, for marking them in result rows. Splits on
  *  the same whitespace class as the rest of the vocabulary and drops the empty
- *  piece a trailing space leaves. Lives beside `normalizeSearchInput` et al. */
+ *  piece a trailing space leaves. */
 export function searchWords(term: string): string[] {
   // A phrase is marked as one contiguous run, not word by word — the same
   // string the server matched — so a quoted `"climate change"` highlights only
