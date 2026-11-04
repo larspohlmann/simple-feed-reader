@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
@@ -8,6 +9,7 @@ import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handl
 import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { ENTRY_ROW_ACTION, EntryRowAction } from '../../entry/entry-actions/entry-row-action';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -130,6 +132,30 @@ it('opens a popover with the copy card and re-emits open for that copy', () => {
 
   (panel!.querySelector('app-entry-row .row') as HTMLElement).click();
   expect(opened).toHaveBeenCalledWith(dup);
+});
+
+it("gives the copies in the popover none of the list's own row action", () => {
+  const listAction: EntryRowAction = {
+    icon: 'visibility_off',
+    label: 'test.listAction',
+    hint: 'test.listAction',
+    run: jest.fn(),
+  };
+  const dup = entry({ id: 2, source: 'NDR SH' });
+  const fixture = mount(entry({ duplicates: [dup] }), () =>
+    TestBed.configureTestingModule({
+      providers: [{ provide: ENTRY_ROW_ACTION, useValue: signal(listAction) }],
+    }),
+  );
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const panel = TestBed.inject(OverlayContainer)
+    .getContainerElement()
+    .querySelector('.dup-popover')!;
+
+  expect(panel.querySelector('app-entry-row')).not.toBeNull();
+  expect(panel.querySelector('[aria-label="test.listAction"]')).toBeNull();
 });
 
 it('closes the popover once the copy is opened', () => {

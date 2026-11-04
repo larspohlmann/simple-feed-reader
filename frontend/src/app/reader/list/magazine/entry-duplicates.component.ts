@@ -8,6 +8,7 @@ import { relativeTime } from '../../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
+import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
 
 let nextId = 0;
 
@@ -21,7 +22,6 @@ const OVERLAY_POSITIONS: ConnectedPosition[] = [
 /** The footer's chip limit: a capped footer keeps a card's height predictable for the planner (#2017). */
 export const ALSO_FOOT_NAMES = 4;
 
-import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
 @Component({
   selector: 'app-entry-duplicates',
   // forwardRef: entry-row renders entry-duplicates for its own footer, so a
@@ -30,7 +30,6 @@ import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
   imports: [TranslocoPipe, IconComponent, CdkConnectedOverlay, forwardRef(() => EntryRowComponent)],
   templateUrl: './entry-duplicates.component.html',
   styleUrl: './entry-duplicates.component.scss',
-  // A list's own row action is no copy's: the popover's copies end without it.
   providers: [
     { provide: EntryActionHandler, useExisting: forwardRef(() => EntryDuplicatesComponent) },
     { provide: ENTRY_ROW_ACTION, useValue: signal(null) },
