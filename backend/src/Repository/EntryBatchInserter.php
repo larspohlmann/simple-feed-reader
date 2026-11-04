@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Doctrine\BulkInsert;
 use App\Entity\EntryImage;
 use App\Entity\EntryMedia;
 use App\Entity\QuotedPostContent;
@@ -49,9 +50,12 @@ final readonly class EntryBatchInserter
     /** @param list<EntryLine> $lines */
     public function insert(int $feedId, array $lines): void
     {
-        foreach (array_chunk($lines, self::ROWS_PER_STATEMENT) as $chunk) {
-            $this->insertChunk($feedId, $chunk);
-        }
+        BulkInsert::rows(
+            $this->connection,
+            \sprintf('INSERT INTO entry (%s)', implode(', ', self::COLUMNS)),
+            array_map(fn (EntryLine $line): array => $this->row($feedId, $line), $lines),
+            self::ROWS_PER_STATEMENT,
+        );
     }
 
     /**
@@ -95,37 +99,10 @@ final readonly class EntryBatchInserter
         $this->insertRows('saved_entry_origin (entry_id, title, favicon_url)', $rows);
     }
 
-    /** @param list<non-empty-list<int|string|null>> $rows one value per column */
+    /** @param list<list<int|string|null>> $rows one value per column */
     private function insertRows(string $tableAndColumns, array $rows): void
     {
-        foreach (array_chunk($rows, self::CARDS_PER_STATEMENT) as $chunk) {
-            $rowPlaceholders = '(' . implode(', ', array_fill(0, \count($chunk[0]), '?')) . ')';
-            $this->connection->executeStatement(
-                sprintf(
-                    'INSERT INTO %s VALUES %s',
-                    $tableAndColumns,
-                    implode(', ', array_fill(0, \count($chunk), $rowPlaceholders)),
-                ),
-                array_merge(...$chunk),
-            );
-        }
-    }
-
-    /** @param non-empty-list<EntryLine> $chunk */
-    private function insertChunk(int $feedId, array $chunk): void
-    {
-        $rowPlaceholders = '(' . implode(', ', array_fill(0, \count(self::COLUMNS), '?')) . ')';
-        $sql = sprintf(
-            'INSERT INTO entry (%s) VALUES %s',
-            implode(', ', self::COLUMNS),
-            implode(', ', array_fill(0, \count($chunk), $rowPlaceholders)),
-        );
-
-        $values = [];
-        foreach ($chunk as $line) {
-            array_push($values, ...$this->row($feedId, $line));
-        }
-        $this->connection->executeStatement($sql, $values);
+        BulkInsert::rows($this->connection, 'INSERT INTO ' . $tableAndColumns, $rows, self::CARDS_PER_STATEMENT);
     }
 
     /** @return list<int|string|null> */

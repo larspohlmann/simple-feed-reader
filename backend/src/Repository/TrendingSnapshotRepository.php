@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Doctrine\BulkInsert;
 use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
 use App\Service\Trending\Model\StoryMemberModel;
@@ -83,24 +84,14 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
             'outlet_count' => $story->outletCount(),
         ]);
         $storyId = (int) $connection->lastInsertId();
-        foreach (array_chunk($story->members, self::INSERT_ROWS) as $members) {
-            $this->insertMembers($connection, $storyId, $members);
-        }
-    }
-
-    /** @param non-empty-list<StoryMemberModel> $members */
-    private function insertMembers(Connection $connection, int $storyId, array $members): void
-    {
-        $parameters = [];
-        foreach ($members as $member) {
-            array_push($parameters, $storyId, $member->entryId, $member->feedId);
-        }
-        $connection->executeStatement(
-            \sprintf(
-                'INSERT INTO trending_story_entry (story_id, entry_id, feed_id) VALUES %s',
-                implode(', ', array_fill(0, \count($members), '(?, ?, ?)')),
+        BulkInsert::rows(
+            $connection,
+            'INSERT INTO trending_story_entry (story_id, entry_id, feed_id)',
+            array_map(
+                static fn (StoryMemberModel $member): array => [$storyId, $member->entryId, $member->feedId],
+                $story->members,
             ),
-            $parameters,
+            self::INSERT_ROWS,
         );
     }
 }
