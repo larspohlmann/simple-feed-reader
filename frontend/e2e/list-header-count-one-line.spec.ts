@@ -57,7 +57,6 @@ async function stubReader(page: Page): Promise<void> {
           favoritesCount: 9,
           keptCount: 4,
           viewedCount: 42,
-          trending: { day: 0, week: 0 },
         }),
       );
     }

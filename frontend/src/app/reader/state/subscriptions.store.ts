@@ -264,7 +264,8 @@ export class SubscriptionsStore {
       fetch().subscribe({
         next: (response) => {
           if (!this.settle(request)) return;
-          // Only the server edits the totals and the Trending counts, so even an overtaken answer carries the latest.
+          // Only the server edits the totals and the Trending counts,
+          // so even an overtaken answer carries the latest.
           this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
           this.trendingCounts.set(response.trending);
           // The user changed a feed count while this was on the wire. The server

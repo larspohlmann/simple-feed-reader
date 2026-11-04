@@ -43,7 +43,6 @@ async function stubReader(page: Page): Promise<void> {
       return json(
         subscriptionsJson([aSubscription({ feedId: 10, title: 'Fixture feed' })], {
           viewedCount: 1,
-          trending: { day: 0, week: 0 },
         }),
       );
     }

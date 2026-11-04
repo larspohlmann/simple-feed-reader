@@ -293,8 +293,8 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Reaches each target as a row and as a copy inside a row's footer (`duplicates`, `coverage.others`). The list keeps its identity when
-   *  `patch` hands every entry back, so nothing derived recomputes. */
+  /** Reaches each target as a row and as a copy inside a row's footer (`duplicates`, `coverage.others`).
+   *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
     this.unlisted.update((held) => (held ? withPatchedRow(held, targets, patch) : held));

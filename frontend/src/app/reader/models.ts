@@ -7,10 +7,10 @@ import { FeedGroupName } from '../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 import { ChapterDto, TranscriptDto } from './episode-detail';
-import { TrendingCounts, TrendingCoverage, TrendingWindow } from './trending/trending-models';
+import { TrendingCounts, TrendingCoverage, TrendingWindow } from './trending/trending.models';
 
 export type { ChapterDto, TranscriptDto, TranscriptParagraphDto } from './episode-detail';
-export type { TrendingResponseDto, TrendingStoryDto } from './trending/trending-models';
+export type { TrendingResponseDto, TrendingStoryDto } from './trending/trending.models';
 export type { TrendingCounts, TrendingCoverage, TrendingWindow };
 export type { HeroImageDto, ReaderArticle, ReaderContent, ReaderFailure } from './reader-content';
 
