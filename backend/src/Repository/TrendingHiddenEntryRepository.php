@@ -19,11 +19,16 @@ final class TrendingHiddenEntryRepository extends ServiceEntityRepository
         parent::__construct($registry, TrendingHiddenEntry::class);
     }
 
-    /** Every entry of the story, social ones included; an entry hidden before keeps its first time. */
-    public function hideStory(int $userId, int $storyId, \DateTimeImmutable $hiddenAt): void
+    /**
+     * Every entry of the story, social ones included; an entry hidden before keeps its first time.
+     *
+     * @return int the entries hidden now
+     */
+    public function hideStory(int $userId, int $storyId, \DateTimeImmutable $hiddenAt): int
     {
         $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement(
+
+        return (int) $connection->executeStatement(
             \sprintf(
                 'INSERT %s INTO trending_hidden_entry (user_id, entry_id, hidden_at)'
                 . ' SELECT ?, member.entry_id, ? FROM trending_story_entry member WHERE member.story_id = ?',

@@ -9,6 +9,7 @@ use App\Repository\TrendingHiddenEntryRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Trending\Exception\TrendingStoryNotFoundException;
+use App\Service\Trending\Model\ReaderWindowModel;
 
 /** Hides a Trending story for one reader, by its entries, so a rebuild that regroups the event cannot bring it back. */
 final readonly class TrendingStoryHiding
@@ -21,10 +22,25 @@ final readonly class TrendingStoryHiding
     ) {
     }
 
-    /** @throws TrendingStoryNotFoundException */
+    /**
+     * Nothing written means the story was hidden before or a rebuild replaced it in between: asked again, the entry
+     * names its new story, or none.
+     *
+     * @throws TrendingStoryNotFoundException
+     */
     public function hide(int $userId, TrendingWindow $window, int $entryId): void
     {
-        $storyId = $this->stories->storyIdContaining($this->readerWindows->of($userId, $window), $entryId);
-        $this->hiddenEntries->hideStory($userId, $storyId, $this->clock->now());
+        $reader = $this->readerWindows->of($userId, $window);
+        if ($this->hideStoryHolding($reader, $entryId) === 0) {
+            $this->hideStoryHolding($reader, $entryId);
+        }
+    }
+
+    /** @throws TrendingStoryNotFoundException */
+    private function hideStoryHolding(ReaderWindowModel $reader, int $entryId): int
+    {
+        $storyId = $this->stories->storyIdContaining($reader, $entryId);
+
+        return $this->hiddenEntries->hideStory($reader->userId, $storyId, $this->clock->now());
     }
 }
