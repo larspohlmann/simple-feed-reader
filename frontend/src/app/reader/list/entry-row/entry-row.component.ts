@@ -27,6 +27,8 @@ import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line
 import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
 import { threadTotal } from '../../thread-post';
 import { alsoFootOf } from '../magazine/also-foot';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { showsUnreadMark } from '../../trending/coverage';
 
 @Component({
   selector: 'app-entry-row',
@@ -47,6 +49,7 @@ import { alsoFootOf } from '../magazine/also-foot';
     ThreadLineComponent,
     ThreadLinePostComponent,
     ThreadCountComponent,
+    TranslocoPipe,
   ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',
@@ -77,6 +80,7 @@ export class EntryRowComponent {
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
   readonly alsoFoot = computed(() => alsoFootOf(this.entry()));
+  readonly unreadMark = computed(() => showsUnreadMark(this.entry()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),

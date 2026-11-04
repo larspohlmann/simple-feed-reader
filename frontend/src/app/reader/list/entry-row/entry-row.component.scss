@@ -59,6 +59,10 @@
   color: var(--text-muted);
 }
 
+.sources {
+  white-space: nowrap;
+}
+
 .snippet {
   margin: 0;
   font-size: var(--fs-sm);

@@ -3,10 +3,16 @@
     <app-entry-source [entry]="entry()" layout="kicker" [size]="faviconSize()" />
     <span class="separator" aria-hidden="true">·</span>
   }
+  @if (entry().coverage; as coverage) {
+    <span class="sources">{{
+      'reader.trendingSources' | transloco: { count: coverage.outletCount }
+    }}</span>
+    <span class="separator" aria-hidden="true">·</span>
+  }
   <span class="when">
     <span class="when-wide">{{ when() }}</span>
     <span class="when-narrow">{{ whenNarrow() }}</span>
   </span>
-  <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
+  <span class="dot" [class.on]="unreadMark()" aria-hidden="true"></span>
   <ng-content />
 </p>

@@ -2834,4 +2834,75 @@ describe('EntryListComponent', () => {
       expect(fill(fixture)).toBe('81.25');
     });
   });
+
+  describe('the Trending list (#2017)', () => {
+    const trending = (window: 'day' | 'week' = 'day') => ({
+      kind: 'trending',
+      id: null,
+      unread: false,
+      window,
+    });
+    const lead = (id: number, viewed: boolean) =>
+      entry(id, { coverage: { outletCount: 3, others: [], viewed } });
+    const slotOf = (fixture: ReturnType<typeof mount>, id: number) =>
+      (fixture.nativeElement as HTMLElement)
+        .querySelector(`[data-entry-id="${id}"]`)!
+        .closest('.row-slot')!;
+
+    it('dims an opened story in the list layout and leaves the others', () => {
+      const fixture = mount({ selection: trending(), entries: [lead(1, true), lead(2, false)] });
+
+      expect(slotOf(fixture, 1).classList).toContain('viewed-story');
+      expect(slotOf(fixture, 2).classList).not.toContain('viewed-story');
+    });
+
+    it('dims an opened story in the magazine layout', () => {
+      const fixture = mount({
+        selection: trending(),
+        layout: 'magazine',
+        entries: [lead(1, true), lead(2, false)],
+      });
+
+      expect(slotOf(fixture, 1).classList).toContain('viewed-story');
+      expect(slotOf(fixture, 2).classList).not.toContain('viewed-story');
+    });
+
+    it('never folds leads of one source into a group widget', () => {
+      const fixture = mount({
+        selection: trending(),
+        layout: 'magazine',
+        entries: MIXED_SOURCE_RUN.map((each) => ({
+          ...each,
+          coverage: { outletCount: 3, others: [], viewed: false },
+        })),
+      });
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-source-group')).toBeNull();
+    });
+
+    it('offers no mark-above-read, even scrolled', () => {
+      const fixture = mount({ selection: trending(), canMarkAllRead: false });
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+    });
+
+    it("states the day's rule when nothing trends", () => {
+      const fixture = mount({ selection: trending('day'), entries: [] });
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
+        '3 of your feeds',
+      );
+    });
+
+    it("states the week's rule when nothing trends", () => {
+      const fixture = mount({ selection: trending('week'), entries: [] });
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
+        '5 of your feeds',
+      );
+    });
+  });
 });

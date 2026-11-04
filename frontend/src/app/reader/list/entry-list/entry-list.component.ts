@@ -30,18 +30,15 @@ import { ListEmptyStateComponent } from '../list-empty-state/list-empty-state.co
 import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.directive';
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
-import { Selection, canScopedRefresh } from '../../query/query';
+import { Selection, canScopedRefresh, offersMarkAboveRead } from '../../query/query';
+import { isStoryViewed } from '../../trending/coverage';
 import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
 import { prefetchMargin } from '../paging';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
-import {
-  entriesAboveFold,
-  foldedGroupTailsAbove,
-  measureEntries,
-  withHiddenDuplicates,
-} from './above-fold';
+import { withHiddenDuplicates } from './above-fold';
+import { ListAboveFold } from './list-above-fold';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { NearViewportMedia } from '../../media/near-viewport-media';
@@ -198,6 +195,11 @@ export class EntryListComponent implements OnDestroy {
    *  focus, and the surrounding prose recedes behind it. */
   readonly isSearch = computed(() => this.selection().kind === 'search');
 
+  /** Mark above read is off where nothing is marked read in bulk (Trending, #2017). */
+  protected readonly marksAboveFold = computed(() => offersMarkAboveRead(this.selection()));
+
+  protected readonly isStoryViewed = isStoryViewed;
+
   private readonly reduceMotion = prefersReducedMotion();
   private readonly screen = inject(LayoutService);
   private readonly host = inject(ElementRef<HTMLElement>);
@@ -320,13 +322,19 @@ export class EntryListComponent implements OnDestroy {
     }
   });
 
+  private readonly aboveFold = new ListAboveFold({
+    scroller: this.scroller,
+    header: () => this.listHdr()?.nativeElement,
+    groups: () => this.content.visibleBlocks().filter((block) => block.kind === 'group'),
+  });
+
   readonly scrolling = new ListScrollState({
     scroller: this.scroller,
     selection: this.selection,
     loading: this.loading,
     layout: this.layout,
     reduceMotion: this.reduceMotion,
-    aboveFold: (scroller) => this.hasEntryAboveFold(scroller),
+    aboveFold: (scroller) => this.aboveFold.hasEntryAbove(scroller),
     onReloaded: () => this.content.clearHidden(),
   });
 
@@ -377,7 +385,7 @@ export class EntryListComponent implements OnDestroy {
   }
 
   onMarkAboveRead(): void {
-    const ids = this.collectAboveFoldIds();
+    const ids = this.aboveFold.entryIds();
     if (ids.length === 0) return;
     this.markAboveRead.emit(withHiddenDuplicates(ids, this.entries()));
   }
@@ -414,28 +422,13 @@ export class EntryListComponent implements OnDestroy {
     return block.kind !== 'group' && this.leavingIds().has(block.entry.id);
   }
 
+  /** Whether a block shows a Trending story already opened; a group block never holds one. */
+  isViewedStoryBlock(block: MagazineBlock): boolean {
+    return block.kind !== 'group' && isStoryViewed(block.entry);
+  }
+
   ngOnDestroy(): void {
     this.observer?.disconnect();
     this.headerObs?.disconnect();
-  }
-
-  private foldTop(scroller: HTMLElement): number {
-    const header = this.listHdr()?.nativeElement.getBoundingClientRect().bottom ?? 0;
-    return Math.max(scroller.getBoundingClientRect().top, header);
-  }
-
-  private collectAboveFoldIds(): number[] {
-    const scroller = this.rows()?.nativeElement;
-    if (!scroller) return [];
-    const measured = measureEntries(scroller);
-    const above = entriesAboveFold(measured, this.foldTop(scroller));
-    const groups = this.content.visibleBlocks().filter((block) => block.kind === 'group');
-    const rendered = new Set(measured.map((measurement) => measurement.id));
-    return [...above, ...foldedGroupTailsAbove(new Set(above), rendered, groups)];
-  }
-
-  private hasEntryAboveFold(scroller: HTMLElement): boolean {
-    const first = scroller.querySelector('[data-entry-id]');
-    return !!first && first.getBoundingClientRect().bottom <= this.foldTop(scroller);
   }
 }

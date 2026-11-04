@@ -12,8 +12,15 @@
       }
       <p class="meta">
         <app-entry-source [entry]="entry()" layout="row" [size]="14" />
-        · {{ when() }}
-        <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
+        ·
+        @if (entry().coverage; as coverage) {
+          <span class="sources">{{
+            'reader.trendingSources' | transloco: { count: coverage.outletCount }
+          }}</span>
+          ·
+        }
+        {{ when() }}
+        <span class="dot" [class.on]="unreadMark()" aria-hidden="true"></span>
       </p>
       @if (snippet()) {
         <p class="snippet">

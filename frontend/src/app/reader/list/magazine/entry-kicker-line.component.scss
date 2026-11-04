@@ -29,10 +29,11 @@
   color: var(--text-muted);
 }
 
-/* Both sit after the elastic source, so both must refuse to shrink — a
+/* All sit after the elastic source, so all must refuse to shrink — a
    flex item's default `min-width: auto` is what would otherwise let the
    time itself get clipped instead of the source. */
 .separator,
+.sources,
 .when {
   flex: none;
 }

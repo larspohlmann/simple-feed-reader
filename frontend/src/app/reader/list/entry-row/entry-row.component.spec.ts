@@ -5,7 +5,7 @@ import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
-import { EntryDto, ImageRenditionDto } from '../../models';
+import { EntryDto, ImageRenditionDto, TrendingCoverage } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
@@ -110,6 +110,33 @@ describe('EntryRowComponent', () => {
         { provide: ImageProxyService, useValue: imageProxy },
         provideRouter([]),
       ],
+    });
+  });
+
+  describe('a Trending lead (#2017)', () => {
+    const lead = (coverage: Partial<TrendingCoverage> = {}) =>
+      entry({ coverage: { outletCount: 7, others: [], viewed: false, ...coverage } });
+
+    it('names how many feeds covered the story in its meta line', () => {
+      const element = mount(lead()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.meta .sources')?.textContent?.trim()).toBe('7 sources');
+    });
+
+    it('drops the unread dot once another outlet was opened', () => {
+      const opened = anEntry({ id: 5, isViewed: true });
+      const element = mount(lead({ others: [opened] })).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.meta .dot')!.classList).not.toContain('on');
+    });
+
+    it('lists the other outlets under Also covered by', () => {
+      const other = anEntry({ id: 5, source: 'Spiegel' });
+      const element = mount(lead({ others: [other] })).nativeElement as HTMLElement;
+      const foot = element.querySelector('.also-foot')!;
+
+      expect(foot.querySelector('.lead')!.textContent!.trim()).toBe('Also covered by');
+      expect(foot.textContent).toContain('Spiegel');
     });
   });
 

@@ -292,6 +292,9 @@
 </ng-template>
 
 <ng-template #headerActions>
+  @if (selection().kind === 'trending') {
+    <app-trending-window-switch />
+  }
   @if (savedSearch.canToggle()) {
     <!-- Save/unsave the search being looked at. It lives here, beside the For You
          control, because both are per-selection commands over a domain object

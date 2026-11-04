@@ -9,5 +9,6 @@ export interface AlsoFoot {
 const NO_COPIES: readonly EntryDto[] = [];
 
 export function alsoFootOf(entry: EntryDto): AlsoFoot {
+  if (entry.coverage) return { copies: entry.coverage.others, label: 'reader.alsoCoveredBy' };
   return { copies: entry.duplicates ?? NO_COPIES, label: 'reader.alsoIn' };
 }
