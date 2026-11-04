@@ -53,7 +53,7 @@ those feeds ran it. A switch in the list header picks the window.
     far end. The gap is what keeps the week clean: a story chains across days through its follow-ups, but a Monday and a
     Friday item never link just for sharing a name.
 12. **Text of an entry.** Headline: the title, derived or not. Body: the summary with HTML stripped, minus a
-    leading repeat of the title (social posts, where `title_derived` is set), cut at 300 characters.
+    leading repeat of the title (social posts, where `title_derived` is set), cut at a word boundary within 300 characters (`EntryPlainText` + `WordBoundary`, which also drop junk bodies such as "none").
 13. **Stems.** Casefold, strip diacritics (`Normalizer` NFKD), split on non-alphanumerics, drop words under 3
     letters, keep numbers of 2+ digits, cut every word to its first 6 characters. Headline stems weigh 1.0,
     body stems 0.5; a stem in both counts once, at 1.0. German compounds do not split; accepted.
