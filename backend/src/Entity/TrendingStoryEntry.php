@@ -32,16 +32,6 @@ final class TrendingStoryEntry
         $this->feedId = $entry->getFeed()->requireId();
     }
 
-    public function getStory(): TrendingStory
-    {
-        return $this->story;
-    }
-
-    public function getEntry(): Entry
-    {
-        return $this->entry;
-    }
-
     public function getFeedId(): int
     {
         return $this->feedId;

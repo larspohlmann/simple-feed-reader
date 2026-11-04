@@ -33,10 +33,14 @@ final readonly class TrendingFixtures
     {
     }
 
+    /** A social feed's address is one the classifier recognises: the listener re-derives its network on flush. */
     public function feed(string $name, ?SocialNetwork $network = null): Feed
     {
-        $feed = new Feed(\sprintf('https://%s.example.com/feed', $name));
-        $feed->classifyAs($network);
+        $feed = new Feed(match ($network) {
+            SocialNetwork::Bluesky => \sprintf('https://bsky.app/profile/%s.bsky.social/rss', $name),
+            SocialNetwork::Mastodon => \sprintf('https://mastodon.example.com/@%s.rss', $name),
+            null => \sprintf('https://%s.example.com/feed', $name),
+        });
         $this->entityManager->persist($feed);
 
         return $feed;
