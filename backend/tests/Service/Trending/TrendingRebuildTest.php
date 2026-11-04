@@ -70,6 +70,17 @@ final class TrendingRebuildTest extends DbTestCase
         self::assertSame([TrendingWindow::Day], self::windowsOf($report));
     }
 
+    public function testAtTheDeadlineNotEvenABuildThatTookNoTimeStarts(): void
+    {
+        $this->snapshotBuiltAt(TrendingWindow::Day, '2031-05-14 11:00:00');
+        $this->snapshotBuiltAt(TrendingWindow::Week, '2031-05-14 10:00:00');
+        $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
+
+        $report = $this->rebuildTaking($clock, 0)->rebuildDueBefore($clock->now());
+
+        self::assertSame([], self::windowsOf($report));
+    }
+
     /** @param list<TrendingWindow> $expectedWindows */
     #[DataProvider('firstBuildDeadlines')]
     public function testBeforeADeadlineAWindowNeverBuiltStartsOnlyIfItsEstimateFits(
