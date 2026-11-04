@@ -7,6 +7,7 @@ import { EntryActionsComponent } from './entry-actions.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from './entry-action-handler';
+import { ENTRY_ROW_ACTION, EntryRowAction } from './entry-row-action';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
@@ -17,13 +18,7 @@ import { OpensEntryDirective } from '../../list/opens-entry.directive';
 @Component({
   imports: [EntryActionsComponent, OpensEntryDirective],
   template: `<article class="card" [appOpensEntry]="entry">
-    <app-entry-actions
-      [entry]="entry"
-      [size]="size"
-      [audio]="audio"
-      [like]="likeShown"
-      [storyHide]="storyHide"
-    />
+    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" [like]="likeShown" />
   </article>`,
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
@@ -32,7 +27,6 @@ class HostComponent implements EntryActionHandler {
   size: 'sm' | 'md' = 'sm';
   audio = true;
   likeShown = true;
-  storyHide = true;
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
@@ -40,7 +34,6 @@ class HostComponent implements EntryActionHandler {
   marked: EntryDto | null = null;
   liked: EntryDto | null = null;
   deleted: EntryDto | null = null;
-  hiddenStory: EntryDto | null = null;
 
   favorite(): void {
     this.favoriteCount++;
@@ -68,10 +61,6 @@ class HostComponent implements EntryActionHandler {
 
   deletePost(entry: EntryDto): void {
     this.deleted = entry;
-  }
-
-  hideStory(entry: EntryDto): void {
-    this.hiddenStory = entry;
   }
 }
 
@@ -473,39 +462,54 @@ describe('EntryActionsComponent', () => {
     expect(fixture.componentInstance.cardOpened).toBe(false);
   });
 
-  describe('Hide on a Trending card (#2017)', () => {
-    const lead = (): EntryDto => anEntry({ story: { outletCount: 3, viewed: false } });
-    const hideButton = (fixture: ReturnType<typeof mount>) =>
-      buttons(fixture).find((button) => button.getAttribute('aria-label') === 'Hide story');
+  describe("a list's own row action (#2017)", () => {
+    const ran: EntryDto[] = [];
+    const rowAction: EntryRowAction = {
+      icon: 'visibility_off',
+      label: 'reader.hideStory',
+      hint: 'reader.actionHint.hideStory',
+      appliesTo: (entry) => entry.id === 7,
+      run: (entry) => ran.push(entry),
+    };
+    const withRowAction = (entry: EntryDto) => {
+      TestBed.configureTestingModule({
+        providers: [{ provide: ENTRY_ROW_ACTION, useValue: rowAction }],
+      });
+      return mount(entry);
+    };
+    const labels = (fixture: ReturnType<typeof mount>) =>
+      buttons(fixture).map((button) => button.getAttribute('aria-label'));
 
-    it('is offered on a Trending lead only', () => {
-      expect(hideButton(mount(anEntry()))).toBeUndefined();
-      expect(hideButton(mount(lead()))).toBeDefined();
+    beforeEach(() => (ran.length = 0));
+
+    it('is offered last, on the entries it applies to', () => {
+      expect(labels(withRowAction(anEntry({ id: 7 }))).at(-1)).toBe('Hide story');
     });
 
-    it('hides the story without opening the card', () => {
-      const story = lead();
-      const fixture = mount(story);
+    it('stays out on an entry it does not apply to', () => {
+      expect(labels(withRowAction(anEntry({ id: 8 })))).not.toContain('Hide story');
+    });
 
-      hideButton(fixture)!.click();
+    it('stays out where no list provides one', () => {
+      expect(labels(mount(anEntry({ id: 7 })))).not.toContain('Hide story');
+    });
 
-      expect(fixture.componentInstance.hiddenStory).toBe(story);
+    it('runs without opening the card', () => {
+      const entry = anEntry({ id: 7 });
+      const fixture = withRowAction(entry);
+
+      buttons(fixture).at(-1)!.click();
+
+      expect(ran).toEqual([entry]);
       expect(fixture.componentInstance.cardOpened).toBe(false);
     });
 
-    it('stays out where the host turns it off', () => {
-      const fixture = TestBed.createComponent(HostComponent);
-      fixture.componentInstance.entry = lead();
-      fixture.componentInstance.storyHide = false;
-      fixture.detectChanges();
-
-      expect(hideButton(fixture)).toBeUndefined();
-    });
-
     it('says what it does', () => {
-      expect(hideButton(mount(lead()))!.getAttribute('title')).toBe(
-        'Hide this story from Trending — it stays hidden as it grows',
-      );
+      expect(
+        buttons(withRowAction(anEntry({ id: 7 })))
+          .at(-1)!
+          .getAttribute('title'),
+      ).toBe('Hide this story from Trending — it stays hidden as it grows');
     });
   });
 });

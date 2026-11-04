@@ -437,26 +437,3 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
-
-describe('EntryStateActions hiding a Trending story (#2017)', () => {
-  it('hides the story of the window on screen and recounts once the server took it', () => {
-    const hideTrendingStory = jest.fn<void, [string, number, StateSaveOutcome?]>();
-    const reloadCountsQuietly = jest.fn();
-    const actions = createActions({
-      entries: { hideTrendingStory },
-      subscriptions: { reloadCountsQuietly },
-      routeState: {
-        openEntryId: signal(null),
-        openEntry: signal(null),
-        selection: () => ({ kind: 'trending', id: null, unread: false, window: 'week' }),
-      },
-    });
-
-    actions.hideStory(anEntry({ id: 7 }));
-
-    expect(hideTrendingStory).toHaveBeenCalledWith('week', 7, expect.any(Object));
-    expect(reloadCountsQuietly).not.toHaveBeenCalled();
-    hideTrendingStory.mock.calls[0][2]?.onSaved?.();
-    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
-  });
-});

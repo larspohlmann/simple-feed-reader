@@ -7,7 +7,6 @@ import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
-import { TrendingWindow } from '../trending/trending.models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withCardBack, withPatchedRow } from './entry-rows';
 
@@ -294,11 +293,12 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Takes a Trending card off the list at once (#2017); a failed hide puts it back where it was, with the banner
-   *  and its retry. */
-  hideTrendingStory(window: TrendingWindow, entryId: number, outcome: StateSaveOutcome = {}): void {
+  /** Takes a card off the loaded Trending list at once, hiding its story in that list's window (#2017); a failed
+   *  hide puts it back where it was, with the banner and its retry. */
+  hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
+    const window = this.query()?.window;
     const index = this.rawEntries().findIndex((entry) => entry.id === entryId);
-    if (index < 0) return;
+    if (!window || index < 0) return;
     const card = this.rawEntries()[index];
     this.error.set(null);
     this.failedOperation.set(null);
@@ -307,7 +307,7 @@ export class EntriesStore {
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
         this.rawEntries.update((current) => withCardBack(current, card, index));
-        this.reportMutationFailure(error, () => this.hideTrendingStory(window, entryId, outcome));
+        this.reportMutationFailure(error, () => this.hideTrendingStory(entryId, outcome));
         outcome.onFailed?.();
       },
     });

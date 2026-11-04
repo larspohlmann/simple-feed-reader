@@ -56,9 +56,17 @@ import { heldFor } from '../../../core/held-for';
 // lands sooner would only flash it, which reads as a glitch rather than as progress.
 const WAIT_OVERLAY_DELAY_MS = 150;
 
+import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
+import { TrendingHideAction } from '../../trending/trending-hide-action';
+
 @Component({
   selector: 'app-entry-list',
-  providers: [ListAutoplayCoordinator, UnlockedVideoElements, NearViewportMedia],
+  providers: [
+    ListAutoplayCoordinator,
+    UnlockedVideoElements,
+    NearViewportMedia,
+    { provide: ENTRY_ROW_ACTION, useClass: TrendingHideAction },
+  ],
   imports: [
     NgTemplateOutlet,
     TranslocoPipe,

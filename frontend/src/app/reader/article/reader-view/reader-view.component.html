@@ -63,14 +63,7 @@
       [subscriptionId]="e.subscriptionId"
       [savedSearches]="e.savedSearches ?? []"
     />
-    <app-entry-actions
-      class="actions"
-      size="md"
-      [entry]="e"
-      [audio]="false"
-      [like]="false"
-      [storyHide]="false"
-    />
+    <app-entry-actions class="actions" size="md" [entry]="e" [audio]="false" [like]="false" />
     @if (audio.attachment()) {
       <app-listen-row [audio]="audio" />
     }

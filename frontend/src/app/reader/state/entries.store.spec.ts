@@ -1157,18 +1157,18 @@ describe('EntriesStore', () => {
   describe('hiding a Trending story (#2017)', () => {
     const listed = () => store.entries().map((row) => row.id);
     const hideRequest = () => ctrl.expectOne('https://api.test/api/trending/hidden');
-    const loadThree = () => {
-      store.load({ view: 'all' });
+    const loadThree = (window: 'day' | 'week' = 'day') => {
+      store.load({ view: 'trending', window });
       ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries')
-        .flush({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
+        .expectOne((request) => request.url === 'https://api.test/api/trending')
+        .flush({ window, builtAt: null, stories: [entry(1), entry(2), entry(3)] });
     };
 
-    it('takes the card off the list at once and reports once the server hid the story', () => {
-      loadThree();
+    it('takes the card off the list at once and hides its story in the window on screen', () => {
+      loadThree('week');
       const onSaved = jest.fn();
 
-      store.hideTrendingStory('week', 2, { onSaved });
+      store.hideTrendingStory(2, { onSaved });
 
       expect(listed()).toEqual([1, 3]);
       const request = hideRequest();
@@ -1180,10 +1180,22 @@ describe('EntriesStore', () => {
       expect(listed()).toEqual([1, 3]);
     });
 
+    it('hides nothing outside a Trending list', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1), entry(2)], nextCursor: null });
+
+      store.hideTrendingStory(2);
+
+      expect(listed()).toEqual([1, 2]);
+      ctrl.expectNone('https://api.test/api/trending/hidden');
+    });
+
     it('puts a card whose hide failed back where it was, with the error banner and its retry', () => {
       loadThree();
 
-      store.hideTrendingStory('day', 2);
+      store.hideTrendingStory(2);
       hideRequest().flush(
         { type: 'x', title: 't', status: 500 },
         { status: 500, statusText: 'err' },
@@ -1200,11 +1212,8 @@ describe('EntriesStore', () => {
 
     it('does not double a card a reload brought back before the hide failed', () => {
       loadThree();
-      store.hideTrendingStory('day', 2);
-      store.load({ view: 'all' });
-      ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries')
-        .flush({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
+      store.hideTrendingStory(2);
+      loadThree();
 
       hideRequest().flush(
         { type: 'x', title: 't', status: 500 },

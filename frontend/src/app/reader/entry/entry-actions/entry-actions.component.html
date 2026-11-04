@@ -97,18 +97,6 @@
 >
   <app-icon name="check" [size]="size()" />
 </button>
-@if (entry().story && storyHide()) {
-  <button
-    type="button"
-    [attr.aria-label]="'reader.hideStory' | transloco"
-    [attr.title]="'reader.actionHint.hideStory' | transloco"
-    (click)="$event.stopPropagation(); actions.hideStory(entry())"
-    (keydown.enter)="$event.stopPropagation()"
-    (keydown.space)="$event.stopPropagation()"
-  >
-    <app-icon name="visibility_off" [size]="size()" />
-  </button>
-}
 @if (entry().social?.isOwn) {
   <button
     type="button"
@@ -121,4 +109,18 @@
   >
     <app-icon name="delete" [size]="size()" />
   </button>
+}
+@if (rowAction; as action) {
+  @if (action.appliesTo(entry())) {
+    <button
+      type="button"
+      [attr.aria-label]="action.label | transloco"
+      [attr.title]="action.hint | transloco"
+      (click)="$event.stopPropagation(); action.run(entry())"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    >
+      <app-icon [name]="action.icon" [size]="size()" />
+    </button>
+  }
 }

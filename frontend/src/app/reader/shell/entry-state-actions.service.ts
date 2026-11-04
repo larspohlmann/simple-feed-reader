@@ -7,7 +7,7 @@ import { EntriesStore, StateSaveOutcome, localStatePatch } from '../state/entrie
 import { countFirstShare } from '../state/first-share';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { Selection, trendingWindowOf } from '../query/query';
+import { Selection } from '../query/query';
 import { entryParam } from '../query/slug';
 import { entryChangeParams } from '../query/link-param';
 import { EntryDto, EntryStatePatch } from '../models';
@@ -117,12 +117,6 @@ export class EntryStateActions implements EntryActionHandler {
 
   deletePost(entry: EntryDto): void {
     this.postActions.deletePost(entry).subscribe(() => this.leaveGonePost(entry.id));
-  }
-
-  hideStory(entry: EntryDto): void {
-    this.entries.hideTrendingStory(trendingWindowOf(this.routeState.selection()), entry.id, {
-      onSaved: () => this.subscriptions.reloadCountsQuietly(),
-    });
   }
 
   closeEntry(): void {

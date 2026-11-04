@@ -104,10 +104,6 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     this.shellActions.toggleRead(copy);
   }
 
-  hideStory(copy: EntryDto): void {
-    this.shellActions.hideStory(copy);
-  }
-
   deletePost(): void {
     this.close();
     this.shellActions.deletePost(this.entry());
