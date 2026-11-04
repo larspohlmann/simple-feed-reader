@@ -43,6 +43,7 @@ use App\Entity\SubscriptionDay;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\ThreadPost;
+use App\Entity\TrendingHiddenEntry;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
@@ -190,6 +191,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'radius of a leaked backup file for no gain.',
         SavedSearchEntry::class => 'A derived saved-search membership row (#1116); rebuilt by the sweep, '
             . 'so a restore carries none.',
+        TrendingHiddenEntry::class => 'The Trending stories the reader hid (#2017). A hide matters only while its '
+            . 'story can trend, at most a week, and a restore regroups Trending from the restored entries.',
     ];
 
     /**

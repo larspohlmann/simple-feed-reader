@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\TrendingStory;
 use App\Enum\TrendingWindow;
+use App\Service\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Trending\Model\RankedStoryModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
@@ -29,7 +30,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
 
     /**
      * The window's stories at least its threshold of the reader's feeds took part in (social ones count), covered by
-     * at least two article feeds the reader follows: widest first, then newest.
+     * at least two article feeds the reader follows, and holding no entry the reader hid: widest first, then
+     * newest.
      *
      * @return list<RankedStoryModel>
      */
@@ -45,6 +47,10 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 . ' JOIN subscription subscribed'
                 . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
                 . ' WHERE story.time_window = :window'
+                . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry hidden_member'
+                . ' JOIN trending_hidden_entry hidden'
+                . ' ON hidden.entry_id = hidden_member.entry_id AND hidden.user_id = :user'
+                . ' WHERE hidden_member.story_id = story.id)'
                 . ' GROUP BY story.id, story.last_seen'
                 . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
                 . ' AND COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
@@ -73,6 +79,29 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             ),
             $rows,
         );
+    }
+
+    /**
+     * @throws TrendingStoryNotFoundException when no story of the window holds the entry through a feed the reader
+     *                                        follows
+     */
+    public function storyIdContaining(int $userId, TrendingWindow $window, int $entryId): int
+    {
+        $storyId = $this->getEntityManager()->getConnection()->fetchOne(
+            'SELECT member.story_id FROM trending_story_entry member'
+            . ' JOIN trending_story story ON story.id = member.story_id AND story.time_window = :window'
+            . ' JOIN subscription reader ON reader.feed_id = member.feed_id AND reader.user_id = :user'
+            . ' WHERE member.entry_id = :entry',
+            ['window' => $window->value, 'user' => $userId, 'entry' => $entryId],
+            ['user' => ParameterType::INTEGER, 'entry' => ParameterType::INTEGER],
+        );
+        if (!is_numeric($storyId)) {
+            throw new TrendingStoryNotFoundException(
+                \sprintf('No %s story holds entry %d for this reader.', $window->value, $entryId),
+            );
+        }
+
+        return (int) $storyId;
     }
 
     /**

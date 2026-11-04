@@ -7,6 +7,7 @@ namespace App\Tests\Service\Trending;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\TrendingHiddenEntry;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
@@ -16,6 +17,7 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\TrendingStoryRepository;
+use App\Service\Trending\Model\RankedStoryModel;
 use App\Service\Trending\Model\TrendingStoryCardModel;
 use App\Service\Trending\TrendingStories;
 use App\Tests\DbTestCase;
@@ -287,6 +289,65 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame(TrendingWindow::Day, $day->window);
         self::assertSame('2031-05-14T12:00:00+00:00', $day->builtAt?->format(\DateTimeInterface::ATOM));
         self::assertNull($week->builtAt);
+    }
+
+    public function testAStoryHoldingAnEntryTheReaderHidStaysOutEvenOnceItGrows(): void
+    {
+        [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
+        $hidden = $this->fixtures->entry($alpha, 'Hidden', '2031-05-14 10:00:00');
+        $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $hidden,
+            $this->fixtures->entry($beta, 'Hidden', '2031-05-14 09:00:00'),
+            $this->fixtures->entry($gamma, 'Hidden', '2031-05-14 08:00:00'),
+        );
+        $untouched = $this->storyOf('2031-05-14 07:00:00', [$alpha, $beta, $gamma]);
+        $this->hideFor($this->reader, $hidden);
+
+        self::assertSame([$untouched->requireId()], $this->rankedDayStoryIdsOf($this->reader));
+
+        $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 11:00:00',
+            $hidden,
+            $this->fixtures->entry($beta, 'Grown', '2031-05-14 11:00:00'),
+            $this->fixtures->entry($gamma, 'Grown', '2031-05-14 11:00:00'),
+            $this->fixtures->entry($delta, 'Grown', '2031-05-14 11:00:00'),
+        );
+
+        self::assertSame([$untouched->requireId()], $this->rankedDayStoryIdsOf($this->reader));
+
+        $other = $this->user('trending-other-reader@example.com');
+        $this->fixtures->subscribe($other, $alpha, $beta, $gamma, $delta);
+        $this->fixtures->flush();
+
+        self::assertCount(3, $this->rankedDayStoryIdsOf($other));
+    }
+
+    private function hideFor(User $user, Entry $entry): void
+    {
+        $this->entityManager->persist(
+            new TrendingHiddenEntry($user, $entry, new \DateTimeImmutable('2031-05-14 12:00:00')),
+        );
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @return list<int>
+     *
+     * @phpstan-impure reads the snapshot the test keeps changing
+     */
+    private function rankedDayStoryIdsOf(User $user): array
+    {
+        $ranked = $this->storyRepository()->rankedForUser(
+            $user->requireId(),
+            TrendingWindow::Day,
+            TrendingStories::MAX_STORIES,
+        );
+
+        return array_map(static fn (RankedStoryModel $story): int => $story->storyId, $ranked);
     }
 
     /** @return list<TrendingStoryCardModel> */
