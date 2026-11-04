@@ -104,7 +104,7 @@ those feeds ran it. A switch in the list header picks the window.
       `WorkerSchedule` (its checkpoint stores a list position); the handler logs the report.
     - Strato: `MaintenanceTick` calls it after its existing sweeps when time is left before the deadline.
 24. **`GET /api/trending?window=day|week`**, bearer auth, JSON. An unknown window is a 422 `problem+json`
-    (mapped in the module's `*Problems` mapper). Response `{ window, builtAt, stories }`, at most 40 stories,
+    (mapped in the module's `*Problems` mapper). Response `{ window, builtAt, stories }`, at most 15 stories,
     no paging; each story `{ lead, others, outletCount, viewed }`:
     - `outletCount`: distinct subscribed feeds in the story, social included.
     - `lead`, `others`: article-feed entries as `EntryJson` list rows, one per feed (the newest when a feed has
