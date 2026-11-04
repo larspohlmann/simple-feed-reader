@@ -50,12 +50,8 @@ final readonly class EntryBatchInserter
     /** @param list<EntryLine> $lines */
     public function insert(int $feedId, array $lines): void
     {
-        BulkInsert::rows(
-            $this->connection,
-            \sprintf('INSERT INTO entry (%s)', implode(', ', self::COLUMNS)),
-            array_map(fn (EntryLine $line): array => $this->row($feedId, $line), $lines),
-            self::ROWS_PER_STATEMENT,
-        );
+        BulkInsert::into(\sprintf('INSERT INTO entry (%s)', implode(', ', self::COLUMNS)), self::ROWS_PER_STATEMENT)
+            ->rows($this->connection, array_map(fn (EntryLine $line): array => $this->row($feedId, $line), $lines));
     }
 
     /**
@@ -102,7 +98,7 @@ final readonly class EntryBatchInserter
     /** @param list<list<int|string|null>> $rows one value per column */
     private function insertRows(string $tableAndColumns, array $rows): void
     {
-        BulkInsert::rows($this->connection, 'INSERT INTO ' . $tableAndColumns, $rows, self::CARDS_PER_STATEMENT);
+        BulkInsert::into('INSERT INTO ' . $tableAndColumns, self::CARDS_PER_STATEMENT)->rows($this->connection, $rows);
     }
 
     /** @return list<int|string|null> */

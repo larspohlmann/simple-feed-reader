@@ -36,15 +36,15 @@ final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
     {
         $connection = $this->getEntityManager()->getConnection();
 
-        return BulkInsert::rows(
-            $connection,
+        $insert = BulkInsert::into(
             \sprintf(
                 'INSERT %s INTO saved_search_entry (saved_search_id, entry_id, matched_at)',
                 DatabasePlatform::insertIgnoreClause($connection),
             ),
-            self::rows($entryIdsBySavedSearchId, $matchedAt->format('Y-m-d H:i:s')),
             self::INSERT_ROWS,
         );
+
+        return $insert->rows($connection, self::rows($entryIdsBySavedSearchId, $matchedAt->format('Y-m-d H:i:s')));
     }
 
     /**

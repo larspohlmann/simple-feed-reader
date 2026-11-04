@@ -84,14 +84,12 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
             'outlet_count' => $story->outletCount(),
         ]);
         $storyId = (int) $connection->lastInsertId();
-        BulkInsert::rows(
+        BulkInsert::into('INSERT INTO trending_story_entry (story_id, entry_id, feed_id)', self::INSERT_ROWS)->rows(
             $connection,
-            'INSERT INTO trending_story_entry (story_id, entry_id, feed_id)',
             array_map(
                 static fn (StoryMemberModel $member): array => [$storyId, $member->entryId, $member->feedId],
                 $story->members,
             ),
-            self::INSERT_ROWS,
         );
     }
 }

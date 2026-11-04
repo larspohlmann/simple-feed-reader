@@ -11,26 +11,37 @@ final readonly class BulkInsert
 {
     /**
      * @param string $insertInto the statement up to VALUES, e.g. "INSERT INTO tag (name, user_id)"
-     * @param list<list<int|string|null>> $rows
      * @param positive-int $rowsPerStatement
+     */
+    private function __construct(private string $insertInto, private int $rowsPerStatement)
+    {
+    }
+
+    /**
+     * @param string $insertInto the statement up to VALUES, e.g. "INSERT INTO tag (name, user_id)"
+     * @param positive-int $rowsPerStatement
+     */
+    public static function into(string $insertInto, int $rowsPerStatement): self
+    {
+        return new self($insertInto, $rowsPerStatement);
+    }
+
+    /**
+     * @param list<list<int|string|null>> $rows
      *
      * @return int the rows the database reports as written
      */
-    public static function rows(Connection $connection, string $insertInto, array $rows, int $rowsPerStatement): int
+    public function rows(Connection $connection, array $rows): int
     {
         $written = 0;
-        foreach (array_chunk($rows, $rowsPerStatement) as $chunk) {
+        foreach (array_chunk($rows, $this->rowsPerStatement) as $chunk) {
             $rowPlaceholders = '(' . implode(', ', array_fill(0, \count($chunk[0]), '?')) . ')';
             $written += (int) $connection->executeStatement(
-                $insertInto . ' VALUES ' . implode(', ', array_fill(0, \count($chunk), $rowPlaceholders)),
+                $this->insertInto . ' VALUES ' . implode(', ', array_fill(0, \count($chunk), $rowPlaceholders)),
                 array_merge(...$chunk),
             );
         }
 
         return $written;
-    }
-
-    private function __construct()
-    {
     }
 }
