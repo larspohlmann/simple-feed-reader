@@ -13,7 +13,7 @@ final class TrendingWindowTest extends TestCase
 {
     public function testTheDayWindowSpansADayRebuildsEveryTenMinutesAndLinksWithinThirtySixHours(): void
     {
-        self::assertSame(86_400, TrendingWindow::Day->spanSeconds());
+        self::assertSame('2031-05-13 12:00:00', self::startBefore(TrendingWindow::Day, '2031-05-14 12:00:00'));
         self::assertSame(600, TrendingWindow::Day->rebuildIntervalSeconds());
         self::assertSame(129_600, TrendingWindow::Day->maxLinkGapSeconds());
         self::assertSame(3, TrendingWindow::Day->minSubscribedFeeds());
@@ -21,7 +21,7 @@ final class TrendingWindowTest extends TestCase
 
     public function testTheWeekWindowSpansSevenDaysRebuildsHourlyAndLinksWithinFortyEightHours(): void
     {
-        self::assertSame(604_800, TrendingWindow::Week->spanSeconds());
+        self::assertSame('2031-05-07 12:00:00', self::startBefore(TrendingWindow::Week, '2031-05-14 12:00:00'));
         self::assertSame(3_600, TrendingWindow::Week->rebuildIntervalSeconds());
         self::assertSame(172_800, TrendingWindow::Week->maxLinkGapSeconds());
         self::assertSame(5, TrendingWindow::Week->minSubscribedFeeds());
@@ -69,5 +69,10 @@ final class TrendingWindowTest extends TestCase
         } catch (ValidationException $exception) {
             self::assertSame(['window'], array_keys($exception->errors));
         }
+    }
+
+    private static function startBefore(TrendingWindow $window, string $now): string
+    {
+        return $window->startBefore(new \DateTimeImmutable($now))->format('Y-m-d H:i:s');
     }
 }

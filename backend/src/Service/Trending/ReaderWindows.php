@@ -20,7 +20,7 @@ final readonly class ReaderWindows
 
     public function of(int $userId, TrendingWindow $window): ReaderWindowModel
     {
-        $since = $this->clock->now()->modify(\sprintf('-%d seconds', $window->spanSeconds()));
+        $since = $window->startBefore($this->clock->now());
 
         return new ReaderWindowModel(
             $userId,

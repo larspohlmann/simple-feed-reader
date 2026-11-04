@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Trending\StoryLinkSource;
 
+use App\Enum\TrendingWindow;
 use App\Service\Trending\Model\HeadlineOverlapModel;
 use App\Service\Trending\Model\NearMissModel;
 use App\Service\Trending\Model\StoryLinkModel;
@@ -14,7 +15,6 @@ final readonly class HeadlineLinks implements StoryLinkSourceInterface
 {
     private const float MIN_SHARED_WEIGHT = 14.0;
     private const float MIN_SHARE_OF_LIGHTER = 0.4;
-    private const int HOUR = 3_600;
 
     public static function key(): string
     {
@@ -63,8 +63,8 @@ final readonly class HeadlineLinks implements StoryLinkSourceInterface
         if (!$run->withinGap($overlap->earlierEntryId, $overlap->entryId)) {
             $failures[] = \sprintf(
                 'gap %.1f h > %g h',
-                $run->gapSeconds($overlap->earlierEntryId, $overlap->entryId) / self::HOUR,
-                $run->window->maxLinkGapSeconds() / self::HOUR,
+                $run->gapSeconds($overlap->earlierEntryId, $overlap->entryId) / TrendingWindow::HOUR,
+                $run->window->maxLinkGapSeconds() / TrendingWindow::HOUR,
             );
         }
         if (!$this->weighsEnough($overlap)) {

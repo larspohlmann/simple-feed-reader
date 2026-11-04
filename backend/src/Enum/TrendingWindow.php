@@ -13,7 +13,7 @@ enum TrendingWindow: string
     case Day = 'day';
     case Week = 'week';
 
-    private const int HOUR = 3_600;
+    public const int HOUR = 3_600;
     private const int PER_MILLE = 1_000;
 
     /**
@@ -28,7 +28,12 @@ enum TrendingWindow: string
         return self::caseOrRefusal($value, 'window');
     }
 
-    public function spanSeconds(): int
+    public function startBefore(\DateTimeImmutable $now): \DateTimeImmutable
+    {
+        return $now->modify(\sprintf('-%d seconds', $this->spanSeconds()));
+    }
+
+    private function spanSeconds(): int
     {
         return match ($this) {
             self::Day => 24 * self::HOUR,

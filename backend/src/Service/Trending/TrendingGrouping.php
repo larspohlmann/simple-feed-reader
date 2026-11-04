@@ -30,7 +30,7 @@ final readonly class TrendingGrouping
     public function collect(TrendingWindow $window): TrendingRun
     {
         $run = new TrendingRun($window, new HeadlineWindow($this->filler));
-        $since = $this->clock->now()->modify(\sprintf('-%d seconds', $window->spanSeconds()));
+        $since = $window->startBefore($this->clock->now());
         foreach ($this->windowEntries->windowEntries($since) as $entry) {
             $run->add($entry, $this->urlHashesOf($entry));
         }
