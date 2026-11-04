@@ -172,7 +172,14 @@ those feeds ran it. A switch in the list header picks the window.
     groups below the floor (instance-wide). On 2026-11-04 the owner's account (129 / 190 active of 241) gets 4
     and 7, about 19 and 23 stories.
 
+39. **Trending can be switched off per account (added 2026-11-04).** A *Trending* toggle in Settings →
+    Preferences, on by default, stored on the account (`preferences.trending_enabled`, like `sharing_enabled`), so
+    every device follows it; it travels in the backup's account line. Off: no sidebar item and no badge; a
+    `?view=trending` selection falls back to All items; the counts response skips both per-reader Trending queries
+    and reports `{ day: 0, week: 0 }`. `GET /api/trending` keeps answering; the instance-wide rebuild keeps running
+    for other accounts; hidden stories stay hidden when the switch comes back on.
+
 ## Out of scope
 
-A per-feed "include in Trending" toggle, notifications, cross-language matching, mark-all-read in Trending,
+A per-feed "include in Trending" toggle, an instance-wide (admin) Trending switch, notifications, cross-language matching, mark-all-read in Trending,
 the AI link source.
