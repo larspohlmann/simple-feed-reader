@@ -23,7 +23,7 @@ final class SharedUrlLinksTest extends TestCase
 
         self::assertCount(1, $links);
         self::assertSame('1:2', $links[0]->pairKey());
-        self::assertSame(StoryLinkModel::URL_STRENGTH, $links[0]->strength);
+        self::assertSame(StoryLinkModel::sameUrl(1, 2)->strength, $links[0]->strength);
     }
 
     public function testEveryPairOfAUrlsEntriesLinksOnce(): void

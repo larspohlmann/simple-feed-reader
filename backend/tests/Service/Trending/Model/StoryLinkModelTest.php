@@ -35,4 +35,11 @@ final class StoryLinkModelTest extends TestCase
             array_map(static fn (StoryLinkModel $link): string => $link->pairKey(), $links),
         );
     }
+
+    public function testAUrlLinkOutranksAnyHeadlineLink(): void
+    {
+        $headlineLink = new StoryLinkModel(1, 2, 1.0e300);
+
+        self::assertLessThan(0, StoryLinkModel::compare(StoryLinkModel::sameUrl(7, 8), $headlineLink));
+    }
 }

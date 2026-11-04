@@ -27,7 +27,8 @@ final class StoryLinksTest extends TestCase
         ksort($strengthByPair);
 
         self::assertSame(['1:2', '1:3', '2:3'], array_keys($strengthByPair));
-        self::assertSame(StoryLinkModel::URL_STRENGTH, $strengthByPair['1:2']);
-        self::assertLessThan(StoryLinkModel::URL_STRENGTH, $strengthByPair['1:3']);
+        $urlStrength = StoryLinkModel::sameUrl(1, 2)->strength;
+        self::assertSame($urlStrength, $strengthByPair['1:2']);
+        self::assertLessThan($urlStrength, $strengthByPair['1:3']);
     }
 }

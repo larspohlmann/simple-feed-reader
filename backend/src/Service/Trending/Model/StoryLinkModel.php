@@ -6,7 +6,7 @@ namespace App\Service\Trending\Model;
 
 final readonly class StoryLinkModel
 {
-    public const float URL_STRENGTH = \PHP_FLOAT_MAX;
+    private const float URL_STRENGTH = \PHP_FLOAT_MAX;
 
     public int $firstEntryId;
     public int $secondEntryId;
