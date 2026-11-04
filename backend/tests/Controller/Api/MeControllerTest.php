@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
+use Symfony\Component\HttpFoundation\Response;
 
 /** Tokens come straight from the JWT manager, so no case touches, or is poisoned by, the login throttler's pool. */
 final class MeControllerTest extends ApiTestCase
@@ -59,7 +60,7 @@ final class MeControllerTest extends ApiTestCase
             content: '{"locale":"tlh"}',
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertStringStartsWith(
             'application/problem+json',
             (string) $client->getResponse()->headers->get('Content-Type'),
@@ -81,7 +82,7 @@ final class MeControllerTest extends ApiTestCase
             content: '{"locale":"de"}',
         );
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testTrialEndsAtIsExposedWhenSet(): void
@@ -165,12 +166,12 @@ final class MeControllerTest extends ApiTestCase
         $this->authenticate($client, $user);
 
         $client->request('DELETE', '/api/me');
-        self::assertResponseStatusCodeSame(204);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
 
         // The JWT is stateless: this proves the token stops authenticating
         // because the user row is gone, not because anything was revoked.
         $client->request('GET', '/api/me');
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
 
         self::assertNull($this->users()->find($userId));
     }
@@ -183,7 +184,7 @@ final class MeControllerTest extends ApiTestCase
 
         $client->request('DELETE', '/api/me');
 
-        self::assertResponseStatusCodeSame(409);
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
     }
 
     /** With the other admin suspended, the last active admin's self-delete must be refused: nobody could reinstate. */
@@ -199,7 +200,7 @@ final class MeControllerTest extends ApiTestCase
 
         $client->request('DELETE', '/api/me');
 
-        self::assertResponseStatusCodeSame(409);
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
     }
 
     public function testDeletingTheAccountNeedsAToken(): void
@@ -207,6 +208,6 @@ final class MeControllerTest extends ApiTestCase
         $client = self::createClient();
         $client->request('DELETE', '/api/me');
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 }
