@@ -25,12 +25,30 @@ final class EntryTextTest extends TestCase
         );
     }
 
-    public function testTheBodyIsCutAtThreeHundredCharacters(): void
+    public function testTheBodyIsCutAtTheLastSpaceWithinThreeHundredCharacters(): void
     {
-        $body = EntryText::body(str_repeat('ab ', 120) . 'tail');
+        self::assertSame(rtrim(str_repeat('ab ', 100)), EntryText::body(str_repeat('ab ', 120) . 'tail'));
+    }
 
-        self::assertSame(300, mb_strlen($body));
-        self::assertSame(str_repeat('ab ', 100), $body);
+    public function testAWordCrossingTheThreeHundredthCharacterIsDroppedWhole(): void
+    {
+        self::assertSame(
+            str_repeat('a', 295),
+            EntryText::body(str_repeat('a', 295) . ' ' . str_repeat('b', 20)),
+        );
+    }
+
+    public function testAJunkSummaryIsAnEmptyBody(): void
+    {
+        self::assertSame('', EntryText::body('<p>none</p>'));
+    }
+
+    public function testAnInlineImageSeparatesTheWordsAroundIt(): void
+    {
+        self::assertSame(
+            'Storm hits',
+            EntryText::body('<p>Storm<img src="https://example.org/storm.jpg" alt="">hits</p>'),
+        );
     }
 
     public function testNoSummaryIsAnEmptyBody(): void
@@ -65,12 +83,17 @@ final class EntryTextTest extends TestCase
         );
     }
 
-    public function testTheBodyAfterTheTitleIsCutAtThreeHundredCharacters(): void
+    public function testTheBodyAfterTheTitleIsCutAtTheLastSpaceWithinThreeHundredCharacters(): void
     {
-        $body = EntryText::bodyAfterTitle('Title', 'Title ' . str_repeat('ab ', 120) . 'tail');
+        self::assertSame(
+            rtrim(str_repeat('ab ', 100)),
+            EntryText::bodyAfterTitle('Title', 'Title ' . str_repeat('ab ', 120) . 'tail'),
+        );
+    }
 
-        self::assertSame(300, mb_strlen($body));
-        self::assertSame(str_repeat('ab ', 100), $body);
+    public function testAJunkSummaryAfterTheTitleIsAnEmptyBody(): void
+    {
+        self::assertSame('', EntryText::bodyAfterTitle('Title', '<p>null</p>'));
     }
 
     public function testNoSummaryAfterTheTitleIsAnEmptyBody(): void

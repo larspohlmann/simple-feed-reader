@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Trending\Support;
 
-use App\Service\Text\Support\PlainText;
+use App\Service\Text\Support\EntryPlainText;
+use App\Service\Text\Support\WordBoundary;
 
 final class EntryText
 {
@@ -13,12 +14,12 @@ final class EntryText
 
     public static function body(?string $summary): string
     {
-        return self::cut(PlainText::fromHtmlBlocks($summary) ?? '');
+        return self::cut(EntryPlainText::of($summary) ?? '');
     }
 
     public static function bodyAfterTitle(string $title, ?string $summary): string
     {
-        $text = PlainText::fromHtmlBlocks($summary) ?? '';
+        $text = EntryPlainText::of($summary) ?? '';
         $head = trim(preg_replace(self::TRAILING_ELLIPSIS, '', $title) ?? $title);
         if ($head === '' || !str_starts_with($text, $head)) {
             return self::cut($text);
@@ -29,7 +30,7 @@ final class EntryText
 
     private static function cut(string $text): string
     {
-        return mb_substr($text, 0, self::BODY_LENGTH);
+        return WordBoundary::cut($text, self::BODY_LENGTH);
     }
 
     private function __construct()
