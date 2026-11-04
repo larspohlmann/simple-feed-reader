@@ -18,10 +18,11 @@ use App\Service\Trending\Pass\StoryCardSource;
 /** One reader's Trending: the shared snapshot cut to their subscriptions and their threshold (#2017). */
 final readonly class TrendingStories
 {
-    public const int MAX_STORIES = 40;
+    public const int MAX_STORIES = 15;
 
     public function __construct(
         private TrendingStoryRepository $stories,
+        private ReaderWindows $readerWindows,
         private TrendingSnapshotRepository $snapshots,
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
@@ -30,7 +31,7 @@ final readonly class TrendingStories
 
     public function forReader(int $userId, TrendingWindow $window): TrendingPageModel
     {
-        $ranked = $this->stories->rankedForUser($userId, $window, self::MAX_STORIES);
+        $ranked = $this->stories->rankedForUser($this->readerWindows->of($userId, $window), self::MAX_STORIES);
 
         return new TrendingPageModel(
             $window,
@@ -49,7 +50,9 @@ final readonly class TrendingStories
 
     private function unopenedIn(int $userId, TrendingWindow $window): int
     {
-        $storyIds = self::storyIdsOf($this->stories->rankedForUser($userId, $window, self::MAX_STORIES));
+        $storyIds = self::storyIdsOf(
+            $this->stories->rankedForUser($this->readerWindows->of($userId, $window), self::MAX_STORIES),
+        );
 
         return \count($storyIds) - \count($this->stories->viewedStoryIds($userId, $storyIds));
     }

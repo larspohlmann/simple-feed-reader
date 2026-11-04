@@ -16,13 +16,18 @@ use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Trending\Model\RankedStoryModel;
+use App\Service\Trending\Model\ReaderWindowModel;
 use App\Service\Trending\Model\TrendingStoryCardModel;
+use App\Service\Trending\ReaderWindows;
 use App\Service\Trending\TrendingStories;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
+use Symfony\Component\Clock\MockClock;
 
 final class TrendingStoriesTest extends DbTestCase
 {
@@ -118,8 +123,7 @@ final class TrendingStoriesTest extends DbTestCase
         $this->storyOf('2031-05-14 10:00:00', $socials);
 
         self::assertSame([], $this->storyRepository()->rankedForUser(
-            $this->reader->requireId(),
-            TrendingWindow::Day,
+            $this->readerWindows()->of($this->reader->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
         ));
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
@@ -136,12 +140,12 @@ final class TrendingStoriesTest extends DbTestCase
         $this->storyOf('2031-05-14 10:00:00', [$alpha, ...$socials]);
         $userId = $this->reader->requireId();
 
-        self::assertSame([], $this->storyRepository()->rankedForUser($userId, TrendingWindow::Day, 10));
+        self::assertSame([], $this->storyRepository()->rankedForUser($this->dayOf($userId), 10));
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
 
         $covered = $this->storyOf('2031-05-14 11:00:00', [$alpha, $beta, ...$socials]);
 
-        $ranked = $this->storyRepository()->rankedForUser($userId, TrendingWindow::Day, 10);
+        $ranked = $this->storyRepository()->rankedForUser($this->dayOf($userId), 10);
         self::assertSame([$covered->requireId()], array_map(static fn ($story): int => $story->storyId, $ranked));
         self::assertSame([4], array_map(static fn ($story): int => $story->outletCount, $ranked));
     }
@@ -153,10 +157,22 @@ final class TrendingStoriesTest extends DbTestCase
         $wider = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $delta]);
         $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
 
-        $ranked = $this->storyRepository()->rankedForUser($this->reader->requireId(), TrendingWindow::Day, 1);
+        $ranked = $this->storyRepository()->rankedForUser($this->dayOf($this->reader->requireId()), 1);
 
         self::assertSame([$wider->requireId()], array_map(static fn ($story): int => $story->storyId, $ranked));
         self::assertSame([4], array_map(static fn ($story): int => $story->outletCount, $ranked));
+    }
+
+    public function testTheListAndItsBadgeStopAtFifteenStories(): void
+    {
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        for ($hour = 0; $hour < 16; ++$hour) {
+            $this->storyOf(\sprintf('2031-05-14 %02d:30:00', $hour + 3), $feeds);
+        }
+
+        self::assertCount(15, $this->storiesFor(TrendingWindow::Day));
+        self::assertSame(15, $this->stories()->unopenedCounts($this->reader->requireId())->day);
     }
 
     public function testOnlyArticlesOfFeedsTheReaderFollowsAreListedPerStory(): void
@@ -326,6 +342,60 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertCount(3, $this->rankedDayStoryIdsOf($other));
     }
 
+    public function testAThreeOutletStoryShowsToAFewActiveFeedsAndNotToOneHundredAndOne(): void
+    {
+        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
+        $story = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
+
+        self::assertSame([$story->requireId()], $this->rankedDayStoryIdsOf($this->reader));
+        self::assertSame(1, $this->stories()->unopenedCounts($this->reader->requireId())->day);
+
+        $this->followFeedsPostingAt(98, '2031-05-13 12:00:00');
+
+        self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
+        self::assertSame([], $this->storiesFor(TrendingWindow::Day));
+        self::assertSame(0, $this->stories()->unopenedCounts($this->reader->requireId())->day);
+    }
+
+    public function testFeedsThatPostedOnlyBeforeTheWindowAreNotActive(): void
+    {
+        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
+        $story = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
+
+        $this->followFeedsPostingAt(98, '2031-05-13 11:59:59');
+
+        self::assertSame([$story->requireId()], $this->rankedDayStoryIdsOf($this->reader));
+    }
+
+    public function testTheActiveFeedsAreTheReadersFeedsWithAnEntryInTheWindowEachCountedOnce(): void
+    {
+        [$twice, $stale, $stranger] = $this->articleFeeds('twice', 'stale', 'stranger');
+        $this->fixtures->subscribe($this->reader, $twice, $stale);
+        $this->fixtures->entry($twice, 'First', '2031-05-14 08:00:00');
+        $this->fixtures->entry($twice, 'Second', '2031-05-14 09:00:00');
+        $this->fixtures->entry($stale, 'Stale', '2031-05-13 08:00:00');
+        $this->fixtures->entry($stranger, 'Stranger', '2031-05-14 08:00:00');
+        $this->fixtures->flush();
+
+        self::assertSame(1, (new TrendingEntryRepository($this->entityManager))->activeFeedCount(
+            $this->reader->requireId(),
+            new \DateTimeImmutable('2031-05-14 00:00:00'),
+        ));
+    }
+
+    /** Each new feed posts once at $effectiveDate; the clock stands at 2031-05-14 12:00, so a day reaches 05-13 12:00. */
+    private function followFeedsPostingAt(int $count, string $effectiveDate): void
+    {
+        for ($index = 0; $index < $count; ++$index) {
+            $feed = $this->fixtures->feed(\sprintf('active-%d', $index));
+            $this->fixtures->subscribe($this->reader, $feed);
+            $this->fixtures->entry($feed, 'Elsewhere', $effectiveDate);
+        }
+        $this->fixtures->flush();
+    }
+
     private function hideFor(User $user, Entry $entry): void
     {
         $this->entityManager->persist(
@@ -342,8 +412,7 @@ final class TrendingStoriesTest extends DbTestCase
     private function rankedDayStoryIdsOf(User $user): array
     {
         $ranked = $this->storyRepository()->rankedForUser(
-            $user->requireId(),
-            TrendingWindow::Day,
+            $this->readerWindows()->of($user->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
         );
 
@@ -365,9 +434,23 @@ final class TrendingStoriesTest extends DbTestCase
 
         return new TrendingStories(
             $this->storyRepository(),
+            $this->readerWindows(),
             TrendingWiring::snapshots($this->entityManager),
             $entryList,
             $enricher,
+        );
+    }
+
+    private function dayOf(int $userId): ReaderWindowModel
+    {
+        return $this->readerWindows()->of($userId, TrendingWindow::Day);
+    }
+
+    private function readerWindows(): ReaderWindows
+    {
+        return new ReaderWindows(
+            new TrendingEntryRepository($this->entityManager),
+            new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC')),
         );
     }
 

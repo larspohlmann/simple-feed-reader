@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\TrendingStory;
-use App\Enum\TrendingWindow;
 use App\Service\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Trending\Model\RankedStoryModel;
+use App\Service\Trending\Model\ReaderWindowModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -23,53 +23,51 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /** A story is shown to a reader only when at least this many article feeds they follow cover it. */
     private const int MINIMUM_ARTICLE_FEEDS = 2;
 
+    private const array VISIBILITY_TYPES = [
+        'user' => ParameterType::INTEGER,
+        'minimum' => ParameterType::INTEGER,
+        'minimumArticleFeeds' => ParameterType::INTEGER,
+    ];
+
+    /** The window's stories, counting only feeds the reader follows; an `AND` on `story`, then VISIBLE_COVERAGE. */
+    private const string VISIBLE_STORIES = 'SELECT story.id AS story_id,'
+        . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
+        . ' FROM trending_story story'
+        . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
+        . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
+        . ' JOIN subscription subscribed'
+        . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
+        . ' WHERE story.time_window = :window';
+
+    /** At least the reader's threshold of their feeds took part (social ones count), two of them article feeds. */
+    private const string VISIBLE_COVERAGE = ' GROUP BY story.id, story.last_seen'
+        . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
+        . ' AND COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
+        . ' >= :minimumArticleFeeds';
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, TrendingStory::class);
     }
 
     /**
-     * The window's stories at least its threshold of the reader's feeds took part in (social ones count), covered by
-     * at least two article feeds the reader follows, and holding no entry the reader hid: widest first, then
-     * newest.
+     * The stories the reader is shown, leaving out any holding an entry they hid: widest first, then newest.
      *
      * @return list<RankedStoryModel>
      */
-    public function rankedForUser(int $userId, TrendingWindow $window, int $limit): array
+    public function rankedForUser(ReaderWindowModel $reader, int $limit): array
     {
         /** @var list<array{story_id: int|string, outlet_count: int|string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            \sprintf(
-                'SELECT story.id AS story_id, COUNT(DISTINCT story_member.feed_id) AS outlet_count'
-                . ' FROM trending_story story'
-                . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
-                . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
-                . ' JOIN subscription subscribed'
-                . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
-                . ' WHERE story.time_window = :window'
-                . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry hidden_member'
-                . ' JOIN trending_hidden_entry hidden'
-                . ' ON hidden.entry_id = hidden_member.entry_id AND hidden.user_id = :user'
-                . ' WHERE hidden_member.story_id = story.id)'
-                . ' GROUP BY story.id, story.last_seen'
-                . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
-                . ' AND COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
-                . ' >= :minimumArticleFeeds'
-                . ' ORDER BY outlet_count DESC, story.last_seen DESC, story.id DESC'
-                . ' LIMIT %d',
-                $limit,
-            ),
-            [
-                'user' => $userId,
-                'window' => $window->value,
-                'minimum' => $window->minSubscribedFeeds(),
-                'minimumArticleFeeds' => self::MINIMUM_ARTICLE_FEEDS,
-            ],
-            [
-                'user' => ParameterType::INTEGER,
-                'minimum' => ParameterType::INTEGER,
-                'minimumArticleFeeds' => ParameterType::INTEGER,
-            ],
+            self::VISIBLE_STORIES
+            . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry hidden_member'
+            . ' JOIN trending_hidden_entry hidden'
+            . ' ON hidden.entry_id = hidden_member.entry_id AND hidden.user_id = :user'
+            . ' WHERE hidden_member.story_id = story.id)'
+            . self::VISIBLE_COVERAGE
+            . \sprintf(' ORDER BY outlet_count DESC, story.last_seen DESC, story.id DESC LIMIT %d', $limit),
+            self::visibilityParameters($reader),
+            self::VISIBILITY_TYPES,
         );
 
         return array_map(
@@ -82,22 +80,23 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * @throws TrendingStoryNotFoundException when no story of the window holds the entry through a feed the reader
-     *                                        follows
+     * @throws TrendingStoryNotFoundException when no story the reader is shown, hidden ones aside, holds the entry
+     *                                        through a feed they follow
      */
-    public function storyIdContaining(int $userId, TrendingWindow $window, int $entryId): int
+    public function storyIdContaining(ReaderWindowModel $reader, int $entryId): int
     {
         $storyId = $this->getEntityManager()->getConnection()->fetchOne(
-            'SELECT member.story_id FROM trending_story_entry member'
-            . ' JOIN trending_story story ON story.id = member.story_id AND story.time_window = :window'
-            . ' JOIN subscription reader ON reader.feed_id = member.feed_id AND reader.user_id = :user'
-            . ' WHERE member.entry_id = :entry',
-            ['window' => $window->value, 'user' => $userId, 'entry' => $entryId],
-            ['user' => ParameterType::INTEGER, 'entry' => ParameterType::INTEGER],
+            self::VISIBLE_STORIES
+            . ' AND EXISTS (SELECT 1 FROM trending_story_entry asked'
+            . ' JOIN subscription asker ON asker.feed_id = asked.feed_id AND asker.user_id = :user'
+            . ' WHERE asked.story_id = story.id AND asked.entry_id = :entry)'
+            . self::VISIBLE_COVERAGE,
+            [...self::visibilityParameters($reader), 'entry' => $entryId],
+            [...self::VISIBILITY_TYPES, 'entry' => ParameterType::INTEGER],
         );
         if (!is_numeric($storyId)) {
             throw new TrendingStoryNotFoundException(
-                \sprintf('No %s story holds entry %d for this reader.', $window->value, $entryId),
+                \sprintf('No %s story holds entry %d for this reader.', $reader->window->value, $entryId),
             );
         }
 
@@ -155,5 +154,16 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
 
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $viewed);
+    }
+
+    /** @return array{user: int, window: string, minimum: int, minimumArticleFeeds: int} */
+    private static function visibilityParameters(ReaderWindowModel $reader): array
+    {
+        return [
+            'user' => $reader->userId,
+            'window' => $reader->window->value,
+            'minimum' => $reader->minimumOutlets,
+            'minimumArticleFeeds' => self::MINIMUM_ARTICLE_FEEDS,
+        ];
     }
 }

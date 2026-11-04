@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Service\Trending\Model\WindowEntryModel;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** The rebuild's read: a window's entries with only the columns Trending matches on, a chunk at a time (#2017). */
+/** Trending's reads of a window's entries: the rebuild's chunks and a reader's active feeds (#2017). */
 final readonly class TrendingEntryRepository
 {
     private const int CHUNK_ROWS = 1_000;
@@ -31,6 +32,20 @@ final readonly class TrendingEntryRepository
                 yield $entry;
             }
         } while (\count($rows) === self::CHUNK_ROWS);
+    }
+
+    /** How many of the feeds the user follows have an entry dated at or after $since. */
+    public function activeFeedCount(int $userId, \DateTimeImmutable $since): int
+    {
+        $activeFeeds = $this->entityManager->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM subscription followed WHERE followed.user_id = :user'
+            . ' AND EXISTS (SELECT 1 FROM entry recent'
+            . ' WHERE recent.feed_id = followed.feed_id AND recent.effective_date >= :since)',
+            ['user' => $userId, 'since' => $since->format('Y-m-d H:i:s')],
+            ['user' => ParameterType::INTEGER],
+        );
+
+        return is_numeric($activeFeeds) ? (int) $activeFeeds : 0;
     }
 
     /**

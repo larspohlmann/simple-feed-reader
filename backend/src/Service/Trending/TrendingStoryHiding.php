@@ -15,6 +15,7 @@ final readonly class TrendingStoryHiding
 {
     public function __construct(
         private TrendingStoryRepository $stories,
+        private ReaderWindows $readerWindows,
         private TrendingHiddenEntryRepository $hiddenEntries,
         private NaiveUtcClock $clock,
     ) {
@@ -23,7 +24,7 @@ final readonly class TrendingStoryHiding
     /** @throws TrendingStoryNotFoundException */
     public function hide(int $userId, TrendingWindow $window, int $entryId): void
     {
-        $storyId = $this->stories->storyIdContaining($userId, $window, $entryId);
+        $storyId = $this->stories->storyIdContaining($this->readerWindows->of($userId, $window), $entryId);
         $this->hiddenEntries->hideStory($userId, $storyId, $this->clock->now());
     }
 }
