@@ -10,6 +10,8 @@
         [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
         [attr.title]="item.feed"
         (click)="toggle(item.copy, $event)"
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation()"
       >
         <span class="feed">{{ item.feed }}</span> <span class="sep">·</span>
         <span class="t">{{ item.when }}</span>

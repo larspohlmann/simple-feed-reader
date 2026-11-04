@@ -80,6 +80,21 @@ it("holds a long feed title in the chip's truncating name, the whole title in it
   expect(chip.getAttribute('title')).toBe(title);
 });
 
+it.each(['Enter', ' '])(
+  'keeps a chip\'s "%s" key from reaching the card, which would open the row',
+  (key) => {
+    const element = mount(entry({ duplicates: [entry({ id: 2 })] })).nativeElement as HTMLElement;
+    const card = jest.fn();
+    element.addEventListener('keydown', card);
+
+    element
+      .querySelector('.also-entry')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+    expect(card).not.toHaveBeenCalled();
+  },
+);
+
 it("names a duplicate from a Home by the Home's label", () => {
   const dup = authorlessHomePost(7, { id: 2, source: 'Bob' });
   const element = mount(entry({ duplicates: [dup] }), () => holdUnrenamedHome(7))
