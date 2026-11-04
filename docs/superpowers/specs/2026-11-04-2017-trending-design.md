@@ -179,6 +179,26 @@ those feeds ran it. A switch in the list header picks the window.
     and reports `{ day: 0, week: 0 }`. `GET /api/trending` keeps answering; the instance-wide rebuild keeps running
     for other accounts; hidden stories stay hidden when the switch comes back on.
 
+40. **Trending rides the shared reader paths (added 2026-11-04, after `/simplify`; the product owner chose all four).**
+    - **A story is an ordinary list row.** `GET /api/trending` answers `{ window, builtAt, stories: EntryJson[] }`.
+      Each story is its lead as an `EntryJson` list row whose `duplicates` hold the other outlets (one per feed: the
+      story's other article entries merged with the lead's own url-hash duplicates, the newest per feed). The row
+      also carries `story: { outletCount, viewed }`. The client keeps no separate `coverage` path: the footer, the
+      store's optimistic patching and the popover all work on `duplicates`, and `story` alone switches the footer label
+      to "Also covered by", the kicker's "N sources" and the unread-mark rule (decision 7). Amends decisions 24 and 29.
+    - **Hide belongs to the Trending list.** The list puts its Hide control into the card's action row through a
+      list-owned slot. The shared entry-action handler contract and `EntryActionsComponent` know nothing about stories.
+      Amends decision 37 (the behaviour is unchanged).
+    - **Switched off means parse-time fallback.** With decision 39's switch off, `?view=trending` resolves to All items
+      where the URL's view is parsed, the way an unknown view does. The selection never differs from the URL.
+    - **The counts carry only the selected window.** `GET /api/subscriptions/counts` and `GET /api/subscriptions` take an
+      optional `trendingWindow=day|week` (default `day`; an unknown value is a 422) and answer
+      `trending: { window, unopened }`. The client sends the window it shows and refetches when it changes. Amends
+      decisions 8 and 25.
+    - **The window is in the URL.** `?view=trending&window=week`, `day` when absent. The 24 h / 7 days switch is a pair
+      of links. The per-account device setting from decision 9 stays as the *default*: a sidebar link to Trending
+      (with no window) opens the stored window, and picking a window stores it. Amends decision 9.
+
 ## Out of scope
 
 A per-feed "include in Trending" toggle, an instance-wide (admin) Trending switch, notifications, cross-language matching, mark-all-read in Trending,
