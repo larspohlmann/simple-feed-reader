@@ -8,7 +8,7 @@ import type { TrendingWindow } from '../src/app/reader/trending/trending.models'
 /**
  * Stubs `GET /api/trending` and `POST /api/trending/hidden` so the spec owns every story it asserts on
  * (#2017): a fresh database has no snapshot, and the seeded account's real one changes every few minutes.
- * No card is opened and no hide reaches the server, so no state on the shared stack moves.
+ * No card is opened and every Trending request is stubbed, so no state on the shared stack moves.
  */
 const outlet = (id: number, source: string): EntryDto =>
   entryWire({ id, source, subscriptionId: id });
