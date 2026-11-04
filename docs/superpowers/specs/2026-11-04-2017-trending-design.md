@@ -199,6 +199,14 @@ those feeds ran it. A switch in the list header picks the window.
       of links. The per-account device setting from decision 9 stays as the *default*: a sidebar link to Trending
       (with no window) opens the stored window, and picking a window stores it. Amends decision 9.
 
+41. **7 days leaves out today's stories (added 2026-11-04; product owner: "too much overlap between the 24h list and
+    the 7 day list").** For a reader, a week story is left out when it shares any entry with a story in that reader's
+    shown 24 h list: after the threshold, the two-article-feed rule, hidden stories and the 15-story cap. The week list
+    becomes "earlier this week", still capped at 15. The week badge counts only what the week list shows, and the hide
+    lookup for `week` uses the same rule, so list, badge and hide never disagree. A day story the reader is not shown
+    never removes anything from the week list. The grouping and the snapshots are unchanged; this is a per-reader read
+    rule. Amends decisions 4, 8 and 24.
+
 ## Out of scope
 
 A per-feed "include in Trending" toggle, an instance-wide (admin) Trending switch, notifications, cross-language matching, mark-all-read in Trending,
