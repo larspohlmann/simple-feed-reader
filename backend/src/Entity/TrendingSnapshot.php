@@ -30,7 +30,7 @@ final class TrendingSnapshot
     #[ORM\Column(name: 'duration_ms')]
     private int $durationMilliseconds;
 
-    #[ORM\Column(name: 'peak_memory_bytes')]
+    #[ORM\Column(name: 'peak_memory_bytes', type: Types::BIGINT)]
     private int $peakMemoryBytes;
 
     public function __construct(

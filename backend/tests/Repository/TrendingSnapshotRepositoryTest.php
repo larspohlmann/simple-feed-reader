@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\Entry;
 use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingSnapshotRepository;
@@ -63,6 +64,52 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
 
         self::assertSame(['week'], array_keys($builtAt));
         self::assertSame('2031-05-14T12:00:00+00:00', $builtAt['week']->format(\DateTimeInterface::ATOM));
+    }
+
+    public function testAStoryLargerThanOneInsertChunkKeepsEveryMember(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $feed = $fixtures->feed('large');
+        $entries = [];
+        for ($index = 0; $index < 301; ++$index) {
+            $entries[] = $fixtures->entry($feed, 'Entry ' . $index, '2031-05-14 08:00:00');
+        }
+        $fixtures->flush();
+        $members = array_map(
+            static fn (Entry $entry): StoryMemberModel => new StoryMemberModel($entry->requireId(), 101),
+            $entries,
+        );
+
+        $this->snapshots()->replace(
+            self::report(TrendingWindow::Day, 1),
+            [new TrendingStoryModel($members, self::utc('2031-05-14 08:00:00'), self::utc('2031-05-14 09:00:00'))],
+        );
+
+        self::assertSame(301, $this->memberCount());
+    }
+
+    public function testAStoryRowCarriesItsDistinctFeedCountAndBounds(): void
+    {
+        [$one, $two] = $this->twoEntries();
+        $story = new TrendingStoryModel(
+            [new StoryMemberModel($one, 101), new StoryMemberModel($two, 101)],
+            self::utc('2031-05-14 08:00:00'),
+            self::utc('2031-05-14 09:00:00'),
+        );
+
+        $this->snapshots()->replace(self::report(TrendingWindow::Day, 1), [$story]);
+
+        $row = $this->entityManager->getConnection()
+            ->fetchAssociative('SELECT outlet_count, first_seen, last_seen FROM trending_story');
+        self::assertIsArray($row);
+        self::assertEquals(1, $row['outlet_count']);
+        self::assertSame('2031-05-14 08:00:00', $row['first_seen']);
+        self::assertSame('2031-05-14 09:00:00', $row['last_seen']);
+    }
+
+    private static function utc(string $moment): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable($moment, new \DateTimeZone('UTC'));
     }
 
     /** @return array{int, int} */

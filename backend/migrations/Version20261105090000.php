@@ -52,7 +52,7 @@ final class Version20261105090000 extends AbstractMigration
     {
         $this->addSql('CREATE TABLE trending_snapshot (time_window VARCHAR(8) NOT NULL, built_at DATETIME NOT NULL,'
             . ' entry_count INT NOT NULL, story_count INT NOT NULL, duration_ms INT NOT NULL,'
-            . ' peak_memory_bytes INT NOT NULL, PRIMARY KEY (time_window)) DEFAULT CHARACTER SET utf8mb4');
+            . ' peak_memory_bytes BIGINT NOT NULL, PRIMARY KEY (time_window)) DEFAULT CHARACTER SET utf8mb4');
         $this->addSql('CREATE TABLE trending_story (id INT AUTO_INCREMENT NOT NULL, time_window VARCHAR(8) NOT NULL,'
             . ' first_seen DATETIME NOT NULL, last_seen DATETIME NOT NULL, outlet_count INT NOT NULL,'
             . ' INDEX idx_trending_story_window_outlets (time_window, outlet_count), PRIMARY KEY (id))'
@@ -71,7 +71,7 @@ final class Version20261105090000 extends AbstractMigration
     {
         $this->addSql('CREATE TABLE trending_snapshot (time_window VARCHAR(8) NOT NULL, built_at DATETIME NOT NULL,'
             . ' entry_count INTEGER NOT NULL, story_count INTEGER NOT NULL, duration_ms INTEGER NOT NULL,'
-            . ' peak_memory_bytes INTEGER NOT NULL, PRIMARY KEY (time_window))');
+            . ' peak_memory_bytes BIGINT NOT NULL, PRIMARY KEY (time_window))');
         $this->addSql('CREATE TABLE trending_story (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
             . ' time_window VARCHAR(8) NOT NULL, first_seen DATETIME NOT NULL, last_seen DATETIME NOT NULL,'
             . ' outlet_count INTEGER NOT NULL)');
