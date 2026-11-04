@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Params } from '@angular/router';
 import { SegmentedChoiceComponent } from '../../../shared/segmented-choice/segmented-choice.component';
 import { TrendingWindow } from '../trending.models';
@@ -9,6 +9,7 @@ import { TrendingWindow } from '../trending.models';
   imports: [SegmentedChoiceComponent],
   templateUrl: './trending-window-switch.component.html',
   styleUrl: './trending-window-switch.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TrendingWindowSwitchComponent {
   readonly window = input.required<TrendingWindow>();
