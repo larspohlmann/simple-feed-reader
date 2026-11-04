@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repository;
+
+use App\Entity\TrendingSnapshot;
+use App\Enum\TrendingWindow;
+use App\Service\Trending\Model\StoryMemberModel;
+use App\Service\Trending\Model\TrendingBuildReportModel;
+use App\Service\Trending\Model\TrendingStoryModel;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Connection;
+use Doctrine\Persistence\ManagerRegistry;
+
+/**
+ * The one writer of the Trending tables: a rebuild replaces one window's stories and its snapshot row together.
+ *
+ * @extends ServiceEntityRepository<TrendingSnapshot>
+ */
+final class TrendingSnapshotRepository extends ServiceEntityRepository
+{
+    /** Rows per INSERT: 3 placeholders each, kept under SQLite's historical 999. */
+    private const int INSERT_ROWS = 300;
+
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, TrendingSnapshot::class);
+    }
+
+    /** @return array<string, \DateTimeImmutable> built_at in UTC, by window value; a window never built is absent */
+    public function builtAtByWindow(): array
+    {
+        /** @var list<array{time_window: string, built_at: string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()
+            ->fetchAllAssociative('SELECT time_window, built_at FROM trending_snapshot');
+
+        $builtAt = [];
+        foreach ($rows as $row) {
+            $builtAt[$row['time_window']] = new \DateTimeImmutable($row['built_at'], new \DateTimeZone('UTC'));
+        }
+
+        return $builtAt;
+    }
+
+    /**
+     * Deleting the window's stories cascades to their members. The caller wraps this in its transaction, so readers
+     * keep the old snapshot until the commit (#2017).
+     *
+     * @param list<TrendingStoryModel> $stories
+     */
+    public function replace(TrendingBuildReportModel $report, array $stories): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $connection->executeStatement('DELETE FROM trending_story WHERE time_window = ?', [$report->window->value]);
+        foreach ($stories as $story) {
+            $this->insertStory($connection, $report->window, $story);
+        }
+        $connection->executeStatement('DELETE FROM trending_snapshot WHERE time_window = ?', [$report->window->value]);
+        $connection->insert('trending_snapshot', [
+            'time_window' => $report->window->value,
+            'built_at' => $report->builtAt->format('Y-m-d H:i:s'),
+            'entry_count' => $report->entryCount,
+            'story_count' => $report->storyCount,
+            'duration_ms' => $report->durationMilliseconds,
+            'peak_memory_bytes' => $report->peakMemoryBytes,
+        ]);
+    }
+
+    private function insertStory(Connection $connection, TrendingWindow $window, TrendingStoryModel $story): void
+    {
+        $connection->insert('trending_story', [
+            'time_window' => $window->value,
+            'first_seen' => $story->firstSeen->format('Y-m-d H:i:s'),
+            'last_seen' => $story->lastSeen->format('Y-m-d H:i:s'),
+            'outlet_count' => $story->outletCount(),
+        ]);
+        $storyId = (int) $connection->lastInsertId();
+        foreach (array_chunk($story->members, self::INSERT_ROWS) as $members) {
+            $this->insertMembers($connection, $storyId, $members);
+        }
+    }
+
+    /** @param non-empty-list<StoryMemberModel> $members */
+    private function insertMembers(Connection $connection, int $storyId, array $members): void
+    {
+        $parameters = [];
+        foreach ($members as $member) {
+            array_push($parameters, $storyId, $member->entryId, $member->feedId);
+        }
+        $connection->executeStatement(
+            \sprintf(
+                'INSERT INTO trending_story_entry (story_id, entry_id, feed_id) VALUES %s',
+                implode(', ', array_fill(0, \count($members), '(?, ?, ?)')),
+            ),
+            $parameters,
+        );
+    }
+}

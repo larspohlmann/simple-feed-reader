@@ -43,6 +43,9 @@ use App\Entity\SubscriptionDay;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\ThreadPost;
+use App\Entity\TrendingSnapshot;
+use App\Entity\TrendingStory;
+use App\Entity\TrendingStoryEntry;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Entity\UserPasskey;
@@ -143,6 +146,12 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'restored entry shows its root post alone.',
         EntryTranscript::class => 'An episode\'s transcript, fetched from the URL its feed declares (#1809); a '
             . 'restored episode has none, since a backup carries no transcript declaration.',
+        TrendingSnapshot::class => 'When a Trending window was last grouped and what it cost (#2017); regrouped from '
+            . 'the entries on the next rebuild.',
+        TrendingStory::class => 'A Trending story of the instance\'s latest grouping (#2017); regrouped from the '
+            . 'entries on the next rebuild.',
+        TrendingStoryEntry::class => 'An entry\'s membership of a Trending story (#2017); regrouped from the '
+            . 'entries on the next rebuild.',
     ];
 
     /**
