@@ -124,7 +124,7 @@ those feeds ran it. A switch in the list header picks the window.
 28. **Card.** In the magazine layout the lead goes through the normal magazine block, the kicker line shows
     "7 sources", and the footer lists the other outlets. In the list layout the same on an `entry-row`. A viewed
     story uses the existing read-state styling, nothing more (decision 7). Opening the lead opens the article
-    page; next and previous walk the leads.
+    page.
 29. **"Also in" is generalised.** `entry-duplicates` takes its copies and its label as inputs instead of reading
     `entry().duplicates`: duplicates pass "Also in", Trending passes "Also covered by". The footer shows at most
     4 names and "+N more", so the magazine planner's block height stays predictable.

@@ -143,21 +143,6 @@ describe('EntryBodyService', () => {
     ctrl.expectNone('https://api.test/api/entries/1');
   });
 
-  it('prefetch warms the cache for an id nothing is displaying yet', async () => {
-    store.prefetch(7);
-    await settle();
-    ctrl
-      .expectOne('https://api.test/api/entries/7')
-      .flush({ entry: { transcript: null, contentHtml: '<p>x</p>' } });
-
-    expect(store.body(7)()).toEqual({
-      status: 'ok',
-      html: '<p>x</p>',
-      chapters: [],
-      transcript: null,
-    });
-  });
-
   it('retry refetches a failed body', async () => {
     const state = store.body(1);
     await settle();

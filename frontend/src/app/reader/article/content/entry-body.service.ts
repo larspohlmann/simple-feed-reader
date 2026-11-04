@@ -49,12 +49,6 @@ export class EntryBodyService {
     return this.stateFor(id).asReadonly();
   }
 
-  /** Warm the cache for an id the view isn't showing yet (prev/next on open).
-   *  A no-op once the id is cached or already in flight. */
-  prefetch(id: number): void {
-    this.stateFor(id);
-  }
-
   /** Seed the cache from a detail response already in hand (a deep link's own
    *  fetch), skipping a redundant request. Writes the existing signal in
    *  place so a view already reading it for this id sees the update. */
