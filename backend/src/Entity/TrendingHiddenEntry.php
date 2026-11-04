@@ -17,15 +17,15 @@ final class TrendingHiddenEntry
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
-    private User $user;
+    public readonly User $user;
 
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: Entry::class)]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
-    private Entry $entry;
+    public readonly Entry $entry;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private \DateTimeImmutable $hiddenAt;
+    public readonly \DateTimeImmutable $hiddenAt;
 
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, Entry $entry, \DateTimeImmutable $hiddenAt)
@@ -33,20 +33,5 @@ final class TrendingHiddenEntry
         $this->user = $user;
         $this->entry = $entry;
         $this->hiddenAt = $hiddenAt;
-    }
-
-    public function getUser(): User
-    {
-        return $this->user;
-    }
-
-    public function getEntry(): Entry
-    {
-        return $this->entry;
-    }
-
-    public function getHiddenAt(): \DateTimeImmutable
-    {
-        return $this->hiddenAt;
     }
 }
