@@ -62,7 +62,7 @@ test('a link card opens in the reader from the magazine and from the article', a
     .toBe(`${A_READER_TOKEN}~${aLinkCard().url}`);
   expect(page.url()).not.toContain('entry=');
 
-  await linkReader.getByRole('button', { name: 'Back to list', exact: true }).click();
+  await linkReader.locator('button.close').click();
   await expect(linkReader).toHaveCount(0);
   await expect(openInReader).toBeVisible();
   expect(page.url()).not.toContain('link=');
@@ -76,7 +76,7 @@ test('a link card opens in the reader from the magazine and from the article', a
   await expect(page).toHaveURL(/entry=/);
   await expect(page).toHaveURL(/link=/);
 
-  await linkReader.getByRole('button', { name: 'Back to article', exact: true }).click();
+  await linkReader.locator('button.close').click();
   await expect(linkReader).toHaveCount(0);
   await expect(page.locator('app-reader-view')).toBeVisible();
   await expect(page).toHaveURL(/entry=/);
