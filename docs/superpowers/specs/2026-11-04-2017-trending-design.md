@@ -119,7 +119,7 @@ those feeds ran it. A switch in the list header picks the window.
 ## Frontend
 
 26. **Sidebar:** *Trending* right above For you, `view: 'trending'`, badge per decision 8. It stays visible when
-    empty; the empty state states the rule ("a story shows up here once 3 of your feeds cover it").
+    empty; the empty state states the rule ("a story shows up here once several of your feeds cover it"; decision 38 makes the number per reader).
 27. **List header:** title and a `24 h | 7 days` switch with both options visible (`<app-segmented-choice>`).
 28. **Card.** In the magazine layout the lead goes through the normal magazine block, the kicker line shows
     "7 sources", and the footer lists the other outlets. In the list layout the same on an `entry-row`. A viewed
