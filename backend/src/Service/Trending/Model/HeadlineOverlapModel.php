@@ -16,6 +16,6 @@ final readonly class HeadlineOverlapModel
 
     public function shareOfLighter(): float
     {
-        return $this->lighterTotal > 0.0 ? $this->sharedWeight / $this->lighterTotal : 0.0;
+        return $this->sharedWeight / $this->lighterTotal;
     }
 }

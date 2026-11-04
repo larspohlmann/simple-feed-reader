@@ -45,7 +45,9 @@ final readonly class TrendingEntryRepository
             ['user' => ParameterType::INTEGER],
         );
 
-        return is_numeric($activeFeeds) ? (int) $activeFeeds : 0;
+        \assert(is_numeric($activeFeeds));
+
+        return (int) $activeFeeds;
     }
 
     /**
