@@ -307,8 +307,7 @@ export class EntriesStore {
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
         this.rawEntries.update((current) => withCardBack(current, card, index));
-        this.error.set(parseProblem(error));
-        this.failedOperation.set(() => this.hideTrendingStory(window, entryId, outcome));
+        this.reportMutationFailure(error, () => this.hideTrendingStory(window, entryId, outcome));
         outcome.onFailed?.();
       },
     });
