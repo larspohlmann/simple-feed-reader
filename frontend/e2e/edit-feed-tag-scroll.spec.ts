@@ -45,15 +45,8 @@ test('the last tag stays reachable when many tags are defined', async ({ page })
   await page.route('**/api/tags**', readOnly({ tags: TAGS }));
   await page.route('**/api/subscriptions**', readOnly(SUBSCRIPTIONS));
   await page.route('**/api/entries**', readOnly({ entries: [], total: 0, page: 1, perPage: 20 }));
-  // An empty address keeps the header avatar from reaching gravatar.com — the
-  // one request in this spec that would otherwise leave the machine.
-  await page.route('**/api/me**', readOnly({ id: 1, email: '', roles: [], preferences: {} }));
   await page.route('**/api/version**', readOnly({ version: 'dev' }));
   await page.route('**/api/recommendations/**', readOnly({ run: null }));
-  // The reader shell loads saved searches on boot (#581). Left unstubbed it
-  // reaches the real backend, 401s on the stub token, and the interceptor
-  // clears the session and redirects to /login mid-test — the Edit-feed button
-  // detaches under the click. Fast machines beat the round trip; CI loses it.
   await page.route('**/api/saved-searches**', readOnly({ savedSearches: [] }));
 
   await page.goto('/?subscription=1');

@@ -16,13 +16,21 @@ export const ADMIN_PASSWORD = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e-admin-pa
  * keep doing so; this is for the ones testing what happens once you are in.
  */
 export async function stubAuthToken(page: Page): Promise<void> {
+  // Registered first, so it answers only what no other route does: the real backend 401s the stub
+  // token, and the interceptor then signs the spec out mid-test, but only where CI is slow (#2016).
+  await page.route('**/api/**', (route) => route.fulfill({ status: 404 }));
   await page.route('**/api/setup/status', async (route) => {
     await route.fulfill({
       json: { needsSetup: false, mailEnabled: true, passkeySignInAvailable: false },
     });
   });
-  // A broken foreign image retries through the proxy, whose 401 for the stub token signs the spec out.
-  await page.route('**/api/image-proxy**', (route) => route.fulfill({ status: 404 }));
+  await page.route(
+    (url) => url.pathname === '/api/me',
+    (route) => route.fulfill({ json: { id: 1, email: '', roles: [], preferences: {} } }),
+  );
+  await page.route('**/api/for-you/excluded-networks', (route) =>
+    route.fulfill({ json: { excludedNetworks: [] } }),
+  );
   // Carries a `userId` claim: without one, the reader holds its first list load for `/api/me`.
   await page.addInitScript(() =>
     localStorage.setItem('sfr.jwt', 'eyJhbGciOiJub25lIn0.eyJ1c2VySWQiOjF9.stub-signature'),

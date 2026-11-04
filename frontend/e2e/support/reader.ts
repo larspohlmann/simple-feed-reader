@@ -80,7 +80,6 @@ export async function stubOneFeedReader(
   await page.route('**/api/subscriptions**', json(oneFeedJson(feedTitle)));
   await page.route('**/api/tags**', json({ tags: [] }));
   await page.route('**/api/entries**', json({ entries: [], nextCursor: null }));
-  await page.route('**/api/me**', json({ id: 1, email: '', roles: [], preferences: {} }));
   await page.route('**/api/version**', json({ version: 'dev' }));
   await page.route('**/api/recommendations/**', json({ run: null }));
   await page.route('**/api/saved-searches**', json(savedSearchesJson(...savedSearches)));
@@ -88,8 +87,6 @@ export async function stubOneFeedReader(
   await page.route('**/api/soundcloud/tracks/**', json(NOTHING_KNOWN_OF_EMBED));
 }
 
-/** An unstubbed embed-details read reaches the real backend, whose 401 for the stub token signs the
- *  spec out mid-test (#1853). */
 const NOTHING_KNOWN_OF_EMBED: TrackDetails = {
   title: null,
   durationSeconds: null,
