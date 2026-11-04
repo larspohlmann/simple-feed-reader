@@ -11,7 +11,7 @@ use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use Psr\Clock\ClockInterface;
 
 /** What a MaintenanceTickTest case swaps into a tick wired by hand; whatever it leaves null stays the default. */
-final readonly class MaintenanceTickDoubles
+final readonly class MaintenanceTickOverrides
 {
     public function __construct(
         public RefreshRunner $refreshRunner,

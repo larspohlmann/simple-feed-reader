@@ -9,10 +9,7 @@ use Doctrine\DBAL\Connection;
 /** Multi-row INSERTs, a chunk of rows per statement; every row binds one value per column of the statement head. */
 final readonly class BulkInsert
 {
-    /**
-     * @param string $insertInto the statement up to VALUES, e.g. "INSERT INTO tag (name, user_id)"
-     * @param positive-int $rowsPerStatement
-     */
+    /** @param positive-int $rowsPerStatement */
     private function __construct(private string $insertInto, private int $rowsPerStatement)
     {
     }

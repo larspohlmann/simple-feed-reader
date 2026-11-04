@@ -30,7 +30,6 @@ final class InterruptingClock implements ClockInterface
 
     public function sleep(float|int $seconds): void
     {
-        // Nothing to wait for: the reading is fixed.
     }
 
     public function withTimeZone(\DateTimeZone|string $timezone): static
