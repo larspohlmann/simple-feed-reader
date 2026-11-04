@@ -11,6 +11,7 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Trending\Model\RankedStoryModel;
+use App\Service\Trending\Model\TrendingCountsModel;
 use App\Service\Trending\Model\TrendingPageModel;
 use App\Service\Trending\Pass\StoryCardSource;
 
@@ -38,10 +39,35 @@ final readonly class TrendingStories
         );
     }
 
+    public function unopenedCounts(int $userId): TrendingCountsModel
+    {
+        return new TrendingCountsModel(
+            $this->unopenedIn($userId, TrendingWindow::Day),
+            $this->unopenedIn($userId, TrendingWindow::Week),
+        );
+    }
+
+    private function unopenedIn(int $userId, TrendingWindow $window): int
+    {
+        $storyIds = self::storyIdsOf($this->stories->rankedForUser($userId, $window, self::MAX_STORIES));
+
+        return \count($storyIds) - \count($this->stories->viewedStoryIds($userId, $storyIds));
+    }
+
+    /**
+     * @param list<RankedStoryModel> $ranked
+     *
+     * @return list<int>
+     */
+    private static function storyIdsOf(array $ranked): array
+    {
+        return array_map(static fn (RankedStoryModel $story): int => $story->storyId, $ranked);
+    }
+
     /** @param list<RankedStoryModel> $ranked */
     private function sourceFor(int $userId, array $ranked): StoryCardSource
     {
-        $storyIds = array_map(static fn (RankedStoryModel $story): int => $story->storyId, $ranked);
+        $storyIds = self::storyIdsOf($ranked);
         $entryIdsByStory = $this->stories->articleEntryIdsByStory($userId, $storyIds);
 
         return new StoryCardSource(
