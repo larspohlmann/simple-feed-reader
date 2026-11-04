@@ -165,6 +165,13 @@ those feeds ran it. A switch in the list header picks the window.
     `{ window, entryId }` (the lead) answers 204; an entry in no story of that window is a 404 `problem+json`.
     The card leaves the list at once; on failure it comes back.
 
+38. **The threshold scales with the reader's active feeds (added 2026-11-04).** Decision 1's 3 / 5 become floors:
+    a story needs at least `max(floor, ceil(share × active))` distinct subscribed feeds, where *active* is the
+    number of feeds the reader follows that published at least one entry within the window. Day: floor 3,
+    share 3 %; week: floor 5, share 3.5 %. Both numbers live in `TrendingWindow`. The build keeps dropping
+    groups below the floor (instance-wide). On 2026-11-04 the owner's account (129 / 190 active of 241) gets 4
+    and 7, about 19 and 23 stories.
+
 ## Out of scope
 
 A per-feed "include in Trending" toggle, notifications, cross-language matching, mark-all-read in Trending,
