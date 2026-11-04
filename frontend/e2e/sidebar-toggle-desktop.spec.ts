@@ -46,7 +46,7 @@ test('hides the sidebar, keeps it hidden across a reload, then shows it again', 
   await expect(sidebar).toBeHidden();
 
   // The toolbar's button; the list's corner circle shares its label (#1943).
-  await page.locator('button.sidebar-show').click();
+  await page.locator('.sidebar-show-slot').getByRole('button', { name: 'Show sidebar' }).click();
   await expect(body).not.toHaveClass(/sidebar-hidden/);
   await expect(sidebar).toBeVisible();
 });
