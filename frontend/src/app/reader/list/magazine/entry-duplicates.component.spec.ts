@@ -70,6 +70,16 @@ it('renders one chip per duplicate with its feed', () => {
   expect(chips[0].textContent).toContain('NDR Schleswig-Holstein');
 });
 
+it("holds a long feed title in the chip's truncating name, the whole title in its tooltip", () => {
+  const title = 'World News, Today World News, Latest International News - Times of India';
+  const dup = entry({ id: 2, source: title });
+  const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
+  const chip = element.querySelector('.also-entry')!;
+
+  expect(chip.querySelector('.feed')!.textContent!.trim()).toBe(title);
+  expect(chip.getAttribute('title')).toBe(title);
+});
+
 it("names a duplicate from a Home by the Home's label", () => {
   const dup = authorlessHomePost(7, { id: 2, source: 'Bob' });
   const element = mount(entry({ duplicates: [dup] }), () => holdUnrenamedHome(7))

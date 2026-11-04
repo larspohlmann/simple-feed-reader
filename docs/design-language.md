@@ -60,6 +60,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
+| `--footer-chip-name-max` | `24ch` | the feed name in an "Also in" / "Also covered by" footer chip, which ellipsises past it; the chip's `title` carries the full name (#2017) |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the

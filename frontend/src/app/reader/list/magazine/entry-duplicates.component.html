@@ -8,9 +8,10 @@
         class="also-entry reads-as-text"
         [attr.aria-expanded]="displayed()?.id === item.copy.id"
         [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
+        [attr.title]="item.feed"
         (click)="toggle(item.copy, $event)"
       >
-        {{ item.feed }} <span class="sep">·</span>
+        <span class="feed">{{ item.feed }}</span> <span class="sep">·</span>
         <span class="t">{{ item.when }}</span>
       </button>
     }
