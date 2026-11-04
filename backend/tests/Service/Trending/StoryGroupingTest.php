@@ -87,6 +87,21 @@ final class StoryGroupingTest extends TestCase
         self::assertSame([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]], self::grouped(12, $links));
     }
 
+    public function testNewestMeansPublishedLastNotHighestId(): void
+    {
+        $links = self::completeGraph(10, 100.0);
+        foreach ([1, 2, 3, 4] as $newMember) {
+            $links[] = new StoryLinkModel($newMember, 11, 5.0);
+        }
+        foreach ([7, 8, 9, 10] as $oldMember) {
+            $links[] = new StoryLinkModel($oldMember, 12, 4.0);
+        }
+
+        $groups = (new StoryGrouping())->group(self::runOfNewestLowestId(12), $links);
+
+        self::assertSame([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]], $groups);
+    }
+
     public function testTiesAreBrokenByEntryId(): void
     {
         $links = [new StoryLinkModel(3, 4, 10.0), new StoryLinkModel(2, 3, 10.0), new StoryLinkModel(1, 2, 10.0)];
@@ -126,9 +141,20 @@ final class StoryGroupingTest extends TestCase
 
     private static function runOf(int $entryCount): TrendingRun
     {
+        return self::runPublishedAt($entryCount, static fn (int $entryId): int => $entryId);
+    }
+
+    private static function runOfNewestLowestId(int $entryCount): TrendingRun
+    {
+        return self::runPublishedAt($entryCount, static fn (int $entryId): int => $entryCount + 1 - $entryId);
+    }
+
+    /** @param callable(int): int $hourOf */
+    private static function runPublishedAt(int $entryCount, callable $hourOf): TrendingRun
+    {
         $run = TrendingRuns::of(TrendingWindow::Day);
         for ($entryId = 1; $entryId <= $entryCount; $entryId++) {
-            $publishedAt = \sprintf('2031-05-14 %02d:00:00', $entryId);
+            $publishedAt = \sprintf('2031-05-14 %02d:00:00', $hourOf($entryId));
             $run->add(TrendingRuns::entry($entryId, $entryId, 'Entry', $publishedAt), []);
         }
 
