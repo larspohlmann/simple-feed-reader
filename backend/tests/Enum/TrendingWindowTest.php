@@ -44,9 +44,9 @@ final class TrendingWindowTest extends TestCase
         yield 'three percent of 101 rounds up past the day floor' => [TrendingWindow::Day, 101, 4];
         yield 'three percent of 129' => [TrendingWindow::Day, 129, 4];
         yield 'a week without active feeds keeps the floor' => [TrendingWindow::Week, 0, 5];
-        yield '3.5 percent of 142 rounds up to the week floor' => [TrendingWindow::Week, 142, 5];
-        yield '3.5 percent of 143 rounds up past the week floor' => [TrendingWindow::Week, 143, 6];
-        yield '3.5 percent of 190' => [TrendingWindow::Week, 190, 7];
+        yield '2.5 percent of 200 is exactly the week floor' => [TrendingWindow::Week, 200, 5];
+        yield '2.5 percent of 201 rounds up past the week floor' => [TrendingWindow::Week, 201, 6];
+        yield '2.5 percent of 222' => [TrendingWindow::Week, 222, 6];
     }
 
     public function testTheWeekLeavesOutTheDaysStoriesAndTheDayLeavesOutNone(): void

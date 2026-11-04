@@ -102,7 +102,7 @@ enum TrendingWindow: string
     {
         return match ($this) {
             self::Day => 30,
-            self::Week => 35,
+            self::Week => 25,
         };
     }
 }
