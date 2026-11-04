@@ -1026,9 +1026,10 @@ The selected option takes the accent treatment of the pill toggles: `--accent-so
 fill, `--accent` text, semibold, so it reads in light and dark alike. `aria-pressed`
 stays the semantic state; the `on` class only draws it.
 
-On a coarse pointer the control is at least `--tap-target` tall, like the view-controls
-groups (`theme/_segmented.scss`); in the list header that matches the 44px actions of
-the other lists, so Trending's header is as tall as theirs.
+On a coarse pointer the control keeps its compact look; only each option's hit area grows
+to `--tap-target` (an invisible `::after`, as the corner buttons do, #1912). A drawn 44px
+switch read as oversized on the iPhone. The list header's tools row owns the touch height
+itself, so Trending's header stays as tall as the other lists'.
 
 The control sizes to its labels; a consumer that wants it full width makes
 the host `display: flex` and the buttons share the width (the social import
