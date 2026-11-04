@@ -144,18 +144,18 @@ describe('PreferencesService', () => {
     });
 
     describe("with the account's cached choice on this device", () => {
-      const cacheKey = 'sfr.user.7.trending-hidden';
+      const cacheKey = 'sfr.user.7.trending-enabled';
 
       beforeEach(() => localStorage.setItem('sfr.jwt', jwtWith({ userId: 7 })));
 
       it('paints a cached off as hidden before the account loads', () => {
-        localStorage.setItem(cacheKey, 'true');
+        localStorage.setItem(cacheKey, 'false');
 
         expect(service().trendingEnabled()).toBe(false);
       });
 
       it("lets the account's value overwrite the cache", () => {
-        localStorage.setItem(cacheKey, 'true');
+        localStorage.setItem(cacheKey, 'false');
         const preferencesService = service();
 
         preferencesService.adopt(account({ trendingEnabled: true }));
@@ -166,11 +166,11 @@ describe('PreferencesService', () => {
 
       it('caches an off from the account, and from the toggle, for the next start', () => {
         service().adopt(account({ trendingEnabled: false }));
-        expect(localStorage.getItem(cacheKey)).toBe('true');
+        expect(localStorage.getItem(cacheKey)).toBe('false');
 
         localStorage.removeItem(cacheKey);
         service().setTrendingEnabled(false);
-        expect(localStorage.getItem(cacheKey)).toBe('true');
+        expect(localStorage.getItem(cacheKey)).toBe('false');
       });
     });
 

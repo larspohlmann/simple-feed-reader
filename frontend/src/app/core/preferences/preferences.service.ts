@@ -1,11 +1,15 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { userIdClaim } from '../auth/account-identity';
 import { CurrentUser } from '../auth/auth.service';
 import { TokenStore } from '../auth/token.store';
 import { PREFERENCES_WRITER } from './preferences-writer';
-import { userDeviceKey } from './user-device-storage';
+import { readDeviceValue, userDeviceKey, writeDeviceValue } from './user-device-storage';
 
-const TRENDING_HIDDEN = 'trending-hidden';
+const TRENDING_ENABLED = 'trending-enabled';
+
+function cachedTrendingEnabled(key: string | null): boolean {
+  return readDeviceValue(key) !== 'false';
+}
 
 /**
  * Per-account settings, mirroring `LanguageService`: the account is the source
@@ -31,13 +35,13 @@ export class PreferencesService {
   /** True when the value applied locally but the account write failed. */
   readonly saveFailed = signal(false);
 
-  /** This session's value; null until `adopt()` or a toggle, when the account's cached choice paints instead. */
-  private readonly trendingChoice = signal<boolean | null>(null);
   private readonly trendingCacheKey = computed(() => {
     const userId = userIdClaim(this.tokens.token());
-    return userId === null ? null : userDeviceKey(userId, TRENDING_HIDDEN);
+    return userId === null ? null : userDeviceKey(userId, TRENDING_ENABLED);
   });
-  readonly trendingEnabled = computed(() => this.trendingChoice() ?? !this.trendingCachedHidden());
+  /** The account's cached choice, read once per account, until `adopt()` or a toggle overrides it. */
+  private readonly trending = linkedSignal(() => cachedTrendingEnabled(this.trendingCacheKey()));
+  readonly trendingEnabled = this.trending.asReadonly();
 
   readonly trendingSaveFailed = signal(false);
 
@@ -79,20 +83,13 @@ export class PreferencesService {
   reset(): void {
     this.scrapeFallbackEnabled.set(false);
     this.saveFailed.set(false);
-    this.trendingChoice.set(null);
+    this.trending.set(cachedTrendingEnabled(this.trendingCacheKey()));
     this.trendingSaveFailed.set(false);
   }
 
   private applyTrending(enabled: boolean): void {
-    this.trendingChoice.set(enabled);
+    this.trending.set(enabled);
     const key = this.trendingCacheKey();
-    if (key === null) return;
-    if (enabled) localStorage.removeItem(key);
-    else localStorage.setItem(key, 'true');
-  }
-
-  private trendingCachedHidden(): boolean {
-    const key = this.trendingCacheKey();
-    return key !== null && localStorage.getItem(key) === 'true';
+    if (key !== null) writeDeviceValue(key, enabled ? null : 'false');
   }
 }

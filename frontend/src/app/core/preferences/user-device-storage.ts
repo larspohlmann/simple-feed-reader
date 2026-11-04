@@ -5,6 +5,16 @@ export function userDeviceKey(userId: number, name: string): string {
   return `sfr.user.${userId}.${name}`;
 }
 
+/** Cycle-free access for a service `UserDeviceStorage` cannot serve: it reaches `AuthService`. */
+export function readDeviceValue(key: string | null): string | null {
+  return key === null ? null : localStorage.getItem(key);
+}
+
+export function writeDeviceValue(key: string, value: string | null): void {
+  if (value === null) localStorage.removeItem(key);
+  else localStorage.setItem(key, value);
+}
+
 /** Per-account values that stay on this device: `sfr.user.<id>.<name>` in localStorage. */
 @Injectable({ providedIn: 'root' })
 export class UserDeviceStorage {
@@ -13,15 +23,13 @@ export class UserDeviceStorage {
 
   read(name: string): string | null {
     this.revision();
-    const key = this.keyFor(name);
-    return key === null ? null : localStorage.getItem(key);
+    return readDeviceValue(this.keyFor(name));
   }
 
   write(name: string, value: string | null): void {
     const key = this.keyFor(name);
     if (key === null) return;
-    if (value === null) localStorage.removeItem(key);
-    else localStorage.setItem(key, value);
+    writeDeviceValue(key, value);
     this.revision.update((count) => count + 1);
   }
 
