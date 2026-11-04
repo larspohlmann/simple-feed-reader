@@ -11,7 +11,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\LinkCard\LinkCardSweep;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
@@ -39,6 +38,7 @@ use App\Tests\Support\ClockStampingMatcher;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\LinkCardSweepWiring;
+use App\Tests\Support\MaintenanceTickDoubles;
 use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\QueuedLinkPosts;
 use App\Tests\Support\RecordingMaintenanceSweep;
@@ -54,14 +54,12 @@ use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\ProfileImageSweep;
 use App\Service\Social\ProfileVisibilityCache;
-use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Transcript\TranscriptSweep;
 use App\Service\Trending\Model\TrendingRebuildReportModel;
 use App\Tests\Support\PrivateFeedSyncWiring;
@@ -80,6 +78,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 final class MaintenanceTickTest extends DbTestCase
 {
     private const int TICK_WINDOW_SECONDS = 25;
+    private const int TRENDING_FIRST_BUILDS_SECONDS = 30;
 
     public function testRunProducesAReportCarryingBothHalves(): void
     {
@@ -224,11 +223,10 @@ final class MaintenanceTickTest extends DbTestCase
         );
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
             ->build($passes, $appView);
-        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
-        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
-        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock);
 
-        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock, $appView)->run();
+        $report = $this->tickAround(
+            new MaintenanceTickDoubles($refreshRunner, $clock, self::TICK_WINDOW_SECONDS, appViewFetcher: $appView),
+        )->run();
 
         return self::reportOf($report, 'profileImages', ProfileImageSweepReportModel::class)->checked;
     }
@@ -272,11 +270,10 @@ final class MaintenanceTickTest extends DbTestCase
         );
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
             ->build($passes, new StubFeedFetcher());
-        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
-        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
-        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock);
 
-        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
+        $report = $this->tickAround(
+            new MaintenanceTickDoubles($refreshRunner, $clock, self::TICK_WINDOW_SECONDS),
+        )->run();
 
         return self::reportOf($report, 'hiddenProfiles', HiddenProfileSwitchReportModel::class)->started;
     }
@@ -298,10 +295,10 @@ final class MaintenanceTickTest extends DbTestCase
         );
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
             ->build($passes, new StubFeedFetcher());
-        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
-        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
 
-        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
+        $report = $this->tickAround(
+            new MaintenanceTickDoubles($refreshRunner, $clock, self::TICK_WINDOW_SECONDS, linkCardSweep: $linkCardSweep),
+        )->run();
 
         self::assertFalse($report->refresh->isAborted());
         self::assertEquals($expectedSweep, $report->sweeps->reports['linkCards']);
@@ -344,11 +341,10 @@ final class MaintenanceTickTest extends DbTestCase
         );
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
             ->build($passes, new StubFeedFetcher());
-        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
-        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
-        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock);
 
-        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
+        $report = $this->tickAround(
+            new MaintenanceTickDoubles($refreshRunner, $clock, self::TRENDING_FIRST_BUILDS_SECONDS),
+        )->run();
 
         self::assertCount(2, self::reportOf($report, 'trending', TrendingRebuildReportModel::class)->builds);
     }
@@ -378,18 +374,14 @@ final class MaintenanceTickTest extends DbTestCase
         $stamps = new StageStamps();
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
             ->build(new StubPassFetcher(), new StubFeedFetcher());
-        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
-        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
 
-        $this->tickAround(
+        $this->tickAround(new MaintenanceTickDoubles(
             $refreshRunner,
-            $sendDueDigests,
-            LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock),
             $clock,
+            100_000,
             matcher: new ClockStampingMatcher($stamps, $clock),
             network: new ClockStampingCandidates($stamps, $clock),
-            windowSeconds: 100_000,
-        )->run();
+        ))->run();
 
         $builtAt = $this->entityManager->getConnection()->fetchOne('SELECT MIN(built_at) FROM trending_snapshot');
         self::assertIsString($builtAt);
@@ -398,16 +390,11 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertLessThan(new \DateTimeImmutable($builtAt, new \DateTimeZone('UTC')), $stamps->at('sync'));
     }
 
-    private function tickAround(
-        RefreshRunner $refreshRunner,
-        SendDueDigests $sendDueDigests,
-        LinkCardSweep $linkCardSweep,
-        ClockInterface $clock,
-        ?StubFeedFetcher $appViewFetcher = null,
-        ?SavedSearchMatcherInterface $matcher = null,
-        ?SocialCandidatesInterface $network = null,
-        int $windowSeconds = self::TICK_WINDOW_SECONDS,
-    ): MaintenanceTick {
+    private function tickAround(MaintenanceTickDoubles $doubles): MaintenanceTick
+    {
+        $clock = $doubles->clock;
+        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
+        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
         $transcriptSweep = self::getContainer()->get(TranscriptSweep::class);
@@ -420,7 +407,7 @@ final class MaintenanceTickTest extends DbTestCase
         );
 
         return new MaintenanceTick(
-            $refreshRunner,
+            $doubles->refreshRunner,
             self::inDeclaredOrder([
                 new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $clock)),
                 new PrivateFeedSyncTickSweep(
@@ -428,7 +415,7 @@ final class MaintenanceTickTest extends DbTestCase
                         self::getContainer(),
                         $this->entityManager,
                         $clock,
-                        $network ?? new StubSocialCandidates(
+                        $doubles->network ?? new StubSocialCandidates(
                             new SocialNetworkUnreachableException('no network in this test'),
                         ),
                     ),
@@ -438,18 +425,21 @@ final class MaintenanceTickTest extends DbTestCase
                     MembershipSweepFactory::fromContainer(
                         self::getContainer(),
                         $this->entityManager,
-                        $matcher ?? new RecordingSavedSearchMatcher(),
+                        $doubles->matcher ?? new RecordingSavedSearchMatcher(),
                         $clock,
                     ),
                     $clock,
                 ),
                 new HiddenProfilesTickSweep($this->hiddenProfileSwitchSweep(), $clock),
                 new ProfileImagesTickSweep(
-                    $this->profileImageSweep($appViewFetcher ?? self::unreachableAppView(), $clock),
+                    $this->profileImageSweep($doubles->appViewFetcher ?? self::unreachableAppView(), $clock),
                     $clock,
                 ),
                 new TranscriptsTickSweep($transcriptSweep, $clock),
-                new LinkCardsTickSweep($linkCardSweep, $clock),
+                new LinkCardsTickSweep(
+                    $doubles->linkCardSweep ?? LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock),
+                    $clock,
+                ),
                 new ImageVerificationTickSweep($imageVerificationSweep, $clock),
                 new DigestsTickSweep($sendDueDigests),
                 new RecommendationsTickSweep($forYouSweep),
@@ -459,7 +449,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
-            $windowSeconds,
+            $doubles->windowSeconds,
         );
     }
 
