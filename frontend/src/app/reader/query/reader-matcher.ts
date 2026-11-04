@@ -1,5 +1,5 @@
 import { ParamMap, UrlMatchResult, UrlSegment } from '@angular/router';
-import { Selection, selectionFromParams } from './query';
+import { OfferedViews, Selection, selectionFromParams } from './query';
 import { entryIdFromParam } from './slug';
 
 /**
@@ -19,10 +19,11 @@ export function readerMatcher(segments: UrlSegment[]): UrlMatchResult | null {
 export function selectionFromRoute(
   pathParams: ParamMap,
   queryParams: ParamMap,
+  offered?: OfferedViews,
 ): { selection: Selection; entryId: number | null } {
   const savedSearch = pathParams.get('savedSearch');
   if (savedSearch === null) {
-    return selectionFromParams(queryParams);
+    return selectionFromParams(queryParams, offered);
   }
 
   // The entry overlay composes on top of a saved-search path, so a merged

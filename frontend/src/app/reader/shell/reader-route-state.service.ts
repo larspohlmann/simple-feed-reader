@@ -1,12 +1,12 @@
 import { DestroyRef, Injectable, computed, effect, inject, untracked } from '@angular/core';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
-import { isDirectSearch, sameSelection, withTrendingAvailability } from '../query/query';
+import { OfferedViews, isDirectSearch, sameSelection } from '../query/query';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
@@ -15,6 +15,7 @@ import { LinkReaderNavigation } from './link-reader-navigation.service';
 @Injectable()
 export class ReaderRouteState {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly api = inject(ReaderApi);
   private readonly bodyService = inject(EntryBodyService);
   private readonly entries = inject(EntriesStore);
@@ -28,18 +29,21 @@ export class ReaderRouteState {
   private readonly pathParameters = toSignal(this.route.paramMap, {
     initialValue: convertToParamMap({}),
   });
+  private readonly offered = computed<OfferedViews>(() => ({
+    trending: this.preferences.trendingEnabled(),
+  }));
   private readonly parsed = computed(() =>
-    selectionFromRoute(this.pathParameters(), this.queryParameters()),
+    selectionFromRoute(this.pathParameters(), this.queryParameters(), this.offered()),
+  );
+  /** The URL names Trending on an account that switched it off; the parse already opened All items. */
+  private readonly namesRefusedView = computed(
+    () => this.queryParameters().get('view') === 'trending' && !this.offered().trending,
   );
 
   /** Structural equality: an entry-only URL change keeps the reference, so the list does not reload. */
-  readonly selection = computed(
-    () =>
-      this.listPreferences.appliedTo(
-        withTrendingAvailability(this.parsed().selection, this.preferences.trendingEnabled()),
-      ),
-    { equal: sameSelection },
-  );
+  readonly selection = computed(() => this.listPreferences.appliedTo(this.parsed().selection), {
+    equal: sameSelection,
+  });
   private readonly inSearch = computed(() => isDirectSearch(this.parsed().selection));
   readonly entryId = computed(() => this.parsed().entryId);
   readonly linkTarget = computed(() => signedUrlFromParam(this.queryParameters().get('link')), {
@@ -76,12 +80,26 @@ export class ReaderRouteState {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
     });
+    effect(() => {
+      if (!this.namesRefusedView()) return;
+      untracked(() => this.dropViewFromUrl());
+    });
     // Warm the body store for the entries beside the one just opened. Keyed on
     // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
     effect(() => {
       const id = this.openEntryId();
       if (id === null) return;
       untracked(() => this.prefetchNeighbours(id));
+    });
+  }
+
+  /** So the URL agrees with the All items list the parse opened in its place. */
+  private dropViewFromUrl(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { view: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 

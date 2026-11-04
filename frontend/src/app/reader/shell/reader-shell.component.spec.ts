@@ -260,32 +260,45 @@ describe('ReaderShellComponent', () => {
   describe('Trending switched off on the account (#2017, D39)', () => {
     const trendingRequests = () =>
       ctrl.match((request) => request.url === 'https://api.test/api/trending');
+    let navigate: jest.SpyInstance;
+    const leftTrending = () =>
+      navigate.mock.calls.filter(
+        ([, extras]) =>
+          extras?.queryParams?.['view'] === null &&
+          extras.queryParamsHandling === 'merge' &&
+          extras.replaceUrl === true,
+      );
 
     beforeEach(() => {
       TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       qp.next(convertToParamMap({ view: 'trending' }));
     });
 
-    it('opens All items for a Trending link', () => {
+    it('opens All items for a Trending link, and takes Trending out of the URL', () => {
       const fixture = boot();
 
       expect(trendingRequests()).toHaveLength(0);
       expect(fixture.componentInstance.selection().kind).toBe('all');
+      expect(leftTrending()).toHaveLength(1);
     });
 
     it('moves an open Trending list to All items when the switch goes off', () => {
       const fixture = boot();
+      navigate.mockClear();
       TestBed.inject(PreferencesService).setTrendingEnabled(true);
       fixture.detectChanges();
       trendingRequests().forEach((request) =>
         request.flush({ window: 'day', builtAt: null, stories: [] }),
       );
       expect(fixture.componentInstance.selection().kind).toBe('trending');
+      expect(leftTrending()).toHaveLength(0);
 
       TestBed.inject(PreferencesService).setTrendingEnabled(false);
       fixture.detectChanges();
 
       expect(fixture.componentInstance.selection().kind).toBe('all');
+      expect(leftTrending()).toHaveLength(1);
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });

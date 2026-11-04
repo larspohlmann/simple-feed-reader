@@ -127,16 +127,6 @@ export function withTrendingWindow(selection: Selection, window: TrendingWindow)
   return selection.kind === 'trending' ? { ...selection, window } : selection;
 }
 
-/** A Trending selection on an account that switched Trending off opens All items, as an unknown view does (D39). */
-export function withTrendingAvailability(
-  selection: Selection,
-  trendingEnabled: boolean,
-): Selection {
-  return selection.kind === 'trending' && !trendingEnabled
-    ? { kind: 'all', id: null, unread: false }
-    : selection;
-}
-
 /** Trending is a picture of the news, not an inbox: nothing in it is marked read in bulk (#2017). */
 export function offersMarkAboveRead(selection: Selection): boolean {
   return selection.kind !== 'trending';
@@ -232,7 +222,17 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   return params;
 }
 
-export function selectionFromParams(paramMap: ParamMap): {
+/** The views an account may switch off (D39); a URL naming one that is off opens All items, as an unknown view does. */
+export interface OfferedViews {
+  trending: boolean;
+}
+
+const EVERY_VIEW: OfferedViews = { trending: true };
+
+export function selectionFromParams(
+  paramMap: ParamMap,
+  offered: OfferedViews = EVERY_VIEW,
+): {
   selection: Selection;
   entryId: number | null;
 } {
@@ -250,21 +250,23 @@ export function selectionFromParams(paramMap: ParamMap): {
     return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
   }
 
-  let selection: Selection;
-  if (view === 'favorites' || view === 'kept' || view === 'shared' || view === 'viewed') {
-    // Each of these IS a filter on entry state, so a second one would be a
-    // contradiction: "kept, but only unread" is not a list this reader offers.
-    selection = { kind: view, id: null, unread: false };
-  } else if (view === 'for-you') {
-    selection = { kind: 'for-you', id: null, unread: false };
-  } else if (view === 'trending') {
-    selection = { kind: 'trending', id: null, unread: false };
-  } else if (view === 'saved-searches') {
-    selection = { kind: 'saved-searches', id: null, unread: false };
-  } else {
-    selection = feedScopedSelection(paramMap);
-  }
-  return { selection, entryId };
+  return { selection: namedViewSelection(view, offered) ?? feedScopedSelection(paramMap), entryId };
+}
+
+/** The views that name no feed and carry nothing beyond their name. */
+const NAMED_VIEWS = ['favorites', 'kept', 'shared', 'viewed', 'for-you', 'saved-searches'] as const;
+
+type NamedView = (typeof NAMED_VIEWS)[number];
+
+function isNamedView(view: string | null): view is NamedView {
+  return (NAMED_VIEWS as readonly (string | null)[]).includes(view);
+}
+
+/** Null for a feed-scoped list, and for a view this account does not offer. */
+function namedViewSelection(view: string | null, offered: OfferedViews): Selection | null {
+  if (view === 'trending')
+    return offered.trending ? { kind: 'trending', id: null, unread: false } : null;
+  return isNamedView(view) ? { kind: view, id: null, unread: false } : null;
 }
 
 /** The lists drawn from feeds: one subscription, a tag, a network's feeds, a feed group, or all of them. */

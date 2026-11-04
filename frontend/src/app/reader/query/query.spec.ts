@@ -881,6 +881,14 @@ describe('the Trending view (#2017)', () => {
     expect(selectionFromParams(pm({ view: 'trending' })).selection).toEqual(trending);
   });
 
+  it('opens All items for view=trending on an account that switched Trending off (D39)', () => {
+    expect(selectionFromParams(pm({ view: 'trending' }), { trending: false }).selection).toEqual({
+      kind: 'all',
+      id: null,
+      unread: false,
+    });
+  });
+
   it('asks for the window the selection carries', () => {
     expect(queryFromSelection({ ...trending, window: 'week' })).toEqual({
       view: 'trending',
