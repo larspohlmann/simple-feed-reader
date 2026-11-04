@@ -76,11 +76,13 @@ final readonly class TrendingStories
     {
         $storyIds = self::storyIdsOf($ranked);
         $entryIdsByStory = $this->stories->articleEntryIdsByStory($userId, $storyIds);
+        $rowsByEntryId = $this->rowsByEntryId($userId, array_merge([], ...array_values($entryIdsByStory)));
 
         return new StoryCardSource(
             $entryIdsByStory,
-            $this->rowsByEntryId($userId, array_merge([], ...array_values($entryIdsByStory))),
+            $rowsByEntryId,
             array_flip($this->stories->viewedStoryIds($userId, $storyIds)),
+            $this->copiesByUrlHash($userId, $rowsByEntryId),
         );
     }
 
@@ -89,27 +91,38 @@ final readonly class TrendingStories
      *
      * @param list<int> $entryIds
      *
-     * @return array<int, EntryListRow> newest first
+     * @return array<int, EntryListRow>
      */
     private function rowsByEntryId(int $userId, array $entryIds): array
     {
-        $rows = [];
-        foreach ($this->enricher->enrich($this->entryList->rowsByIdsForUser($userId, $entryIds), $userId) as $row) {
-            $rows[] = $row->withDuplicates([]);
-            foreach ($row->duplicates as $duplicate) {
-                $rows[] = $duplicate->withDuplicates([]);
-            }
-        }
-        usort($rows, static fn (EntryListRow $left, EntryListRow $right): int => [
-            $right->entry->getEffectiveDate(),
-            $right->entry->requireId(),
-        ] <=> [$left->entry->getEffectiveDate(), $left->entry->requireId()]);
-
         $rowsByEntryId = [];
-        foreach ($rows as $row) {
-            $rowsByEntryId[$row->entry->requireId()] = $row;
+        foreach ($this->enricher->enrich($this->entryList->rowsByIdsForUser($userId, $entryIds), $userId) as $row) {
+            foreach ([$row, ...$row->duplicates] as $outlet) {
+                $rowsByEntryId[$outlet->entry->requireId()] = $outlet->withDuplicates([]);
+            }
         }
 
         return $rowsByEntryId;
+    }
+
+    /**
+     * @param array<int, EntryListRow> $rowsByEntryId
+     *
+     * @return array<string, list<EntryListRow>>
+     */
+    private function copiesByUrlHash(int $userId, array $rowsByEntryId): array
+    {
+        $urlHashes = array_values(array_unique(array_filter(array_map(
+            static fn (EntryListRow $row): ?string => $row->entry->getUrlHash(),
+            array_values($rowsByEntryId),
+        ))));
+
+        $copiesByUrlHash = [];
+        $copies = $this->entryList->rowsByUrlHashesForUser($userId, $urlHashes);
+        foreach ($this->enricher->enrich($copies, $userId) as $copy) {
+            $copiesByUrlHash[(string) $copy->entry->getUrlHash()][] = $copy;
+        }
+
+        return $copiesByUrlHash;
     }
 }

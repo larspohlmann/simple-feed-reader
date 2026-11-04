@@ -23,13 +23,8 @@ import {
   tagsInTreeOrder,
   untaggedSubscriptions,
 } from './subscription-derivations';
-import {
-  SubscriptionDto,
-  SubscriptionTagDto,
-  TagDto,
-  TrendingCounts,
-  UnreadTotalsDto,
-} from '../models';
+import { SubscriptionDto, SubscriptionTagDto, TagDto, UnreadTotalsDto } from '../models';
+import { TrendingCounts } from '../trending/trending.models';
 import { anEntry } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
 import { makeTag } from '../testing/tag.factory';

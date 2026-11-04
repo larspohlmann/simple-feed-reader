@@ -6,41 +6,79 @@ namespace App\Service\Trending\Model;
 
 use App\Repository\EntryListRow;
 
-/** One Trending card: an article per feed, led by the newest with a picture (#2017). */
+/** One Trending card: the lead article, newest with a picture, whose duplicates are the other outlets (#2017). */
 final readonly class TrendingStoryCardModel
 {
-    /** @param list<EntryListRow> $others newest first */
     public function __construct(
         public EntryListRow $lead,
-        public array $others,
         public int $outletCount,
         public bool $viewed,
     ) {
     }
 
-    /** @param non-empty-list<EntryListRow> $newestFirst the story's article rows the reader can see */
-    public static function fromRows(array $newestFirst, int $outletCount, bool $viewed): self
+    /** @param non-empty-list<EntryListRow> $rows the story's article rows the reader can see */
+    public static function fromRows(array $rows, int $outletCount, bool $viewed): self
     {
-        $onePerFeed = self::newestPerFeed($newestFirst);
+        $onePerFeed = self::newestPerFeed($rows);
         $lead = self::leadOf($onePerFeed);
-        $others = array_values(array_filter($onePerFeed, static fn (EntryListRow $row): bool => $row !== $lead));
 
-        return new self($lead, $others, $outletCount, $viewed);
+        return new self(
+            $lead->withDuplicates(self::otherFeedsThan($lead, $onePerFeed)),
+            $outletCount,
+            $viewed,
+        );
     }
 
     /**
-     * @param non-empty-list<EntryListRow> $newestFirst
+     * The lead's own copies elsewhere join its outlets, one per feed, the lead's feed never.
      *
-     * @return non-empty-list<EntryListRow>
+     * @param list<EntryListRow> $copies
      */
-    private static function newestPerFeed(array $newestFirst): array
+    public function withCopies(array $copies): self
     {
+        return new self(
+            $this->lead->withDuplicates(self::otherFeedsThan(
+                $this->lead,
+                self::newestPerFeed([...$this->lead->duplicates, ...$copies]),
+            )),
+            $this->outletCount,
+            $this->viewed,
+        );
+    }
+
+    /**
+     * @param list<EntryListRow> $rows
+     *
+     * @return ($rows is non-empty-list ? non-empty-list<EntryListRow> : list<EntryListRow>) newest first
+     */
+    private static function newestPerFeed(array $rows): array
+    {
+        usort($rows, static fn (EntryListRow $left, EntryListRow $right): int => [
+            $right->entry->getEffectiveDate(),
+            $right->entry->requireId(),
+        ] <=> [$left->entry->getEffectiveDate(), $left->entry->requireId()]);
+
         $byFeed = [];
-        foreach ($newestFirst as $row) {
+        foreach ($rows as $row) {
             $byFeed[$row->entry->getFeed()->requireId()] ??= $row;
         }
 
         return array_values($byFeed);
+    }
+
+    /**
+     * @param list<EntryListRow> $onePerFeed
+     *
+     * @return list<EntryListRow>
+     */
+    private static function otherFeedsThan(EntryListRow $lead, array $onePerFeed): array
+    {
+        $leadFeedId = $lead->entry->getFeed()->requireId();
+
+        return array_values(array_filter(
+            $onePerFeed,
+            static fn (EntryListRow $row): bool => $row->entry->getFeed()->requireId() !== $leadFeedId,
+        ));
     }
 
     /** @param non-empty-list<EntryListRow> $rows */

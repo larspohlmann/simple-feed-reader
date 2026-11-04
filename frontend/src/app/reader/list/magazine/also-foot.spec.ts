@@ -21,10 +21,7 @@ describe('alsoFootOf', () => {
 
   it("lists a Trending story's other outlets under Also covered by", () => {
     const other = anEntry({ id: 3 });
-    const lead = anEntry({
-      duplicates: [anEntry({ id: 2 })],
-      coverage: { outletCount: 4, others: [other], viewed: false },
-    });
+    const lead = anEntry({ duplicates: [other], story: { outletCount: 4, viewed: false } });
 
     expect(alsoFootOf(lead)).toEqual({ copies: [other], label: 'reader.alsoCoveredBy' });
   });

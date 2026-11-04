@@ -1,36 +1,17 @@
 import { EntryDto } from '../models';
 
-/** `row` itself when neither it nor a copy in its footer is targeted. */
+/** `row` itself when neither it nor a copy in its `duplicates` is targeted. */
 export function withPatchedRow(
   row: EntryDto,
   targets: ReadonlySet<number>,
   patch: (entry: EntryDto) => EntryDto,
 ): EntryDto {
   const patched = targets.has(row.id) ? patch(row) : row;
-  return withPatchedCoverage(withPatchedDuplicates(patched, targets, patch), targets, patch);
-}
-
-function withPatchedDuplicates(
-  row: EntryDto,
-  targets: ReadonlySet<number>,
-  patch: (entry: EntryDto) => EntryDto,
-): EntryDto {
-  if (!row.duplicates?.some((copy) => targets.has(copy.id))) return row;
+  if (!patched.duplicates?.some((copy) => targets.has(copy.id))) return patched;
   return {
-    ...row,
-    duplicates: row.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
+    ...patched,
+    duplicates: patched.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
   };
-}
-
-function withPatchedCoverage(
-  row: EntryDto,
-  targets: ReadonlySet<number>,
-  patch: (entry: EntryDto) => EntryDto,
-): EntryDto {
-  const coverage = row.coverage;
-  if (!coverage?.others.some((other) => targets.has(other.id))) return row;
-  const others = coverage.others.map((other) => (targets.has(other.id) ? patch(other) : other));
-  return { ...row, coverage: { ...coverage, others } };
 }
 
 /** `current` with `card` back at `index`, unless a reload already brought it back. */

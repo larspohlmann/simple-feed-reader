@@ -182,9 +182,8 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         $leadIds = [];
         foreach ($stories as $story) {
             self::assertIsArray($story);
-            self::assertIsArray($story['lead']);
-            self::assertIsInt($story['lead']['id']);
-            $leadIds[] = $story['lead']['id'];
+            self::assertIsInt($story['id']);
+            $leadIds[] = $story['id'];
         }
 
         return $leadIds;

@@ -1,5 +1,6 @@
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
-import { EntryQuery, ListOrder, MarkReadScope, TrendingWindow } from '../models';
+import { EntryQuery, ListOrder, MarkReadScope } from '../models';
+import { TrendingWindow } from '../trending/trending.models';
 import { FeedGroupName, isFeedGroupName } from '../../core/feed-group';
 import { entryIdFromParam } from './slug';
 import { isSearchableTerm, normalizeSearchInput, phraseWithin } from './search-term';

@@ -45,13 +45,8 @@ import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
-import {
-  MoveFeedToTag,
-  SavedSearchDto,
-  SubscriptionDto,
-  TagDto,
-  TrendingCounts,
-} from '../../models';
+import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import { TrendingCounts } from '../../trending/trending.models';
 import { NO_TRENDING_COUNTS } from '../../trending/trending-window';
 import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';

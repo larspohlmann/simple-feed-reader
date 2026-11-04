@@ -2849,7 +2849,7 @@ describe('EntryListComponent', () => {
         layout: 'magazine',
         entries: MIXED_SOURCE_RUN.map((each) => ({
           ...each,
-          coverage: { outletCount: 3, others: [], viewed: false },
+          story: { outletCount: 3, viewed: false },
         })),
       });
 

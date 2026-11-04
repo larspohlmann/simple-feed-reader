@@ -14,13 +14,7 @@ final readonly class TrendingJson
     }
 
     /**
-     * @return array{
-     *   window: string,
-     *   builtAt: string|null,
-     *   stories: list<array{
-     *     lead: array<string, mixed>, others: list<array<string, mixed>>, outletCount: int, viewed: bool
-     *   }>
-     * }
+     * @return array{window: string, builtAt: string|null, stories: list<array<string, mixed>>}
      */
     public function page(TrendingPageModel $page): array
     {
@@ -31,16 +25,12 @@ final readonly class TrendingJson
         ];
     }
 
-    /**
-     * @return array{lead: array<string, mixed>, others: list<array<string, mixed>>, outletCount: int, viewed: bool}
-     */
+    /** @return array<string, mixed> the lead's list row; its duplicates are the story's other outlets */
     private function story(TrendingStoryCardModel $story): array
     {
         return [
-            'lead' => $this->entryJson->listRow($story->lead),
-            'others' => array_map($this->entryJson->listRow(...), $story->others),
-            'outletCount' => $story->outletCount,
-            'viewed' => $story->viewed,
+            ...$this->entryJson->listRow($story->lead),
+            'story' => ['outletCount' => $story->outletCount, 'viewed' => $story->viewed],
         ];
     }
 }

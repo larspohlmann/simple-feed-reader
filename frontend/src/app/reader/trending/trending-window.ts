@@ -1,4 +1,4 @@
-import { TrendingCounts, TrendingWindow } from '../models';
+import { TrendingCounts, TrendingWindow } from './trending.models';
 
 export const DEFAULT_TRENDING_WINDOW: TrendingWindow = 'day';
 

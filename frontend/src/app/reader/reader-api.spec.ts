@@ -331,7 +331,7 @@ describe('ReaderApi', () => {
     testRequest.flush({
       window: 'day',
       builtAt: null,
-      stories: [{ lead: anEntry({ id: 9 }), others: [], outletCount: 3, viewed: false }],
+      stories: [anEntry({ id: 9, story: { outletCount: 3, viewed: false } })],
     });
     expect(ids).toEqual([9]);
   });

@@ -18,8 +18,8 @@ import {
   UnreadTotalsDto,
   SubscriptionDto,
   SubscriptionsResponse,
-  TrendingCounts,
 } from '../models';
+import { TrendingCounts } from '../trending/trending.models';
 import { NO_TRENDING_COUNTS, sameTrendingCounts } from '../trending/trending-window';
 import {
   FeedGroupCounts,

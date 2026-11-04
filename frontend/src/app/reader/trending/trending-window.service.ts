@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { UserDeviceStorage } from '../../core/preferences/user-device-storage';
-import { TrendingWindow } from '../models';
+import { TrendingWindow } from './trending.models';
 import { DEFAULT_TRENDING_WINDOW, isTrendingWindow } from './trending-window';
 
 const NAME = 'trending-window';

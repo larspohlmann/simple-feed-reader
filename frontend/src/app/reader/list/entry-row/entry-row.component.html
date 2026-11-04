@@ -13,12 +13,7 @@
       <p class="meta">
         <app-entry-source [entry]="entry()" layout="row" [size]="14" />
         ·
-        @if (entry().coverage; as coverage) {
-          <span class="sources">{{
-            'reader.trendingSources' | transloco: { count: coverage.outletCount }
-          }}</span>
-          ·
-        }
+        <app-story-source-count [entry]="entry()" />
         {{ when() }}
         <span class="dot" [class.on]="unreadMark()" aria-hidden="true"></span>
       </p>

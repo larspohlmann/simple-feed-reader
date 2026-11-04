@@ -97,7 +97,7 @@
 >
   <app-icon name="check" [size]="size()" />
 </button>
-@if (entry().coverage && storyHide()) {
+@if (entry().story && storyHide()) {
   <button
     type="button"
     [attr.aria-label]="'reader.hideStory' | transloco"

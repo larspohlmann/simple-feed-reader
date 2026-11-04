@@ -4,7 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { TrendingCounts } from '../../models';
+import { TrendingCounts } from '../../trending/trending.models';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { NO_TRENDING_COUNTS } from '../../trending/trending-window';

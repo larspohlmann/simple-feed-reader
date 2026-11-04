@@ -6,7 +6,8 @@ import { accountSignal, onIdentityChange } from '../../core/auth/session-identit
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
-import { EntryDto, EntryQuery, EntryStatePatch, TrendingWindow } from '../models';
+import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
+import { TrendingWindow } from '../trending/trending.models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withCardBack, withPatchedRow } from './entry-rows';
 
@@ -265,14 +266,13 @@ export class EntriesStore {
     return false;
   }
 
-  /** The entry with `id`, or a copy inside a row — a duplicate, or an outlet of a Trending story — which the
-   *  footer popover acts on. */
+  /** The entry with `id`, or its copy inside a row's `duplicates`, which the footer popover acts on. */
   private entryOrCopy(id: number): EntryDto | null {
     const listed = this.entry(id);
     if (listed) return listed;
     const held = this.unlisted();
     const rows = held ? [...this.rawEntries(), held] : this.rawEntries();
-    return rows.flatMap(copiesOf).find((copy) => copy.id === id) ?? null;
+    return rows.flatMap((row) => row.duplicates ?? []).find((copy) => copy.id === id) ?? null;
   }
 
   mergeCompleted(rows: CompletedEntryDto[]): void {
@@ -313,7 +313,7 @@ export class EntriesStore {
     });
   }
 
-  /** Reaches each target as a row and as a copy inside a row's footer (`duplicates`, `coverage.others`).
+  /** Reaches each target as a row and as a copy inside a row's `duplicates`.
    *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
@@ -357,10 +357,6 @@ export class EntriesStore {
 function valuesBefore(entry: EntryDto, patch: RowPatch): RowPatch {
   const keys = Object.keys(patch) as (keyof RowPatch)[];
   return Object.fromEntries(keys.map((key) => [key, entry[key]]));
-}
-
-function copiesOf(row: EntryDto): EntryDto[] {
-  return [...(row.duplicates ?? []), ...(row.coverage?.others ?? [])];
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

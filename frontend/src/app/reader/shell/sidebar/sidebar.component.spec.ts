@@ -17,13 +17,8 @@ import { TagsStore } from '../../state/tags.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
-import {
-  MoveFeedToTag,
-  SavedSearchDto,
-  SubscriptionDto,
-  TagDto,
-  TrendingCounts,
-} from '../../models';
+import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import { TrendingCounts } from '../../trending/trending.models';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';

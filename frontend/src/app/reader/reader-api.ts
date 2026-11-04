@@ -29,11 +29,10 @@ import {
   EntryStateDto,
   TagDto,
   TagInput,
-  TrendingResponseDto,
-  TrendingWindow,
 } from './models';
+import { TrendingWindow } from './trending/trending.models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
-import { trendingPage } from './trending/trending-page';
+import { TrendingResponseDto, trendingPage } from './trending/trending-page';
 import { DEFAULT_TRENDING_WINDOW } from './trending/trending-window';
 
 export interface SubscribeRequest {

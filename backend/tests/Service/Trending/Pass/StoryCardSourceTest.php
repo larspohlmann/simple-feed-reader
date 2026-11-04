@@ -32,18 +32,19 @@ final class StoryCardSourceTest extends DbTestCase
             [5 => [101, 102], 6 => [$entry->requireId()]],
             [$entry->requireId() => $row],
             [6 => 0],
+            [],
         );
 
         $cards = $source->cardsOf([new RankedStoryModel(5, 3), new RankedStoryModel(6, 4)]);
 
         self::assertCount(1, $cards);
-        self::assertSame($row, $cards[0]->lead);
+        self::assertSame($entry, $cards[0]->lead->entry);
         self::assertSame(4, $cards[0]->outletCount);
         self::assertTrue($cards[0]->viewed);
     }
 
     public function testAStoryWithoutAnyEntryIdsGetsNoCard(): void
     {
-        self::assertSame([], (new StoryCardSource([], [], []))->cardsOf([new RankedStoryModel(7, 3)]));
+        self::assertSame([], (new StoryCardSource([], [], [], []))->cardsOf([new RankedStoryModel(7, 3)]));
     }
 }

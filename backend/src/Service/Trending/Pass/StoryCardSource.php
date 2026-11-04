@@ -8,18 +8,20 @@ use App\Repository\EntryListRow;
 use App\Service\Trending\Model\RankedStoryModel;
 use App\Service\Trending\Model\TrendingStoryCardModel;
 
-/** The three lookups one reader's cards are cut from. */
+/** The four lookups one reader's cards are cut from. */
 final readonly class StoryCardSource
 {
     /**
      * @param array<int, list<int>> $entryIdsByStory
-     * @param array<int, EntryListRow> $rowsByEntryId newest first
+     * @param array<int, EntryListRow> $rowsByEntryId
      * @param array<int, int> $viewedStories
+     * @param array<string, list<EntryListRow>> $copiesByUrlHash every subscribed copy of an article, by its url hash
      */
     public function __construct(
         private array $entryIdsByStory,
         private array $rowsByEntryId,
         private array $viewedStories,
+        private array $copiesByUrlHash,
     ) {
     }
 
@@ -39,13 +41,20 @@ final readonly class StoryCardSource
             if ($rows === []) {
                 continue;
             }
-            $cards[] = TrendingStoryCardModel::fromRows(
+            $card = TrendingStoryCardModel::fromRows(
                 $rows,
                 $story->outletCount,
                 isset($this->viewedStories[$story->storyId]),
             );
+            $cards[] = $card->withCopies($this->copiesOf($card->lead));
         }
 
         return $cards;
+    }
+
+    /** @return list<EntryListRow> */
+    private function copiesOf(EntryListRow $row): array
+    {
+        return $this->copiesByUrlHash[$row->entry->getUrlHash() ?? ''] ?? [];
     }
 }

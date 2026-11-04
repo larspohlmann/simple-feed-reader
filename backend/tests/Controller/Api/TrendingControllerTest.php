@@ -43,17 +43,17 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertCount(1, $payload['stories']);
         $story = $payload['stories'][0];
         self::assertIsArray($story);
-        self::assertSame(['lead', 'others', 'outletCount', 'viewed'], array_keys($story));
-        self::assertIsArray($story['lead']);
-        self::assertSame($lead->requireId(), $story['lead']['id']);
-        self::assertSame('Lead', $story['lead']['title']);
-        self::assertIsArray($story['others']);
+        self::assertSame($lead->requireId(), $story['id']);
+        self::assertSame('Lead', $story['title']);
+        self::assertIsArray($story['duplicates']);
         self::assertSame(
             [$second->requireId(), $third->requireId()],
-            array_map(static fn (mixed $other): mixed => \is_array($other) ? $other['id'] : null, $story['others']),
+            array_map(
+                static fn (mixed $outlet): mixed => \is_array($outlet) ? $outlet['id'] : null,
+                $story['duplicates'],
+            ),
         );
-        self::assertSame(3, $story['outletCount']);
-        self::assertFalse($story['viewed']);
+        self::assertSame(['outletCount' => 3, 'viewed' => false], $story['story']);
     }
 
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void

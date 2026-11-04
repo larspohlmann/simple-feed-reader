@@ -1,7 +1,9 @@
 import { expect, Page, Request, test } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryWire } from './support/reader';
-import type { EntryDto, TrendingResponseDto, TrendingWindow } from '../src/app/reader/models';
+import type { EntryDto } from '../src/app/reader/models';
+import type { TrendingResponseDto } from '../src/app/reader/trending/trending-page';
+import type { TrendingWindow } from '../src/app/reader/trending/trending.models';
 
 /**
  * Stubs `GET /api/trending` and `POST /api/trending/hidden` so the spec owns every story it asserts on
@@ -11,22 +13,29 @@ import type { EntryDto, TrendingResponseDto, TrendingWindow } from '../src/app/r
 const outlet = (id: number, source: string): EntryDto =>
   entryWire({ id, source, subscriptionId: id });
 
+const story = (
+  lead: Pick<EntryDto, 'id' | 'title'>,
+  duplicates: EntryDto[],
+  outletCount: number,
+  viewed: boolean,
+) => entryWire({ ...lead, source: 'Fixture lead', duplicates, story: { outletCount, viewed } });
+
 const DAY: TrendingResponseDto = {
   window: 'day',
   builtAt: '2026-11-04T08:00:00Z',
   stories: [
-    {
-      lead: entryWire({ id: 9001, title: 'Trending fixture day story', source: 'Fixture lead' }),
-      others: [9002, 9003, 9004, 9005, 9006, 9007].map((id) => outlet(id, `Outlet ${id}`)),
-      outletCount: 7,
-      viewed: false,
-    },
-    {
-      lead: entryWire({ id: 9011, title: 'Trending fixture opened story', source: 'Fixture lead' }),
-      others: [outlet(9012, 'Outlet 9012')],
-      outletCount: 3,
-      viewed: true,
-    },
+    story(
+      { id: 9001, title: 'Trending fixture day story' },
+      [9002, 9003, 9004, 9005, 9006, 9007].map((id) => outlet(id, `Outlet ${id}`)),
+      7,
+      false,
+    ),
+    story(
+      { id: 9011, title: 'Trending fixture opened story' },
+      [outlet(9012, 'Outlet 9012')],
+      3,
+      true,
+    ),
   ],
 };
 
@@ -34,12 +43,12 @@ const WEEK: TrendingResponseDto = {
   window: 'week',
   builtAt: '2026-11-04T08:00:00Z',
   stories: [
-    {
-      lead: entryWire({ id: 9021, title: 'Trending fixture week story', source: 'Fixture lead' }),
-      others: [outlet(9022, 'Outlet 9022')],
-      outletCount: 5,
-      viewed: false,
-    },
+    story(
+      { id: 9021, title: 'Trending fixture week story' },
+      [outlet(9022, 'Outlet 9022')],
+      5,
+      false,
+    ),
   ],
 };
 

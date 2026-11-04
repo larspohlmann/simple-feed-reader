@@ -474,8 +474,7 @@ describe('EntryActionsComponent', () => {
   });
 
   describe('Hide on a Trending card (#2017)', () => {
-    const lead = (): EntryDto =>
-      anEntry({ coverage: { outletCount: 3, others: [], viewed: false } });
+    const lead = (): EntryDto => anEntry({ story: { outletCount: 3, viewed: false } });
     const hideButton = (fixture: ReturnType<typeof mount>) =>
       buttons(fixture).find((button) => button.getAttribute('aria-label') === 'Hide story');
 

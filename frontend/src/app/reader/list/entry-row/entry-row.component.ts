@@ -27,8 +27,8 @@ import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line
 import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
 import { threadTotal } from '../../thread-post';
 import { alsoFootOf } from '../magazine/also-foot';
-import { TranslocoPipe } from '@jsverse/transloco';
-import { showsUnreadMark } from '../../trending/coverage';
+import { showsUnreadMark } from '../../trending/story';
+import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 
 @Component({
   selector: 'app-entry-row',
@@ -49,7 +49,7 @@ import { showsUnreadMark } from '../../trending/coverage';
     ThreadLineComponent,
     ThreadLinePostComponent,
     ThreadCountComponent,
-    TranslocoPipe,
+    StorySourceCountComponent,
   ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',

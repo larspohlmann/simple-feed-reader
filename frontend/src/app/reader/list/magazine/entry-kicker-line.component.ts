@@ -3,8 +3,8 @@ import { EntryDto } from '../../models';
 import { relativeTime, relativeTimeNarrow } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
-import { TranslocoPipe } from '@jsverse/transloco';
-import { showsUnreadMark } from '../../trending/coverage';
+import { showsUnreadMark } from '../../trending/story';
+import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
@@ -15,7 +15,7 @@ import { showsUnreadMark } from '../../trending/coverage';
  */
 @Component({
   selector: 'app-entry-kicker-line',
-  imports: [EntrySourceComponent, TranslocoPipe],
+  imports: [EntrySourceComponent, StorySourceCountComponent],
   templateUrl: './entry-kicker-line.component.html',
   styleUrl: './entry-kicker-line.component.scss',
 })
