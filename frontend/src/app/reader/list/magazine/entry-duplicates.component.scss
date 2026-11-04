@@ -42,7 +42,8 @@
 }
 
 @media (hover: hover) {
-  .also-entry:hover {
+  .also-entry:hover,
+  .also-more:hover {
     background: var(--card-hover-bg);
   }
 }
@@ -50,6 +51,7 @@
 .also-more {
   padding: var(--space-1) var(--space-2);
   border: none;
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--accent);
   font: inherit;
