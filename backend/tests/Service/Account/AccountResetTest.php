@@ -22,6 +22,7 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
+use App\Entity\TrendingHiddenEntry;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\PrivateFeedSyncReason;
@@ -149,8 +150,12 @@ final class AccountResetTest extends DbTestCase
 
     public function testWipesEverythingTheUserOwns(): void
     {
-        [$user, , , $run, $profileRun] = $this->seedAccount('reset-wipes@example.com');
+        [$user, , $entry, $run, $profileRun] = $this->seedAccount('reset-wipes@example.com');
         $userId = $user->requireId();
+        $this->entityManager->persist(
+            new TrendingHiddenEntry($user, $entry, new \DateTimeImmutable('2031-05-14 12:00:00')),
+        );
+        $this->entityManager->flush();
         $runId = $run->requireId();
         $profileRunId = $profileRun->requireId();
 
@@ -162,6 +167,10 @@ final class AccountResetTest extends DbTestCase
         self::assertSame([], $this->entityManager->getRepository(Tag::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->entityManager->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->entityManager->getRepository(EntryState::class)->findBy(['user' => $userId]));
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(TrendingHiddenEntry::class)->findBy(['user' => $userId]),
+        );
         self::assertSame(
             [],
             $this->entityManager->getRepository(RecommendationRun::class)->findBy(['user' => $userId]),

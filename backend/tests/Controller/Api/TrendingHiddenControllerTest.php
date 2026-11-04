@@ -12,6 +12,7 @@ use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\TrendingFixtures;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 final class TrendingHiddenControllerTest extends ApiTestCase
@@ -84,6 +85,37 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         $errors = $this->payload($this->client)['errors'] ?? null;
         self::assertIsArray($errors);
         self::assertArrayHasKey('window', $errors);
+    }
+
+    /** @param array<string, mixed> $body */
+    #[DataProvider('malformedBodies')]
+    public function testAMalformedBodyIsRefusedAndHidesNothing(array $body, string $field): void
+    {
+        $reader = $this->signIn($this->client, 'trending-hide-malformed@example.com');
+        $this->story($this->followedFeeds($reader));
+
+        $this->client->request(
+            'POST',
+            '/api/trending/hidden',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertRejected($this->client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame([], $this->hiddenEntryIdsOf($reader));
+        $errors = $this->payload($this->client)['errors'] ?? null;
+        self::assertIsArray($errors);
+        self::assertArrayHasKey($field, $errors);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, string}> */
+    public static function malformedBodies(): iterable
+    {
+        yield 'no entryId' => [['window' => 'day'], 'entryId'];
+        yield 'a text entryId' => [['window' => 'day', 'entryId' => 'seven'], 'entryId'];
+        yield 'entryId 0' => [['window' => 'day', 'entryId' => 0], 'entryId'];
+        yield 'no window' => [['entryId' => 1], 'window'];
+        yield 'a blank window' => [['window' => '', 'entryId' => 1], 'window'];
     }
 
     /** @return list<Feed> three article feeds and a social account, all followed by the reader */
