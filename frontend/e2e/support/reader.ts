@@ -77,12 +77,12 @@ export async function stubOneFeedReader(
   const json = (body: unknown) => (route: { fulfill: (response: { json: unknown }) => unknown }) =>
     route.fulfill({ json: body });
 
-  await page.route('**/api/subscriptions**', json(oneFeedJson(feedTitle)));
-  await page.route('**/api/tags**', json({ tags: [] }));
-  await page.route('**/api/entries**', json({ entries: [], nextCursor: null }));
+  await page.route(/\/api\/subscriptions(?:[?#]|$)/, json(oneFeedJson(feedTitle)));
+  await page.route(/\/api\/tags(?:[?#]|$)/, json({ tags: [] }));
+  await page.route(/\/api\/entries(?:[?#]|$)/, json({ entries: [], nextCursor: null }));
   await page.route('**/api/version**', json({ version: 'dev' }));
   await page.route('**/api/recommendations/**', json({ run: null }));
-  await page.route('**/api/saved-searches**', json(savedSearchesJson(...savedSearches)));
+  await page.route(/\/api\/saved-searches(?:[?#]|$)/, json(savedSearchesJson(...savedSearches)));
   await page.route('**/api/youtube/videos/**', json(NOTHING_KNOWN_OF_EMBED));
   await page.route('**/api/soundcloud/tracks/**', json(NOTHING_KNOWN_OF_EMBED));
 }
