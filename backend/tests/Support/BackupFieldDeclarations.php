@@ -40,6 +40,7 @@ final class BackupFieldDeclarations
             'sharingEnabled' => 'sharingEnabled',
             'hiddenShareTargets' => 'hiddenShareTargets',
             'rememberingShares' => 'rememberShares',
+            'trendingEnabled' => 'trendingEnabled',
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',

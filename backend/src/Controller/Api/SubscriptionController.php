@@ -49,7 +49,7 @@ final readonly class SubscriptionController
     {
         return new JsonResponse(SubscriptionJson::list(
             $this->subscriptions->findForUserWithTags($user->requireId()),
-            $this->tallies->forUser($user->requireId()),
+            $this->tallies->forUser($user),
             $this->socialAccounts->findAllForUser($user),
         ));
     }
@@ -57,7 +57,7 @@ final readonly class SubscriptionController
     #[Route('/counts', name: 'api_subscriptions_counts', methods: ['GET'])]
     public function counts(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(SubscriptionCountsJson::from($this->tallies->forUser($user->requireId())));
+        return new JsonResponse(SubscriptionCountsJson::from($this->tallies->forUser($user)));
     }
 
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]

@@ -38,6 +38,38 @@ final class SubscriptionTrendingCountsTest extends ApiTestCase
         self::assertSame(['day' => 2, 'week' => 1], $this->payload($client)['trending']);
     }
 
+    public function testTheCountsPollReportsNoTrendingStoriesWhenTheReaderSwitchedTrendingOff(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('trending-counts-off@example.com');
+        $this->seedStories($user);
+        $this->switchTrendingOff($user);
+
+        $client->request('GET', '/api/subscriptions/counts', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['day' => 0, 'week' => 0], $this->payload($client)['trending']);
+    }
+
+    public function testTheSidebarListReportsNoTrendingStoriesWhenTheReaderSwitchedTrendingOff(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('trending-list-off@example.com');
+        $this->seedStories($user);
+        $this->switchTrendingOff($user);
+
+        $client->request('GET', '/api/subscriptions', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['day' => 0, 'week' => 0], $this->payload($client)['trending']);
+    }
+
+    private function switchTrendingOff(User $user): void
+    {
+        $user->getPreferences()->setTrendingEnabled(false);
+        $this->entityManager()->flush();
+    }
+
     private function seedStories(User $user): void
     {
         $fixtures = new TrendingFixtures($this->entityManager());

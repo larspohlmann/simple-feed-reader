@@ -20,6 +20,20 @@ final class AccountLineTest extends TestCase
         self::assertSame([], $line->hiddenShareTargets);
     }
 
+    public function testAnOlderBackupShowsTrending(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertTrue($line->trendingEnabled);
+    }
+
+    public function testItReadsTrending(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'trendingEnabled' => false]);
+
+        self::assertFalse($line->trendingEnabled);
+    }
+
     public function testItReadsSharing(): void
     {
         $line = AccountLine::fromLine([

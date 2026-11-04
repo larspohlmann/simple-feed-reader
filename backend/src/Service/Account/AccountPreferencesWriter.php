@@ -47,6 +47,12 @@ final readonly class AccountPreferencesWriter
         $this->entityManager->flush();
     }
 
+    public function changeTrending(User $user, bool $trendingEnabled): void
+    {
+        $user->getPreferences()->setTrendingEnabled($trendingEnabled);
+        $this->entityManager->flush();
+    }
+
     public function changeDigest(User $user, DigestConfigurationModel $configuration): void
     {
         $this->digestEnablement->applyTo($user->getPreferences(), $configuration);

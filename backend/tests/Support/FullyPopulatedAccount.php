@@ -54,6 +54,7 @@ final readonly class FullyPopulatedAccount
         $user->getPreferences()->setSharingEnabled(false);
         $user->getPreferences()->setHiddenShareTargets(['facebook', 'x']);
         $user->getPreferences()->setRememberingShares(false);
+        $user->getPreferences()->setTrendingEnabled(false);
 
         $parentTag = $this->parentTagFor($user);
         $this->entityManager->persist($parentTag);

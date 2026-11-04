@@ -67,6 +67,7 @@ final readonly class BackupLines
             'sharingEnabled' => $user->getPreferences()->isSharingEnabled(),
             'hiddenShareTargets' => $user->getPreferences()->getHiddenShareTargets(),
             'rememberShares' => $user->getPreferences()->isRememberingShares(),
+            'trendingEnabled' => $user->getPreferences()->isTrendingEnabled(),
             'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($networks->savedSearchIncludedNetworks),
             'forYouExcludedNetworks' => SocialNetwork::valuesOf($networks->forYouExcludedNetworks),
         ]);

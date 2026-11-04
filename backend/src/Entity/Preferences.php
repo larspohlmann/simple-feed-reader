@@ -79,6 +79,9 @@ final class Preferences
     #[ORM\Column(name: 'remember_shares', options: ['default' => true])]
     private bool $rememberingShares = true;
 
+    #[ORM\Column(name: 'trending_enabled', options: ['default' => true])]
+    private bool $trendingEnabled = true;
+
     public function __construct(User $user)
     {
         $this->user = $user;
@@ -227,6 +230,16 @@ final class Preferences
     public function setRememberingShares(bool $rememberingShares): void
     {
         $this->rememberingShares = $rememberingShares;
+    }
+
+    public function isTrendingEnabled(): bool
+    {
+        return $this->trendingEnabled;
+    }
+
+    public function setTrendingEnabled(bool $trendingEnabled): void
+    {
+        $this->trendingEnabled = $trendingEnabled;
     }
 
     public function recordsShares(): bool
