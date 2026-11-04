@@ -7,6 +7,7 @@ import { FeedGroupName } from '../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 import { ChapterDto, TranscriptDto } from './episode-detail';
+import { TrendingStory, TrendingUnopened, TrendingWindow } from './trending/trending.models';
 
 export type { ChapterDto, TranscriptDto, TranscriptParagraphDto } from './episode-detail';
 export type { HeroImageDto, ReaderArticle, ReaderContent, ReaderFailure } from './reader-content';
@@ -142,6 +143,8 @@ export interface SubscriptionsResponse {
   viewedCount: number;
   socialAccounts: SocialAccountRefDto[];
   unreadTotals: UnreadTotalsDto;
+  /** Unopened Trending stories in the window the request asked for (#2017). */
+  trending: TrendingUnopened;
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
@@ -154,6 +157,8 @@ export interface SubscriptionCountsResponse {
   sharedCount: number;
   viewedCount: number;
   unreadTotals: UnreadTotalsDto;
+  /** Unopened Trending stories in the window the request asked for (#2017). */
+  trending: TrendingUnopened;
 }
 
 /** Unread per scope, each article counted once within its scope (#1679). */
@@ -267,6 +272,8 @@ export interface EntryDto {
   /** Other copies of this article the reader also subscribes to, in this
    *  list's scope. Set by the API's collapse; empty for a non-duplicated row. */
   duplicates?: EntryDto[];
+  /** Only on a Trending row (#2017); its `duplicates` are then the story's other outlets. */
+  story?: TrendingStory;
 }
 
 /** The `/api/entries/{id}` detail shape: every list field plus the full body,
@@ -367,7 +374,15 @@ export type SubscribeResult =
   | { candidates: FeedCandidate[]; scrapeFailureReason?: ScrapeFailureReason };
 
 export type EntryView =
-  'all' | 'unread' | 'favorites' | 'kept' | 'shared' | 'viewed' | 'for-you' | 'saved-searches';
+  | 'all'
+  | 'unread'
+  | 'favorites'
+  | 'kept'
+  | 'shared'
+  | 'viewed'
+  | 'for-you'
+  | 'saved-searches'
+  | 'trending';
 
 export type ListOrder = 'newest' | 'oldest';
 
@@ -390,6 +405,8 @@ export interface EntryQuery {
   savedSearchId?: number;
   /** Absent means newest first, the API's own default. */
   order?: ListOrder;
+  /** Only the Trending list carries one. */
+  window?: TrendingWindow;
 }
 
 /** The scopes `POST /api/entries/mark-read` accepts. A search is deliberately NOT one of them: it has its own

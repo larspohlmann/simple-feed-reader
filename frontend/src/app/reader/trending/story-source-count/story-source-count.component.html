@@ -1,0 +1,6 @@
+@if (entry().story; as story) {
+  <span class="sources">{{
+    'reader.trendingSources' | transloco: { count: story.outletCount }
+  }}</span
+  >&ngsp;<span class="separator" aria-hidden="true">·</span>
+}

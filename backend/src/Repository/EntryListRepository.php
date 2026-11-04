@@ -192,6 +192,32 @@ final class EntryListRepository extends ServiceEntityRepository
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
+    /**
+     * Every copy of the given articles this caller subscribes to, hidden or shown — the outlets beyond a Trending
+     * story that ran the same article.
+     *
+     * @param list<string> $urlHashes
+     *
+     * @return list<EntryListRow>
+     */
+    public function rowsByUrlHashesForUser(int $userId, array $urlHashes): array
+    {
+        if ($urlHashes === []) {
+            return [];
+        }
+
+        $query = $this->projection->rowQueryBuilder($userId)
+            ->andWhere('e.location.urlHash IN (:urlHashes)')
+            ->setParameter('urlHashes', $urlHashes)
+            ->getQuery();
+        EntryPlanHintWalker::apply($query, EntryPlanHint::DuplicateLookup);
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $query->getResult();
+
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+    }
+
     /** The entry only if the caller subscribes to its feed — the IDOR gate for per-entry state writes. */
     public function getOneSubscribedForUser(int $userId, int $entryId): Entry
     {

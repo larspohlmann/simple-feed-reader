@@ -54,6 +54,7 @@ function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
       passkeyOfferAnswered: true,
       magazineStyle: 'boxed',
       sharing: SHARING_EVERYTHING,
+      trendingEnabled: true,
     },
     ai: { ready: false, model: null, capabilities: null },
     mail: { enabled: true },

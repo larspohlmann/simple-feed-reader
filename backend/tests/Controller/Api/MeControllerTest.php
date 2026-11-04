@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
+use Symfony\Component\HttpFoundation\Response;
 
 /** Tokens come straight from the JWT manager, so no case touches, or is poisoned by, the login throttler's pool. */
 final class MeControllerTest extends ApiTestCase
@@ -15,7 +15,7 @@ final class MeControllerTest extends ApiTestCase
 
     public function testTheProfileCarriesTheAccountLocale(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $user = $this->factory()->create('locale-reader@example.test');
         $user->setLocale('de');
         $this->entityManager()->flush();
@@ -29,7 +29,7 @@ final class MeControllerTest extends ApiTestCase
 
     public function testChangingTheLocalePersistsIt(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $this->signIn($client, 'switcher@example.test');
 
         $client->request(
@@ -50,7 +50,7 @@ final class MeControllerTest extends ApiTestCase
 
     public function testAnUnsupportedLocaleIsRejected(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $this->signIn($client, 'klingon@example.test');
 
         $client->request(
@@ -60,7 +60,7 @@ final class MeControllerTest extends ApiTestCase
             content: '{"locale":"tlh"}',
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertStringStartsWith(
             'application/problem+json',
             (string) $client->getResponse()->headers->get('Content-Type'),
@@ -74,7 +74,7 @@ final class MeControllerTest extends ApiTestCase
 
     public function testChangingTheLocaleRequiresAuthentication(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $client->request(
             'PATCH',
             '/api/me',
@@ -82,7 +82,7 @@ final class MeControllerTest extends ApiTestCase
             content: '{"locale":"de"}',
         );
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testTrialEndsAtIsExposedWhenSet(): void
@@ -92,7 +92,7 @@ final class MeControllerTest extends ApiTestCase
         // next request and can no longer authenticate.
         $trialEndsAt = new \DateTimeImmutable('2999-01-01T00:00:00Z');
 
-        $client = static::createClient();
+        $client = self::createClient();
         $user = $this->factory()->create('has-trial@example.test', trialEndsAt: $trialEndsAt);
         $this->authenticate($client, $user);
 
@@ -107,7 +107,7 @@ final class MeControllerTest extends ApiTestCase
 
     public function testTrialEndsAtIsNullWhenUnset(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $this->signIn($client, 'no-trial@example.test');
 
         $client->request('GET', '/api/me');
@@ -118,7 +118,7 @@ final class MeControllerTest extends ApiTestCase
 
     public function testTheProfileCarriesMailCapabilityAndVerificationState(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $this->seedEnabledMailInstance();
         $this->signIn($client, 'mail-flags@example.test');
 
@@ -130,93 +130,9 @@ final class MeControllerTest extends ApiTestCase
         self::assertFalse($payload['emailVerified']);
     }
 
-    public function testScrapeFallbackCanBeEnabled(): void
-    {
-        $client = static::createClient();
-        $user = $this->factory()->create('prefs-enable@example.com');
-        $this->authenticate($client, $user);
-
-        $client->request(
-            'PATCH',
-            '/api/me/preferences',
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['scrapeFallbackEnabled' => true], \JSON_THROW_ON_ERROR),
-        );
-
-        self::assertResponseIsSuccessful();
-        self::assertSame(
-            [
-                'scrapeFallbackEnabled' => true,
-                'magazineStyle' => 'boxed',
-                'passkeyOfferAnswered' => false,
-                'sharing' => ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true],
-                'digest' => [
-                    'enabled' => false,
-                    'cadence' => 'daily',
-                    'format' => 'html',
-                    'sendHour' => 8,
-                    'weekday' => 1,
-                    'timezone' => 'UTC',
-                ],
-            ],
-            $this->payload($client)['preferences'],
-        );
-
-        $this->entityManager()->clear();
-        $reloaded = $this->users()->find($user->getId());
-        self::assertInstanceOf(User::class, $reloaded);
-        self::assertTrue($reloaded->getPreferences()->isScrapeFallbackEnabled());
-    }
-
-    public function testANonBooleanPreferenceIsRejected(): void
-    {
-        $client = static::createClient();
-        $user = $this->factory()->create('prefs-invalid@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $this->entityManager()->flush();
-        $this->authenticate($client, $user);
-
-        $client->request(
-            'PATCH',
-            '/api/me/preferences',
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['scrapeFallbackEnabled' => 'yes'], \JSON_THROW_ON_ERROR),
-        );
-
-        self::assertResponseStatusCodeSame(422);
-
-        $this->entityManager()->clear();
-        $unchanged = $this->users()->find($user->getId());
-        self::assertInstanceOf(User::class, $unchanged);
-        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
-    }
-
-    public function testAnEmptyBodyIsRejectedRatherThanSilentlyDisablingScraping(): void
-    {
-        $client = static::createClient();
-        $user = $this->factory()->create('prefs-empty@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $this->entityManager()->flush();
-        $this->authenticate($client, $user);
-
-        $client->request(
-            'PATCH',
-            '/api/me/preferences',
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode([], \JSON_THROW_ON_ERROR),
-        );
-
-        self::assertResponseStatusCodeSame(422);
-
-        $this->entityManager()->clear();
-        $unchanged = $this->users()->find($user->getId());
-        self::assertInstanceOf(User::class, $unchanged);
-        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
-    }
-
     public function testTheProfileCarriesPreferencesWithScrapingOffByDefault(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $this->signIn($client, 'prefs-default@example.com');
 
         $client->request('GET', '/api/me');
@@ -227,6 +143,7 @@ final class MeControllerTest extends ApiTestCase
                 'scrapeFallbackEnabled' => false,
                 'magazineStyle' => 'boxed',
                 'passkeyOfferAnswered' => false,
+                'trendingEnabled' => true,
                 'sharing' => ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true],
                 'digest' => [
                     'enabled' => false,
@@ -243,37 +160,37 @@ final class MeControllerTest extends ApiTestCase
 
     public function testAUserDeletesTheirOwnAccount(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $user = $this->factory()->create('bye@example.com');
         $userId = $user->requireId();
         $this->authenticate($client, $user);
 
         $client->request('DELETE', '/api/me');
-        self::assertResponseStatusCodeSame(204);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
 
         // The JWT is stateless: this proves the token stops authenticating
         // because the user row is gone, not because anything was revoked.
         $client->request('GET', '/api/me');
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
 
         self::assertNull($this->users()->find($userId));
     }
 
     public function testTheSoleAdminCannotDeleteTheirOwnAccount(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $admin = $this->factory()->create('last-admin@example.com', roles: ['ROLE_ADMIN']);
         $this->authenticate($client, $admin);
 
         $client->request('DELETE', '/api/me');
 
-        self::assertResponseStatusCodeSame(409);
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
     }
 
     /** With the other admin suspended, the last active admin's self-delete must be refused: nobody could reinstate. */
     public function testTheLastActiveAdminCannotSelfDeleteAfterSuspendingTheOtherAdmin(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $admin = $this->factory()->create('remaining-admin@example.com', roles: ['ROLE_ADMIN']);
         $suspended = $this->factory()->create('to-be-suspended-admin@example.com', roles: ['ROLE_ADMIN']);
         $this->authenticate($client, $admin);
@@ -283,14 +200,14 @@ final class MeControllerTest extends ApiTestCase
 
         $client->request('DELETE', '/api/me');
 
-        self::assertResponseStatusCodeSame(409);
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
     }
 
     public function testDeletingTheAccountNeedsAToken(): void
     {
-        $client = static::createClient();
+        $client = self::createClient();
         $client->request('DELETE', '/api/me');
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 }

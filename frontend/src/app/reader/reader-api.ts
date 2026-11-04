@@ -30,7 +30,10 @@ import {
   TagDto,
   TagInput,
 } from './models';
+import { TrendingWindow } from './trending/trending.models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
+import { TrendingApi } from './trending/trending-api';
+import { DEFAULT_TRENDING_WINDOW } from './trending/trending-window';
 
 export interface SubscribeRequest {
   url: string;
@@ -43,16 +46,20 @@ export interface SubscribeRequest {
 export class ReaderApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
+  private readonly trendingApi = inject(TrendingApi);
 
-  subscriptions(): Observable<SubscriptionsResponse> {
+  /** `trendingWindow` picks the window whose unopened Trending stories the answer counts. */
+  subscriptions(trendingWindow: TrendingWindow): Observable<SubscriptionsResponse> {
     return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`, {
+      params: trendingWindowParams(trendingWindow),
       context: retryingTransientGatewayErrors(),
     });
   }
 
   /** The sidebar poll's cheap tick (#720): counts only, no feeds or tags. */
-  subscriptionCounts(): Observable<SubscriptionCountsResponse> {
+  subscriptionCounts(trendingWindow: TrendingWindow): Observable<SubscriptionCountsResponse> {
     return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`, {
+      params: trendingWindowParams(trendingWindow),
       context: retryingTransientGatewayErrors(),
     });
   }
@@ -75,6 +82,9 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
+    if (query.view === 'trending') {
+      return this.trendingApi.page(query.window);
+    }
     const params = this.pageParams(query, cursor);
     const context = retryingTransientGatewayErrors();
     if (query.savedSearchId != null) {
@@ -359,4 +369,12 @@ export class ReaderApi {
   purgeRecommendations(): Observable<RecommendationRunReport> {
     return this.http.delete<RecommendationRunReport>(`${this.base}/api/recommendations/runs`);
   }
+}
+
+/** The server counts the day when no window is named, so the day is left out of the URL. */
+function trendingWindowParams(trendingWindow: TrendingWindow): HttpParams {
+  const params = new HttpParams();
+  return trendingWindow === DEFAULT_TRENDING_WINDOW
+    ? params
+    : params.set('trendingWindow', trendingWindow);
 }

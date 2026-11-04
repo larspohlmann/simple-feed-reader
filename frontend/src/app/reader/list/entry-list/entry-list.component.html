@@ -214,7 +214,7 @@
 }
 
 @let markAllShown = canMarkAllRead() && hasEntries;
-@let markAboveShown = toTopShown && scrolling.hasAboveFold();
+@let markAboveShown = toTopShown && scrolling.hasAboveFold() && marksAboveFold();
 @if (markAllShown || markAboveShown) {
   <div class="corner-actions">
     @if (markAllShown) {

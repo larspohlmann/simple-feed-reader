@@ -168,7 +168,7 @@ file.
 | Line | What the line holds |
 |---|---|
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. See the header field table below. |
-| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), whether sharing is switched on (`sharingEnabled`; a file without it keeps sharing on), the share targets you hid (`hiddenShareTargets`; an id that is malformed or repeated is dropped, and only the first 64 ids are kept), whether shared articles are remembered (`rememberShares`; a file without it keeps remembering), the social networks whose feeds count in your saved searches (`savedSearchIncludedNetworks`; a network not listed is left out), and the social networks you keep out of For you (`forYouExcludedNetworks`; a network not listed is included). |
+| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), whether sharing is switched on (`sharingEnabled`; a file without it keeps sharing on), the share targets you hid (`hiddenShareTargets`; an id that is malformed or repeated is dropped, and only the first 64 ids are kept), whether shared articles are remembered (`rememberShares`; a file without it keeps remembering), whether Trending is shown (`trendingEnabled`; a file without it shows Trending), the social networks whose feeds count in your saved searches (`savedSearchIncludedNetworks`; a network not listed is left out), and the social networks you keep out of For you (`forYouExcludedNetworks`; a network not listed is included). |
 | `tag` | Each tag: `name`, `color`, `icon`, `position` and `parent` (the parent tag's name, or null for a root). Roots are written before their children. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. Your Saved from … feeds are included and come back as your own. |
@@ -212,6 +212,9 @@ writes none of them.
 | `ShareEnrichment` | The queue of entries whose embed or link cards are still to come. It is a machine record, not your data. |
 | `ThreadPost` | The replies in which a post's author continued it, read from the network when the post arrives. A restored article shows its root post alone. |
 | `EntryTranscript` | An episode's transcript, fetched from the URL its feed declares. A restored episode has no transcript, since a backup carries no transcript declaration. |
+| `TrendingSnapshot` | When a Trending window was last grouped and what the grouping cost. The next rebuild writes it again. |
+| `TrendingStory` | A Trending story of the latest grouping. The next rebuild groups the restored entries again. |
+| `TrendingStoryEntry` | Which entries belong to a Trending story. The next rebuild groups the restored entries again. |
 
 ### 6.2 Account data that the file drops in full
 
@@ -235,6 +238,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
 | `SavedSearchEntry` | Which articles match one of your saved searches. A derived row: the sweep that matches searches against articles rebuilds it, so a restore leaves it to be rebuilt rather than carrying it. |
+| `TrendingHiddenEntry` | The Trending stories you hid. A hide only matters while its story can still trend, which is at most a week, and a restore groups Trending again from the restored articles. So the file leaves your hides out, and a story you hid may show again after a restore. |
 
 Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.

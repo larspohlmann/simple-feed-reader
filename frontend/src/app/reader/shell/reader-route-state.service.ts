@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, computed, effect, inject, untracked } from '@angular/core';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Params, Router, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
@@ -7,18 +7,25 @@ import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
 import { isDirectSearch, sameSelection } from '../query/query';
+import { AccountViewContext } from '../query/account-view-context';
 import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
+import { TrendingWindowService } from '../trending/trending-window.service';
+import { PreferencesService } from '../../core/preferences/preferences.service';
 
 @Injectable()
 export class ReaderRouteState {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly api = inject(ReaderApi);
   private readonly bodyService = inject(EntryBodyService);
   private readonly entries = inject(EntriesStore);
   private readonly listPreferences = inject(ListPreferences);
   private readonly linkNavigation = inject(LinkReaderNavigation);
+  private readonly viewContext = inject(AccountViewContext);
+  private readonly trendingWindow = inject(TrendingWindowService);
+  private readonly preferences = inject(PreferencesService);
 
   private readonly queryParameters = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -27,7 +34,7 @@ export class ReaderRouteState {
     initialValue: convertToParamMap({}),
   });
   private readonly parsed = computed(() =>
-    selectionFromRoute(this.pathParameters(), this.queryParameters()),
+    selectionFromRoute(this.pathParameters(), this.queryParameters(), this.viewContext.context()),
   );
 
   /** Structural equality: an entry-only URL change keeps the reference, so the list does not reload. */
@@ -70,12 +77,36 @@ export class ReaderRouteState {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
     });
+    // Waits for the account, whose stored window a bare Trending link opens; only the
+    // account's own switch, never a stale device cache, may take Trending out of the URL.
+    effect(() => {
+      const correction = this.parsed().urlCorrection;
+      if (correction === null || !this.listPreferences.ready()) return;
+      if (correction['view'] === null && !this.preferences.trendingConfirmed()) return;
+      untracked(() => this.correctUrl(correction));
+    });
+    // A bare link opened the stored window, so only a window the URL names changes what is stored.
+    effect(() => {
+      const window = this.selection().window;
+      if (window === undefined) return;
+      untracked(() => this.trendingWindow.set(window));
+    });
     // Warm the body store for the entries beside the one just opened. Keyed on
     // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
     effect(() => {
       const id = this.openEntryId();
       if (id === null) return;
       untracked(() => this.prefetchNeighbours(id));
+    });
+  }
+
+  /** So the URL says what the parse opened. */
+  private correctUrl(correction: Params): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: correction,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 

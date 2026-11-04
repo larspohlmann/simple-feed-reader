@@ -66,6 +66,8 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
+import { TrendingWindowSwitchComponent } from '../trending/trending-window-switch/trending-window-switch.component';
+import { TrendingListDirective } from '../trending/trending-list.directive';
 import { UrlDropZoneComponent } from './url-drop/url-drop-zone.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -86,6 +88,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
     IconButtonDirective,
     ListActionDirective,
     FeedIntroComponent,
+    TrendingWindowSwitchComponent,
+    TrendingListDirective,
     RouterLink,
     TranslocoPipe,
   ],

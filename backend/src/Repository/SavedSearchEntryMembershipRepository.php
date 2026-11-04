@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Doctrine\BulkInsert;
 use App\Entity\SavedSearchEntry;
 use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -33,49 +34,33 @@ final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
      */
     public function insertMissing(array $entryIdsBySavedSearchId, \DateTimeImmutable $matchedAt): int
     {
-        $inserted = 0;
-        foreach (array_chunk(self::pairs($entryIdsBySavedSearchId), self::INSERT_ROWS) as $rows) {
-            $inserted += $this->insertIgnoringStored($rows, $matchedAt);
-        }
+        $connection = $this->getEntityManager()->getConnection();
 
-        return $inserted;
+        $insert = BulkInsert::into(
+            \sprintf(
+                'INSERT %s INTO saved_search_entry (saved_search_id, entry_id, matched_at)',
+                DatabasePlatform::insertIgnoreClause($connection),
+            ),
+            self::INSERT_ROWS,
+        );
+
+        return $insert->rows($connection, self::rows($entryIdsBySavedSearchId, $matchedAt->format('Y-m-d H:i:s')));
     }
 
     /**
      * @param array<int, list<int>> $entryIdsBySavedSearchId
      *
-     * @return list<array{int, int}> [savedSearchId, entryId]
+     * @return list<array{int, int, string}> [savedSearchId, entryId, matchedAt]
      */
-    private static function pairs(array $entryIdsBySavedSearchId): array
+    private static function rows(array $entryIdsBySavedSearchId, string $matchedAt): array
     {
-        $pairs = [];
+        $rows = [];
         foreach ($entryIdsBySavedSearchId as $savedSearchId => $entryIds) {
             foreach ($entryIds as $entryId) {
-                $pairs[] = [$savedSearchId, $entryId];
+                $rows[] = [$savedSearchId, $entryId, $matchedAt];
             }
         }
 
-        return $pairs;
-    }
-
-    /** @param non-empty-list<array{int, int}> $pairs */
-    private function insertIgnoringStored(array $pairs, \DateTimeImmutable $matchedAt): int
-    {
-        $connection = $this->getEntityManager()->getConnection();
-        $conflictClause = DatabasePlatform::insertIgnoreClause($connection);
-
-        $parameters = [];
-        foreach ($pairs as [$savedSearchId, $entryId]) {
-            array_push($parameters, $savedSearchId, $entryId, $matchedAt->format('Y-m-d H:i:s'));
-        }
-
-        return (int) $connection->executeStatement(
-            \sprintf(
-                'INSERT %s INTO saved_search_entry (saved_search_id, entry_id, matched_at) VALUES %s',
-                $conflictClause,
-                implode(', ', array_fill(0, \count($pairs), '(?, ?, ?)')),
-            ),
-            $parameters,
-        );
+        return $rows;
     }
 }

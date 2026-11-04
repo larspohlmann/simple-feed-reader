@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../../core/api';
 import { AuthService, CurrentUser } from '../../../core/auth/auth.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
+import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
@@ -17,6 +18,8 @@ import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import { TrendingUnopened } from '../../trending/trending.models';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
@@ -66,6 +69,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
     sharing: SHARING_EVERYTHING,
+    trendingEnabled: true,
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
@@ -117,6 +121,7 @@ function inputDefaults() {
     favoritesCount: 0,
     keptCount: 0,
     sharedCount: 0,
+    trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
     groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', id: null, unread: true } as Selection,
     loading: false,
@@ -147,6 +152,7 @@ function mount(
     favoritesCount: number;
     keptCount: number;
     sharedCount: number;
+    trendingUnopened: TrendingUnopened;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
     user: CurrentUser | null;
@@ -168,6 +174,7 @@ function mount(
       provideRouter([{ path: '**', children: [] }]),
       provideHttpClient(),
       provideHttpClientTesting(),
+      provideAccountIdentity(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       { provide: AuthService, useValue: { user: signal(over.user ?? account(null)) } },
       {
@@ -243,6 +250,65 @@ describe('SidebarComponent', () => {
         nav.querySelector('.name')?.textContent?.includes('Shared'),
       )!;
       expect(shared.classList).toContain('active');
+    });
+  });
+
+  describe('the Trending item (#2017)', () => {
+    beforeEach(() => localStorage.clear());
+
+    const navLabels = (element: HTMLElement): string[] =>
+      [...element.querySelectorAll('.nav .name')].map((name) => name.textContent?.trim() ?? '');
+    const trendingNav = (element: HTMLElement): HTMLAnchorElement =>
+      [...element.querySelectorAll<HTMLAnchorElement>('.nav')].find(
+        (nav) => nav.querySelector('.name')?.textContent?.trim() === 'Trending',
+      )!;
+
+    it('shows right after Recently read even while nothing trends, with no badge', () => {
+      const element = mount().nativeElement as HTMLElement;
+      const labels = navLabels(element);
+
+      expect(labels[labels.indexOf('Recently read') + 1]).toBe('Trending');
+      expect(trendingNav(element).querySelector('.count')).toBeNull();
+    });
+
+    it('sits directly above For you', () => {
+      const fixture = mount();
+      TestBed.inject(AiAvailabilityService).apply({
+        ready: true,
+        model: 'model',
+        capabilities: null,
+      });
+      fixture.detectChanges();
+      const labels = navLabels(fixture.nativeElement as HTMLElement);
+
+      expect(labels[labels.indexOf('Trending') + 1]).toBe('For you');
+    });
+
+    it('counts the unopened stories the server reported', () => {
+      const element = mount({ trendingUnopened: { window: 'week', unopened: 9 } })
+        .nativeElement as HTMLElement;
+
+      expect(trendingNav(element).querySelector('.count')?.textContent?.trim()).toBe('9');
+    });
+
+    it('links to the Trending view and is marked active on it', () => {
+      const element = mount({
+        selection: { kind: 'trending', id: null, unread: false, window: 'day' },
+      }).nativeElement as HTMLElement;
+
+      expect(trendingNav(element).getAttribute('href')).toContain('view=trending');
+      expect(trendingNav(element).getAttribute('href')).not.toContain('window=');
+      expect(trendingNav(element).classList).toContain('active');
+    });
+
+    it('is gone, badge and all, once the account switched Trending off (D39)', () => {
+      const fixture = mount({ trendingUnopened: { window: 'day', unopened: 4 } });
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(navLabels(element)).not.toContain('Trending');
+      expect(element.querySelector('.nav.trending')).toBeNull();
     });
   });
 

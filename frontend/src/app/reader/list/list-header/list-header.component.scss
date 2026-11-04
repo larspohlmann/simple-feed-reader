@@ -200,6 +200,13 @@ h2.search-title {
   margin-left: auto;
 }
 
+/* The row owns the bar's touch height, so a compact control (Trending's switch) leaves it level with other lists. */
+@media (pointer: coarse) {
+  .tools {
+    min-height: var(--tap-target);
+  }
+}
+
 /* Switch/Mark-all/Refresh share their look with the shell's Edit and
    Save-search via `app-list-action` (#617). The switch (#602) is a filled
    circle when unread-filtered; app-icon's `fill` input carries the state. */

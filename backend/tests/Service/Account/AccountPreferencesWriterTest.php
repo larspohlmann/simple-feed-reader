@@ -50,6 +50,15 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertSame($wanted, $this->reload($user)->getPreferences()->getMagazineStyle());
     }
 
+    public function testChangeTrendingPersists(): void
+    {
+        $user = $this->user('prefs-trending@example.com');
+
+        $this->writer()->changeTrending($user, false);
+
+        self::assertFalse($this->reload($user)->getPreferences()->isTrendingEnabled());
+    }
+
     public function testChangeDigestPersistsTheConfiguration(): void
     {
         $user = $this->user('prefs-digest@example.com');

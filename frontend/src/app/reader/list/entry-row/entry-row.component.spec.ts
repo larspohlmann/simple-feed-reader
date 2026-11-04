@@ -113,6 +113,33 @@ describe('EntryRowComponent', () => {
     });
   });
 
+  describe('a Trending lead (#2017)', () => {
+    const lead = (duplicates: EntryDto[] = []) =>
+      entry({ duplicates, story: { outletCount: 7, viewed: false } });
+
+    it('names how many feeds covered the story in its meta line', () => {
+      const element = mount(lead()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.meta .sources')?.textContent?.trim()).toBe('7 sources');
+    });
+
+    it('drops the unread dot once another outlet was opened', () => {
+      const opened = anEntry({ id: 5, isViewed: true });
+      const element = mount(lead([opened])).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.meta .dot')!.classList).not.toContain('on');
+    });
+
+    it('lists the other outlets under Also covered by', () => {
+      const other = anEntry({ id: 5, source: 'Spiegel' });
+      const element = mount(lead([other])).nativeElement as HTMLElement;
+      const foot = element.querySelector('.also-foot')!;
+
+      expect(foot.querySelector('.lead')!.textContent!.trim()).toBe('Also covered by');
+      expect(foot.textContent).toContain('Spiegel');
+    });
+  });
+
   it("names an authorless Home post by the Home's label", () => {
     holdUnrenamedHome(7);
     const element = mount(authorlessHomePost(7)).nativeElement as HTMLElement;

@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
 import { UnreadFilterService } from './unread-filter.service';
+import { TrendingWindowService } from '../trending/trending-window.service';
 
 describe('ListPreferences', () => {
   let user: WritableSignal<{ id: number } | null>;
@@ -29,6 +30,13 @@ describe('ListPreferences', () => {
     });
 
     expect(applied).toEqual({ kind: 'tag', id: 9, unread: true, order: 'oldest' });
+  });
+
+  it('leaves the Trending window to the URL (#2017, D40)', () => {
+    TestBed.inject(TrendingWindowService).set('week');
+    const trending = { kind: 'trending', id: null, unread: false, window: 'day' } as const;
+
+    expect(TestBed.inject(ListPreferences).appliedTo(trending)).toEqual(trending);
   });
 
   describe('a direct search (#1922)', () => {

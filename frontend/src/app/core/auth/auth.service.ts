@@ -28,6 +28,7 @@ export interface UserPreferences {
   passkeyOfferAnswered: boolean;
   magazineStyle: string;
   sharing: SharingSettings;
+  trendingEnabled: boolean;
 }
 
 export interface CurrentUser {

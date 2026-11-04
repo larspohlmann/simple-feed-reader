@@ -1,5 +1,5 @@
 import { ParamMap, UrlMatchResult, UrlSegment } from '@angular/router';
-import { Selection, selectionFromParams } from './query';
+import { ParsedRoute, ViewContext, selectionFromParams } from './query';
 import { entryIdFromParam } from './slug';
 
 /**
@@ -19,10 +19,11 @@ export function readerMatcher(segments: UrlSegment[]): UrlMatchResult | null {
 export function selectionFromRoute(
   pathParams: ParamMap,
   queryParams: ParamMap,
-): { selection: Selection; entryId: number | null } {
+  context: ViewContext,
+): ParsedRoute {
   const savedSearch = pathParams.get('savedSearch');
   if (savedSearch === null) {
-    return selectionFromParams(queryParams);
+    return selectionFromParams(queryParams, context);
   }
 
   // The entry overlay composes on top of a saved-search path, so a merged
@@ -32,7 +33,11 @@ export function selectionFromRoute(
   // A slug with no leading id (hand-edited URL) has no single search to open,
   // so fall back to the combined view rather than fetching the plain list.
   if (savedSearch === 'all' || id === null) {
-    return { selection: { kind: 'saved-searches', id: null, unread: false }, entryId };
+    return {
+      selection: { kind: 'saved-searches', id: null, unread: false },
+      entryId,
+      urlCorrection: null,
+    };
   }
-  return { selection: { kind: 'saved-search', id, unread: false }, entryId };
+  return { selection: { kind: 'saved-search', id, unread: false }, entryId, urlCorrection: null };
 }

@@ -26,6 +26,7 @@ final readonly class AccountLine
         public bool $sharingEnabled,
         public array $hiddenShareTargets,
         public bool $rememberShares,
+        public bool $trendingEnabled,
         public array $savedSearchIncludedNetworks,
         public array $forYouExcludedNetworks,
     ) {
@@ -46,6 +47,7 @@ final readonly class AccountLine
             sharingEnabled: LineFieldWithDefault::bool($line, 'sharingEnabled', true),
             hiddenShareTargets: LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
             rememberShares: LineFieldWithDefault::bool($line, 'rememberShares', true),
+            trendingEnabled: LineFieldWithDefault::bool($line, 'trendingEnabled', true),
             savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
             forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
         );

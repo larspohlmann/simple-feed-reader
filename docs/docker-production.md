@@ -441,15 +441,16 @@ but it signs every user out.
   transport, fed by `App\Service\Worker\WorkerSchedule`: it advances active
   recommendation runs every 10 seconds, starts due scheduled recommendation
   runs every 5 minutes, sweeps due feeds every 5 minutes, sends due digest
-  mails every hour, fills saved-search memberships every minute, and once a
-  day purges failed messages older than 30 days. Watch it with
+  mails every hour, fills saved-search memberships every minute, rebuilds the
+  due Trending windows every 5 minutes, and once a day purges failed messages
+  older than 30 days. Watch it with
   `docker compose -p simple-feed-reader-prod logs -f worker`. If it is down,
   the app degrades automatically rather than breaking: once the worker's
   heartbeat is 16 minutes old (`WorkerPresence::FRESH_SECONDS`), a
   recommendation run advances only while a tab polls it — this stack sets no
   `DRAIN_PHP_CLI_BINARY`, so no on-demand drainer starts — and scheduled feed
-  refresh, scheduled recommendation runs, digests and the saved-search sweep
-  pause. Feeds still refresh manually. A cron calling `POST /maintenance/tick`
+  refresh, scheduled recommendation runs, digests, the saved-search sweep and
+  the Trending rebuild pause. Feeds still refresh manually. A cron calling `POST /maintenance/tick`
   with `MAINTENANCE_TOKEN` does the same jobs meanwhile
   ([for-you-scheduling.md](for-you-scheduling.md#one-call-for-everything)).
 - **Compose refuses to start and names a variable** — that value is empty in

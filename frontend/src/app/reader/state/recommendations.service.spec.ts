@@ -138,6 +138,7 @@ describe('RecommendationsService', () => {
         entry: null,
         link: null,
         q: null,
+        window: null,
       },
     });
   });

@@ -94,37 +94,6 @@
   }
 }
 
-.nav {
-  @include row.row-geometry;
-}
-
-@include row.row-states('.nav', '.nav.active');
-
-.nav:not(.active) > app-icon {
-  color: var(--text-muted);
-}
-
-.nav app-icon.pulse {
-  animation: for-you-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes for-you-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.35;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nav app-icon.pulse {
-    animation: none;
-  }
-}
-
 .feeds-card:not(.card) {
   display: contents;
 }

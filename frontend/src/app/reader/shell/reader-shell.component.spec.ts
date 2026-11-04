@@ -20,7 +20,9 @@ import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
-import { AuthService } from '../../core/auth/auth.service';
+import { TrendingWindowService } from '../trending/trending-window.service';
+import { PreferencesService } from '../../core/preferences/preferences.service';
+import { AuthService, CurrentUser } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { TokenStore } from '../../core/auth/token.store';
 import { OnboardingSkip } from '../feeds/catalog/onboarding-skip';
@@ -98,6 +100,7 @@ describe('ReaderShellComponent', () => {
     favoritesCount: 0,
     keptCount: 0,
     viewedCount: 0,
+    trending: { window: 'day', unopened: 0 },
     unreadTotals: NO_UNREAD_TOTALS_DTO,
   };
 
@@ -124,6 +127,7 @@ describe('ReaderShellComponent', () => {
     ],
     socialAccounts: [],
     unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 2 },
+    trending: { window: 'day', unopened: 0 },
   };
   const entry = anEntry({
     title: 'e1',
@@ -254,6 +258,146 @@ describe('ReaderShellComponent', () => {
     return fixture;
   }
 
+  describe('Trending switched off on the account (#2017, D39)', () => {
+    const trendingRequests = () =>
+      ctrl.match((request) => request.url === 'https://api.test/api/trending');
+    let navigate: jest.SpyInstance;
+    const leftTrending = () =>
+      navigate.mock.calls.filter(
+        ([, extras]) =>
+          extras?.queryParams?.['view'] === null &&
+          extras.queryParamsHandling === 'merge' &&
+          extras.replaceUrl === true,
+      );
+
+    beforeEach(() => {
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      qp.next(convertToParamMap({ view: 'trending' }));
+    });
+
+    it('opens All items for a Trending link, and takes Trending out of the URL', () => {
+      const fixture = boot();
+
+      expect(trendingRequests()).toHaveLength(0);
+      expect(fixture.componentInstance.selection().kind).toBe('all');
+      expect(leftTrending()).toHaveLength(1);
+    });
+
+    it('moves an open Trending list to All items when the switch goes off', () => {
+      const fixture = boot();
+      navigate.mockClear();
+      TestBed.inject(PreferencesService).setTrendingEnabled(true);
+      fixture.detectChanges();
+      trendingRequests().forEach((request) =>
+        request.flush({ window: 'day', builtAt: null, stories: [] }),
+      );
+      expect(fixture.componentInstance.selection().kind).toBe('trending');
+      expect(leftTrending()).toHaveLength(0);
+
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.selection().kind).toBe('all');
+      expect(leftTrending()).toHaveLength(1);
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+    });
+  });
+
+  it("keeps a Trending link in the URL while only this device's stale cache says Trending is off (#2017)", () => {
+    const claims = btoa(JSON.stringify({ userId: 7 })).replace(/=+$/, '');
+    localStorage.setItem('sfr.user.7.trending-enabled', 'false');
+    TestBed.inject(TokenStore).set(`header.${claims}.signature`);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const leftTrending = () =>
+      navigate.mock.calls.filter(([, extras]) => extras?.queryParams?.['view'] === null);
+    qp.next(convertToParamMap({ view: 'trending' }));
+    const fixture = boot();
+    expect(fixture.componentInstance.selection().kind).toBe('all');
+
+    const preferences = TestBed.inject(PreferencesService);
+    preferences.adopt({
+      ...auth.user(),
+      preferences: { scrapeFallbackEnabled: false, trendingEnabled: true },
+    } as unknown as CurrentUser);
+    fixture.detectChanges();
+
+    expect(leftTrending()).toHaveLength(0);
+    expect(fixture.componentInstance.selection().kind).toBe('trending');
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/trending')
+      .flush({ window: 'day', builtAt: null, stories: [] });
+  });
+
+  describe('the Trending window in the URL (#2017, D40)', () => {
+    let navigate: jest.SpyInstance;
+    const openTrending = (params: Record<string, string>) => {
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      qp.next(convertToParamMap({ view: 'trending', ...params }));
+      const fixture = boot();
+      navigate.mockClear();
+      TestBed.inject(PreferencesService).setTrendingEnabled(true);
+      fixture.detectChanges();
+      const request = ctrl.expectOne((each) => each.url === 'https://api.test/api/trending');
+      return { fixture, request };
+    };
+    const windowsWritten = () =>
+      navigate.mock.calls
+        .filter(([, extras]) => extras?.replaceUrl === true)
+        .map(([, extras]) => extras.queryParams);
+    const story = () => ({ ...entry, id: 77, story: { outletCount: 3, viewed: false } });
+    const hideButtons = (fixture: { nativeElement: HTMLElement }) =>
+      fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]');
+
+    it('opens the window a deep link names, remembers it, and leaves the URL alone', () => {
+      const { request } = openTrending({ window: 'week' });
+
+      expect(request.request.params.get('window')).toBe('week');
+      expect(TestBed.inject(TrendingWindowService).window()).toBe('week');
+      expect(windowsWritten()).toEqual([]);
+      request.flush({ window: 'week', builtAt: null, stories: [] });
+    });
+
+    it('lets a named day win over a stored week, and remembers the day', () => {
+      TestBed.inject(TrendingWindowService).set('week');
+      const { request } = openTrending({ window: 'day' });
+
+      expect(request.request.params.get('window')).toBe('day');
+      expect(TestBed.inject(TrendingWindowService).window()).toBe('day');
+      request.flush({ window: 'day', builtAt: null, stories: [] });
+    });
+
+    it('opens the stored week for a bare link, names it in the URL, and keeps it stored', () => {
+      TestBed.inject(TrendingWindowService).set('week');
+      const { request } = openTrending({});
+
+      expect(request.request.params.get('window')).toBe('week');
+      expect(windowsWritten()).toEqual([{ window: 'week' }]);
+      expect(TestBed.inject(TrendingWindowService).window()).toBe('week');
+      request.flush({ window: 'week', builtAt: null, stories: [] });
+    });
+
+    it("ends every Trending card's action row in Hide", () => {
+      const { fixture, request } = openTrending({ window: 'day' });
+      request.flush({ window: 'day', builtAt: null, stories: [story()] });
+      fixture.detectChanges();
+
+      expect(hideButtons(fixture)).toHaveLength(1);
+    });
+  });
+
+  it('offers no Hide on a list that is not Trending (#2017, D40)', () => {
+    const fixture = boot({ story: { outletCount: 3, viewed: false } });
+
+    expect(fixture.nativeElement.querySelectorAll('.row, app-entry-row').length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]')).toHaveLength(
+      0,
+    );
+  });
+
   describe('previews still loading (#1502)', () => {
     const status = (element: HTMLElement) => element.querySelector('.previews-status')!;
 
@@ -301,6 +445,7 @@ describe('ReaderShellComponent', () => {
       keptCount: 0,
       socialAccounts: [],
       unreadTotals: NO_UNREAD_TOTALS_DTO,
+      trending: { window: 'day', unopened: 0 },
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
@@ -974,6 +1119,7 @@ describe('ReaderShellComponent', () => {
       favoritesCount: 0,
       keptCount: 0,
       viewedCount: 1,
+      trending: { window: 'day', unopened: 0 },
       unreadTotals: { ...subscriptionsBody.unreadTotals, forYou: 0 },
     });
 
@@ -1581,6 +1727,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
           }),
@@ -1617,6 +1764,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             tags: [],
@@ -2212,6 +2360,7 @@ describe('ReaderShellComponent', () => {
             entry: null,
             link: null,
             q: null,
+            window: null,
           },
         }),
       );
@@ -2709,6 +2858,7 @@ describe('ReaderShellComponent', () => {
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
+        trending: { window: 'day', unopened: 0 },
       });
 
       tokens.set('user-b.jwt');
@@ -2752,6 +2902,7 @@ describe('ReaderShellComponent', () => {
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
+        trending: { window: 'day', unopened: 0 },
       });
       await fixture.whenStable();
       fixture.detectChanges();
@@ -3164,6 +3315,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3215,6 +3367,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3295,6 +3448,7 @@ describe('ReaderShellComponent', () => {
             savedSearches: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -4458,6 +4612,7 @@ describe('ReaderShellComponent', () => {
       socialAccounts: [],
       keptCount: 0,
       viewedCount: 0,
+      trending: { window: 'day', unopened: 0 },
     };
 
     afterEach(() => {

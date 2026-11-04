@@ -1,4 +1,5 @@
-import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { EntryDto } from '../../models';
@@ -8,6 +9,7 @@ import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handl
 import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { ENTRY_ROW_ACTION, EntryRowAction } from '../../entry/entry-actions/entry-row-action';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -41,9 +43,13 @@ function mount(testEntry: EntryDto, arrange?: () => void) {
   });
   arrange?.();
   const fixture = TestBed.createComponent(EntryDuplicatesComponent);
-  fixture.componentRef.setInput('entry', testEntry);
-  fixture.detectChanges();
+  hold(fixture, testEntry);
   return fixture;
+}
+
+function hold(fixture: ComponentFixture<EntryDuplicatesComponent>, row: EntryDto): void {
+  fixture.componentRef.setInput('entry', row);
+  fixture.detectChanges();
 }
 
 it('renders nothing without duplicates', () => {
@@ -58,6 +64,31 @@ it('renders one chip per duplicate with its feed', () => {
   expect(chips.length).toBe(1);
   expect(chips[0].textContent).toContain('NDR Schleswig-Holstein');
 });
+
+it("holds a long feed title in the chip's truncating name, the whole title in its tooltip", () => {
+  const title = 'World News, Today World News, Latest International News - Times of India';
+  const dup = entry({ id: 2, source: title });
+  const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
+  const chip = element.querySelector('.also-entry')!;
+
+  expect(chip.querySelector('.feed')!.textContent!.trim()).toBe(title);
+  expect(chip.getAttribute('title')).toBe(title);
+});
+
+it.each(['Enter', ' '])(
+  'keeps a chip\'s "%s" key from reaching the card, which would open the row',
+  (key) => {
+    const element = mount(entry({ duplicates: [entry({ id: 2 })] })).nativeElement as HTMLElement;
+    const card = jest.fn();
+    element.addEventListener('keydown', card);
+
+    element
+      .querySelector('.also-entry')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+    expect(card).not.toHaveBeenCalled();
+  },
+);
 
 it("names a duplicate from a Home by the Home's label", () => {
   const dup = authorlessHomePost(7, { id: 2, source: 'Bob' });
@@ -94,6 +125,30 @@ it('opens a popover with the copy card and re-emits open for that copy', () => {
 
   (panel!.querySelector('app-entry-row .row') as HTMLElement).click();
   expect(opened).toHaveBeenCalledWith(dup);
+});
+
+it("gives the copies in the popover none of the list's own row action", () => {
+  const listAction: EntryRowAction = {
+    icon: 'visibility_off',
+    label: 'test.listAction',
+    hint: 'test.listAction',
+    run: jest.fn(),
+  };
+  const dup = entry({ id: 2, source: 'NDR SH' });
+  const fixture = mount(entry({ duplicates: [dup] }), () =>
+    TestBed.configureTestingModule({
+      providers: [{ provide: ENTRY_ROW_ACTION, useValue: signal(listAction) }],
+    }),
+  );
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const panel = TestBed.inject(OverlayContainer)
+    .getContainerElement()
+    .querySelector('.dup-popover')!;
+
+  expect(panel.querySelector('app-entry-row')).not.toBeNull();
+  expect(panel.querySelector('[aria-label="test.listAction"]')).toBeNull();
 });
 
 it('closes the popover once the copy is opened', () => {
@@ -154,8 +209,7 @@ it('re-emits favorite for the copy and shows the flag the store then holds', () 
 
   favoriteButton().click();
   expect(entryActions.favorite).toHaveBeenCalledWith(dup);
-  fixture.componentRef.setInput('entry', entry({ duplicates: [{ ...dup, isFavorite: true }] }));
-  fixture.detectChanges();
+  hold(fixture, entry({ duplicates: [{ ...dup, isFavorite: true }] }));
 
   expect(favoriteButton().classList.contains('on')).toBe(true);
   expect(favoriteButton().getAttribute('aria-pressed')).toBe('true');
@@ -175,15 +229,14 @@ function openLikePopover() {
       .getContainerElement()
       .querySelector('.dup-popover button[aria-label$="on Bluesky"]') as HTMLElement;
   const storeHolds = (isLiked: boolean) => {
-    fixture.componentRef.setInput(
-      'entry',
+    hold(
+      fixture,
       entry({
         duplicates: [
           { ...dup, social: { network: 'bluesky', isLiked, canLike: true, isOwn: false } },
         ],
       }),
     );
-    fixture.detectChanges();
   };
   return { fixture, dup, button, storeHolds };
 }
@@ -221,4 +274,57 @@ it('reopens the popover on the like the store wrote into the row copy (#1600)', 
     .getContainerElement()
     .querySelector('.dup-popover button[aria-label$="on Bluesky"]') as HTMLElement;
   expect(reopened.getAttribute('aria-pressed')).toBe('true');
+});
+
+it("heads a row's duplicates as the places it also ran in", () => {
+  const element = mount(entry({ duplicates: [entry({ id: 2 })] })).nativeElement as HTMLElement;
+
+  expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also in');
+});
+
+it("heads a Trending story's other outlets as the feeds that also covered it", () => {
+  const lead = entry({ duplicates: [entry({ id: 2 })], story: { outletCount: 3, viewed: false } });
+  const element = mount(lead).nativeElement as HTMLElement;
+
+  expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also covered by');
+});
+
+describe('more than four copies', () => {
+  const six = () => [2, 3, 4, 5, 6, 7].map((id) => entry({ id, source: `Feed ${id}` }));
+
+  it('names the first four and offers the rest behind "+N more"', () => {
+    const element = mount(entry({ duplicates: six() })).nativeElement as HTMLElement;
+
+    const chips = [...element.querySelectorAll('.also-entry')];
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      expect.stringContaining('Feed 2'),
+      expect.stringContaining('Feed 3'),
+      expect.stringContaining('Feed 4'),
+      expect.stringContaining('Feed 5'),
+    ]);
+    expect(element.querySelector('.also-more')!.textContent!.trim()).toBe('+2 more');
+  });
+
+  it('reveals the rest in place, without the click reaching the row around it', () => {
+    const fixture = mount(entry({ duplicates: six() }));
+    const element = fixture.nativeElement as HTMLElement;
+    const row = document.createElement('div');
+    const rowOpened = jest.fn();
+    row.addEventListener('click', rowOpened);
+    row.appendChild(element);
+
+    element.querySelector<HTMLButtonElement>('.also-more')!.click();
+    fixture.detectChanges();
+
+    expect(element.querySelectorAll('.also-entry')).toHaveLength(6);
+    expect(element.querySelector('.also-more')).toBeNull();
+    expect(rowOpened).not.toHaveBeenCalled();
+  });
+
+  it('offers no "+N more" for exactly four', () => {
+    const element = mount(entry({ duplicates: six().slice(0, 4) })).nativeElement as HTMLElement;
+
+    expect(element.querySelectorAll('.also-entry')).toHaveLength(4);
+    expect(element.querySelector('.also-more')).toBeNull();
+  });
 });

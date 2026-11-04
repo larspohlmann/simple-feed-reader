@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription;
 
+use App\Entity\User;
+use App\Enum\TrendingWindow;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationItemRepository;
@@ -11,6 +13,7 @@ use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Subscription\Model\UnreadTotalsModel;
+use App\Service\Trending\TrendingStories;
 
 final readonly class SubscriptionTallyReader
 {
@@ -20,11 +23,14 @@ final readonly class SubscriptionTallyReader
         private UnreadCountRepository $unreadCounts,
         private RecommendationItemRepository $recommendationItems,
         private EntryShareRepository $entryShares,
+        private TrendingStories $trendingStories,
     ) {
     }
 
-    public function forUser(int $userId): SubscriptionTalliesModel
+    public function forUser(User $user, TrendingWindow $trendingWindow): SubscriptionTalliesModel
     {
+        $userId = $user->requireId();
+
         return new SubscriptionTalliesModel(
             $this->unreadCounts->perSubscription($userId),
             $this->entryCounts->forUser($userId),
@@ -37,6 +43,7 @@ final readonly class SubscriptionTallyReader
                 $this->recommendationItems->countForYou($userId),
                 $this->unreadCounts->perFeedGroup($userId),
             ),
+            $this->trendingStories->unopenedFor($user, $trendingWindow),
         );
     }
 

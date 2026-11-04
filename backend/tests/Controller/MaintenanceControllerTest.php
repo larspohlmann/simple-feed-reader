@@ -19,6 +19,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Lock\LockFactory;
 
 final class MaintenanceControllerTest extends WebTestCase
@@ -47,7 +48,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('POST', '/maintenance/refresh');
 
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
     public function testRejectsWrongToken(): void
@@ -55,7 +56,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('POST', '/maintenance/refresh?token=wrong');
 
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
     public function testRefreshesWithValidToken(): void
@@ -101,7 +102,7 @@ final class MaintenanceControllerTest extends WebTestCase
             'HTTP_X_MAINTENANCE_TOKEN' => 'nope',
         ]);
 
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
     public function testGetMethodIsNotAllowed(): void
@@ -109,7 +110,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('GET', '/maintenance/refresh?token=test-maintenance-token');
 
-        self::assertResponseStatusCodeSame(405);
+        self::assertResponseStatusCodeSame(Response::HTTP_METHOD_NOT_ALLOWED);
     }
 
     public function testBusyReturnsConflict(): void
@@ -124,7 +125,7 @@ final class MaintenanceControllerTest extends WebTestCase
 
         $client->request('POST', '/maintenance/refresh?token=test-maintenance-token');
 
-        self::assertResponseStatusCodeSame(409);
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
         $lock->release();
     }
 
@@ -161,7 +162,7 @@ final class MaintenanceControllerTest extends WebTestCase
 
         $client->request('POST', '/maintenance/refresh?token=test-maintenance-token');
 
-        self::assertResponseStatusCodeSame(500);
+        self::assertResponseStatusCodeSame(Response::HTTP_INTERNAL_SERVER_ERROR);
         /** @var array{status: string} $payload */
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('aborted', $payload['status']);
@@ -172,7 +173,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('POST', '/maintenance/wipe-everything?token=test-maintenance-token');
 
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
     public function testRecommendationSweepRejectsMissingToken(): void
@@ -180,7 +181,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('POST', '/maintenance/recommendations/sweep');
 
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
         // The body shape matters, not just the status: the guard's rejection
         // carries the `error` field the caller reads.
         self::assertSame(
@@ -213,7 +214,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('GET', '/maintenance/recommendations/sweep?token=test-maintenance-token');
 
-        self::assertResponseStatusCodeSame(405);
+        self::assertResponseStatusCodeSame(Response::HTTP_METHOD_NOT_ALLOWED);
     }
 
     public function testTickRejectsMissingToken(): void
@@ -221,7 +222,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('POST', '/maintenance/tick');
 
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
         self::assertSame(
             ['error' => 'forbidden'],
             json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
@@ -233,7 +234,7 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $client->request('GET', '/maintenance/tick?token=test-maintenance-token');
 
-        self::assertResponseStatusCodeSame(405);
+        self::assertResponseStatusCodeSame(Response::HTTP_METHOD_NOT_ALLOWED);
     }
 
     public function testTickReturnsBothHalvesWithValidToken(): void
@@ -253,9 +254,23 @@ final class MaintenanceControllerTest extends WebTestCase
         self::assertResponseHeaderSame('Content-Type', 'application/json');
         /** @var array<string, mixed> $payload */
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertArrayHasKey('refresh', $payload);
-        self::assertArrayHasKey('recommendations', $payload);
-        self::assertArrayHasKey('logShipping', $payload);
+        self::assertSame(
+            [
+                'refresh',
+                'recommendations',
+                'digests',
+                'imageVerification',
+                'linkCards',
+                'transcripts',
+                'profileImages',
+                'hiddenProfiles',
+                'savedSearchMemberships',
+                'privateFeedSync',
+                'trending',
+                'logShipping',
+            ],
+            array_keys($payload),
+        );
         /** @var array<string, mixed> $refresh */
         $refresh = $payload['refresh'];
         self::assertSame('completed', $refresh['status']);

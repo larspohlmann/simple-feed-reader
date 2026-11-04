@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Maintenance;
 
 use App\Service\Logging\Loki\LokiSpoolShipper;
-use App\Service\Mail\Digest\SendDueDigests;
+use App\Service\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
-use App\Service\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Social\SocialMaintenance;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
  * Refresh first, then the sweeps, then the log spool. An aborted refresh closed the shared
@@ -24,16 +21,11 @@ final readonly class MaintenanceTick
 {
     public const int REFRESH_BUDGET_SECONDS = 20;
 
-    /** The membership sweep's own cap inside the tick window: enough for ~50 chunks on Strato. */
-    private const int MEMBERSHIP_BUDGET_SECONDS = 10;
-
+    /** @param iterable<string, MaintenanceSweepInterface> $sweeps */
     public function __construct(
         private RefreshRunner $refreshRunner,
-        private ForYouSweep $forYouSweep,
-        private SendDueDigests $sendDueDigests,
-        private FollowUpFetchSweeps $followUpFetchSweeps,
-        private SocialMaintenance $socialMaintenance,
-        private SavedSearchMembershipSweep $membershipSweep,
+        #[AutowireIterator('app.maintenance_sweep', defaultIndexMethod: 'name', defaultPriorityMethod: 'priority')]
+        private iterable $sweeps,
         private LokiSpoolShipper $logSpoolShipper,
         private ClockInterface $clock,
         private int $tickWindowSeconds,
@@ -44,31 +36,28 @@ final readonly class MaintenanceTick
     {
         $deadline = $this->clock->now()->modify(\sprintf('+%d seconds', $this->tickWindowSeconds));
         $refresh = $this->refreshRunner->run(RefreshRequestModel::allDue(self::REFRESH_BUDGET_SECONDS));
-        $sweeps = $refresh->isAborted()
-            ? MaintenanceSweepsModel::skippedAfterAbortedRefresh()
-            : $this->sweep($deadline);
+        $sweeps = $refresh->isAborted() ? $this->skippedSweeps() : $this->sweep($deadline);
 
         return new MaintenanceTickReportModel($refresh, $sweeps, $this->logSpoolShipper->ship());
     }
 
     private function sweep(\DateTimeImmutable $deadline): MaintenanceSweepsModel
     {
-        $recommendations = $this->forYouSweep->sweepOnce();
-        $digests = $this->sendDueDigests->run();
-        $followUpFetches = $this->followUpFetchSweeps->sweep($deadline);
-        $profileImages = $this->socialMaintenance->refreshProfileImages($deadline);
-        $hiddenProfiles = $this->socialMaintenance->switchHiddenProfiles($deadline);
-        $budget = SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
-        $memberships = $this->membershipSweep->sweep($budget);
+        $reports = [];
+        foreach ($this->sweeps as $name => $sweep) {
+            $reports[$name] = $sweep->run($deadline);
+        }
 
-        return new MaintenanceSweepsModel(
-            $recommendations,
-            $digests,
-            $followUpFetches,
-            $profileImages,
-            $hiddenProfiles,
-            $this->socialMaintenance->syncPrivateFeeds($deadline),
-            $memberships,
-        );
+        return MaintenanceSweepsModel::ran($reports);
+    }
+
+    private function skippedSweeps(): MaintenanceSweepsModel
+    {
+        $reports = [];
+        foreach ($this->sweeps as $name => $sweep) {
+            $reports[$name] = $sweep->idleReport();
+        }
+
+        return MaintenanceSweepsModel::skippedAfterAbortedRefresh($reports);
     }
 }

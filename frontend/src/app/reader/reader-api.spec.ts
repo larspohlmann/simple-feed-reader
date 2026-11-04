@@ -7,7 +7,7 @@ import { ReaderApi } from './reader-api';
 import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
 import { Observable } from 'rxjs';
-import { A_READER_TOKEN } from '../../testing/entry-testing';
+import { A_READER_TOKEN, anEntry } from '../../testing/entry-testing';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
@@ -29,11 +29,24 @@ describe('ReaderApi', () => {
   afterEach(() => ctrl.verify());
 
   it('GETs subscriptions', () => {
-    api.subscriptions().subscribe();
+    api.subscriptions('day').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush({ subscriptions: [] });
   });
+
+  it.each([
+    ['subscriptions', () => api.subscriptions('week'), 'https://api.test/api/subscriptions'],
+    ['counts', () => api.subscriptionCounts('week'), 'https://api.test/api/subscriptions/counts'],
+  ])(
+    'asks the sidebar %s read for the week of Trending, and names no day (#2017)',
+    (_name, read, url) => {
+      read().subscribe();
+      const testRequest = ctrl.expectOne((request) => request.url === url);
+      expect(testRequest.request.params.get('trendingWindow')).toBe('week');
+      testRequest.flush({});
+    },
+  );
 
   it('POSTs the ids to complete and answers with the finished rows', () => {
     let rows: unknown;
@@ -51,8 +64,8 @@ describe('ReaderApi', () => {
     afterEach(() => jest.useRealTimers());
 
     it.each<[string, () => Observable<unknown>, string]>([
-      ['subscriptions', () => api.subscriptions(), 'https://api.test/api/subscriptions'],
-      ['counts', () => api.subscriptionCounts(), 'https://api.test/api/subscriptions/counts'],
+      ['subscriptions', () => api.subscriptions('day'), 'https://api.test/api/subscriptions'],
+      ['counts', () => api.subscriptionCounts('day'), 'https://api.test/api/subscriptions/counts'],
       ['saved searches', () => api.savedSearches(), 'https://api.test/api/saved-searches'],
     ])('retries the sidebar %s read after a 503', (_name, read, url) => {
       const responses: unknown[] = [];
@@ -307,6 +320,33 @@ describe('ReaderApi', () => {
     );
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush({ entries: [], nextCursor: null });
+  });
+
+  it('answers the Trending list query with the stories as their leads (#2017)', () => {
+    let ids: number[] = [];
+    api.entries({ view: 'trending', window: 'day' }).subscribe((page) => {
+      ids = page.entries.map((entry) => entry.id);
+    });
+    const testRequest = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/trending',
+    );
+    expect(testRequest.request.params.get('window')).toBe('day');
+    expect(testRequest.request.params.get('limit')).toBeNull();
+    testRequest.flush({
+      window: 'day',
+      builtAt: null,
+      stories: [anEntry({ id: 9, story: { outletCount: 3, viewed: false } })],
+    });
+    expect(ids).toEqual([9]);
+  });
+
+  it('asks for the day when the Trending query names no window (#2017)', () => {
+    api.entries({ view: 'trending' }).subscribe();
+    const testRequest = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/trending',
+    );
+    expect(testRequest.request.params.get('window')).toBe('day');
+    testRequest.flush({ window: 'day', builtAt: null, stories: [] });
   });
 
   it('asks every list endpoint for oldest first only when the query says so', () => {

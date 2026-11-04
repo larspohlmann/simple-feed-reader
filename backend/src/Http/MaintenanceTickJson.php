@@ -4,127 +4,55 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Image\Model\ImageVerificationReportModel;
-use App\Service\LinkCard\Model\LinkCardSweepReportModel;
+use App\Http\SweepReportJson\SweepReportJsonInterface;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
-use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
-use App\Service\Social\Model\HiddenProfileSwitchReportModel;
-use App\Service\Social\Model\PrivateFeedSyncReportModel;
-use App\Service\Social\Model\ProfileImageSweepReportModel;
-use App\Service\Transcript\Model\TranscriptSweepReportModel;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /** The /maintenance/tick response: every half under a stable key; a skipped sweep says why. */
-final class MaintenanceTickJson
+final readonly class MaintenanceTickJson
 {
     public const string SKIPPED_REASON = 'refresh aborted: the shared EntityManager is unusable this tick';
 
-    /** @return array<string, array<string, int|bool|string>> */
-    public static function report(MaintenanceTickReportModel $report): array
-    {
-        $sweeps = $report->sweeps;
-
-        return [
-            'refresh' => RefreshReportJson::report($report->refresh),
-            'recommendations' => self::markedIfSkipped(
-                $sweeps,
-                ForYouSweepReportJson::report($sweeps->recommendations),
-            ),
-            'digests' => self::markedIfSkipped($sweeps, self::digests($sweeps->digests)),
-            'imageVerification' => self::markedIfSkipped(
-                $sweeps,
-                self::imageVerification($sweeps->followUpFetches->imageVerification),
-            ),
-            'linkCards' => self::markedIfSkipped($sweeps, self::linkCards($sweeps->followUpFetches->linkCards)),
-            'transcripts' => self::markedIfSkipped($sweeps, self::transcripts($sweeps->followUpFetches->transcripts)),
-            'profileImages' => self::markedIfSkipped($sweeps, self::profileImages($sweeps->profileImages)),
-            'hiddenProfiles' => self::markedIfSkipped($sweeps, self::hiddenProfiles($sweeps->hiddenProfiles)),
-            'privateFeedSync' => self::markedIfSkipped($sweeps, self::privateFeedSync($sweeps->privateFeedSync)),
-            'savedSearchMemberships' => self::markedIfSkipped(
-                $sweeps,
-                self::memberships($sweeps->savedSearchMemberships),
-            ),
-            'logShipping' => self::logShipping($report->logShipping),
-        ];
+    /** @param iterable<SweepReportJsonInterface> $mappers */
+    public function __construct(
+        #[AutowireIterator('app.sweep_report_json')]
+        private iterable $mappers,
+    ) {
     }
 
-    /**
-     * @param array<string, int|bool> $counts
-     *
-     * @return array<string, int|bool|string>
-     */
-    private static function markedIfSkipped(MaintenanceSweepsModel $sweeps, array $counts): array
+    /** @return array<string, array<string, int|bool|string>> */
+    public function report(MaintenanceTickReportModel $report): array
     {
-        if (!$sweeps->skipped) {
-            return $counts;
+        return ['refresh' => RefreshReportJson::report($report->refresh)]
+            + $this->sweeps($report->sweeps)
+            + ['logShipping' => self::logShipping($report->logShipping)];
+    }
+
+    /** @return array<string, array<string, int|bool|string>> */
+    private function sweeps(MaintenanceSweepsModel $sweeps): array
+    {
+        $json = [];
+        foreach ($sweeps->reports as $name => $report) {
+            $figures = $this->figures($report);
+            $json[$name] = $sweeps->skipped ? $figures + ['skipped' => self::SKIPPED_REASON] : $figures;
         }
 
-        return $counts + ['skipped' => self::SKIPPED_REASON];
+        return $json;
     }
 
-    /** @return array{considered: int, sent: int, skippedEmpty: int} */
-    private static function digests(DigestSweepReportModel $report): array
+    /** @return array<string, int|bool> */
+    private function figures(object $report): array
     {
-        return ['considered' => $report->considered, 'sent' => $report->sent, 'skippedEmpty' => $report->skippedEmpty];
-    }
+        foreach ($this->mappers as $mapper) {
+            $figures = $mapper->figures($report);
+            if (null !== $figures) {
+                return $figures;
+            }
+        }
 
-    /** @return array{considered: int, completed: int} */
-    private static function linkCards(LinkCardSweepReportModel $report): array
-    {
-        return ['considered' => $report->considered, 'completed' => $report->completed];
-    }
-
-    /** @return array{claimed: int, filled: int} */
-    private static function transcripts(TranscriptSweepReportModel $report): array
-    {
-        return ['claimed' => $report->claimed, 'filled' => $report->filled];
-    }
-
-    /** @return array{checked: int, changed: int} */
-    private static function profileImages(ProfileImageSweepReportModel $report): array
-    {
-        return ['checked' => $report->checked, 'changed' => $report->changed];
-    }
-
-    /** @return array{started: int, finished: int} */
-    private static function hiddenProfiles(HiddenProfileSwitchReportModel $report): array
-    {
-        return ['started' => $report->started, 'finished' => $report->finished];
-    }
-
-    /** @return array{accountsChecked: int, accountsSkipped: int, added: int, removed: int} */
-    private static function privateFeedSync(PrivateFeedSyncReportModel $report): array
-    {
-        return [
-            'accountsChecked' => $report->checked,
-            'accountsSkipped' => $report->skipped,
-            'added' => $report->added,
-            'removed' => $report->removed,
-        ];
-    }
-
-    /** @return array{measured: int, kept: int, dropped: int, retried: int} */
-    private static function imageVerification(ImageVerificationReportModel $report): array
-    {
-        return [
-            'measured' => $report->measured,
-            'kept' => $report->kept,
-            'dropped' => $report->dropped,
-            'retried' => $report->retried,
-        ];
-    }
-
-    /** @return array{searchesSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool} */
-    private static function memberships(SavedSearchMembershipSweepReportModel $report): array
-    {
-        return [
-            'searchesSwept' => $report->searchesSwept,
-            'entriesScanned' => $report->entriesScanned,
-            'matchesInserted' => $report->matchesInserted,
-            'caughtUp' => $report->caughtUp,
-        ];
+        throw new \LogicException(\sprintf('No tick JSON mapper claims %s.', $report::class));
     }
 
     /** @return array{shipped: int, failed: int} */

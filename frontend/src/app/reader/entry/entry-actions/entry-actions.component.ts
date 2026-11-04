@@ -1,5 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { EntryActionHandler } from './entry-action-handler';
+import { ENTRY_ROW_ACTION } from './entry-row-action';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
@@ -12,7 +13,8 @@ import { ListenLauncher } from '../../audio/listen-launcher';
 /**
  * The per-entry actions — favorite, like on the post's network (#1600), keep,
  * mark read, delete my own post (#1972), led by the declared duration, play and
- * add-to-playlist on an audio entry (#1436, #1449) — as one control cluster.
+ * add-to-playlist on an audio entry (#1436, #1449) — as one control cluster,
+ * ended by the list's own action (`ENTRY_ROW_ACTION`) where the list has one.
  * Lives here, not repeated per block: a second copy (hero vs entry-row) once
  * made actions read as unreliable across the view (#414).
  *
@@ -48,4 +50,6 @@ export class EntryActionsComponent {
     inject(ListenLauncher),
   );
   protected readonly actions = inject(EntryActionHandler);
+  private readonly listAction = inject(ENTRY_ROW_ACTION, { optional: true });
+  protected readonly rowAction = computed(() => this.listAction?.() ?? null);
 }

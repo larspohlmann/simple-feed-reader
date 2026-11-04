@@ -1,3 +1,4 @@
+import { provideAccountIdentity } from '../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { effect } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -24,6 +25,8 @@ import {
   untaggedSubscriptions,
 } from './subscription-derivations';
 import { SubscriptionDto, SubscriptionTagDto, TagDto, UnreadTotalsDto } from '../models';
+import { TrendingUnopened } from '../trending/trending.models';
+import { TrendingWindowService } from '../trending/trending-window.service';
 import { anEntry } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
 import { makeTag } from '../testing/tag.factory';
@@ -70,6 +73,7 @@ interface CountTotals {
   kept?: number;
   shared?: number;
   viewed?: number;
+  trending?: TrendingUnopened;
   unreadTotals?: Partial<UnreadTotalsDto>;
 }
 
@@ -88,6 +92,7 @@ const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
   keptCount: totals.kept ?? 0,
   sharedCount: totals.shared ?? 0,
   viewedCount: totals.viewed ?? 0,
+  trending: totals.trending ?? { window: 'day', unopened: 0 },
   unreadTotals: unreadTotalsDto(totals.unreadTotals),
 });
 
@@ -358,7 +363,9 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto({ allItems: 4, tags: [{ id: 20, unreadCount: 4 }] }),
       keptCount: 2,
       sharedCount: 3,
+      trending: { window: 'day', unopened: 2 },
     });
+    expect(store.trendingUnopened()).toEqual({ window: 'day', unopened: 2 });
     expect(store.totalUnread()).toBe(4);
     expect(store.tagTree()[0].unreadCount).toBe(4);
     expect(store.favoritesCount()).toBe(4);
@@ -378,6 +385,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto({ allItems: 5 }),
     });
 
@@ -395,6 +403,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto(),
     });
     tokens.clear();
@@ -412,6 +421,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       viewedCount: 0,
+      trending: { window: 'day', unopened: 0 },
     });
     expect(store.resolved()).toBe(true);
 
@@ -425,6 +435,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       viewedCount: 0,
+      trending: { window: 'day', unopened: 0 },
     });
     expect(store.resolved()).toBe(true);
   });
@@ -439,6 +450,7 @@ describe('SubscriptionsStore', () => {
         keptCount: 1,
         sharedCount: 2,
         viewedCount: 4,
+        trending: { window: 'day', unopened: 2 },
       });
 
       tokens.clear();
@@ -449,6 +461,7 @@ describe('SubscriptionsStore', () => {
       expect(store.keptCount()).toBe(0);
       expect(store.sharedCount()).toBe(0);
       expect(store.viewedCount()).toBe(0);
+      expect(store.trendingUnopened()).toEqual({ window: 'day', unopened: 0 });
       expect(store.resolved()).toBe(false);
     });
 
@@ -474,6 +487,7 @@ describe('SubscriptionsStore', () => {
         keptCount: 0,
         sharedCount: 0,
         viewedCount: 0,
+        trending: { window: 'day', unopened: 0 },
       });
 
       tokens.clear();
@@ -488,6 +502,7 @@ describe('SubscriptionsStore', () => {
         keptCount: 0,
         sharedCount: 0,
         viewedCount: 0,
+        trending: { window: 'day', unopened: 0 },
       });
       expect(store.subscriptions().map((subscription) => subscription.id)).toEqual([2]);
       jest.useRealTimers();
@@ -504,6 +519,7 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
     });
     store.loadIfStale();
     ctrl.expectNone('https://api.test/api/subscriptions');
@@ -520,6 +536,7 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
     });
 
     jest.useRealTimers();
@@ -532,6 +549,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 1,
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto(),
     });
     store.bumpFavorites(1);
@@ -549,6 +567,7 @@ describe('SubscriptionsStore', () => {
       favoritesCount: 0,
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto(),
     });
     store.bumpShared(-1);
@@ -565,6 +584,7 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
     });
     store.markArticleRead(anEntry({ subscriptionId: 1 }));
     expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
@@ -628,6 +648,7 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
       sharedCount: 0,
+      trending: { window: 'day', unopened: 0 },
     });
     store.patchLocal(1, { includeInAllItems: false });
     expect(
@@ -1001,6 +1022,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     keptCount: 0,
     sharedCount: 0,
     viewedCount: 0,
+    trending: { window: 'day', unopened: 0 },
   });
 
   it('keeps ticking after a response that never left the process', () => {
@@ -1009,7 +1031,11 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     const subscriptions = jest.fn(() => of(respond(++unread)));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [SubscriptionsStore, { provide: ReaderApi, useValue: { subscriptions } }],
+      providers: [
+        SubscriptionsStore,
+        { provide: ReaderApi, useValue: { subscriptions } },
+        provideAccountIdentity(),
+      ],
     });
     const store = TestBed.inject(SubscriptionsStore);
 
@@ -1057,6 +1083,7 @@ describe('SubscriptionsStore counts-only reload', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
+        provideAccountIdentity(),
       ],
     });
     TestBed.inject(TokenStore).set('user-a.jwt');
@@ -1103,6 +1130,44 @@ describe('SubscriptionsStore counts-only reload', () => {
 
     expect(store.subscriptions()[0].unreadCount).toBe(0);
     expect(store.favoritesCount()).toBe(1);
+  });
+
+  it('adopts the Trending count of a counts tick (#2017)', () => {
+    settleAndAge([sub(1, 2)]);
+
+    store.reloadCountsIfStale();
+    ctrl
+      .expectOne(countsUrl)
+      .flush(countsBody([{ id: 1, unreadCount: 2 }], { trending: { window: 'day', unopened: 3 } }));
+
+    expect(store.trendingUnopened()).toEqual({ window: 'day', unopened: 3 });
+  });
+
+  it('asks every tick for the window the sidebar links to, and asks again when it changes (D40)', () => {
+    settleAndAge([sub(1, 2)]);
+    const windows = TestBed.inject(TrendingWindowService);
+
+    windows.set('week');
+    TestBed.tick();
+    const refetch = ctrl.expectOne((request) => request.url === countsUrl);
+    expect(refetch.request.params.get('trendingWindow')).toBe('week');
+    refetch.flush(
+      countsBody([{ id: 1, unreadCount: 2 }], { trending: { window: 'week', unopened: 5 } }),
+    );
+    expect(store.trendingUnopened()).toEqual({ window: 'week', unopened: 5 });
+  });
+
+  it('adopts the Trending counts even from a tick a local edit overtook (#2017)', () => {
+    settleAndAge([sub(1, 2)]);
+
+    store.reloadCountsIfStale();
+    const tick = ctrl.expectOne(countsUrl);
+    store.bumpFavorites(1);
+    tick.flush(
+      countsBody([{ id: 1, unreadCount: 2 }], { trending: { window: 'day', unopened: 3 } }),
+    );
+
+    expect(store.trendingUnopened()).toEqual({ window: 'day', unopened: 3 });
   });
 
   it('fetches the cheap counts endpoint, not the full list', () => {

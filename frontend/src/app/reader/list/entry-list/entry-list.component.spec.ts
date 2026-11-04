@@ -2834,4 +2834,51 @@ describe('EntryListComponent', () => {
       expect(fill(fixture)).toBe('81.25');
     });
   });
+
+  describe('the Trending list (#2017)', () => {
+    const trending = (window: 'day' | 'week' = 'day') => ({
+      kind: 'trending',
+      id: null,
+      unread: false,
+      window,
+    });
+
+    it('never folds leads of one source into a group widget', () => {
+      const fixture = mount({
+        selection: trending(),
+        layout: 'magazine',
+        entries: MIXED_SOURCE_RUN.map((each) => ({
+          ...each,
+          story: { outletCount: 3, viewed: false },
+        })),
+      });
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-source-group')).toBeNull();
+    });
+
+    it('offers no mark-above-read, even scrolled', () => {
+      const fixture = mount({ selection: trending(), canMarkAllRead: false });
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+    });
+
+    it("states the day's rule when nothing trends", () => {
+      const fixture = mount({ selection: trending('day'), entries: [] });
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
+        'several of your feeds cover it within 24 hours',
+      );
+    });
+
+    it("states the week's rule when nothing trends", () => {
+      const fixture = mount({ selection: trending('week'), entries: [] });
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
+        'several of your feeds cover it within 7 days',
+      );
+    });
+  });
 });

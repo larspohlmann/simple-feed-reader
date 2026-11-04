@@ -1,0 +1,10 @@
+/* Its spans join the host line directly: flex items beside the magazine kicker's, inline text in a list row. */
+:host {
+  display: contents;
+}
+
+.sources,
+.separator {
+  flex: none;
+  white-space: nowrap;
+}

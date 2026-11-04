@@ -118,21 +118,27 @@ of the two separate ones:
     POST /maintenance/tick
     Header: X-Maintenance-Token: <MAINTENANCE_TOKEN>
 
-It refreshes all due feeds, then starts due recommendation and profile runs and
-advances each active run one step, and returns both reports:
+It refreshes all due feeds, then runs every maintenance sweep in its fixed order
+(recommendations first: it starts due recommendation and profile runs and advances
+each active run one step; Trending last) and returns one report per step:
 
     { "refresh": { "status": "completed", ... },
       "recommendations": { "startedRuns": n, "advancedRuns": m, "activeRuns": k,
-        "startedProfileRuns": p, "advancedProfileRuns": q, "activeProfileRuns": r } }
+        "startedProfileRuns": p, "advancedProfileRuns": q, "activeProfileRuns": r },
+      "digests": { ... }, "imageVerification": { ... }, "linkCards": { ... },
+      "transcripts": { ... }, "profileImages": { ... }, "hiddenProfiles": { ... },
+      "savedSearchMemberships": { ... }, "privateFeedSync": { ... },
+      "trending": { "windowsRebuilt": w, "storiesBuilt": s },
+      "logShipping": { "shipped": a, "failed": b } }
 
-It always answers `200` when the tick ran; read each half's own status in the
+It always answers `200` when the tick ran; read each step's own status in the
 body. The granular `/maintenance/refresh` and `/maintenance/recommendations/sweep`
 routes stay available for a caller that wants one job only.
 
-Both halves share one database connection, so if the feed refresh aborts (its
-report shows `"status": "aborted"`), the recommendations half is skipped for
-that tick — its report keeps the run counts at zero and adds a `"skipped"`
-reason — and the call still returns `200`; the next tick tries the sweep again.
+Every step shares one database connection, so if the feed refresh aborts (its
+report shows `"status": "aborted"`), every sweep is skipped for that tick — each
+report keeps its counts at zero and adds a `"skipped"` reason — and the call
+still returns `200`; the next tick tries the sweeps again.
 
 Example cron line — pick the interval to suit the install. It sets how often
 due feeds are picked up, and it is the pace a recommendation run advances at

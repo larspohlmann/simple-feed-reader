@@ -8,6 +8,8 @@ import { relativeTime } from '../../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
+import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
+import { alsoFootOf } from './also-foot';
 
 let nextId = 0;
 
@@ -17,6 +19,9 @@ const OVERLAY_POSITIONS: ConnectedPosition[] = [
   { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
   { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
 ];
+
+/** The footer's chip limit: a capped footer keeps a card's height predictable for the planner (#2017). */
+export const ALSO_FOOT_NAMES = 4;
 
 @Component({
   selector: 'app-entry-duplicates',
@@ -28,30 +33,45 @@ const OVERLAY_POSITIONS: ConnectedPosition[] = [
   styleUrl: './entry-duplicates.component.scss',
   providers: [
     { provide: EntryActionHandler, useExisting: forwardRef(() => EntryDuplicatesComponent) },
+    { provide: ENTRY_ROW_ACTION, useValue: signal(null) },
   ],
 })
 export class EntryDuplicatesComponent implements EntryActionHandler {
+  /** The row the footer sits on; deleting from a copy's card deletes this row's post (#1972). */
   readonly entry = input.required<EntryDto>();
+  private readonly foot = computed(() => alsoFootOf(this.entry()));
+  protected readonly copies = computed(() => this.foot().copies);
+  protected readonly label = computed(() => this.foot().label);
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
-  readonly copies = computed(() =>
-    (this.entry().duplicates ?? []).map((copy) => ({
+  private readonly named = computed(() =>
+    this.copies().map((copy) => ({
       copy,
       feed: this.rows.find(copy.subscriptionId)?.title ?? copy.source,
       when: relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang()),
     })),
   );
+  private readonly expanded = signal(false);
+  protected readonly shown = computed(() =>
+    this.expanded() ? this.named() : this.named().slice(0, ALSO_FOOT_NAMES),
+  );
+  protected readonly hiddenCount = computed(() => this.named().length - this.shown().length);
 
   private readonly displayedId = signal<number | null>(null);
   /** The shown copy as the row the store keeps in sync holds it, so an action's optimistic flip and revert show. */
   protected readonly displayed = computed(
-    () => this.entry().duplicates?.find((copy) => copy.id === this.displayedId()) ?? null,
+    () => this.copies().find((copy) => copy.id === this.displayedId()) ?? null,
   );
   protected readonly origin = signal<HTMLElement | null>(null);
   protected readonly positions = OVERLAY_POSITIONS;
   protected readonly panelId = `dup-popover-${nextId++}`;
+
+  showAll(event: Event): void {
+    event.stopPropagation();
+    this.expanded.set(true);
+  }
 
   toggle(copy: EntryDto, event: Event): void {
     event.stopPropagation();

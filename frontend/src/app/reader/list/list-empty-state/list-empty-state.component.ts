@@ -31,6 +31,10 @@ export class ListEmptyStateComponent {
     visibleSearchTerm(this.selection().term ?? ''),
   );
 
+  protected readonly trendingRule = computed(() =>
+    this.selection().window === 'week' ? 'reader.trendingEmptyWeek' : 'reader.trendingEmptyDay',
+  );
+
   /** True only once the catalog has been resolved AND has no entries.
    *  Unresolved reads as not-empty, so the /discover link is never hidden on a
    *  guess — it simply shows until the shell (which loads the catalog on the

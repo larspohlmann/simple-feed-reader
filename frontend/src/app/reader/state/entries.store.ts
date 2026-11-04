@@ -4,10 +4,13 @@ import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
+import { DEFAULT_TRENDING_WINDOW } from '../trending/trending-window';
+import { TrendingApi } from '../trending/trending-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
+import { withCardBack, withPatchedRow } from './entry-rows';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -43,6 +46,7 @@ export interface StateSaveOutcome {
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
+  private readonly trendingApi = inject(TrendingApi);
 
   private readonly rawEntries = accountSignal<EntryDto[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
@@ -264,7 +268,7 @@ export class EntriesStore {
     return false;
   }
 
-  /** The entry with `id`, or its copy inside a row's `duplicates`, which the duplicates popover acts on. */
+  /** The entry with `id`, or its copy inside a row's `duplicates`, which the footer popover acts on. */
   private entryOrCopy(id: number): EntryDto | null {
     const listed = this.entry(id);
     if (listed) return listed;
@@ -292,8 +296,29 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Reaches each target as a row and as a copy inside a row's `duplicates`. The list keeps its identity when
-   *  `patch` hands every entry back, so nothing derived recomputes. */
+  /** Takes a card off the loaded Trending list at once, hiding its story in that list's window (#2017); a failed
+   *  hide puts it back where it was, with the banner and its retry. */
+  hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
+    const query = this.query();
+    const index = this.rawEntries().findIndex((entry) => entry.id === entryId);
+    if (query?.view !== 'trending' || index < 0) return;
+    const window = query.window ?? DEFAULT_TRENDING_WINDOW;
+    const card = this.rawEntries()[index];
+    this.error.set(null);
+    this.failedOperation.set(null);
+    this.rawEntries.update((current) => current.filter((entry) => entry.id !== entryId));
+    this.trendingApi.hideStory(window, entryId).subscribe({
+      next: () => outcome.onSaved?.(),
+      error: (error: HttpErrorResponse) => {
+        this.rawEntries.update((current) => withCardBack(current, card, index));
+        this.reportMutationFailure(error, () => this.hideTrendingStory(entryId, outcome));
+        outcome.onFailed?.();
+      },
+    });
+  }
+
+  /** Reaches each target as a row and as a copy inside a row's `duplicates`.
+   *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
     this.unlisted.update((held) => (held ? withPatchedRow(held, targets, patch) : held));
@@ -336,20 +361,6 @@ export class EntriesStore {
 function valuesBefore(entry: EntryDto, patch: RowPatch): RowPatch {
   const keys = Object.keys(patch) as (keyof RowPatch)[];
   return Object.fromEntries(keys.map((key) => [key, entry[key]]));
-}
-
-/** `row` itself when neither it nor a copy in its `duplicates` is targeted. */
-function withPatchedRow(
-  row: EntryDto,
-  targets: ReadonlySet<number>,
-  patch: (entry: EntryDto) => EntryDto,
-): EntryDto {
-  const patched = targets.has(row.id) ? patch(row) : row;
-  if (!patched.duplicates?.some((copy) => targets.has(copy.id))) return patched;
-  return {
-    ...patched,
-    duplicates: patched.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
-  };
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

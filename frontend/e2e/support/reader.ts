@@ -146,6 +146,7 @@ export function subscriptionsJson(
     keptCount: 0,
     sharedCount: 0,
     viewedCount: 0,
+    trending: { window: 'day', unopened: 0 },
     socialAccounts: [],
     unreadTotals: unreadTotalsOf(subscriptions),
     ...totals,

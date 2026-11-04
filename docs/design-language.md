@@ -60,6 +60,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
+| `--footer-chip-name-max` | `24ch` | the feed name in an "Also in" / "Also covered by" footer chip, which ellipsises past it; the chip's `title` carries the full name (#2017) |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
@@ -999,6 +1000,7 @@ clicked option; the consumer owns the selection and passes it back as
 | `disabledOptions` | `readonly T[]` | `[]` — options that cannot be picked now |
 | `describedBy` | `string \| null` | `null` — the id of the text that says why an option is disabled |
 | `counts` | `Partial<Record<T, number>>` | `{}` — a number shown after an option's label, such as how many items a tab holds |
+| `links` | `Readonly<Record<T, Params>> \| null` | `null` — link mode: each option is a link merging these query params into the URL |
 
 ```html
 <app-segmented-choice
@@ -1010,10 +1012,24 @@ clicked option; the consumer owns the selection and passes it back as
 />
 ```
 
+In link mode the options are `<a>` elements in the same look, the URL owns the
+selection (pass the URL's value back as `selected`; `pick` never fires), and the
+selected link carries `aria-current="true"` instead of `aria-pressed`. Trending's
+`24 h | 7 days` switch uses it, so the window rides in `?window=` (#2017, D40).
+
 A disabled option stays visible at the shared disabled look; say why in a
 hint beside the control (the AI model picker's "This provider offers no
 LLMs.") and pass that hint's id as `describedBy`, since a disabled button
 takes no focus and a keyboard user would otherwise never hear the reason.
+
+The selected option takes the accent treatment of the pill toggles: `--accent-soft`
+fill, `--accent` text, semibold, so it reads in light and dark alike. `aria-pressed`
+stays the semantic state; the `on` class only draws it.
+
+On a coarse pointer the control keeps its compact look; only each option's hit area grows
+to `--tap-target` (an invisible `::after`, as the corner buttons do, #1912). A drawn 44px
+switch read as oversized on the iPhone. The list header's tools row owns the touch height
+itself, so Trending's header stays as tall as the other lists'.
 
 The control sizes to its labels; a consumer that wants it full width makes
 the host `display: flex` and the buttons share the width (the social import

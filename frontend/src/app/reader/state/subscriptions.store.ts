@@ -1,5 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
+import {
+  Injectable,
+  WritableSignal,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
 import { FeedGroupName } from '../../core/feed-group';
 import { Problem, parseProblem } from '../../core/problem';
@@ -19,6 +27,9 @@ import {
   SubscriptionDto,
   SubscriptionsResponse,
 } from '../models';
+import { TrendingUnopened } from '../trending/trending.models';
+import { NO_TRENDING_UNOPENED, sameTrendingUnopened } from '../trending/trending-window';
+import { TrendingWindowService } from '../trending/trending-window.service';
 import {
   FeedGroupCounts,
   buildTagTree,
@@ -40,6 +51,7 @@ export class SubscriptionsStore {
   private readonly api = inject(ReaderApi);
   private readonly tags = inject(TagsStore);
   private readonly rows = inject(SubscriptionRows);
+  private readonly trendingWindow = inject(TrendingWindowService);
   /** Every title resolved for display. */
   readonly subscriptions = this.rows.all;
   /** The rows as the server sent them, which an optimistic edit patches. */
@@ -48,6 +60,10 @@ export class SubscriptionsStore {
   readonly keptCount = signal(0);
   readonly sharedCount = signal(0);
   readonly viewedCount = signal(0);
+  /** Unopened Trending stories in the window the sidebar links to; only the server moves them (#2017). */
+  readonly trendingUnopened = signal<TrendingUnopened>(NO_TRENDING_UNOPENED, {
+    equal: sameTrendingUnopened,
+  });
   readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
@@ -104,6 +120,11 @@ export class SubscriptionsStore {
 
   constructor() {
     onIdentityChange(() => this.invalidate());
+    // The badge counts another window than the sidebar now links to: ask for that one.
+    effect(() => {
+      if (this.trendingWindow.window() === this.trendingUnopened().window) return;
+      untracked(() => this.reloadCountsQuietly());
+    });
   }
 
   load(): void {
@@ -112,7 +133,7 @@ export class SubscriptionsStore {
     this.error.set(null);
     this.resolved.set(false);
     this.inFlight = this.trackWhileOpen(
-      this.api.subscriptions().subscribe({
+      this.api.subscriptions(this.trendingWindow.window()).subscribe({
         next: (response) => {
           if (!this.settle(request)) return;
           this.applyCounts(response);
@@ -164,6 +185,7 @@ export class SubscriptionsStore {
     this.keptCount.set(0);
     this.sharedCount.set(0);
     this.viewedCount.set(0);
+    this.trendingUnopened.set(NO_TRENDING_UNOPENED);
     this.socialAccounts.set([]);
     this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
     this.loading.set(false);
@@ -182,7 +204,7 @@ export class SubscriptionsStore {
    *  the onboarding redirect) — a tick can never spin, flicker, or move the user. */
   reloadQuietlyIfStale(): void {
     this.quietReload(
-      () => this.api.subscriptions(),
+      () => this.api.subscriptions(this.trendingWindow.window()),
       (response) => this.applyCounts(response),
     );
   }
@@ -193,7 +215,7 @@ export class SubscriptionsStore {
    *  list with feeds and tags is left to `load()` and the regain reload. */
   reloadCountsIfStale(): void {
     this.quietReload(
-      () => this.api.subscriptionCounts(),
+      () => this.api.subscriptionCounts(this.trendingWindow.window()),
       (response) => this.applyCountsOnly(response),
     );
   }
@@ -206,7 +228,7 @@ export class SubscriptionsStore {
   reloadQuietly(): void {
     if (!this.resolved()) return;
     this.quietFetch(
-      () => this.api.subscriptions(),
+      () => this.api.subscriptions(this.trendingWindow.window()),
       (response) => this.applyCounts(response),
       () => this.reloadQuietly(),
     );
@@ -216,7 +238,7 @@ export class SubscriptionsStore {
   reloadCountsQuietly(): void {
     if (!this.resolved()) return;
     this.quietFetch(
-      () => this.api.subscriptionCounts(),
+      () => this.api.subscriptionCounts(this.trendingWindow.window()),
       (response) => this.applyCountsOnly(response),
       () => this.reloadCountsQuietly(),
     );
@@ -225,7 +247,7 @@ export class SubscriptionsStore {
   /** The shared body of every silent tick: refresh only when worth a request,
    *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
    *  The `apply` closure is the only difference between full and counts-only. */
-  private quietReload<T extends { unreadTotals: UnreadTotalsDto }>(
+  private quietReload<T extends { unreadTotals: UnreadTotalsDto; trending: TrendingUnopened }>(
     fetch: () => Observable<T>,
     apply: (response: T) => void,
   ): void {
@@ -246,7 +268,7 @@ export class SubscriptionsStore {
    *  through `whenOvertaken`, since only its answer carries the change; a poll
    *  tick waits for the next one. The gates that decide WHEN to fire belong to
    *  each caller. */
-  private quietFetch<T extends { unreadTotals: UnreadTotalsDto }>(
+  private quietFetch<T extends { unreadTotals: UnreadTotalsDto; trending: TrendingUnopened }>(
     fetch: () => Observable<T>,
     apply: (response: T) => void,
     whenOvertaken: () => void,
@@ -257,8 +279,10 @@ export class SubscriptionsStore {
       fetch().subscribe({
         next: (response) => {
           if (!this.settle(request)) return;
-          // Only the server edits the totals, so even an overtaken answer carries the latest ones.
+          // Only the server edits the totals and the Trending counts,
+          // so even an overtaken answer carries the latest.
           this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+          this.trendingUnopened.set(response.trending);
           // The user changed a feed count while this was on the wire. The server
           // counted before that, so adopting those counts now would put the badge back up.
           if (this.localEdits !== editsWhenSent) {
@@ -278,6 +302,7 @@ export class SubscriptionsStore {
     this.keptCount.set(response.keptCount);
     this.sharedCount.set(response.sharedCount);
     this.viewedCount.set(response.viewedCount);
+    this.trendingUnopened.set(response.trending);
     this.socialAccounts.set(response.socialAccounts);
     this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }

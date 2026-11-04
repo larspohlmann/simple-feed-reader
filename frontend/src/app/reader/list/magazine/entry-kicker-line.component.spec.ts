@@ -121,4 +121,24 @@ describe('EntryKickerLineComponent', () => {
     expect(narrow.textContent).toContain('5');
     expect(narrow.textContent!.length).toBeLessThan(wide.textContent!.length);
   });
+
+  describe('on a Trending lead (#2017)', () => {
+    const lead = (viewed = false) => entry({ isHidden: false, story: { outletCount: 7, viewed } });
+
+    it('names how many feeds covered the story', () => {
+      expect(mount(lead()).querySelector('.sources')?.textContent?.trim()).toBe('7 sources');
+    });
+
+    it('keeps the unread dot while nobody opened the story', () => {
+      expect(mount(lead()).querySelector('.dot')!.classList).toContain('on');
+    });
+
+    it('drops the unread dot once the story was opened anywhere', () => {
+      expect(mount(lead(true)).querySelector('.dot')!.classList).not.toContain('on');
+    });
+  });
+
+  it('names no source count on an ordinary entry', () => {
+    expect(mount(entry()).querySelector('.sources')).toBeNull();
+  });
 });

@@ -12,8 +12,10 @@
       }
       <p class="meta">
         <app-entry-source [entry]="entry()" layout="row" [size]="14" />
-        · {{ when() }}
-        <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
+        ·
+        <app-story-source-count [entry]="entry()" />
+        {{ when() }}
+        <span class="dot" [class.on]="unreadMark()" aria-hidden="true"></span>
       </p>
       @if (snippet()) {
         <p class="snippet">

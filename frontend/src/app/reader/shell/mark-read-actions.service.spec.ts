@@ -99,6 +99,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
         favoritesCount: 0,
         keptCount: 0,
         viewedCount: 0,
+        trending: { window: 'day', unopened: 0 },
         unreadTotals: {
           allItems: 0,
           forYou: 0,

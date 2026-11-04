@@ -2,47 +2,57 @@ import { convertToParamMap } from '@angular/router';
 import {
   canScopedRefresh,
   hasListOrder,
-  isSearchableTerm,
-  isTooShortToSearch,
-  isWholeWordTerm,
-  isPhraseTerm,
   listOrderKey,
   listOrderOf,
   listSelectionFrom,
   hasUnreadFilter,
+  isSingleStreamView,
   markReadTarget,
-  normalizeSearchInput,
+  offersMarkAboveRead,
   queryFromSelection,
   sameSelection,
-  searchWords,
   selectionFromParams,
   selectionQueryParams,
   visibleSearchTerm,
   withListOrder,
   withUnreadPreference,
   type Selection,
+  type ViewContext,
 } from './query';
+import {
+  isPhraseTerm,
+  isSearchableTerm,
+  isTooShortToSearch,
+  isWholeWordTerm,
+  normalizeSearchInput,
+  searchWords,
+} from './search-term';
 import { selectionFromRoute } from './reader-matcher';
 
 const pm = (params: Record<string, string>) => convertToParamMap(params);
 
+/** An account that offers Trending and stored no window. */
+const ON: ViewContext = { trending: true, trendingWindow: 'day' };
+
 describe('selectionFromParams', () => {
   it('defaults to all-items, showing everything', () => {
-    const { selection, entryId } = selectionFromParams(pm({}));
+    const { selection, entryId } = selectionFromParams(pm({}), ON);
     expect(selection).toEqual({ kind: 'all', id: null, unread: false });
     expect(entryId).toBeNull();
   });
   it('ignores an unread parameter — the filter lives in localStorage (#1126)', () => {
-    expect(selectionFromParams(pm({ unread: '1' })).selection.unread).toBe(false);
-    expect(selectionFromParams(pm({ view: 'for-you', unread: '1' })).selection.unread).toBe(false);
+    expect(selectionFromParams(pm({ unread: '1' }), ON).selection.unread).toBe(false);
+    expect(selectionFromParams(pm({ view: 'for-you', unread: '1' }), ON).selection.unread).toBe(
+      false,
+    );
   });
   it('reads a subscription selection and open entry', () => {
-    const { selection, entryId } = selectionFromParams(pm({ subscription: '7', entry: '42' }));
+    const { selection, entryId } = selectionFromParams(pm({ subscription: '7', entry: '42' }), ON);
     expect(selection).toEqual({ kind: 'subscription', id: 7, unread: false });
     expect(entryId).toBe(42);
   });
   it("reads a network's combined view", () => {
-    expect(selectionFromParams(pm({ network: 'mastodon' })).selection).toEqual({
+    expect(selectionFromParams(pm({ network: 'mastodon' }), ON).selection).toEqual({
       kind: 'network',
       id: null,
       unread: false,
@@ -50,7 +60,7 @@ describe('selectionFromParams', () => {
     });
   });
   it("reads a feed group's combined view", () => {
-    expect(selectionFromParams(pm({ group: 'tags' })).selection).toEqual({
+    expect(selectionFromParams(pm({ group: 'tags' }), ON).selection).toEqual({
       kind: 'group',
       id: null,
       unread: false,
@@ -58,7 +68,7 @@ describe('selectionFromParams', () => {
     });
   });
   it('ignores a feed group it does not know', () => {
-    expect(selectionFromParams(pm({ group: 'folders' })).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ group: 'folders' }), ON).selection.kind).toBe('all');
   });
   it("maps a feed group's view through the unread toggle", () => {
     expect(queryFromSelection({ kind: 'group', id: null, unread: true, group: 'feeds' })).toEqual({
@@ -79,32 +89,32 @@ describe('selectionFromParams', () => {
     expect(canScopedRefresh(tags)).toBe(true);
   });
   it('ignores a network it does not know', () => {
-    expect(selectionFromParams(pm({ network: 'myspace' })).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ network: 'myspace' }), ON).selection.kind).toBe('all');
   });
   it('reads a tag selection', () => {
-    expect(selectionFromParams(pm({ tag: '3' })).selection).toEqual({
+    expect(selectionFromParams(pm({ tag: '3' }), ON).selection).toEqual({
       kind: 'tag',
       id: 3,
       unread: false,
     });
   });
   it('reads favorites/kept', () => {
-    expect(selectionFromParams(pm({ view: 'favorites' })).selection).toEqual({
+    expect(selectionFromParams(pm({ view: 'favorites' }), ON).selection).toEqual({
       kind: 'favorites',
       id: null,
       unread: false,
     });
-    expect(selectionFromParams(pm({ view: 'kept' })).selection.kind).toBe('kept');
+    expect(selectionFromParams(pm({ view: 'kept' }), ON).selection.kind).toBe('kept');
   });
   it('reads view=shared into the shared selection', () => {
-    expect(selectionFromParams(pm({ view: 'shared' })).selection).toEqual({
+    expect(selectionFromParams(pm({ view: 'shared' }), ON).selection).toEqual({
       kind: 'shared',
       id: null,
       unread: false,
     });
   });
   it('reads for-you', () => {
-    expect(selectionFromParams(pm({ view: 'for-you' })).selection).toEqual({
+    expect(selectionFromParams(pm({ view: 'for-you' }), ON).selection).toEqual({
       kind: 'for-you',
       id: null,
       unread: false,
@@ -112,11 +122,11 @@ describe('selectionFromParams', () => {
   });
 
   it('rejects non-positive/garbage ids', () => {
-    expect(selectionFromParams(pm({ subscription: '0' })).selection.kind).toBe('all');
-    expect(selectionFromParams(pm({ tag: 'x' })).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ subscription: '0' }), ON).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ tag: 'x' }), ON).selection.kind).toBe('all');
   });
   it('reads a search selection from a q of 3+ characters', () => {
-    expect(selectionFromParams(pm({ q: 'angular' })).selection).toEqual({
+    expect(selectionFromParams(pm({ q: 'angular' }), ON).selection).toEqual({
       kind: 'search',
       id: null,
       unread: false,
@@ -124,7 +134,7 @@ describe('selectionFromParams', () => {
     });
   });
   it('lets q win over a tag present in the same URL', () => {
-    expect(selectionFromParams(pm({ q: 'angular', tag: '3' })).selection).toEqual({
+    expect(selectionFromParams(pm({ q: 'angular', tag: '3' }), ON).selection).toEqual({
       kind: 'search',
       id: null,
       unread: false,
@@ -132,16 +142,16 @@ describe('selectionFromParams', () => {
     });
   });
   it('ignores a q shorter than the minimum and falls back to all', () => {
-    expect(selectionFromParams(pm({ q: 'an' })).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ q: 'an' }), ON).selection.kind).toBe('all');
   });
   it('ignores an empty or whitespace-only q', () => {
-    expect(selectionFromParams(pm({ q: '' })).selection.kind).toBe('all');
-    expect(selectionFromParams(pm({ q: '   ' })).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ q: '' }), ON).selection.kind).toBe('all');
+    expect(selectionFromParams(pm({ q: '   ' }), ON).selection.kind).toBe('all');
   });
 
   describe('trailing space as the whole-word signal (#408 follow-up)', () => {
     it('keeps a trailing space in the selection term', () => {
-      expect(selectionFromParams(pm({ q: 'punk ' })).selection).toEqual({
+      expect(selectionFromParams(pm({ q: 'punk ' }), ON).selection).toEqual({
         kind: 'search',
         id: null,
         unread: false,
@@ -149,7 +159,7 @@ describe('selectionFromParams', () => {
       });
     });
     it('strips leading whitespace and collapses inner runs, but keeps the one trailing space', () => {
-      expect(selectionFromParams(pm({ q: '  angular   js  ' })).selection).toEqual({
+      expect(selectionFromParams(pm({ q: '  angular   js  ' }), ON).selection).toEqual({
         kind: 'search',
         id: null,
         unread: false,
@@ -158,14 +168,14 @@ describe('selectionFromParams', () => {
     });
     it('measures the minimum length on the trimmed value, so a trailing space does not buy an extra character', () => {
       // 'ab ' is 3 raw characters but 2 once the trailing space is set aside.
-      expect(selectionFromParams(pm({ q: 'ab ' })).selection.kind).toBe('all');
+      expect(selectionFromParams(pm({ q: 'ab ' }), ON).selection.kind).toBe('all');
     });
   });
 });
 
 describe('listSelectionFrom (#579)', () => {
   it('reads the list a search is layered over', () => {
-    expect(listSelectionFrom({ tag: '5', q: 'angular' })).toEqual({
+    expect(listSelectionFrom({ tag: '5', q: 'angular' }, ON)).toEqual({
       kind: 'tag',
       id: 5,
       unread: false,
@@ -173,7 +183,7 @@ describe('listSelectionFrom (#579)', () => {
   });
 
   it('reads a plain list unchanged', () => {
-    expect(listSelectionFrom({ view: 'favorites' })).toEqual({
+    expect(listSelectionFrom({ view: 'favorites' }, ON)).toEqual({
       kind: 'favorites',
       id: null,
       unread: false,
@@ -183,7 +193,7 @@ describe('listSelectionFrom (#579)', () => {
   it('does not touch the parameters it is given', () => {
     const params = { tag: '5', q: 'angular' };
 
-    listSelectionFrom(params);
+    listSelectionFrom(params, ON);
 
     expect(params).toEqual({ tag: '5', q: 'angular' });
   });
@@ -192,7 +202,18 @@ describe('listSelectionFrom (#579)', () => {
 describe('selectionQueryParams', () => {
   it('pins the selection vocabulary — this must not shrink silently', () => {
     expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
-      ['entry', 'feedKind', 'group', 'link', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
+      [
+        'entry',
+        'feedKind',
+        'group',
+        'link',
+        'network',
+        'q',
+        'subscription',
+        'tag',
+        'view',
+        'window',
+      ].sort(),
     );
   });
   it('nulls every selection parameter the caller did not set', () => {
@@ -206,6 +227,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
   });
   it('keeps only the params the caller set, nulling the rest', () => {
@@ -219,6 +241,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
     expect(selectionQueryParams({ subscription: 7 })).toEqual({
       view: null,
@@ -230,6 +253,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
     expect(selectionQueryParams({ view: 'favorites' })).toEqual({
       view: 'favorites',
@@ -241,6 +265,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
   });
   it('clears q along with everything else when nothing is set', () => {
@@ -254,6 +279,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: null,
+      window: null,
     });
   });
   // The results are cached so that a [queryParams] binding — one per sidebar
@@ -293,6 +319,7 @@ describe('selectionQueryParams', () => {
         entry: null,
         link: null,
         q: null,
+        window: null,
       });
     });
   });
@@ -308,6 +335,7 @@ describe('selectionQueryParams', () => {
       entry: null,
       link: null,
       q: 'angular',
+      window: null,
     });
   });
 });
@@ -719,7 +747,7 @@ describe('normalizeSearchInput and a trailing NBSP (#408 follow-up)', () => {
 
 describe('the combined saved-searches view', () => {
   it('reads view=saved-searches as its own selection', () => {
-    const { selection } = selectionFromParams(convertToParamMap({ view: 'saved-searches' }));
+    const { selection } = selectionFromParams(convertToParamMap({ view: 'saved-searches' }), ON);
 
     expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
   });
@@ -727,6 +755,7 @@ describe('the combined saved-searches view', () => {
   it('ignores an unread parameter (#1126)', () => {
     const { selection } = selectionFromParams(
       convertToParamMap({ view: 'saved-searches', unread: '1' }),
+      ON,
     );
 
     expect(selection.unread).toBe(false);
@@ -759,6 +788,7 @@ describe('the combined saved-searches view', () => {
   it('loses to a searchable q in the URL, like every other list', () => {
     const { selection } = selectionFromParams(
       convertToParamMap({ view: 'saved-searches', q: 'climate' }),
+      ON,
     );
 
     expect(selection.kind).toBe('search');
@@ -769,7 +799,11 @@ describe('selectionFromRoute', () => {
   const noQuery = convertToParamMap({});
 
   it('maps the "all" path segment to the combined saved-searches selection', () => {
-    const { selection } = selectionFromRoute(convertToParamMap({ savedSearch: 'all' }), noQuery);
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: 'all' }),
+      noQuery,
+      ON,
+    );
     expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
   });
 
@@ -777,6 +811,7 @@ describe('selectionFromRoute', () => {
     const { selection } = selectionFromRoute(
       convertToParamMap({ savedSearch: '42-climate' }),
       noQuery,
+      ON,
     );
     expect(selection).toEqual({ kind: 'saved-search', id: 42, unread: false });
   });
@@ -785,6 +820,7 @@ describe('selectionFromRoute', () => {
     const { selection } = selectionFromRoute(
       convertToParamMap({ savedSearch: 'climate' }),
       noQuery,
+      ON,
     );
     expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
   });
@@ -792,7 +828,11 @@ describe('selectionFromRoute', () => {
   it('falls back to the combined view for a slug whose leading digits are not anchored (#1118)', () => {
     // "42x" is not a valid leading id: entryIdFromParam's anchored regex
     // requires the digits to end the slug or be followed by a hyphen.
-    const { selection } = selectionFromRoute(convertToParamMap({ savedSearch: '42x' }), noQuery);
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: '42x' }),
+      noQuery,
+      ON,
+    );
     expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
   });
 
@@ -800,12 +840,13 @@ describe('selectionFromRoute', () => {
     const { selection } = selectionFromRoute(
       convertToParamMap({ savedSearch: '42-climate' }),
       convertToParamMap({ unread: '1' }),
+      ON,
     );
     expect(selection.unread).toBe(false);
   });
 
   it('falls back to query-param selection when no saved-search segment is present', () => {
-    const { selection } = selectionFromRoute(noQuery, convertToParamMap({ tag: '7' }));
+    const { selection } = selectionFromRoute(noQuery, convertToParamMap({ tag: '7' }), ON);
     expect(selection).toEqual({ kind: 'tag', id: 7, unread: false });
   });
 
@@ -813,6 +854,7 @@ describe('selectionFromRoute', () => {
     const { entryId } = selectionFromRoute(
       convertToParamMap({ savedSearch: '42-climate' }),
       convertToParamMap({ entry: '99' }),
+      ON,
     );
     expect(entryId).toBe(99);
   });
@@ -821,6 +863,7 @@ describe('selectionFromRoute', () => {
     const { entryId } = selectionFromRoute(
       convertToParamMap({ savedSearch: 'all' }),
       convertToParamMap({ entry: '99' }),
+      ON,
     );
     expect(entryId).toBe(99);
   });
@@ -838,13 +881,13 @@ describe("a network's profile feeds", () => {
 
   it('reads the feed kind beside the network', () => {
     expect(
-      selectionFromParams(params({ network: 'mastodon', feedKind: 'profile' })).selection,
+      selectionFromParams(params({ network: 'mastodon', feedKind: 'profile' }), ON).selection,
     ).toEqual(profiles);
   });
 
   it('ignores an unknown feed kind', () => {
     expect(
-      selectionFromParams(params({ network: 'mastodon', feedKind: 'home' })).selection.feedKind,
+      selectionFromParams(params({ network: 'mastodon', feedKind: 'home' }), ON).selection.feedKind,
     ).toBeUndefined();
   });
 
@@ -865,5 +908,85 @@ describe("a network's profile feeds", () => {
       feedKind: 'profile',
     });
     expect(selectionQueryParams({ network: 'mastodon' }).feedKind).toBeNull();
+  });
+});
+
+describe('the Trending view (#2017)', () => {
+  const trending = { kind: 'trending', id: null, unread: false, window: 'day' } as const;
+  const storedWeek: ViewContext = { trending: true, trendingWindow: 'week' };
+
+  it('reads the window the URL names, and asks for no change (D40)', () => {
+    expect(selectionFromParams(pm({ view: 'trending', window: 'week' }), ON)).toEqual({
+      selection: { ...trending, window: 'week' },
+      entryId: null,
+      urlCorrection: null,
+    });
+  });
+
+  it("opens the account's stored window for a bare link, and has the URL name it", () => {
+    expect(selectionFromParams(pm({ view: 'trending' }), storedWeek)).toEqual({
+      selection: { ...trending, window: 'week' },
+      entryId: null,
+      urlCorrection: { window: 'week' },
+    });
+  });
+
+  it('puts the stored window in place of one Trending does not know', () => {
+    const parsed = selectionFromParams(pm({ view: 'trending', window: 'month' }), ON);
+
+    expect(parsed.selection).toEqual(trending);
+    expect(parsed.urlCorrection).toEqual({ window: 'day' });
+  });
+
+  it('lets a named day win over a stored week', () => {
+    const parsed = selectionFromParams(pm({ view: 'trending', window: 'day' }), storedWeek);
+
+    expect(parsed.selection).toEqual(trending);
+    expect(parsed.urlCorrection).toBeNull();
+  });
+
+  it('reads a window only on the Trending view', () => {
+    expect(selectionFromParams(pm({ view: 'kept', window: 'week' }), ON)).toEqual({
+      selection: { kind: 'kept', id: null, unread: false },
+      entryId: null,
+      urlCorrection: null,
+    });
+  });
+
+  it('clears the window when a link selects another list', () => {
+    expect(selectionQueryParams({ view: 'kept' }).window).toBeNull();
+  });
+
+  it('opens All items on an account that switched Trending off, and takes Trending out of the URL (D39)', () => {
+    const parsed = selectionFromParams(pm({ view: 'trending', window: 'week' }), {
+      trending: false,
+      trendingWindow: 'day',
+    });
+
+    expect(parsed.selection).toEqual({ kind: 'all', id: null, unread: false });
+    expect(parsed.urlCorrection).toEqual({ view: null, window: null });
+  });
+
+  it('asks for the window the selection carries', () => {
+    expect(queryFromSelection({ ...trending, window: 'week' })).toEqual({
+      view: 'trending',
+      window: 'week',
+    });
+  });
+
+  it('names a different list for a different window', () => {
+    expect(sameSelection(trending, { ...trending, window: 'week' })).toBe(false);
+  });
+
+  it('offers no unread switch, no order, no mark-all-read and no mark-above-read', () => {
+    expect(hasUnreadFilter(trending)).toBe(false);
+    expect(hasListOrder(trending)).toBe(false);
+    expect(markReadTarget(trending)).toBeNull();
+    expect(offersMarkAboveRead(trending)).toBe(false);
+    expect(offersMarkAboveRead({ kind: 'all', id: null, unread: false })).toBe(true);
+  });
+
+  it('never files its leads under one source', () => {
+    expect(isSingleStreamView(trending)).toBe(true);
   });
 });

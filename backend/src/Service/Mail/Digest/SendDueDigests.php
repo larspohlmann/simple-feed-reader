@@ -42,7 +42,7 @@ final readonly class SendDueDigests
     public function run(): DigestSweepReportModel
     {
         if (!$this->mail->isEnabled()) {
-            return new DigestSweepReportModel(0, 0, 0);
+            return DigestSweepReportModel::none();
         }
 
         $now = $this->clock->now();

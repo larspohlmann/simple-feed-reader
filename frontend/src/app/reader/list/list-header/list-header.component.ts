@@ -21,11 +21,10 @@ import {
   canScopedRefresh,
   hasListOrder,
   hasUnreadFilter,
-  isPhraseTerm,
   isSingleStreamView,
-  isWholeWordTerm,
   listOrderOf,
 } from '../../query/query';
+import { isPhraseTerm, isWholeWordTerm } from '../../query/search-term';
 import { relativeTime, relativeTimeUntil } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 
@@ -39,6 +38,7 @@ const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
   shared: 'share',
   viewed: 'history',
   'for-you': 'auto_awesome',
+  trending: 'trending_up',
   'saved-searches': 'saved_search',
   search: 'search',
 };

@@ -13,6 +13,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { TagNode, countDescendants, tagNodesById } from '../state/subscription-derivations';
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
+import { anEntry } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
 import { ListHeading } from './list-heading.service';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -277,5 +278,38 @@ describe('ListHeading for the Shared list (#2007)', () => {
 
   it('counts the shared entries', () => {
     expect(sharedHeading().titleCount()).toEqual({ value: 3, counts: 'items' });
+  });
+});
+
+describe('ListHeading for the Trending list (#2017)', () => {
+  const trendingHeading = () => {
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        ListHeading,
+        {
+          provide: ReaderRouteState,
+          useValue: { selection: signal<Selection>({ kind: 'trending', id: null, unread: false }) },
+        },
+        { provide: SubscriptionsStore, useValue: {} },
+        { provide: LanguageService, useValue: { lang: signal('en') } },
+        {
+          provide: EntriesStore,
+          useValue: { entries: signal([anEntry({ id: 1 }), anEntry({ id: 2 })]) },
+        },
+        { provide: RecommendationsService, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+      ],
+    });
+    return TestBed.inject(ListHeading);
+  };
+
+  it('is titled Trending', () => {
+    expect(trendingHeading().title()).toBe('Trending');
+  });
+
+  it('counts the stories it lists', () => {
+    expect(trendingHeading().titleCount()).toEqual({ value: 2, counts: 'items' });
   });
 });

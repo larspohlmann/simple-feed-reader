@@ -1,7 +1,10 @@
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
 import { EntryQuery, ListOrder, MarkReadScope } from '../models';
+import { TrendingWindow } from '../trending/trending.models';
 import { FeedGroupName, isFeedGroupName } from '../../core/feed-group';
 import { entryIdFromParam } from './slug';
+import { isSearchableTerm, normalizeSearchInput, phraseWithin } from './search-term';
+import { isTrendingWindow } from '../trending/trending-window';
 import {
   NetworkFeedKind,
   SocialNetworkName,
@@ -21,6 +24,7 @@ export interface Selection {
     | 'shared'
     | 'viewed'
     | 'for-you'
+    | 'trending'
     | 'saved-searches'
     | 'saved-search'
     | 'search';
@@ -37,90 +41,8 @@ export interface Selection {
   group?: FeedGroupName;
   /** Absent means newest first; only a list `hasListOrder` accepts ever carries one. */
   order?: ListOrder;
-}
-
-/** The shortest term the backend will accept. A shorter one is not an error
- *  here — it is a half-typed word, so the URL simply carries no search yet. */
-export const MIN_SEARCH_LENGTH = 3;
-
-/** Whether a search term ends in whitespace, which the backend
- *  (`SearchTermsModel::fromInput`) reads as "match whole words only" rather than
- *  substrings. Exported rather than inlined: this exact question already had
- *  three drifted answers on this branch (#408); `normalizeSearchInput` and the
- *  whole-word badge both call this one function instead.
- *
- *  The class is `[\s\p{Z}]`, matching the backend's `SearchTermsModel::WHITESPACE`
- *  exactly. PHP's `\s` under `/u` is ASCII-only, so the backend adds `\p{Z}`
- *  for Unicode separators (e.g. NBSP); JS's `\s` covers `\p{Z}` already but
- *  also ASCII control whitespace (tab, newline, etc.) that `\p{Z}` alone
- *  misses. `\p{Z}` alone here (round 1's mistake) silently dropped a pasted
- *  trailing tab/newline; the union is the one set both languages agree on. */
-export function isWholeWordTerm(term: string): boolean {
-  return /[\s\p{Z}]$/u.test(term);
-}
-
-/** Whether a search term (`SearchTermsModel::fromInput`) is wrapped in double quotes,
- *  read as "match this exact phrase" rather than each word anywhere. A phrase
- *  overrides whole-word mode when both signals are present, so any "is this
- *  whole-word?" check must set a phrase aside first. */
-export function isPhraseTerm(term: string): boolean {
-  return phraseWithin(term) !== null;
-}
-
-/** The exact phrase inside a quoted query, or null when not a phrase (including
- *  a quoted-but-blank one). Mirrors the server's `SearchTermsModel::phraseWithin`:
- *  trimmed input opens/closes with a quote, inner quotes become boundaries,
- *  inner whitespace collapses to one space. */
-function phraseWithin(term: string): string | null {
-  const trimmed = term.trim();
-  if (trimmed.length < 2 || !trimmed.startsWith('"') || !trimmed.endsWith('"')) return null;
-  const inner = trimmed
-    .slice(1, -1)
-    .replace(/"/g, ' ')
-    .replace(/[\s\p{Z}]+/gu, ' ')
-    .trim();
-  return inner.length > 0 ? inner : null;
-}
-
-/** Strips leading whitespace and collapses inner runs to one space, but —
- *  unlike `String.trim()` — keeps one trailing space when the raw input ended
- *  in whitespace: the server reads that as "whole words only" (#408 follow-up),
- *  and a plain `trim()` would destroy the signal. Shared by the field's
- *  settled-emission path and `selectionFromParams` so both agree on "the term". */
-export function normalizeSearchInput(raw: string): string {
-  const hasTrailingSpace = isWholeWordTerm(raw);
-  const collapsed = raw.trim().replace(/\s+/g, ' ');
-  if (collapsed.length === 0) return '';
-  return hasTrailingSpace ? `${collapsed} ` : collapsed;
-}
-
-/** Whether a term is long enough to search on. Measured on the TRIMMED value:
- *  'ab ' is three raw characters but two real ones, since the trailing space is
- *  the whole-word-match signal, not a character of the word (`isWholeWordTerm`).
- *
- *  Exported for the same reason `isWholeWordTerm` is: this rule had three
- *  writers with their own copy of the comment before, and drifted (#408). */
-export function isSearchableTerm(term: string): boolean {
-  return term.trim().length >= MIN_SEARCH_LENGTH;
-}
-
-/** A term the user has begun but not finished: something is typed, but not yet
- *  enough to search on. The empty box is NOT too short — it means "no search",
- *  which is always a valid state. */
-export function isTooShortToSearch(term: string): boolean {
-  return term.trim().length > 0 && !isSearchableTerm(term);
-}
-
-/** The individual words of a term, for marking them in result rows. Splits on
- *  the same whitespace class as the rest of the vocabulary and drops the empty
- *  piece a trailing space leaves. Lives beside `normalizeSearchInput` et al. */
-export function searchWords(term: string): string[] {
-  // A phrase is marked as one contiguous run, not word by word — the same
-  // string the server matched — so a quoted `"climate change"` highlights only
-  // where the two words sit together, never each on its own.
-  const phrase = phraseWithin(term);
-  if (phrase !== null) return [phrase];
-  return term.split(/[\s\p{Z}]+/u).filter((word) => word.length > 0);
+  /** Only Trending carries one, read from the URL's `window` (#2017, D40). */
+  window?: TrendingWindow;
 }
 
 /** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
@@ -145,6 +67,7 @@ export function sameSelection(left: Selection, right: Selection): boolean {
     left.network === right.network &&
     left.feedKind === right.feedKind &&
     left.group === right.group &&
+    left.window === right.window &&
     listOrderOf(left) === listOrderOf(right)
   );
 }
@@ -181,9 +104,9 @@ export function withUnreadPreference(selection: Selection, unreadOnly: boolean):
 }
 
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
- *  feed has no date order to reverse. */
+ *  and Trending lists have no date order to reverse. */
 export function hasListOrder(selection: Selection): boolean {
-  return selection.kind !== 'for-you';
+  return selection.kind !== 'for-you' && selection.kind !== 'trending';
 }
 
 export function listOrderOf(selection: Selection): ListOrder {
@@ -193,6 +116,11 @@ export function listOrderOf(selection: Selection): ListOrder {
 /** Applies an order to a selection parsed from the URL, which never carries one. */
 export function withListOrder(selection: Selection, order: ListOrder): Selection {
   return hasListOrder(selection) && order === 'oldest' ? { ...selection, order } : selection;
+}
+
+/** Trending is a picture of the news, not an inbox: nothing in it is marked read in bulk (#2017). */
+export function offersMarkAboveRead(selection: Selection): boolean {
+  return selection.kind !== 'trending';
 }
 
 /** Where a list's order is remembered: per feed, tag, saved search and view, and
@@ -218,10 +146,14 @@ export function canScopedRefresh(selection: Selection): boolean {
 }
 
 /** A view that shows one logical stream, not an aggregation of feeds: a single
- *  subscription, or the ranked for-you list. Carries a "last refreshed" label and
+ *  subscription, or a ranked list (for you, Trending). Carries a "last refreshed" label and
  *  never collapses same-source runs into a group widget (would hide/reorder entries). */
 export function isSingleStreamView(selection: Selection): boolean {
-  return selection.kind === 'subscription' || selection.kind === 'for-you';
+  return (
+    selection.kind === 'subscription' ||
+    selection.kind === 'for-you' ||
+    selection.kind === 'trending'
+  );
 }
 
 /** Every query parameter that names which list is on screen. A navigation that
@@ -237,6 +169,7 @@ const SELECTION_PARAM_NAMES = [
   'entry',
   'link',
   'q',
+  'window',
 ] as const;
 
 type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
@@ -281,11 +214,23 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   return params;
 }
 
-export function selectionFromParams(paramMap: ParamMap): {
+/** What the account brings to reading a URL: whether it offers Trending (D39), and the window a Trending link that
+ *  names none opens (D40). */
+export interface ViewContext {
+  trending: boolean;
+  trendingWindow: TrendingWindow;
+}
+
+/** What a URL names, and how the URL must change to say the same; null when it already does. */
+export interface ParsedRoute {
   selection: Selection;
   entryId: number | null;
-} {
-  const view = selectionParam(paramMap, 'view');
+  urlCorrection: Params | null;
+}
+
+type ParsedView = Omit<ParsedRoute, 'entryId'>;
+
+export function selectionFromParams(paramMap: ParamMap, context: ViewContext): ParsedRoute {
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(paramMap, 'entry'));
 
@@ -296,22 +241,46 @@ export function selectionFromParams(paramMap: ParamMap): {
   if (isSearchableTerm(term)) {
     // A `?q=` search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
-    return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
+    const selection: Selection = { kind: 'search', id: null, unread: false, term };
+    return { selection, entryId, urlCorrection: null };
   }
 
-  let selection: Selection;
-  if (view === 'favorites' || view === 'kept' || view === 'shared' || view === 'viewed') {
-    // Each of these IS a filter on entry state, so a second one would be a
-    // contradiction: "kept, but only unread" is not a list this reader offers.
-    selection = { kind: view, id: null, unread: false };
-  } else if (view === 'for-you') {
-    selection = { kind: 'for-you', id: null, unread: false };
-  } else if (view === 'saved-searches') {
-    selection = { kind: 'saved-searches', id: null, unread: false };
-  } else {
-    selection = feedScopedSelection(paramMap);
+  return { ...viewFromParams(paramMap, context), entryId };
+}
+
+/** The views that name no feed and carry nothing beyond their name. */
+const NAMED_VIEWS = ['favorites', 'kept', 'shared', 'viewed', 'for-you', 'saved-searches'] as const;
+
+type NamedView = (typeof NAMED_VIEWS)[number];
+
+function isNamedView(view: string | null): view is NamedView {
+  return (NAMED_VIEWS as readonly (string | null)[]).includes(view);
+}
+
+function viewFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
+  const view = selectionParam(paramMap, 'view');
+  if (view === 'trending') return trendingFromParams(paramMap, context);
+  const selection: Selection = isNamedView(view)
+    ? { kind: view, id: null, unread: false }
+    : feedScopedSelection(paramMap);
+  return { selection, urlCorrection: null };
+}
+
+/** Switched off, Trending opens All items, as an unknown view does, and leaves the URL. A URL naming no window
+ *  (or an unknown one) opens the account's window and gains it. */
+function trendingFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
+  if (!context.trending) {
+    return {
+      selection: feedScopedSelection(paramMap),
+      urlCorrection: { view: null, window: null },
+    };
   }
-  return { selection, entryId };
+  const named = selectionParam(paramMap, 'window');
+  const window = isTrendingWindow(named) ? named : context.trendingWindow;
+  return {
+    selection: { kind: 'trending', id: null, unread: false, window },
+    urlCorrection: named === window ? null : { window },
+  };
 }
 
 /** The lists drawn from feeds: one subscription, a tag, a network's feeds, a feed group, or all of them. */
@@ -343,8 +312,8 @@ export function networkKey(selection: Selection): string {
  *  over, and the one that clearing the search returns to. `selectionFromParams`
  *  gives a searchable `q` priority, so the covered list is invisible in the
  *  resulting selection even though the URL still carries it (#542). */
-export function listSelectionFrom(params: Params): Selection {
-  return selectionFromParams(convertToParamMap({ ...params, q: null })).selection;
+export function listSelectionFrom(params: Params, context: ViewContext): Selection {
+  return selectionFromParams(convertToParamMap({ ...params, q: null }), context).selection;
 }
 
 export function queryFromSelection(selection: Selection): EntryQuery {
@@ -366,6 +335,7 @@ const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = 
   // The one list whose unread filter is not a view of its own: the ranked
   // feed IS the view, so the filter travels beside it (#710).
   'for-you': (selection) => withUnread({ view: 'for-you' }, selection.unread),
+  trending: (selection) => ({ view: 'trending', window: selection.window }),
   tag: (selection) => ({ view: listView(selection), tag: selection.id ?? undefined }),
   network: (selection) => ({
     view: listView(selection),
