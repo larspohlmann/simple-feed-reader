@@ -150,7 +150,7 @@ those feeds ran it. A switch in the list header picks the window.
     shown, article-less stories dropped, the lead and one-per-feed rules, and `viewed`.
 35. **Functional:** `GET /api/trending` (auth, 422, shape); the counts carry `trending`; `MaintenanceTick` runs
     the rebuild. The migration is covered by CI's migrate-from-empty leg.
-36. **Frontend:** Jest for the sidebar item and badge, the list, the window switch and its storage, dimming, the
+36. **Frontend:** Jest for the sidebar item and badge, the list, the window switch and its storage, the hide action, the
     generalised footer (the duplicates footer unchanged) and its 4-name cap. One Playwright smoke that stubs
     `/api/trending`. Live check on :4200: magazine and list layouts at phone and desktop width, Trending cards
     beside ordinary duplicates, dark mode.
