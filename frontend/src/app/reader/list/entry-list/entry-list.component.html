@@ -117,11 +117,7 @@
       } @else {
         <!-- Same leave animation as the list layout: the slot collapses the
              block's height once its content has faded, closing the gap (#478). -->
-        <div
-          class="row-slot magazine-slot"
-          [class.leaving]="isBlockLeaving(b)"
-          [class.viewed-story]="isViewedStoryBlock(b)"
-        >
+        <div class="row-slot magazine-slot" [class.leaving]="isBlockLeaving(b)">
           <div class="row-slot-inner">
             <app-recommendation-strip [entry]="strippableEntry(b)">
               <app-magazine-block [block]="b" [feedTags]="feedTags()" />
@@ -170,11 +166,7 @@
       @for (e of group.entries; track e.id) {
         <!-- The slot collapses the gap when a row leaves; the inner box clips the
              fading content so the collapse reads as the row closing up (#478). -->
-        <div
-          class="row-slot"
-          [class.leaving]="leavingIds().has(e.id)"
-          [class.viewed-story]="isStoryViewed(e)"
-        >
+        <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">
           <div class="row-slot-inner">
             <app-recommendation-strip [entry]="e">
               <app-entry-row

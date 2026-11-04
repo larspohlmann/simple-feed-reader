@@ -8,9 +8,10 @@ import { showsUnreadMark } from '../../trending/coverage';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
- * source name, a Trending story's source count, relative time. Owned here, not repeated per block, to keep the
- * single-line guarantee in one place — seven copies once let `flex: none` on
- * the dot go missing from two of them (#155).
+ * source name, a Trending story's source count, relative time. Owned here,
+ * not repeated per block, to keep the single-line guarantee in one place —
+ * seven copies once let `flex: none` on the dot go missing from two of them
+ * (#155).
  */
 @Component({
   selector: 'app-entry-kicker-line',

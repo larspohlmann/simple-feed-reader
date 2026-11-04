@@ -168,12 +168,6 @@ app-progress-rail {
   animation: row-leave 0.26s ease forwards;
 }
 
-/* Dims the inner box: the slot's own opacity belongs to the leave animation and
-   the reading-focus pass (#2017). */
-.row-slot.viewed-story > .row-slot-inner {
-  opacity: var(--viewed-story-opacity);
-}
-
 @keyframes row-leave {
   0% {
     grid-template-rows: 1fr;

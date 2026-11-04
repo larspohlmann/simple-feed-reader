@@ -31,7 +31,6 @@ import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.dir
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
 import { Selection, canScopedRefresh, offersMarkAboveRead } from '../../query/query';
-import { isStoryViewed } from '../../trending/coverage';
 import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
@@ -195,10 +194,7 @@ export class EntryListComponent implements OnDestroy {
    *  focus, and the surrounding prose recedes behind it. */
   readonly isSearch = computed(() => this.selection().kind === 'search');
 
-  /** Mark above read is off where nothing is marked read in bulk (Trending, #2017). */
   protected readonly marksAboveFold = computed(() => offersMarkAboveRead(this.selection()));
-
-  protected readonly isStoryViewed = isStoryViewed;
 
   private readonly reduceMotion = prefersReducedMotion();
   private readonly screen = inject(LayoutService);
@@ -420,11 +416,6 @@ export class EntryListComponent implements OnDestroy {
    *  block never leaves as a unit, so it is never marked leaving. */
   isBlockLeaving(block: MagazineBlock): boolean {
     return block.kind !== 'group' && this.leavingIds().has(block.entry.id);
-  }
-
-  /** Whether a block shows a Trending story already opened; a group block never holds one. */
-  isViewedStoryBlock(block: MagazineBlock): boolean {
-    return block.kind !== 'group' && isStoryViewed(block.entry);
   }
 
   ngOnDestroy(): void {

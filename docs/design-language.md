@@ -93,7 +93,6 @@ The grouped-card sidebar's own measures. They sit on `:root`, not in the sidebar
 | `--drawer-shadow` | `6px 0 24px rgb(0 0 0 / 18%)` | the phone sheet's cast |
 | `--drawer-scrim` | `rgb(0 0 0 / 32%)` light, `55%` dark | the backdrop behind the phone sheet |
 | `--hidden-favicon-opacity` | `0.35` light, `0.55` dark | a hidden feed's greyed favicon |
-| `--viewed-story-opacity` | `0.55` light, `0.65` dark | an opened Trending story's card (#2017) |
 
 Every row height is `--tap-target` on a coarse pointer.
 

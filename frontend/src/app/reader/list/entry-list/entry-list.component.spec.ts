@@ -2842,30 +2842,6 @@ describe('EntryListComponent', () => {
       unread: false,
       window,
     });
-    const lead = (id: number, viewed: boolean) =>
-      entry(id, { coverage: { outletCount: 3, others: [], viewed } });
-    const slotOf = (fixture: ReturnType<typeof mount>, id: number) =>
-      (fixture.nativeElement as HTMLElement)
-        .querySelector(`[data-entry-id="${id}"]`)!
-        .closest('.row-slot')!;
-
-    it('dims an opened story in the list layout and leaves the others', () => {
-      const fixture = mount({ selection: trending(), entries: [lead(1, true), lead(2, false)] });
-
-      expect(slotOf(fixture, 1).classList).toContain('viewed-story');
-      expect(slotOf(fixture, 2).classList).not.toContain('viewed-story');
-    });
-
-    it('dims an opened story in the magazine layout', () => {
-      const fixture = mount({
-        selection: trending(),
-        layout: 'magazine',
-        entries: [lead(1, true), lead(2, false)],
-      });
-
-      expect(slotOf(fixture, 1).classList).toContain('viewed-story');
-      expect(slotOf(fixture, 2).classList).not.toContain('viewed-story');
-    });
 
     it('never folds leads of one source into a group widget', () => {
       const fixture = mount({
