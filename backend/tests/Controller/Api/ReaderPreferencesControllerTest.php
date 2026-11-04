@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
-final class TrendingPreferenceControllerTest extends ApiTestCase
+final class ReaderPreferencesControllerTest extends ApiTestCase
 {
     private function patchTrending(KernelBrowser $client, string $body): void
     {
@@ -26,6 +27,91 @@ final class TrendingPreferenceControllerTest extends ApiTestCase
         self::assertIsArray($preferences);
 
         return $preferences['trendingEnabled'];
+    }
+
+    public function testScrapeFallbackCanBeEnabled(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('prefs-enable@example.com');
+        $this->authenticate($client, $user);
+
+        $client->request(
+            'PATCH',
+            '/api/me/preferences',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scrapeFallbackEnabled' => true], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            [
+                'scrapeFallbackEnabled' => true,
+                'magazineStyle' => 'boxed',
+                'passkeyOfferAnswered' => false,
+                'trendingEnabled' => true,
+                'sharing' => ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true],
+                'digest' => [
+                    'enabled' => false,
+                    'cadence' => 'daily',
+                    'format' => 'html',
+                    'sendHour' => 8,
+                    'weekday' => 1,
+                    'timezone' => 'UTC',
+                ],
+            ],
+            $this->payload($client)['preferences'],
+        );
+
+        $this->entityManager()->clear();
+        $reloaded = $this->users()->find($user->getId());
+        self::assertInstanceOf(User::class, $reloaded);
+        self::assertTrue($reloaded->getPreferences()->isScrapeFallbackEnabled());
+    }
+
+    public function testANonBooleanPreferenceIsRejected(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('prefs-invalid@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $this->entityManager()->flush();
+        $this->authenticate($client, $user);
+
+        $client->request(
+            'PATCH',
+            '/api/me/preferences',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['scrapeFallbackEnabled' => 'yes'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->entityManager()->clear();
+        $unchanged = $this->users()->find($user->getId());
+        self::assertInstanceOf(User::class, $unchanged);
+        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
+    }
+
+    public function testAnEmptyBodyIsRejectedRatherThanSilentlyDisablingScraping(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('prefs-empty@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $this->entityManager()->flush();
+        $this->authenticate($client, $user);
+
+        $client->request(
+            'PATCH',
+            '/api/me/preferences',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode([], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->entityManager()->clear();
+        $unchanged = $this->users()->find($user->getId());
+        self::assertInstanceOf(User::class, $unchanged);
+        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
     }
 
     public function testANewAccountShowsTrending(): void

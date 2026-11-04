@@ -4,24 +4,17 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Dto\Me\SendTestDigestRequest;
-use App\Dto\Me\UpdateDigestRequest;
 use App\Dto\Me\UpdateLocaleRequest;
-use App\Dto\Me\UpdateMagazineStyleRequest;
-use App\Dto\Me\UpdatePreferencesRequest;
-use App\Dto\Me\UpdateSharingRequest;
 use App\Entity\User;
 use App\Http\MeProfileJson;
 use App\Service\Account\AccountDeleter;
 use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Auth\RegistrationService;
-use App\Service\Mail\Digest\SendTestDigest;
-use App\Service\Mail\Digest\TestDigestEligibility;
-use App\Service\RateLimit\MeRateLimiters;
 use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -31,10 +24,8 @@ final readonly class MeController
         private AccountPreferencesWriter $preferences,
         private AccountDeleter $accountDeleter,
         private RegistrationService $registration,
-        private SendTestDigest $sendTestDigest,
-        private TestDigestEligibility $testDigestEligibility,
         private RateLimitGuard $rateLimitGuard,
-        private MeRateLimiters $rateLimiters,
+        private RateLimiterFactoryInterface $resendVerificationLimiter,
         private MeProfileJson $profile,
     ) {
     }
@@ -59,69 +50,10 @@ final readonly class MeController
         return new JsonResponse($this->profile->of($user));
     }
 
-    /**
-     * Split from the locale PATCH: folding them would force every preference write to resend the language, or
-     * cost the locale its 422-on-unsupported-value guarantee.
-     */
-    #[Route('/api/me/preferences', name: 'api_me_update_preferences', methods: ['PATCH'])]
-    public function updatePreferences(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdatePreferencesRequest $request,
-    ): JsonResponse {
-        $this->preferences->changeScrapeFallback($user, $request->scrapeFallbackEnabled);
-
-        return new JsonResponse($this->profile->of($user));
-    }
-
-    /** Its own PATCH for the reason updatePreferences() gives. */
-    #[Route('/api/me/magazine-style', name: 'api_me_update_magazine_style', methods: ['PATCH'])]
-    public function updateMagazineStyle(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateMagazineStyleRequest $request,
-    ): JsonResponse {
-        $this->preferences->changeMagazineStyle($user, $request->magazineStyle);
-
-        return new JsonResponse($this->profile->of($user));
-    }
-
-    /** Its own PATCH for the reason updatePreferences() gives. */
-    #[Route('/api/me/sharing', name: 'api_me_update_sharing', methods: ['PATCH'])]
-    public function updateSharing(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateSharingRequest $request,
-    ): JsonResponse {
-        $this->preferences->changeSharing($user, $request->toSettings());
-
-        return new JsonResponse($this->profile->of($user));
-    }
-
-    /** Its own PATCH for the reason updatePreferences() gives. */
-    #[Route('/api/me/digest', name: 'api_me_update_digest', methods: ['PATCH'])]
-    public function updateDigest(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateDigestRequest $request,
-    ): JsonResponse {
-        $this->preferences->changeDigest($user, $request->toConfiguration());
-
-        return new JsonResponse($this->profile->of($user));
-    }
-
-    #[Route('/api/me/digest/test', name: 'api_me_digest_test', methods: ['POST'])]
-    public function sendTestDigest(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] SendTestDigestRequest $request,
-    ): JsonResponse {
-        $this->testDigestEligibility->assertEligible($user);
-        $this->rateLimitGuard->enforceForUser($this->rateLimiters->digestTest, $user);
-        $sent = $this->sendTestDigest->send($user, $request->days);
-
-        return new JsonResponse(['sent' => $sent]);
-    }
-
     #[Route('/api/me/resend-verification', name: 'api_me_resend_verification', methods: ['POST'])]
     public function resendVerification(#[CurrentUser] User $user): JsonResponse
     {
-        $this->rateLimitGuard->enforceForUser($this->rateLimiters->resendVerification, $user);
+        $this->rateLimitGuard->enforceForUser($this->resendVerificationLimiter, $user);
         $this->registration->resendVerification($user);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);

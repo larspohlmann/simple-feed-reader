@@ -204,13 +204,6 @@ services:
     App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface: '@App\Service\Process\ShellCommandRunner\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher'
 
-    # MeController's outbound-mail limiters as one collaborator, wired by limiter service id: the class does not use
-    # the `$<name>Limiter` autowiring aliases.
-    App\Service\RateLimit\MeRateLimiters:
-        arguments:
-            $digestTest: '@limiter.digest_test'
-            $resendVerification: '@limiter.resend_verification'
-
     # Two classes implement AccountMailerInterface, so it gets no automatic alias. This one names AccountMailer's id,
     # which #[AsDecorator] turns into MailGatedAccountMailer, so every consumer gets the mail gate.
     # MailGatedAccountMailerWiringTest pins it.
