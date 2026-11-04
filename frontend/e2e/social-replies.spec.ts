@@ -3,6 +3,7 @@ import { anEntryComment } from '../src/testing/entry-testing';
 import { CommentsResponse } from '../src/app/reader/entry-comment';
 import { presetLocalStorage } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from './support/reader';
+import { plays, recordPlays } from './support/media';
 
 /**
  * #1616: a social post's article lists its replies, indented by depth, with
@@ -129,22 +130,6 @@ const REPLY_WITH_VIDEO: CommentsResponse = {
     }),
   ],
 };
-
-type Play = { src: string; muted: boolean };
-
-/** Chromium here has no H.264, so `play()` is recorded instead of decoding a clip. */
-async function recordPlays(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const plays: Play[] = [];
-    (window as unknown as { plays: Play[] }).plays = plays;
-    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
-      plays.push({ src: this.currentSrc || this.src, muted: this.muted });
-      return Promise.resolve();
-    };
-  });
-}
-
-const plays = (page: Page) => page.evaluate(() => (window as unknown as { plays: Play[] }).plays);
 
 /** A play or a pause the recorded `play()` never fires on its own. */
 async function report(page: Page, selector: string, playing: boolean): Promise<void> {
