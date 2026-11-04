@@ -12,6 +12,7 @@ final class HeadlineWindowTest extends TestCase
 {
     private const float ONCE = 6.6214;
     private const float TWICE = 6.2159;
+    private const float THRICE = 5.9282;
 
     private HeadlineWindow $window;
 
@@ -44,6 +45,16 @@ final class HeadlineWindowTest extends TestCase
         self::assertSame([1], array_keys($shared));
         self::assertEqualsWithDelta(1.5 * self::TWICE, $shared[1], 0.0001);
         self::assertSame([], $this->window->sharedWeightsWithEarlier(1));
+    }
+
+    public function testAStemInTheEarlierBodyIsSharedAtHalfWhereverTheLaterEntryHoldsIt(): void
+    {
+        $this->window->add(1, 10, 'Storm Hamburg', 'Elbe');
+        $this->window->add(2, 20, 'Hamburg Elbe', '');
+        $this->window->add(3, 30, 'Hamburg harbour', 'Elbe');
+
+        self::assertEqualsWithDelta(1.5 * self::THRICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
+        self::assertEqualsWithDelta(1.5 * self::THRICE, $this->window->sharedWeightsWithEarlier(3)[1], 0.0001);
     }
 
     public function testEntriesSharingOnlyBodyStemsAreNotPaired(): void
@@ -103,6 +114,16 @@ final class HeadlineWindowTest extends TestCase
 
         self::assertEqualsWithDelta(self::TWICE, $this->window->totalWeight(1), 0.0001, 'koalit alone');
         self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(5)[1], 0.0001);
+    }
+
+    public function testAFeedFillerStemAnywhereInTheHeadlineIsIgnored(): void
+    {
+        $this->window->add(1, 7, 'Koalition: Fleischhauer', '');
+        $this->window->add(2, 7, 'Haushalt: Fleischhauer', '');
+        $this->window->add(3, 7, 'Bahnstreik', '');
+        $this->window->add(4, 7, 'Wetter', '');
+
+        self::assertEqualsWithDelta(self::ONCE, $this->window->totalWeight(1), 0.0001, 'koalit alone');
     }
 
     public function testAFeedWithThreeEntriesKeepsAStemTheyAllHold(): void
