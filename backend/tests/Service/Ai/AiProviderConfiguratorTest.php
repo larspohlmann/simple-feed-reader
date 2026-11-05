@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
 use App\Repository\UserRepository;
+use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -50,6 +51,14 @@ final class AiProviderConfiguratorTest extends DbTestCase
         return $configurator;
     }
 
+    private function configurations(): AiConfigurationForUser
+    {
+        /** @var AiConfigurationForUser $configurations */
+        $configurations = self::getContainer()->get(AiConfigurationForUser::class);
+
+        return $configurations;
+    }
+
     public function testTheStoredRowDoesNotContainThePlainKey(): void
     {
         $configurator = $this->configurator(['gpt-4o']);
@@ -71,7 +80,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         // clear() first: the assertion has to read the stamped column back out
         // of the database, not off the entity this test already holds.
         $this->entityManager->clear();
-        $stored = $configurator->listConfigurations($this->reload('cfg-verified@example.test'));
+        $stored = $this->configurations()->all($this->reload('cfg-verified@example.test'));
         $verifiedAt = $stored[0]->getVerifiedAt();
         self::assertNotNull($verifiedAt);
         self::assertSame('UTC', $verifiedAt->getTimezone()->getName());
@@ -90,7 +99,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
             $this->entityManager->clear();
             $reloaded = $this->users()->findOneByEmail('cfg-refused@example.test');
             self::assertInstanceOf(User::class, $reloaded);
-            self::assertSame([], $configurator->listConfigurations($reloaded));
+            self::assertSame([], $this->configurations()->all($reloaded));
         }
     }
 
@@ -106,7 +115,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         // test already holds, and the assertion would pass even if nothing was
         // ever written to the database.
         $this->entityManager->clear();
-        $stored = $configurator->settingsFor($this->reload('cfg-model@example.test'));
+        $stored = $this->reload('cfg-model@example.test')->getActiveAiProviderSettings();
         self::assertSame('gpt-4o-mini', $stored?->getModel());
     }
 
@@ -136,7 +145,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->chooseModel($added->configuration, 'acme/decider-2');
 
         $this->entityManager->clear();
-        $stored = $configurator->settingsFor($this->reload('cfg-scoring-model@example.test'));
+        $stored = $this->reload('cfg-scoring-model@example.test')->getActiveAiProviderSettings();
         self::assertNotNull($stored);
         self::assertSame(RecommendationEngineKind::Scoring, $stored->getModelKind());
         self::assertSame(ScoringProtocol::SystemOne, $stored->getScoringProtocol());
@@ -176,22 +185,11 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         // The row is now the thief's, so the configurator seals/opens it under
         // the thief's id — which is not the id the key was bound to.
-        $thiefSettings = $configurator->requireConfiguration($this->reload('cfg-thief@example.test'));
+        $thiefSettings = $this->reload('cfg-thief@example.test')->getActiveAiProviderSettings();
+        self::assertNotNull($thiefSettings);
 
         $this->expectException(AiKeyUnreadableException::class);
         $configurator->listModels($thiefSettings);
-    }
-
-    public function testSettingsForReturnsTheActiveConfiguration(): void
-    {
-        $configurator = $this->configurator(['gpt-4o']);
-        $user = $this->user('cfg-settings-for@example.test');
-        self::assertNull($configurator->settingsFor($user));
-
-        $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
-        $configurator->chooseModel($added->configuration, 'gpt-4o');
-
-        self::assertSame($added->configuration, $configurator->settingsFor($user));
     }
 
     public function testAddConfigurationPersistsItAndReturnsTheOfferedModelIds(): void
@@ -232,7 +230,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         self::assertSame(
             [$first->configuration, $second->configuration],
-            $configurator->listConfigurations($user),
+            $this->configurations()->all($user),
         );
     }
 
@@ -340,7 +338,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->deleteConfiguration($second->configuration);
 
         self::assertSame($first->configuration, $user->getActiveAiProviderSettings());
-        self::assertCount(1, $configurator->listConfigurations($user));
+        self::assertCount(1, $this->configurations()->all($user));
     }
 
     public function testDeletingTheProfileConnectionClearsTheProfileSettingAndKeepsTheSchedule(): void
@@ -454,7 +452,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         // clear() first: otherwise the identity map serves the entities this test
         // already holds and the count/name would pass without any real write.
         $this->entityManager->clear();
-        $stored = $configurator->listConfigurations($this->reload('cfg-duplicate-persist@example.test'));
+        $stored = $this->configurations()->all($this->reload('cfg-duplicate-persist@example.test'));
 
         self::assertCount(2, $stored);
         self::assertSame(['Original', 'Copy of Original'], array_map(
@@ -497,8 +495,8 @@ final class AiProviderConfiguratorTest extends DbTestCase
     }
 
     /**
-     * Moves the row's owner FK and the recipient's active pointer, which settingsFor() and requireConfiguration()
-     * resolve through. pointActiveAt() writes at the database level, so the caller reloads $to.
+     * Moves the row's owner FK and the recipient's active pointer, which getActiveAiProviderSettings()
+     * resolves through. pointActiveAt() writes at the database level, so the caller reloads $to.
      */
     private function moveSettingsRow(User $from, User $to): void
     {

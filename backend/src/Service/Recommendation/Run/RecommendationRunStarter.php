@@ -8,7 +8,6 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Support\AiReadiness;
 use App\Service\Ai\Support\ProviderHost;
@@ -26,7 +25,6 @@ final readonly class RecommendationRunStarter
 {
     public function __construct(
         private RecommendationRunRepository $runs,
-        private AiProviderConfigurator $configurator,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private RecommendationRunLogRepository $logs,
@@ -38,7 +36,7 @@ final readonly class RecommendationRunStarter
      */
     public function start(User $user): RecommendationRunReportModel
     {
-        if (!AiReadiness::of($this->configurator->settingsFor($user))) {
+        if (!AiReadiness::of($user->getActiveAiProviderSettings())) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
         }
 
@@ -77,7 +75,7 @@ final readonly class RecommendationRunStarter
      */
     public function resume(User $user): RecommendationRunReportModel
     {
-        if (!AiReadiness::of($this->configurator->settingsFor($user))) {
+        if (!AiReadiness::of($user->getActiveAiProviderSettings())) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
         }
 
@@ -97,7 +95,7 @@ final readonly class RecommendationRunStarter
     /** Copied onto the run, never read back from the editable configuration, so the history keeps each run's model. */
     private function stampProvider(RecommendationRun $run, User $user): void
     {
-        $settings = $this->configurator->settingsFor($user);
+        $settings = $user->getActiveAiProviderSettings();
 
         $run->stampProvider(ProviderHost::of($settings), $settings?->getModel());
     }

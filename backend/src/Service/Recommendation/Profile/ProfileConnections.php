@@ -9,7 +9,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Enum\RecommendationProfileSource;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\Support\AiReadiness;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 
@@ -20,7 +20,7 @@ final readonly class ProfileConnections
 
     public function __construct(
         private RecommendationSettingsRepository $recommendationSettings,
-        private AiProviderConfigurator $configurator,
+        private AiConfigurationForUser $configurations,
         private RecommendationEngineResolver $engines,
     ) {
     }
@@ -33,7 +33,7 @@ final readonly class ProfileConnections
     /** The chosen connection if it can build a profile, else none; with nothing chosen, the active one if it can. */
     public function usableGiven(User $user, ?RecommendationSettings $storedSettings): ?AiProviderSettings
     {
-        $candidate = $storedSettings?->profileSettings()->connection ?? $this->configurator->settingsFor($user);
+        $candidate = $storedSettings?->profileSettings()->connection ?? $user->getActiveAiProviderSettings();
 
         return null !== $candidate && $this->canBuildProfiles($candidate) ? $candidate : null;
     }
@@ -48,7 +48,7 @@ final readonly class ProfileConnections
     public function candidatesFor(User $user): array
     {
         return array_values(array_filter(
-            $this->configurator->listConfigurations($user),
+            $this->configurations->all($user),
             $this->canBuildProfiles(...),
         ));
     }

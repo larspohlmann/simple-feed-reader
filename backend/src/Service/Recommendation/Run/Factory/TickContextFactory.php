@@ -7,7 +7,6 @@ namespace App\Service\Recommendation\Run\Factory;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -18,7 +17,6 @@ use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 final readonly class TickContextFactory
 {
     public function __construct(
-        private AiProviderConfigurator $configurator,
         private RecommendationSettingsResolver $settingsResolver,
         private RecommendationEngineResolver $engines,
     ) {
@@ -41,7 +39,8 @@ final readonly class TickContextFactory
 
     private function activeConnection(User $user): AiProviderSettings
     {
-        $connection = $this->configurator->requireConfiguration($user);
+        $connection = $user->getActiveAiProviderSettings()
+            ?? throw new AiNotConfiguredException('This account has no active AI configuration.');
         if (!$connection->hasModel()) {
             throw new AiNotConfiguredException('No model is chosen.');
         }
