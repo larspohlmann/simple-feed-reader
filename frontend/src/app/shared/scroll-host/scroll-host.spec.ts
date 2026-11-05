@@ -86,4 +86,21 @@ describe('ScrollHosts', () => {
     element.dispatchEvent(new Event('scroll'));
     expect(zones).toEqual([false]);
   });
+
+  it('constructs its resize observer outside the Angular zone', () => {
+    installMockResizeObserver();
+    const zones: boolean[] = [];
+    const Recording = class extends MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        super(callback);
+        zones.push(NgZone.isInAngularZone());
+      }
+    };
+    (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = Recording;
+    const zone = TestBed.inject(NgZone);
+    zone.run(() =>
+      TestBed.inject(ScrollHosts).forElement(document.createElement('div')).watchResize(jest.fn()),
+    );
+    expect(zones).toEqual([false]);
+  });
 });

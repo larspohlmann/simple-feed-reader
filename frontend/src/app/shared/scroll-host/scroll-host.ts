@@ -15,7 +15,7 @@ export interface ScrollHost {
   readonly intersectionRoot: HTMLElement | null;
   /** A passive listener, outside the Angular zone (#501); returns its removal. */
   listen(listener: () => void): () => void;
-  /** Calls back when the visible box changes size; returns its removal. */
+  /** Calls back when the visible box changes size, outside the Angular zone; returns its removal. */
   watchResize(listener: () => void): () => void;
 }
 
@@ -65,8 +65,9 @@ export class ElementScrollHost implements ScrollHost {
 
   watchResize(listener: () => void): () => void {
     if (typeof ResizeObserver === 'undefined') return () => undefined;
-    const observer = new ResizeObserver(() => listener());
-    observer.observe(this.content);
+    const content = this.content;
+    const observer = this.outsideZone(() => new ResizeObserver(() => listener()));
+    observer.observe(content);
     return () => observer.disconnect();
   }
 }

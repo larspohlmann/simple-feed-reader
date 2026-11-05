@@ -1878,9 +1878,8 @@ describe('EntryListComponent', () => {
   });
 
   // #1080: the lower-left "mark everything above as read" button. jsdom lays
-  // nothing out, so geometry is driven through fakes standing in for the
-  // `#rows`/`#listHdr` viewChild signals, exactly like the real elements they
-  // replace (getBoundingClientRect, querySelector/All, getAttribute).
+  // nothing out, so geometry is driven through fakes of the scroll host's content and
+  // the `#listHdr` element (getBoundingClientRect, querySelector/All, getAttribute).
   describe('mark-above-read button (#1080)', () => {
     const measuredEntry = (id: string, bottom: number): HTMLElement =>
       ({
@@ -1888,8 +1887,8 @@ describe('EntryListComponent', () => {
         getBoundingClientRect: () => ({ bottom }),
       }) as unknown as HTMLElement;
 
-    /** Stubs the component's `rows`/`listHdr` viewChild signals with fakes whose
-     *  geometry is scripted: `fold.scrollerTop`/`fold.headerBottom` place the fold line,
+    /** Stubs the scroll host's `content`/`viewportTop` and the `listHdr` viewChild with
+     *  scripted geometry: `fold.scrollerTop`/`fold.headerBottom` place the fold line,
      *  `entries` become the tagged rows `querySelector(All)` finds. */
     function stubGeometry(
       fixture: ReturnType<typeof mount>,
@@ -2066,10 +2065,6 @@ describe('EntryListComponent', () => {
       expect(button.querySelector('app-icon[name="playlist_add_check"]')).not.toBeNull();
     });
 
-    // The scroll path resolves the scroller from the `#rows` viewChild — the
-    // same source `collectAboveFoldIds`/`foldTop` use for the click path — not
-    // from the scroll event's own target, so the probe is driven the same way
-    // `stubGeometry` drives the click-time collection above.
     it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
       const fixture = mount();
       stubGeometry(fixture, [measuredEntry('1', 40)]);
@@ -2095,14 +2090,6 @@ describe('EntryListComponent', () => {
       fixture.componentInstance.scrolling.onScroll(900);
 
       expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
-    });
-
-    it('does not throw for a scroll event carrying only scrollTop', () => {
-      // Several pre-existing scroll tests drive onRowsScroll with a bare
-      // {scrollTop} object as the event target; resolving the scroller from
-      // the viewChild instead of that target must tolerate it.
-      const fixture = mount();
-      expect(() => fixture.componentInstance.scrolling.onScroll(900)).not.toThrow();
     });
 
     it('resets hasAboveFold when the selection changes', () => {

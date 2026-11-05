@@ -22,8 +22,8 @@ export interface ScrollProgressRailOptions {
 }
 
 /** A scroller's length-and-position cue (#238), for the article and the paged list
- *  alike: the rail (`app-progress-rail`) attaches
- *  itself, and `paint()` writes the fill without change detection (#501). */
+ *  alike: the rail (`app-progress-rail`) attaches itself, and `paint()` writes the
+ *  fill without change detection (#501). */
 export class ScrollProgressRail {
   private readonly injector = inject(Injector);
   private rail?: HTMLElement;
