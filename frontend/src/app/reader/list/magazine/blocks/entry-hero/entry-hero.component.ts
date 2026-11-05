@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, signal } from '@angular/core';
 import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
-import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
+import { MoreSourcesComponent } from '../../more-sources.component';
 import { entryImage, widestRenditionWidth } from '../../../preview-image';
 import { EntryBlockBase } from '../../entry-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
@@ -15,7 +15,7 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
     OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
-    EntryDuplicatesComponent,
+    MoreSourcesComponent,
     RenditionsDirective,
   ],
   templateUrl: './entry-hero.component.html',
