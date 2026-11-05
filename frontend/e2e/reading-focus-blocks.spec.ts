@@ -64,7 +64,9 @@ test.describe('Reading focus block detection', () => {
     await page.evaluate(() => document.fonts.ready);
 
     // Read somewhere in the middle, where a paragraph is in the reading band.
-    await pane.evaluate((el) => el.scrollTo({ top: el.scrollHeight / 2, behavior: 'instant' }));
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight / 2, behavior: 'instant' }),
+    );
     await page.waitForTimeout(400); // focus rAF + the 0.2s opacity transition
 
     const opacities = await pane.evaluate((el) =>

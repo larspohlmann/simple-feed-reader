@@ -1,5 +1,6 @@
 import { test, expect, Locator, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
+import { scrollPageToEnd } from './support/scroll';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
@@ -75,7 +76,7 @@ test.describe('Article tail space', () => {
     const scroller = pane.locator('.scroller');
 
     // All the way to the end of the article.
-    await scroller.evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
+    await scrollPageToEnd(page);
     await page.waitForTimeout(400);
 
     const last = pane.locator('.content p').last();
@@ -87,9 +88,8 @@ test.describe('Article tail space', () => {
     await scroller.evaluate((el) => {
       const p = el.querySelectorAll('.content p');
       const rect = p[p.length - 1].getBoundingClientRect();
-      const paneRect = el.getBoundingClientRect();
-      const centre = rect.top + rect.height / 2 - paneRect.top;
-      el.scrollTop += centre - el.clientHeight / 2;
+      const centre = rect.top + rect.height / 2;
+      window.scrollBy({ top: centre - window.innerHeight / 2, behavior: 'instant' });
     });
     await page.waitForTimeout(400); // focus rAF + the 0.2s opacity transition
 
@@ -102,9 +102,11 @@ test.describe('Article tail space', () => {
   });
 
   test('an article that fits the screen gains no dead scroll', async ({ page }) => {
-    const scroller = (await openStubbedArticle(page, SHORT_BODY)).locator('.scroller');
+    await openStubbedArticle(page, SHORT_BODY);
 
-    const overflow = await scroller.evaluate((el) => el.scrollHeight - el.clientHeight);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollHeight - window.innerHeight,
+    );
     expect(overflow).toBeLessThanOrEqual(2);
   });
 });
@@ -118,8 +120,8 @@ async function tailMetrics(pane: Locator) {
     const readerTop = parseFloat(getComputedStyle(scroller.querySelector('.reader')!).paddingTop);
     return {
       padding: parseFloat(getComputedStyle(article).paddingBottom),
-      cinemaRoom: scroller.clientHeight - readerTop,
-      focusRoom: scroller.clientHeight / 2,
+      cinemaRoom: window.innerHeight - readerTop,
+      focusRoom: window.innerHeight / 2,
     };
   });
 }
