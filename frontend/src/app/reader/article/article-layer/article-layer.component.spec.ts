@@ -1,11 +1,16 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { scrollerOf } from '../../../../testing/scroll-testing';
+import {
+  restorePageScroll,
+  scrollerOf,
+  trackPageScrollTop,
+} from '../../../../testing/scroll-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
+import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import { ArticleLayerComponent } from './article-layer.component';
 
 @Component({
@@ -38,6 +43,34 @@ class LayerHostComponent {
   });
   closes = 0;
   toTops = 0;
+  readonly scrolledTo: number[] = [];
+}
+
+@Component({
+  imports: [ArticleLayerComponent],
+  providers: [
+    { provide: PageLayer, useFactory: () => new PageLayer(document.createElement('div')) },
+  ],
+  template: `
+    <app-article-layer
+      [fullscreen]="true"
+      [resetKey]="page()"
+      [progressRail]="progressRail"
+      backLabel="Back"
+      (scrolled)="scrolledTo.push($event)"
+    >
+      <article>body</article>
+    </app-article-layer>
+  `,
+})
+class PageLayerHostComponent {
+  readonly page = signal('entry:1');
+  readonly layer = inject(PageLayer);
+  readonly progressRail = new ScrollProgressRail({
+    scroller: () => undefined,
+    contentBottom: () => null,
+    layout: signal(0),
+  });
   readonly scrolledTo: number[] = [];
 }
 
@@ -193,5 +226,64 @@ describe('ArticleLayerComponent', () => {
     expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
     expect(document.activeElement).toBe(heading);
     heading.remove();
+  });
+});
+
+describe('ArticleLayerComponent on the page (#2038)', () => {
+  let fixture: ComponentFixture<PageLayerHostComponent>;
+  let page: { top: number };
+
+  beforeEach(() => {
+    installMockResizeObserver();
+    page = trackPageScrollTop();
+    TestBed.configureTestingModule({
+      imports: [PageLayerHostComponent, provideTranslocoTesting()],
+    });
+    fixture = TestBed.createComponent(PageLayerHostComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(restorePageScroll);
+
+  const layerElement = (): HTMLElement =>
+    (fixture.nativeElement as HTMLElement).querySelector('app-article-layer') as HTMLElement;
+
+  function scrollPage(top: number): void {
+    page.top = top;
+    window.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+  }
+
+  it('marks itself on the page', () => {
+    expect(layerElement().classList).toContain('on-page');
+  });
+
+  it('hears the page, not its own box, and retracts its toolbar on it', () => {
+    scrollPage(400);
+
+    expect(fixture.componentInstance.scrolledTo).toEqual([400]);
+    expect(layerElement().querySelector('.bar')!.classList).toContain('hidden');
+  });
+
+  it('starts a new page at the top of the document', () => {
+    scrollPage(400);
+
+    fixture.componentInstance.page.set('entry:2');
+    fixture.detectChanges();
+
+    expect(page.top).toBe(0);
+  });
+
+  it('hears nothing while pinned beneath another layer, and moves its pin on a reset', () => {
+    const { layer } = fixture.componentInstance;
+    layer.pinAt(300);
+
+    scrollPage(1200);
+    fixture.componentInstance.page.set('entry:2');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.scrolledTo).toEqual([]);
+    expect(layer.pinnedTop).toBe(0);
+    expect(page.top).toBe(1200);
   });
 });

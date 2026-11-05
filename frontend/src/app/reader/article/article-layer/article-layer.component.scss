@@ -185,3 +185,52 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
+
+/* Full screen on the page (#2038): the document scrolls, and the layer grows with its article. */
+:host(.on-page),
+:host(.on-page) .frame {
+  height: auto;
+}
+
+/* No longer a scroller; an inline-size container only, so `cqb` reads the viewport. */
+:host(.on-page) .scroller {
+  height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+  container: reader-pane / inline-size;
+}
+
+/* Covers the pinned list even when short, and runs clear of the fixed audio bar. */
+:host(.on-page) .reader {
+  min-height: 100dvh;
+  padding-bottom: var(--audio-bar-h, 0);
+}
+
+/* Sticky, not fixed: the swipe and the slide transform an ancestor, which traps a fixed box (#100). */
+:host(.on-page) .chrome-head {
+  position: sticky;
+  bottom: auto;
+  height: 0;
+}
+
+:host(.on-page) .chrome-foot {
+  position: sticky;
+  bottom: var(--audio-bar-h, 0);
+}
+
+:host(.on-page) app-progress-rail {
+  bottom: auto;
+  height: calc(100dvh - var(--audio-bar-h, 0rem));
+}
+
+/* Pinned beneath a layer or leaving: held where the viewport was. Must follow the rules above. */
+:host-context(.page-pinned) .chrome-head {
+  position: absolute;
+  top: var(--page-pin-top, 0);
+}
+
+:host-context(.page-pinned) .chrome-foot {
+  position: absolute;
+  top: calc(var(--page-pin-top, 0rem) + 100dvh - var(--audio-bar-h, 0rem));
+  bottom: auto;
+}

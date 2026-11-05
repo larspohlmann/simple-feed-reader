@@ -22,8 +22,10 @@ import { LayoutService } from '../../layout.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
+import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import {
   ElementBackedScrollHosts,
+  elementScrollHost,
   restorePageScroll,
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
@@ -358,6 +360,18 @@ describe('EntryListComponent', () => {
       const element = mount().nativeElement as HTMLElement;
       expect(element.querySelector('app-list-header .top-marker')).toBeNull();
     });
+  });
+
+  it('hands its page layer to the page host (#2038)', () => {
+    const layer = new PageLayer(document.createElement('section'));
+    const forPage = jest.fn((content: HTMLElement) => elementScrollHost(content));
+
+    mount({}, [
+      { provide: PageLayer, useValue: layer },
+      { provide: ScrollHosts, useValue: { forPage } },
+    ]);
+
+    expect(forPage).toHaveBeenCalledWith(expect.any(HTMLElement), layer);
   });
 
   it('renders a row per entry and the header title', () => {

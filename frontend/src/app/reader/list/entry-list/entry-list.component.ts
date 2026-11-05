@@ -46,6 +46,7 @@ import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
 import { EstimatedListBottom } from './estimated-list-bottom';
+import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
@@ -206,9 +207,10 @@ export class EntryListComponent implements OnDestroy {
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private readonly header = viewChild(ListHeaderComponent);
   private readonly scrollHosts = inject(ScrollHosts);
+  private readonly pageLayer = inject(PageLayer, { optional: true });
   private readonly scrollHost = computed((): ScrollHost | undefined => {
     const rows = this.rows()?.nativeElement;
-    return rows ? this.scrollHosts.forPage(rows) : undefined;
+    return rows ? this.scrollHosts.forPage(rows, this.pageLayer) : undefined;
   });
   private readonly _nearViewportRoot = effect(() => {
     const scroller = this.scrollHost();

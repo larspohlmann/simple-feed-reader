@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
+import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
@@ -24,7 +25,7 @@ import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
 import { ArticleGestures } from './article-gestures.service';
 
-/** The reader's layer: its frame, hide-on-scroll toolbar, the one scroller, the
+/** The reader's layer: its frame, hide-on-scroll toolbar, its scroller (the pane's box, or the page), the
  *  progress rail, the to-top button and the return gestures. The article itself,
  *  the toolbar's actions and the nameplate are projected by the reader using it. */
 @Component({
@@ -33,6 +34,7 @@ import { ArticleGestures } from './article-gestures.service';
   providers: [ArticleGestures],
   templateUrl: './article-layer.component.html',
   styleUrl: './article-layer.component.scss',
+  host: { '[class.on-page]': 'onPage' },
 })
 export class ArticleLayerComponent {
   /** Full-screen reading (the mobile overlay) vs. the split pane. The article
@@ -54,9 +56,15 @@ export class ArticleLayerComponent {
   private readonly reduceMotion = prefersReducedMotion();
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
   private readonly scrollHosts = inject(ScrollHosts);
+  private readonly pageLayer = inject(PageLayer, { optional: true });
+  /** Full screen the article owns the page (#2038); the split pane scrolls its own box. */
+  protected readonly onPage = this.pageLayer !== null;
   readonly scroller = computed((): ScrollHost | undefined => {
     const element = this.scrollerRef()?.nativeElement;
-    return element ? this.scrollHosts.forElement(element) : undefined;
+    if (!element) return undefined;
+    return this.pageLayer
+      ? this.scrollHosts.forPage(element, this.pageLayer)
+      : this.scrollHosts.forElement(element);
   });
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
