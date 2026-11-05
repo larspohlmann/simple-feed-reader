@@ -193,6 +193,23 @@ describe('PageScrollHost', () => {
       expect(host.scrollTop).toBe(1200);
     });
 
+    it('lands a write held under a CDK block on its pin once pinned beneath another', async () => {
+      const layer = new PageLayer(element);
+      const host = layerHost(layer);
+      const stop = host.listen(() => undefined);
+      page.top = 1200;
+      blockAt(1200);
+      host.scrollTop = 900;
+
+      layer.pinAt(1200);
+      releaseTo(300);
+      await mutationsDelivered();
+
+      expect(layer.pinnedTop).toBe(900);
+      expect(page.top).toBe(300);
+      stop();
+    });
+
     it('is the page again once unpinned', () => {
       const layer = new PageLayer(element);
       const host = layerHost(layer);

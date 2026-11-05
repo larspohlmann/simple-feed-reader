@@ -110,7 +110,7 @@ export class PageScrollHost implements ScrollHost {
     if (this.pendingTop === null || this.blocked()) return;
     const top = this.pendingTop;
     this.pendingTop = null;
-    this.scrollingElement.scrollTop = top;
+    this.scrollTop = top;
   }
 
   private held(): boolean {
