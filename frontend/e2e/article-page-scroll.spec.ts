@@ -2,7 +2,13 @@ import { test, expect, Locator, Page } from '@playwright/test';
 import type { ReadingLayout } from '../src/app/reader/reading-layout.service';
 import { aLinkCard } from '../src/testing/entry-testing';
 import { presetLocalStorage } from './support/auth';
-import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from './support/reader';
+import {
+  entryDetailJson,
+  entryWire,
+  oneFeedJson,
+  readerFailedJson,
+  stubOneFeedReader,
+} from './support/reader';
 import {
   liftTouch,
   pageScrollY,
@@ -23,6 +29,7 @@ const LIST_OFFSET = 1200;
 const ARTICLE_OFFSET = 600;
 const LAYER = 'app-reader-view app-article-layer';
 const LAST_PARAGRAPH = 'Paragraph 39 of filler text';
+const FEED_TITLE = 'Fixture feed';
 
 const TALL_BODY = Array.from(
   { length: 40 },
@@ -56,7 +63,10 @@ const LINKED_PAGE = {
 };
 
 async function openReader(page: Page, layout: ReadingLayout): Promise<void> {
-  await stubOneFeedReader(page, 'Fixture feed');
+  await stubOneFeedReader(page, FEED_TITLE);
+  await page.route('**/api/subscriptions/counts**', (route) =>
+    route.fulfill({ json: oneFeedJson(FEED_TITLE) }),
+  );
   await presetLocalStorage(page, { 'sfr.layout': layout });
   await page.route(
     (url) => url.pathname === '/api/entries',
