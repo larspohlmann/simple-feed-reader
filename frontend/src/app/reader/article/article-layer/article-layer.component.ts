@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  NgZone,
   computed,
   effect,
   inject,
@@ -10,6 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { observeResize } from '../../../shared/observe-resize';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
@@ -55,6 +57,7 @@ export class ArticleLayerComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reduceMotion = prefersReducedMotion();
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
+  private readonly zone = inject(NgZone);
   private readonly scrollHosts = inject(ScrollHosts);
   private readonly pageLayer = inject(PageLayer, { optional: true });
   /** The overlay's article owns the page (#2038); the split pane scrolls its own box. */
@@ -140,14 +143,14 @@ export class ArticleLayerComponent {
   private reserveToolbarHeight(): void {
     effect((onCleanup) => {
       const bar = this.bar()?.nativeElement;
-      if (!bar || typeof ResizeObserver === 'undefined') return;
+      if (!bar) return;
       const style = this.host.nativeElement.style;
-      const observer = new ResizeObserver(() => {
-        style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
-        this.barResized.emit();
-      });
-      observer.observe(bar);
-      onCleanup(() => observer.disconnect());
+      onCleanup(
+        observeResize(this.zone, [bar], () => {
+          style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
+          this.barResized.emit();
+        }),
+      );
     });
   }
 }
