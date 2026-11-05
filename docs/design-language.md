@@ -1727,8 +1727,10 @@ app bar, `.under-header`, list header, rail, corner discs, audio bar — is `pos
 List chrome sits in the entry list's two `.list-frame`s, placed by `--list-column-left` and
 `--list-column-width`, which the shell measures off the `.list` column because `fixed`
 measures from the viewport; everything pinned to the foot leaves `--audio-bar-h` free. The
-sidebar column, the pane divider and split view's reader pane are sticky flex children
-(`top: 0`, a viewport-tall height, `align-self: flex-start`) whose scrollers set
+frames and the full-screen article take that box from `page-chrome.list-column-box`
+(`theme/_page-chrome.scss`). The wide sidebar column, the pane divider and split view's
+reader pane are sticky flex children (`page-chrome.pinned-column`: `top: 0`, a
+viewport-tall height, `align-self: flex-start`) whose scrollers set
 `overscroll-behavior: contain`. A new fixed element is checked for a transformed, filtered or
 contained ancestor (#100).
 

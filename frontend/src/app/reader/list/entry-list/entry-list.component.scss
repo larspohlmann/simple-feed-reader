@@ -1,10 +1,8 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/glass-rim';
+@use '../../../theme/page-chrome';
 
-/* What every scroller/overlay branch below reserves before its own content:
-   app bar + list header + gap. Was 4 independent copies of this calc
-   (.rows, .rows.magazine, empty state, .list-error) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 
 /* Tail room so the last row can scroll up clear of the corner buttons and the audio bar. */
@@ -16,14 +14,10 @@ $corner-clear: calc(
   display: block;
 }
 
-/* The list column's visible box, pinned while the rows scroll the page (#2038); the
-   shell publishes the column's box because `fixed` measures from the viewport. */
+/* The list's chrome, held over its column while the rows scroll the page (#2038). */
 .list-frame {
-  position: fixed;
-  top: 0;
-  bottom: var(--audio-bar-h, 0);
-  left: var(--list-column-left, 0);
-  width: var(--list-column-width, 100%);
+  @include page-chrome.list-column-box;
+
   z-index: 1;
   pointer-events: none;
 }
@@ -43,9 +37,7 @@ $corner-clear: calc(
   pointer-events: auto;
 }
 
-/* Floats over the scroller rather than sitting in the flow: collapsing it used
-   to shrink the list's box and move the rows mid-gesture (#87). The scroller
-   reserves the expanded height instead, so rows pass translucently behind it. */
+/* Floats over the rows, which reserve its expanded height: collapsing it moves no row (#87). */
 .list-header {
   position: absolute;
   top: var(--app-bar-h, var(--bar-h));
@@ -72,9 +64,8 @@ $corner-clear: calc(
   border-bottom: 1px solid var(--border);
   container: list-header / inline-size;
 
-  /* Deliberately NOT animated: the scroller measures this bar's height for its
-     reservation, and an animating box reports every intermediate value, which
-     reintroduces the row jump (#87) this fix removes. It snaps instead. */
+  /* Deliberately NOT animated: the rows' reservation follows this bar's measured
+     height, and an animating box reports every intermediate value (#87). */
 }
 
 @media (width >= bp.$bp-lg) {
@@ -294,9 +285,7 @@ app-progress-rail {
   --card-hover-decoration: underline;
   --magazine-gap: var(--space-5);
 
-  /* No cards left, so the card colour becomes the sheet the column sits on.
-     Painted as a background image because the box IS the scroller: narrowing
-     it would leave the space beside it dead to the wheel (#723). */
+  /* No cards left, so the card colour becomes the sheet the column sits on. */
   --airy-sheet: min(100%, calc(var(--magazine-measure) + 2 * var(--space-5)));
 
   /* Dark mode pulls this down to --surface-read so the sheet matches the open
@@ -375,7 +364,7 @@ app-progress-rail {
 }
 
 /* Overlays the top of the content, just below the floating header, instead of
-   sitting in the flow. The scroller keeps its own `$header-clear` reservation
+   sitting in the flow. The rows keep their own `$header-clear` reservation
    unconditionally, so the error appearing or being dismissed never moves a row
    (#996 — the old flow banner handed the reservation back and forth, #321). */
 .list-error {
