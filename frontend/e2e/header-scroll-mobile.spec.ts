@@ -193,7 +193,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     expect(panelBox.height).toBeGreaterThanOrEqual(hostBox.height - 1);
   });
 
-  test('the content area keeps its height while the header slides', async ({ page }) => {
+  test('the list keeps its place and height while the header slides', async ({ page }) => {
     const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
@@ -206,12 +206,17 @@ test.describe('Hide-on-scroll header on a phone', () => {
     const rows = page.locator(ROWS);
     await expect(rows).toBeVisible();
     await settle(page);
-    const height = () => page.locator(PAGE).evaluate((el) => el.clientHeight);
+    const geometry = () =>
+      rows.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        return { documentTop: box.top + window.scrollY, height: box.height };
+      });
 
-    const before = await height();
+    const before = await geometry();
     await page.locator(PAGE).evaluate((el) => el.scrollBy(0, 300));
     await waitForHeaderTransitionEnd(page);
-    expect(await height()).toBe(before);
+    await expect(page.locator('app-reader-header')).toHaveClass(/hidden/);
+    expect(await geometry()).toEqual(before);
   });
 
   test('the bar’s empty middle and the corner button both return the list to the top', async ({

@@ -150,8 +150,21 @@ test.describe('Article reading progress on the split layout', () => {
     const signedIn = await signInWithLayout(page, 'pane');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
+    // Enough rows that the page itself scrolls, so a rail bound to it would move.
+    await page.route(
+      (url) => url.pathname === '/api/entries',
+      async (route) => {
+        if (route.request().method() !== 'GET') return route.fallback();
+        const entries = Array.from({ length: 40 }, (_, index) => entry(index + 1));
+        await route.fulfill({ status: 200, json: { entries, nextCursor: null } });
+      },
+    );
     await page.reload();
     const pane = await openArticle(page);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight),
+      'the page does not overflow — the case proves nothing',
+    ).toBe(true);
 
     // The rail stands at the pane's right edge in place of the pane's scrollbar (#2038).
     await expect(pane.locator(BOTTOM_HAIRLINE)).toHaveCount(0);
@@ -161,11 +174,16 @@ test.describe('Article reading progress on the split layout', () => {
     expect(box.x + box.width).toBeCloseTo(paneBox.x + paneBox.width, 0);
 
     // The pane is the window's rightmost column, so the edge alone cannot tell the two
-    // apart: the rail must fill with the pane's scroll while the page stays put.
+    // apart: the rail must ignore the page's scroll and follow the pane's.
+    const unscrolled = await railFilledFraction(pane);
+    await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+    await page.waitForTimeout(200);
+    expect(await railFilledFraction(pane)).toBeCloseTo(unscrolled, 2);
+
     await pane
       .locator('.scroller')
       .evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
-    await expect.poll(() => railFilledFraction(pane)).toBeGreaterThan(0.1);
-    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await expect.poll(() => railFilledFraction(pane)).toBeGreaterThan(unscrolled + 0.1);
   });
 });
