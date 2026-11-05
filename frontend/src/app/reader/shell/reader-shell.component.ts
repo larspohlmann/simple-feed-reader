@@ -61,6 +61,7 @@ import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
+import { PageChromeGeometry } from './page-chrome-geometry';
 import { SightedPreviews } from './sighted-previews.service';
 import { PreviewProgress } from '../link-card/preview-progress';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -246,6 +247,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly showSidebarButton =
     viewChild<ElementRef<HTMLButtonElement>>('showSidebarButton');
+  private readonly listColumn = viewChild<ElementRef<HTMLElement>>('listColumn');
+  private readonly mainColumn = viewChild<ElementRef<HTMLElement>>('mainEl');
+  private readonly audioBar = viewChild('audioBar', { read: ElementRef });
+  private readonly _chromeGeometry = new PageChromeGeometry({
+    host: this.hostRef.nativeElement,
+    listColumn: () => this.listColumn()?.nativeElement,
+    main: () => this.mainColumn()?.nativeElement,
+    audioBar: () => this.audioBar()?.nativeElement as HTMLElement | undefined,
+  });
   /** Armed while the sidebar is visible, so the very first render does not pull
    *  focus onto the (absent) show button. */
   private sidebarWasVisible = false;
