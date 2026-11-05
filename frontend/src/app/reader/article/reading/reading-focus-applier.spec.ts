@@ -1,4 +1,5 @@
-import { ElementScrollHost, ScrollHost } from '../../../shared/scroll-host/scroll-host';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
+import { elementScrollHost } from '../../../../testing/scroll-testing';
 import { ReadingFocusApplier } from './reading-focus-applier';
 import { LIST_FOCUS_CURVE } from './reading-focus';
 import { SENTENCE_CLASS, sectionedUnits } from './reading-sections';
@@ -19,7 +20,7 @@ function scrollerWith(count: number): {
   for (let index = 0; index < count; index++)
     element.appendChild(document.createElement('article'));
   const blocks = (): HTMLElement[] => Array.from(element.children) as HTMLElement[];
-  return { element, scroller: new ElementScrollHost(element, (run) => run()), blocks };
+  return { element, scroller: elementScrollHost(element), blocks };
 }
 
 const opacities = (blocks: () => HTMLElement[]): string[] =>
@@ -194,7 +195,7 @@ describe('splitting a tall block into sections', () => {
     stubRect(block, 0, 400); // taller than half the 600px scroller
     element.appendChild(block);
     return {
-      scroller: new ElementScrollHost(element, (run) => run()),
+      scroller: elementScrollHost(element),
       block,
       blocks: () => Array.from(element.children) as HTMLElement[],
     };

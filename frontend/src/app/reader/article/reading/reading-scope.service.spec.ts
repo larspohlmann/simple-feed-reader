@@ -1,6 +1,7 @@
 import { ElementRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ElementScrollHost, ScrollHost } from '../../../shared/scroll-host/scroll-host';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
+import { elementScrollHost } from '../../../../testing/scroll-testing';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { articleHost } from '../../../../testing/article-host-testing';
@@ -38,7 +39,7 @@ function scrollerOfViewport(): ScrollHost {
   const scroller = document.createElement('div');
   Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: VIEWPORT });
   scroller.getBoundingClientRect = () => ({ top: 0, bottom: VIEWPORT }) as DOMRect;
-  return new ElementScrollHost(scroller, (run) => run());
+  return elementScrollHost(scroller);
 }
 
 const query = (element: HTMLElement | undefined) =>

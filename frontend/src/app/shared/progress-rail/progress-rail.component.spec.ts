@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ElementScrollHost, ScrollHost } from '../scroll-host/scroll-host';
+import type { ScrollHost } from '../scroll-host/scroll-host';
+import { elementScrollHost } from '../../../testing/scroll-testing';
 import { ProgressRailComponent } from './progress-rail.component';
 import { ScrollProgressRail } from './scroll-progress-rail';
 
@@ -50,7 +51,7 @@ describe('ScrollProgressRail following its scroller', () => {
   function setup() {
     const first = scrollerElement(0);
     const second = scrollerElement(0);
-    const host = signal<ScrollHost | undefined>(new ElementScrollHost(first, (run) => run()));
+    const host = signal<ScrollHost | undefined>(elementScrollHost(first));
     const progress = TestBed.runInInjectionContext(
       () =>
         new ScrollProgressRail({
@@ -70,7 +71,7 @@ describe('ScrollProgressRail following its scroller', () => {
       element.dispatchEvent(new Event('scroll'));
     };
     const swapTo = (next: HTMLElement | undefined) => {
-      host.set(next && new ElementScrollHost(next, (run) => run()));
+      host.set(next && elementScrollHost(next));
       fixture.detectChanges();
     };
     return { first, second, progress, fill, scrollTo, swapTo };

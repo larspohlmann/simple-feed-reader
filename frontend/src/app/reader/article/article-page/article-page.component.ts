@@ -139,7 +139,7 @@ export class ArticlePageComponent {
     const scroller = this.scroller();
     if (!scroller || !target) return;
     this.restore.abort(); // a jump takes over from any in-flight restore
-    const top = target.getBoundingClientRect().top - scroller.viewportTop() + scroller.scrollTop;
+    const top = scroller.toContentY(target.getBoundingClientRect().top);
     scroller.scrollTo({
       top: Math.max(0, top - scroller.scrollPaddingTop()),
       behavior: this.reduceMotion ? 'auto' : 'smooth',

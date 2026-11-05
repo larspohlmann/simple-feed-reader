@@ -45,10 +45,9 @@ export class EstimatedListBottom {
     const slots = scroller.content.querySelectorAll<HTMLElement>('.row-slot');
     if (slots.length === 0) return null;
     const layout = this.layout();
-    const origin = scroller.viewportTop() - scroller.scrollTop;
     return estimatedListBottom({
-      rowsTop: slots[0].getBoundingClientRect().top - origin,
-      rowsBottom: slots[slots.length - 1].getBoundingClientRect().bottom - origin,
+      rowsTop: scroller.toContentY(slots[0].getBoundingClientRect().top),
+      rowsBottom: scroller.toContentY(slots[slots.length - 1].getBoundingClientRect().bottom),
       shownEntries: layout.shownEntries,
       renderedEntries: layout.renderedEntries,
       totalEntries: layout.loadedTotal ?? this.raiseHeldTotal(layout.headerTotal),

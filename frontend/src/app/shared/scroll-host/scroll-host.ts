@@ -5,8 +5,9 @@ export interface ScrollHost {
   readonly clientHeight: number;
   readonly scrollHeight: number;
   scrollTo(options: ScrollToOptions): void;
-  /** The viewport y at which the scroll area begins. */
   viewportTop(): number;
+  /** A viewport y as an offset in the scrolled content. */
+  toContentY(viewportY: number): number;
   /** The band at the top that chrome covers, from `scroll-padding-top`. */
   scrollPaddingTop(): number;
   /** The scrolled content: rows are queried and touches heard here. */
@@ -53,6 +54,10 @@ export class ElementScrollHost implements ScrollHost {
     return this.content.getBoundingClientRect().top;
   }
 
+  toContentY(viewportY: number): number {
+    return viewportY - this.viewportTop() + this.scrollTop;
+  }
+
   scrollPaddingTop(): number {
     return parseFloat(getComputedStyle(this.content).scrollPaddingTop) || 0;
   }
@@ -65,9 +70,8 @@ export class ElementScrollHost implements ScrollHost {
 
   watchResize(listener: () => void): () => void {
     if (typeof ResizeObserver === 'undefined') return () => undefined;
-    const content = this.content;
     const observer = this.outsideZone(() => new ResizeObserver(() => listener()));
-    observer.observe(content);
+    observer.observe(this.content);
     return () => observer.disconnect();
   }
 }

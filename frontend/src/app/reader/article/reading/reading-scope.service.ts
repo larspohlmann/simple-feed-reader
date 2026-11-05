@@ -36,10 +36,6 @@ export interface ReadingScopeParts {
   readonly trailing: Signal<readonly TrailingPart[]>;
 }
 
-function bottomWithin(scroller: ScrollHost, element: HTMLElement): number {
-  return element.getBoundingClientRect().bottom - scroller.viewportTop() + scroller.scrollTop;
-}
-
 function isPresent(element: HTMLElement | undefined): element is HTMLElement {
   return element !== undefined;
 }
@@ -171,7 +167,7 @@ export class ReadingScope {
     }
     const lastPart = this.presentElements(this.trailing()).at(-1) ?? content;
     this.viewportHeight.set(scroller.clientHeight);
-    this.readingBottom.set(bottomWithin(scroller, lastPart));
+    this.readingBottom.set(scroller.toContentY(lastPart.getBoundingClientRect().bottom));
   }
 
   // Reads the DOM untracked: `readingEnd` refreshes because every re-measure moves `readingBottom`.

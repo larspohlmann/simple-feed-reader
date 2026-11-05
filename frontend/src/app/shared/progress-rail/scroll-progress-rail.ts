@@ -13,7 +13,6 @@ import { overflowsViewport, scrollProgress } from './scroll-progress';
 
 export interface ScrollProgressRailOptions {
   readonly isWide: Signal<boolean>;
-  /** The pane's scroller; the rail listens to it and repaints on its scroll and resize. */
   readonly scroller: () => ScrollHost | undefined;
   /** Where the content ends in the scroller's scroll coordinates, or null when unknown. */
   readonly contentBottom: (scroller: ScrollHost) => number | null;

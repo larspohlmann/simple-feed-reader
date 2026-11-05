@@ -1,3 +1,5 @@
+import { ElementScrollHost } from '../app/shared/scroll-host/scroll-host';
+
 /** Make an element's scrollTop a plain settable value, since jsdom does no layout. */
 export function trackScrollTop(element: HTMLElement): { top: number } {
   const state = { top: 0 };
@@ -23,4 +25,8 @@ export function stubCssEscape(): () => void {
   return () => {
     globals.CSS = previous;
   };
+}
+
+export function elementScrollHost(element: HTMLElement): ElementScrollHost {
+  return new ElementScrollHost(element, (run) => run());
 }

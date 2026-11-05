@@ -40,6 +40,13 @@ describe('ElementScrollHost', () => {
     expect(host.scrollPaddingTop()).toBe(44);
   });
 
+  it('converts a viewport y to a content offset', () => {
+    const element = document.createElement('div');
+    trackScrollTop(element).top = 300;
+    element.getBoundingClientRect = () => ({ top: 56 }) as DOMRect;
+    expect(new ElementScrollHost(element, inZone).toContentY(100)).toBe(344);
+  });
+
   it('delegates scrollTo to the element at call time', () => {
     const element = document.createElement('div');
     const host = new ElementScrollHost(element, inZone);
