@@ -1,4 +1,5 @@
 import { DestroyRef, ElementRef, Signal, computed, effect, inject, signal } from '@angular/core';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { atTop, pullTriggersRefresh, rubberBand } from '../../reader-gestures';
 
 // Ceiling the rubber-banded pull-to-refresh indicator approaches but never reaches.
@@ -9,7 +10,7 @@ const MAX_PULL = 100;
 export const REFRESH_REVEAL = 48;
 
 export interface PullToRefreshOptions {
-  readonly scroller: () => HTMLElement | undefined;
+  readonly scroller: () => ScrollHost | undefined;
   readonly enabled: () => boolean;
   readonly refreshing: Signal<boolean>;
   readonly reduceMotion: boolean;
@@ -53,12 +54,13 @@ export class PullToRefresh {
   // (Re)attach the listeners when the scroll container appears or swaps;
   // touchmove is non-passive so a pull can preventDefault the overscroll.
   private readonly _wirePull = effect(() => {
-    const element = this.options.scroller();
+    const scroller = this.options.scroller();
     this.pullCleanup?.();
     this.pullCleanup = undefined;
-    if (!element) return;
-    const start = (touchEvent: TouchEvent): void => this.onPullStart(touchEvent, element);
-    const move = (touchEvent: TouchEvent): void => this.onPullMove(touchEvent, element);
+    if (!scroller) return;
+    const element = scroller.content;
+    const start = (touchEvent: TouchEvent): void => this.onPullStart(touchEvent, scroller);
+    const move = (touchEvent: TouchEvent): void => this.onPullMove(touchEvent, scroller);
     const end = (): void => this.onPullEnd();
     element.addEventListener('touchstart', start, { passive: true });
     element.addEventListener('touchmove', move, { passive: false });
@@ -78,20 +80,20 @@ export class PullToRefresh {
     inject(DestroyRef).onDestroy(() => this.pullCleanup?.());
   }
 
-  private onPullStart(touchEvent: TouchEvent, element: HTMLElement): void {
+  private onPullStart(touchEvent: TouchEvent, scroller: ScrollHost): void {
     // Only arm a pull that begins at the very top with a single finger.
     this.pullTracking =
-      this.options.enabled() && touchEvent.touches.length === 1 && atTop(element.scrollTop);
+      this.options.enabled() && touchEvent.touches.length === 1 && atTop(scroller.scrollTop);
     if (this.pullTracking) this.pullStartY = touchEvent.touches[0].clientY;
   }
 
-  private onPullMove(touchEvent: TouchEvent, element: HTMLElement): void {
+  private onPullMove(touchEvent: TouchEvent, scroller: ScrollHost): void {
     if (!this.pullTracking || touchEvent.touches.length !== 1) return;
     const dy = touchEvent.touches[0].clientY - this.pullStartY;
     // A downward pull that is still anchored at the top rubber-bands the content;
     // anything else (upward, or the list has since scrolled) releases it and hands
     // the gesture back to normal scrolling.
-    if (dy <= 0 || !atTop(element.scrollTop)) {
+    if (dy <= 0 || !atTop(scroller.scrollTop)) {
       if (this.dragging()) this.dragging.set(false);
       if (this.pulled() !== 0) this.pulled.set(0);
       return;

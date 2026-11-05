@@ -17,7 +17,7 @@ export class NearViewportMedia {
   }
 
   /** The list scrolls inside its own box, so only a margin rooted on it reaches beyond the screen. */
-  scrollWithin(root: Element): void {
+  scrollWithin(root: Element | null): void {
     if (typeof IntersectionObserver === 'undefined') return;
     this.observer?.disconnect();
     this.observer = new IntersectionObserver((changes) => this.sight(changes), {

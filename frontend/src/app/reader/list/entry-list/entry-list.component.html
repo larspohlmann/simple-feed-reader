@@ -101,7 +101,6 @@
     [style.transform]="pull.revealTransform()"
     [appScrollProgress]="progressRail"
     #rows
-    [appScrollOutsideZone]="scrolling.onScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
@@ -149,7 +148,6 @@
     [style.transform]="pull.revealTransform()"
     [appScrollProgress]="progressRail"
     #rows
-    [appScrollOutsideZone]="scrolling.onScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own

@@ -541,7 +541,7 @@ describe('ReaderShellComponent', () => {
       function scrollListDown(fixture: ComponentFixture<ReaderShellComponent>): void {
         const list = fixture.debugElement.query(By.directive(EntryListComponent))
           .componentInstance as EntryListComponent;
-        list.scrolling.onScroll({ target: { scrollTop: 900 } } as unknown as Event);
+        list.scrolling.onScroll(900);
         fixture.detectChanges();
       }
 

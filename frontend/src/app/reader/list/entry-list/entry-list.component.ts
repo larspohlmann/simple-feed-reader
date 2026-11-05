@@ -27,7 +27,6 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { MagazineBlockComponent, NO_TAGS } from '../magazine/magazine-block.component';
 import { ListHeaderComponent, TitleCount } from '../list-header/list-header.component';
 import { ListEmptyStateComponent } from '../list-empty-state/list-empty-state.component';
-import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.directive';
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
 import { Selection, canScopedRefresh, offersMarkAboveRead } from '../../query/query';
@@ -75,7 +74,6 @@ const WAIT_OVERLAY_DELAY_MS = 150;
     ListHeaderComponent,
     ListEmptyStateComponent,
     ToTopButtonComponent,
-    ScrollOutsideZoneDirective,
     ProgressRailComponent,
     ScrollProgressDirective,
   ],
@@ -206,18 +204,17 @@ export class EntryListComponent implements OnDestroy {
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly nearViewport = inject(NearViewportMedia);
-  private readonly _nearViewportRoot = effect(() => {
-    const rows = this.rows()?.nativeElement;
-    if (rows) this.nearViewport.scrollWithin(rows);
-  });
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private readonly header = viewChild(ListHeaderComponent);
-  private readonly scroller = (): HTMLElement | undefined => this.rows()?.nativeElement;
   private readonly scrollHosts = inject(ScrollHosts);
   private readonly scrollHost = computed((): ScrollHost | undefined => {
     const rows = this.rows()?.nativeElement;
     return rows ? this.scrollHosts.forElement(rows) : undefined;
+  });
+  private readonly _nearViewportRoot = effect(() => {
+    const scroller = this.scrollHost();
+    if (scroller) this.nearViewport.scrollWithin(scroller.intersectionRoot);
   });
 
   readonly content = new ListContent({
@@ -289,7 +286,7 @@ export class EntryListComponent implements OnDestroy {
   });
 
   readonly pull = new PullToRefresh({
-    scroller: this.scroller,
+    scroller: this.scrollHost,
     enabled: () =>
       this.canRefresh() && !this.screen.isWide() && !this.reduceMotion && !this.refreshing(),
     refreshing: this.refreshing,
@@ -307,9 +304,9 @@ export class EntryListComponent implements OnDestroy {
   // Re-observe whenever the sentinel appears/disappears (hasMore toggles it).
   private readonly _wire = effect(() => {
     const node = this.sentinel()?.nativeElement;
-    const root = this.rows()?.nativeElement ?? null;
+    const scroller = this.scrollHost();
     this.observer?.disconnect();
-    if (node && typeof IntersectionObserver !== 'undefined') {
+    if (node && scroller && typeof IntersectionObserver !== 'undefined') {
       this.observer = new IntersectionObserver(
         (es) => {
           if (
@@ -319,20 +316,20 @@ export class EntryListComponent implements OnDestroy {
           )
             this.loadMore.emit();
         },
-        { root, rootMargin: prefetchMargin(root?.clientHeight ?? 0) },
+        { root: scroller.intersectionRoot, rootMargin: prefetchMargin(scroller.clientHeight) },
       );
       this.observer.observe(node);
     }
   });
 
   private readonly aboveFold = new ListAboveFold({
-    scroller: this.scroller,
+    scroller: this.scrollHost,
     header: () => this.listHdr()?.nativeElement,
     groups: () => this.content.visibleBlocks().filter((block) => block.kind === 'group'),
   });
 
   readonly scrolling = new ListScrollState({
-    scroller: this.scroller,
+    scroller: this.scrollHost,
     selection: this.selection,
     loading: this.loading,
     layout: this.layout,
