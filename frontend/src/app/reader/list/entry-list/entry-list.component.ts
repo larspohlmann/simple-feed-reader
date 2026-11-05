@@ -19,7 +19,6 @@ import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
-import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
@@ -75,7 +74,6 @@ const WAIT_OVERLAY_DELAY_MS = 150;
     ListEmptyStateComponent,
     ToTopButtonComponent,
     ProgressRailComponent,
-    ScrollProgressDirective,
   ],
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
@@ -349,6 +347,7 @@ export class EntryListComponent implements OnDestroy {
 
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
+    scroller: this.scrollHost,
     contentBottom: this.listBottom.measure,
     layout: this.listBottom.layout,
   });

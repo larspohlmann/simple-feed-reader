@@ -94,6 +94,7 @@ export class ArticlePageComponent {
   private readonly scroller = computed(() => this.layer()?.scroller());
 
   protected readonly progressRail = new ScrollProgressRail({
+    scroller: this.scroller,
     isWide: inject(LayoutService).isWide,
     contentBottom: this.scope.readingEnd,
     layout: this.scope.readingEnd,

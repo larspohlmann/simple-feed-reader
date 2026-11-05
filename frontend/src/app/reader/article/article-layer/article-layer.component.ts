@@ -13,7 +13,6 @@ import {
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
-import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
@@ -30,13 +29,7 @@ import { ArticleGestures } from './article-gestures.service';
  *  the toolbar's actions and the nameplate are projected by the reader using it. */
 @Component({
   selector: 'app-article-layer',
-  imports: [
-    ProgressRailComponent,
-    ScrollProgressDirective,
-    IconComponent,
-    SpinnerComponent,
-    ToTopButtonComponent,
-  ],
+  imports: [ProgressRailComponent, IconComponent, SpinnerComponent, ToTopButtonComponent],
   providers: [ArticleGestures],
   templateUrl: './article-layer.component.html',
   styleUrl: './article-layer.component.scss',

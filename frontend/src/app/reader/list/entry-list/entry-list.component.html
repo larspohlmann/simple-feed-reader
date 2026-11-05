@@ -99,7 +99,7 @@
     [attr.aria-busy]="loading() || mutating() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [appScrollProgress]="progressRail"
+    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
   >
     @if (topBlock(); as block) {
@@ -146,7 +146,7 @@
     [attr.aria-busy]="loading() || mutating() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [appScrollProgress]="progressRail"
+    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
   >
     @if (topBlock(); as block) {

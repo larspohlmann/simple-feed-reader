@@ -8,22 +8,24 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import type { ScrollHost } from '../scroll-host/scroll-host';
 import { overflowsViewport, scrollProgress } from './scroll-progress';
 
 export interface ScrollProgressRailOptions {
   readonly isWide: Signal<boolean>;
+  /** The pane's scroller; the rail listens to it and repaints on its scroll and resize. */
+  readonly scroller: () => ScrollHost | undefined;
   /** Where the content ends in the scroller's scroll coordinates, or null when unknown. */
-  readonly contentBottom: (scroller: HTMLElement) => number | null;
+  readonly contentBottom: (scroller: ScrollHost) => number | null;
   /** Changes whenever the content's end may have moved; the rail repaints once rendered. */
   readonly layout: Signal<unknown>;
 }
 
 /** A scroller's length-and-position cue (#238), for the article and the paged list
- *  alike: the scroller (`appScrollProgress`) and the rail (`app-progress-rail`) attach
- *  themselves, and `paint()` writes the fill without change detection (#501). */
+ *  alike: the rail (`app-progress-rail`) attaches
+ *  itself, and `paint()` writes the fill without change detection (#501). */
 export class ScrollProgressRail {
   private readonly injector = inject(Injector);
-  private readonly scroller = signal<HTMLElement | undefined>(undefined);
   private rail?: HTMLElement;
 
   readonly overflows = signal(false);
@@ -43,26 +45,22 @@ export class ScrollProgressRail {
     afterNextRender(() => this.paint(), { injector: this.injector });
   });
 
-  private readonly _paintOnResize = effect((onCleanup) => {
-    const scroller = this.scroller();
-    if (!scroller || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => this.paint());
-    observer.observe(scroller);
-    onCleanup(() => observer.disconnect());
+  private readonly _followScroller = effect((onCleanup) => {
+    const scroller = this.options.scroller();
+    if (!scroller) {
+      this.overflows.set(false);
+      this.knowsLength.set(false);
+      return;
+    }
+    const stopListening = scroller.listen(this.paint);
+    const stopWatching = scroller.watchResize(this.paint);
+    onCleanup(() => {
+      stopListening();
+      stopWatching();
+    });
   });
 
   constructor(private readonly options: ScrollProgressRailOptions) {}
-
-  attachScroller(scroller: HTMLElement): void {
-    this.scroller.set(scroller);
-  }
-
-  detachScroller(scroller: HTMLElement): void {
-    if (untracked(this.scroller) !== scroller) return;
-    this.scroller.set(undefined);
-    this.overflows.set(false);
-    this.knowsLength.set(false);
-  }
 
   attachRail(rail: HTMLElement): void {
     this.rail = rail;
@@ -74,7 +72,7 @@ export class ScrollProgressRail {
   }
 
   readonly paint = (): void => {
-    const scroller = untracked(this.scroller);
+    const scroller = untracked(this.options.scroller);
     if (!scroller) return;
     const bottom = this.options.contentBottom(scroller);
     this.knowsLength.set(bottom !== null);

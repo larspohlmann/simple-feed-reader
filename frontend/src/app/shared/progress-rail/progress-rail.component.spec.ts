@@ -9,6 +9,7 @@ describe('ProgressRailComponent', () => {
       () =>
         new ScrollProgressRail({
           isWide: signal(isWide),
+          scroller: () => undefined,
           contentBottom: () => null,
           layout: signal(0),
         }),

@@ -1,4 +1,5 @@
 import { Signal, computed, effect } from '@angular/core';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { EntryDto } from '../../models';
 import { TitleCount } from '../list-header/list-header.component';
 import { ListContent } from './list-content';
@@ -40,11 +41,11 @@ export class EstimatedListBottom {
 
   constructor(private readonly options: EstimatedListBottomOptions) {}
 
-  readonly measure = (scroller: HTMLElement): number | null => {
-    const slots = scroller.querySelectorAll<HTMLElement>('.row-slot');
+  readonly measure = (scroller: ScrollHost): number | null => {
+    const slots = scroller.content.querySelectorAll<HTMLElement>('.row-slot');
     if (slots.length === 0) return null;
     const layout = this.layout();
-    const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
+    const origin = scroller.viewportTop() - scroller.scrollTop;
     return estimatedListBottom({
       rowsTop: slots[0].getBoundingClientRect().top - origin,
       rowsBottom: slots[slots.length - 1].getBoundingClientRect().bottom - origin,
