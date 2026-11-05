@@ -115,3 +115,17 @@ it.each(['Enter', ' '])('keeps a "%s" key on a mini card from reaching the card'
 
   expect(cardKey).not.toHaveBeenCalled();
 });
+
+it.each(['Enter', ' '])('keeps a "%s" key on the toggle from reaching the card', (key) => {
+  const card = document.createElement('div');
+  const cardKey = jest.fn();
+  card.addEventListener('keydown', cardKey);
+  const element = mount(anEntry({ duplicates: copies }));
+  card.appendChild(element);
+
+  element
+    .querySelector('.toggle')!
+    .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+  expect(cardKey).not.toHaveBeenCalled();
+});

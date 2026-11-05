@@ -13,7 +13,6 @@ import { alsoFootOf } from './also-foot';
 
 let nextId = 0;
 
-/** A magazine card's other sources for the same story: one line that opens into mini cards (#2036). */
 @Component({
   selector: 'app-more-sources',
   changeDetection: ChangeDetectionStrategy.OnPush,

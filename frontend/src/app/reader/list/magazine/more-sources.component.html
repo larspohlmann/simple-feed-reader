@@ -4,7 +4,7 @@
       type="button"
       class="toggle reads-as-text"
       [attr.aria-expanded]="expanded()"
-      [attr.aria-controls]="panelId"
+      [attr.aria-controls]="expanded() ? panelId : null"
       (click)="toggle($event)"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"

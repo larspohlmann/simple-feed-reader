@@ -48,9 +48,12 @@
 }
 
 @media (hover: hover) {
-  .toggle:hover,
-  .mini:hover {
+  .toggle:hover {
     background: var(--card-hover-bg);
+  }
+
+  .mini:hover {
+    background: var(--border);
   }
 }
 
