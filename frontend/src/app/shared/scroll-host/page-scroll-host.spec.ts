@@ -152,11 +152,16 @@ describe('PageScrollHost', () => {
     const layerHost = (layer: PageLayer): PageScrollHost =>
       new PageScrollHost(content, { view: window, outsideZone: inZone }, layer);
 
+    afterEach(() => {
+      element.className = '';
+      element.removeAttribute('style');
+    });
+
     it('reports its pin and hears none of the page the layer above scrolls', () => {
       const layer = new PageLayer(element);
       const host = layerHost(layer);
       const heard: number[] = [];
-      host.listen(() => heard.push(host.scrollTop));
+      const stop = host.listen(() => heard.push(host.scrollTop));
 
       layer.pinAt(1200);
       page.top = 300;
@@ -165,6 +170,7 @@ describe('PageScrollHost', () => {
       expect(host.scrollTop).toBe(1200);
       expect(host.toContentY(10)).toBe(1210);
       expect(heard).toEqual([]);
+      stop();
     });
 
     it('moves its pin on a write and leaves the page to the layer above', () => {

@@ -101,7 +101,7 @@ describe('PageScrollOwner', () => {
     expect(state(list)).toBe('in flow');
   });
 
-  it('never pins a layer that is already pinned', () => {
+  it('pins only the layer that was in the flow', () => {
     const pinnedTwice: string[] = [];
     const watch = (name: string, layer: PageLayer): PageLayer => {
       const pinAt = layer.pinAt.bind(layer);
