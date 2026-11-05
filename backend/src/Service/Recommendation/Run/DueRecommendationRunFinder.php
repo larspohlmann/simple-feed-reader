@@ -8,7 +8,6 @@ use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Support\AiReadiness;
 use App\Service\Recommendation\Run\Support\IntervalElapsed;
 use Symfony\Component\Clock\ClockInterface;
@@ -22,7 +21,6 @@ final readonly class DueRecommendationRunFinder
     public function __construct(
         private RecommendationSettingsRepository $settings,
         private RecommendationRunRepository $runs,
-        private AiProviderConfigurator $configurator,
         private ClockInterface $clock,
     ) {
     }
@@ -47,7 +45,7 @@ final readonly class DueRecommendationRunFinder
 
     private function isDue(RecommendationSettings $row, User $user): bool
     {
-        if (!AiReadiness::of($this->configurator->settingsFor($user))) {
+        if (!AiReadiness::of($user->getActiveAiProviderSettings())) {
             return false;
         }
 

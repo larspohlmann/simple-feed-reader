@@ -10,13 +10,21 @@ use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Exception\ConfigurationNotFoundException;
 
 /**
- * Turns a route's `{id}` into a row the requesting account owns; every `{id}` route in AiSettingsController goes
- * through here. Another account's row reads as missing (404, not 403), so a caller never learns an id exists.
+ * Finds the configurations an account owns. A route's `{id}` resolves through require(): another account's row reads
+ * as missing (404, not 403), so a caller never learns an id exists.
  */
 final readonly class AiConfigurationForUser
 {
     public function __construct(private AiProviderSettingsRepository $aiProviderSettings)
     {
+    }
+
+    /**
+     * @return list<AiProviderSettings> oldest first
+     */
+    public function all(User $user): array
+    {
+        return $this->aiProviderSettings->findAllForUser($user);
     }
 
     /**

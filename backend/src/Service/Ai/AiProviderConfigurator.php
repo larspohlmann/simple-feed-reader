@@ -11,7 +11,6 @@ use App\Repository\AiProviderSettingsRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ModelRequiredForActivationException;
@@ -44,31 +43,6 @@ final readonly class AiProviderConfigurator
         private AiConfigurationFactory $configurationFactory,
         private RecommendationSettingsRepository $recommendationSettings,
     ) {
-    }
-
-    public function settingsFor(User $user): ?AiProviderSettings
-    {
-        return $user->getActiveAiProviderSettings();
-    }
-
-    /**
-     * Refuses an account with no active configuration before a caller spends its outbound-call budget, and returns
-     * the row so the call after the spend need not load it again.
-     *
-     * @throws AiNotConfiguredException
-     */
-    public function requireConfiguration(User $user): AiProviderSettings
-    {
-        return $this->settingsFor($user)
-            ?? throw new AiNotConfiguredException('This account has no active AI configuration.');
-    }
-
-    /**
-     * @return list<AiProviderSettings> every configuration this account owns, oldest first
-     */
-    public function listConfigurations(User $user): array
-    {
-        return $this->aiProviderSettings->findAllForUser($user);
     }
 
     /**

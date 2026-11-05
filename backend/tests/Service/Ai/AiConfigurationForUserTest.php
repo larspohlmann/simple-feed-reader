@@ -64,4 +64,14 @@ final class AiConfigurationForUserTest extends DbTestCase
         $this->expectException(ConfigurationNotFoundException::class);
         $this->resolver()->require($owner, 999999);
     }
+
+    public function testAllListsOnlyTheAccountsRowsOldestFirst(): void
+    {
+        $owner = $this->user('resolver-all@example.test');
+        $first = $this->persistConfiguration($owner);
+        $second = $this->persistConfiguration($owner);
+        $this->persistConfiguration($this->user('resolver-all-other@example.test'));
+
+        self::assertSame([$first, $second], $this->resolver()->all($owner));
+    }
 }

@@ -6,7 +6,6 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 
@@ -23,14 +22,13 @@ final readonly class TickLockTtl
     public const float MARGIN_SECONDS = 300.0;
 
     public function __construct(
-        private AiProviderConfigurator $configurator,
         private ProviderConnectionFactory $connectionFactory,
     ) {
     }
 
     public function secondsFor(User $user): float
     {
-        return $this->secondsForConnection($this->configurator->settingsFor($user));
+        return $this->secondsForConnection($user->getActiveAiProviderSettings());
     }
 
     /** No connection gets the standard bound: a tick that only fails its run still holds the lock briefly. */

@@ -36,7 +36,7 @@ final readonly class AiSettingsController
     public function __construct(
         private AiProviderConfigurator $configurator,
         private AiConfigurationEditor $editor,
-        private AiConfigurationForUser $configuration,
+        private AiConfigurationForUser $configurations,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiProviderLimiter,
         private AiSettingsJson $settingsJson,
@@ -47,7 +47,7 @@ final readonly class AiSettingsController
     public function list(#[CurrentUser] User $user): JsonResponse
     {
         return new JsonResponse($this->settingsJson->list(
-            $this->configurator->listConfigurations($user),
+            $this->configurations->all($user),
             $user->getActiveAiProviderSettings()?->getId(),
         ));
     }
@@ -69,7 +69,7 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}/duplicate', name: 'api_me_ai_duplicate', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function duplicate(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        $source = $this->configuration->require($user, $id);
+        $source = $this->configurations->require($user, $id);
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
         $copy = $this->configurator->duplicateConfiguration($source);
 
@@ -82,7 +82,7 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}/models', name: 'api_me_ai_models', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function models(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
 
         return new JsonResponse($this->settingsJson->models($this->configurator->listModels($configuration)));
@@ -94,7 +94,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SaveModelRequest $request,
     ): JsonResponse {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
         $this->configurator->chooseModel($configuration, $request->model);
 
@@ -107,7 +107,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] RenameConfigurationRequest $request,
     ): JsonResponse {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->editor->rename($configuration, $request->name);
 
         return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
@@ -124,7 +124,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SetReasoningRequest $request,
     ): JsonResponse {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->editor->setSuppressReasoning($configuration, $request->suppressReasoning);
 
         return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
@@ -141,7 +141,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SetSlowModelRequest $request,
     ): JsonResponse {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->editor->setSlowModel($configuration, $request->slowModel);
 
         return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
@@ -158,7 +158,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SetBatchConcurrencyRequest $request,
     ): JsonResponse {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->editor->setBatchConcurrency($configuration, $request->batchConcurrency);
 
         return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
@@ -180,7 +180,7 @@ final readonly class AiSettingsController
         #[MapRequestPayload(serializationContext: [AbstractNormalizer::REQUIRE_ALL_PROPERTIES => true])]
         SetMaxBatchSizeRequest $request,
     ): JsonResponse {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->editor->setMaxBatchSize($configuration, $request->maxBatchSize);
 
         return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
@@ -189,7 +189,7 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}/active', name: 'api_me_ai_activate', requirements: ['id' => '\d+'], methods: ['PUT'])]
     public function activate(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        $configuration = $this->configuration->require($user, $id);
+        $configuration = $this->configurations->require($user, $id);
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
         $this->configurator->activate($configuration);
 
@@ -199,7 +199,7 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}', name: 'api_me_ai_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     public function delete(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        $this->configurator->deleteConfiguration($this->configuration->require($user, $id));
+        $this->configurator->deleteConfiguration($this->configurations->require($user, $id));
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

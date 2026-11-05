@@ -12,7 +12,6 @@ use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\DueRecommendationRunFinder;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
@@ -158,13 +157,10 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         self::assertInstanceOf(RecommendationSettingsRepository::class, $settings);
         $runs = self::getContainer()->get(RecommendationRunRepository::class);
         self::assertInstanceOf(RecommendationRunRepository::class, $runs);
-        $configurator = self::getContainer()->get(AiProviderConfigurator::class);
-        self::assertInstanceOf(AiProviderConfigurator::class, $configurator);
 
         $finder = new DueRecommendationRunFinder(
             $settings,
             $runs,
-            $configurator,
             new MockClock(new \DateTimeImmutable('2026-08-09 12:00:00')),
         );
 
