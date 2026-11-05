@@ -811,7 +811,9 @@ describe('ReaderViewComponent', () => {
 
       scrollTo(800);
 
-      expect(host.querySelector('app-progress-rail')!.parentElement!.classList).toContain('frame');
+      expect(host.querySelector('app-progress-rail')!.parentElement!.classList).toContain(
+        'chrome-head',
+      );
       expect(fill()).toBe('50');
     });
 

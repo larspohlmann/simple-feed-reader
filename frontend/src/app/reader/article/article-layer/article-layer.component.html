@@ -4,19 +4,23 @@
   [style.transform]="gestures.swipeTransform()"
   [style.transition]="gestures.snapTransition()"
 >
-  @if (fullscreen()) {
-    <!-- The toolbar below retracts on scroll, so full-screen the nameplate needs
-         a strip of its own. aria-hidden: the h1 carries the same title, so
-         announcing this too would read the headline twice. -->
-    <div class="mini" aria-hidden="true">
-      <ng-content select="[articleMini]" />
+  <div class="chrome-head">
+    @if (fullscreen()) {
+      <!-- The toolbar below retracts on scroll, so full-screen the nameplate needs
+           a strip of its own. aria-hidden: the h1 carries the same title, so
+           announcing this too would read the headline twice. -->
+      <div class="mini" aria-hidden="true">
+        <ng-content select="[articleMini]" />
+      </div>
+    }
+    <div #bar class="bar" [class.hidden]="toolbarHidden()">
+      <button class="close" type="button" [attr.aria-label]="backLabel()" (click)="onBackButton()">
+        <app-icon name="arrow_back" size="md" />
+      </button>
+      <ng-content select="[articleBar]" />
     </div>
-  }
-  <div #bar class="bar" [class.hidden]="toolbarHidden()">
-    <button class="close" type="button" [attr.aria-label]="backLabel()" (click)="onBackButton()">
-      <app-icon name="arrow_back" size="md" />
-    </button>
-    <ng-content select="[articleBar]" />
+    <!-- No progressbar role: announcing every scroll frame would only be noise. -->
+    <app-progress-rail [progress]="progressRail()" />
   </div>
   <div #scroller class="scroller" [class.scrollbar-hidden]="progressRail().replacesScrollbar()">
     <div
@@ -33,27 +37,27 @@
       }
     </div>
   </div>
-  <!-- No progressbar role: announcing every scroll frame would only be noise. -->
-  <app-progress-rail [progress]="progressRail()" />
-  <div class="corner-actions">
-    <ng-content select="[articleCorner]" />
-  </div>
-  <div class="dock">
-    <ng-content select="[articleDock]" />
-  </div>
-  @if (!leaving()) {
-    <div class="end-corner">
-      @if (showToTop()) {
-        <app-to-top-button (activate)="toTop.emit()" />
-      }
-      <button
-        class="corner-back"
-        type="button"
-        [attr.aria-label]="backLabel()"
-        (click)="onBackButton()"
-      >
-        <app-icon name="arrow_back" size="dense" />
-      </button>
+  <div class="chrome-foot">
+    <div class="corner-actions">
+      <ng-content select="[articleCorner]" />
     </div>
-  }
+    <div class="dock">
+      <ng-content select="[articleDock]" />
+    </div>
+    @if (!leaving()) {
+      <div class="end-corner">
+        @if (showToTop()) {
+          <app-to-top-button (activate)="toTop.emit()" />
+        }
+        <button
+          class="corner-back"
+          type="button"
+          [attr.aria-label]="backLabel()"
+          (click)="onBackButton()"
+        >
+          <app-icon name="arrow_back" size="dense" />
+        </button>
+      </div>
+    }
+  </div>
 </div>

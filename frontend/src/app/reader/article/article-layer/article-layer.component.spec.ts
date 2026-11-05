@@ -82,6 +82,21 @@ describe('ArticleLayerComponent', () => {
     expect(element.querySelector('.scroller .dock-probe')).toBeNull();
   });
 
+  it('holds the chrome in a head and a foot around the scroller (#2038)', () => {
+    goFullscreen();
+    const frame = element.querySelector('.frame')!;
+
+    const order = Array.from(frame.children).map((child) => child.className.split(' ')[0]);
+
+    expect(order).toEqual(['chrome-head', 'scroller', 'chrome-foot']);
+    expect(element.querySelector('.chrome-head .mini')).not.toBeNull();
+    expect(element.querySelector('.chrome-head .bar .probe')).not.toBeNull();
+    expect(element.querySelector('.chrome-head app-progress-rail')).not.toBeNull();
+    expect(element.querySelector('.chrome-foot .corner-actions .corner-probe')).not.toBeNull();
+    expect(element.querySelector('.chrome-foot .dock .dock-probe')).not.toBeNull();
+    expect(element.querySelector('.chrome-foot .end-corner .corner-back')).not.toBeNull();
+  });
+
   it('emits back from the back button in the split pane', () => {
     (element.querySelector('.bar .close') as HTMLButtonElement).click();
 

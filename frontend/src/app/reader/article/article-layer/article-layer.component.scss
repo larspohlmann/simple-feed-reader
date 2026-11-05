@@ -52,6 +52,33 @@
   scroll-padding-top: var(--reader-top);
 }
 
+/* The pane's chrome, outside the scroller so a tap reaches it (#1332). Above the isolated
+   scroller; the head spans the pane for the rail, the foot anchors the corners. */
+.chrome-head,
+.chrome-foot {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.chrome-head {
+  top: 0;
+  bottom: 0;
+}
+
+.chrome-foot {
+  bottom: 0;
+}
+
+.mini,
+.bar,
+.corner-actions,
+.dock,
+.end-corner {
+  pointer-events: auto;
+}
+
 /* Set on .reader, not the projected article this layer's styles cannot reach;
    the article inherits it. */
 .reader.with-tail {
