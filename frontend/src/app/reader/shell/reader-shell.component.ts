@@ -60,6 +60,7 @@ import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
+import { holdReaderPage } from './reader-page';
 import { SightedPreviews } from './sighted-previews.service';
 import { PreviewProgress } from '../link-card/preview-progress';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -227,6 +228,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Mirror of the sidebar's Organise model. Owned here so closing the drawer
    *  can reset it, and so the close-swipe pauses while a drag is possible. */
   readonly sidebarOrganising = signal(false);
+
+  /** The drawer and a full-screen article cover the list; nothing may scroll it beneath them. */
+  private readonly _holdPage = holdReaderPage(
+    computed(() => (this.sidebarOpen() && this.screen.isNarrow()) || this.articleFullscreen()),
+  );
 
   /** The wide-layout sidebar is collapsed: the user hid it, and the layout is
    *  not the narrow drawer, where `sidebarOpen` governs instead. Drives both the

@@ -193,7 +193,8 @@ function describeElement(element: Element): string {
 }
 
 function scrolledElements(): Record<string, unknown>[] {
-  return Array.from(document.querySelectorAll('body *'))
+  const page = document.scrollingElement ?? document.documentElement;
+  return [page, ...Array.from(document.querySelectorAll('body *'))]
     .filter((element) => element.scrollTop > 0)
     .slice(0, MAX_SCROLLED_ELEMENTS)
     .map((element) => ({

@@ -608,6 +608,13 @@ describe('ReaderShellComponent', () => {
 
   // #87: the header is an overlay, so hiding it must change the header and
   // nothing else — no layout pass that resizes the scroller under the finger.
+  it('claims the page while mounted (#2038)', () => {
+    const fixture = boot();
+    expect(document.documentElement.classList).toContain('reader-page');
+    fixture.destroy();
+    expect(document.documentElement.classList).not.toContain('reader-page');
+  });
+
   describe('hide-on-scroll header', () => {
     it('publishes a bar height that does not move when the bar does', () => {
       const fixture = boot();
