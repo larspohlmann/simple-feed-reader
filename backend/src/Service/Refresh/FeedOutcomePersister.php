@@ -12,13 +12,11 @@ use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\Model\IncomingFeedModel;
-use App\Service\Search\EntryIndexer;
 use App\Service\Social\Model\TimelinePageModel;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -35,10 +33,8 @@ final readonly class FeedOutcomePersister
         private EntityManagerInterface $entityManager,
         private FeedRepository $feeds,
         private FeedBodyParser $bodyParser,
-        private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
-        private EntryIndexer $indexer,
-        private IncomingEntries $incomingEntries,
+        private IncomingPageStore $pageStore,
         private FeedShareEnrichment $shareEnrichment,
         private LoggerInterface $logger,
     ) {
@@ -58,11 +54,10 @@ final readonly class FeedOutcomePersister
     {
         $context = new FeedIngestContext($now, $feed->getLastSuccessfulFetchAt());
 
-        return $this->guarded($feed, fn (): FeedRefreshResultModel => $this->storeIngested(
+        return $this->guarded(
             $feed,
-            $this->incomingEntries->ofTimeline($feed, $page),
-            $context,
-        ));
+            fn (): FeedRefreshResultModel => $this->pageStore->storeTimeline($feed, $page, $context),
+        );
     }
 
     public function storeFailure(Feed $feed, \Exception $failure): FeedRefreshResultModel
@@ -111,7 +106,7 @@ final readonly class FeedOutcomePersister
             $feed->recordCacheValidators($response->etag, $response->lastModified);
             $this->applyPermanentRedirect($feed, $response);
 
-            return $this->storeIngested($feed, IncomingFeedModel::parsed($parsed), $context);
+            return $this->pageStore->store($feed, IncomingFeedModel::parsed($parsed), $context);
         } catch (FeedThrottledException $exception) {
             return $this->recordThrottled($feed, $exception->retryAfterSeconds);
         } catch (FeedGoneException $exception) {
@@ -131,26 +126,6 @@ final readonly class FeedOutcomePersister
         $this->shareEnrichment->enrich($feed);
 
         return FeedRefreshResultModel::of(FeedOutcome::NotModified);
-    }
-
-    /** @throws \DateMalformedStringException */
-    private function storeIngested(
-        Feed $feed,
-        IncomingFeedModel $incoming,
-        FeedIngestContext $context,
-    ): FeedRefreshResultModel {
-        $stored = $this->incomingEntries->withoutDeletedPosts($feed, $incoming);
-        $createdEntries = $this->ingestor->ingest($feed, $stored->parsed, $context);
-        // A backfilled image is not new content, so it stays out of the count.
-        $this->ingestor->fillMissingImages($feed, $stored->parsed);
-        $this->scheduler->recordSuccess($feed, \count($createdEntries));
-        $this->incomingEntries->settle($feed, $stored, $createdEntries);
-        $this->entityManager->flush();
-        // Only the flush assigns ids, so indexing has to follow it.
-        $this->indexer->index($createdEntries);
-        $this->shareEnrichment->enrich($feed);
-
-        return FeedRefreshResultModel::fetched(\count($createdEntries));
     }
 
     /** @throws \DateMalformedStringException */
