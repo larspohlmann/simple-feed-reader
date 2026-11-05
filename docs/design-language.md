@@ -61,6 +61,8 @@ discover panel and the auth card each arrived at 12px independently.
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
 | `--footer-chip-name-max` | `24ch` | the feed name in an "Also in" / "Also covered by" footer chip, which ellipsises past it; the chip's `title` carries the full name (#2017) |
+| `--mini-card-thumb` | `32px` | the square thumbnail of a magazine card's "more sources" mini card (#2036) |
+| `--mini-card-min-w` | `12rem` | the narrowest a mini card gets before the "more sources" grid drops a column (#2036) |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
@@ -1499,6 +1501,20 @@ On a coarse pointer the buttons grow to `--tap-target` height on negative
 margins alone, so a card never gets taller on a phone, and the gap between
 them widens to exactly twice a button's touch padding, so the enlarged hit
 boxes tile edge to edge — a tap on the star must never land on keep.
+
+---
+
+### `<app-more-sources>`
+
+A magazine card's other sources for the same story or post (#2036): one accent line,
+"x more sources", that opens in place into a grid of mini cards — the smallest card in
+the app: a `--mini-card-thumb` square (the copy's picture, else its favicon on
+`--surface-1`), the feed and relative time, and a one-line title. A mini card opens its
+copy; it carries no actions. The grid fills `--mini-card-min-w` columns, so a narrow
+card stacks them and a hero lays out two or three.
+
+**Not for:** the list view, whose `entry-row` keeps `<app-entry-duplicates>` — chips that
+open the copy's row in a popover.
 
 ---
 

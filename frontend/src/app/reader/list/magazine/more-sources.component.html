@@ -1,0 +1,50 @@
+@if (copies().length) {
+  <div class="more-sources">
+    <button
+      type="button"
+      class="toggle reads-as-text"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-controls]="panelId"
+      (click)="toggle($event)"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    >
+      <app-icon name="layers" size="sm" aria-hidden="true" />
+      {{ countKey() | transloco: { count: copies().length } }}
+      <app-icon [name]="expanded() ? 'expand_less' : 'expand_more'" size="sm" aria-hidden="true" />
+    </button>
+    @if (expanded()) {
+      <div class="minis" [id]="panelId">
+        @for (source of sources(); track source.copy.id) {
+          <button
+            type="button"
+            class="mini reads-as-text"
+            [attr.title]="source.feed + ' · ' + source.title"
+            (click)="open(source.copy, $event)"
+            (keydown.enter)="$event.stopPropagation()"
+            (keydown.space)="$event.stopPropagation()"
+          >
+            @if (source.copy.imageUrl) {
+              <img class="thumb" [src]="source.copy.imageUrl" alt="" loading="lazy" />
+            } @else {
+              <span class="thumb">
+                <app-favicon
+                  [url]="source.copy.faviconUrl"
+                  [avatarUrl]="source.avatarUrl"
+                  [size]="16"
+                />
+              </span>
+            }
+            <span class="text">
+              <span class="byline"
+                ><span class="feed">{{ source.feed }}</span
+                ><span class="when"> · {{ source.when }}</span></span
+              >
+              <span class="title">{{ source.title }}</span>
+            </span>
+          </button>
+        }
+      </div>
+    }
+  </div>
+}
