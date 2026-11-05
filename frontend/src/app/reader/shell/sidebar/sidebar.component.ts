@@ -197,7 +197,7 @@ export class SidebarComponent {
     }
     if (!this.returningFromHidden) return;
     this.returningFromHidden = false;
-    this.collapseButton()?.nativeElement.focus();
+    this.collapseButton()?.nativeElement.focus({ preventScroll: true });
   });
 
   /** A convertible losing its coarse pointer (docked keyboard, DevTools

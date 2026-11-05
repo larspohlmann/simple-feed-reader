@@ -31,10 +31,11 @@ const LAYER = 'app-reader-view app-article-layer';
 const LAST_PARAGRAPH = 'Paragraph 39 of filler text';
 const FEED_TITLE = 'Fixture feed';
 
-const TALL_BODY = Array.from(
-  { length: 40 },
-  (_, i) =>
-    `<p>Paragraph ${i} of filler text, long enough that the article runs past a screen.</p>`,
+const LINKED_PARAGRAPH = 20;
+const TALL_BODY = Array.from({ length: 40 }, (_, index) =>
+  index === LINKED_PARAGRAPH
+    ? `<p>Paragraph ${index} of filler text, with <a href="https://news.test/inline">an inline link</a>.</p>`
+    : `<p>Paragraph ${index} of filler text, long enough that the article runs past a screen.</p>`,
 ).join('');
 
 const ENTRIES = Array.from({ length: 40 }, (_, i) =>
@@ -232,7 +233,6 @@ test.describe('A full-screen article owns the page on a phone', () => {
     await expect(linkReader).toHaveCount(0);
     expect(await pageScrollY(page)).toBe(articleOffset);
     await expect(page.locator('.article-overlay')).not.toHaveClass(/page-pinned/);
-    expect(await page.evaluate(() => document.documentElement.style.scrollPaddingTop)).not.toBe('');
 
     await page.locator(`${LAYER} .corner-back`).click();
     await expectListBackAtItsOffset(page);
@@ -261,6 +261,54 @@ test.describe('A full-screen article owns the page beneath the app bar on a wide
 
     await close.click();
     await expectListBackAtItsOffset(page);
+  });
+});
+
+test.describe('Keyboard focus on a full-screen article on a wide screen', () => {
+  test.use({ viewport: WIDE });
+
+  test.beforeEach(async ({ page }) => {
+    await openReader(page, 'list');
+    await openArticleFromList(page);
+    await scrollPageTo(page, ARTICLE_OFFSET);
+  });
+
+  // The page's scroll-padding would cover the toolbar and the sticky sidebar too, so focusing
+  // them scrolled the article away although they stood in view.
+  test('focusing the toolbar or the sidebar leaves the page where it is', async ({ page }) => {
+    const controls = [
+      page.locator(`${LAYER} .bar .close`),
+      page.locator('aside.sidebar .collapse'),
+      page.locator('aside.sidebar input').first(),
+    ];
+    for (const control of controls) {
+      await control.focus();
+      await nextFrames(page);
+      expect(await pageScrollY(page), await control.evaluate((element) => element.outerHTML)).toBe(
+        ARTICLE_OFFSET,
+      );
+    }
+  });
+
+  test('tabbing back into the toolbar leaves the page where it is', async ({ page }) => {
+    await page.locator(`${LAYER} .bar button`).last().focus();
+
+    await page.keyboard.press('Shift+Tab');
+    await nextFrames(page);
+
+    expect(await page.evaluate(() => !!document.activeElement?.closest('.bar'))).toBe(true);
+    expect(await pageScrollY(page)).toBe(ARTICLE_OFFSET);
+  });
+
+  test('focusing a link beneath the toolbar lands it just under the chrome', async ({ page }) => {
+    const link = page.locator(`${LAYER} .scroller a[href="https://news.test/inline"]`);
+    const toolbar = (await page.locator(`${LAYER} .bar`).boundingBox())!;
+    await scrollPageTo(page, Math.round((await pageScrollY(page)) + (await link.boundingBox())!.y));
+
+    await link.focus();
+    await nextFrames(page);
+
+    expect((await link.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height);
   });
 });
 

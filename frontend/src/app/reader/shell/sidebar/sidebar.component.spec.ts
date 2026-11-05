@@ -2671,6 +2671,22 @@ describe('organise mode', () => {
       (element.querySelector('.collapse') as HTMLButtonElement).click();
       expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(true);
     });
+
+    it('focuses the collapse button without scrolling the page when the sidebar returns', () => {
+      const fixture = mount();
+      const visibility = TestBed.inject(SidebarVisibilityService);
+      visibility.hide();
+      fixture.detectChanges();
+      const collapse = (fixture.nativeElement as HTMLElement).querySelector(
+        '.collapse',
+      ) as HTMLButtonElement;
+      const focus = jest.spyOn(collapse, 'focus');
+
+      visibility.show();
+      fixture.detectChanges();
+
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    });
   });
 
   describe('social sections', () => {

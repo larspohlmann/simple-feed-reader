@@ -531,6 +531,21 @@ describe('ReaderShellComponent', () => {
       expect(element.querySelector('.list-header [aria-label="Show sidebar"]')).not.toBeNull();
     });
 
+    it('focuses the show button without scrolling the page when the sidebar hides', () => {
+      const fixture = boot();
+      const focus = jest.spyOn(HTMLButtonElement.prototype, 'focus');
+
+      TestBed.inject(SidebarVisibilityService).hide();
+      fixture.detectChanges();
+
+      const { contexts, calls } = focus.mock;
+      focus.mockRestore();
+      const show = (fixture.nativeElement as HTMLElement).querySelector(
+        '[aria-label="Show sidebar"]',
+      );
+      expect(calls[contexts.indexOf(show)]).toEqual([{ preventScroll: true }]);
+    });
+
     it('shows the sidebar again when the show button is clicked', () => {
       const fixture = boot();
       const element = fixture.nativeElement as HTMLElement;

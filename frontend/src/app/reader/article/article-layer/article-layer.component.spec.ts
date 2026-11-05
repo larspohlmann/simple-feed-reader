@@ -246,19 +246,7 @@ describe('ArticleLayerComponent on the page (#2038)', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => {
-    restorePageScroll();
-    document.documentElement.style.removeProperty('scroll-padding-top');
-  });
-
-  const rootPadding = (): string =>
-    document.documentElement.style.getPropertyValue('scroll-padding-top');
-
-  function padScrollerAndResizeBar(padding: string): void {
-    scrollerOf(fixture).style.setProperty('scroll-padding-top', padding);
-    const bar = layerElement().querySelector('.bar')!;
-    MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
-  }
+  afterEach(restorePageScroll);
 
   const layerElement = (): HTMLElement =>
     (fixture.nativeElement as HTMLElement).querySelector('app-article-layer') as HTMLElement;
@@ -302,29 +290,12 @@ describe('ArticleLayerComponent on the page (#2038)', () => {
     expect(page.top).toBe(1200);
   });
 
-  it('pads the page’s own scrolls as its scroller pads itself', () => {
-    padScrollerAndResizeBar('44px');
+  // The page's padding would also cover the sticky chrome and sidebar, so focusing them scrolled.
+  it('leaves the page’s own scroll-padding alone when its toolbar resizes', () => {
+    scrollerOf(fixture).style.setProperty('scroll-padding-top', '44px');
+    const bar = layerElement().querySelector('.bar')!;
+    MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
 
-    expect(rootPadding()).toBe('44px');
-  });
-
-  it('leaves the page’s padding to the layer above while pinned, and takes it back on return', async () => {
-    fixture.componentInstance.layer.pinAt(300);
-    padScrollerAndResizeBar('44px');
-
-    expect(rootPadding()).toBe('');
-
-    fixture.componentInstance.layer.unpin();
-    await Promise.resolve();
-
-    expect(rootPadding()).toBe('44px');
-  });
-
-  it('clears the page’s padding when it goes', () => {
-    padScrollerAndResizeBar('44px');
-
-    fixture.destroy();
-
-    expect(rootPadding()).toBe('');
+    expect(document.documentElement.style.getPropertyValue('scroll-padding-top')).toBe('');
   });
 });

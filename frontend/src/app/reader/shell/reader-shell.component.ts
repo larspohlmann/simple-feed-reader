@@ -281,7 +281,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (!this.sidebarWasVisible) return;
     this.sidebarWasVisible = false;
-    this.showSidebarButton()?.nativeElement.focus();
+    this.showSidebarButton()?.nativeElement.focus({ preventScroll: true });
   });
 
   ngOnInit(): void {

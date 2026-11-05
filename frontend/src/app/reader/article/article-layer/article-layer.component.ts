@@ -1,4 +1,3 @@
-import { DOCUMENT } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -6,7 +5,6 @@ import {
   effect,
   inject,
   input,
-  NgZone,
   output,
   signal,
   untracked,
@@ -68,8 +66,6 @@ export class ArticleLayerComponent {
       ? this.scrollHosts.forPage(element, this.pageLayer)
       : this.scrollHosts.forElement(element);
   });
-  private readonly root = inject(DOCUMENT).documentElement;
-  private readonly zone = inject(NgZone);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
   readonly leaving = this.gestures.leaving;
@@ -94,7 +90,6 @@ export class ArticleLayerComponent {
       if (scroller) onCleanup(scroller.listen(() => this.onScroll(scroller.scrollTop)));
     });
     this.reserveToolbarHeight();
-    this.padPageScrolls();
     effect(() => {
       this.resetKey();
       untracked(() => this.reset());
@@ -149,38 +144,10 @@ export class ArticleLayerComponent {
       const style = this.host.nativeElement.style;
       const observer = new ResizeObserver(() => {
         style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
-        this.padPage();
         this.barResized.emit();
       });
       observer.observe(bar);
       onCleanup(() => observer.disconnect());
     });
-  }
-
-  /** Focus, `scrollIntoView` and fragment jumps pad by the root's scroll-padding, not the scroller's. */
-  private padPageScrolls(): void {
-    const layer = this.pageLayer;
-    if (!layer) return;
-    effect((onCleanup) => {
-      if (!this.scrollerRef()) return;
-      this.padPage();
-      const observer = this.zone.runOutsideAngular(() => {
-        const pinWatch = new MutationObserver(() => this.padPage());
-        pinWatch.observe(layer.element, { attributes: true, attributeFilter: ['class'] });
-        return pinWatch;
-      });
-      onCleanup(() => {
-        observer.disconnect();
-        this.root.style.removeProperty('scroll-padding-top');
-      });
-    });
-  }
-
-  /** Pinned, the layer above owns the page's padding. */
-  private padPage(): void {
-    const scroller = this.scrollerRef()?.nativeElement;
-    if (!this.pageLayer || this.pageLayer.pinned || !scroller) return;
-    const padding = getComputedStyle(scroller).getPropertyValue('scroll-padding-top');
-    this.root.style.setProperty('scroll-padding-top', padding);
   }
 }

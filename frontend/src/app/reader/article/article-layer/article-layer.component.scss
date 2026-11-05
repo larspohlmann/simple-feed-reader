@@ -24,6 +24,7 @@
    scrolls, dimmed paragraphs included, paints over that chrome. */
 .scroller {
   --reader-top: calc(var(--reader-mini-h) + var(--reader-bar-h) + var(--bar-gap));
+  --reader-scroll-pad: calc(var(--reader-mini-h) + var(--bar-gap));
 
   container: reader-pane / size;
   height: 100%;
@@ -32,7 +33,7 @@
   /* At its end, a wheel or touch must not go on to scroll the list behind (#2038). */
   overscroll-behavior: contain;
   isolation: isolate;
-  scroll-padding-top: calc(var(--reader-mini-h) + var(--bar-gap));
+  scroll-padding-top: var(--reader-scroll-pad);
 }
 
 /* Opaque and full-height so this overlay hides the still-mounted list until a
@@ -48,8 +49,7 @@
    beneath it, never retracting, so the whole stack stays covered. */
 .with-bar .scroller {
   --reader-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
-
-  scroll-padding-top: var(--reader-top);
+  --reader-scroll-pad: var(--reader-top);
 }
 
 /* The pane's chrome, outside the scroller so a tap reaches it (#1332). Above the isolated
@@ -198,6 +198,12 @@
   overflow: visible;
   overscroll-behavior: auto;
   container: reader-pane / inline-size;
+}
+
+/* The page's own scroll-padding would cover the sticky chrome and sidebar too, so focusing
+   them would scroll the article away; the margin pads only what the article holds. */
+:host(.on-page) .reader ::ng-deep * {
+  scroll-margin-top: var(--reader-scroll-pad);
 }
 
 /* Covers the pinned list even when short, and runs clear of the fixed audio bar. */

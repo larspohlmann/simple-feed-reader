@@ -1743,7 +1743,10 @@ the pin on a write. Back pins the leaving layer, unpins the one beneath and writ
 one call, before the next paint. The article layer's chrome sits in two zero-height **sticky**
 wrappers (`.chrome-head`, `.chrome-foot`), never `fixed` boxes: the frame's swipe and the
 overlay's slide transform their ancestors, which would trap a fixed child (#100). While pinned,
-they turn absolute at `--page-pin-top`. Split view's reader pane has no handoff and keeps its
+they turn absolute at `--page-pin-top`. The band the chrome covers pads the article's own content
+as `scroll-margin-top`, never the root as `scroll-padding-top`: the root's padding also covers the
+sticky chrome and the sticky sidebar, and the browser scrolls a focused control it thinks is
+covered, so tabbing into the toolbar threw the article to the top. Split view's reader pane has no handoff and keeps its
 element scroller; a split ↔ full-screen switch remounts both panes, which land on their
 remembered offsets (a resize can shift those by a row first, through the browser's scroll
 anchoring).
