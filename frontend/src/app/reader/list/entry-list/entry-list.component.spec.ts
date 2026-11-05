@@ -23,6 +23,7 @@ import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coor
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import { PageLayer } from '../../../shared/scroll-host/page-layer';
+import { ListScrollState } from './list-scroll-state';
 import {
   ElementBackedScrollHosts,
   elementScrollHost,
@@ -1647,6 +1648,15 @@ describe('EntryListComponent', () => {
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
     }
+
+    it('lands a list built anew, rows already loaded, on its remembered offset (#2038)', () => {
+      const apply = jest.spyOn(ListScrollState.prototype, 'applyScroll');
+
+      mount({}, [{ provide: ListScrollMemory, useValue: { save: jest.fn(), read: () => 420 } }]);
+
+      expect(apply).toHaveBeenCalledWith(expect.anything(), 420);
+      apply.mockRestore();
+    });
 
     it('returns to the top when the incoming view has no remembered offset', () => {
       const fixture = mount();
