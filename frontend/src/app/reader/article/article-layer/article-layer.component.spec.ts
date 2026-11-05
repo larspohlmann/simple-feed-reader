@@ -290,7 +290,6 @@ describe('ArticleLayerComponent on the page (#2038)', () => {
     expect(page.top).toBe(1200);
   });
 
-  // The page's padding would also cover the sticky chrome and sidebar, so focusing them scrolled.
   it('leaves the page’s own scroll-padding alone when its toolbar resizes', () => {
     scrollerOf(fixture).style.setProperty('scroll-padding-top', '44px');
     const bar = layerElement().querySelector('.bar')!;

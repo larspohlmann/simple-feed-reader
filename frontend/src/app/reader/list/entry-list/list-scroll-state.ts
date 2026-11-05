@@ -96,8 +96,6 @@ export class ListScrollState {
   // A view switch leaves the previous view's list on screen until the new page
   // lands. Hand the scroller the incoming view's place right away, so the wait
   // shows that view's window, not the one left. The restore above repeats it.
-  // A remount (split ↔ full screen) lands on its first scroller; a later one is a
-  // rows rebuild, whose remembered offset is stale (#2038).
   private landedOnScroller = false;
   private readonly _scrollOnSelectionChange = effect(() => {
     const selection = this.options.selection();

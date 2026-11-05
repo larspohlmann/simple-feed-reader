@@ -33,7 +33,7 @@ export class PageScrollOwner {
   }
 
   /** Pins the leaver so its leave animation plays in place, and gives the page back to the
-   *  layer beneath at its offset, all before the next paint (spec Risk 2). */
+   *  layer beneath at its offset, all before the next paint. */
   leave(layer: PageLayer): void {
     const index = this.layers.indexOf(layer);
     if (index === -1) return;
