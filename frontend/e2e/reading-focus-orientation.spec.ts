@@ -58,8 +58,8 @@ interface FocusEdge {
 async function readingFocusEdges(page: Page): Promise<{ near: FocusEdge; far: FocusEdge }> {
   return page.evaluate((bandBottom) => {
     const scroller = document.querySelector('.rows') as HTMLElement;
-    const scrollerTop = scroller.getBoundingClientRect().top;
-    const edge = scroller.clientHeight * bandBottom;
+    const scrollerTop = 0;
+    const edge = window.innerHeight * bandBottom;
     const rows = Array.from(scroller.querySelectorAll(':scope > *:not(.foot)')) as HTMLElement[];
     const measured = rows.map((row, index) => {
       const rect = row.getBoundingClientRect();
@@ -110,7 +110,7 @@ test.describe('Reading focus dim survives a rotation', () => {
     // Scroll so a mid-list row sits in the band, with rows on both
     // sides — not the first/last row, which would shift for reasons of its
     // own and not isolate what the rotation does to the geometry.
-    await page.locator('.rows').evaluate((el) => {
+    await page.locator('html').evaluate((el) => {
       el.scrollTo({ top: (el.scrollHeight - el.clientHeight) / 2, behavior: 'instant' });
     });
 

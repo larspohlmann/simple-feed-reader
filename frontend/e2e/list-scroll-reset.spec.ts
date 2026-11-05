@@ -93,13 +93,9 @@ async function signInWithReaderData(page: Page): Promise<boolean> {
   return signInAsAdmin(page);
 }
 
-/** The list's own scroller — the shell locks the page and scrolls this instead. */
-function listScroller(page: Page) {
-  return page.locator('app-entry-list .rows').first();
-}
-
+/** The list scrolls the page (#2038). */
 function scrollTop(page: Page): Promise<number> {
-  return listScroller(page).evaluate((el) => el.scrollTop);
+  return page.evaluate(() => window.scrollY);
 }
 
 /**
@@ -134,12 +130,12 @@ async function scrollListTo(page: Page, top: number): Promise<void> {
   // handler runs — and two such scrolls in a row then coalesce into one event
   // the header reads as a single downward move, leaving it hidden for good
   // (#830). Awaiting the event keeps each direction change its own gesture.
-  await listScroller(page).evaluate(
-    (el, to) =>
+  await page.evaluate(
+    (to) =>
       new Promise<void>((resolve) => {
-        if (el.scrollTop === to) return resolve();
-        el.addEventListener('scroll', () => resolve(), { once: true });
-        el.scrollTo({ top: to });
+        if (window.scrollY === to) return resolve();
+        window.addEventListener('scroll', () => resolve(), { once: true });
+        window.scrollTo({ top: to });
       }),
     top,
   );

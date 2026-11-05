@@ -133,10 +133,7 @@ test.describe('list order (#1143)', () => {
     await expect.poll(() => firstRowId(page)).toBe(String(ENTRY_COUNT));
     await flipToOldestFirst(page);
 
-    await page
-      .locator('app-entry-list .rows')
-      .first()
-      .evaluate((el) => el.scrollTo({ top: 1500 }));
+    await page.evaluate(() => window.scrollTo({ top: 1500 }));
     await page.locator('.mark-above').click();
     await page.locator('[data-testid=confirm]').click();
 

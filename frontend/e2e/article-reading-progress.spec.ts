@@ -159,6 +159,13 @@ test.describe('Article reading progress on the split layout', () => {
     const box = (await pane.locator(SIDE_RAIL).boundingBox())!;
     const paneBox = (await pane.locator('.scroller').boundingBox())!;
     expect(box.x + box.width).toBeCloseTo(paneBox.x + paneBox.width, 0);
-    expect(box.x + box.width).toBeLessThan(DESKTOP.width);
+
+    // The pane is the window's rightmost column, so the edge alone cannot tell the two
+    // apart: the rail must fill with the pane's scroll while the page stays put.
+    await pane
+      .locator('.scroller')
+      .evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
+    await expect.poll(() => railFilledFraction(pane)).toBeGreaterThan(0.1);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
   });
 });

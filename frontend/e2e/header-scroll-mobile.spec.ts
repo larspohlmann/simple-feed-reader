@@ -59,8 +59,10 @@ async function stubEntries(page: Page): Promise<void> {
   });
 }
 
-/** The list's own scroll container — the scroller that drives the app bar. */
+/** The list's rows; the page they lie on is what scrolls (#2038). */
 const ROWS = '.rows';
+/** The list's scroller: the document, through its scrolling element. */
+const PAGE = 'html';
 
 /**
  * Wait for the layout to stop moving on its own before measuring. The Material
@@ -121,10 +123,10 @@ test.describe('Hide-on-scroll header on a phone', () => {
 
     // Scroll far enough to retract the header, and let the 0.2s transition end.
     const before = (await anchor.boundingBox())!;
-    const scrollBefore = await rows.evaluate((el) => el.scrollTop);
-    await rows.evaluate((el) => el.scrollBy(0, 300));
+    const scrollBefore = await page.locator(PAGE).evaluate((el) => el.scrollTop);
+    await page.locator(PAGE).evaluate((el) => el.scrollBy(0, 300));
     await waitForHeaderTransitionEnd(page);
-    const scrollAfter = await rows.evaluate((el) => el.scrollTop);
+    const scrollAfter = await page.locator(PAGE).evaluate((el) => el.scrollTop);
     const after = (await anchor.boundingBox())!;
 
     // The header really did retract — otherwise this test proves nothing.
@@ -151,13 +153,13 @@ test.describe('Hide-on-scroll header on a phone', () => {
     const rows = page.locator(ROWS);
     await expect(rows).toBeVisible();
     await settle(page);
-    await rows.evaluate((el) => el.scrollBy(0, 400));
+    await page.locator(PAGE).evaluate((el) => el.scrollBy(0, 400));
     await waitForHeaderTransitionEnd(page);
 
     const anchor = page.getByText('Entry number 12', { exact: false }).first();
     const before = (await anchor.boundingBox())!;
     // Scrolling up expands the header again.
-    await rows.evaluate((el) => el.scrollBy(0, -100));
+    await page.locator(PAGE).evaluate((el) => el.scrollBy(0, -100));
     await waitForHeaderTransitionEnd(page);
     const after = (await anchor.boundingBox())!;
 
@@ -204,10 +206,10 @@ test.describe('Hide-on-scroll header on a phone', () => {
     const rows = page.locator(ROWS);
     await expect(rows).toBeVisible();
     await settle(page);
-    const height = () => rows.evaluate((el) => el.clientHeight);
+    const height = () => page.locator(PAGE).evaluate((el) => el.clientHeight);
 
     const before = await height();
-    await rows.evaluate((el) => el.scrollBy(0, 300));
+    await page.locator(PAGE).evaluate((el) => el.scrollBy(0, 300));
     await waitForHeaderTransitionEnd(page);
     expect(await height()).toBe(before);
   });
@@ -229,25 +231,25 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await settle(page);
 
     // Well past the 500px threshold, so the corner button is showing.
-    await rows.evaluate((el) => el.scrollTo({ top: 1500 }));
-    expect(await rows.evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
+    await page.locator(PAGE).evaluate((el) => el.scrollTo({ top: 1500 }));
+    expect(await page.locator(PAGE).evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
 
     const corner = page.locator('app-entry-list app-to-top-button');
     await expect(corner).toBeVisible();
     await corner.click();
-    await expect.poll(() => rows.evaluate((el) => el.scrollTop)).toBe(0);
+    await expect.poll(() => page.locator(PAGE).evaluate((el) => el.scrollTop)).toBe(0);
     await expect(corner).toBeHidden();
 
     // And again via the empty middle of the app bar. Scrolling down retracts the
     // bar, so scroll back up a little first to bring it into reach — exactly what
     // the user does.
-    await rows.evaluate((el) => el.scrollTo({ top: 1500 }));
+    await page.locator(PAGE).evaluate((el) => el.scrollTo({ top: 1500 }));
     await page.waitForTimeout(400);
-    await rows.evaluate((el) => el.scrollBy(0, -100));
+    await page.locator(PAGE).evaluate((el) => el.scrollBy(0, -100));
     await page.waitForTimeout(400);
 
     await page.locator('app-reader-header .tap-to-top').click();
-    await expect.poll(() => rows.evaluate((el) => el.scrollTop)).toBe(0);
+    await expect.poll(() => page.locator(PAGE).evaluate((el) => el.scrollTop)).toBe(0);
   });
 
   // #128: returning from a full-screen article used to spring the retracted
@@ -293,13 +295,13 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await settle(page);
 
     // Retract the header, then note where a row rests.
-    await rows.evaluate((el) => el.scrollBy(0, 800));
+    await page.locator(PAGE).evaluate((el) => el.scrollBy(0, 800));
     await page.waitForTimeout(400);
     const header = page.locator('app-reader-header');
     await expect(header).toHaveClass(/hidden/);
     const anchor = page.getByText('Entry number 12', { exact: false }).first();
     const before = (await anchor.boundingBox())!;
-    const scrollBefore = await rows.evaluate((el) => el.scrollTop);
+    const scrollBefore = await page.locator(PAGE).evaluate((el) => el.scrollTop);
 
     // Open whichever entry is on screen — clicking through Playwright would
     // auto-scroll the target into view and move the very offset under test.
@@ -326,7 +328,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     // The list is exactly as left: still scrolled, header still retracted,
     // rows at the same pixel.
     await expect(header).toHaveClass(/hidden/);
-    expect(await rows.evaluate((el) => el.scrollTop)).toBe(scrollBefore);
+    expect(await page.locator(PAGE).evaluate((el) => el.scrollTop)).toBe(scrollBefore);
     const after = (await anchor.boundingBox())!;
     expect(after.y).toBeCloseTo(before.y, 0);
   });
@@ -453,7 +455,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await settle(page);
 
     // Scroll down: the bar retracts.
-    await rows.evaluate((el) => el.scrollBy(0, 400));
+    await page.locator(PAGE).evaluate((el) => el.scrollBy(0, 400));
     await waitForHeaderTransitionEnd(page);
     const header = page.locator('app-reader-header');
     await expect(header).toHaveClass(/hidden/);
