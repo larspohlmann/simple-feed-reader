@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Fetch\ResponseExchange;
 
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\HeaderDecision;
 use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\ResponseClassifier;
+use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
 use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -20,16 +19,16 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-final class ResponseClassifierTest extends TestCase
+final class FeedResponseExchangeTest extends TestCase
 {
     private function attempt(string $url = 'https://example.com/feed'): FetchAttemptModel
     {
         return FetchAttemptModel::start(1, FeedTickets::of($url, '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'));
     }
 
-    private function classifier(string $now = '2026-08-05 12:00:00'): ResponseClassifier
+    private function exchange(string $now = '2026-08-05 12:00:00'): FeedResponseExchange
     {
-        return new ResponseClassifier(new MockClock($now));
+        return new FeedResponseExchange(new MockClock($now));
     }
 
     private function respond(MockResponse $mock): ResponseInterface
@@ -39,17 +38,17 @@ final class ResponseClassifierTest extends TestCase
 
     public function testATwoHundredAwaitsTheBody(): void
     {
-        $verdict = $this->classifier()->fromHeaders(
+        $step = $this->exchange()->onHeaders(
             $this->respond(new MockResponse('<rss/>', ['http_code' => 200])),
             $this->attempt(),
         );
 
-        self::assertSame(HeaderDecision::AwaitBody, $verdict->decision);
+        self::assertTrue($step->isAwaitingBody());
     }
 
     public function testAThreeOhOneRedirectsAndIsPermanent(): void
     {
-        $verdict = $this->classifier()->fromHeaders(
+        $step = $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', [
                 'http_code' => 301,
                 'response_headers' => ['location' => 'https://example.com/moved'],
@@ -57,14 +56,14 @@ final class ResponseClassifierTest extends TestCase
             $this->attempt(),
         );
 
-        self::assertSame(HeaderDecision::Redirect, $verdict->decision);
-        self::assertSame('https://example.com/moved', $verdict->redirectUrl);
-        self::assertTrue($verdict->permanent);
+        self::assertNotNull($step->nextAttempt);
+        self::assertSame('https://example.com/moved', $step->nextAttempt->url);
+        self::assertTrue($step->nextAttempt->permanentRedirect);
     }
 
     public function testAThreeOhTwoRedirectsButIsNotPermanent(): void
     {
-        $verdict = $this->classifier()->fromHeaders(
+        $step = $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', [
                 'http_code' => 302,
                 'response_headers' => ['location' => '/relative'],
@@ -72,9 +71,9 @@ final class ResponseClassifierTest extends TestCase
             $this->attempt(),
         );
 
-        self::assertSame(HeaderDecision::Redirect, $verdict->decision);
-        self::assertSame('https://example.com/relative', $verdict->redirectUrl);
-        self::assertFalse($verdict->permanent);
+        self::assertNotNull($step->nextAttempt);
+        self::assertSame('https://example.com/relative', $step->nextAttempt->url);
+        self::assertFalse($step->nextAttempt->permanentRedirect);
     }
 
     /** @return iterable<string, array{int}> */
@@ -87,7 +86,7 @@ final class ResponseClassifierTest extends TestCase
     #[DataProvider('otherTemporaryRedirectCodes')]
     public function testOtherRedirectCodesAreNotPermanent(int $statusCode): void
     {
-        $verdict = $this->classifier()->fromHeaders(
+        $step = $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', [
                 'http_code' => $statusCode,
                 'response_headers' => ['location' => 'https://example.com/moved'],
@@ -95,15 +94,15 @@ final class ResponseClassifierTest extends TestCase
             $this->attempt(),
         );
 
-        self::assertSame(HeaderDecision::Redirect, $verdict->decision);
-        self::assertFalse($verdict->permanent);
+        self::assertNotNull($step->nextAttempt);
+        self::assertFalse($step->nextAttempt->permanentRedirect);
     }
 
     public function testARedirectWithoutALocationIsUnreachable(): void
     {
         $this->expectException(FeedUnreachableException::class);
 
-        $this->classifier()->fromHeaders(
+        $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', ['http_code' => 302])),
             $this->attempt(),
         );
@@ -111,14 +110,13 @@ final class ResponseClassifierTest extends TestCase
 
     public function testAThreeOhFourIsTerminalAndEchoesTheCachingHeaders(): void
     {
-        $verdict = $this->classifier()->fromHeaders(
+        $step = $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', ['http_code' => 304])),
             $this->attempt(),
         );
 
-        self::assertSame(HeaderDecision::Terminal, $verdict->decision);
-        $response = $verdict->response;
-        self::assertNotNull($response);
+        self::assertNotNull($step->outcome);
+        $response = $step->outcome->responseOrThrow();
         self::assertTrue($response->notModified);
         self::assertSame('"v1"', $response->etag);
         self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $response->lastModified);
@@ -126,14 +124,13 @@ final class ResponseClassifierTest extends TestCase
 
     public function testAThreeOhFourToAnUnconditionalRequestIsAnEmptyFetch(): void
     {
-        $verdict = $this->classifier()->fromHeaders(
+        $step = $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', ['http_code' => 304])),
             FetchAttemptModel::start(1, FeedTickets::of('https://example.com/feed')),
         );
 
-        self::assertSame(HeaderDecision::Terminal, $verdict->decision);
-        $response = $verdict->response;
-        self::assertNotNull($response);
+        self::assertNotNull($step->outcome);
+        $response = $step->outcome->responseOrThrow();
         self::assertFalse($response->notModified);
         self::assertSame('', $response->modifiedBody());
     }
@@ -150,13 +147,13 @@ final class ResponseClassifierTest extends TestCase
         ?string $etag,
         ?string $lastModified,
     ): void {
-        $verdict = $this->classifier()->fromHeaders(
+        $step = $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', ['http_code' => 304])),
             FetchAttemptModel::start(1, FeedTickets::of('https://example.com/feed', $etag, $lastModified)),
         );
 
-        $response = $verdict->response;
-        self::assertNotNull($response);
+        self::assertNotNull($step->outcome);
+        $response = $step->outcome->responseOrThrow();
         self::assertTrue($response->notModified);
     }
 
@@ -164,7 +161,7 @@ final class ResponseClassifierTest extends TestCase
     {
         $this->expectException(FeedGoneException::class);
 
-        $this->classifier()->fromHeaders(
+        $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', ['http_code' => 410])),
             $this->attempt(),
         );
@@ -192,7 +189,7 @@ final class ResponseClassifierTest extends TestCase
         $headers = null === $retryAfter ? [] : ['response_headers' => ['retry-after' => $retryAfter]];
 
         try {
-            $this->classifier()->fromHeaders(
+            $this->exchange()->onHeaders(
                 $this->respond(new MockResponse('', ['http_code' => 429] + $headers)),
                 $this->attempt(),
             );
@@ -202,12 +199,26 @@ final class ResponseClassifierTest extends TestCase
         }
     }
 
+    public function testAThreeHundredIsUnreachableRatherThanFollowed(): void
+    {
+        $this->expectException(FeedUnreachableException::class);
+        $this->expectExceptionMessageMatches('#^https://example\.com/feed: HTTP 300$#');
+
+        $this->exchange()->onHeaders(
+            $this->respond(new MockResponse('', [
+                'http_code' => 300,
+                'response_headers' => ['location' => 'https://example.com/moved'],
+            ])),
+            $this->attempt(),
+        );
+    }
+
     public function testAFiveHundredIsUnreachable(): void
     {
         $this->expectException(FeedUnreachableException::class);
         $this->expectExceptionMessageMatches('#^https://example\.com/feed: HTTP 500$#');
 
-        $this->classifier()->fromHeaders(
+        $this->exchange()->onHeaders(
             $this->respond(new MockResponse('', ['http_code' => 500])),
             $this->attempt(),
         );
@@ -220,7 +231,7 @@ final class ResponseClassifierTest extends TestCase
             'response_headers' => ['etag' => '"v2"', 'last-modified' => 'Tue, 21 Jul 2026 08:30:00 GMT'],
         ]));
 
-        $fetched = $this->classifier()->fromBody($response, $this->attempt());
+        $fetched = $this->exchange()->onBody($response, $this->attempt())->responseOrThrow();
 
         self::assertFalse($fetched->notModified);
         self::assertSame('<rss/>', $fetched->modifiedBody());
@@ -235,9 +246,28 @@ final class ResponseClassifierTest extends TestCase
 
         $this->expectException(ResponseTooLargeException::class);
 
-        $this->classifier()->fromBody(
+        $this->exchange()->onBody(
             $this->respond($oversized),
             $this->attempt(),
+        );
+    }
+
+    public function testARedirectPastTheCapIsUnreachable(): void
+    {
+        $attempt = $this->attempt();
+        for ($hop = 0; $hop < FetchAttemptModel::MAX_REDIRECTS; ++$hop) {
+            $attempt = $attempt->followedTo('https://example.com/hop-' . $hop, false);
+        }
+
+        $this->expectException(FeedUnreachableException::class);
+        $this->expectExceptionMessage('https://example.com/feed: more than 5 redirects');
+
+        $this->exchange()->onHeaders(
+            $this->respond(new MockResponse('', [
+                'http_code' => 302,
+                'response_headers' => ['location' => 'https://example.com/moved'],
+            ])),
+            $attempt,
         );
     }
 }

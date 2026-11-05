@@ -12,7 +12,6 @@ use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\RedirectFollower;
-use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\ResponseExchange\ApiResponseExchange;
 use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
 use App\Service\Fetch\UrlGuard;
@@ -85,9 +84,7 @@ final class FetchWiring
             $egressProxy,
             $retryPolicy,
             new ServiceLocator([
-                FeedResponseExchange::kind() => static fn (): FeedResponseExchange => new FeedResponseExchange(
-                    new ResponseClassifier($clock),
-                ),
+                FeedResponseExchange::kind() => static fn (): FeedResponseExchange => new FeedResponseExchange($clock),
                 ApiResponseExchange::kind() => static fn (): ApiResponseExchange => new ApiResponseExchange(
                     $retryPolicy,
                     new CrossFamilyFailover(),
