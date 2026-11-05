@@ -83,6 +83,11 @@ looks exactly as it did and keeps its offset.
   its offset, as today.
 - **Link reader** (`linkTarget`) is a second article-shaped layer and follows the same
   rule.
+- **Stacking:** a `fixed` layer paints above unpositioned in-flow content, so the
+  in-flow article layer is `position: relative` with a `z-index` above the pinned list,
+  and its opaque background sits on the frame that slides, not on the layer box —
+  otherwise the pinned list paints over the article, or a swipe-back uncovers the
+  article's own background instead of the list (both seen in the spike).
 
 `PageScrollOwner` owns only this handoff; it is the one place that writes the page
 offset on a layer switch. `ListScrollMemory` keeps owning what offset a selection
@@ -108,36 +113,59 @@ purpose, as the toolbar does today). Each new `fixed` element is checked for thi
 Bottom chrome anchored with `fixed` follows the visible viewport, so it moves with the
 browser toolbar as it collapses — intended.
 
+**Accepted trade-off (#1332 returns):** on page scroll, iOS spends the first tap after
+a flick on stopping the coasting page, and fixed chrome is now inside that scroller. A
+tap on the app bar, a corner button or the article toolbar while the page coasts only
+stops it; a second tap acts. #1332 kept chrome outside the scroller to avoid exactly
+this; it is how every ordinary page behaves in Safari and Brave, and the collapsing
+browser bar was judged worth it. Do not try to work around it.
+
 ### 4. Gestures and browser behaviour
 
 - **Overscroll:** narrow sets `html { overscroll-behavior-y: none }`. Brave/Chrome on
   Android otherwise run their own pull-to-reload (a full app reload) and iOS rubber-bands
   the page edge; either would steal the list's pull-to-refresh and the article's
   end-pull back. Both gestures keep their trigger ("touch starts at top / at end"),
-  read through the `ScrollHost`.
+  read through the `ScrollHost`. On iOS the pull's non-passive `preventDefault` already
+  suppresses the bounce (spike: 300 px pull, `scrollY` never below 0, with and without
+  the rule); the rule is there for Android and for edges no handler holds.
 - **History:** `history.scrollRestoration = 'manual'`, so back/forward and reload never
   restore a stale document offset over `ListScrollMemory`/`ArticleScrollRestore`.
 - **CDK dialogs:** their default `block` strategy pins `<html>` at the current offset and
   restores it on close. With page scroll that becomes real behaviour (no scrolling under
-  a dialog) — wanted — and must coexist with a pinned list. Checked with an open article
-  plus an action sheet and a dialog. Toasts already use `noop`.
+  a dialog) — wanted. The spike showed the restore is exact (2538 → 2538) and the list
+  stays visually in place, **but** while blocked the page reports `scrollY` 0 and no
+  overflow, and the restore on close reads as a scroll: the rail painted full and the
+  app bar flipped. So `PageScrollHost` reports no scroll while `<html>` carries
+  `cdk-global-scrollblock` and re-baselines (offset, last offset) silently on release;
+  hide-on-scroll and the rail never see the block. The browser bar re-expands while a
+  dialog is open — acceptable. Checked again in the app with an open article plus an
+  action sheet and a dialog. Toasts already use `noop`.
 - **Sidebar drawer** on narrow locks the page while open, the same way.
+- **Programmatic jumps:** scrolling the page to 0 on article open brings the browser bar
+  back; the jump back to the list's offset leaves its state alone (spike: stayed
+  collapsed). Both fine.
 
 ### 5. The green progress rail
 
 `ScrollProgressRail` keeps its contract and its all-entries estimate; it reads through
 the `ScrollHost`. On narrow it stays the right-edge rail that stands in for the
-scrollbar, with the page's scrollbar hidden.
+scrollbar, with the page's scrollbar hidden by `scrollbar-width: none` on `<html>`
+while the rail replaces it. The spike confirmed this hides iOS WebKit's own page scroll
+indicator (frame-by-frame recording against a control with the rule off, which showed
+the native indicator beside the rail).
 
-**Fallback:** if iOS WebKit will not hide its own page scroll indicator, the rail on a
-`PageScrollHost` switches to its existing `horizontal` mode — the bottom hairline the
-wide layout uses — so it never sits on top of the native indicator. Decided by the
-iPhone live check, not up front.
+**Fallback, only if the iPhone shows otherwise:** the rail on a `PageScrollHost`
+switches to its existing `horizontal` mode — the bottom hairline the wide layout uses —
+so it never sits on top of the native indicator.
 
 ## Risks
 
-1. iOS may show its own page scroll indicator regardless → rail fallback above.
+1. A real iPhone may still show its own page scroll indicator (the simulator hid it) →
+   rail fallback above.
 2. The offset restore on back must land before paint, or the list flashes at the top.
+   The spike measured it exact on the first frame; the app's Angular render path must
+   keep the pin/unpin and the `scrollTo` in one task.
 3. Rotation/resize across the breakpoint with an article open must carry both offsets.
 4. Reading focus/sections measure against the scroller's top; on the page that is the
    viewport top, partly covered by fixed chrome — the existing reserved-height
@@ -155,8 +183,12 @@ A series of PRs off `develop`, each shippable:
    on narrow.
 3. **Article handoff** — `PageScrollOwner`; article and link reader on the page;
    swipe-back, end-pull, leave animation; CDK checks.
-4. **Rail and polish** — iOS indicator decision and rail fallback if needed; any
-   leftovers from the live check.
+4. **Polish** — whatever the iPhone Brave live check turns up (the rail fallback only if
+   the device shows the native indicator).
+
+The assumptions above were checked in a throwaway prototype in the iOS 27 simulator's
+Safari on 2026-11-05 (Brave on iOS shares the WebKit view, not the toolbar, so the
+device check stays).
 
 ## Testing
 
