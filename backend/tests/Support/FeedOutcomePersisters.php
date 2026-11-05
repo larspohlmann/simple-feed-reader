@@ -12,7 +12,7 @@ use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\FeedShareEnrichment;
-use App\Service\Refresh\IncomingEntries;
+use App\Service\Refresh\IncomingPageStore;
 use App\Service\Social\DeletedPostTombstones;
 use App\Service\Social\SelfThreadEnricher;
 use App\Service\Social\TimelineSelfThreads;
@@ -113,27 +113,32 @@ final class FeedOutcomePersisters
     {
         /** @var FeedRepository $feeds */
         $feeds = $this->entityManager->getRepository(Feed::class);
+        $scheduler = FeedSchedulers::build($this->clock);
+        $shareEnrichment = new FeedShareEnrichment(
+            $postEnricher,
+            $this->selfThreadEnricher ?? SelfThreadEnrichers::idle($this->entityManager, $this->clock),
+        );
 
         return new FeedOutcomePersister(
             $this->flushingEntityManager,
             $feeds,
             $this->bodyParser,
-            EntryIngestors::withPlatformRules(
-                $this->entityManager,
-                $this->clock,
-                new PlatformEntryRules([new BlueskyEntryRule()]),
-            ),
-            FeedSchedulers::build($this->clock),
-            EntryIndexers::with($this->indexWriter),
-            new IncomingEntries(
+            $scheduler,
+            new IncomingPageStore(
+                $this->flushingEntityManager,
+                EntryIngestors::withPlatformRules(
+                    $this->entityManager,
+                    $this->clock,
+                    new PlatformEntryRules([new BlueskyEntryRule()]),
+                ),
+                $scheduler,
+                EntryIndexers::with($this->indexWriter),
+                $shareEnrichment,
                 PostEnrichers::queue($this->entityManager, $this->clock),
                 $this->timelineSelfThreads,
                 $this->tombstones,
             ),
-            new FeedShareEnrichment(
-                $postEnricher,
-                $this->selfThreadEnricher ?? SelfThreadEnrichers::idle($this->entityManager, $this->clock),
-            ),
+            $shareEnrichment,
             $this->logger,
         );
     }
