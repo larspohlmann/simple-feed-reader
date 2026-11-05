@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Entry\EntryPageParameters;
-use App\Dto\Entry\MarkEntriesReadRequest;
-use App\Dto\Entry\MarkForYouReadRequest;
-use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\User;
 use App\Enum\EntryView;
@@ -24,9 +21,6 @@ use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\NetworkScope;
 use App\Service\Reading\EntryStateUpdater;
-use App\Service\Reading\ForYouMarkReadService;
-use App\Service\Reading\MarkEntriesReadService;
-use App\Service\Reading\MarkReadService;
 use App\Service\Recommendation\Feed\ForYouFeed;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,10 +37,7 @@ final readonly class EntryController
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
         private EntryStateUpdater $entryStateUpdater,
-        private MarkReadService $markRead,
         private ForYouFeed $forYouFeed,
-        private ForYouMarkReadService $forYouMarkRead,
-        private MarkEntriesReadService $markEntriesRead,
         private EntryPage $entryPage,
         private RecommendationFeedJson $recommendationFeedJson,
     ) {
@@ -92,40 +83,6 @@ final readonly class EntryController
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
 
         return new JsonResponse($this->entryPage->of($rows, $query->limit, EntryListSort::forView($entryView)));
-    }
-
-    #[Route('/mark-read', name: 'api_entries_mark_read', methods: ['POST'])]
-    public function markRead(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] MarkReadRequest $request,
-    ): JsonResponse {
-        $this->markRead->mark($user, $request->toScope(), $request->until);
-
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
-    }
-
-    /**
-     * Its own endpoint, not a scope on `/mark-read`: that one moves a watermark per subscription, which marking the
-     * for-you list must never move (ForYouMarkReadService).
-     */
-    #[Route('/for-you/mark-read', name: 'api_entries_for_you_mark_read', methods: ['POST'])]
-    public function markForYouRead(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] MarkForYouReadRequest $request,
-    ): JsonResponse {
-        $this->forYouMarkRead->mark($user, $request->until);
-
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
-    }
-
-    #[Route('/mark-read-batch', name: 'api_entries_mark_read_batch', methods: ['POST'])]
-    public function markReadBatch(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] MarkEntriesReadRequest $request,
-    ): JsonResponse {
-        $this->markEntriesRead->mark($user, $request->ids);
-
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}/state', name: 'api_entries_state', methods: ['PATCH'], requirements: ['id' => '\d+'])]
