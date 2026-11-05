@@ -2,7 +2,7 @@
 # PHPMD count-dodge gate (#2025). A PHPMD finding points at a design weakness; a new class
 # that only holds a flagged class's overflow silences it without fixing anything, and no
 # static rule can tell that from a real extraction. So while a finding is open, a commit
-# that brings new backend/src classes is refused until Lars approves them in a message of his own.
+# that brings new backend/src classes is refused until the user approves them in a message of their own.
 #
 #   record   PostToolUseFailure on Bash: a PHPMD run opens or closes the finding (md exits 2 on findings)
 #   gate     PreToolUse on Bash: a git commit with unapproved new src classes is denied
@@ -13,9 +13,9 @@
 # The gate denies rather than asks: in auto mode a hook's "ask" let the commit straight through
 # (2026-11-05). UserPromptSubmit also carries messages from other sessions, subagents and the
 # harness, so the phrase must open the prompt and no harness wrapper may appear in it: a relayed
-# report that merely mentioned the phrase once approved a class without Lars (2026-11-05).
+# report that merely mentioned the phrase once approved a class without the user (2026-11-05).
 # The gate runs before the command, so a class created inside the commit's own command slips past
-# it; settle catches that from HEAD and tells Lars. Commands match only at command position, so a
+# it; settle catches that from HEAD and tells the user. Commands match only at command position, so a
 # commit message that merely names PHPMD or git commit triggers nothing.
 #
 # State: <git dir>/phpmd-gate.json = {open, findings, snapshot, pending}; shared by every session on the checkout.
@@ -66,9 +66,9 @@ record() {
     jq -n --arg event "$event" --arg findings "$findings" '{hookSpecificOutput: {hookEventName: $event, additionalContext: (
         "PHPMD finding (class rule): " + ($findings | split("\n") | join(", ")) + ". "
         + "The limit points at a design weakness: name the concern the flagged class mixes and fix that design, "
-        + "offering Lars the options with their cost. Do not move methods or constructor parameters into a new "
+        + "offering the user the options with their cost. Do not move methods or constructor parameters into a new "
         + "class just to get under the count. Until PHPMD is clean and committed, a git commit that adds "
-        + "backend/src classes is refused until Lars approves the new classes.")}}'
+        + "backend/src classes is refused until the user approves the new classes.")}}'
 }
 
 gate() {
@@ -81,8 +81,8 @@ gate() {
         '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: (
             "PHPMD count-dodge gate (#2025): new backend/src classes since the PHPMD finding on "
             + $findings + ": " + ($added | split("\n") | join(", "))
-            + ". Show Lars why each is a real concern of its own, not a container for the flagged class'"'"'s "
-            + "overflow. The commit goes through once Lars starts a reply with \"approve classes\".")}}'
+            + ". Show the user why each is a real concern of its own, not a container for the flagged class'"'"'s "
+            + "overflow. The commit goes through once the user starts a reply with \"approve classes\".")}}'
 }
 
 approve() {
@@ -91,12 +91,14 @@ approve() {
         | ($prompt | test("\\A\\s*approve classes\\b"; "i"))
           and ($prompt | test("<(cross-session-message|task-notification|agent-message|system-reminder|ci-monitor-event|side-sessions-event)|Another Claude session sent a message") | not)' \
         <<<"$input" >/dev/null || return 0
-    local pending
+    local pending approver
     pending=$(state_list pending)
     [ -n "$pending" ] || return 0
+    approver=$(git -C "$root" config user.name)
+    [ -n "$approver" ] || approver="The user"
     update_state '.snapshot = (.snapshot + .pending | unique) | .pending = []'
-    jq -n --arg pending "$pending" '{hookSpecificOutput: {hookEventName: "UserPromptSubmit", additionalContext: (
-        "PHPMD count-dodge gate (#2025): Lars approved these new classes: " + ($pending | split("\n") | join(", ")))}}'
+    jq -n --arg pending "$pending" --arg approver "$approver" '{hookSpecificOutput: {hookEventName: "UserPromptSubmit", additionalContext: (
+        "PHPMD count-dodge gate (#2025): " + $approver + " approved these new classes: " + ($pending | split("\n") | join(", ")))}}'
 }
 
 settle() {
@@ -116,8 +118,8 @@ settle() {
     jq -n --arg unapproved "$unapproved" '($unapproved | split("\n") | join(", ")) as $files | {
         systemMessage: ("PHPMD count-dodge gate (#2025): committed without your approval while a PHPMD finding was open: " + $files),
         hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: (
-            "These backend/src classes reached HEAD while a PHPMD finding was open, without Lars'"'"'s approval "
-            + "(created inside the commit command): " + $files + ". Tell Lars and justify each one.")}}'
+            "These backend/src classes reached HEAD while a PHPMD finding was open, without the user'"'"'s approval "
+            + "(created inside the commit command): " + $files + ". Tell the user and justify each one.")}}'
 }
 
 case "$mode" in
