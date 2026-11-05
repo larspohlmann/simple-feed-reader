@@ -2,7 +2,7 @@ import { NgZone } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PAGE_SCROLL_BLOCK_CLASS, PageScrollHost } from './page-scroll-host';
 import { ScrollHosts } from './scroll-hosts.service';
-import { trackScrollTop } from '../../../testing/scroll-testing';
+import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
 const inZone = <T>(run: () => T): T => run();
 
@@ -12,14 +12,14 @@ describe('PageScrollHost', () => {
   let page: { top: number };
 
   beforeEach(() => {
-    Object.defineProperty(document, 'scrollingElement', { value: root, configurable: true });
-    page = trackScrollTop(root);
+    page = trackPageScrollTop();
   });
 
   afterEach(() => {
     root.classList.remove(PAGE_SCROLL_BLOCK_CLASS);
     root.style.top = '';
     root.style.scrollPaddingTop = '';
+    restorePageScroll();
     jest.restoreAllMocks();
   });
 

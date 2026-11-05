@@ -22,7 +22,11 @@ import { LayoutService } from '../../layout.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
-import { ElementBackedScrollHosts, trackScrollTop } from '../../../../testing/scroll-testing';
+import {
+  ElementBackedScrollHosts,
+  restorePageScroll,
+  trackPageScrollTop,
+} from '../../../../testing/scroll-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import {
@@ -2697,6 +2701,7 @@ describe('EntryListComponent', () => {
 
       expect(rail(fixture)!.classList).not.toContain('horizontal');
       expect(fill(fixture)).toBe('50');
+      expect(document.documentElement.classList).toContain('page-scrollbar-hidden');
     });
 
     it('stands on the right edge in place of the scrollbar on a phone', () => {
@@ -2850,13 +2855,11 @@ describe('EntryListComponent', () => {
   });
 
   describe('on the page (#2038)', () => {
+    afterEach(restorePageScroll);
+
     it('collapses its header when the document scrolls', () => {
       const fixture = mount({}, [{ provide: ScrollHosts, useClass: ScrollHosts }]);
-      Object.defineProperty(document, 'scrollingElement', {
-        value: document.documentElement,
-        configurable: true,
-      });
-      const page = trackScrollTop(document.documentElement);
+      const page = trackPageScrollTop();
 
       page.top = 100;
       window.dispatchEvent(new Event('scroll'));

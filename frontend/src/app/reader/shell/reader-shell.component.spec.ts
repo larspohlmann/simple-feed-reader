@@ -59,7 +59,7 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../../testing/refresh-report';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
-import { trackScrollTop } from '../../../testing/scroll-testing';
+import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
 
@@ -176,6 +176,8 @@ describe('ReaderShellComponent', () => {
     configureShell([{ provide: AuthService, useValue: auth }]);
     ctrl = TestBed.inject(HttpTestingController);
   });
+
+  afterEach(restorePageScroll);
 
   function configureShell(
     authProviders: Provider[],
@@ -607,8 +609,6 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  // #87: the header is an overlay, so hiding it must change the header and
-  // nothing else — no layout pass that resizes the scroller under the finger.
   it('claims the page while mounted (#2038)', () => {
     const fixture = boot();
     expect(document.documentElement.classList).toContain('reader-page');
@@ -616,6 +616,8 @@ describe('ReaderShellComponent', () => {
     expect(document.documentElement.classList).not.toContain('reader-page');
   });
 
+  // #87: the header is an overlay, so hiding it must change the header and
+  // nothing else — no layout pass that resizes the scroller under the finger.
   describe('hide-on-scroll header', () => {
     it('publishes a bar height that does not move when the bar does', () => {
       const fixture = boot();
@@ -845,11 +847,7 @@ describe('ReaderShellComponent', () => {
   /** Drive the entry list's real scroller, the page (#2038): set the document's offset
    *  and fire the window scroll its PageScrollHost hears. */
   function listScroller() {
-    Object.defineProperty(document, 'scrollingElement', {
-      value: document.documentElement,
-      configurable: true,
-    });
-    const page = trackScrollTop(document.documentElement);
+    const page = trackPageScrollTop();
     return {
       scrollTo(top: number): void {
         page.top = top;

@@ -16,6 +16,19 @@ export function trackScrollTop(element: HTMLElement): { top: number } {
   return state;
 }
 
+/** Make the document the page scroller with a settable offset; undo with `restorePageScroll`. */
+export function trackPageScrollTop(): { top: number } {
+  const root = document.documentElement;
+  Object.defineProperty(document, 'scrollingElement', { value: root, configurable: true });
+  return trackScrollTop(root);
+}
+
+/** Remove what `trackPageScrollTop` installed, so no later spec inherits it. */
+export function restorePageScroll(): void {
+  delete (document as unknown as { scrollingElement?: Element }).scrollingElement;
+  delete (document.documentElement as unknown as { scrollTop?: number }).scrollTop;
+}
+
 export function scrollerOf(fixture: { nativeElement: unknown }): HTMLElement {
   return (fixture.nativeElement as HTMLElement).querySelector('.scroller') as HTMLElement;
 }
