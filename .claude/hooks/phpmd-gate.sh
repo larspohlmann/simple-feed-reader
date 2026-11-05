@@ -82,7 +82,7 @@ gate() {
             "PHPMD count-dodge gate (#2025): new backend/src classes since the PHPMD finding on "
             + $findings + ": " + ($added | split("\n") | join(", "))
             + ". Show Lars why each is a real concern of its own, not a container for the flagged class'"'"'s "
-            + "overflow. The commit goes through once Lars replies with \"approve classes\".")}}'
+            + "overflow. The commit goes through once Lars starts a reply with \"approve classes\".")}}'
 }
 
 approve() {
