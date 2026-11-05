@@ -1,6 +1,5 @@
 import {
   Component,
-  DestroyRef,
   ElementRef,
   OnDestroy,
   TemplateRef,
@@ -352,13 +351,11 @@ export class EntryListComponent implements OnDestroy {
     layout: this.listBottom.layout,
   });
 
-  private readonly _hidePageScrollbar = (() => {
-    const root = inject(DOCUMENT).documentElement;
-    inject(DestroyRef).onDestroy(() => root.classList.remove('page-scrollbar-hidden'));
-    return effect(() =>
-      root.classList.toggle('page-scrollbar-hidden', this.progressRail.replacesScrollbar()),
-    );
-  })();
+  private readonly root = inject(DOCUMENT).documentElement;
+  private readonly _hidePageScrollbar = effect((onCleanup) => {
+    this.root.classList.toggle('page-scrollbar-hidden', this.progressRail.replacesScrollbar());
+    onCleanup(() => this.root.classList.remove('page-scrollbar-hidden'));
+  });
 
   /** The list header's collapsed state; the shell's app bar mirrors it (#630). */
   readonly collapsed = this.scrolling.collapsed;
