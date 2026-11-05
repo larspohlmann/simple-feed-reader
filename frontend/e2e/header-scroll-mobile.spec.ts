@@ -385,7 +385,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await expect(article).toBeVisible();
     await expect(page.getByText('Paragraph 0 of filler text').first()).toBeVisible();
 
-    await page.evaluate(() => window.scrollTo({ top: 900, behavior: 'instant' }));
+    await scrollPageTo(page, 900);
     const button = page.locator('app-reader-view app-to-top-button');
     await expect(button).toBeVisible();
 
@@ -421,7 +421,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     // above) has settled, so this is the steady-state position.
     const first = (await button.boundingBox())!;
 
-    await page.evaluate(() => window.scrollTo({ top: 1400, behavior: 'instant' }));
+    await scrollPageTo(page, 1400);
     const second = (await button.boundingBox())!;
 
     // Fixed to the viewport, so 500px of article scroll must not move it.

@@ -4,7 +4,7 @@ import { scrollPageTo } from './support/scroll';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
-/** Past the 900px `isWide` boundary, so the article renders in the split pane. */
+/** Past the 900px `isWide` boundary, so the full-screen article sits beneath the app bar. */
 const DESKTOP = { width: 1280, height: 800 };
 
 /** Far wider than a phone, so the one-line rule is what has to cut it. */
@@ -141,7 +141,7 @@ test.describe('Article mini header on a phone', () => {
   });
 });
 
-test.describe('Article mini header on the split pane', () => {
+test.describe('Article mini header on a wide full-screen article', () => {
   test.use({ viewport: DESKTOP });
 
   // The wide layout never retracts its toolbar, so the name rides inside that

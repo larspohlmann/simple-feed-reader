@@ -138,7 +138,7 @@ async function clickWhereItStands(page: Page, target: Locator): Promise<void> {
       document
         .getAnimations()
         .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-        .map((animation) => animation.finished),
+        .map((animation) => animation.finished.catch(() => undefined)),
     ),
   );
   const box = (await target.boundingBox())!;
@@ -232,6 +232,7 @@ test.describe('A full-screen article owns the page on a phone', () => {
     await expect(linkReader).toHaveCount(0);
     expect(await pageScrollY(page)).toBe(articleOffset);
     await expect(page.locator('.article-overlay')).not.toHaveClass(/page-pinned/);
+    expect(await page.evaluate(() => document.documentElement.style.scrollPaddingTop)).not.toBe('');
 
     await page.locator(`${LAYER} .corner-back`).click();
     await expectListBackAtItsOffset(page);
@@ -270,6 +271,10 @@ test.describe('Switching between split view and full screen with an article open
     await openReader(page, 'pane');
     await openArticleFromList(page);
     await expect(page.locator('.main.split')).toHaveCount(1);
+    await expect(page.locator('.main.split > .reader app-article-layer')).not.toHaveClass(
+      /on-page/,
+    );
+    await expect(page.locator('section.list')).not.toHaveClass(/page-pinned/);
 
     // Resized mid-test on purpose; each wait below gates on the layout actually switching.
     await page.setViewportSize(MEDIUM);
@@ -277,7 +282,7 @@ test.describe('Switching between split view and full screen with an article open
     await expect(page.locator(LAYER)).toHaveClass(/on-page/);
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
     await nextFrames(page);
-    const paragraph = page.locator(`${LAYER} p`).first();
+    const paragraph = page.locator(`${LAYER} .scroller p`).first();
     const top = await pageScrollY(page);
     const target = top > ARTICLE_OFFSET ? top - ARTICLE_OFFSET : top + ARTICLE_OFFSET;
     const paragraphY = (await paragraph.boundingBox())!.y;
@@ -291,6 +296,8 @@ test.describe('Switching between split view and full screen with an article open
 
     await page.setViewportSize(WIDE);
     await expect(page.locator('.main.split')).toHaveCount(1);
+    await expect(page.locator('.article-overlay')).toHaveCount(0);
+    await expect(page.locator('section.list')).not.toHaveClass(/page-pinned/);
   });
 
   // Follow-up: a content-anchored restore across a layout switch.
@@ -361,6 +368,7 @@ test.describe('An action sheet over a full-screen article', () => {
     const fill = (): Promise<number> =>
       rail.evaluate((el) => parseFloat(el.style.getPropertyValue('--rail-fill')));
     const fillBefore = await fill();
+    expect(fillBefore, 'the rail is empty — the case proves nothing').toBeGreaterThan(0);
 
     await clickWhereItStands(page, page.locator(`${LAYER} .corner-actions button.corner-share`));
     await expect(page.locator('.app-action-sheet')).toBeVisible();

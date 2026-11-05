@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
+import { scrollPageTo } from './support/scroll';
 
 // Wide enough for both shell breakpoints that matter here: the sidebar is a
 // column (>720px) and the wide layout is active (>=900px), which keeps the app
@@ -126,7 +127,7 @@ test.describe('Article back button on desktop', () => {
     expect(await hitAtCentre(page, 'app-reader-view .bar .close')).toBe('self');
 
     // The toolbar sticks below the bar while the article scrolls the page (#2038).
-    await page.evaluate(() => window.scrollTo({ top: 800, behavior: 'instant' }));
+    await scrollPageTo(page, 800);
     await page.waitForTimeout(200);
     expect((await back.boundingBox())!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
 
