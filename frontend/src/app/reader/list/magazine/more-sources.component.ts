@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { relativeTime } from '../../format';
+import { entryRelativeTime } from '../../format';
 import { entryDisplayTitle, entryHeadline } from '../../entry/entry-text';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -38,7 +38,7 @@ export class MoreSourcesComponent {
       feed: sourceNameOf(copy, this.rows),
       avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
       title: entryHeadline(copy) || entryDisplayTitle(copy),
-      when: relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang()),
+      when: entryRelativeTime(copy, this.language.lang()),
     })),
   );
   protected readonly expanded = signal(false);

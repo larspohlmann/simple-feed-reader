@@ -16,7 +16,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { entryImage, portraitCoverRatio } from '../preview-image';
 import { entryDek, entryHeadline, isPost } from '../../entry/entry-text';
-import { relativeTime } from '../../format';
+import { entryRelativeTime } from '../../format';
 import { RenditionsDirective } from '../renditions.directive';
 import { ShortBadgeComponent } from '../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../rendition-sizes';
@@ -80,9 +80,7 @@ export class EntryRowComponent {
   readonly snippet = computed(() => entryDek(this.entry()));
   readonly unreadMark = computed(() => showsUnreadMark(this.entry()));
   private readonly language = inject(LanguageService);
-  readonly when = computed(() =>
-    relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),
-  );
+  readonly when = computed(() => entryRelativeTime(this.entry(), this.language.lang()));
 
   // Reset the failed-image flag whenever the row is reused for a different entry.
   private readonly _resetOnEntryChange = effect(() => {

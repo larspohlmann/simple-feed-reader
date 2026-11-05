@@ -13,6 +13,7 @@ import {
   relativeTimeUntil,
   trialDaysRemaining,
   trialExpired,
+  entryRelativeTime,
 } from './format';
 
 describe('relativeTime', () => {
@@ -280,5 +281,19 @@ describe('bytesToKb', () => {
 
   it('floors at 1 KB even for zero bytes', () => {
     expect(bytesToKb(0)).toBe(1);
+  });
+});
+
+describe('entryRelativeTime', () => {
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+  it('dates an entry by when it was published', () => {
+    const entry = { publishedAt: minutesAgo(5), createdAt: minutesAgo(120) };
+    expect(entryRelativeTime(entry, 'en')).toBe(relativeTime(entry.publishedAt, 'en'));
+  });
+
+  it('dates an entry without a published time by when it was fetched', () => {
+    const entry = { publishedAt: null, createdAt: minutesAgo(120) };
+    expect(entryRelativeTime(entry, 'en')).toBe(relativeTime(entry.createdAt, 'en'));
   });
 });

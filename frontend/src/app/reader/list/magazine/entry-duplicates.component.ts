@@ -4,7 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { relativeTime } from '../../format';
+import { entryRelativeTime } from '../../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
@@ -50,7 +50,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     this.copies().map((copy) => ({
       copy,
       feed: this.rows.find(copy.subscriptionId)?.title ?? copy.source,
-      when: relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang()),
+      when: entryRelativeTime(copy, this.language.lang()),
     })),
   );
   private readonly expanded = signal(false);

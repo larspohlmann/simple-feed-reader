@@ -58,6 +58,14 @@ export function relativeTime(iso: string, locale = 'en', now: Date = new Date())
   return relativeFormatter(locale, 'short').format(magnitude.value, magnitude.unit);
 }
 
+/** How long ago an entry appeared: its published time, else when it was fetched. */
+export function entryRelativeTime(
+  entry: { publishedAt: string | null; createdAt: string },
+  locale = 'en',
+): string {
+  return relativeTime(entry.publishedAt ?? entry.createdAt, locale);
+}
+
 /**
  * The narrowest form `relativeTime` has (e.g. "5m ago" / "vor 5 m") — same
  * bucketing, `style: 'narrow'` instead of `'short'`, for a kicker line too
