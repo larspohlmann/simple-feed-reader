@@ -1,6 +1,7 @@
 import { test, expect, Locator, Page } from '@playwright/test';
 import type { ReadingLayout } from '../src/app/reader/reading-layout.service';
 import { aLinkCard } from '../src/testing/entry-testing';
+import { nextFrames, settleAnimations } from './support/animations';
 import { presetLocalStorage } from './support/auth';
 import {
   entryDetailJson,
@@ -13,6 +14,7 @@ import {
   liftTouch,
   pageScrollY,
   rowTitleInView,
+  textInView,
   scrollPageTo,
   scrollPageToEnd,
   touchDrag,
@@ -112,36 +114,9 @@ async function expectListBackAtItsOffset(page: Page): Promise<void> {
   expect(await pageScrollY(page)).toBe(LIST_OFFSET);
 }
 
-/** Two frames, so a scroll event has been heard and any restore re-assert has settled. */
-async function nextFrames(page: Page): Promise<void> {
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
-}
-
-/** The article paragraph in the middle third of the viewport, wherever the article scrolls. */
-function paragraphInView(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const paragraphs = Array.from(document.querySelectorAll<HTMLElement>('app-reader-view p'));
-    const third = window.innerHeight / 3;
-    const visible = paragraphs.find((paragraph) => {
-      const box = paragraph.getBoundingClientRect();
-      return box.top > third && box.top < 2 * third;
-    });
-    return visible?.textContent?.trim() ?? '';
-  });
-}
-
 /** A locator click scrolls a sticky box's in-flow position into view first, moving the page. */
 async function clickWhereItStands(page: Page, target: Locator): Promise<void> {
-  await target.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-        .map((animation) => animation.finished.catch(() => undefined)),
-    ),
-  );
+  await settleAnimations(page.locator('html'));
   const box = (await target.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
@@ -273,8 +248,6 @@ test.describe('Keyboard focus on a full-screen article on a wide screen', () => 
     await scrollPageTo(page, ARTICLE_OFFSET);
   });
 
-  // The page's scroll-padding would cover the toolbar and the sticky sidebar too, so focusing
-  // them scrolled the article away although they stood in view.
   test('focusing the toolbar or the sidebar leaves the page where it is', async ({ page }) => {
     const controls = [
       page.locator(`${LAYER} .bar .close`),
@@ -302,12 +275,12 @@ test.describe('Keyboard focus on a full-screen article on a wide screen', () => 
 
   test('focusing a link beneath the toolbar lands it just under the chrome', async ({ page }) => {
     const link = page.locator(`${LAYER} .scroller a[href="https://news.test/inline"]`);
-    const toolbar = (await page.locator(`${LAYER} .bar`).boundingBox())!;
     await scrollPageTo(page, Math.round((await pageScrollY(page)) + (await link.boundingBox())!.y));
 
     await link.focus();
     await nextFrames(page);
 
+    const toolbar = (await page.locator(`${LAYER} .bar`).boundingBox())!;
     expect((await link.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height);
   });
 });
@@ -387,13 +360,13 @@ test.describe('Switching between split view and full screen with an article open
     );
     await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(ARTICLE_OFFSET);
     await nextFrames(page);
-    const paragraph = await paragraphInView(page);
+    const paragraph = await textInView(page, 'app-reader-view p');
     expect(paragraph, 'no paragraph in the middle third — the case proves nothing').not.toBe('');
 
     await page.setViewportSize(MEDIUM);
     await expect(page.locator('.main.split')).toHaveCount(0);
     await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
-    await expect.poll(() => paragraphInView(page)).toBe(paragraph);
+    await expect.poll(() => textInView(page, 'app-reader-view p')).toBe(paragraph);
   });
 });
 

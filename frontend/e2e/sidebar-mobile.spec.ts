@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { aSubscription } from '../src/testing/subscription-testing';
+import { settleAnimations } from './support/animations';
 import { signInAsAdmin } from './support/auth';
 import { subscriptionsJson } from './support/reader';
 
@@ -88,9 +89,7 @@ test.describe('Sidebar on a phone', () => {
     // The sheet slides up over 0.2s; toBeVisible resolves at animation start,
     // while the sheet is still translated below the viewport. The quality bar
     // is about the resting geometry, so let the enter animation finish first.
-    await page
-      .locator('app-action-sheet')
-      .evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
+    await settleAnimations(page.locator('app-action-sheet'));
     const box = (await sheet.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(375 + 1);

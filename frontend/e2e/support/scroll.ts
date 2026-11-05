@@ -17,17 +17,20 @@ export async function scrollPageToEnd(page: Page): Promise<number> {
   return end;
 }
 
-/** The title of a row in the middle third, so clicking it scrolls nothing into view. */
-export function rowTitleInView(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const titles = Array.from(document.querySelectorAll<HTMLElement>('app-entry-row .title'));
+/** The text of the first `selector` match whose top is in the middle third, so clicking it scrolls nothing into view. */
+export function textInView(page: Page, selector: string): Promise<string> {
+  return page.evaluate((query) => {
     const third = window.innerHeight / 3;
-    const visible = titles.find((title) => {
-      const box = title.getBoundingClientRect();
-      return box.top > third && box.bottom < 2 * third;
+    const visible = Array.from(document.querySelectorAll<HTMLElement>(query)).find((element) => {
+      const { top } = element.getBoundingClientRect();
+      return top > third && top < 2 * third;
     });
     return visible?.textContent?.trim() ?? '';
-  });
+  }, selector);
+}
+
+export function rowTitleInView(page: Page): Promise<string> {
+  return textInView(page, 'app-entry-row .title');
 }
 
 export interface TouchPoint {

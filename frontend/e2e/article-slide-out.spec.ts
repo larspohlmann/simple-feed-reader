@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { settleAnimations } from './support/animations';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
@@ -53,9 +54,7 @@ async function openArticle(page: Page): Promise<void> {
   await page.getByText('Entry number 1', { exact: false }).first().click();
   const overlay = page.locator('.article-overlay');
   await expect(overlay.locator('app-reader-view')).toBeVisible();
-  await overlay.evaluate((element) =>
-    Promise.all(element.getAnimations().map((animation) => animation.finished)),
-  );
+  await settleAnimations(overlay);
 }
 
 /** Closes the article and returns the animation each leaving overlay was given. */
