@@ -1,4 +1,5 @@
 import { NgZone, effect, inject } from '@angular/core';
+import { observeResize } from '../../shared/observe-resize';
 
 export interface PageChromeGeometryOptions {
   readonly host: HTMLElement;
@@ -7,35 +8,31 @@ export interface PageChromeGeometryOptions {
   readonly audioBar: () => HTMLElement | undefined;
 }
 
-/** Publishes on the shell what its fixed chrome positions against, since `fixed` measures
- *  from the viewport (#2038): the list column's box and the audio bar's height. Built in a
- *  field initializer, for its effects. */
+/** Construct in a field initializer: it injects and owns effects. */
 export class PageChromeGeometry {
   private readonly zone = inject(NgZone);
+  private readonly published = new Map<string, number>();
 
   // `main` too: hiding the sidebar moves a min-width split column without resizing it.
   private readonly _followListColumn = effect((onCleanup) => {
     const column = this.options.listColumn();
     if (!column) return;
-    onCleanup(this.observe([column, this.options.main()], () => this.publishColumn(column)));
+    const main = this.options.main();
+    const targets = main ? [column, main] : [column];
+    onCleanup(observeResize(this.zone, targets, () => this.publishColumn(column)));
   });
 
   private readonly _followAudioBar = effect((onCleanup) => {
     const bar = this.options.audioBar();
     if (!bar) return;
     onCleanup(
-      this.observe([bar], () => this.publish('--audio-bar-h', bar.getBoundingClientRect().height)),
+      observeResize(this.zone, [bar], () =>
+        this.publish('--audio-bar-h', bar.getBoundingClientRect().height),
+      ),
     );
   });
 
   constructor(private readonly options: PageChromeGeometryOptions) {}
-
-  private observe(targets: (HTMLElement | undefined)[], measure: () => void): () => void {
-    if (typeof ResizeObserver === 'undefined') return () => undefined;
-    const observer = this.zone.runOutsideAngular(() => new ResizeObserver(() => measure()));
-    for (const target of targets) if (target) observer.observe(target);
-    return () => observer.disconnect();
-  }
 
   private publishColumn(column: HTMLElement): void {
     const box = column.getBoundingClientRect();
@@ -44,6 +41,8 @@ export class PageChromeGeometry {
   }
 
   private publish(property: string, pixels: number): void {
+    if (this.published.get(property) === pixels) return;
+    this.published.set(property, pixels);
     this.options.host.style.setProperty(property, `${pixels}px`);
   }
 }

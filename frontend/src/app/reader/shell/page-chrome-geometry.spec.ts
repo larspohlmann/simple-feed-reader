@@ -68,6 +68,20 @@ describe('PageChromeGeometry', () => {
     expect(host.style.getPropertyValue('--list-column-left')).toBe('312px');
   });
 
+  it('writes nothing when a resize leaves the published values unchanged', () => {
+    const column = boxed({ left: 312, width: 560 });
+    const audioBar = boxed({ height: 72 });
+    const { host } = publish({ column, audioBar });
+    observing(column)!.fire();
+    observing(audioBar)!.fire();
+    const setProperty = jest.spyOn(host.style, 'setProperty');
+
+    observing(column)!.fire();
+    observing(audioBar)!.fire();
+
+    expect(setProperty).not.toHaveBeenCalled();
+  });
+
   it('publishes the audio bar height the page leaves free', () => {
     const audioBar = boxed({ height: 72 });
     const { host } = publish({ audioBar });
