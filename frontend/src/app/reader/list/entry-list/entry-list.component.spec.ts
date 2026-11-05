@@ -1658,6 +1658,19 @@ describe('EntryListComponent', () => {
       apply.mockRestore();
     });
 
+    it('does not re-land rows rebuilt without a selection change (#2038)', () => {
+      const fixture = mount();
+      memory.read.mockReturnValue(420);
+      const apply = jest.spyOn(fixture.componentInstance.scrolling, 'applyScroll');
+
+      fixture.componentRef.setInput('entries', []);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('entries', [entry(1), entry(2)]);
+      fixture.detectChanges();
+
+      expect(apply).not.toHaveBeenCalled();
+    });
+
     it('returns to the top when the incoming view has no remembered offset', () => {
       const fixture = mount();
       const rows = fakeScroller(fixture, 900);
