@@ -1508,8 +1508,8 @@ boxes tile edge to edge — a tap on the star must never land on keep.
 
 A magazine card's other sources for the same story or post (#2036): one accent line,
 "x more sources", that opens in place into a grid of mini cards — the smallest card in
-the app: a `--mini-card-thumb` square (the copy's picture, else its favicon on
-`--surface-1`), the feed and relative time, and a one-line title. A mini card opens its
+the app, on `--surface-sunken`: a `--mini-card-thumb` square (the copy's picture, else its
+favicon on `--surface-1`), the feed and relative time, and a one-line title. A mini card opens its
 copy; it carries no actions. The grid fills `--mini-card-min-w` columns, so a narrow
 card stacks them and a hero lays out two or three.
 

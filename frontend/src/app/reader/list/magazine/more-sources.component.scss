@@ -40,7 +40,7 @@
   padding: var(--space-1);
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  background: var(--surface-sunken);
   color: var(--text-secondary);
   font: inherit;
   text-align: left;
@@ -55,14 +55,17 @@
 }
 
 .thumb {
-  display: grid;
   flex: none;
-  place-items: center;
   width: var(--mini-card-thumb);
   height: var(--mini-card-thumb);
   border-radius: var(--radius-sm);
-  background: var(--surface-1);
   object-fit: cover;
+}
+
+.thumb.tile {
+  display: grid;
+  place-items: center;
+  background: var(--surface-1);
 }
 
 .text {
