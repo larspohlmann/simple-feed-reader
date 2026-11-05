@@ -1,8 +1,9 @@
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { type FocusCurve, focusOpacityForSpan } from './reading-focus';
 import type { FocusUnit, UnitStrategy } from './reading-sections';
 
 export interface ReadingFocusConfig {
-  readonly scroller: HTMLElement;
+  readonly scroller: ScrollHost;
   readonly blocks: () => HTMLElement[];
   readonly curve: FocusCurve;
   /** enabled && !isWide && !reduceMotion — read live, off the reactive graph. */
@@ -20,7 +21,8 @@ export interface ReadingFocusConfig {
 export class ReadingFocusApplier {
   private readonly runOutsideZone: <T>(run: () => T) => T;
   private readonly observer?: ResizeObserver;
-  private readonly onScroll = (): void => this.schedule();
+  private readonly stopListening: () => void;
+  private readonly stopWatchingResize: () => void;
   private frame = 0;
   private destroyed = false;
   private units: FocusUnit[] = [];
@@ -28,9 +30,8 @@ export class ReadingFocusApplier {
 
   constructor(private readonly config: ReadingFocusConfig) {
     this.runOutsideZone = config.runOutsideZone ?? ((run) => run());
-    this.runOutsideZone(() =>
-      config.scroller.addEventListener('scroll', this.onScroll, { passive: true }),
-    );
+    this.stopListening = config.scroller.listen(() => this.schedule());
+    this.stopWatchingResize = config.scroller.watchResize(() => this.scheduleRegroup());
     if (typeof ResizeObserver !== 'undefined') {
       this.observer = new ResizeObserver(() => this.scheduleRegroup());
     }
@@ -54,13 +55,13 @@ export class ReadingFocusApplier {
     this.destroyed = true;
     this.cancel();
     this.observer?.disconnect();
-    this.config.scroller.removeEventListener('scroll', this.onScroll);
+    this.stopWatchingResize();
+    this.stopListening();
   }
 
   private observe(): void {
     if (!this.observer) return;
     this.observer.disconnect();
-    this.observer.observe(this.config.scroller);
     for (const block of this.config.blocks()) this.observer.observe(block);
   }
 
@@ -116,7 +117,7 @@ export class ReadingFocusApplier {
   private measureOpacities(): string[] {
     const { scroller, curve } = this.config;
     const viewport = scroller.clientHeight;
-    const scrollerTop = scroller.getBoundingClientRect().top;
+    const scrollerTop = scroller.viewportTop();
     return this.units.map((unit) => {
       const first = unit[0].getBoundingClientRect();
       const last = unit.length === 1 ? first : unit[unit.length - 1].getBoundingClientRect();

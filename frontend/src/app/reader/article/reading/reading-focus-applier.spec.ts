@@ -1,3 +1,4 @@
+import { ElementScrollHost, ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ReadingFocusApplier } from './reading-focus-applier';
 import { LIST_FOCUS_CURVE } from './reading-focus';
 import { SENTENCE_CLASS, sectionedUnits } from './reading-sections';
@@ -9,12 +10,16 @@ import {
 const frames = (): Promise<void> =>
   new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
-function scrollerWith(count: number): { scroller: HTMLElement; blocks: () => HTMLElement[] } {
-  const scroller = document.createElement('div');
+function scrollerWith(count: number): {
+  element: HTMLElement;
+  scroller: ScrollHost;
+  blocks: () => HTMLElement[];
+} {
+  const element = document.createElement('div');
   for (let index = 0; index < count; index++)
-    scroller.appendChild(document.createElement('article'));
-  const blocks = (): HTMLElement[] => Array.from(scroller.children) as HTMLElement[];
-  return { scroller, blocks };
+    element.appendChild(document.createElement('article'));
+  const blocks = (): HTMLElement[] => Array.from(element.children) as HTMLElement[];
+  return { element, scroller: new ElementScrollHost(element, (run) => run()), blocks };
 }
 
 const opacities = (blocks: () => HTMLElement[]): string[] =>
@@ -71,7 +76,7 @@ it('clear() blanks synchronously', () => {
 });
 
 it('recomputes on a scroll event', async () => {
-  const { scroller, blocks } = scrollerWith(3);
+  const { element, scroller, blocks } = scrollerWith(3);
   const applier = new ReadingFocusApplier({
     scroller,
     blocks,
@@ -80,7 +85,7 @@ it('recomputes on a scroll event', async () => {
   });
   await frames();
   blank(blocks);
-  scroller.dispatchEvent(new Event('scroll'));
+  element.dispatchEvent(new Event('scroll'));
   await frames();
   expect(opacities(blocks)).not.toContain('');
   applier.destroy();
@@ -102,21 +107,21 @@ it('recomputes when the ResizeObserver fires (orientation/reflow)', async () => 
   applier.destroy();
 });
 
-it('observes the scroller and every block', () => {
-  const { scroller, blocks } = scrollerWith(3);
+it('watches the scroller and observes every block', () => {
+  const { element, scroller, blocks } = scrollerWith(3);
   const applier = new ReadingFocusApplier({
     scroller,
     blocks,
     curve: LIST_FOCUS_CURVE,
     isActive: () => true,
   });
-  expect(observer().targets.has(scroller)).toBe(true);
+  expect(MockResizeObserver.instances[0].targets.has(element)).toBe(true);
   for (const block of blocks()) expect(observer().targets.has(block)).toBe(true);
   applier.destroy();
 });
 
 it('refresh() re-observes newly added blocks', async () => {
-  const { scroller, blocks } = scrollerWith(2);
+  const { element, scroller, blocks } = scrollerWith(2);
   const applier = new ReadingFocusApplier({
     scroller,
     blocks,
@@ -124,7 +129,7 @@ it('refresh() re-observes newly added blocks', async () => {
     isActive: () => true,
   });
   const added = document.createElement('article');
-  scroller.appendChild(added);
+  element.appendChild(added);
   applier.refresh();
   await frames();
   expect(observer().targets.has(added)).toBe(true);
@@ -133,7 +138,7 @@ it('refresh() re-observes newly added blocks', async () => {
 });
 
 it('picks up a row revealed between two refreshes on the next scroll', async () => {
-  const { scroller, blocks } = scrollerWith(2);
+  const { element, scroller, blocks } = scrollerWith(2);
   const applier = new ReadingFocusApplier({
     scroller,
     blocks,
@@ -142,15 +147,15 @@ it('picks up a row revealed between two refreshes on the next scroll', async () 
   });
   await frames();
   const revealed = document.createElement('article');
-  scroller.appendChild(revealed);
-  scroller.dispatchEvent(new Event('scroll'));
+  element.appendChild(revealed);
+  element.dispatchEvent(new Event('scroll'));
   await frames();
   expect(revealed.style.opacity).not.toBe('');
   applier.destroy();
 });
 
 it('stops recomputing after destroy()', async () => {
-  const { scroller, blocks } = scrollerWith(3);
+  const { element, scroller, blocks } = scrollerWith(3);
   const applier = new ReadingFocusApplier({
     scroller,
     blocks,
@@ -160,7 +165,7 @@ it('stops recomputing after destroy()', async () => {
   await frames();
   applier.destroy();
   blank(blocks);
-  scroller.dispatchEvent(new Event('scroll'));
+  element.dispatchEvent(new Event('scroll'));
   observer().fire();
   await frames();
   expect(opacities(blocks)).toEqual(['', '', '']);
@@ -177,21 +182,25 @@ describe('splitting a tall block into sections', () => {
   }
 
   function tallArticle(): {
-    scroller: HTMLElement;
+    scroller: ScrollHost;
     block: HTMLElement;
     blocks: () => HTMLElement[];
   } {
-    const scroller = document.createElement('div');
-    Object.defineProperty(scroller, 'clientHeight', { value: 600, configurable: true });
-    scroller.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+    const element = document.createElement('div');
+    Object.defineProperty(element, 'clientHeight', { value: 600, configurable: true });
+    element.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
     const block = document.createElement('p');
     block.textContent = FOUR_SENTENCES;
     stubRect(block, 0, 400); // taller than half the 600px scroller
-    scroller.appendChild(block);
-    return { scroller, block, blocks: () => Array.from(scroller.children) as HTMLElement[] };
+    element.appendChild(block);
+    return {
+      scroller: new ElementScrollHost(element, (run) => run()),
+      block,
+      blocks: () => Array.from(element.children) as HTMLElement[],
+    };
   }
 
-  function articleApplier(scroller: HTMLElement, blocks: () => HTMLElement[]): ReadingFocusApplier {
+  function articleApplier(scroller: ScrollHost, blocks: () => HTMLElement[]): ReadingFocusApplier {
     return new ReadingFocusApplier({
       scroller,
       blocks,
@@ -268,11 +277,12 @@ describe('geometry reads and style writes', () => {
   }
 
   function traced(count: number): {
-    scroller: HTMLElement;
+    element: HTMLElement;
+    scroller: ScrollHost;
     blocks: () => HTMLElement[];
     log: string[];
   } {
-    const { scroller, blocks } = scrollerWith(count);
+    const { element, scroller, blocks } = scrollerWith(count);
     const log: string[] = [];
     for (const block of blocks()) {
       spyOnOpacityWrites(block, log);
@@ -281,7 +291,7 @@ describe('geometry reads and style writes', () => {
         return { top: 0, height: 10 } as DOMRect;
       };
     }
-    return { scroller, blocks, log };
+    return { element, scroller, blocks, log };
   }
 
   it('reads every block before it writes any', async () => {
@@ -298,7 +308,7 @@ describe('geometry reads and style writes', () => {
   });
 
   it('leaves a block untouched when its opacity has not changed', async () => {
-    const { scroller, blocks, log } = traced(2);
+    const { element, scroller, blocks, log } = traced(2);
     const applier = new ReadingFocusApplier({
       scroller,
       blocks,
@@ -307,7 +317,7 @@ describe('geometry reads and style writes', () => {
     });
     await frames();
     log.length = 0;
-    scroller.dispatchEvent(new Event('scroll'));
+    element.dispatchEvent(new Event('scroll'));
     await frames();
     expect(log.filter((entry) => entry === 'write')).toEqual([]);
     applier.destroy();

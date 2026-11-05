@@ -138,13 +138,9 @@ export class ArticlePageComponent {
     const scroller = this.scroller();
     if (!scroller || !target) return;
     this.restore.abort(); // a jump takes over from any in-flight restore
-    const top =
-      target.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top +
-      scroller.scrollTop;
-    const covered = parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;
+    const top = target.getBoundingClientRect().top - scroller.viewportTop() + scroller.scrollTop;
     scroller.scrollTo({
-      top: Math.max(0, top - covered),
+      top: Math.max(0, top - scroller.scrollPaddingTop()),
       behavior: this.reduceMotion ? 'auto' : 'smooth',
     });
   }

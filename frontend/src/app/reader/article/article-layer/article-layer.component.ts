@@ -10,6 +10,8 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
 import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
@@ -58,7 +60,11 @@ export class ArticleLayerComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reduceMotion = prefersReducedMotion();
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
-  readonly scroller = computed(() => this.scrollerRef()?.nativeElement);
+  private readonly scrollHosts = inject(ScrollHosts);
+  readonly scroller = computed((): ScrollHost | undefined => {
+    const element = this.scrollerRef()?.nativeElement;
+    return element ? this.scrollHosts.forElement(element) : undefined;
+  });
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
   readonly leaving = this.gestures.leaving;
@@ -77,6 +83,10 @@ export class ArticleLayerComponent {
       fullscreen: this.fullscreen,
       scroller: this.scroller,
       back: () => this.back.emit(),
+    });
+    effect((onCleanup) => {
+      const scroller = this.scroller();
+      if (scroller) onCleanup(scroller.listen(() => this.onScroll(scroller.scrollTop)));
     });
     this.reserveToolbarHeight();
     effect(() => {
@@ -99,7 +109,7 @@ export class ArticleLayerComponent {
     heading?.focus({ preventScroll: true });
   }
 
-  protected onScroll(scrollTop: number): void {
+  private onScroll(scrollTop: number): void {
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
       // `isWide` is false by definition here: full-screen reading only exists

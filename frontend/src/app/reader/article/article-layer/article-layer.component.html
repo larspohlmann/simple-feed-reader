@@ -18,12 +18,7 @@
     </button>
     <ng-content select="[articleBar]" />
   </div>
-  <div
-    #scroller
-    class="scroller"
-    [appScrollProgress]="progressRail()"
-    (scroll)="onScroll(scroller.scrollTop)"
-  >
+  <div #scroller class="scroller" [appScrollProgress]="progressRail()">
     <div
       class="reader"
       [class.with-tail]="withTail()"

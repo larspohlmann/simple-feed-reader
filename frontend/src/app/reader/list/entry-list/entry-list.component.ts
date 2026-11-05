@@ -48,6 +48,8 @@ import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
 import { EstimatedListBottom } from './estimated-list-bottom';
+import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { heldFor } from '../../../core/held-for';
@@ -212,6 +214,11 @@ export class EntryListComponent implements OnDestroy {
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private readonly header = viewChild(ListHeaderComponent);
   private readonly scroller = (): HTMLElement | undefined => this.rows()?.nativeElement;
+  private readonly scrollHosts = inject(ScrollHosts);
+  private readonly scrollHost = computed((): ScrollHost | undefined => {
+    const rows = this.rows()?.nativeElement;
+    return rows ? this.scrollHosts.forElement(rows) : undefined;
+  });
 
   readonly content = new ListContent({
     entries: this.entries,
@@ -261,7 +268,7 @@ export class EntryListComponent implements OnDestroy {
   });
 
   private readonly readingFocus = new ListReadingFocus({
-    scroller: this.scroller,
+    scroller: this.scrollHost,
     rendered: this.content.rendered,
     entries: this.entries,
     selection: this.selection,

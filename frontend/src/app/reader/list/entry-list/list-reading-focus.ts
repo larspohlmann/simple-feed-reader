@@ -2,12 +2,13 @@ import { DestroyRef, NgZone, Signal, effect, inject } from '@angular/core';
 import { LIST_FOCUS_CURVE } from '../../article/reading/reading-focus';
 import { ReadingFocusApplier } from '../../article/reading/reading-focus-applier';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { LayoutService } from '../../layout.service';
 import { EntryDto } from '../../models';
 import { Selection } from '../../query/query';
 
 export interface ListReadingFocusOptions {
-  readonly scroller: () => HTMLElement | undefined;
+  readonly scroller: () => ScrollHost | undefined;
   readonly rendered: Signal<EntryDto[]>;
   readonly entries: Signal<EntryDto[]>;
   readonly selection: Signal<Selection>;
@@ -33,7 +34,7 @@ export class ListReadingFocus {
     this.applier = new ReadingFocusApplier({
       scroller,
       blocks: () =>
-        (Array.from(scroller.children) as HTMLElement[]).filter(
+        (Array.from(scroller.content.children) as HTMLElement[]).filter(
           (child) => !child.classList.contains('foot'),
         ),
       curve: LIST_FOCUS_CURVE,
