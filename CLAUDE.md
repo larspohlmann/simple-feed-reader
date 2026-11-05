@@ -217,7 +217,13 @@ Enforced mechanically by `composer check` and `composer md`:
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design
-  the metric is pointing at; do not tune the threshold.
+  the metric is pointing at; do not tune the threshold, and do not move methods or
+  constructor parameters into a new class just to get under the count (#2025).
+  The project hook `.claude/hooks/phpmd-gate.sh` enforces this: while a PHPMD
+  finding is open, a `git commit` that brings new `backend/src` classes is denied
+  until Lars starts a reply with "approve classes". A split planned before PHPMD ever fires
+  passes no gate, so review asks of every new `src` class: would it merge back
+  into its only caller if no PHPMD limit existed?
 - **phptramp** (`phptramp.dist.json`, run by `composer tramp` and CI) — a chain
   of **4** or more methods forwarding a parameter none of them reads fails the
   build; **3** hops warns. Only chains crossing **2** or more classes count
