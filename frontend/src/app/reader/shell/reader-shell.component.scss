@@ -137,16 +137,6 @@ app-reader-header.hidden {
   }
 }
 
-/* The list column in both layouts: a flex column so `app-entry-list` fills it,
-   shared by split and single-pane mode. Positioned so the run hairline below
-   anchors to it, not the viewport. */
-.list {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  position: relative;
-}
-
 /* The list pane's width is user-owned: dragged on the divider below, persisted
    per device (PaneSplitService, #810). `--list-width` is written by the
    divider; 42% is only the fallback before its effect writes the saved value. */
@@ -226,14 +216,6 @@ app-reader-header.hidden {
 .main:not(.split) > * {
   flex: 1;
   min-width: 0;
-}
-
-/* `app-entry-list` is `.list`'s only child now — the run block lives inside
-   its own scroller (`topBlock`) rather than beside it — so it simply fills
-   the column. */
-.list app-entry-list {
-  flex: 1;
-  min-height: 0;
 }
 
 /* Its buttons join the header's `.tools` row, so they take that row's gap in both forms. */

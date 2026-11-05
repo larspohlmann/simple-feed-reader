@@ -116,8 +116,7 @@ export class ListScrollState {
   private settleAbort = false;
 
   constructor(private readonly options: ListScrollStateOptions) {
-    // Capture so we hear the gesture even though scroll events fire on inner .rows;
-    // passive so we never block scrolling. Both cancel an in-flight scroll restore.
+    // A wheel or touch drag over the list is the user scrolling: it cancels an in-flight restore.
     const host: HTMLElement = inject(ElementRef).nativeElement;
     host.addEventListener('wheel', this.onUserScrollIntent, { passive: true, capture: true });
     host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
