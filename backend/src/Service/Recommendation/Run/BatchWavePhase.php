@@ -21,7 +21,6 @@ final readonly class BatchWavePhase
     public const int POLL_MAX_CONCURRENCY = 2;
 
     public function __construct(
-        private RecommendationWaveConcurrency $waveConcurrency,
         private WaveBatchLoader $batches,
         private EntityManagerInterface $entityManager,
     ) {
@@ -53,13 +52,13 @@ final readonly class BatchWavePhase
         try {
             $result = $resolveWave($batches);
         } catch (ProviderRateLimitedException | RetryableProviderException $exception) {
-            $this->waveConcurrency->halve($tick->run, $tick->connection);
+            $this->halveConcurrency($tick);
 
             throw $exception;
         }
 
         if ($result->rateLimitObserved) {
-            $this->waveConcurrency->halve($tick->run, $tick->connection);
+            $this->halveConcurrency($tick);
         }
 
         return $result;
@@ -85,19 +84,25 @@ final readonly class BatchWavePhase
 
         return min(
             $this->effectiveCap($tick),
-            $this->waveConcurrency->cap($tick->run, $tick->connection),
             \count($tick->run->getCandidateBatches()) - $progress->nextBatchIndex,
         );
     }
 
-    /** Never below 1, like the wave cap: a directly stored concurrency ≤ 0 would wedge the run. */
+    /** Never below 1: a directly stored concurrency ≤ 0 would wedge the run. */
     private function effectiveCap(TickContext $tick): int
     {
         $runTuning = $tick->connection->getRunTuning();
-        $cap = TickDriver::Worker === $tick->driver
-            ? $runTuning->cappedBatchConcurrency()
+        $configuredCap = $runTuning->cappedBatchConcurrency();
+        $driverCap = TickDriver::Worker === $tick->driver
+            ? $configuredCap
             : min($runTuning->batchConcurrency(), self::POLL_MAX_CONCURRENCY);
 
-        return max(1, $cap);
+        return max(1, min($driverCap, $tick->run->getWaveConcurrencyCap($configuredCap)));
+    }
+
+    private function halveConcurrency(TickContext $tick): void
+    {
+        $configuredCap = $tick->connection->getRunTuning()->cappedBatchConcurrency();
+        $tick->run->getRunningThrottle()->reduceConcurrency($configuredCap);
     }
 }
