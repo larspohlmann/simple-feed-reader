@@ -63,6 +63,8 @@ import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
 import { PageChromeGeometry } from './page-chrome-geometry';
+import { PageScrollOwner } from './page-scroll-owner';
+import { PageLayerDirective } from './page-layer.directive';
 import { observeResize } from '../../shared/observe-resize';
 import { SightedPreviews } from './sighted-previews.service';
 import { PreviewProgress } from '../link-card/preview-progress';
@@ -88,6 +90,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     UrlDropZoneComponent,
     DrawerSwipeDirective,
     PaneResizeDirective,
+    PageLayerDirective,
     IconComponent,
     IconButtonDirective,
     ListActionDirective,
@@ -105,6 +108,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     CompletedEntriesMerge,
     SightedPreviews,
     PendingEntriesPoll,
+    PageScrollOwner,
     { provide: PreviewProgress, useExisting: PendingEntriesPoll },
     ReaderRouteState,
     LinkReaderNavigation,
@@ -233,10 +237,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  can reset it, and so the close-swipe pauses while a drag is possible. */
   readonly sidebarOrganising = signal(false);
 
-  /** The drawer and a full-screen article cover the list; nothing may scroll it beneath them. */
+  /** The open drawer covers the list; nothing may scroll it beneath. A full-screen article
+   *  pins the list itself (PageScrollOwner, #2038). */
   private readonly _holdPage = holdReaderPage(
     this.hostRef.nativeElement,
-    computed(() => (this.sidebarOpen() && this.screen.isNarrow()) || this.articleFullscreen()),
+    computed(() => this.sidebarOpen() && this.screen.isNarrow()),
   );
 
   /** The wide-layout sidebar is collapsed: the user hid it, and the layout is
@@ -256,7 +261,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly audioBar = viewChild('audioBar', { read: ElementRef });
   private readonly _chromeGeometry = new PageChromeGeometry({
     host: this.hostRef.nativeElement,
-    listColumn: () => this.listColumn()?.nativeElement,
+    // Off split view the list column is main's box, which stays in flow while the list is pinned.
+    listColumn: () => (this.splitView() ? this.listColumn() : this.mainColumn())?.nativeElement,
     main: () => this.mainColumn()?.nativeElement,
     audioBar: () => this.audioBar()?.nativeElement as HTMLElement | undefined,
   });

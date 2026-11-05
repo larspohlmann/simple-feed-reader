@@ -62,10 +62,12 @@ async function openArticle(page: Page): Promise<void> {
 async function closeArticle(page: Page, close: () => Promise<unknown>): Promise<string[]> {
   await page.evaluate(() => {
     window.leaveAnimations = [];
+    const leaving = new Set<Element>();
     new MutationObserver((records) => {
       for (const record of records) {
         const target = record.target as HTMLElement;
-        if (target.matches('.article-overlay.article-leave')) {
+        if (!leaving.has(target) && target.matches('.article-overlay.article-leave')) {
+          leaving.add(target);
           window.leaveAnimations.push(getComputedStyle(target).animationName);
         }
       }

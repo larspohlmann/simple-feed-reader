@@ -113,26 +113,49 @@
       </section>
     } @else {
       <!-- The list stays mounted; a full-screen article overlays it, so swiping it
-           away reveals the list underneath. The app bar mirrors this list's own
-           `collapsed` state, so the list scroller is the bar's only scroll source (#128). -->
+           away reveals the list underneath. Each is a page layer: the top one owns the
+           document's scroll, the ones beneath are pinned at their offsets (#2038). The app
+           bar mirrors this list's own `collapsed` state, its only scroll source (#128). -->
       <ng-container *ngTemplateOutlet="entryListPane" />
       @if (openEntry()) {
-        <div class="article-overlay" animate.leave="article-leave">
+        <div
+          class="article-overlay"
+          appPageLayer
+          #entryLayer="appPageLayer"
+          animate.leave="article-leave"
+        >
           <!-- Immersive (own toolbar, above the app bar) only below the wide breakpoint.
                On wide screens the bar is app chrome, so the full-pane article slots
                beneath it with the same toolbar arrangement the split pane uses. -->
-          <ng-container *ngTemplateOutlet="readerPane; context: { fullscreen: !screen.isWide() }" />
+          <ng-container
+            *ngTemplateOutlet="
+              readerPane;
+              context: { fullscreen: !screen.isWide() };
+              injector: entryLayer.injector
+            "
+          />
         </div>
       }
       @if (linkTarget()) {
-        <div class="article-overlay" animate.leave="article-leave">
-          <ng-container *ngTemplateOutlet="linkPane; context: { fullscreen: !screen.isWide() }" />
+        <div
+          class="article-overlay"
+          appPageLayer
+          #linkLayer="appPageLayer"
+          animate.leave="article-leave"
+        >
+          <ng-container
+            *ngTemplateOutlet="
+              linkPane;
+              context: { fullscreen: !screen.isWide() };
+              injector: linkLayer.injector
+            "
+          />
         </div>
       }
     }
   </main>
   <ng-template #entryListPane>
-    <section class="list" #listColumn>
+    <section class="list" #listColumn appPageLayer>
       <app-entry-list
         appTrendingList
         [layout]="layout.mode()"
