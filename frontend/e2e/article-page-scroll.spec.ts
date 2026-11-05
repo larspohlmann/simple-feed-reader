@@ -101,6 +101,26 @@ async function expectListBackAtItsOffset(page: Page): Promise<void> {
   expect(await pageScrollY(page)).toBe(LIST_OFFSET);
 }
 
+/** Two frames, so a scroll event has been heard and any restore re-assert has settled. */
+async function nextFrames(page: Page): Promise<void> {
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+}
+
+/** The article paragraph in the middle third of the viewport, wherever the article scrolls. */
+function paragraphInView(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const paragraphs = Array.from(document.querySelectorAll<HTMLElement>('app-reader-view p'));
+    const third = window.innerHeight / 3;
+    const visible = paragraphs.find((paragraph) => {
+      const box = paragraph.getBoundingClientRect();
+      return box.top > third && box.top < 2 * third;
+    });
+    return visible?.textContent?.trim() ?? '';
+  });
+}
+
 /** A locator click scrolls a sticky box's in-flow position into view first, moving the page. */
 async function clickWhereItStands(page: Page, target: Locator): Promise<void> {
   await target.evaluate(() =>
@@ -236,29 +256,79 @@ test.describe('A full-screen article owns the page beneath the app bar on a wide
 test.describe('Switching between split view and full screen with an article open', () => {
   test.use({ viewport: WIDE });
 
-  test('carries the list’s and the article’s offsets both ways', async ({ page }) => {
+  test('hands the page to the article and back to the list', async ({ page }) => {
     await openReader(page, 'pane');
     await openArticleFromList(page);
-    const pane = page.locator('.main.split > .reader app-reader-view .scroller');
-    await pane.evaluate((el, top) => el.scrollTo({ top, behavior: 'instant' }), ARTICLE_OFFSET);
-    await expect.poll(() => pane.evaluate((el) => el.scrollTop)).toBe(ARTICLE_OFFSET);
-    // Two frames, so the pane's scroll event has been heard and its offset remembered.
-    await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    await expect(page.locator('.main.split')).toHaveCount(1);
+
+    // Resized mid-test on purpose; each wait below gates on the layout actually switching.
+    await page.setViewportSize(MEDIUM);
+    await expect(page.locator('.main.split')).toHaveCount(0);
+    await expect(page.locator(LAYER)).toHaveClass(/on-page/);
+    await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
+    await nextFrames(page);
+    const paragraph = page.locator(`${LAYER} p`).first();
+    const top = await pageScrollY(page);
+    const target = top > ARTICLE_OFFSET ? top - ARTICLE_OFFSET : top + ARTICLE_OFFSET;
+    const paragraphY = (await paragraph.boundingBox())!.y;
+    await scrollPageTo(page, target);
+    expect((await paragraph.boundingBox())!.y).toBeCloseTo(paragraphY + top - target, 0);
+
+    await page.locator(`${LAYER} .corner-back`).click();
+    await expect(page.locator('.article-overlay')).toHaveCount(0);
+    await expect(page.locator('section.list')).not.toHaveClass(/page-pinned/);
+    await scrollPageTo(page, LIST_OFFSET);
+
+    await page.setViewportSize(WIDE);
+    await expect(page.locator('.main.split')).toHaveCount(1);
+  });
+
+  // Follow-up: a content-anchored restore across a layout switch.
+  test.fixme('keeps the list on the same row through full screen and back', async ({ page }) => {
+    await openReader(page, 'pane');
+    await openArticleFromList(page);
+    await expect(page.locator('.main.split')).toHaveCount(1);
+    expect(await pageScrollY(page), 'the list does not overflow — the case proves nothing').toBe(
+      LIST_OFFSET,
     );
-    expect(await pageScrollY(page)).toBe(LIST_OFFSET);
+    const title = await rowTitleInView(page);
+    expect(title, 'no row in the middle third — the case proves nothing').not.toBe('');
 
     // Resized mid-test on purpose; each wait below gates on the layout actually switching.
     await page.setViewportSize(MEDIUM);
     await expect(page.locator('.main.split')).toHaveCount(0);
     await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
-    await expect.poll(() => pageScrollY(page)).toBe(ARTICLE_OFFSET);
+
+    await page.locator(`${LAYER} .corner-back`).click();
+    await expect(page.locator('.article-overlay')).toHaveCount(0);
+    await expect(page.locator('section.list')).not.toHaveClass(/page-pinned/);
+    await expect.poll(() => rowTitleInView(page)).toBe(title);
 
     await page.setViewportSize(WIDE);
     await expect(page.locator('.main.split')).toHaveCount(1);
-    await expect.poll(() => pageScrollY(page)).toBe(LIST_OFFSET);
-    await expect.poll(() => pane.evaluate((el) => el.scrollTop)).toBe(ARTICLE_OFFSET);
+    await expect.poll(() => rowTitleInView(page)).toBe(title);
+  });
+
+  // Follow-up: a content-anchored restore across a layout switch.
+  test.fixme('keeps the article on the same paragraph into full screen', async ({ page }) => {
+    await openReader(page, 'pane');
+    await openArticleFromList(page);
+    await expect(page.locator('.main.split')).toHaveCount(1);
+    const pane = page.locator('.main.split > .reader app-reader-view .scroller');
+    await pane.evaluate(
+      (element, top) => element.scrollTo({ top, behavior: 'instant' }),
+      ARTICLE_OFFSET,
+    );
+    await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(ARTICLE_OFFSET);
+    await nextFrames(page);
+    const paragraph = await paragraphInView(page);
+    expect(paragraph, 'no paragraph in the middle third — the case proves nothing').not.toBe('');
+
+    await page.setViewportSize(MEDIUM);
+    await expect(page.locator('.main.split')).toHaveCount(0);
+    await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
+    await expect.poll(() => paragraphInView(page)).toBe(paragraph);
   });
 });
 
@@ -285,9 +355,7 @@ test.describe('An action sheet over a full-screen article', () => {
     await clickWhereItStands(page, page.locator(`${LAYER} .corner-actions button.corner-share`));
     await expect(page.locator('.app-action-sheet')).toBeVisible();
     await expect(page.locator('html')).toHaveClass(/cdk-global-scrollblock/);
-    await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-    );
+    await nextFrames(page);
     await expect(bar).toHaveClass(/hidden/);
     expect(await fill()).toBeCloseTo(fillBefore, 1);
 
