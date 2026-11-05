@@ -218,7 +218,7 @@
   bottom: var(--audio-bar-h, 0);
 }
 
-:host(.on-page) app-progress-rail {
+:host(.on-page) app-progress-rail:not(.horizontal) {
   bottom: auto;
   height: calc(100dvh - var(--audio-bar-h, 0rem));
 }

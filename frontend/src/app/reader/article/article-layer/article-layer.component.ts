@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -5,6 +6,7 @@ import {
   effect,
   inject,
   input,
+  NgZone,
   output,
   signal,
   untracked,
@@ -25,9 +27,9 @@ import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
 import { ArticleGestures } from './article-gestures.service';
 
-/** The reader's layer: its frame, hide-on-scroll toolbar, its scroller (the pane's box, or the page), the
- *  progress rail, the to-top button and the return gestures. The article itself,
- *  the toolbar's actions and the nameplate are projected by the reader using it. */
+/** The reader's layer: its frame, hide-on-scroll toolbar, its scroller (the pane's box,
+ *  or the page), the progress rail, the to-top button and the return gestures. The article
+ *  itself, the toolbar's actions and the nameplate are projected by the reader using it. */
 @Component({
   selector: 'app-article-layer',
   imports: [ProgressRailComponent, IconComponent, SpinnerComponent, ToTopButtonComponent],
@@ -57,7 +59,7 @@ export class ArticleLayerComponent {
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
   private readonly scrollHosts = inject(ScrollHosts);
   private readonly pageLayer = inject(PageLayer, { optional: true });
-  /** Full screen the article owns the page (#2038); the split pane scrolls its own box. */
+  /** The overlay's article owns the page (#2038); the split pane scrolls its own box. */
   protected readonly onPage = this.pageLayer !== null;
   readonly scroller = computed((): ScrollHost | undefined => {
     const element = this.scrollerRef()?.nativeElement;
@@ -66,6 +68,8 @@ export class ArticleLayerComponent {
       ? this.scrollHosts.forPage(element, this.pageLayer)
       : this.scrollHosts.forElement(element);
   });
+  private readonly root = inject(DOCUMENT).documentElement;
+  private readonly zone = inject(NgZone);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
   readonly leaving = this.gestures.leaving;
@@ -90,6 +94,7 @@ export class ArticleLayerComponent {
       if (scroller) onCleanup(scroller.listen(() => this.onScroll(scroller.scrollTop)));
     });
     this.reserveToolbarHeight();
+    this.padPageScrolls();
     effect(() => {
       this.resetKey();
       untracked(() => this.reset());
@@ -144,10 +149,38 @@ export class ArticleLayerComponent {
       const style = this.host.nativeElement.style;
       const observer = new ResizeObserver(() => {
         style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
+        this.padPage();
         this.barResized.emit();
       });
       observer.observe(bar);
       onCleanup(() => observer.disconnect());
     });
+  }
+
+  /** Focus, `scrollIntoView` and fragment jumps pad by the root's scroll-padding, not the scroller's. */
+  private padPageScrolls(): void {
+    const layer = this.pageLayer;
+    if (!layer) return;
+    effect((onCleanup) => {
+      if (!this.scrollerRef()) return;
+      this.padPage();
+      const observer = this.zone.runOutsideAngular(() => {
+        const pinWatch = new MutationObserver(() => this.padPage());
+        pinWatch.observe(layer.element, { attributes: true, attributeFilter: ['class'] });
+        return pinWatch;
+      });
+      onCleanup(() => {
+        observer.disconnect();
+        this.root.style.removeProperty('scroll-padding-top');
+      });
+    });
+  }
+
+  /** Pinned, the layer above owns the page's padding. */
+  private padPage(): void {
+    const scroller = this.scrollerRef()?.nativeElement;
+    if (!this.pageLayer || this.pageLayer.pinned || !scroller) return;
+    const padding = getComputedStyle(scroller).getPropertyValue('scroll-padding-top');
+    this.root.style.setProperty('scroll-padding-top', padding);
   }
 }
