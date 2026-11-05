@@ -21,6 +21,12 @@ import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-
 import { LayoutService } from '../../layout.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
+import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
+import {
+  ElementBackedScrollHosts,
+  restorePageScroll,
+  trackPageScrollTop,
+} from '../../../../testing/scroll-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import {
@@ -79,6 +85,7 @@ function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
       { provide: CatalogStore, useValue: catalog },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
       { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
+      { provide: ScrollHosts, useClass: ElementBackedScrollHosts },
       ...providers,
     ],
   });
@@ -2686,15 +2693,15 @@ describe('EntryListComponent', () => {
       expect(fill(fixture)).toBe('50');
     });
 
-    it('runs along the bottom on a wide layout, keeping the scrollbar', () => {
+    it('stands on the right edge on a wide layout too', () => {
       const fixture = mount(pagedList, [wideLayout]);
       const scroller = layOut(fixture, 100, 1100);
       scrollTo(fixture, scroller, 0);
       scrollTo(fixture, scroller, 1300);
 
-      expect(rail(fixture)!.classList).toContain('horizontal');
+      expect(rail(fixture)!.classList).not.toContain('horizontal');
       expect(fill(fixture)).toBe('50');
-      expect(scroller.classList).not.toContain('scrollbar-hidden');
+      expect(document.documentElement.classList).toContain('page-scrollbar-hidden');
     });
 
     it('stands on the right edge in place of the scrollbar on a phone', () => {
@@ -2703,7 +2710,7 @@ describe('EntryListComponent', () => {
       scrollTo(fixture, scroller, 0);
 
       expect(rail(fixture)!.classList).not.toContain('horizontal');
-      expect(scroller.classList).toContain('scrollbar-hidden');
+      expect(document.documentElement.classList).toContain('page-scrollbar-hidden');
     });
 
     it('is not shown for a paged search, which has no total', () => {
@@ -2716,7 +2723,17 @@ describe('EntryListComponent', () => {
       const fixture = mount({ ...pagedList, selection: search });
       const scroller = layOut(fixture, 100, 1100);
       scrollTo(fixture, scroller, 0);
-      expect(scroller.classList).not.toContain('scrollbar-hidden');
+      expect(document.documentElement.classList).not.toContain('page-scrollbar-hidden');
+    });
+
+    it('gives the page its scrollbar back when the list goes', () => {
+      const fixture = mount(pagedList);
+      scrollTo(fixture, layOut(fixture, 100, 1100), 0);
+      expect(document.documentElement.classList).toContain('page-scrollbar-hidden');
+
+      fixture.destroy();
+
+      expect(document.documentElement.classList).not.toContain('page-scrollbar-hidden');
     });
 
     it('goes idle when the rows give way to the empty state', () => {
@@ -2834,6 +2851,23 @@ describe('EntryListComponent', () => {
       expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
         'several of your feeds cover it within 7 days',
       );
+    });
+  });
+
+  describe('on the page (#2038)', () => {
+    afterEach(restorePageScroll);
+
+    it('collapses its header when the document scrolls', () => {
+      const fixture = mount({}, [{ provide: ScrollHosts, useClass: ScrollHosts }]);
+      const page = trackPageScrollTop();
+
+      page.top = 100;
+      window.dispatchEvent(new Event('scroll'));
+      page.top = 800;
+      window.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.collapsed()).toBe(true);
     });
   });
 });

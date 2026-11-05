@@ -132,7 +132,7 @@
     }
   </main>
   <ng-template #entryListPane>
-    <section class="list">
+    <section class="list" #listColumn>
       <app-entry-list
         appTrendingList
         [layout]="layout.mode()"
@@ -203,7 +203,7 @@
     }
   </ng-template>
 </div>
-<app-audio-player-bar />
+<app-audio-player-bar #audioBar />
 <app-url-drop-zone (urlDropped)="refresh.addFeed($event)" />
 
 <!-- Defined once and outlet-rendered into whichever `.list` header via

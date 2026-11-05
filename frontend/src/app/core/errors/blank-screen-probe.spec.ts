@@ -225,4 +225,21 @@ describe('startBlankScreenProbe', () => {
       expect.objectContaining({ element: 'app-reader.shell', scrollTop: 4200 }),
     ]);
   });
+
+  it('records the scroll offset of the page itself', () => {
+    mountRouteContent();
+    mountBootErrorSurface(true);
+    textRect = BELOW_THE_FOLD;
+    const root = document.documentElement;
+    Object.defineProperty(document, 'scrollingElement', { value: root, configurable: true });
+    Object.defineProperty(root, 'scrollTop', { value: 4200, configurable: true });
+    stopProbe = startBlankScreenProbe();
+
+    jest.advanceTimersByTime(SETTLE_AFTER_LOAD_MS);
+    delete (root as unknown as { scrollTop?: number }).scrollTop;
+
+    expect(sentPayloads()[0].snapshot.scrolled).toEqual([
+      expect.objectContaining({ element: 'html', scrollTop: 4200 }),
+    ]);
+  });
 });

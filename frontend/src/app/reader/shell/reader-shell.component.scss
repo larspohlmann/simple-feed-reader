@@ -1,27 +1,17 @@
 @use '../../theme/breakpoints' as bp;
 @use '../../theme/corner-circle-button' as circle;
+@use '../../theme/page-chrome';
 
+/* The list scrolls the page (#2038): the shell grows with it and its chrome is fixed. */
 :host {
-  display: flex;
-  flex-direction: column;
-
-  /* `dvh` tracks mobile Safari's toolbar; without it the shell's bottom edge
-     hides behind it, since the page itself never scrolls (an inner container
-     does). The `vh` line above is the fallback for browsers without `dvh`. */
-  height: 100vh;
-  height: 100dvh;
-
-  /* Clip the header when it slides up off the top (hide-on-scroll), and anchor
-     it: it is positioned against this box, not the viewport. */
-  overflow: hidden;
-  position: relative;
+  display: block;
 }
 
 /* Floats over the content rather than sitting in the flow. A negative
    `margin-top` used to hide it, re-running flex layout every frame and
    jumping the list under the finger (#87). A transform touches no layout. */
 app-reader-header {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -43,13 +33,9 @@ app-reader-header.hidden {
    bar's height in their own padding, so retracting it reveals content instead
    of leaving a gap. The in-flow sidebar takes its own offset below. */
 .body {
-  /* Contains the narrow drawer and its backdrop, and clips a squeezed list, so
-     nothing paints over the audio player below. */
-  position: relative;
-  overflow: clip;
-  flex: 1;
+  /* Clips sideways overflow, a split list held at its min-width, so the page never scrolls sideways. */
+  overflow-x: clip;
   display: flex;
-  min-height: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -67,6 +53,11 @@ app-reader-header.hidden {
      it. This offset lives here, not on `.body`, because it's keyed to the
      element that needs it, not to a breakpoint (they diverge 721–899px). */
   padding: calc(var(--app-bar-h, var(--bar-h)) + var(--space-2)) var(--space-2) var(--space-2);
+}
+
+/* Pinned beside the list while the list scrolls the page; `.sidebar-body` scrolls inside. */
+.body:not(.is-narrow) .sidebar {
+  @include page-chrome.pinned-column;
 }
 
 /* The user hid the sidebar on a wide layout. Class-driven like the narrow
@@ -89,8 +80,7 @@ app-reader-header.hidden {
    right. Lives on a wrapper, not `app-reader-view` itself: a transform on that
    component would hijack its `position: fixed` descendants (#100). */
 .article-overlay {
-  position: absolute;
-  inset: 0;
+  @include page-chrome.list-column-box;
 
   /* Wide: beneath the app bar (10) — brand and account stay visible, and the
      article panel reserves the bar's height like the split pane does. */
@@ -143,16 +133,6 @@ app-reader-header.hidden {
   }
 }
 
-/* The list column in both layouts: a flex column so `app-entry-list` fills it,
-   shared by split and single-pane mode. Positioned so the run hairline below
-   anchors to it, not the viewport. */
-.list {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  position: relative;
-}
-
 /* The list pane's width is user-owned: dragged on the divider below, persisted
    per device (PaneSplitService, #810). `--list-width` is written by the
    divider; 42% is only the fallback before its effect writes the saved value. */
@@ -163,8 +143,10 @@ app-reader-header.hidden {
   min-width: 17.5rem;
 }
 
+/* Pinned beside the list, which owns the page; the article scrolls inside it. */
 .main.split .reader {
-  position: relative;
+  @include page-chrome.pinned-column;
+
   flex: 1;
   min-width: 0;
 }
@@ -194,10 +176,10 @@ app-reader-header.hidden {
    negative inline margin so its grab area adds no layout width, and draws the
    hairline the list used to own. `touch-action: none` claims the gesture. */
 .main.split .pane-divider {
+  @include page-chrome.pinned-column;
+
   flex: 0 0 var(--space-2);
-  align-self: stretch;
   margin-inline: calc(var(--space-2) * -0.5);
-  position: relative;
   z-index: 1;
   cursor: col-resize;
   touch-action: none;
@@ -228,14 +210,6 @@ app-reader-header.hidden {
   min-width: 0;
 }
 
-/* `app-entry-list` is `.list`'s only child now — the run block lives inside
-   its own scroller (`topBlock`) rather than beside it — so it simply fills
-   the column. */
-.list app-entry-list {
-  flex: 1;
-  min-height: 0;
-}
-
 /* Its buttons join the header's `.tools` row, so they take that row's gap in both forms. */
 .for-you-action {
   display: contents;
@@ -246,11 +220,11 @@ app-reader-header.hidden {
   color: var(--danger);
 }
 
-/* Nothing in normal flow can sit "below the header" (absolute, opaque). This
+/* Nothing in normal flow can sit "below the header" (fixed, opaque). This
    wrapper is positioned instead, dropped by the bar's height (zero shift for
    the main column). z-index sits between the list header (3) and article (5/12). */
 .under-header {
-  position: absolute;
+  position: fixed;
   top: var(--app-bar-h, var(--bar-h));
   left: 0;
   right: 0;
@@ -267,6 +241,14 @@ app-reader-header.hidden {
   .under-header {
     transition: none;
   }
+}
+
+/* The shell publishes this bar's height as `--audio-bar-h`; everything pinned to the foot leaves it free. */
+app-audio-player-bar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 9;
 }
 
 /* The post-onboarding fetch banner: an in-flow strip inside `.under-header`. */
@@ -326,11 +308,8 @@ app-reader-header.hidden {
    LayoutService.isNarrow(), not a media query, so the 720px boundary is
    declared once (#185). A full-height sheet over the app bar (#1749). */
 .body.is-narrow .sidebar {
-  /* Anchored to the shell host (in document flow), not the viewport: a
-     `fixed` drawer stays pinned while iOS rubber-bands the page on
-     pull-to-refresh, so it drifts against the header and list. */
-  position: absolute;
-  inset-block: 0;
+  position: fixed;
+  inset-block: 0 var(--audio-bar-h, 0);
   left: 0;
   z-index: 20;
   box-sizing: content-box;
@@ -351,8 +330,8 @@ app-reader-header.hidden {
 
 .body.is-narrow .backdrop {
   display: block;
-  position: absolute;
-  inset: 0;
+  position: fixed;
+  inset: 0 0 var(--audio-bar-h, 0);
   z-index: 15;
   background: var(--drawer-scrim);
 }

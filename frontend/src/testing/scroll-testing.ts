@@ -1,4 +1,7 @@
+import { Injectable } from '@angular/core';
 import { ElementScrollHost } from '../app/shared/scroll-host/scroll-host';
+import type { ScrollHost } from '../app/shared/scroll-host/scroll-host';
+import { ScrollHosts } from '../app/shared/scroll-host/scroll-hosts.service';
 
 /** Make an element's scrollTop a plain settable value, since jsdom does no layout. */
 export function trackScrollTop(element: HTMLElement): { top: number } {
@@ -11,6 +14,19 @@ export function trackScrollTop(element: HTMLElement): { top: number } {
     },
   });
   return state;
+}
+
+/** Make the document the page scroller with a settable offset; undo with `restorePageScroll`. */
+export function trackPageScrollTop(): { top: number } {
+  const root = document.documentElement;
+  Object.defineProperty(document, 'scrollingElement', { value: root, configurable: true });
+  return trackScrollTop(root);
+}
+
+/** Remove what `trackPageScrollTop` installed, so no later spec inherits it. */
+export function restorePageScroll(): void {
+  delete (document as unknown as { scrollingElement?: Element }).scrollingElement;
+  delete (document.documentElement as unknown as { scrollTop?: number }).scrollTop;
 }
 
 export function scrollerOf(fixture: { nativeElement: unknown }): HTMLElement {
@@ -29,4 +45,12 @@ export function stubCssEscape(): () => void {
 
 export function elementScrollHost(element: HTMLElement): ElementScrollHost {
   return new ElementScrollHost(element, (run) => run());
+}
+
+/** For specs that drive the list's scroller as an element: jsdom has no page scroll (#2038). */
+@Injectable()
+export class ElementBackedScrollHosts extends ScrollHosts {
+  override forPage(content: HTMLElement): ScrollHost {
+    return this.forElement(content);
+  }
 }

@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 import { entryWire, oneFeedJson } from './support/reader';
+import { pageScrollY } from './support/scroll';
 
 /** How far down the list the spec scrolls before switching lists. */
 const SCROLLED_TO = 900;
@@ -93,15 +94,6 @@ async function signInWithReaderData(page: Page): Promise<boolean> {
   return signInAsAdmin(page);
 }
 
-/** The list's own scroller — the shell locks the page and scrolls this instead. */
-function listScroller(page: Page) {
-  return page.locator('app-entry-list .rows').first();
-}
-
-function scrollTop(page: Page): Promise<number> {
-  return listScroller(page).evaluate((el) => el.scrollTop);
-}
-
 /**
  * Wait for a list's own rows before touching the scroller. The outgoing list
  * stays rendered while the next query runs (#254), so the scroller is visible
@@ -134,16 +126,16 @@ async function scrollListTo(page: Page, top: number): Promise<void> {
   // handler runs — and two such scrolls in a row then coalesce into one event
   // the header reads as a single downward move, leaving it hidden for good
   // (#830). Awaiting the event keeps each direction change its own gesture.
-  await listScroller(page).evaluate(
-    (el, to) =>
+  await page.evaluate(
+    (to) =>
       new Promise<void>((resolve) => {
-        if (el.scrollTop === to) return resolve();
-        el.addEventListener('scroll', () => resolve(), { once: true });
-        el.scrollTo({ top: to });
+        if (window.scrollY === to) return resolve();
+        window.addEventListener('scroll', () => resolve(), { once: true });
+        window.scrollTo({ top: to });
       }),
     top,
   );
-  await expect.poll(() => scrollTop(page)).toBe(top);
+  await expect.poll(() => pageScrollY(page)).toBe(top);
 }
 
 /**
@@ -171,11 +163,11 @@ test.describe('list scroll position on a list switch', () => {
     // --- Back restores the place the list was left at. ---
     await page.goBack();
     await showsRowsOf(page, ALL_LIST);
-    await expect.poll(() => scrollTop(page)).toBe(SCROLLED_TO);
+    await expect.poll(() => pageScrollY(page)).toBe(SCROLLED_TO);
 
     // --- A click asks for the list afresh: top, not where it was left. ---
     await openList(page, TAG_LIST);
-    await expect.poll(() => scrollTop(page)).toBe(0);
+    await expect.poll(() => pageScrollY(page)).toBe(0);
   });
 
   /**
@@ -208,7 +200,7 @@ test.describe('list scroll position on a list switch', () => {
     // Clicking the other remembered list proves the reset survived the teardown:
     // it lands at the top, not where it was left.
     await openList(page, ALL_LIST);
-    await expect.poll(() => scrollTop(page)).toBe(0);
+    await expect.poll(() => pageScrollY(page)).toBe(0);
   });
 
   test('a reload lands where the list was left, as a resume-reload must', async ({ page }) => {
@@ -224,7 +216,7 @@ test.describe('list scroll position on a list switch', () => {
     await page.reload();
 
     await showsRowsOf(page, ALL_LIST);
-    await expect.poll(() => scrollTop(page)).toBe(SCROLLED_TO);
+    await expect.poll(() => pageScrollY(page)).toBe(SCROLLED_TO);
   });
 });
 
@@ -257,7 +249,7 @@ test.describe('list scroll position with the unread filter on', () => {
     await openList(page, TAG_LIST);
 
     await openList(page, ALL_LIST);
-    await expect.poll(() => scrollTop(page)).toBe(0);
+    await expect.poll(() => pageScrollY(page)).toBe(0);
   });
 
   test('flipping the filter starts the list at the top', async ({ page }) => {
@@ -273,12 +265,12 @@ test.describe('list scroll position with the unread filter on', () => {
     await scrollListTo(page, SCROLLED_TO);
     await unreadSwitch(page).click();
     await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'false');
-    await expect.poll(() => scrollTop(page)).toBe(0);
+    await expect.poll(() => pageScrollY(page)).toBe(0);
 
     await unreadSwitch(page).click();
     await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
     await showsRowsOf(page, ALL_LIST);
-    await expect.poll(() => scrollTop(page)).toBe(0);
+    await expect.poll(() => pageScrollY(page)).toBe(0);
   });
 });
 
@@ -307,7 +299,7 @@ test.describe('list scroll position around a search', () => {
     await showsRowsOf(page, SEARCH_RESULTS);
     // The results are their own list: they start at the top, and scrolling them
     // must not be mistaken for scrolling the list underneath.
-    await expect.poll(() => scrollTop(page)).toBe(0);
+    await expect.poll(() => pageScrollY(page)).toBe(0);
 
     // The bar's ✕ is a two-step contract on a phone: the first tap empties the
     // box, the second ends the search and closes the bar.
@@ -315,6 +307,6 @@ test.describe('list scroll position around a search', () => {
     await page.getByRole('button', { name: 'Close search' }).click();
 
     await showsRowsOf(page, TAG_LIST);
-    await expect.poll(() => scrollTop(page)).toBe(RESTS_AT);
+    await expect.poll(() => pageScrollY(page)).toBe(RESTS_AT);
   });
 });

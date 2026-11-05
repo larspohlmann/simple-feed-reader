@@ -28,6 +28,9 @@
   container: reader-pane / size;
   height: 100%;
   overflow: auto;
+
+  /* At its end, a wheel or touch must not go on to scroll the list behind (#2038). */
+  overscroll-behavior: contain;
   isolation: isolate;
   scroll-padding-top: calc(var(--reader-mini-h) + var(--bar-gap));
 }

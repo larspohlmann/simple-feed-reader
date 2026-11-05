@@ -1,0 +1,16 @@
+// A flex child held in view while the page scrolls past it: one viewport tall, above the audio bar.
+@mixin pinned-column {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: calc(100dvh - var(--audio-bar-h, 0rem));
+}
+
+// The list column's box, which the shell publishes because `fixed` measures from the viewport.
+@mixin list-column-box {
+  position: fixed;
+  top: 0;
+  bottom: var(--audio-bar-h, 0);
+  left: var(--list-column-left, 0);
+  width: var(--list-column-width, 100%);
+}

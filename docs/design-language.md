@@ -1722,6 +1722,18 @@ when the categories outrun it:
 }
 ```
 
+**The reader scrolls the page (#2038).** The list's rows lie on the document; its chrome —
+app bar, `.under-header`, list header, rail, corner discs, audio bar — is `position: fixed`.
+List chrome sits in the entry list's two `.list-frame`s, placed by `--list-column-left` and
+`--list-column-width`, which the shell measures off the `.list` column because `fixed`
+measures from the viewport; everything pinned to the foot leaves `--audio-bar-h` free. The
+frames and the full-screen article take that box from `page-chrome.list-column-box`
+(`theme/_page-chrome.scss`). The wide sidebar column, the pane divider and split view's
+reader pane are sticky flex children (`page-chrome.pinned-column`: `top: 0`, a
+viewport-tall height, `align-self: flex-start`) whose scrollers set
+`overscroll-behavior: contain`. A new fixed element is checked for a transformed, filtered or
+contained ancestor (#100).
+
 **A percentage height inside an overlay panel silently resolves to `auto`.** The
 panel is sized by `max-height` alone, and a `max-height` does not make a box's
 height definite — so every `height: 100%` / `max-height: 100%` below it computes

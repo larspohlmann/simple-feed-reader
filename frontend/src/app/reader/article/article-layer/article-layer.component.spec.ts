@@ -32,7 +32,6 @@ class LayerHostComponent {
   readonly fullscreen = signal(false);
   readonly page = signal('entry:1');
   readonly progressRail = new ScrollProgressRail({
-    isWide: signal(false),
     scroller: () => undefined,
     contentBottom: () => null,
     layout: signal(0),

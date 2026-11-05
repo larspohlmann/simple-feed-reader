@@ -6,11 +6,11 @@ import { ProgressRailComponent } from './progress-rail.component';
 import { ScrollProgressRail } from './scroll-progress-rail';
 
 describe('ProgressRailComponent', () => {
-  function mount(isWide: boolean) {
+  function mount(horizontal?: boolean) {
     const progress = TestBed.runInInjectionContext(
       () =>
         new ScrollProgressRail({
-          isWide: signal(isWide),
+          horizontal: horizontal === undefined ? undefined : signal(horizontal),
           scroller: () => undefined,
           contentBottom: () => null,
           layout: signal(0),
@@ -23,7 +23,7 @@ describe('ProgressRailComponent', () => {
   }
 
   it('is decorative and idle until the content overflows', () => {
-    const { host, progress, fixture } = mount(false);
+    const { host, progress, fixture } = mount();
     expect(host.getAttribute('aria-hidden')).toBe('true');
     expect(host.classList).toContain('idle');
 
@@ -33,8 +33,8 @@ describe('ProgressRailComponent', () => {
     expect(host.classList).not.toContain('idle');
   });
 
-  it('stands up on a phone and lies along the bottom when wide', () => {
-    expect(mount(false).host.classList).not.toContain('horizontal');
+  it('stands up unless a caller asks for the bottom hairline', () => {
+    expect(mount().host.classList).not.toContain('horizontal');
     expect(mount(true).host.classList).toContain('horizontal');
   });
 });
@@ -55,7 +55,6 @@ describe('ScrollProgressRail following its scroller', () => {
     const progress = TestBed.runInInjectionContext(
       () =>
         new ScrollProgressRail({
-          isWide: signal(false),
           scroller: () => host(),
           contentBottom: (scroller) => scroller.scrollHeight,
           layout: signal(0),

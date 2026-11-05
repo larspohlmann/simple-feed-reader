@@ -21,7 +21,6 @@ import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
-import { LayoutService } from '../../layout.service';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
 import { ArticleContentComponent } from '../article-content/article-content.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
@@ -95,7 +94,6 @@ export class ArticlePageComponent {
 
   protected readonly progressRail = new ScrollProgressRail({
     scroller: this.scroller,
-    isWide: inject(LayoutService).isWide,
     contentBottom: this.scope.readingEnd,
     layout: this.scope.readingEnd,
   });

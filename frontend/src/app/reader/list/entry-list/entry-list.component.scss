@@ -1,27 +1,43 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/glass-rim';
+@use '../../../theme/page-chrome';
 
-/* What every scroller/overlay branch below reserves before its own content:
-   app bar + list header + gap. Was 4 independent copies of this calc
-   (.rows, .rows.magazine, empty state, .list-error) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 
-/* Tail room so the last row can scroll up clear of the corner buttons. */
-$corner-clear: calc(3 * (var(--space-5) + var(--corner-button-size) + var(--space-3)));
+/* Tail room so the last row can scroll up clear of the corner buttons and the audio bar. */
+$corner-clear: calc(
+  3 * (var(--space-5) + var(--corner-button-size) + var(--space-3)) + var(--audio-bar-h, 0rem)
+);
 
 :host {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-  position: relative; /* anchor for the pull-to-refresh indicator */
+  display: block;
+}
+
+/* The list's chrome, held over its column while the rows scroll the page (#2038). */
+.list-frame {
+  @include page-chrome.list-column-box;
+
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Above the tail frame, so the list header still covers the rail and the wait veil. */
+.list-frame.lead {
+  z-index: 2;
+}
+
+.list-frame.tail {
   container: entry-list / size;
 }
 
-/* Floats over the scroller rather than sitting in the flow: collapsing it used
-   to shrink the list's box and move the rows mid-gesture (#87). The scroller
-   reserves the expanded height instead, so rows pass translucently behind it. */
+.list-header,
+.list-error,
+.corner-actions {
+  pointer-events: auto;
+}
+
+/* Floats over the rows, which reserve its expanded height: collapsing it moves no row (#87). */
 .list-header {
   position: absolute;
   top: var(--app-bar-h, var(--bar-h));
@@ -48,9 +64,8 @@ $corner-clear: calc(3 * (var(--space-5) + var(--corner-button-size) + var(--spac
   border-bottom: 1px solid var(--border);
   container: list-header / inline-size;
 
-  /* Deliberately NOT animated: the scroller measures this bar's height for its
-     reservation, and an animating box reports every intermediate value, which
-     reintroduces the row jump (#87) this fix removes. It snaps instead. */
+  /* Deliberately NOT animated: the rows' reservation follows this bar's measured
+     height, and an animating box reports every intermediate value (#87). */
 }
 
 @media (width >= bp.$bp-lg) {
@@ -115,9 +130,8 @@ $corner-clear: calc(3 * (var(--space-5) + var(--corner-button-size) + var(--spac
 }
 
 .rows {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+  /* A screen at least, so the airy sheet and a pull reach the foot of a short list. */
+  min-height: calc(100dvh - var(--audio-bar-h, 0rem));
 
   /* Animates the reveal open/closed (snap-back, and the button-driven slide);
      removed under .dragging so the content tracks the finger 1:1. */
@@ -271,9 +285,7 @@ app-progress-rail {
   --card-hover-decoration: underline;
   --magazine-gap: var(--space-5);
 
-  /* No cards left, so the card colour becomes the sheet the column sits on.
-     Painted as a background image because the box IS the scroller: narrowing
-     it would leave the space beside it dead to the wheel (#723). */
+  /* No cards left, so the card colour becomes the sheet the column sits on. */
   --airy-sheet: min(100%, calc(var(--magazine-measure) + 2 * var(--space-5)));
 
   /* Dark mode pulls this down to --surface-read so the sheet matches the open
@@ -352,7 +364,7 @@ app-progress-rail {
 }
 
 /* Overlays the top of the content, just below the floating header, instead of
-   sitting in the flow. The scroller keeps its own `$header-clear` reservation
+   sitting in the flow. The rows keep their own `$header-clear` reservation
    unconditionally, so the error appearing or being dismissed never moves a row
    (#996 — the old flow banner handed the reservation back and forth, #321). */
 .list-error {
@@ -409,9 +421,8 @@ app-loading-overlay {
   }
 }
 
-/* Anchored to this component's box, not the viewport: in split-pane mode a
-   fixed button would hang over the reader pane. The buttons render even under
-   an open article, so they must stay below `.article-overlay`'s z-index: 5. */
+/* Anchored to the tail frame, so in split view they stay in the list column; the
+   frame sits below `.article-overlay`'s z-index: 5, which covers them under an article. */
 .corner-actions {
   @include circle.corner-anchor(left, 4);
 }
