@@ -45,10 +45,11 @@ html.reader-page {
   overscroll-behavior-y: none;
 }
 
-html.reader-page.page-scrollbar-hidden {
+/* A full-screen article's rail always knows its length, so it always stands in. */
+html.reader-page:is(.page-scrollbar-hidden, .page-overlaid) {
   scrollbar-width: none;
 }
 
-html.reader-page.page-scrollbar-hidden::-webkit-scrollbar {
+html.reader-page:is(.page-scrollbar-hidden, .page-overlaid)::-webkit-scrollbar {
   display: none;
 }

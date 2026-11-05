@@ -22,6 +22,10 @@ export class PageLayer {
 
   /** Out of the flow, showing exactly what it showed with the page at `top`. */
   pinAt(top: number): void {
+    if (this.pinned) {
+      this.hold(top);
+      return;
+    }
     this.documentTop = this.element.getBoundingClientRect().top + top;
     this.element.classList.add(PAGE_PINNED_CLASS);
     this.hold(top);

@@ -46,6 +46,18 @@ describe('PageLayer', () => {
     expect(element.style.getPropertyValue(PAGE_PIN_TOP)).toBe('800px');
   });
 
+  it('only moves its pin when pinned again, keeping where its box started', () => {
+    showsAt(100, 1200);
+    const layer = new PageLayer(element);
+    layer.pinAt(1200);
+    showsAt(-1000, 0);
+
+    layer.pinAt(900);
+
+    expect(layer.pinnedTop).toBe(900);
+    expect(element.style.getPropertyValue(PAGE_PIN_TOP)).toBe('800px');
+  });
+
   it('ignores a write while in the flow', () => {
     const layer = new PageLayer(element);
     layer.moveTo(900);
