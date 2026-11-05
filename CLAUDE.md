@@ -221,7 +221,7 @@ Enforced mechanically by `composer check` and `composer md`:
   constructor parameters into a new class just to get under the count (#2025).
   The project hook `.claude/hooks/phpmd-gate.sh` enforces this: while a PHPMD
   finding is open, a `git commit` that brings new `backend/src` classes is denied
-  until Lars replies "approve classes". A split planned before PHPMD ever fires
+  until Lars starts a reply with "approve classes". A split planned before PHPMD ever fires
   passes no gate, so review asks of every new `src` class: would it merge back
   into its only caller if no PHPMD limit existed?
 - **phptramp** (`phptramp.dist.json`, run by `composer tramp` and CI) — a chain

@@ -6,12 +6,14 @@
 #
 #   record   PostToolUseFailure on Bash: a PHPMD run opens or closes the finding (md exits 2 on findings)
 #   gate     PreToolUse on Bash: a git commit with unapproved new src classes is denied
-#   approve  UserPromptSubmit: Lars's "approve classes" approves the classes the gate named
+#   approve  UserPromptSubmit: a prompt that starts with "approve classes" approves the classes the gate named
 #   settle   PostToolUse on Bash: a PHPMD run records; a commit reports src classes that reached HEAD
 #            unapproved, then forgets a closed finding or re-baselines an open one
 #
 # The gate denies rather than asks: in auto mode a hook's "ask" let the commit straight through
-# (2026-11-05). Approval comes through UserPromptSubmit because only Lars's own message fires it.
+# (2026-11-05). UserPromptSubmit also carries messages from other sessions, subagents and the
+# harness, so the phrase must open the prompt and no harness wrapper may appear in it: a relayed
+# report that merely mentioned the phrase once approved a class without Lars (2026-11-05).
 # The gate runs before the command, so a class created inside the commit's own command slips past
 # it; settle catches that from HEAD and tells Lars. Commands match only at command position, so a
 # commit message that merely names PHPMD or git commit triggers nothing.
@@ -85,7 +87,10 @@ gate() {
 
 approve() {
     [ -f "$state" ] || return 0
-    jq -r '.prompt // ""' <<<"$input" | grep -qi 'approve classes' || return 0
+    jq -e '(.prompt // "") as $prompt
+        | ($prompt | test("\\A\\s*approve classes\\b"; "i"))
+          and ($prompt | test("<(cross-session-message|task-notification|agent-message|system-reminder|ci-monitor-event|side-sessions-event)|Another Claude session sent a message") | not)' \
+        <<<"$input" >/dev/null || return 0
     local pending
     pending=$(state_list pending)
     [ -n "$pending" ] || return 0
