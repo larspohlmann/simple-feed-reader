@@ -55,9 +55,7 @@ async function openArticle(page: Page) {
   return pane;
 }
 
-/** How full the phone's rail is, as a fraction of its height. #435 stood the
- *  cue up on the right edge below the split-pane breakpoint, so below 900px the
- *  cue fills downward — the horizontal hairline is the wide layout's alone. */
+/** How full the rail is, as a fraction of its height: it fills downward at every width (#435, #2038). */
 async function railFilledFraction(pane: ReturnType<Page['locator']>): Promise<number> {
   return pane.evaluate((el) => {
     const rail = el.querySelector('app-progress-rail')!;
@@ -148,21 +146,19 @@ test.describe('Article reading progress on the split layout', () => {
   // The bar belongs to the article, not to the window: on the split layout the
   // list occupies the left of the same row, and a bar spanning the viewport
   // would report the article's position underneath the list as well.
-  test('the bar spans the reading pane only, not the window', async ({ page }) => {
+  test('the rail stands at the reading pane edge, not the window', async ({ page }) => {
     const signedIn = await signInWithLayout(page, 'pane');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
     const pane = await openArticle(page);
 
-    // The wide layout keeps the hairline the split pane was designed for, and
-    // shows no rail — the other half of the swap #435 introduced.
-    await expect(pane.locator(SIDE_RAIL)).toHaveCount(0);
+    // The rail stands at the pane's right edge in place of the pane's scrollbar (#2038).
+    await expect(pane.locator(BOTTOM_HAIRLINE)).toHaveCount(0);
 
-    const box = (await pane.locator(BOTTOM_HAIRLINE).boundingBox())!;
+    const box = (await pane.locator(SIDE_RAIL).boundingBox())!;
     const paneBox = (await pane.locator('.scroller').boundingBox())!;
-    expect(box.width).toBeCloseTo(paneBox.width, 0);
-    expect(box.width).toBeLessThan(DESKTOP.width);
-    expect(box.x).toBeCloseTo(paneBox.x, 0);
+    expect(box.x + box.width).toBeCloseTo(paneBox.x + paneBox.width, 0);
+    expect(box.x + box.width).toBeLessThan(DESKTOP.width);
   });
 });

@@ -12,7 +12,8 @@ import type { ScrollHost } from '../scroll-host/scroll-host';
 import { overflowsViewport, scrollProgress } from './scroll-progress';
 
 export interface ScrollProgressRailOptions {
-  readonly isWide: Signal<boolean>;
+  /** Unset everywhere: the coarse-pointer fallback should an iPhone draw its own indicator (#2038). */
+  readonly horizontal?: Signal<boolean>;
   readonly scroller: () => ScrollHost | undefined;
   /** Where the content ends in the scroller's scroll coordinates, or null when unknown. */
   readonly contentBottom: (scroller: ScrollHost) => number | null;
@@ -31,9 +32,7 @@ export class ScrollProgressRail {
   /** Whether the content's end is known; a paged search, with no total, never is. */
   private readonly knowsLength = signal(false);
 
-  /** A wide layout keeps its scrollbar and gets a hairline along the bottom; a phone
-   *  gets a rail on the right edge in place of the scrollbar it withholds. */
-  readonly horizontal = computed(() => this.options.isWide());
+  readonly horizontal = computed(() => this.options.horizontal?.() ?? false);
 
   /** By whether a rail can show, not by `overflows`: toggling a classic scrollbar
    *  resizes the content, which could flip `overflows` back and forth. */

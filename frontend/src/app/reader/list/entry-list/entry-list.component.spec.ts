@@ -2686,15 +2686,14 @@ describe('EntryListComponent', () => {
       expect(fill(fixture)).toBe('50');
     });
 
-    it('runs along the bottom on a wide layout, keeping the scrollbar', () => {
+    it('stands on the right edge on a wide layout too', () => {
       const fixture = mount(pagedList, [wideLayout]);
       const scroller = layOut(fixture, 100, 1100);
       scrollTo(fixture, scroller, 0);
       scrollTo(fixture, scroller, 1300);
 
-      expect(rail(fixture)!.classList).toContain('horizontal');
+      expect(rail(fixture)!.classList).not.toContain('horizontal');
       expect(fill(fixture)).toBe('50');
-      expect(scroller.classList).not.toContain('scrollbar-hidden');
     });
 
     it('stands on the right edge in place of the scrollbar on a phone', () => {

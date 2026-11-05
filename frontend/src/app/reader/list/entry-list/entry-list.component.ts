@@ -346,7 +346,6 @@ export class EntryListComponent implements OnDestroy {
   });
 
   protected readonly progressRail = new ScrollProgressRail({
-    isWide: this.screen.isWide,
     scroller: this.scrollHost,
     contentBottom: this.listBottom.measure,
     layout: this.listBottom.layout,
