@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  NgZone,
   OnDestroy,
   OnInit,
   afterRenderEffect,
@@ -62,6 +63,7 @@ import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
 import { PageChromeGeometry } from './page-chrome-geometry';
+import { observeResize } from '../../shared/observe-resize';
 import { SightedPreviews } from './sighted-previews.service';
 import { PreviewProgress } from '../link-card/preview-progress';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -123,6 +125,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
+  private readonly zone = inject(NgZone);
 
   readonly manage = inject(ManageActions);
   readonly subs = inject(SubscriptionsStore);
@@ -223,7 +226,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly headerHidden = computed(() =>
     this.headerOverlayOpen() ? false : (this.list()?.collapsed() ?? false),
   );
-  private resizeObs?: ResizeObserver;
+  private stopHeaderResize?: () => void;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
   readonly sidebarOpen = signal(false);
   /** Mirror of the sidebar's Organise model. Owned here so closing the drawer
@@ -287,22 +290,21 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     const headerElement = this.hdr()?.nativeElement as HTMLElement | undefined;
-    if (headerElement && typeof ResizeObserver !== 'undefined') {
+    if (headerElement) {
       // Floor the *fractional* rendered height, not `offsetHeight`: with the
       // mobile tag row present the bar's real height is fractional, and
       // rounding up drops elements anchored at `--app-bar-h` a sub-pixel
       // below the bar's true edge, opening a hairline on iOS Safari (#122).
-      this.resizeObs = new ResizeObserver(() =>
+      this.stopHeaderResize = observeResize(this.zone, [headerElement], () =>
         this.headerHeight.set(Math.floor(headerElement.getBoundingClientRect().height)),
       );
-      this.resizeObs.observe(headerElement);
     }
     // This height drives the content area's top padding, not just the header's
     // slide. Until the observer's first callback lands, the stylesheet's own 56px holds.
   }
 
   ngOnDestroy(): void {
-    this.resizeObs?.disconnect();
+    this.stopHeaderResize?.();
   }
 
   /**

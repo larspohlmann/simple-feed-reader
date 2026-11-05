@@ -1,4 +1,5 @@
 import { describeError, sendClientError, toClientErrorItem } from './client-error-beacon';
+import { pageScrollingElement } from '../page-scrolling-element';
 
 /**
  * Reports a page that shows nothing (#1374): the grey page an iOS browser leaves
@@ -193,7 +194,7 @@ function describeElement(element: Element): string {
 }
 
 function scrolledElements(): Record<string, unknown>[] {
-  const page = document.scrollingElement ?? document.documentElement;
+  const page = pageScrollingElement(document);
   return [page, ...Array.from(document.querySelectorAll('body *'))]
     .filter((element) => element.scrollTop > 0)
     .slice(0, MAX_SCROLLED_ELEMENTS)

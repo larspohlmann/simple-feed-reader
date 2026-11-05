@@ -1,11 +1,10 @@
 import type { ScrollHost } from './scroll-host';
+import { pageScrollingElement } from '../../core/page-scrolling-element';
 
 /** The class a CDK BlockScrollStrategy puts on `<html>` while it pins the page. */
 export const PAGE_SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
 
-/** The document as a scroller (#2038). While a CDK block pins the page it reports the
- *  pinned offset and stays silent, and a write waits for the release, so no consumer
- *  reads the block as a scroll. */
+/** While a CDK block pins the page it reports the pinned offset, stays silent, and defers writes. */
 export class PageScrollHost implements ScrollHost {
   readonly intersectionRoot = null;
   private pendingTop: number | null = null;
@@ -105,6 +104,6 @@ export class PageScrollHost implements ScrollHost {
   }
 
   private get scrollingElement(): Element {
-    return this.view.document.scrollingElement ?? this.root;
+    return pageScrollingElement(this.view.document);
   }
 }

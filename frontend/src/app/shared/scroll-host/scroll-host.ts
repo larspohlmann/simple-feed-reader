@@ -1,3 +1,5 @@
+import { observeResize } from '../observe-resize';
+
 /** Where a pane scrolls: its own element, or the page (#2038). Mirrors the Element
  *  scroll API so geometry helpers such as `atBottom` take either. */
 export interface ScrollHost {
@@ -69,9 +71,6 @@ export class ElementScrollHost implements ScrollHost {
   }
 
   watchResize(listener: () => void): () => void {
-    if (typeof ResizeObserver === 'undefined') return () => undefined;
-    const observer = this.outsideZone(() => new ResizeObserver(() => listener()));
-    observer.observe(this.content);
-    return () => observer.disconnect();
+    return observeResize({ runOutsideAngular: this.outsideZone }, [this.content], listener);
   }
 }
