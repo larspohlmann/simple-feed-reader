@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
-import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
+import { MoreSourcesComponent } from '../../more-sources.component';
 import { EntryImageBlockBase } from '../../entry-image-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
 import { FULL_COLUMN_SIZES } from '../../../rendition-sizes';
@@ -14,7 +14,7 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
     OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
-    EntryDuplicatesComponent,
+    MoreSourcesComponent,
     RenditionsDirective,
   ],
   templateUrl: './entry-wide.component.html',

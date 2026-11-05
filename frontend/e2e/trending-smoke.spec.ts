@@ -78,7 +78,7 @@ const slotOf = (page: Page, id: number) =>
   page.locator('.row-slot', { has: page.locator(`[data-entry-id="${id}"]`) });
 
 for (const layout of ['magazine', 'list'] as const) {
-  test(`Trending lists stories, caps the footer, hides a story and switches the window (${layout})`, async ({
+  test(`Trending lists stories, lists the other sources, hides a story and switches the window (${layout})`, async ({
     page,
   }) => {
     await stubTrending(page);
@@ -97,11 +97,18 @@ for (const layout of ['magazine', 'list'] as const) {
     const story = slotOf(page, 9001);
     await expect(story.getByText('Trending fixture day story')).toBeVisible();
     await expect(story.locator('.sources')).toHaveText('7 sources');
-    await expect(story.locator('.also-foot .lead')).toHaveText('Also covered by');
-    await expect(story.locator('.also-entry')).toHaveCount(4);
-
-    await story.locator('.also-more').click();
-    await expect(story.locator('.also-entry')).toHaveCount(6);
+    if (layout === 'magazine') {
+      const toggle = story.locator('app-more-sources .toggle');
+      await expect(toggle).toHaveText(/6 more sources/);
+      await expect(story.locator('.mini')).toHaveCount(0);
+      await toggle.click();
+      await expect(story.locator('.mini')).toHaveCount(6);
+    } else {
+      await expect(story.locator('.also-foot .lead')).toHaveText('Also covered by');
+      await expect(story.locator('.also-entry')).toHaveCount(4);
+      await story.locator('.also-more').click();
+      await expect(story.locator('.also-entry')).toHaveCount(6);
+    }
     expect(new URL(page.url()).searchParams.get('entry')).toBeNull();
 
     const opened = slotOf(page, 9011);

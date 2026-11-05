@@ -3,7 +3,7 @@ import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryActionsComponent } from '../../../../entry/entry-actions/entry-actions.component';
 import { EntryPillsComponent } from '../../../../entry/entry-pills/entry-pills.component';
-import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
+import { MoreSourcesComponent } from '../../more-sources.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { showsShortPill } from '../../../preview-image';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
@@ -17,7 +17,7 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
     EntryMetaComponent,
     EntryActionsComponent,
     EntryPillsComponent,
-    EntryDuplicatesComponent,
+    MoreSourcesComponent,
   ],
   templateUrl: './entry-compact.component.html',
   styleUrl: './entry-compact.component.scss',

@@ -40,7 +40,7 @@ import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { HandedAutoplayRegion, handedAutoplayRegion } from '../../media/autoplay/autoplay-region';
-import { relativeTime } from '../../format';
+import { entryRelativeTime } from '../../format';
 import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
 import { ArticlePageComponent } from '../article-page/article-page.component';
@@ -165,6 +165,6 @@ export class ReaderViewComponent implements OnChanges {
   }
 
   when(entry: EntryDto): string {
-    return relativeTime(entry.publishedAt ?? entry.createdAt, this.language.lang());
+    return entryRelativeTime(entry, this.language.lang());
   }
 }

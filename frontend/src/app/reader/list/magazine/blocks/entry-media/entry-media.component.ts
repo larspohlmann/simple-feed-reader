@@ -12,7 +12,7 @@ import { DOCUMENT } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
-import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
+import { MoreSourcesComponent } from '../../more-sources.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { sharedMedia } from '../../magazine-slot-fit';
 import { EntryMediumDto, entryMediumRatio } from '../../../../entry-medium';
@@ -34,7 +34,7 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
     OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
-    EntryDuplicatesComponent,
+    MoreSourcesComponent,
     PlayingEmbedDirective,
     PostMediaComponent,
     ProxiedImageDirective,

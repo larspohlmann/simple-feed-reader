@@ -1151,6 +1151,8 @@
     "alsoIn": "Auch in",
     "alsoPublishedAs": "Auch veröffentlicht als",
     "alsoMore": "+{{count}} weitere",
+    "moreSourcesOne": "1 weitere Quelle",
+    "moreSources": "{{count}} weitere Quellen",
     "refresh": "Aktualisieren",
     "refreshing": "Aktualisiere…",
     "lastRefreshed": "Zuletzt aktualisiert",
