@@ -56,6 +56,18 @@ it('expands to one mini card per source, naming its feed and title', () => {
   expect(element.querySelector('.toggle')!.getAttribute('aria-expanded')).toBe('true');
 });
 
+it('names a copy by its poster when someone other than the feed posted it', () => {
+  const post = anEntry({
+    id: 4,
+    source: 'Home',
+    poster: { name: 'Hank Green', url: null, imageUrl: null },
+  });
+  const element = mount(anEntry({ duplicates: [post] }));
+  expand(element);
+
+  expect(element.querySelector('.mini .feed')!.textContent).toContain('Hank Green');
+});
+
 it("shows a source's picture as its thumbnail, its favicon when it has none", () => {
   const element = mount(anEntry({ duplicates: copies }));
   expand(element);
@@ -74,58 +86,47 @@ it('collapses again on a second click', () => {
   expect(element.querySelector('.mini')).toBeNull();
 });
 
-it('opens the source a mini card shows, and not the card it sits on', () => {
+/** Mounts the footer inside a card that records whether an event of `type` reached it. */
+function mountOnCard(type: 'click' | 'keydown'): { element: HTMLElement; reached: jest.Mock } {
   const card = document.createElement('div');
-  const cardClick = jest.fn();
-  card.addEventListener('click', cardClick);
+  const reached = jest.fn();
+  card.addEventListener(type, reached);
   const element = mount(anEntry({ duplicates: copies }));
   card.appendChild(element);
+  return { element, reached };
+}
+
+it('opens the source a mini card shows, and not the card it sits on', () => {
+  const { element, reached } = mountOnCard('click');
   expand(element);
-  cardClick.mockReset();
+  reached.mockReset();
 
   element.querySelectorAll<HTMLButtonElement>('.mini')[1].click();
 
   expect(open).toHaveBeenCalledWith(copies[1]);
-  expect(cardClick).not.toHaveBeenCalled();
+  expect(reached).not.toHaveBeenCalled();
 });
 
 it("keeps the toggle's click from opening the card it sits on", () => {
-  const card = document.createElement('div');
-  const cardClick = jest.fn();
-  card.addEventListener('click', cardClick);
-  const element = mount(anEntry({ duplicates: copies }));
-  card.appendChild(element);
+  const { element, reached } = mountOnCard('click');
 
   expand(element);
 
-  expect(cardClick).not.toHaveBeenCalled();
+  expect(reached).not.toHaveBeenCalled();
 });
 
-it.each(['Enter', ' '])('keeps a "%s" key on a mini card from reaching the card', (key) => {
-  const card = document.createElement('div');
-  const cardKey = jest.fn();
-  card.addEventListener('keydown', cardKey);
-  const element = mount(anEntry({ duplicates: copies }));
-  card.appendChild(element);
+it.each([
+  ['.toggle', 'Enter'],
+  ['.toggle', ' '],
+  ['.mini', 'Enter'],
+  ['.mini', ' '],
+])('keeps a "%s" key "%s" from reaching the card', (selector, key) => {
+  const { element, reached } = mountOnCard('keydown');
   expand(element);
 
   element
-    .querySelector('.mini')!
+    .querySelector(selector)!
     .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
-  expect(cardKey).not.toHaveBeenCalled();
-});
-
-it.each(['Enter', ' '])('keeps a "%s" key on the toggle from reaching the card', (key) => {
-  const card = document.createElement('div');
-  const cardKey = jest.fn();
-  card.addEventListener('keydown', cardKey);
-  const element = mount(anEntry({ duplicates: copies }));
-  card.appendChild(element);
-
-  element
-    .querySelector('.toggle')!
-    .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-
-  expect(cardKey).not.toHaveBeenCalled();
+  expect(reached).not.toHaveBeenCalled();
 });

@@ -1,5 +1,4 @@
-// Like entry-duplicates: without other sources the template renders nothing, so
-// the host must hold no box either, or the card's gap reserves dead space.
+// No box without sources, or the card's gap reserves dead space below the meta row.
 :host {
   display: contents;
 }

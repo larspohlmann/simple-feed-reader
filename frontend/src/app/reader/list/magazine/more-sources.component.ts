@@ -9,6 +9,7 @@ import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { feedAvatarUrl } from '../../state/social-sections';
+import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { alsoFootOf } from './also-foot';
 
 let nextId = 0;
@@ -32,16 +33,13 @@ export class MoreSourcesComponent {
     this.copies().length === 1 ? 'reader.moreSourcesOne' : 'reader.moreSources',
   );
   protected readonly sources = computed(() =>
-    this.copies().map((copy) => {
-      const subscription = this.rows.find(copy.subscriptionId);
-      return {
-        copy,
-        feed: subscription?.title ?? copy.source,
-        avatarUrl: feedAvatarUrl(subscription),
-        title: entryHeadline(copy) || entryDisplayTitle(copy),
-        when: relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang()),
-      };
-    }),
+    this.copies().map((copy) => ({
+      copy,
+      feed: sourceNameOf(copy, this.rows),
+      avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
+      title: entryHeadline(copy) || entryDisplayTitle(copy),
+      when: relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang()),
+    })),
   );
   protected readonly expanded = signal(false);
   protected readonly panelId = `more-sources-${nextId++}`;

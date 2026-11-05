@@ -5,6 +5,7 @@ import { EntryDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
 import { isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
+import { sourceNameOf } from './source-name';
 
 /** Where the source sits: a list row names it unlinked, a magazine kicker and the article link the feed's list. */
 export type EntrySourceLayout = 'row' | 'kicker' | 'article';
@@ -28,10 +29,7 @@ export class EntrySourceComponent {
   readonly size = input(16);
 
   private readonly rows = inject(SubscriptionRows);
-  protected readonly name = computed(() => {
-    const entry = this.entry();
-    return entry.poster?.name ?? this.rows.find(entry.subscriptionId)?.title ?? entry.source;
-  });
+  protected readonly name = computed(() => sourceNameOf(this.entry(), this.rows));
 
   /** A saved post names the feed it now lives in after its poster or origin. */
   protected readonly savedIn = computed(() => {
