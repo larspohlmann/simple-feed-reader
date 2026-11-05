@@ -17,7 +17,6 @@ use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FeedTickets;
@@ -496,7 +495,7 @@ final class ConcurrentRequestEngineTest extends TestCase
         ]);
         $feedOnly = new ServiceLocator([
             FeedResponseExchange::kind() => static fn (): FeedResponseExchange => new FeedResponseExchange(
-                new ResponseClassifier(new MockClock()),
+                new MockClock(),
             ),
         ]);
         $engine = new ConcurrentRequestEngine(
