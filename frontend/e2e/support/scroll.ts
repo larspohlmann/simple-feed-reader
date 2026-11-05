@@ -16,3 +16,60 @@ export async function scrollPageToEnd(page: Page): Promise<number> {
   await scrollPageTo(page, end);
   return end;
 }
+
+/** The title of a row in the middle third, so clicking it scrolls nothing into view. */
+export function rowTitleInView(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const titles = Array.from(document.querySelectorAll<HTMLElement>('app-entry-row .title'));
+    const third = window.innerHeight / 3;
+    const visible = titles.find((title) => {
+      const box = title.getBoundingClientRect();
+      return box.top > third && box.bottom < 2 * third;
+    });
+    return visible?.textContent?.trim() ?? '';
+  });
+}
+
+export interface TouchPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** A one-finger drag on the first match of `selector`, from `from` through `to`, not yet lifted. */
+export async function touchDrag(
+  page: Page,
+  selector: string,
+  from: TouchPoint,
+  to: TouchPoint,
+): Promise<void> {
+  await page
+    .locator(selector)
+    .first()
+    .evaluate(
+      (target, points) => {
+        const fire = (type: string, point: { x: number; y: number }): void => {
+          const touch = new Touch({ identifier: 1, target, clientX: point.x, clientY: point.y });
+          target.dispatchEvent(
+            new TouchEvent(type, { bubbles: true, cancelable: true, touches: [touch] }),
+          );
+        };
+        const midway = {
+          x: (points.from.x + points.to.x) / 2,
+          y: (points.from.y + points.to.y) / 2,
+        };
+        fire('touchstart', points.from);
+        fire('touchmove', midway);
+        fire('touchmove', points.to);
+      },
+      { from, to },
+    );
+}
+
+export async function liftTouch(page: Page, selector: string): Promise<void> {
+  await page
+    .locator(selector)
+    .first()
+    .evaluate((target) =>
+      target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [] })),
+    );
+}

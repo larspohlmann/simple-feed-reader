@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-import { pageScrollY, scrollPageTo } from './support/scroll';
+import { pageScrollY, rowTitleInView, scrollPageTo } from './support/scroll';
 
 // The list scrolls the document at every width (#2038): a mobile browser collapses its
 // bar only for a page scroll. Every entry is stubbed, so the spec owns what it scrolls.
@@ -59,19 +59,6 @@ async function stubReader(page: Page): Promise<void> {
       await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
     },
   );
-}
-
-/** The title of a row in the middle third, so clicking it scrolls nothing into view. */
-function rowTitleInView(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const titles = Array.from(document.querySelectorAll<HTMLElement>('app-entry-row .title'));
-    const third = window.innerHeight / 3;
-    const visible = titles.find((title) => {
-      const box = title.getBoundingClientRect();
-      return box.top > third && box.bottom < 2 * third;
-    });
-    return visible?.textContent?.trim() ?? '';
-  });
 }
 
 async function dragDivider(page: Page, deltaX: number): Promise<void> {
