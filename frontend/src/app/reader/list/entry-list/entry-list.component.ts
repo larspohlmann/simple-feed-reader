@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   OnDestroy,
   TemplateRef,
@@ -11,7 +12,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
@@ -208,7 +209,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly scrollHosts = inject(ScrollHosts);
   private readonly scrollHost = computed((): ScrollHost | undefined => {
     const rows = this.rows()?.nativeElement;
-    return rows ? this.scrollHosts.forElement(rows) : undefined;
+    return rows ? this.scrollHosts.forPage(rows) : undefined;
   });
   private readonly _nearViewportRoot = effect(() => {
     const scroller = this.scrollHost();
@@ -350,6 +351,14 @@ export class EntryListComponent implements OnDestroy {
     contentBottom: this.listBottom.measure,
     layout: this.listBottom.layout,
   });
+
+  private readonly _hidePageScrollbar = (() => {
+    const root = inject(DOCUMENT).documentElement;
+    inject(DestroyRef).onDestroy(() => root.classList.remove('page-scrollbar-hidden'));
+    return effect(() =>
+      root.classList.toggle('page-scrollbar-hidden', this.progressRail.replacesScrollbar()),
+    );
+  })();
 
   /** The list header's collapsed state; the shell's app bar mirrors it (#630). */
   readonly collapsed = this.scrolling.collapsed;

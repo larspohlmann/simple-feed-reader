@@ -1,4 +1,7 @@
+import { Injectable } from '@angular/core';
 import { ElementScrollHost } from '../app/shared/scroll-host/scroll-host';
+import type { ScrollHost } from '../app/shared/scroll-host/scroll-host';
+import { ScrollHosts } from '../app/shared/scroll-host/scroll-hosts.service';
 
 /** Make an element's scrollTop a plain settable value, since jsdom does no layout. */
 export function trackScrollTop(element: HTMLElement): { top: number } {
@@ -29,4 +32,12 @@ export function stubCssEscape(): () => void {
 
 export function elementScrollHost(element: HTMLElement): ElementScrollHost {
   return new ElementScrollHost(element, (run) => run());
+}
+
+/** For specs that drive the list's scroller as an element: jsdom has no page scroll (#2038). */
+@Injectable()
+export class ElementBackedScrollHosts extends ScrollHosts {
+  override forPage(content: HTMLElement): ScrollHost {
+    return this.forElement(content);
+  }
 }

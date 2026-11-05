@@ -1,36 +1,70 @@
-<!-- Floats over the scroller's reserved top padding rather than sitting above
-     it in the flow, so collapsing the bar never resizes the scroller and the
-     rows stay put under the finger (#87). -->
-<header
-  class="list-header"
-  #listHdr
-  [class.collapsed]="collapsed()"
-  [class.is-search]="selection().kind === 'search'"
->
-  <app-list-header
-    [selection]="selection()"
-    [title]="title()"
-    [searchTitlePrefix]="searchTitlePrefix()"
-    [searchTitleTerm]="searchTitleTerm()"
-    [searchCountLabel]="searchCountLabel()"
-    [titleCount]="titleCount()"
-    [titleTag]="titleTag()"
-    [titleFaviconUrl]="titleFaviconUrl()"
-    [titleAvatarUrl]="titleAvatarUrl()"
-    [lastRefreshed]="lastRefreshed()"
-    [nextRefresh]="nextRefresh()"
-    [headerLeading]="headerLeading()"
-    [leadingActions]="leadingActions()"
-    [headerActions]="headerActions()"
-    [collapsed]="collapsed()"
-    [refreshing]="refreshing()"
-    [canMarkAllRead]="canMarkAllRead()"
-    (refresh)="refresh.emit()"
-    (orderChange)="orderChange.emit($event)"
-    (unreadOnlyChange)="unreadOnlyChange.emit($event)"
-    (markAllRead)="markAllRead.emit()"
-  />
-</header>
+<div class="list-frame lead">
+  <!-- Floats over the scroller's reserved top padding rather than sitting above
+       it in the flow, so collapsing the bar never resizes the scroller and the
+       rows stay put under the finger (#87). -->
+  <header
+    class="list-header"
+    #listHdr
+    [class.collapsed]="collapsed()"
+    [class.is-search]="selection().kind === 'search'"
+  >
+    <app-list-header
+      [selection]="selection()"
+      [title]="title()"
+      [searchTitlePrefix]="searchTitlePrefix()"
+      [searchTitleTerm]="searchTitleTerm()"
+      [searchCountLabel]="searchCountLabel()"
+      [titleCount]="titleCount()"
+      [titleTag]="titleTag()"
+      [titleFaviconUrl]="titleFaviconUrl()"
+      [titleAvatarUrl]="titleAvatarUrl()"
+      [lastRefreshed]="lastRefreshed()"
+      [nextRefresh]="nextRefresh()"
+      [headerLeading]="headerLeading()"
+      [leadingActions]="leadingActions()"
+      [headerActions]="headerActions()"
+      [collapsed]="collapsed()"
+      [refreshing]="refreshing()"
+      [canMarkAllRead]="canMarkAllRead()"
+      (refresh)="refresh.emit()"
+      (orderChange)="orderChange.emit($event)"
+      (unreadOnlyChange)="unreadOnlyChange.emit($event)"
+      (markAllRead)="markAllRead.emit()"
+    />
+  </header>
+
+  @if (revealVisible()) {
+    <div
+      class="pull-indicator"
+      [class.armed]="pull.pullArmed()"
+      [class.dragging]="pull.dragging()"
+      [style.transform]="pull.revealTransform()"
+      aria-hidden="true"
+    >
+      <div class="pill">
+        <app-spinner [size]="20" [decorative]="true" [animate]="pull.pullArmed() || refreshing()" />
+        @if (refreshing()) {
+          <span class="label">{{ 'reader.refreshing' | transloco }}</span>
+        }
+      </div>
+    </div>
+  }
+
+  @if (error(); as problem) {
+    <app-error-banner
+      class="list-error text-scaled"
+      [message]="
+        problem.status === 0
+          ? ('reader.errorOffline' | transloco)
+          : ('reader.errorServer' | transloco: { status: problem.status })
+      "
+      [actionLabel]="'reader.retry' | transloco"
+      [dismissLabel]="'reader.dismiss' | transloco"
+      (action)="retry.emit()"
+      (dismiss)="dismiss.emit()"
+    />
+  }
+</div>
 
 @if (selection().kind === 'search') {
   <!-- Announces the count, not the rows: speaking every row would drown a
@@ -39,38 +73,6 @@
   <p class="sr-only" aria-live="polite" role="status">
     {{ 'reader.searchCount' | transloco: { count: entries().length } }}
   </p>
-}
-
-@if (revealVisible()) {
-  <div
-    class="pull-indicator"
-    [class.armed]="pull.pullArmed()"
-    [class.dragging]="pull.dragging()"
-    [style.transform]="pull.revealTransform()"
-    aria-hidden="true"
-  >
-    <div class="pill">
-      <app-spinner [size]="20" [decorative]="true" [animate]="pull.pullArmed() || refreshing()" />
-      @if (refreshing()) {
-        <span class="label">{{ 'reader.refreshing' | transloco }}</span>
-      }
-    </div>
-  </div>
-}
-
-@if (error(); as problem) {
-  <app-error-banner
-    class="list-error text-scaled"
-    [message]="
-      problem.status === 0
-        ? ('reader.errorOffline' | transloco)
-        : ('reader.errorServer' | transloco: { status: problem.status })
-    "
-    [actionLabel]="'reader.retry' | transloco"
-    [dismissLabel]="'reader.dismiss' | transloco"
-    (action)="retry.emit()"
-    (dismiss)="dismiss.emit()"
-  />
 }
 
 @if (loading() && entries().length === 0) {
@@ -99,7 +101,6 @@
     [attr.aria-busy]="loading() || mutating() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
   >
     @if (topBlock(); as block) {
@@ -146,7 +147,6 @@
     [attr.aria-busy]="loading() || mutating() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
   >
     @if (topBlock(); as block) {
@@ -194,48 +194,50 @@
   </div>
 }
 
-<app-progress-rail [progress]="progressRail" />
+<div class="list-frame tail">
+  <app-progress-rail [progress]="progressRail" />
 
-<app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
+  <app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
 
-@let hasEntries = content.visibleEntryCount() > 0;
-@let toTopShown = scrolling.showToTop() && hasEntries;
-@if (toTopShown || cornerTrailing()) {
-  <div class="end-corner">
-    @if (toTopShown) {
-      <app-to-top-button (activate)="scrollToTop()" />
-    }
-    @if (cornerTrailing(); as trailing) {
-      <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
-    }
-  </div>
-}
+  @let hasEntries = content.visibleEntryCount() > 0;
+  @let toTopShown = scrolling.showToTop() && hasEntries;
+  @if (toTopShown || cornerTrailing()) {
+    <div class="end-corner">
+      @if (toTopShown) {
+        <app-to-top-button (activate)="scrollToTop()" />
+      }
+      @if (cornerTrailing(); as trailing) {
+        <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
+      }
+    </div>
+  }
 
-@let markAllShown = canMarkAllRead() && hasEntries;
-@let markAboveShown = toTopShown && scrolling.hasAboveFold() && marksAboveFold();
-@if (markAllShown || markAboveShown) {
-  <div class="corner-actions">
-    @if (markAllShown) {
-      <button
-        type="button"
-        class="mark-all"
-        (click)="markAllRead.emit()"
-        [attr.aria-label]="'reader.markAllRead' | transloco"
-        [attr.title]="'reader.markAllRead' | transloco"
-      >
-        <app-icon name="done_all" size="dense" />
-      </button>
-    }
-    @if (markAboveShown) {
-      <button
-        type="button"
-        class="mark-above"
-        (click)="onMarkAboveRead()"
-        [attr.aria-label]="'reader.markAboveRead' | transloco"
-        [attr.title]="'reader.markAboveRead' | transloco"
-      >
-        <app-icon name="playlist_add_check" size="dense" />
-      </button>
-    }
-  </div>
-}
+  @let markAllShown = canMarkAllRead() && hasEntries;
+  @let markAboveShown = toTopShown && scrolling.hasAboveFold() && marksAboveFold();
+  @if (markAllShown || markAboveShown) {
+    <div class="corner-actions">
+      @if (markAllShown) {
+        <button
+          type="button"
+          class="mark-all"
+          (click)="markAllRead.emit()"
+          [attr.aria-label]="'reader.markAllRead' | transloco"
+          [attr.title]="'reader.markAllRead' | transloco"
+        >
+          <app-icon name="done_all" size="dense" />
+        </button>
+      }
+      @if (markAboveShown) {
+        <button
+          type="button"
+          class="mark-above"
+          (click)="onMarkAboveRead()"
+          [attr.aria-label]="'reader.markAboveRead' | transloco"
+          [attr.title]="'reader.markAboveRead' | transloco"
+        >
+          <app-icon name="playlist_add_check" size="dense" />
+        </button>
+      }
+    </div>
+  }
+</div>

@@ -59,6 +59,7 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../../testing/refresh-report';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
+import { trackScrollTop } from '../../../testing/scroll-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
 
@@ -628,7 +629,7 @@ describe('ReaderShellComponent', () => {
 
       // Retract the bar the only way there is now: scroll the list down on the
       // narrow layout, which collapses the list and the app bar mirrors it.
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -644,7 +645,7 @@ describe('ReaderShellComponent', () => {
     it('shows the header again when the mobile drawer opens', () => {
       // An open drawer holds the bar shown, whatever the list's scroll.
       const fixture = boot();
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -672,7 +673,7 @@ describe('ReaderShellComponent', () => {
 
       // A residual downward scroll (100 → 500) on the list while the drawer is
       // open. It collapses the list, but the open overlay force-shows the bar.
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -689,7 +690,7 @@ describe('ReaderShellComponent', () => {
         false;
 
       // Swipe up / scroll down: the header minimizes.
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -723,7 +724,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
       expect(fixture.componentInstance.headerHidden()).toBe(false);
 
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -742,7 +743,7 @@ describe('ReaderShellComponent', () => {
 
       // Scroll down first so the resting state the bar returns to is minimized,
       // not just whatever the header happened to hold before opening.
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -769,7 +770,7 @@ describe('ReaderShellComponent', () => {
       const header = fixture.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -798,7 +799,7 @@ describe('ReaderShellComponent', () => {
       const header = fixture.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -819,7 +820,7 @@ describe('ReaderShellComponent', () => {
       // The drawer auto-closes while the OUTGOING list is still rendered and
       // scrolled down (#254); the bar must not take its state from that offset.
       const fixture = boot();
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(500);
       fixture.detectChanges();
@@ -841,16 +842,18 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  /** Drive the entry list's real scroll container: assign an offset and fire the
-   *  scroll event `onRowsScroll` handles, updating the `collapsed` signal the app
-   *  bar mirrors — tests must scroll the element the component actually consults. */
-  function listScroller(fixture: ReturnType<typeof boot>) {
-    const element = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.rows')!;
+  /** Drive the entry list's real scroller, the page (#2038): set the document's offset
+   *  and fire the window scroll its PageScrollHost hears. */
+  function listScroller() {
+    Object.defineProperty(document, 'scrollingElement', {
+      value: document.documentElement,
+      configurable: true,
+    });
+    const page = trackScrollTop(document.documentElement);
     return {
-      el: element,
       scrollTo(top: number): void {
-        element.scrollTop = top;
-        element.dispatchEvent(new Event('scroll'));
+        page.top = top;
+        window.dispatchEvent(new Event('scroll'));
       },
     };
   }
@@ -876,7 +879,7 @@ describe('ReaderShellComponent', () => {
       const fixture = boot();
       (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
         false;
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(100);
       rows.scrollTo(800);
       fixture.detectChanges();
@@ -951,7 +954,7 @@ describe('ReaderShellComponent', () => {
       const fixture = boot();
       (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
         false;
-      const rows = listScroller(fixture);
+      const rows = listScroller();
       rows.scrollTo(30);
       rows.scrollTo(10);
       fixture.detectChanges();

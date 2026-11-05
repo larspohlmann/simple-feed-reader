@@ -7,16 +7,40 @@
    (.rows, .rows.magazine, empty state, .list-error) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 
-/* Tail room so the last row can scroll up clear of the corner buttons. */
-$corner-clear: calc(3 * (var(--space-5) + var(--corner-button-size) + var(--space-3)));
+/* Tail room so the last row can scroll up clear of the corner buttons and the audio bar. */
+$corner-clear: calc(
+  3 * (var(--space-5) + var(--corner-button-size) + var(--space-3)) + var(--audio-bar-h, 0rem)
+);
 
 :host {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-  position: relative; /* anchor for the pull-to-refresh indicator */
+  display: block;
+}
+
+/* The list column's visible box, pinned while the rows scroll the page (#2038); the
+   shell publishes the column's box because `fixed` measures from the viewport. */
+.list-frame {
+  position: fixed;
+  top: 0;
+  bottom: var(--audio-bar-h, 0);
+  left: var(--list-column-left, 0);
+  width: var(--list-column-width, 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Above the tail frame, so the list header still covers the rail and the wait veil. */
+.list-frame.lead {
+  z-index: 2;
+}
+
+.list-frame.tail {
   container: entry-list / size;
+}
+
+.list-header,
+.list-error,
+.corner-actions {
+  pointer-events: auto;
 }
 
 /* Floats over the scroller rather than sitting in the flow: collapsing it used
@@ -115,9 +139,8 @@ $corner-clear: calc(3 * (var(--space-5) + var(--corner-button-size) + var(--spac
 }
 
 .rows {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+  /* A screen at least, so the airy sheet and a pull reach the foot of a short list. */
+  min-height: calc(100dvh - var(--audio-bar-h, 0rem));
 
   /* Animates the reveal open/closed (snap-back, and the button-driven slide);
      removed under .dragging so the content tracks the finger 1:1. */
@@ -409,9 +432,8 @@ app-loading-overlay {
   }
 }
 
-/* Anchored to this component's box, not the viewport: in split-pane mode a
-   fixed button would hang over the reader pane. The buttons render even under
-   an open article, so they must stay below `.article-overlay`'s z-index: 5. */
+/* Anchored to the tail frame, so in split view they stay in the list column; the
+   frame sits below `.article-overlay`'s z-index: 5, which covers them under an article. */
 .corner-actions {
   @include circle.corner-anchor(left, 4);
 }
