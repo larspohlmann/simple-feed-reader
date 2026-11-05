@@ -44,6 +44,11 @@ abstract class ApiTestCase extends WebTestCase
         return $repository;
     }
 
+    protected function admin(string $email = 'boss@example.com'): User
+    {
+        return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
+    }
+
     protected function tokenFor(User $user): string
     {
         /** @var JWTTokenManagerInterface $tokens */

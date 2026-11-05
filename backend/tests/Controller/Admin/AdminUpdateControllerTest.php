@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Controller\Admin\AdminUpdateController;
-use App\Entity\User;
 use App\Service\SelfUpdate\SelfUpdater;
 use App\Service\Version\Model\LatestReleaseModel;
 use App\Service\Version\Model\ReleaseVersionModel;
@@ -117,11 +116,6 @@ final class AdminUpdateControllerTest extends ApiTestCase
         self::assertTrue($payload['updaterPresent']);
         self::assertSame('requested', $payload['phase']);
         self::assertSame('boss@example.com', $state->savedRequests[0]->requestedBy);
-    }
-
-    private function admin(): User
-    {
-        return $this->factory()->create('boss@example.com', roles: ['ROLE_ADMIN']);
     }
 
     private function postAsAdmin(): void

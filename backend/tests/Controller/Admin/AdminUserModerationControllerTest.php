@@ -36,11 +36,6 @@ final class AdminUserModerationControllerTest extends ApiTestCase
         $this->seedEnabledMailInstance();
     }
 
-    private function admin(string $email = 'boss@example.com'): User
-    {
-        return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
-    }
-
     private function call(string $method, string $uri, ?string $token = null): void
     {
         $this->client->request(

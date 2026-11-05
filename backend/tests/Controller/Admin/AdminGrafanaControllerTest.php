@@ -38,11 +38,6 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $cache->forget();
     }
 
-    private function admin(string $email = 'boss@example.com'): User
-    {
-        return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
-    }
-
     /** @param array<string, mixed> $body */
     private function requestWithJsonBody(string $method, User $user, array $body): void
     {
