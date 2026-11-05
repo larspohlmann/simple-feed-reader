@@ -1727,12 +1727,26 @@ app bar, `.under-header`, list header, rail, corner discs, audio bar — is `pos
 List chrome sits in the entry list's two `.list-frame`s, placed by `--list-column-left` and
 `--list-column-width`, which the shell measures off the `.list` column because `fixed`
 measures from the viewport; everything pinned to the foot leaves `--audio-bar-h` free. The
-frames and the full-screen article take that box from `page-chrome.list-column-box`
-(`theme/_page-chrome.scss`). The wide sidebar column, the pane divider and split view's
+frames take that box from `page-chrome.list-column-box` (`theme/_page-chrome.scss`), and a
+pinned page layer takes it from the same two properties. The wide sidebar column, the pane divider and split view's
 reader pane are sticky flex children (`page-chrome.pinned-column`: `top: 0`, a
 viewport-tall height, `align-self: flex-start`) whose scrollers set
 `overscroll-behavior: contain`. A new fixed element is checked for a transformed, filtered or
 contained ancestor (#100).
+
+**A full-screen article takes the page from the list (#2038).** The shell's `PageScrollOwner`
+keeps one page and a stack of layers (`appPageLayer`: the list column, each `.article-overlay`).
+The top layer is in the flow and owns the document's offset; every layer beneath carries
+`.page-pinned` (`position: fixed` in the list column's box, shifted up by `--page-pin-top`), so
+it looks exactly as it did, and its `PageScrollHost` reports the pin, hears no scroll and moves
+the pin on a write. Back pins the leaving layer, unpins the one beneath and writes its offset in
+one call, before the next paint. The article layer's chrome sits in two zero-height **sticky**
+wrappers (`.chrome-head`, `.chrome-foot`), never `fixed` boxes: the frame's swipe and the
+overlay's slide transform their ancestors, which would trap a fixed child (#100). While pinned,
+they turn absolute at `--page-pin-top`. Split view's reader pane has no handoff and keeps its
+element scroller; a split ↔ full-screen switch remounts both panes, which land on their
+remembered offsets (a resize can shift those by a row first, through the browser's scroll
+anchoring).
 
 **A percentage height inside an overlay panel silently resolves to `auto`.** The
 panel is sized by `max-height` alone, and a `max-height` does not make a box's
