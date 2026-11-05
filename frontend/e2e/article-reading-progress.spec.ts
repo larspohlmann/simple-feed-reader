@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
+import { scrollPageTo } from './support/scroll';
 
 const PHONE = { width: 375, height: 667 };
 const SIDE_RAIL = 'app-progress-rail:not(.horizontal)';
@@ -176,8 +177,7 @@ test.describe('Article reading progress on the split layout', () => {
     // The pane is the window's rightmost column, so the edge alone cannot tell the two
     // apart: the rail must ignore the page's scroll and follow the pane's.
     const unscrolled = await railFilledFraction(pane);
-    await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }));
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+    await scrollPageTo(page, 600);
     await page.waitForTimeout(200);
     expect(await railFilledFraction(pane)).toBeCloseTo(unscrolled, 2);
 

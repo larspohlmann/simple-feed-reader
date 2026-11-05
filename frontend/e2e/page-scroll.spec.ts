@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
+import { pageScrollY, scrollPageTo } from './support/scroll';
 
 // The list scrolls the document at every width (#2038): a mobile browser collapses its
 // bar only for a page scroll. Every entry is stubbed, so the spec owns what it scrolls.
@@ -58,13 +59,6 @@ async function stubReader(page: Page): Promise<void> {
       await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
     },
   );
-}
-
-const scrollY = (page: Page): Promise<number> => page.evaluate(() => window.scrollY);
-
-async function scrollPageTo(page: Page, top: number): Promise<void> {
-  await page.evaluate((to) => window.scrollTo({ top: to, behavior: 'instant' }), top);
-  await expect.poll(() => scrollY(page)).toBe(top);
 }
 
 /** The title of a row in the middle third, so clicking it scrolls nothing into view. */
@@ -139,7 +133,7 @@ test.describe('The list scrolls the page on a phone', () => {
     await page.locator('app-reader-view .bar .close').click();
     await expect(page.locator('.article-overlay')).toHaveCount(0);
     await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
-    expect(await scrollY(page)).toBe(LIST_OFFSET);
+    expect(await pageScrollY(page)).toBe(LIST_OFFSET);
   });
 
   test('the open drawer pins the page', async ({ page }) => {
@@ -159,7 +153,7 @@ test.describe('The list scrolls the page on a phone', () => {
       .locator('.backdrop')
       .click({ position: { x: PHONE.width - 10, y: PHONE.height / 2 } });
     await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
-    expect(await scrollY(page)).toBe(LIST_OFFSET);
+    expect(await pageScrollY(page)).toBe(LIST_OFFSET);
   });
 });
 
@@ -202,13 +196,13 @@ test.describe('The list scrolls the page beside a pinned reader pane', () => {
     await page.mouse.move(paneBox.x + paneBox.width / 2, paneBox.y + paneBox.height / 2);
     await page.mouse.wheel(0, 800);
     await page.waitForTimeout(300);
-    expect(await scrollY(page)).toBe(400);
+    expect(await pageScrollY(page)).toBe(400);
 
     // The control: the same wheel over the list does move the page.
     const listBox = (await page.locator('.main.split > .list').boundingBox())!;
     await page.mouse.move(listBox.x + listBox.width / 2, paneBox.y + paneBox.height / 2);
     await page.mouse.wheel(0, 800);
-    await expect.poll(() => scrollY(page)).toBeGreaterThan(400);
+    await expect.poll(() => pageScrollY(page)).toBeGreaterThan(400);
   });
 
   test('the list rail sits at the column edge and follows a divider drag', async ({ page }) => {

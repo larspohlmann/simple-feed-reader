@@ -1,6 +1,7 @@
 import { expect, Page, Request, test } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 import { entryWire, oneFeedJson } from './support/reader';
+import { scrollPageTo } from './support/scroll';
 
 const TAG = {
   id: 7101,
@@ -133,7 +134,7 @@ test.describe('list order (#1143)', () => {
     await expect.poll(() => firstRowId(page)).toBe(String(ENTRY_COUNT));
     await flipToOldestFirst(page);
 
-    await page.evaluate(() => window.scrollTo({ top: 1500 }));
+    await scrollPageTo(page, 1500);
     await page.locator('.mark-above').click();
     await page.locator('[data-testid=confirm]').click();
 
