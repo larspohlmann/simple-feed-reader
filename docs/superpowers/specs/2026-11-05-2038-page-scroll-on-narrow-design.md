@@ -179,7 +179,10 @@ the `ScrollHost`. At **every width** it is the vertical rail that stands in for 
 scrollbar (decided 2026-11-05): on the list it sits at the `.list` column's right edge,
 with the page's scrollbar hidden by `scrollbar-width: none` on `<html>`; in split view
 the reader pane's rail does the same for the pane's scrollbar. The wide layout's bottom
-hairline goes. The reason is split view: the page's native scrollbar would sit at the
+hairline goes. The page's scrollbar is hidden only while the rail replaces it (today's
+phone rule): a paged search, whose length is unknown until its last page (#1392), has no
+rail and keeps the native page scrollbar meanwhile — at the window's right edge in split
+view (decided 2026-11-05). The reason is split view: the page's native scrollbar would sit at the
 window's far right, outside the reader pane and beside the pane's own scrollbar, yet move
 the list on the left. Cost: mouse users can no longer drag a scrollbar; wheel, trackpad
 and keys are unaffected. The spike confirmed `scrollbar-width: none` hides iOS WebKit's
