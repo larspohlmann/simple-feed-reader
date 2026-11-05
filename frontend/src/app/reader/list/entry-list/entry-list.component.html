@@ -99,9 +99,8 @@
     [attr.aria-busy]="loading() || mutating() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [appScrollProgress]="progressRail"
+    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
-    [appScrollOutsideZone]="scrolling.onScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
@@ -147,9 +146,8 @@
     [attr.aria-busy]="loading() || mutating() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [appScrollProgress]="progressRail"
+    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
-    [appScrollOutsideZone]="scrolling.onScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own

@@ -10,6 +10,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { LayoutService } from '../../layout.service';
@@ -29,18 +30,10 @@ export interface TrailingPart {
 }
 
 export interface ReadingScopeParts {
-  readonly scroller: Signal<HTMLElement | undefined>;
+  readonly scroller: Signal<ScrollHost | undefined>;
   readonly content: ElementQuery;
   /** The sections below the body, in document order. */
   readonly trailing: Signal<readonly TrailingPart[]>;
-}
-
-function bottomWithin(scroller: HTMLElement, element: HTMLElement): number {
-  return (
-    element.getBoundingClientRect().bottom -
-    scroller.getBoundingClientRect().top +
-    scroller.scrollTop
-  );
 }
 
 function isPresent(element: HTMLElement | undefined): element is HTMLElement {
@@ -62,7 +55,7 @@ export class ReadingScope {
   // while the rest dims. Skipped entirely when the setting is off or the reader
   // prefers reduced motion.
   private readonly reduceMotion = prefersReducedMotion();
-  private scroller: Signal<HTMLElement | undefined> = signal(undefined);
+  private scroller: Signal<ScrollHost | undefined> = signal(undefined);
   private content: ElementQuery = signal(undefined);
   private trailing: Signal<readonly TrailingPart[]> = signal([]);
   private applier?: ReadingFocusApplier;
@@ -174,7 +167,7 @@ export class ReadingScope {
     }
     const lastPart = this.presentElements(this.trailing()).at(-1) ?? content;
     this.viewportHeight.set(scroller.clientHeight);
-    this.readingBottom.set(bottomWithin(scroller, lastPart));
+    this.readingBottom.set(scroller.toContentY(lastPart.getBoundingClientRect().bottom));
   }
 
   // Reads the DOM untracked: `readingEnd` refreshes because every re-measure moves `readingBottom`.

@@ -14,6 +14,7 @@ import {
   overscrollTriggersBack,
   rubberBand,
 } from '../../reader-gestures';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 
 /** How far the rubber-banded overscroll pull may travel. */
@@ -35,7 +36,7 @@ function startsOnMediaControl(target: EventTarget | null): boolean {
 
 export interface ArticleGestureHost {
   readonly fullscreen: Signal<boolean>;
-  readonly scroller: Signal<HTMLElement | undefined>;
+  readonly scroller: Signal<ScrollHost | undefined>;
   readonly back: () => void;
 }
 

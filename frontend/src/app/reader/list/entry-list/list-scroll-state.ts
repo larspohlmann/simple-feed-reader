@@ -8,6 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
 import { LayoutService } from '../../layout.service';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
@@ -21,13 +22,13 @@ const MAX_SETTLE_FRAMES = 30;
 const SETTLE_STABLE_FRAMES = 3;
 
 export interface ListScrollStateOptions {
-  readonly scroller: () => HTMLElement | undefined;
+  readonly scroller: () => ScrollHost | undefined;
   readonly selection: Signal<Selection>;
   readonly loading: Signal<boolean>;
   readonly layout: Signal<ReadingLayout>;
   readonly reduceMotion: boolean;
   /** Whether an entry is fully scrolled past the fold of this scroller. */
-  readonly aboveFold: (scroller: HTMLElement) => boolean;
+  readonly aboveFold: (scroller: ScrollHost) => boolean;
   /** A fresh load finished and its rows are on screen. */
   readonly onReloaded: () => void;
 }
@@ -77,18 +78,18 @@ export class ListScrollState {
   private wasLoading = false;
   private readonly _restoreScroll = effect(() => {
     const loading = this.options.loading();
-    const element = this.options.scroller();
+    const scroller = this.options.scroller();
     if (loading) {
       this.wasLoading = true;
       return;
     }
     // Wait for the scroll container to render (it only exists once entries show),
     // then land the user back where they were before the page was reloaded.
-    if (this.wasLoading && element) {
+    if (this.wasLoading && scroller) {
       this.wasLoading = false;
       this.options.onReloaded();
       this.renderedSelection = this.options.selection();
-      this.applyScroll(element, this.scroll.read(this.options.selection()));
+      this.applyScroll(scroller, this.scroll.read(this.options.selection()));
     }
   });
 
@@ -98,9 +99,14 @@ export class ListScrollState {
   private readonly _scrollOnSelectionChange = effect(() => {
     const selection = this.options.selection();
     untracked(() => {
-      const element = this.options.scroller();
-      if (element) this.applyScroll(element, this.scroll.read(selection));
+      const scroller = this.options.scroller();
+      if (scroller) this.applyScroll(scroller, this.scroll.read(selection));
     });
+  });
+
+  private readonly _listenToScroll = effect((onCleanup) => {
+    const scroller = this.options.scroller();
+    if (scroller) onCleanup(scroller.listen(() => this.onScroll(scroller.scrollTop)));
   });
 
   // A resume-reload re-renders the list from scratch; block heights firm up over
@@ -122,10 +128,7 @@ export class ListScrollState {
     });
   }
 
-  readonly onScroll = (scrollEvent: Event): void => {
-    const element = scrollEvent.target as HTMLElement | null;
-    if (!element || typeof element.scrollTop !== 'number') return;
-    const top = element.scrollTop;
+  readonly onScroll = (top: number): void => {
     this.collapsed.set(
       nextHeaderHidden({
         previousHidden: this.collapsed(),
@@ -149,12 +152,12 @@ export class ListScrollState {
    * the corner button and by the tap on the empty middle of the app bar.
    */
   scrollToTop(): boolean {
-    const element = this.options.scroller();
-    if (!element) return false;
+    const scroller = this.options.scroller();
+    if (!scroller) return false;
     // A scroll restore in flight re-asserts its own target every frame; the
     // user's jump has to win.
     this.cancelSettle();
-    element.scrollTo({ top: 0, behavior: this.options.reduceMotion ? 'auto' : 'smooth' });
+    scroller.scrollTo({ top: 0, behavior: this.options.reduceMotion ? 'auto' : 'smooth' });
     // Say the bar is expanded now rather than waiting for a scroll event: the
     // tap expands it immediately instead of ~300ms later, and an interrupted
     // scroll gesture (wheel/touch — see cancelSettle) may never reach 0 at all.
@@ -174,29 +177,29 @@ export class ListScrollState {
     this.collapsed.set(false);
     this.showToTop.set(false);
     this.hasAboveFold.set(false);
-    const element = this.options.scroller();
-    if (!element) return;
+    const scroller = this.options.scroller();
+    if (!scroller) return;
     this.scroll.save(this.options.selection(), 0);
     this.zone.runOutsideAngular(() =>
       requestAnimationFrame(() => {
-        element.scrollTop = 0;
+        scroller.scrollTop = 0;
         this.lastScrollTop = 0;
       }),
     );
   }
 
-  applyScroll(element: HTMLElement, top: number): void {
+  applyScroll(scroller: ScrollHost, top: number): void {
     this.cancelSettle();
     // Assign even for 0 — the scroller outlives a view switch (outgoing list
     // stays rendered, #254), so "no remembered offset" must put it back at the
     // top rather than leave the previous view's offset in place (#267).
-    element.scrollTop = top; // immediate rough landing so the list never flashes at the top
+    scroller.scrollTop = top; // immediate rough landing so the list never flashes at the top
     // Seed the hide-on-scroll baseline so the very next scroll compares against
     // the restored position, not 0.
-    this.lastScrollTop = element.scrollTop;
+    this.lastScrollTop = scroller.scrollTop;
     // Only a target below the fold can be nudged off by late layout; the top is
     // where scroll-anchoring holds content anyway, so it needs no settle window.
-    if (top > 0) this.settleTo(element, top);
+    if (top > 0) this.settleTo(scroller, top);
   }
 
   cancelSettle(): void {
@@ -215,7 +218,7 @@ export class ListScrollState {
     return rendered === null || sameSelection(rendered, this.options.selection());
   }
 
-  private settleTo(element: HTMLElement, target: number): void {
+  private settleTo(scroller: ScrollHost, target: number): void {
     if (typeof requestAnimationFrame === 'undefined') return;
     this.settleAbort = false;
     let frames = 0;
@@ -223,9 +226,9 @@ export class ListScrollState {
     let lastHeight = -1;
     const step = (): void => {
       if (this.settleAbort) return;
-      element.scrollTop = target;
-      this.lastScrollTop = element.scrollTop;
-      const height = element.scrollHeight;
+      scroller.scrollTop = target;
+      this.lastScrollTop = scroller.scrollTop;
+      const height = scroller.scrollHeight;
       stableFrames = height === lastHeight ? stableFrames + 1 : 0;
       lastHeight = height;
       if (++frames < MAX_SETTLE_FRAMES && stableFrames < SETTLE_STABLE_FRAMES) {

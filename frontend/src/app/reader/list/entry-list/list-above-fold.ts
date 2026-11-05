@@ -1,7 +1,8 @@
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { FoldedGroup, entriesAboveFold, foldedGroupTailsAbove, measureEntries } from './above-fold';
 
 export interface ListAboveFoldOptions {
-  readonly scroller: () => HTMLElement | undefined;
+  readonly scroller: () => ScrollHost | undefined;
   readonly header: () => HTMLElement | undefined;
   readonly groups: () => readonly FoldedGroup[];
 }
@@ -11,22 +12,22 @@ export interface ListAboveFoldOptions {
 export class ListAboveFold {
   constructor(private readonly options: ListAboveFoldOptions) {}
 
-  hasEntryAbove(scroller: HTMLElement): boolean {
-    const first = scroller.querySelector('[data-entry-id]');
+  hasEntryAbove(scroller: ScrollHost): boolean {
+    const first = scroller.content.querySelector('[data-entry-id]');
     return !!first && first.getBoundingClientRect().bottom <= this.foldTop(scroller);
   }
 
   entryIds(): number[] {
     const scroller = this.options.scroller();
     if (!scroller) return [];
-    const measured = measureEntries(scroller);
+    const measured = measureEntries(scroller.content);
     const above = entriesAboveFold(measured, this.foldTop(scroller));
     const rendered = new Set(measured.map((measurement) => measurement.id));
     return [...above, ...foldedGroupTailsAbove(new Set(above), rendered, this.options.groups())];
   }
 
-  private foldTop(scroller: HTMLElement): number {
+  private foldTop(scroller: ScrollHost): number {
     const header = this.options.header()?.getBoundingClientRect().bottom ?? 0;
-    return Math.max(scroller.getBoundingClientRect().top, header);
+    return Math.max(scroller.viewportTop(), header);
   }
 }

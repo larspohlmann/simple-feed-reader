@@ -94,6 +94,7 @@ export class ArticlePageComponent {
   private readonly scroller = computed(() => this.layer()?.scroller());
 
   protected readonly progressRail = new ScrollProgressRail({
+    scroller: this.scroller,
     isWide: inject(LayoutService).isWide,
     contentBottom: this.scope.readingEnd,
     layout: this.scope.readingEnd,
@@ -138,13 +139,9 @@ export class ArticlePageComponent {
     const scroller = this.scroller();
     if (!scroller || !target) return;
     this.restore.abort(); // a jump takes over from any in-flight restore
-    const top =
-      target.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top +
-      scroller.scrollTop;
-    const covered = parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;
+    const top = scroller.toContentY(target.getBoundingClientRect().top);
     scroller.scrollTo({
-      top: Math.max(0, top - covered),
+      top: Math.max(0, top - scroller.scrollPaddingTop()),
       behavior: this.reduceMotion ? 'auto' : 'smooth',
     });
   }

@@ -20,6 +20,7 @@ import { MagazineStyleService } from '../../../core/preferences/magazine-style.s
 import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
 import { LayoutService } from '../../layout.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import {
@@ -1548,9 +1549,7 @@ describe('EntryListComponent', () => {
 
   it('remembers the scroll offset per selection as the list is scrolled', () => {
     const fixture = mount();
-    fixture.componentInstance.scrolling.onScroll({
-      target: { scrollTop: 480 },
-    } as unknown as Event);
+    fixture.componentInstance.scrolling.onScroll(480);
     expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
   });
 
@@ -1668,9 +1667,7 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       memory.save.mockClear();
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 480 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(480);
 
       expect(memory.save).not.toHaveBeenCalled();
     });
@@ -1685,9 +1682,7 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       memory.save.mockClear();
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 480 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(480);
 
       expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
     });
@@ -1707,15 +1702,11 @@ describe('EntryListComponent', () => {
       const element = fixture.nativeElement as HTMLElement;
       expect(element.querySelector('app-to-top-button')).toBeNull();
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
       fixture.detectChanges();
       expect(element.querySelector('app-to-top-button')).not.toBeNull();
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 100 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(100);
       fixture.detectChanges();
       expect(element.querySelector('app-to-top-button')).toBeNull();
     });
@@ -1725,9 +1716,7 @@ describe('EntryListComponent', () => {
       const fixture = mount({ cornerTrailing: tb });
       const element = fixture.nativeElement as HTMLElement;
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
       fixture.detectChanges();
 
       const marker = element.querySelector('.end-corner .top-marker')!;
@@ -1745,9 +1734,7 @@ describe('EntryListComponent', () => {
     it('keeps the corner slot when marking all read empties an unread view (#1945)', () => {
       const fixture = mount({ cornerTrailing: topBlockTemplate() });
       const element = fixture.nativeElement as HTMLElement;
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
       fixture.detectChanges();
 
       fixture.componentRef.setInput('entries', []);
@@ -1774,9 +1761,7 @@ describe('EntryListComponent', () => {
     it('clicking the button scrolls to the top', () => {
       const fixture = mount();
       const { scrollTo } = stubScroller(fixture);
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
       fixture.detectChanges();
 
       (
@@ -1792,9 +1777,7 @@ describe('EntryListComponent', () => {
     it('moves focus to the list title instead of dropping it to the body', () => {
       const fixture = mount();
       stubScroller(fixture);
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
       fixture.detectChanges();
 
       (
@@ -1820,9 +1803,7 @@ describe('EntryListComponent', () => {
 
     it('hides the button again when the selection changes', () => {
       const fixture = mount();
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
       fixture.detectChanges();
       expect(
         (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
@@ -1836,15 +1817,11 @@ describe('EntryListComponent', () => {
     it('keeps the bar expanded as the smooth scroll travels back up', () => {
       const fixture = mount();
       stubScroller(fixture);
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 3000 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(3000);
       fixture.componentInstance.scrollToTop();
       // The animation's own first event, still deep in the list. Against a zeroed
       // baseline this would read as a 2900px scroll *down* and re-collapse the bar.
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 2900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(2900);
       expect(fixture.componentInstance.collapsed()).toBe(false);
     });
 
@@ -1901,9 +1878,8 @@ describe('EntryListComponent', () => {
   });
 
   // #1080: the lower-left "mark everything above as read" button. jsdom lays
-  // nothing out, so geometry is driven through fakes standing in for the
-  // `#rows`/`#listHdr` viewChild signals, exactly like the real elements they
-  // replace (getBoundingClientRect, querySelector/All, getAttribute).
+  // nothing out, so geometry is driven through fakes of the scroll host's content and
+  // the `#listHdr` element (getBoundingClientRect, querySelector/All, getAttribute).
   describe('mark-above-read button (#1080)', () => {
     const measuredEntry = (id: string, bottom: number): HTMLElement =>
       ({
@@ -1911,26 +1887,27 @@ describe('EntryListComponent', () => {
         getBoundingClientRect: () => ({ bottom }),
       }) as unknown as HTMLElement;
 
-    /** Stubs the component's `rows`/`listHdr` viewChild signals with fakes whose
-     *  geometry is scripted: `fold.scrollerTop`/`fold.headerBottom` place the fold line,
+    /** Stubs the scroll host's `content`/`viewportTop` and the `listHdr` viewChild with
+     *  scripted geometry: `fold.scrollerTop`/`fold.headerBottom` place the fold line,
      *  `entries` become the tagged rows `querySelector(All)` finds. */
     function stubGeometry(
       fixture: ReturnType<typeof mount>,
       entries: HTMLElement[],
       fold: { scrollerTop?: number; headerBottom?: number } = {},
     ): void {
-      const scroller = {
-        getBoundingClientRect: () => ({ top: fold.scrollerTop ?? 0 }),
+      const content = {
         querySelector: () => entries[0] ?? null,
         querySelectorAll: () => entries as unknown as NodeListOf<Element>,
       } as unknown as HTMLElement;
+      const scroller = (
+        fixture.componentInstance as unknown as { scrollHost: () => ScrollHost }
+      ).scrollHost();
+      Object.defineProperty(scroller, 'content', { value: content });
+      jest.spyOn(scroller, 'viewportTop').mockReturnValue(fold.scrollerTop ?? 0);
       const header = {
         getBoundingClientRect: () => ({ bottom: fold.headerBottom ?? 100 }),
       } as unknown as HTMLElement;
 
-      jest
-        .spyOn(fixture.componentInstance as unknown as { rows: () => unknown }, 'rows')
-        .mockReturnValue({ nativeElement: scroller });
       jest
         .spyOn(fixture.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
         .mockReturnValue({ nativeElement: header });
@@ -2088,17 +2065,11 @@ describe('EntryListComponent', () => {
       expect(button.querySelector('app-icon[name="playlist_add_check"]')).not.toBeNull();
     });
 
-    // The scroll path resolves the scroller from the `#rows` viewChild — the
-    // same source `collectAboveFoldIds`/`foldTop` use for the click path — not
-    // from the scroll event's own target, so the probe is driven the same way
-    // `stubGeometry` drives the click-time collection above.
     it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
       const fixture = mount();
       stubGeometry(fixture, [measuredEntry('1', 40)]);
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
 
       expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(true);
     });
@@ -2107,9 +2078,7 @@ describe('EntryListComponent', () => {
       const fixture = mount();
       stubGeometry(fixture, [measuredEntry('1', 40)]);
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 100 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(100);
 
       expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
@@ -2118,23 +2087,9 @@ describe('EntryListComponent', () => {
       const fixture = mount();
       stubGeometry(fixture, [measuredEntry('1', 150)]);
 
-      fixture.componentInstance.scrolling.onScroll({
-        target: { scrollTop: 900 },
-      } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll(900);
 
       expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
-    });
-
-    it('does not throw for a scroll event carrying only scrollTop', () => {
-      // Several pre-existing scroll tests drive onRowsScroll with a bare
-      // {scrollTop} object as the event target; resolving the scroller from
-      // the viewChild instead of that target must tolerate it.
-      const fixture = mount();
-      expect(() =>
-        fixture.componentInstance.scrolling.onScroll({
-          target: { scrollTop: 900 },
-        } as unknown as Event),
-      ).not.toThrow();
     });
 
     it('resets hasAboveFold when the selection changes', () => {

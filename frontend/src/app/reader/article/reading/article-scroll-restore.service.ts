@@ -8,6 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 import { ARTICLE_PAGE_SOURCE } from '../article-page/article-page-source';
 
@@ -24,7 +25,7 @@ export class ArticleScrollRestore {
   private readonly layer = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly scroll = inject(ListScrollMemory);
   private readonly pageKey = inject(ARTICLE_PAGE_SOURCE).key;
-  private scroller: Signal<HTMLElement | undefined> = signal(undefined);
+  private scroller: Signal<ScrollHost | undefined> = signal(undefined);
 
   private pendingRestore: { key: string; top: number } | null = null;
   private restoreRaf = 0;
@@ -46,7 +47,7 @@ export class ArticleScrollRestore {
     });
   }
 
-  connect(scroller: Signal<HTMLElement | undefined>): void {
+  connect(scroller: Signal<ScrollHost | undefined>): void {
     this.scroller = scroller;
   }
 
