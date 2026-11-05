@@ -35,11 +35,6 @@ final class AdminMailControllerTest extends ApiTestCase
         $this->client = self::createClient();
     }
 
-    private function admin(): User
-    {
-        return $this->factory()->create('boss@example.com', roles: ['ROLE_ADMIN']);
-    }
-
     private function requestAs(User $user, string $method, string $path = self::MAIL): void
     {
         $this->client->request(

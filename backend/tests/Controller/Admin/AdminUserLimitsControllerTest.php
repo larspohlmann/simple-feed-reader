@@ -26,11 +26,6 @@ final class AdminUserLimitsControllerTest extends ApiTestCase
         $this->client = self::createClient();
     }
 
-    private function admin(string $email = 'boss@example.com'): User
-    {
-        return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
-    }
-
     /** @param array<string, mixed> $body */
     private function requestWithJsonBody(string $method, string $uri, User $admin, array $body): void
     {

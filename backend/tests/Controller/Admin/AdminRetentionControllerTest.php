@@ -23,11 +23,6 @@ final class AdminRetentionControllerTest extends ApiTestCase
         $this->client = self::createClient();
     }
 
-    private function admin(): User
-    {
-        return $this->factory()->create('boss@example.com', roles: ['ROLE_ADMIN']);
-    }
-
     private function get(User $user): void
     {
         $this->client->request(
