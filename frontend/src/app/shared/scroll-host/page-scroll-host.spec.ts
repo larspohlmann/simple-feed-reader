@@ -2,6 +2,7 @@ import { NgZone } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PAGE_SCROLL_BLOCK_CLASS, PageScrollHost } from './page-scroll-host';
 import { ScrollHosts } from './scroll-hosts.service';
+import { PageLayer } from './page-layer';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
 const inZone = <T>(run: () => T): T => run();
@@ -23,7 +24,8 @@ describe('PageScrollHost', () => {
     jest.restoreAllMocks();
   });
 
-  const pageHost = (): PageScrollHost => new PageScrollHost(content, window, inZone);
+  const pageHost = (): PageScrollHost =>
+    new PageScrollHost(content, { view: window, outsideZone: inZone });
   const scrollEvent = (): boolean => window.dispatchEvent(new Event('scroll'));
   const mutationsDelivered = (): Promise<void> => new Promise((resolve) => setTimeout(resolve));
 
@@ -61,9 +63,12 @@ describe('PageScrollHost', () => {
     expect(host.intersectionRoot).toBeNull();
   });
 
-  it('reads the band chrome covers from the root element', () => {
-    root.style.scrollPaddingTop = '96px';
+  it('reads the band chrome covers from its content, like an element host', () => {
+    document.body.append(content);
+    content.style.scrollPaddingTop = '96px';
     expect(pageHost().scrollPaddingTop()).toBe(96);
+    content.style.scrollPaddingTop = '';
+    content.remove();
   });
 
   it('scrolls the window', () => {
@@ -141,6 +146,63 @@ describe('PageScrollHost', () => {
       expect(host.scrollTop).toBe(0);
     });
   });
+
+  describe('for a layer pinned beneath another (#2038)', () => {
+    const element = document.createElement('section');
+    const layerHost = (layer: PageLayer): PageScrollHost =>
+      new PageScrollHost(content, { view: window, outsideZone: inZone }, layer);
+
+    it('reports its pin and hears none of the page the layer above scrolls', () => {
+      const layer = new PageLayer(element);
+      const host = layerHost(layer);
+      const heard: number[] = [];
+      host.listen(() => heard.push(host.scrollTop));
+
+      layer.pinAt(1200);
+      page.top = 300;
+      scrollEvent();
+
+      expect(host.scrollTop).toBe(1200);
+      expect(host.toContentY(10)).toBe(1210);
+      expect(heard).toEqual([]);
+    });
+
+    it('moves its pin on a write and leaves the page to the layer above', () => {
+      const scrollTo = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+      const layer = new PageLayer(element);
+      const host = layerHost(layer);
+      layer.pinAt(1200);
+      page.top = 300;
+
+      host.scrollTop = 900;
+      host.scrollTo({ top: 800, behavior: 'smooth' });
+
+      expect(layer.pinnedTop).toBe(800);
+      expect(page.top).toBe(300);
+      expect(scrollTo).not.toHaveBeenCalled();
+    });
+
+    it('reads its pin, not the block, while a CDK dialog holds the page', () => {
+      const layer = new PageLayer(element);
+      const host = layerHost(layer);
+      layer.pinAt(1200);
+      page.top = 300;
+
+      blockAt(300);
+
+      expect(host.scrollTop).toBe(1200);
+    });
+
+    it('is the page again once unpinned', () => {
+      const layer = new PageLayer(element);
+      const host = layerHost(layer);
+      layer.pinAt(1200);
+
+      page.top = layer.unpin();
+
+      expect(host.scrollTop).toBe(1200);
+    });
+  });
 });
 
 describe('ScrollHosts.forPage', () => {
@@ -154,5 +216,13 @@ describe('ScrollHosts.forPage', () => {
     expect(host).toBeInstanceOf(PageScrollHost);
     expect(host.content).toBe(content);
     expect(zones).toEqual([false]);
+  });
+
+  it('hands the layer it is given to the host', () => {
+    const element = document.createElement('section');
+    const layer = new PageLayer(element);
+    layer.pinAt(700);
+    const host = TestBed.inject(ScrollHosts).forPage(document.createElement('div'), layer);
+    expect(host.scrollTop).toBe(700);
   });
 });

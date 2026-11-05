@@ -1,26 +1,44 @@
 import type { ScrollHost } from './scroll-host';
+import type { PageLayer } from './page-layer';
 import { pageScrollingElement } from '../../core/page-scrolling-element';
 
 /** The class a CDK BlockScrollStrategy puts on `<html>` while it pins the page. */
 export const PAGE_SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
 
-/** While a CDK block pins the page it reports the pinned offset, stays silent, and defers writes. */
+export interface PageScrollEnvironment {
+  readonly view: Window;
+  readonly outsideZone: <T>(run: () => T) => T;
+}
+
+/** While a CDK block pins the page, or its layer is pinned beneath another (#2038), it reports
+ *  the pinned offset, stays silent, and defers writes. */
 export class PageScrollHost implements ScrollHost {
   readonly intersectionRoot = null;
   private pendingTop: number | null = null;
 
+  private readonly view: Window;
+  private readonly outsideZone: <T>(run: () => T) => T;
+
   constructor(
     readonly content: HTMLElement,
-    private readonly view: Window,
-    private readonly outsideZone: <T>(run: () => T) => T,
-  ) {}
+    environment: PageScrollEnvironment,
+    private readonly layer: PageLayer | null = null,
+  ) {
+    this.view = environment.view;
+    this.outsideZone = environment.outsideZone;
+  }
 
   get scrollTop(): number {
+    if (this.layer?.pinned) return this.layer.pinnedTop;
     if (this.blocked()) return -parseFloat(this.root.style.top) || 0;
     return this.scrollingElement.scrollTop;
   }
 
   set scrollTop(top: number) {
+    if (this.layer?.pinned) {
+      this.layer.moveTo(top);
+      return;
+    }
     if (!this.blocked()) {
       this.scrollingElement.scrollTop = top;
       return;
@@ -38,7 +56,7 @@ export class PageScrollHost implements ScrollHost {
   }
 
   scrollTo(options: ScrollToOptions): void {
-    if (!this.blocked()) {
+    if (!this.held()) {
       this.view.scrollTo(options);
       return;
     }
@@ -54,13 +72,13 @@ export class PageScrollHost implements ScrollHost {
   }
 
   scrollPaddingTop(): number {
-    return parseFloat(this.view.getComputedStyle(this.root).scrollPaddingTop) || 0;
+    return parseFloat(this.view.getComputedStyle(this.content).scrollPaddingTop) || 0;
   }
 
   listen(listener: () => void): () => void {
     const view = this.view;
     const onScroll = (): void => {
-      if (!this.blocked()) listener();
+      if (!this.held()) listener();
     };
     const release = this.outsideZone(() => {
       view.addEventListener('scroll', onScroll, { passive: true });
@@ -93,6 +111,10 @@ export class PageScrollHost implements ScrollHost {
     const top = this.pendingTop;
     this.pendingTop = null;
     this.scrollingElement.scrollTop = top;
+  }
+
+  private held(): boolean {
+    return (this.layer?.pinned ?? false) || this.blocked();
   }
 
   private blocked(): boolean {
