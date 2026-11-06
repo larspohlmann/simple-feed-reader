@@ -32,8 +32,9 @@ export class PageScrollOwner {
     this.layers.push(layer);
     this.markOverlaid();
     if (!beneath) return;
-    beneath.pinAt(this.page.scrollTop);
-    this.offsetHold.hold(this.page, 0);
+    const from = this.page.scrollTop;
+    beneath.pinAt(from);
+    this.offsetHold.hold(this.page, { from, to: 0 });
     this.probe?.watch('enter', 0);
   }
 
@@ -46,11 +47,12 @@ export class PageScrollOwner {
     this.layers.splice(index, 1);
     this.markOverlaid();
     if (!onTop) return;
-    layer.pinAt(this.page.scrollTop);
+    const from = this.page.scrollTop;
+    layer.pinAt(from);
     const beneath = this.layers.at(-1);
     if (!beneath) return;
     const top = beneath.unpin();
-    this.offsetHold.hold(this.page, top);
+    this.offsetHold.hold(this.page, { from, to: top });
     this.probe?.watch('leave', top);
   }
 

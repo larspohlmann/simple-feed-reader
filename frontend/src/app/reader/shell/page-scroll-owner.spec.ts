@@ -17,6 +17,8 @@ describe('PageScrollOwner', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
+    delete (root as unknown as { scrollHeight?: number }).scrollHeight;
     TestBed.resetTestingModule();
     root.classList.remove(PAGE_SCROLL_BLOCK_CLASS);
     root.style.top = '';
@@ -53,6 +55,26 @@ describe('PageScrollOwner', () => {
     expect(list.pinned).toBe(false);
     expect(page.top).toBe(1200);
     expect(root.classList).not.toContain(PAGE_OVERLAID_CLASS);
+  });
+
+  it('holds an entering layer at the top when iOS puts back the offset pinning cut short', () => {
+    jest.useFakeTimers();
+    Object.defineProperty(root, 'scrollHeight', { value: 30000, configurable: true });
+    const list = layerAt(0);
+    owner.enter(list);
+    page.top = 4970;
+    const pinAt = list.pinAt.bind(list);
+    jest.spyOn(list, 'pinAt').mockImplementation((top) => {
+      pinAt(top);
+      page.top = 480;
+    });
+
+    owner.enter(layerAt(0));
+    jest.advanceTimersByTime(110);
+    page.top = 4970;
+    jest.advanceTimersByTime(32);
+
+    expect(page.top).toBe(0);
   });
 
   it('pins the layer beneath where it stands and starts the entering one at the top', () => {
