@@ -64,6 +64,7 @@ import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
 import { PageChromeGeometry } from './page-chrome-geometry';
 import { PageScrollOwner } from './page-scroll-owner';
+import { PageHandoffProbe } from './page-handoff-probe';
 import { PageLayerDirective } from './page-layer.directive';
 import { observeResize } from '../../shared/observe-resize';
 import { SightedPreviews } from './sighted-previews.service';
@@ -109,6 +110,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     SightedPreviews,
     PendingEntriesPoll,
     PageScrollOwner,
+    PageHandoffProbe,
     { provide: PreviewProgress, useExisting: PendingEntriesPoll },
     ReaderRouteState,
     LinkReaderNavigation,

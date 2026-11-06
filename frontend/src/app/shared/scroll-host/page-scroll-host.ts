@@ -5,6 +5,18 @@ import { pageScrollingElement } from '../../core/page-scrolling-element';
 /** The class a CDK BlockScrollStrategy puts on `<html>` while it pins the page. */
 export const PAGE_SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
 
+const pageWriteListeners = new Set<(top: number) => void>();
+
+/** Hears every offset the app writes to the page, for #2074's handoff probe; returns its removal. */
+export function observePageWrites(listener: (top: number) => void): () => void {
+  pageWriteListeners.add(listener);
+  return () => pageWriteListeners.delete(listener);
+}
+
+function announcePageWrite(top: number): void {
+  pageWriteListeners.forEach((listener) => listener(top));
+}
+
 export interface PageScrollEnvironment {
   readonly view: Window;
   readonly outsideZone: <T>(run: () => T) => T;
@@ -40,6 +52,7 @@ export class PageScrollHost implements ScrollHost {
       return;
     }
     if (!this.blocked()) {
+      announcePageWrite(top);
       this.scrollingElement.scrollTop = top;
       return;
     }
@@ -57,6 +70,7 @@ export class PageScrollHost implements ScrollHost {
 
   scrollTo(options: ScrollToOptions): void {
     if (!this.held()) {
+      if (options.top !== undefined) announcePageWrite(options.top);
       this.view.scrollTo(options);
       return;
     }
