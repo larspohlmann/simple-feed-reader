@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.8.1] - 2026-11-06
+
+## What's Changed
+* feat(#2051): sort Bluesky/Mastodon replies by interest by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2052
+* fix(#2053): duplicated posts keep their "Also in" pills in the magazine by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2054
+* Trending: richer full-width mini cards for a story's other sources (#2055) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2057
+* Mini-card thumbnails: renditions and favicon fallback on a broken picture (#2058) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2060
+* fix(#2056): an article URL counts as one Trending source by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2059
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.8.0...v1.8.1
+
 ## [v1.8.0] - 2026-11-06
 
 ### Highlights
