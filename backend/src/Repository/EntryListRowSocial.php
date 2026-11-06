@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Enum\SocialNetwork;
 
-/** A row's post on its network: whether the reader can like it there, did, wrote it, and where they open it signed in. */
+/** A row's post on its network: whether the reader can like it there, did, and wrote it. */
 final readonly class EntryListRowSocial
 {
     public function __construct(

@@ -356,6 +356,23 @@ final class EntryListRowEnricherTest extends DbTestCase
         );
     }
 
+    public function testAMastodonPostOpensThroughTheDefaultAccountsInstance(): void
+    {
+        SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAt($this->user, 'alice@first.example', 'https://first.example'),
+        );
+        $default = SocialAccounts::mastodonAt($this->user, 'alice@second.example', 'https://second.example');
+        $default->becomeDefault();
+        SocialFeeds::persistedAccount($this->entityManager, $default);
+        $post = $this->postOn($this->mastodonFeed(), self::POST . '8');
+
+        self::assertSame(
+            'https://second.example/authorize_interaction?uri=' . rawurlencode(self::POST . '8'),
+            $this->enrich([$this->row($post)])[0]->enrichment->social?->openUrl,
+        );
+    }
+
     public function testMyOwnPostSaysSoWhenIHaveAnAccountOnEachNetwork(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));

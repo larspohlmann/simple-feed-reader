@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Support;
 
+use App\Enum\SocialNetwork;
+use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Support\OwnInstancePostUrl;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
@@ -11,52 +13,56 @@ use PHPUnit\Framework\TestCase;
 final class OwnInstancePostUrlTest extends TestCase
 {
     private const string POST = 'https://mastodon.social/@Gargron/109';
+    private const string FOREIGN_URL =
+        'https://home.example/authorize_interaction?uri=https%3A%2F%2Fmastodon.social%2F%40Gargron%2F109';
 
     public function testAForeignPostOpensThroughTheReadersInstance(): void
     {
         self::assertSame(
-            'https://home.example/authorize_interaction?uri=https%3A%2F%2Fmastodon.social%2F%40Gargron%2F109',
-            OwnInstancePostUrl::among([SocialAccounts::mastodonOn('https://home.example')], self::POST),
+            self::FOREIGN_URL,
+            OwnInstancePostUrl::of($this->mastodonPost(), [SocialAccounts::mastodonOn('https://home.example')]),
         );
     }
 
     public function testATrailingSlashOnTheInstanceIsNotDoubled(): void
     {
-        self::assertStringStartsWith(
-            'https://home.example/authorize_interaction?uri=',
-            (string) OwnInstancePostUrl::among([SocialAccounts::mastodonOn('https://home.example/')], self::POST),
+        self::assertSame(
+            self::FOREIGN_URL,
+            OwnInstancePostUrl::of($this->mastodonPost(), [SocialAccounts::mastodonOn('https://home.example/')]),
         );
     }
 
-    public function testAPostOnTheReadersOwnInstanceKeepsItsPlainLink(): void
+    public function testAPostOnTheReadersOwnInstanceKeepsItsPlainLinkWhateverItsCase(): void
     {
         self::assertNull(
-            OwnInstancePostUrl::among([SocialAccounts::mastodonOn('https://Mastodon.Social')], self::POST),
+            OwnInstancePostUrl::of($this->mastodonPost(), [SocialAccounts::mastodonOn('https://Mastodon.Social')]),
         );
     }
 
-    public function testTheDefaultAccountsInstanceWins(): void
-    {
-        $default = SocialAccounts::mastodonOn('https://second.example');
-        $default->becomeDefault();
-        $accounts = [SocialAccounts::mastodonOn('https://first.example'), $default];
-
-        self::assertStringStartsWith(
-            'https://second.example/',
-            (string) OwnInstancePostUrl::among($accounts, self::POST),
-        );
-    }
-
-    public function testWithoutADefaultTheFirstAccountActs(): void
+    public function testTheHeadOfTheListActs(): void
     {
         $accounts = [
-            SocialAccounts::mastodonOn('https://first.example'),
-            SocialAccounts::mastodonOn('https://second.example'),
+            SocialAccounts::mastodonOn('https://home.example'),
+            SocialAccounts::mastodonOn('https://other.example'),
         ];
 
-        self::assertStringStartsWith(
-            'https://first.example/',
-            (string) OwnInstancePostUrl::among($accounts, self::POST),
-        );
+        self::assertSame(self::FOREIGN_URL, OwnInstancePostUrl::of($this->mastodonPost(), $accounts));
+    }
+
+    public function testABlueskyPostKeepsItsPlainLink(): void
+    {
+        $post = new SocialPostAddressModel(SocialNetwork::Bluesky, 'at://did:plc:alice/app.bsky.feed.post/3kabc');
+
+        self::assertNull(OwnInstancePostUrl::of($post, [SocialAccounts::mastodonOn('https://home.example')]));
+    }
+
+    public function testWithoutAnAccountThePostKeepsItsPlainLink(): void
+    {
+        self::assertNull(OwnInstancePostUrl::of($this->mastodonPost(), []));
+    }
+
+    private function mastodonPost(): SocialPostAddressModel
+    {
+        return new SocialPostAddressModel(SocialNetwork::Mastodon, self::POST);
     }
 }

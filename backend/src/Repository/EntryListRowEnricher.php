@@ -90,7 +90,7 @@ final readonly class EntryListRowEnricher
         if ([] === $posts) {
             return [];
         }
-        $accountsByNetwork = self::accountsByNetwork($this->socialAccounts->findAllForUserId($userId));
+        $accountsByNetwork = self::accountsByNetwork($this->socialAccounts->findAllForUserIdInActingOrder($userId));
         $likeable = array_filter(
             $posts,
             static fn (SocialPostAddressModel $post): bool => isset($accountsByNetwork[$post->network->value]),
@@ -106,21 +106,11 @@ final readonly class EntryListRowEnricher
                 isLiked: isset($likedIds[$entryId]),
                 canLike: $canLike,
                 isOwn: $canLike && null !== PostAuthor::accountAmong($entries[$entryId], $networkAccounts),
-                openUrl: self::openUrlOf($post, $networkAccounts),
+                openUrl: OwnInstancePostUrl::of($post, $networkAccounts),
             );
         }
 
         return $states;
-    }
-
-    /** @param list<SocialAccount> $accounts the reader's accounts on the post's network */
-    private static function openUrlOf(SocialPostAddressModel $post, array $accounts): ?string
-    {
-        if (SocialNetwork::Mastodon !== $post->network || [] === $accounts) {
-            return null;
-        }
-
-        return OwnInstancePostUrl::among($accounts, $post->address);
     }
 
     /**

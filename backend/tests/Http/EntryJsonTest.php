@@ -360,8 +360,14 @@ final class EntryJsonTest extends TestCase
         );
 
         self::assertSame(
-            'https://home.example/authorize_interaction?uri=x',
-            JsonMappers::entryJson()->listRow($row)['social']['openUrl'] ?? null,
+            [
+                'network' => 'mastodon',
+                'isLiked' => false,
+                'canLike' => true,
+                'isOwn' => false,
+                'openUrl' => 'https://home.example/authorize_interaction?uri=x',
+            ],
+            JsonMappers::entryJson()->listRow($row)['social'],
         );
     }
 
