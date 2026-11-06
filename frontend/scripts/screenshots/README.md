@@ -25,6 +25,11 @@ BLUESKY_IMPORT_HANDLES=heise.de,hankgreen.bsky.social BLUESKY_IMPORT_COLLECTIONS
 node --env-file=.env.screenshots scripts/screenshots/shots.mjs library social
 node --env-file=.env.screenshots scripts/screenshots/bluesky-setup.mjs teardown
 
+# The Trending shots need news feeds whose stories overlap: borrow some, shoot, give them back.
+node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs
+node --env-file=.env.screenshots scripts/screenshots/shots.mjs trending-light mobile-trending-light
+node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs teardown
+
 # The Listening shots need podcasts the demo does not follow: borrow some, shoot, give them back.
 node --env-file=.env.screenshots scripts/screenshots/podcast-setup.mjs        # prints PODCAST_TAG=<id>
 PODCAST_TAG=<id> node --env-file=.env.screenshots scripts/screenshots/shots.mjs listening
