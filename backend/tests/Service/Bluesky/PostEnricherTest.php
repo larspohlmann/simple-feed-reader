@@ -178,6 +178,7 @@ final class PostEnricherTest extends DbTestCase
             [],
             null,
             true,
+            null,
         )]);
 
         $this->enricher()->enrich($this->feed);

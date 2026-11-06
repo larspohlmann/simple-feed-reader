@@ -294,8 +294,12 @@ final class SocialRepliesSourceTest extends DbTestCase
         ));
         $this->entityManager->flush();
         $this->threads->readsReplies([
-            self::reply('folded', '2026-10-16 08:00:00', self::FOLDED_REPLY_URL)
-                ->withReplies([self::reply('child', '2026-10-16 09:00:00')]),
+            self::reply(
+                'folded',
+                '2026-10-16 08:00:00',
+                self::FOLDED_REPLY_URL,
+                self::reply('child', '2026-10-16 09:00:00'),
+            ),
             self::reply('other', '2026-10-16 07:00:00'),
         ]);
 
@@ -360,11 +364,16 @@ final class SocialRepliesSourceTest extends DbTestCase
             [],
             null,
             false,
+            null,
         );
     }
 
-    private static function reply(string $text, string $publishedAt, ?string $url = null): ReplyNode
-    {
+    private static function reply(
+        string $text,
+        string $publishedAt,
+        ?string $url = null,
+        ReplyNode ...$replies,
+    ): ReplyNode {
         $at = new \DateTimeImmutable($publishedAt);
 
         return new ReplyNode(
@@ -376,9 +385,10 @@ final class SocialRepliesSourceTest extends DbTestCase
                 $text,
                 false,
             ),
-            [],
+            array_values($replies),
             $url,
             false,
+            null,
         );
     }
 

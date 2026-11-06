@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social;
 
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\ReplyThreadOrder;
 use PHPUnit\Framework\TestCase;
@@ -24,6 +25,97 @@ final class ReplyThreadOrderTest extends TestCase
         ]);
 
         self::assertSame(['new', 'mid', 'old'], $this->urls($page->comments));
+    }
+
+    public function testTopLevelRepliesAreMostInterestingFirst(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->engaged('quiet', '2026-03-01', new SocialCountsModel(0, 0, 0, null)),
+            $this->engaged('loud', '2026-01-01', new SocialCountsModel(9, 0, 0, null)),
+            $this->engaged('mid', '2026-02-01', new SocialCountsModel(4, 0, 0, null)),
+        ]);
+
+        self::assertSame(['loud', 'mid', 'quiet'], $this->urls($page->comments));
+    }
+
+    public function testAReplyWeighsAsMuchAsThreeLikes(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->engaged('replied', '2026-01-01', new SocialCountsModel(0, 0, 1, null)),
+            $this->engaged('three likes', '2026-03-01', new SocialCountsModel(3, 0, 0, null)),
+            $this->engaged('two likes', '2026-02-01', new SocialCountsModel(2, 0, 0, null)),
+        ]);
+
+        self::assertSame(['three likes', 'replied', 'two likes'], $this->urls($page->comments));
+    }
+
+    public function testARepostWeighsAsMuchAsTwoLikes(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->engaged('reposted', '2026-01-01', new SocialCountsModel(0, 1, 0, null)),
+            $this->engaged('two likes', '2026-03-01', new SocialCountsModel(2, 0, 0, 0)),
+            $this->engaged('one like', '2026-02-01', new SocialCountsModel(1, 0, 0, 0)),
+        ]);
+
+        self::assertSame(['two likes', 'reposted', 'one like'], $this->urls($page->comments));
+    }
+
+    public function testAQuoteWeighsAsMuchAsTwoLikes(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->engaged('quoted', '2026-01-01', new SocialCountsModel(0, 0, 0, 1)),
+            $this->engaged('two likes', '2026-03-01', new SocialCountsModel(2, 0, 0, 0)),
+            $this->engaged('one like', '2026-02-01', new SocialCountsModel(1, 0, 0, 0)),
+        ]);
+
+        self::assertSame(['two likes', 'quoted', 'one like'], $this->urls($page->comments));
+    }
+
+    public function testAReplyWithoutCountsRanksAsOneNobodyEngagedWith(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->node('uncounted', '2026-03-01'),
+            $this->engaged('unengaged', '2026-02-01', new SocialCountsModel(0, 0, 0, null)),
+            $this->engaged('liked', '2026-01-01', new SocialCountsModel(1, 0, 0, null)),
+        ]);
+
+        self::assertSame(['liked', 'uncounted', 'unengaged'], $this->urls($page->comments));
+    }
+
+    public function testEquallyInterestingTopLevelRepliesAreNewestFirst(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->engaged('old', '2026-01-01', new SocialCountsModel(3, 0, 0, null)),
+            $this->engaged('new', '2026-03-01', new SocialCountsModel(3, 0, 0, null)),
+        ]);
+
+        self::assertSame(['new', 'old'], $this->urls($page->comments));
+    }
+
+    public function testRepliesInsideAThreadStayOldestFirstWhateverTheirInterest(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->node(
+                'root',
+                '2026-01-01',
+                $this->engaged('early', '2026-01-02', new SocialCountsModel(0, 0, 0, null)),
+                $this->engaged('late', '2026-01-03', new SocialCountsModel(9, 0, 0, null)),
+            ),
+        ]);
+
+        self::assertSame(['root', 'early', 'late'], $this->urls($page->comments));
+    }
+
+    public function testTheCountCapKeepsTheMostInterestingReplies(): void
+    {
+        $page = (new ReplyThreadOrder(3, 2))->pageOf([
+            $this->engaged('newest', '2026-03-01', new SocialCountsModel(0, 0, 0, null)),
+            $this->engaged('loud', '2026-01-01', new SocialCountsModel(7, 0, 0, null)),
+            $this->engaged('mid', '2026-02-01', new SocialCountsModel(2, 0, 0, null)),
+        ]);
+
+        self::assertSame(['loud', 'mid'], $this->urls($page->comments));
+        self::assertSame(1, $page->omitted);
     }
 
     public function testRepliesInsideAThreadAreOldestFirst(): void
@@ -125,6 +217,11 @@ final class ReplyThreadOrderTest extends TestCase
 
     private function node(string $url, ?string $at, ReplyNode ...$replies): ReplyNode
     {
+        return $this->engaged($url, $at, null, ...$replies);
+    }
+
+    private function engaged(string $url, ?string $at, ?SocialCountsModel $counts, ReplyNode ...$replies): ReplyNode
+    {
         $publishedAt = $at === null ? null : new \DateTimeImmutable($at);
         $comment = function (?\DateTimeImmutable $publishedAt) use ($url): EntryCommentModel {
             $this->built[] = $url;
@@ -132,7 +229,7 @@ final class ReplyThreadOrderTest extends TestCase
             return new EntryCommentModel(new CommentAuthorModel('Ann'), $url, $publishedAt, '<p>Hi</p>', false);
         };
 
-        return new ReplyNode($publishedAt, $comment, array_values($replies), $url, false);
+        return new ReplyNode($publishedAt, $comment, array_values($replies), $url, false, $counts);
     }
 
     /**

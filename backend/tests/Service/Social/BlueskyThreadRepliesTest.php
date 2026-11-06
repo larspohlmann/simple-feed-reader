@@ -13,6 +13,7 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Social\BlueskyThreadReplies;
+use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Pass\ReplyNode;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
@@ -262,6 +263,25 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertSame('at://did:plc:ann/app.bsky.feed.post/reply', $post->address);
         self::assertSame(3, $post->counts->likes);
         self::assertTrue($post->viewer->isLiked);
+    }
+
+    public function testANodeKnowsItsCountsWithoutBuildingTheComment(): void
+    {
+        $reply = self::replyBy('did:plc:ann', [], [], [
+            'likeCount' => 3,
+            'repostCount' => 1,
+            'replyCount' => 2,
+            'quoteCount' => 1,
+        ]);
+
+        self::assertEquals(new SocialCountsModel(3, 1, 2, 1), $this->replies(self::threadOf([$reply]))[0]->counts);
+    }
+
+    public function testANodeMissingACountHasNone(): void
+    {
+        $reply = self::replyBy('did:plc:ann', [], [], ['likeCount' => 3]);
+
+        self::assertNull($this->replies(self::threadOf([$reply]))[0]->counts);
     }
 
     public function testAnAnswerWithoutAThreadIsUnavailable(): void

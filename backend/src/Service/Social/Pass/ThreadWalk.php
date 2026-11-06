@@ -18,9 +18,8 @@ final class ThreadWalk
     }
 
     /** @param list<ReplyNode> $replies */
-    public function walkNewestFirst(array $replies): void
+    public function walkInOrder(array $replies): void
     {
-        usort($replies, static fn (ReplyNode $left, ReplyNode $right): int => self::oldestFirst($right, $left));
         $this->walkAll($replies, 0);
     }
 
@@ -58,16 +57,11 @@ final class ThreadWalk
 
     private static function oldestFirst(ReplyNode $left, ReplyNode $right): int
     {
-        return self::timeOf($left) <=> self::timeOf($right);
+        return $left->sortableTime() <=> $right->sortableTime();
     }
 
     private static function sizeOf(ReplyNode $node): int
     {
         return 1 + array_sum(array_map(self::sizeOf(...), $node->replies));
-    }
-
-    private static function timeOf(ReplyNode $node): int
-    {
-        return $node->publishedAt?->getTimestamp() ?? PHP_INT_MIN;
     }
 }

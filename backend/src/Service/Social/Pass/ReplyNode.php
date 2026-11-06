@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Pass;
 
 use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Social\Model\SocialCountsModel;
 
 final readonly class ReplyNode
 {
@@ -18,6 +19,7 @@ final readonly class ReplyNode
         public array $replies,
         public ?string $url,
         public bool $byEntryAuthor,
+        public ?SocialCountsModel $counts,
     ) {
     }
 
@@ -26,9 +28,8 @@ final readonly class ReplyNode
         return ($this->commentOf)($this->publishedAt);
     }
 
-    /** @param list<ReplyNode> $replies */
-    public function withReplies(array $replies): self
+    public function sortableTime(): int
     {
-        return new self($this->publishedAt, $this->commentOf, $replies, $this->url, $this->byEntryAuthor);
+        return $this->publishedAt?->getTimestamp() ?? PHP_INT_MIN;
     }
 }

@@ -19,6 +19,7 @@ use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\Support\BlueskyAuthor;
 use App\Service\Social\Support\CommentPost;
+use App\Service\Social\Support\PostCounts;
 use App\Service\Text\Support\HtmlAnchor;
 
 final readonly class BlueskyThreadReplies
@@ -62,6 +63,7 @@ final readonly class BlueskyThreadReplies
                     $this->nodesOf($reply->nodes('replies'), $entryAuthor),
                     url: AtPostUri::webUrl($post->string('uri') ?? ''),
                     byEntryAuthor: self::isByEntryAuthor($post->node('author'), $entryAuthor),
+                    counts: PostCounts::ofBlueskyPost($post),
                 );
             }
         }

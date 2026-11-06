@@ -11,6 +11,7 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Social\MastodonContextReplies;
+use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Pass\ReplyNode;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
@@ -62,6 +63,24 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertSame('https://example.social/users/someone/statuses/300', $post->address);
         self::assertSame(4, $post->counts->likes);
         self::assertTrue($post->viewer->isLiked);
+    }
+
+    public function testANodeKnowsItsCountsWithoutBuildingTheComment(): void
+    {
+        $answer = self::contextOf([self::statusOf('300', '110', [
+            'favourites_count' => 4,
+            'reblogs_count' => 1,
+            'replies_count' => 2,
+        ])]);
+
+        self::assertEquals(new SocialCountsModel(4, 1, 2, null), $this->replies($answer)[0]->counts);
+    }
+
+    public function testANodeMissingACountHasNone(): void
+    {
+        $answer = self::contextOf([self::statusOf('300', '110', ['favourites_count' => 4])]);
+
+        self::assertNull($this->replies($answer)[0]->counts);
     }
 
     public function testANonPublicReplyGoesWithItsAnswers(): void
