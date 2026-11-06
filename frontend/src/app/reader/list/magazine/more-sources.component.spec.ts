@@ -153,3 +153,31 @@ it.each([
 
   expect(reached).not.toHaveBeenCalled();
 });
+
+it("shows each source's dek under its title", () => {
+  const withDek = anEntry({
+    id: 5,
+    source: 'BBC',
+    title: 'Raman wins',
+    excerpt: 'A second big win.',
+  });
+  const element = mount(storyOf([withDek]));
+  expand(element);
+
+  expect(element.querySelector('.mini .dek')!.textContent).toContain('A second big win.');
+});
+
+it('leaves out the dek line when a source has none', () => {
+  const bare = anEntry({ id: 6, source: 'CBC', title: 'New mayor', excerpt: '' });
+  const element = mount(storyOf([bare]));
+  expand(element);
+
+  expect(element.querySelector('.mini .dek')).toBeNull();
+});
+
+it("puts the source's favicon in its byline", () => {
+  const element = mount(storyOf(copies));
+  expand(element);
+
+  expect(element.querySelector('.mini .byline app-favicon')).not.toBeNull();
+});

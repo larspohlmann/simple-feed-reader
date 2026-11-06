@@ -21,7 +21,6 @@
           <button
             type="button"
             class="mini reads-as-text"
-            [attr.title]="source.feed + ' · ' + source.title"
             (click)="open(source.copy, $event)"
             (keydown.enter)="$event.stopPropagation()"
             (keydown.space)="$event.stopPropagation()"
@@ -33,16 +32,24 @@
                 <app-favicon
                   [url]="source.copy.faviconUrl"
                   [avatarUrl]="source.avatarUrl"
-                  [size]="16"
+                  [size]="20"
                 />
               </span>
             }
             <span class="text">
-              <span class="byline"
-                ><span class="feed">{{ source.feed }}</span
-                ><span class="when"> · {{ source.when }}</span></span
-              >
+              <span class="byline">
+                <app-favicon
+                  [url]="source.copy.faviconUrl"
+                  [avatarUrl]="source.avatarUrl"
+                  [size]="14"
+                />
+                <span class="feed">{{ source.feed }}</span>
+                <span class="when">· {{ source.when }}</span>
+              </span>
               <span class="title">{{ source.title }}</span>
+              @if (source.dek) {
+                <span class="dek">{{ source.dek }}</span>
+              }
             </span>
           </button>
         }

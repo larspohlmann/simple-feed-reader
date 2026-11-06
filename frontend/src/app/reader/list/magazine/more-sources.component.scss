@@ -26,18 +26,18 @@
 }
 
 .minis {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(var(--mini-card-min-w), 100%), 1fr));
-  gap: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin-top: var(--space-1);
 }
 
 .mini {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-1);
+  padding: var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background: var(--surface-sunken);
@@ -59,8 +59,8 @@
 
 .thumb {
   flex: none;
-  width: var(--mini-card-thumb);
-  height: var(--mini-card-thumb);
+  width: var(--mini-card-thumb-w);
+  height: var(--mini-card-thumb-h);
   border-radius: var(--radius-sm);
   object-fit: cover;
 }
@@ -72,27 +72,44 @@
 }
 
 .text {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  gap: var(--space-0);
   min-width: 0;
 }
 
-.byline,
-.title {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .byline {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) + var(--space-0));
+  min-width: 0;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .feed {
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
+.when {
+  flex: none;
+}
+
 .title {
   color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: var(--lh-tight);
+}
+
+.dek {
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
