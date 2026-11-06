@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { PageLayerDirective } from './page-layer.directive';
 import { PageScrollOwner } from './page-scroll-owner';
+import { PageOffsetHold } from './page-offset-hold';
 import { PAGE_PINNED_CLASS, PageLayer } from '../../shared/scroll-host/page-layer';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
@@ -14,7 +15,7 @@ class LayerProbeComponent {
 
 @Component({
   imports: [PageLayerDirective, NgTemplateOutlet, LayerProbeComponent],
-  providers: [PageScrollOwner],
+  providers: [PageScrollOwner, PageOffsetHold],
   template: `
     <section class="list" appPageLayer></section>
     @if (open()) {

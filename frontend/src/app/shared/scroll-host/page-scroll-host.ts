@@ -7,7 +7,7 @@ export const PAGE_SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
 
 const pageWriteListeners = new Set<(top: number) => void>();
 
-/** Hears every offset the app writes to the page, for #2074's handoff probe; returns its removal. */
+/** Hears every offset the app writes to the page; returns its removal. */
 export function observePageWrites(listener: (top: number) => void): () => void {
   pageWriteListeners.add(listener);
   return () => pageWriteListeners.delete(listener);
