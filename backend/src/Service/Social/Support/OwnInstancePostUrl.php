@@ -12,7 +12,7 @@ final class OwnInstancePostUrl
     private const string AUTHORIZE_INTERACTION = '%s/authorize_interaction?uri=%s';
 
     /**
-     * @param non-empty-list<SocialAccount> $accounts the reader's Mastodon accounts
+     * @param non-empty-list<SocialAccount> $accounts
      *
      * @return string|null null when the post already lives on that instance
      */
