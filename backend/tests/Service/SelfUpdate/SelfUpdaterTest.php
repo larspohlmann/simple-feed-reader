@@ -68,7 +68,7 @@ final class SelfUpdaterTest extends TestCase
         $status = $this->updater()->status();
 
         self::assertSame(SelfUpdatePhase::Succeeded, $status->phase);
-        self::assertSame($this->state->lastRun, $status->lastRun);
+        self::assertSame($this->state->lastRun, $status->currentRun);
     }
 
     public function testARunWithoutARequestFileReportsItsOwnPhase(): void
@@ -94,7 +94,7 @@ final class SelfUpdaterTest extends TestCase
 
         $status = $this->updater()->status();
 
-        self::assertNull($status->lastRun);
+        self::assertNull($status->currentRun);
         self::assertSame('', $status->log);
     }
 
