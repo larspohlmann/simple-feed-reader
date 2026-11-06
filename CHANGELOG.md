@@ -10,6 +10,33 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Trending.** A new view right above For you shows the stories several of your
+feeds are covering at once, one card per story, ranked by how many of your
+sources ran it. Switch between the last 24 hours and the last 7 days; the 7-day
+list leaves out what is already in the 24-hour one, so it reads as "earlier
+this week". Each card names the outlets that also covered the story, and your
+Bluesky and Mastodon accounts count towards a story without cluttering the
+card. The bar a story has to clear grows with the number of feeds you follow,
+so a large subscription list doesn't flood the view. The sidebar badge counts
+the stories you haven't opened yet, a card's Hide button keeps that story out
+for good, even as it keeps growing, and Settings → Preferences switches
+Trending off. No AI involved: stories are grouped from their headlines,
+descriptions and shared links.
+
+**More sources, at a glance.** In the magazine view, a story covered elsewhere
+now ends in a single "x more sources" line that opens into small cards, each
+with the other outlet's picture, name, time and headline.
+
+**The page scrolls on phones.** The list and full-screen articles now scroll
+the page itself, so mobile browsers tuck their address bar away while you read
+and bring it back when you scroll up.
+
+**Mastodon posts open where you're signed in.** With a Mastodon account
+connected, "Open original" takes you to the post on your own instance, ready to
+reply, boost or favourite.
+
 ## [v1.7.1] - 2026-11-03
 
 ## What's Changed
