@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -25,34 +26,41 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
     }
 
     /**
-     * Every account that opted into a scheduled run; the finder decides which of them are due right now.
+     * Every active account that opted into a scheduled run; the finder decides which of them are due right now.
      *
      * @return list<RecommendationSettings>
      */
-    public function findWithAutoGenerateInterval(): array
+    public function findWithAutoGenerateInterval(\DateTimeImmutable $now): array
     {
+        $qb = $this->withOwner()->andWhere('s.autoGenerateIntervalHours IS NOT NULL');
+        ActiveAccountDql::restrict($qb, 'owner', $now);
+
         /** @var list<RecommendationSettings> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->andWhere('s.autoGenerateIntervalHours IS NOT NULL')
-            ->getQuery()
-            ->getResult();
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
     }
 
     /**
-     * Every account that scheduled its profile; the finder decides which of them are due right now.
+     * Every active account that scheduled its profile; the finder decides which of them are due right now.
      *
      * @return list<RecommendationSettings>
      */
-    public function findWithProfileInterval(): array
+    public function findWithProfileInterval(\DateTimeImmutable $now): array
     {
+        $qb = $this->withOwner()->andWhere('s.profileTuning.intervalHours IS NOT NULL');
+        ActiveAccountDql::restrict($qb, 'owner', $now);
+
         /** @var list<RecommendationSettings> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->andWhere('s.profileTuning.intervalHours IS NOT NULL')
-            ->getQuery()
-            ->getResult();
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
+    }
+
+    private function withOwner(): QueryBuilder
+    {
+        return $this->createQueryBuilder('s')
+            ->join('s.user', 'owner')
+            ->addSelect('owner');
     }
 }

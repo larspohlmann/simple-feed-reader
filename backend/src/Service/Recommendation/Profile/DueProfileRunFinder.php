@@ -12,7 +12,7 @@ use App\Service\Recommendation\Run\Support\IntervalElapsed;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The accounts a scheduled sweep starts a profile run for: a schedule chosen, a connection that can build the
+ * The accounts a scheduled sweep starts a profile run for: active, a schedule chosen, a connection that can build the
  * profile (none means skipped, not started and failed), no profile run in flight, and the newest one an interval old.
  */
 final readonly class DueProfileRunFinder
@@ -29,9 +29,10 @@ final readonly class DueProfileRunFinder
     public function due(): array
     {
         $due = [];
+        $now = $this->clock->now();
 
-        foreach ($this->settings->findWithProfileInterval() as $row) {
-            if ($this->isDue($row)) {
+        foreach ($this->settings->findWithProfileInterval($now) as $row) {
+            if ($this->isDue($row, $now)) {
                 $due[] = $row->getUser();
             }
         }
@@ -39,7 +40,7 @@ final readonly class DueProfileRunFinder
         return $due;
     }
 
-    private function isDue(RecommendationSettings $row): bool
+    private function isDue(RecommendationSettings $row, \DateTimeImmutable $now): bool
     {
         $user = $row->getUser();
         $latest = $this->profileRuns->findLatestForUser($user);
@@ -49,7 +50,7 @@ final readonly class DueProfileRunFinder
 
         $intervalHours = $row->profileSettings()->intervalHours
             ?? throw new \LogicException('A scheduled row has an interval.');
-        if (!IntervalElapsed::since($latest?->getCreatedAt(), $intervalHours, $this->clock->now())) {
+        if (!IntervalElapsed::since($latest?->getCreatedAt(), $intervalHours, $now)) {
             return false;
         }
 
