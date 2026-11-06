@@ -18,9 +18,13 @@ final class ThreadWalk
     }
 
     /** @param list<ReplyNode> $replies */
-    public function walkNewestFirst(array $replies): void
+    public function walkMostInterestingFirst(array $replies): void
     {
-        usort($replies, static fn (ReplyNode $left, ReplyNode $right): int => self::oldestFirst($right, $left));
+        usort(
+            $replies,
+            static fn (ReplyNode $left, ReplyNode $right): int
+                => [$right->interest, self::timeOf($right)] <=> [$left->interest, self::timeOf($left)],
+        );
         $this->walkAll($replies, 0);
     }
 

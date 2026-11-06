@@ -21,7 +21,7 @@ final readonly class ReplyThreadOrder
     public function pageOf(array $replies): CommentsPageModel
     {
         $walk = new ThreadWalk($this->maxDepth, $this->maxCount);
-        $walk->walkNewestFirst($replies);
+        $walk->walkMostInterestingFirst($replies);
 
         return new CommentsPageModel($walk->comments(), $walk->omitted());
     }

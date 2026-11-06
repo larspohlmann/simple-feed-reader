@@ -264,6 +264,25 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertTrue($post->viewer->isLiked);
     }
 
+    public function testANodeKnowsItsInterestFromItsCounts(): void
+    {
+        $reply = self::replyBy('did:plc:ann', [], [], [
+            'likeCount' => 3,
+            'repostCount' => 1,
+            'replyCount' => 2,
+            'quoteCount' => 1,
+        ]);
+
+        self::assertSame(3 + 2 + 6 + 2, $this->replies(self::threadOf([$reply]))[0]->interest);
+    }
+
+    public function testANodeWithoutCountsHasNoInterest(): void
+    {
+        $reply = self::replyBy('did:plc:ann', [], [], ['likeCount' => 3]);
+
+        self::assertSame(0, $this->replies(self::threadOf([$reply]))[0]->interest);
+    }
+
     public function testAnAnswerWithoutAThreadIsUnavailable(): void
     {
         $this->expectException(CommentsUnavailableException::class);

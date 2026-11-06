@@ -20,6 +20,7 @@ use App\Service\Social\Support\MastodonCard;
 use App\Service\Social\Support\MastodonQuotedStatus;
 use App\Service\Social\Support\MastodonStatusAddress;
 use App\Service\Social\Support\MastodonStatusUrl;
+use App\Service\Social\Support\PostCounts;
 use App\Service\Text\Support\HtmlEscape;
 
 final readonly class MastodonContextReplies
@@ -76,6 +77,7 @@ final readonly class MastodonContextReplies
                     $this->nodesOf($thread->answersTo($status), $thread),
                     url: MastodonStatusUrl::of($status),
                     byEntryAuthor: $byPostAuthor,
+                    interest: PostCounts::ofMastodonStatus($status)?->interest() ?? 0,
                 );
             },
             $statuses,

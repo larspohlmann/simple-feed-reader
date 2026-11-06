@@ -64,6 +64,17 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertTrue($post->viewer->isLiked);
     }
 
+    public function testANodeKnowsItsInterestFromItsCounts(): void
+    {
+        $answer = self::contextOf([self::statusOf('300', '110', [
+            'favourites_count' => 4,
+            'reblogs_count' => 1,
+            'replies_count' => 2,
+        ])]);
+
+        self::assertSame(4 + 2 + 6, $this->replies($answer)[0]->interest);
+    }
+
     public function testANonPublicReplyGoesWithItsAnswers(): void
     {
         $urls = self::allUrlsOf($this->replies());

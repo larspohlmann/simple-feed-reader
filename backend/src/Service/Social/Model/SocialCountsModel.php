@@ -15,6 +15,11 @@ final readonly class SocialCountsModel
     ) {
     }
 
+    public function interest(): int
+    {
+        return $this->likes + 2 * $this->reposts + 2 * ($this->quotes ?? 0) + 3 * $this->replies;
+    }
+
     /** @return array{likes: int, reposts: int, replies: int, quotes: int|null} */
     public function toCacheEntry(): array
     {

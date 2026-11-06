@@ -18,6 +18,7 @@ final readonly class ReplyNode
         public array $replies,
         public ?string $url,
         public bool $byEntryAuthor,
+        public int $interest = 0,
     ) {
     }
 

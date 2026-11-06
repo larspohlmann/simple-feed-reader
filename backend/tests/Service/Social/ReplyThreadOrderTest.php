@@ -26,6 +26,53 @@ final class ReplyThreadOrderTest extends TestCase
         self::assertSame(['new', 'mid', 'old'], $this->urls($page->comments));
     }
 
+    public function testTopLevelRepliesAreMostInterestingFirst(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->scored('quiet', '2026-03-01', 0),
+            $this->scored('loud', '2026-01-01', 9),
+            $this->scored('mid', '2026-02-01', 4),
+        ]);
+
+        self::assertSame(['loud', 'mid', 'quiet'], $this->urls($page->comments));
+    }
+
+    public function testEquallyInterestingTopLevelRepliesAreNewestFirst(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->scored('old', '2026-01-01', 3),
+            $this->scored('new', '2026-03-01', 3),
+        ]);
+
+        self::assertSame(['new', 'old'], $this->urls($page->comments));
+    }
+
+    public function testRepliesInsideAThreadStayOldestFirstWhateverTheirInterest(): void
+    {
+        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+            $this->node(
+                'root',
+                '2026-01-01',
+                $this->scored('early', '2026-01-02', 0),
+                $this->scored('late', '2026-01-03', 9),
+            ),
+        ]);
+
+        self::assertSame(['root', 'early', 'late'], $this->urls($page->comments));
+    }
+
+    public function testTheCountCapKeepsTheMostInterestingReplies(): void
+    {
+        $page = (new ReplyThreadOrder(3, 2))->pageOf([
+            $this->scored('newest', '2026-03-01', 0),
+            $this->scored('loud', '2026-01-01', 7),
+            $this->scored('mid', '2026-02-01', 2),
+        ]);
+
+        self::assertSame(['loud', 'mid'], $this->urls($page->comments));
+        self::assertSame(1, $page->omitted);
+    }
+
     public function testRepliesInsideAThreadAreOldestFirst(): void
     {
         $page = (new ReplyThreadOrder(3, 5))->pageOf([
@@ -125,6 +172,11 @@ final class ReplyThreadOrderTest extends TestCase
 
     private function node(string $url, ?string $at, ReplyNode ...$replies): ReplyNode
     {
+        return $this->scored($url, $at, 0, ...$replies);
+    }
+
+    private function scored(string $url, ?string $at, int $interest, ReplyNode ...$replies): ReplyNode
+    {
         $publishedAt = $at === null ? null : new \DateTimeImmutable($at);
         $comment = function (?\DateTimeImmutable $publishedAt) use ($url): EntryCommentModel {
             $this->built[] = $url;
@@ -132,7 +184,7 @@ final class ReplyThreadOrderTest extends TestCase
             return new EntryCommentModel(new CommentAuthorModel('Ann'), $url, $publishedAt, '<p>Hi</p>', false);
         };
 
-        return new ReplyNode($publishedAt, $comment, array_values($replies), $url, false);
+        return new ReplyNode($publishedAt, $comment, array_values($replies), $url, false, $interest);
     }
 
     /**
