@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
@@ -32,9 +32,7 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly viewedOnOpen = new Set<number>();
   private readonly leaving = signal<ReadonlySet<number>>(new Set());
   /** Rows fading out of a saved view or Trending; they stay in the list data so the magazine plan holds. */
-  readonly leavingIds = computed<ReadonlySet<number>>(
-    () => new Set([...this.leaving(), ...this.entries.hidingTrendingIds()]),
-  );
+  readonly leavingIds = this.leaving.asReadonly();
 
   constructor() {
     // Once per session, even when the PATCH fails and rolls back.
@@ -138,6 +136,14 @@ export class EntryStateActions implements EntryActionHandler {
     this.leaving.set(new Set());
   }
 
+  markLeaving(id: number): void {
+    this.leaving.update((ids) => new Set(ids).add(id));
+  }
+
+  stayInList(id: number): void {
+    this.leaving.update((ids) => withoutId(ids, id));
+  }
+
   /** The gone post's row leaves the list as an excluded one does; its open article closes. */
   private leaveGonePost(id: number): void {
     this.markLeaving(id);
@@ -179,27 +185,20 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   private patchInList(entry: EntryDto, patch: EntryStatePatch, outcome: StateSaveOutcome): void {
-    const revertLeave = this.leaveExcludedRow(entry, patch);
+    const leaves = this.leavesSavedView(entry, patch);
     this.entries.setState(entry.id, patch, {
       ...outcome,
+      onStarted: leaves ? () => this.markLeaving(entry.id) : undefined,
       onFailed: () => {
         outcome.onFailed?.();
-        revertLeave();
+        if (leaves) this.stayInList(entry.id);
       },
     });
   }
 
-  private leaveExcludedRow(entry: EntryDto, patch: EntryStatePatch): () => void {
+  private leavesSavedView(entry: EntryDto, patch: EntryStatePatch): boolean {
     const flag = savedViewMembership(this.routeState.selection().kind);
-    if (flag === null) return () => undefined;
-    const stillMember = (localStatePatch(patch)[flag] ?? entry[flag]) === true;
-    if (stillMember) return () => undefined;
-    this.markLeaving(entry.id);
-    return () => this.leaving.update((ids) => withoutId(ids, entry.id));
-  }
-
-  private markLeaving(id: number): void {
-    this.leaving.update((ids) => new Set(ids).add(id));
+    return flag !== null && (localStatePatch(patch)[flag] ?? entry[flag]) !== true;
   }
 }
 

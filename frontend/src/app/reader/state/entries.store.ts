@@ -38,6 +38,8 @@ type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
+  /** Runs as each attempt starts, a retry's included. */
+  readonly onStarted?: () => void;
   readonly onSaved?: () => void;
   readonly onFailed?: () => void;
 }
@@ -53,9 +55,6 @@ export class EntriesStore {
   private readonly unlisted = accountSignal<EntryDto | null>(null);
   private readonly inFlightPatches = new Set<InFlightPatch>();
   readonly entries = this.rawEntries.asReadonly();
-  private readonly hidingTrending = accountSignal<ReadonlySet<number>>(new Set());
-  /** Trending cards whose hide is saving or saved; they stay in the list to leave it in place. */
-  readonly hidingTrendingIds = this.hidingTrending.asReadonly();
   readonly nextCursor = accountSignal<string | null>(null);
   readonly loading = accountSignal(false);
   /** A mutation that changes the list in place, with no reload to follow — kept off `loading`,
@@ -102,7 +101,6 @@ export class EntriesStore {
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
         this.rawEntries.set(this.withInFlightPatches(page.entries));
-        this.hidingTrending.set(new Set());
         this.nextCursor.set(page.nextCursor);
         this.matchedWords.set(page.matchedWords ?? []);
         this.loading.set(false);
@@ -218,10 +216,11 @@ export class EntriesStore {
   private saveState(
     entryId: number,
     patch: EntryStatePatch,
-    outcome: { onSaved?: () => void; onFailed?: (error: HttpErrorResponse) => void },
+    outcome: Omit<StateSaveOutcome, 'onFailed'> & { onFailed?: (error: HttpErrorResponse) => void },
   ): void {
     const target = this.entryOrCopy(entryId);
     if (!target) return;
+    outcome.onStarted?.();
     const request$ = this.api.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
       next: () => outcome.onSaved?.(),
@@ -300,8 +299,8 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Hides a card's story in the loaded Trending list's window (#2017): the card leaves at once (#2066);
-   *  a failed hide brings it back, with the banner and its retry. */
+  /** Hides a card's story in the loaded Trending list's window (#2017); the card stays in the list, so the
+   *  caller can let it leave in place (#2066). A failure shows the banner and its retry. */
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
     const query = this.query();
     if (query?.view !== 'trending' || !this.rawEntries().some((entry) => entry.id === entryId))
@@ -309,11 +308,10 @@ export class EntriesStore {
     const window = query.window ?? DEFAULT_TRENDING_WINDOW;
     this.error.set(null);
     this.failedOperation.set(null);
-    this.hidingTrending.update((ids) => new Set(ids).add(entryId));
+    outcome.onStarted?.();
     this.trendingApi.hideStory(window, entryId).subscribe({
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
-        this.hidingTrending.update((ids) => new Set([...ids].filter((id) => id !== entryId)));
         this.reportMutationFailure(error, () => this.hideTrendingStory(entryId, outcome));
         outcome.onFailed?.();
       },

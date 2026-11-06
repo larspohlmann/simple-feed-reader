@@ -29,10 +29,7 @@ function createActions(collaborators: Collaborators): EntryStateActions {
     providers: [
       EntryStateActions,
       provideRouter([]),
-      {
-        provide: EntriesStore,
-        useValue: { hidingTrendingIds: signal(new Set()), ...collaborators.entries },
-      },
+      { provide: EntriesStore, useValue: collaborators.entries },
       { provide: SubscriptionsStore, useValue: collaborators.subscriptions },
       { provide: SavedSearchesStore, useValue: collaborators.savedSearches ?? {} },
       { provide: ReaderRouteState, useValue: collaborators.routeState },
@@ -311,6 +308,19 @@ describe('EntryStateActions unsharing (#2007)', () => {
     selection.set({ kind: 'shared' });
 
     actions.unshare(anEntry({ id: 9, isShared: true }));
+    setState.mock.calls[0][2]?.onStarted?.();
+
+    expect(actions.leavingIds().has(9)).toBe(true);
+  });
+
+  it('leaves the Shared list again on each attempt (#2066)', () => {
+    selection.set({ kind: 'shared' });
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+    const outcome = setState.mock.calls[0][2];
+
+    outcome?.onStarted?.();
+    outcome?.onFailed?.();
+    outcome?.onStarted?.();
 
     expect(actions.leavingIds().has(9)).toBe(true);
   });
@@ -318,30 +328,12 @@ describe('EntryStateActions unsharing (#2007)', () => {
   it('restores the count and the row when the save fails', () => {
     selection.set({ kind: 'shared' });
     actions.unshare(anEntry({ id: 9, isShared: true }));
+    setState.mock.calls[0][2]?.onStarted?.();
 
     setState.mock.calls[0][2]?.onFailed?.();
 
     expect(bumpShared).toHaveBeenLastCalledWith(1);
     expect(actions.leavingIds().has(9)).toBe(false);
-  });
-});
-
-describe('EntryStateActions leaving Trending (#2066)', () => {
-  it('lets a card whose story is being hidden leave as a saved-view row does', () => {
-    const hidingTrendingIds = signal<ReadonlySet<number>>(new Set());
-    const actions = createActions({
-      entries: { hidingTrendingIds },
-      subscriptions: {},
-      routeState: {
-        openEntryId: signal(null),
-        openEntry: signal(null),
-        selection: signal({ kind: 'trending' }),
-      },
-    });
-
-    hidingTrendingIds.set(new Set([4]));
-
-    expect([...actions.leavingIds()]).toEqual([4]);
   });
 });
 
@@ -361,7 +353,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        { provide: EntriesStore, useValue: { hidingTrendingIds: signal(new Set()) } },
+        { provide: EntriesStore, useValue: {} },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -422,7 +414,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        { provide: EntriesStore, useValue: { hidingTrendingIds: signal(new Set()) } },
+        { provide: EntriesStore, useValue: {} },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
         {
