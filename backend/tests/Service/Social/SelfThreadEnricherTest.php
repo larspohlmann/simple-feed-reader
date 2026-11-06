@@ -486,7 +486,7 @@ final class SelfThreadEnricherTest extends DbTestCase
             $replies,
             null,
             true,
-            0,
+            null,
         );
     }
 }

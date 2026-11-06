@@ -25,16 +25,6 @@ final class SocialCountsModelTest extends TestCase
         self::assertEquals($counts, SocialCountsModel::fromCacheEntryOrNull($counts->toCacheEntry()));
     }
 
-    public function testInterestWeighsRepliesOverRepostsAndQuotesOverLikes(): void
-    {
-        self::assertSame(1 + 2 * 2 + 3 * 3 + 2 * 4, (new SocialCountsModel(1, 2, 3, 4))->interest());
-    }
-
-    public function testInterestWithoutQuotesCountsTheRest(): void
-    {
-        self::assertSame(5 + 2 * 2 + 3 * 1, (new SocialCountsModel(5, 2, 1, null))->interest());
-    }
-
     #[DataProvider('unreadableEntries')]
     public function testAnUnreadableCacheEntryReadsAsNoCounts(mixed $stored): void
     {

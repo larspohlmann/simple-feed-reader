@@ -69,7 +69,7 @@ final class SelfReplyChainTest extends TestCase
             $replies,
             url: 'https://x/' . $html,
             byEntryAuthor: $byAuthor,
-            interest: 0,
+            counts: null,
         );
     }
 }

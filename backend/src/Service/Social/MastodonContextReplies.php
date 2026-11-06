@@ -77,7 +77,7 @@ final readonly class MastodonContextReplies
                     $this->nodesOf($thread->answersTo($status), $thread),
                     url: MastodonStatusUrl::of($status),
                     byEntryAuthor: $byPostAuthor,
-                    interest: PostCounts::ofMastodonStatus($status)?->interest() ?? 0,
+                    counts: PostCounts::ofMastodonStatus($status),
                 );
             },
             $statuses,

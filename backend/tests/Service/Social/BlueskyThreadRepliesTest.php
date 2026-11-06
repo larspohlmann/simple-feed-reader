@@ -13,6 +13,7 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Social\BlueskyThreadReplies;
+use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Pass\ReplyNode;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
@@ -264,7 +265,7 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertTrue($post->viewer->isLiked);
     }
 
-    public function testANodeKnowsItsInterestFromItsCounts(): void
+    public function testANodeKnowsItsCountsWithoutBuildingTheComment(): void
     {
         $reply = self::replyBy('did:plc:ann', [], [], [
             'likeCount' => 3,
@@ -273,14 +274,14 @@ final class BlueskyThreadRepliesTest extends TestCase
             'quoteCount' => 1,
         ]);
 
-        self::assertSame(3 + 2 + 6 + 2, $this->replies(self::threadOf([$reply]))[0]->interest);
+        self::assertEquals(new SocialCountsModel(3, 1, 2, 1), $this->replies(self::threadOf([$reply]))[0]->counts);
     }
 
-    public function testANodeWithoutCountsHasNoInterest(): void
+    public function testANodeMissingACountHasNone(): void
     {
         $reply = self::replyBy('did:plc:ann', [], [], ['likeCount' => 3]);
 
-        self::assertSame(0, $this->replies(self::threadOf([$reply]))[0]->interest);
+        self::assertNull($this->replies(self::threadOf([$reply]))[0]->counts);
     }
 
     public function testAnAnswerWithoutAThreadIsUnavailable(): void

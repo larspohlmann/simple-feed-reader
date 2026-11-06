@@ -63,7 +63,7 @@ final readonly class BlueskyThreadReplies
                     $this->nodesOf($reply->nodes('replies'), $entryAuthor),
                     url: AtPostUri::webUrl($post->string('uri') ?? ''),
                     byEntryAuthor: self::isByEntryAuthor($post->node('author'), $entryAuthor),
-                    interest: PostCounts::ofBlueskyPost($post)?->interest() ?? 0,
+                    counts: PostCounts::ofBlueskyPost($post),
                 );
             }
         }
