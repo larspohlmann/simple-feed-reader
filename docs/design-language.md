@@ -1506,15 +1506,17 @@ boxes tile edge to edge — a tap on the star must never land on keep.
 
 ### `<app-more-sources>`
 
-A magazine card's other sources for the same story or post (#2036): one accent line,
+A magazine card's footer slot. A Trending story's other outlets (#2036) get one accent line,
 "x more sources", that opens in place into a grid of mini cards — the smallest card in
 the app, on `--surface-sunken`: a `--mini-card-thumb` square (the copy's picture, else its
 favicon on `--surface-1`), the feed and relative time, and a one-line title. A mini card opens its
 copy; it carries no actions. The grid fills `--mini-card-min-w` columns, so a narrow
 card stacks them and a hero lays out two or three.
 
-**Not for:** the list view, whose `entry-row` keeps `<app-entry-duplicates>` — chips that
-open the copy's row in a popover.
+Any other entry with duplicates — the same post in several feeds — renders
+`<app-entry-duplicates>` instead: the "Also in" pills that open the copy's row in a popover (#2053).
+
+**Not for:** the list view, whose `entry-row` renders `<app-entry-duplicates>` directly.
 
 ---
 

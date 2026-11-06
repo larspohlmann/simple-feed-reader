@@ -10,14 +10,14 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { feedAvatarUrl } from '../../state/social-sections';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
-import { alsoFootOf } from './also-foot';
+import { EntryDuplicatesComponent } from './entry-duplicates.component';
 
 let nextId = 0;
 
 @Component({
   selector: 'app-more-sources',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe, FaviconComponent, IconComponent],
+  imports: [TranslocoPipe, FaviconComponent, IconComponent, EntryDuplicatesComponent],
   templateUrl: './more-sources.component.html',
   styleUrl: './more-sources.component.scss',
 })
@@ -28,7 +28,7 @@ export class MoreSourcesComponent {
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
 
-  protected readonly copies = computed(() => alsoFootOf(this.entry()).copies);
+  protected readonly copies = computed(() => this.entry().duplicates ?? []);
   protected readonly countKey = computed(() =>
     this.copies().length === 1 ? 'reader.moreSourcesOne' : 'reader.moreSources',
   );
