@@ -28,13 +28,13 @@ final readonly class SelfUpdater
 
     public function status(): SelfUpdateStatusModel
     {
-        $lastRun = $this->state->lastRun();
+        $currentRun = $this->currentRun();
 
         return new SelfUpdateStatusModel(
             $this->updaterPresent(),
-            $this->phase($lastRun),
-            $lastRun,
-            $this->state->logTail(),
+            $this->phase($currentRun),
+            $currentRun,
+            null === $currentRun ? '' : $this->state->logTail(),
         );
     }
 
@@ -43,7 +43,7 @@ final readonly class SelfUpdater
         if (!$this->updaterPresent()) {
             throw new UpdaterUnavailableException('No updater container is running.');
         }
-        if ($this->phase($this->state->lastRun())->isUnderway()) {
+        if ($this->phase($this->currentRun())->isUnderway()) {
             throw new UpdateInProgressException('An update is already under way.');
         }
         if (!$this->versions->report()->updateAvailable) {
@@ -63,13 +63,23 @@ final readonly class SelfUpdater
             && $this->clock->now()->getTimestamp() - $heartbeat->getTimestamp() <= self::HEARTBEAT_FRESH_SECONDS;
     }
 
-    private function phase(?UpdateRunModel $lastRun): SelfUpdatePhase
+    private function currentRun(): ?UpdateRunModel
     {
+        $lastRun = $this->state->lastRun();
         $pendingRequestId = $this->state->pendingRequestId();
         if (null !== $pendingRequestId && $pendingRequestId !== $lastRun?->requestId) {
-            return SelfUpdatePhase::Requested;
+            return null;
         }
 
-        return $lastRun->phase ?? SelfUpdatePhase::Idle;
+        return $lastRun;
+    }
+
+    private function phase(?UpdateRunModel $currentRun): SelfUpdatePhase
+    {
+        if (null !== $currentRun) {
+            return $currentRun->phase;
+        }
+
+        return null === $this->state->pendingRequestId() ? SelfUpdatePhase::Idle : SelfUpdatePhase::Requested;
     }
 }
