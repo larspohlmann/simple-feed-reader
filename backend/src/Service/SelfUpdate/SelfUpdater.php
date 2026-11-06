@@ -28,13 +28,14 @@ final readonly class SelfUpdater
 
     public function status(): SelfUpdateStatusModel
     {
-        $lastRun = $this->state->lastRun();
+        $pendingRequestId = $this->state->pendingRequestId();
+        $currentRun = $this->currentRun($pendingRequestId);
 
         return new SelfUpdateStatusModel(
             $this->updaterPresent(),
-            $this->phase($lastRun),
-            $lastRun,
-            $this->state->logTail(),
+            self::phase($currentRun, $pendingRequestId),
+            $currentRun,
+            null === $currentRun ? '' : $this->state->logTail(),
         );
     }
 
@@ -43,7 +44,8 @@ final readonly class SelfUpdater
         if (!$this->updaterPresent()) {
             throw new UpdaterUnavailableException('No updater container is running.');
         }
-        if ($this->phase($this->state->lastRun())->isUnderway()) {
+        $pendingRequestId = $this->state->pendingRequestId();
+        if (self::phase($this->currentRun($pendingRequestId), $pendingRequestId)->isUnderway()) {
             throw new UpdateInProgressException('An update is already under way.');
         }
         if (!$this->versions->report()->updateAvailable) {
@@ -63,13 +65,15 @@ final readonly class SelfUpdater
             && $this->clock->now()->getTimestamp() - $heartbeat->getTimestamp() <= self::HEARTBEAT_FRESH_SECONDS;
     }
 
-    private function phase(?UpdateRunModel $lastRun): SelfUpdatePhase
+    private function currentRun(?string $pendingRequestId): ?UpdateRunModel
     {
-        $pendingRequestId = $this->state->pendingRequestId();
-        if (null !== $pendingRequestId && $pendingRequestId !== $lastRun?->requestId) {
-            return SelfUpdatePhase::Requested;
-        }
+        $lastRun = $this->state->lastRun();
 
-        return $lastRun->phase ?? SelfUpdatePhase::Idle;
+        return null === $pendingRequestId || $pendingRequestId === $lastRun?->requestId ? $lastRun : null;
+    }
+
+    private static function phase(?UpdateRunModel $currentRun, ?string $pendingRequestId): SelfUpdatePhase
+    {
+        return $currentRun->phase ?? (null === $pendingRequestId ? SelfUpdatePhase::Idle : SelfUpdatePhase::Requested);
     }
 }

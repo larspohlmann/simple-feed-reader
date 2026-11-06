@@ -68,7 +68,7 @@ final class SelfUpdaterTest extends TestCase
         $status = $this->updater()->status();
 
         self::assertSame(SelfUpdatePhase::Succeeded, $status->phase);
-        self::assertSame($this->state->lastRun, $status->lastRun);
+        self::assertSame($this->state->lastRun, $status->currentRun);
     }
 
     public function testARunWithoutARequestFileReportsItsOwnPhase(): void
@@ -86,8 +86,21 @@ final class SelfUpdaterTest extends TestCase
         self::assertSame(SelfUpdatePhase::Requested, $this->updater()->status()->phase);
     }
 
-    public function testTheStatusCarriesTheLogTail(): void
+    public function testAPendingRequestReportsNeitherThePreviousRunNorItsLog(): void
     {
+        $this->state->pendingRequestId = 'def';
+        $this->state->lastRun = $this->runOf('abc', SelfUpdatePhase::Succeeded);
+        $this->state->log = "previous run\n";
+
+        $status = $this->updater()->status();
+
+        self::assertNull($status->currentRun);
+        self::assertSame('', $status->log);
+    }
+
+    public function testTheStatusCarriesTheLogTailOfTheCurrentRun(): void
+    {
+        $this->state->lastRun = $this->runOf('abc', SelfUpdatePhase::Running);
         $this->state->log = "pulling images\n";
 
         self::assertSame("pulling images\n", $this->updater()->status()->log);

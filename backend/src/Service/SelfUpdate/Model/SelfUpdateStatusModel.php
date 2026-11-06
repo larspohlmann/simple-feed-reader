@@ -9,7 +9,7 @@ final readonly class SelfUpdateStatusModel
     public function __construct(
         public bool $updaterPresent,
         public SelfUpdatePhase $phase,
-        public ?UpdateRunModel $lastRun,
+        public ?UpdateRunModel $currentRun,
         public string $log,
     ) {
     }

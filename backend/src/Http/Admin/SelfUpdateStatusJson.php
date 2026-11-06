@@ -23,9 +23,9 @@ final readonly class SelfUpdateStatusJson
         return [
             'updaterPresent' => $status->updaterPresent,
             'phase' => $status->phase->value,
-            'startedAt' => $status->lastRun?->startedAt?->format(\DATE_ATOM),
-            'finishedAt' => $status->lastRun?->finishedAt?->format(\DATE_ATOM),
-            'exitCode' => $status->lastRun?->exitCode,
+            'startedAt' => $status->currentRun?->startedAt?->format(\DATE_ATOM),
+            'finishedAt' => $status->currentRun?->finishedAt?->format(\DATE_ATOM),
+            'exitCode' => $status->currentRun?->exitCode,
             'log' => $status->log,
         ];
     }
