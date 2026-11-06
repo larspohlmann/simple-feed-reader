@@ -10,6 +10,24 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.8.2] - 2026-11-06
+
+## What's Changed
+* fix(#2061): a pending update request hides the previous run's log; spinner while under way by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2063
+* fix(#2064): right-align the more-sources toggle on Trending cards by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2065
+* Hidden Trending cards animate out; reading focus follows moved rows (#2066) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2067
+* docs(#2068): which data is shared between users and which is per-user by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2069
+* fix(#2070): digests go only to active accounts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2072
+* fix(#2071): background sweeps act only for active accounts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2073
+* feat(#2074): probe page handoffs that drift on iPhone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2075
+* fix(#2074): hold the page offset across a layer handoff on iOS by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2076
+* fix(#2074): the offset hold knows the offset it replaces by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2077
+* refactor(#2074): drop the page handoff probe by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2078
+* refactor(#2074): simplify the page offset hold by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2079
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.8.1...v1.8.2
+
 ## [v1.8.1] - 2026-11-06
 
 ## What's Changed
