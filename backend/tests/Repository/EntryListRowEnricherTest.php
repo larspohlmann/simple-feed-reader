@@ -252,9 +252,12 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         $rows = $this->enrich([$this->row($liked, [$this->row($unliked)]), $this->row($article)]);
 
-        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, true, true), $rows[0]->enrichment->social);
         self::assertEquals(
-            new EntryListRowSocial(SocialNetwork::Mastodon, false, true),
+            new EntryListRowSocial(SocialNetwork::Mastodon, true, true, openUrl: self::openUrlOf('1')),
+            $rows[0]->enrichment->social,
+        );
+        self::assertEquals(
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, true, openUrl: self::openUrlOf('2')),
             $rows[0]->duplicates[0]->enrichment->social,
         );
         self::assertNull($rows[1]->enrichment->social);
@@ -291,6 +294,35 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertNull($rows[1]->enrichment->discussion);
     }
 
+    public function testAMastodonPostOpensOnTheReadersInstance(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $post = $this->postOn($this->mastodonFeed(), self::POST . '8');
+
+        self::assertSame(
+            'https://mastodon.example/authorize_interaction?uri=' . rawurlencode(self::POST . '8'),
+            $this->enrich([$this->row($post)])[0]->enrichment->social?->openUrl,
+        );
+    }
+
+    public function testAMastodonPostOnTheReadersInstanceKeepsItsPlainLink(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $feed = new Feed('https://mastodon.example/@bob.rss');
+        $this->entityManager->persist($feed);
+        $post = $this->postOn($feed, 'https://mastodon.example/@bob/1');
+
+        self::assertNull($this->enrich([$this->row($post)])[0]->enrichment->social?->openUrl);
+    }
+
+    public function testWithoutAMastodonAccountAPostKeepsItsPlainLink(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        $post = $this->postOn($this->mastodonFeed(), self::POST . '9');
+
+        self::assertNull($this->enrich([$this->row($post)])[0]->enrichment->social?->openUrl);
+    }
+
     public function testMyOwnPostSaysSoAndSomeoneElsesDoesNot(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
@@ -306,7 +338,7 @@ final class EntryListRowEnricherTest extends DbTestCase
             $rows[0]->enrichment->social,
         );
         self::assertEquals(
-            new EntryListRowSocial(SocialNetwork::Mastodon, false, true),
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, true, openUrl: self::openUrlOf('7')),
             $rows[1]->enrichment->social,
         );
     }
@@ -335,7 +367,10 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         $social = $this->enrich([$this->row($post)])[0]->enrichment->social;
 
-        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, false, true), $social);
+        self::assertEquals(
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, true, openUrl: self::openUrlOf('5')),
+            $social,
+        );
     }
 
     public function testWithoutAnAccountOnItsNetworkAPostCannotBeLiked(): void
@@ -398,6 +433,11 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertSame([], $this->enrich([]));
 
         self::assertSame([], $recorder->queries());
+    }
+
+    private static function openUrlOf(string $suffix): string
+    {
+        return 'https://mastodon.example/authorize_interaction?uri=' . rawurlencode(self::POST . $suffix);
     }
 
     /**

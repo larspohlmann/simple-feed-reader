@@ -485,14 +485,14 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             ->requireId();
     }
 
-    /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool} */
+    /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null} */
     private function socialOf(KernelBrowser $client): array
     {
         $entry = $this->payload($client)['entry'];
         self::assertIsArray($entry);
         self::assertIsArray($entry['social']);
 
-        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool} $social */
+        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null} $social */
         $social = $entry['social'];
 
         return $social;
