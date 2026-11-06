@@ -13,8 +13,8 @@ export const PAGE_OVERLAID_CLASS = 'page-overlaid';
 export class PageScrollOwner {
   private readonly document = inject(DOCUMENT);
   private readonly page = inject(ScrollHosts).forPage(this.document.body);
+  private readonly offsetHold = new PageOffsetHold(this.page);
   private readonly layers: PageLayer[] = [];
-  private readonly offsetHold = inject(PageOffsetHold);
 
   constructor() {
     // Listening arms the host's release observer: a write under a CDK block lands after it.
@@ -32,7 +32,7 @@ export class PageScrollOwner {
     if (!beneath) return;
     const from = this.page.scrollTop;
     beneath.pinAt(from);
-    this.offsetHold.hold(this.page, { from, to: 0 });
+    this.offsetHold.handOff({ from, to: 0 });
   }
 
   /** Pins the leaver so its leave animation plays in place, and gives the page back to the
@@ -48,7 +48,7 @@ export class PageScrollOwner {
     layer.pinAt(from);
     const beneath = this.layers.at(-1);
     if (!beneath) return;
-    this.offsetHold.hold(this.page, { from, to: beneath.unpin() });
+    this.offsetHold.handOff({ from, to: beneath.unpin() });
   }
 
   private markOverlaid(): void {

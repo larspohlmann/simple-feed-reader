@@ -25,7 +25,11 @@ describe('PageScrollHost', () => {
   });
 
   const pageHost = (): PageScrollHost =>
-    new PageScrollHost(content, { view: window, outsideZone: inZone });
+    new PageScrollHost(content, {
+      view: window,
+      outsideZone: inZone,
+      announceWrite: () => undefined,
+    });
   const scrollEvent = (): boolean => window.dispatchEvent(new Event('scroll'));
   const mutationsDelivered = (): Promise<void> => new Promise((resolve) => setTimeout(resolve));
 
@@ -150,7 +154,11 @@ describe('PageScrollHost', () => {
   describe('for a layer pinned beneath another (#2038)', () => {
     const element = document.createElement('section');
     const layerHost = (layer: PageLayer): PageScrollHost =>
-      new PageScrollHost(content, { view: window, outsideZone: inZone }, layer);
+      new PageScrollHost(
+        content,
+        { view: window, outsideZone: inZone, announceWrite: () => undefined },
+        layer,
+      );
 
     afterEach(() => {
       element.className = '';
