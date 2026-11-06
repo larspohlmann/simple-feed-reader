@@ -10,6 +10,12 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Trending.** A new view above For you shows the stories several of your feeds
+are covering, ranked by how many sources ran them. Switch between the last
+24 hours and the last 7 days.
+
 ## [v1.7.1] - 2026-11-03
 
 ## What's Changed

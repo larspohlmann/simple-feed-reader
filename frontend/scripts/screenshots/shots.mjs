@@ -247,6 +247,7 @@ const SETS = {
     desktop('search-light', '/?q=climate', magazine),
     desktop('kept-light', '/?view=kept', magazine),
     desktop('for-you-light', '/?view=for-you', magazine),
+    desktop('trending-light', '/?view=trending&window=day', magazine),
     desktop('onboarding-light', '/discover'),
     phone('mobile-onboarding-light', '/discover'),
     desktop('organise-light', '/settings/organise', { before: expandAll }),
@@ -263,6 +264,7 @@ const SETS = {
     phone('mobile-reader-light', '/', { ...magazine, before: openArticle }),
     phone('mobile-reader-dark', '/', { ...magazine, theme: 'dark', before: openArticle }),
     phone('mobile-for-you-light', '/?view=for-you', magazine),
+    phone('mobile-trending-light', '/?view=trending&window=day', magazine),
     phone('mobile-search-dark', '/?q=climate', { ...magazine, theme: 'dark' }),
   ],
   social: [

@@ -89,6 +89,17 @@ quotes — with its likes and replies in the reader.
   <img src="screenshots/mobile-bluesky-post-dark.webp" alt="A Bluesky post in the reader on a phone, dark theme" width="24%">
 </p>
 
+## Trending
+
+The stories several of your feeds are covering, one card per story, ranked by
+how many sources ran it, over the last 24 hours or the last 7 days.
+
+![Trending stories over the last 24 hours](screenshots/trending-light.webp)
+
+<p>
+  <img src="screenshots/mobile-trending-light.webp" alt="Trending on a phone" width="24%">
+</p>
+
 ## "For you"
 
 An optional personal feed. A model of your choice ranks your unread entries

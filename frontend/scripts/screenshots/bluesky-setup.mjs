@@ -6,8 +6,8 @@
 //   node --env-file=.env.screenshots bluesky-setup.mjs candidates   # connect, list what could be imported
 //   node --env-file=.env.screenshots bluesky-setup.mjs teardown     # unsubscribe, untag, disconnect
 import { chromium } from '@playwright/test';
+import { openApiSession } from './lib.mjs';
 
-const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:4200';
 // Which follows to import: a comma-separated list of handles, or the first eight when unset.
 const HANDLES = (process.env.BLUESKY_IMPORT_HANDLES ?? '')
   .split(',')
@@ -16,27 +16,7 @@ const HANDLES = (process.env.BLUESKY_IMPORT_HANDLES ?? '')
 const mode = process.argv[2] ?? 'connect';
 
 const browser = await chromium.launch();
-const page = await browser.newPage();
-await page.goto(`${BASE}/login`);
-await page.locator('input[type=email]').fill(process.env.SHOT_EMAIL);
-await page.locator('input[type=password]').fill(process.env.SHOT_PASSWORD);
-await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-await page.waitForURL((url) => !url.pathname.startsWith('/login'));
-
-const api = (method, path, body) =>
-  page.evaluate(
-    async ({ method, path, body }) => {
-      const token = localStorage.getItem('sfr.jwt');
-      const response = await fetch(path, {
-        method,
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      const text = await response.text();
-      return { status: response.status, json: text ? JSON.parse(text) : null };
-    },
-    { method, path, body },
-  );
+const api = await openApiSession(browser);
 
 const accounts = async () => (await api('GET', '/api/me/social-accounts')).json.accounts ?? [];
 const blueskyAccount = async () =>
