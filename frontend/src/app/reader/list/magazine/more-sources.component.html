@@ -1,4 +1,4 @@
-@if (!entry().story) {
+@if (copies().length && !entry().story) {
   <app-entry-duplicates [entry]="entry()" />
 } @else if (copies().length) {
   <div class="more-sources">
