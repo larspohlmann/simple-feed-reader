@@ -17,8 +17,6 @@ use Psr\Log\LoggerInterface;
 
 final readonly class PrivateFeedSyncSweep
 {
-    private const string DUE_AFTER = '-1 hour';
-
     public function __construct(
         private SocialAccountSyncRepository $socialAccounts,
         private PrivateFeedSync $privateFeedSync,
@@ -35,8 +33,7 @@ final readonly class PrivateFeedSyncSweep
         if ($budget->isEmpty()) {
             return $report;
         }
-        $dueBefore = $this->clock->now()->modify(self::DUE_AFTER);
-        foreach ($this->socialAccounts->findIdsDueForSync($dueBefore, $budget->accounts) as $accountId) {
+        foreach ($this->socialAccounts->findIdsDueForSync($this->clock->now(), $budget->accounts) as $accountId) {
             $account = $this->socialAccounts->find($accountId);
             if (null !== $account) {
                 $report = $report->adding($this->syncIsolated($account));

@@ -45,9 +45,9 @@ final class SocialAccountSyncRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$never->requireId(), $old->requireId()],
-            $this->syncs()->findIdsDueForSync($now->modify('-1 hour'), 10),
+            $this->syncs()->findIdsDueForSync($now, 10),
         );
-        self::assertSame([$never->requireId()], $this->syncs()->findIdsDueForSync($now->modify('-1 hour'), 1));
+        self::assertSame([$never->requireId()], $this->syncs()->findIdsDueForSync($now, 1));
     }
 
     public function testAnAccountCheckedExactlyAtTheCutoffIsNotYetDue(): void
@@ -62,7 +62,7 @@ final class SocialAccountSyncRepositoryTest extends DbTestCase
         $this->entityManager->persist($beforeCutoff);
         $this->entityManager->flush();
 
-        self::assertSame([$beforeCutoff->requireId()], $this->syncs()->findIdsDueForSync($cutoff, 10));
+        self::assertSame([$beforeCutoff->requireId()], $this->syncs()->findIdsDueForSync($now, 10));
     }
 
     public function testTheAccountOfASuspendedUserIsNeverDue(): void
@@ -73,8 +73,30 @@ final class SocialAccountSyncRepositoryTest extends DbTestCase
             ->create('due-suspended@example.test', status: UserStatus::Suspended);
         $this->entityManager->persist(SocialAccounts::blueskyAs($suspended, 'did:plc:suspended'));
         $this->entityManager->flush();
+        $now = new \DateTimeImmutable('2026-10-17 12:00:00');
 
-        self::assertSame([], $this->syncs()->findIdsDueForSync(new \DateTimeImmutable('2026-10-17 12:00:00'), 10));
+        self::assertSame([], $this->syncs()->findIdsDueForSync($now, 10));
+    }
+
+    public function testTheAccountOfAUserWhoseTrialEndedIsNeverDue(): void
+    {
+        $now = new \DateTimeImmutable('2026-10-17 12:00:00');
+        $this->owner->setTrialEndsAt($now);
+        $this->entityManager->persist(SocialAccounts::blueskyAs($this->owner, 'did:plc:lapsed'));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->syncs()->findIdsDueForSync($now, 10));
+    }
+
+    public function testTheAccountOfAUserStillInTheirTrialIsDue(): void
+    {
+        $now = new \DateTimeImmutable('2026-10-17 12:00:00');
+        $this->owner->setTrialEndsAt($now->modify('+1 second'));
+        $trial = SocialAccounts::blueskyAs($this->owner, 'did:plc:trial');
+        $this->entityManager->persist($trial);
+        $this->entityManager->flush();
+
+        self::assertSame([$trial->requireId()], $this->syncs()->findIdsDueForSync($now, 10));
     }
 
     public function testAFailedCheckIsStampedEvenAfterTheEntityManagerClosed(): void

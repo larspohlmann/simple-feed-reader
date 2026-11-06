@@ -13,8 +13,8 @@ use App\Service\Recommendation\Run\Support\IntervalElapsed;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The accounts a scheduled sweep should start a run for: a cadence chosen, AI ready, no run in flight, and the newest
- * run at least one interval old. Any run resets that clock, so a failed run waits a full interval before the next.
+ * The accounts a scheduled sweep should start a run for: active, a cadence chosen, AI ready, no run in flight, and the
+ * newest run an interval old. Any run resets that clock, so a failed run waits a full interval before the next.
  */
 final readonly class DueRecommendationRunFinder
 {
@@ -31,20 +31,20 @@ final readonly class DueRecommendationRunFinder
     public function due(): array
     {
         $due = [];
+        $now = $this->clock->now();
 
-        foreach ($this->settings->findWithAutoGenerateInterval() as $row) {
-            $user = $row->getUser();
-
-            if ($this->isDue($row, $user)) {
-                $due[] = $user;
+        foreach ($this->settings->findWithAutoGenerateInterval($now) as $row) {
+            if ($this->isDue($row, $now)) {
+                $due[] = $row->getUser();
             }
         }
 
         return $due;
     }
 
-    private function isDue(RecommendationSettings $row, User $user): bool
+    private function isDue(RecommendationSettings $row, \DateTimeImmutable $now): bool
     {
+        $user = $row->getUser();
         if (!AiReadiness::of($user->getActiveAiProviderSettings())) {
             return false;
         }
@@ -56,7 +56,7 @@ final readonly class DueRecommendationRunFinder
         return IntervalElapsed::since(
             $this->runs->findLatestForUser($user)?->getCreatedAt(),
             $row->values()->autoGenerateIntervalHours ?? throw new \LogicException('A scheduled row has an interval.'),
-            $this->clock->now(),
+            $now,
         );
     }
 }

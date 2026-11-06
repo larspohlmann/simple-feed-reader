@@ -195,8 +195,17 @@ Two checkers, one per kind of firewall:
   so a live trial costs a null check and a date comparison. `trialEndsAt` stays set, which is how admin screens tell a
   trial expiry from a manual suspend.
 
-The digest sweep sends no request, so neither checker sees it: `SendDueDigests` mails only a verified, Active account
-whose trial has not ended, and an expired trial is skipped before its next request suspends it (#2070).
+Background jobs send no request, so neither checker sees them. Each one that acts for an account applies the same rule
+itself: Active and the trial not ended, so a lapsed trial is skipped before its next request suspends it. The rule is
+`User::isActiveAt()` in PHP and `ActiveAccountDql` in a query.
+
+- `SendDueDigests` mails only a verified account that is active (#2070).
+- The For-You and profile run finders, which spend the account's AI provider calls, schedule runs for active accounts
+  only, through `RecommendationSettingsRepository` (#2071).
+- `SocialAccountSyncRepository::findIdsDueForSync()` stops syncing a suspended or lapsed account's Mastodon and Bluesky
+  timelines, so it never takes a slot of the sweep's budget (#2071).
+
+A new job that acts for an account without a request needs the same check.
 
 `security.yaml`'s `expose_security_errors: AccountStatus` lets the status 403 through while `UserNotFoundException`
 stays masked as bad credentials.

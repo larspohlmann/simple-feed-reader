@@ -59,6 +59,15 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $this->entityManager->flush();
     }
 
+    private function readyHourlyUser(string $email): User
+    {
+        $user = $this->user($email);
+        $this->fixtures->seedReadyAiSettings($user);
+        $this->setCadence($user, 1);
+
+        return $user;
+    }
+
     /** @return list<string> */
     private function dueEmails(): array
     {
@@ -136,6 +145,36 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $this->entityManager->clear();
 
         self::assertNotContains('finder-old-active@example.test', $this->dueEmails());
+    }
+
+    public function testASuspendedAccountIsNeverDue(): void
+    {
+        $user = $this->readyHourlyUser('finder-suspended@example.test');
+        $user->suspend();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        self::assertNotContains('finder-suspended@example.test', $this->dueEmails());
+    }
+
+    public function testAnAccountWhoseTrialEndedIsNeverDue(): void
+    {
+        $user = $this->readyHourlyUser('finder-lapsed@example.test');
+        $user->setTrialEndsAt(new \DateTimeImmutable('-1 minute'));
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        self::assertNotContains('finder-lapsed@example.test', $this->dueEmails());
+    }
+
+    public function testAnAccountStillInItsTrialIsDue(): void
+    {
+        $user = $this->readyHourlyUser('finder-trial@example.test');
+        $user->setTrialEndsAt(new \DateTimeImmutable('+1 day'));
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        self::assertContains('finder-trial@example.test', $this->dueEmails());
     }
 
     /**

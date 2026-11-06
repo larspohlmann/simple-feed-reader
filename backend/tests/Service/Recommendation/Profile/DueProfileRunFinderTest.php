@@ -95,6 +95,33 @@ final class DueProfileRunFinderTest extends DbTestCase
         self::assertSame([], $this->dueEmails());
     }
 
+    public function testASuspendedAccountIsNeverDue(): void
+    {
+        $owner = $this->scheduledOwner('profile-due-suspended@example.test', 6);
+        $owner->suspend();
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->dueEmails());
+    }
+
+    public function testAnAccountWhoseTrialEndedIsNeverDue(): void
+    {
+        $owner = $this->scheduledOwner('profile-due-lapsed@example.test', 6);
+        $owner->setTrialEndsAt(new \DateTimeImmutable(self::NOW));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->dueEmails());
+    }
+
+    public function testAnAccountStillInItsTrialIsDue(): void
+    {
+        $owner = $this->scheduledOwner('profile-due-trial@example.test', 6);
+        $owner->setTrialEndsAt(new \DateTimeImmutable(self::NOW)->modify('+1 second'));
+        $this->entityManager->flush();
+
+        self::assertSame(['profile-due-trial@example.test'], $this->dueEmails());
+    }
+
     private function scheduledOwner(string $email, int $hours): User
     {
         $owner = $this->user($email);
