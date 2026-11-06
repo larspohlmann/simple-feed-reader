@@ -31,9 +31,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     ];
 
     /**
-     * The window's stories, counting only feeds the reader follows, leaving out any sharing an entry with a story the
-     * reader is shown in a shorter window; an `AND` on `story`, then VISIBLE_COVERAGE. An empty id list expands to
-     * `IN (NULL)`, which leaves nothing out.
+     * The window's stories, counting only feeds the reader follows and an article URL once, leaving out any sharing an
+     * entry with a story the reader is shown in a shorter window; an `AND` on `story`, then VISIBLE_COVERAGE. An empty
+     * id list expands to `IN (NULL)`, which leaves nothing out.
      */
     private const string VISIBLE_STORIES = 'SELECT story.id AS story_id, story.last_seen,'
         . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
@@ -42,10 +42,25 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
         . ' JOIN subscription subscribed'
         . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
+        . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
         . ' WHERE story.time_window = :window'
+        . self::NO_EARLIER_COPY
         . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry overlap_member'
         . ' JOIN trending_story_entry shorter_member ON shorter_member.entry_id = overlap_member.entry_id'
         . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
+
+    /**
+     * Like the list's duplicate collapse, only the lowest-id copy of an article the reader can see in the story counts;
+     * the earlier copy must be one of theirs, or the article would count for no feed. Social posts always count.
+     */
+    private const string NO_EARLIER_COPY = ' AND (member_feed.network IS NOT NULL OR member_entry.url_hash IS NULL'
+        . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
+        . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
+        . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
+        . ' JOIN subscription earlier_reader'
+        . ' ON earlier_reader.feed_id = earlier_member.feed_id AND earlier_reader.user_id = :user'
+        . ' WHERE earlier_member.story_id = story.id AND earlier_member.entry_id < story_member.entry_id'
+        . ' AND earlier_entry.url_hash = member_entry.url_hash))';
 
     /** At least the reader's threshold of their feeds took part (social ones count), two of them article feeds. */
     private const string VISIBLE_COVERAGE = ' GROUP BY story.id, story.last_seen'
