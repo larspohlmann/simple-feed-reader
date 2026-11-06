@@ -110,6 +110,55 @@ it("loads a source's picture asynchronously and without a referrer", () => {
   expect(thumb.getAttribute('decoding')).toBe('async');
 });
 
+const withRenditions = anEntry({
+  id: 7,
+  source: 'BBC',
+  title: 'Raman wins',
+  imageUrl: 'https://img/7.jpg',
+  imageRenditions: [{ url: 'https://img/7-240.jpg', width: 240 }],
+});
+
+function breakThumb(element: HTMLElement, index: number): void {
+  element
+    .querySelectorAll('.mini')
+    [index].querySelector('img.thumb')!
+    .dispatchEvent(new Event('error'));
+  fixture.detectChanges();
+}
+
+it("loads the smallest rendition that covers a mini card's picture", () => {
+  const element = mount(storyOf([withRenditions]));
+  expand(element);
+
+  const thumb = element.querySelector('img.thumb')!;
+  expect(thumb.getAttribute('srcset')).toContain('https://img/7-240.jpg 240w');
+  expect(thumb.getAttribute('sizes')).toBe('104px');
+});
+
+it('retries the plain picture when its rendition fails to load', () => {
+  const element = mount(storyOf([withRenditions]));
+  expand(element);
+  expect(element.querySelector('img.thumb')!.getAttribute('srcset')).not.toBeNull();
+
+  breakThumb(element, 0);
+
+  const thumb = element.querySelector('img.thumb')!;
+  expect(thumb.getAttribute('srcset')).toBeNull();
+  expect(thumb.getAttribute('src')).toBe('https://img/7.jpg');
+});
+
+it('shows the favicon box on the one card whose picture fails to load', () => {
+  const element = mount(storyOf([copies[0], withRenditions]));
+  expand(element);
+
+  breakThumb(element, 0);
+
+  const [broken, intact] = Array.from(element.querySelectorAll('.mini'));
+  expect(broken.querySelector('img.thumb')).toBeNull();
+  expect(broken.querySelector('.thumb app-favicon')).not.toBeNull();
+  expect(intact.querySelector('img.thumb')).not.toBeNull();
+});
+
 it('collapses again on a second click', () => {
   const element = mount(storyOf(copies));
   expand(element);
