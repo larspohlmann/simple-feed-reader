@@ -101,6 +101,15 @@ it("shows a source's picture as its thumbnail, its favicon when it has none", ()
   expect(withoutImage.querySelector('.thumb app-favicon')).not.toBeNull();
 });
 
+it("sends no referrer to a source's image host", () => {
+  const element = mount(storyOf(copies));
+  expand(element);
+
+  const thumb = element.querySelector('img.thumb')!;
+  expect(thumb.getAttribute('referrerpolicy')).toBe('no-referrer');
+  expect(thumb.getAttribute('decoding')).toBe('async');
+});
+
 it('collapses again on a second click', () => {
   const element = mount(storyOf(copies));
   expand(element);

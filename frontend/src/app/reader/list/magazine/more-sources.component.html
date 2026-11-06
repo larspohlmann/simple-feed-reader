@@ -26,7 +26,14 @@
             (keydown.space)="$event.stopPropagation()"
           >
             @if (source.copy.imageUrl) {
-              <img class="thumb" [src]="source.copy.imageUrl" alt="" loading="lazy" />
+              <img
+                class="thumb"
+                [src]="source.copy.imageUrl"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer"
+              />
             } @else {
               <span class="thumb tile">
                 <app-favicon
