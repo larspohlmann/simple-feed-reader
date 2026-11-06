@@ -142,7 +142,50 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testADueButUnverifiedUserIsSkippedAndNotCountedAsSent(): void
     {
+        $this->assertIneligibleUserIsSkipped($this->unverifiedUser());
+    }
+
+    public function testADueButSuspendedUserIsSkippedAndNotCountedAsSent(): void
+    {
+        $user = $this->verifiedUser();
+        $user->suspend();
+
+        $this->assertIneligibleUserIsSkipped($user);
+    }
+
+    public function testADueUserStillAwaitingApprovalIsSkippedAndNotCountedAsSent(): void
+    {
         $user = $this->unverifiedUser();
+        $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $user->queueForApproval();
+
+        $this->assertIneligibleUserIsSkipped($user);
+    }
+
+    public function testADueUserWhoseTrialEndedIsSkippedBeforeTheLoginGuardSuspendsThem(): void
+    {
+        $user = $this->verifiedUser();
+        $user->setTrialEndsAt(new \DateTimeImmutable(self::NOW));
+
+        $this->assertIneligibleUserIsSkipped($user);
+    }
+
+    public function testADueUserWhoseTrialRunsPastNowIsSent(): void
+    {
+        $user = $this->verifiedUser();
+        $user->setTrialEndsAt(new \DateTimeImmutable('2026-08-28T09:31:00Z'));
+        $preferences = $this->duePreferences($user, lastSentAt: null);
+        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+
+        $this->mailer->expects($this->once())->method('send');
+
+        self::assertSame(1, $this->sweep()->run()->sent);
+    }
+
+    private function assertIneligibleUserIsSkipped(User $user): void
+    {
         $preferences = $this->duePreferences($user, lastSentAt: null);
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);

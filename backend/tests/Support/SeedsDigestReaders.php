@@ -13,6 +13,7 @@ trait SeedsDigestReaders
     {
         $user = $this->unverifiedUser();
         $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $user->approve(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
 
         return $user;
     }

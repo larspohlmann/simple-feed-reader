@@ -7,6 +7,7 @@ namespace App\Service\Mail\Digest;
 use App\Entity\Preferences;
 use App\Entity\User;
 use App\Enum\MailKind;
+use App\Enum\UserStatus;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Mail\Digest\Model\DigestAttempt;
@@ -21,8 +22,8 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /**
  * Mails every account whose digest occurrence has passed since its last send, for the worker and the maintenance cron.
- * The digest's security boundary: mail capability and email verification are re-checked here, because a preferences
- * row can outlive the state that made it valid.
+ * The digest's security boundary: mail capability, email verification and account status are re-checked here, because
+ * a preferences row can outlive the state that made it valid.
  */
 final readonly class SendDueDigests
 {
@@ -72,7 +73,7 @@ final readonly class SendDueDigests
         }
 
         $user = $preferences->getUser();
-        if (!$user->isEmailVerified()) {
+        if (!$this->isEligible($user, $now)) {
             return DigestAttempt::Ineligible;
         }
 
@@ -82,6 +83,16 @@ final readonly class SendDueDigests
         }
 
         return $this->sendAndAdvance($user, $model, $preferences, $occurrence);
+    }
+
+    /** An expired trial counts as suspended here: the login guard only flips its status on the account's next request. */
+    private function isEligible(User $user, \DateTimeImmutable $now): bool
+    {
+        $trialEndsAt = $user->getTrialEndsAt();
+
+        return $user->isEmailVerified()
+            && UserStatus::Active === $user->getStatus()
+            && (null === $trialEndsAt || $trialEndsAt > $now);
     }
 
     /** One recipient's transport failure must not stop the sweep; the untouched watermark retries it next tick. */
