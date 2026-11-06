@@ -323,6 +323,19 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertNull($this->enrich([$this->row($post)])[0]->enrichment->social?->openUrl);
     }
 
+    public function testABlueskyPostKeepsItsPlainLink(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        $feed = new Feed('https://bsky.app/profile/alice.bsky.social/rss');
+        $this->entityManager->persist($feed);
+        $post = $this->postOn($feed, 'at://did:plc:alice/app.bsky.feed.post/3kabc');
+
+        $social = $this->enrich([$this->row($post)])[0]->enrichment->social;
+
+        self::assertNotNull($social);
+        self::assertNull($social->openUrl);
+    }
+
     public function testMyOwnPostSaysSoAndSomeoneElsesDoesNot(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
