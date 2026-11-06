@@ -75,6 +75,13 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertSame(4 + 2 + 6, $this->replies($answer)[0]->interest);
     }
 
+    public function testANodeWithoutCountsHasNoInterest(): void
+    {
+        $answer = self::contextOf([self::statusOf('300', '110', ['favourites_count' => 4])]);
+
+        self::assertSame(0, $this->replies($answer)[0]->interest);
+    }
+
     public function testANonPublicReplyGoesWithItsAnswers(): void
     {
         $urls = self::allUrlsOf($this->replies());

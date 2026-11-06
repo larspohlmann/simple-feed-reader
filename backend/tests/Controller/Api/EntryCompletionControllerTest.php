@@ -137,6 +137,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
             [],
             null,
             true,
+            0,
         )]);
 
         $this->complete($headers, [$root->requireId()]);

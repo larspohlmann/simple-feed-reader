@@ -364,6 +364,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             [],
             null,
             false,
+            0,
         );
     }
 
@@ -387,6 +388,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             array_values($replies),
             $url,
             false,
+            0,
         );
     }
 
