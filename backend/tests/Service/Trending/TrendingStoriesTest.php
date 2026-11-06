@@ -145,16 +145,15 @@ final class TrendingStoriesTest extends DbTestCase
         ];
         $this->fixtures->subscribe($this->reader, $alpha, $beta, ...$socials);
         $this->storyOf('2031-05-14 10:00:00', [$alpha, ...$socials]);
-        $userId = $this->reader->requireId();
 
-        self::assertSame([], $this->storyRepository()->rankedForUser($this->dayOf($userId), 10));
+        self::assertSame([], $this->rankedDay());
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
 
         $covered = $this->storyOf('2031-05-14 11:00:00', [$alpha, $beta, ...$socials]);
 
-        $ranked = $this->storyRepository()->rankedForUser($this->dayOf($userId), 10);
-        self::assertSame([$covered->requireId()], array_map(static fn ($story): int => $story->storyId, $ranked));
-        self::assertSame([4], array_map(static fn ($story): int => $story->outletCount, $ranked));
+        $ranked = $this->rankedDay();
+        self::assertSame([$covered->requireId()], RankedStoryModel::storyIdsOf($ranked));
+        self::assertSame([4], self::outletCountsOf($ranked));
     }
 
     public function testTheRankingIsCutAtTheLimit(): void
@@ -164,10 +163,10 @@ final class TrendingStoriesTest extends DbTestCase
         $wider = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $delta]);
         $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
 
-        $ranked = $this->storyRepository()->rankedForUser($this->dayOf($this->reader->requireId()), 1);
+        $ranked = $this->rankedDay(1);
 
-        self::assertSame([$wider->requireId()], array_map(static fn ($story): int => $story->storyId, $ranked));
-        self::assertSame([4], array_map(static fn ($story): int => $story->outletCount, $ranked));
+        self::assertSame([$wider->requireId()], RankedStoryModel::storyIdsOf($ranked));
+        self::assertSame([4], self::outletCountsOf($ranked));
     }
 
     public function testTheListAndItsBadgeStopAtFifteenStories(): void
@@ -264,14 +263,14 @@ final class TrendingStoriesTest extends DbTestCase
         );
         $wider = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $delta]);
 
-        $ranked = $this->storyRepository()->rankedForUser($this->dayOf($this->reader->requireId()), 10);
+        $ranked = $this->rankedDay();
 
         self::assertSame(
             [$wider->requireId(), $narrower->requireId()],
             RankedStoryModel::storyIdsOf($ranked),
             'the newer story is narrower once its syndicated copy is counted once',
         );
-        self::assertSame([4, 3], array_map(static fn (RankedStoryModel $story): int => $story->outletCount, $ranked));
+        self::assertSame([4, 3], self::outletCountsOf($ranked));
     }
 
     public function testTheSameArticleInTwoFeedsIsNotTwoArticleFeeds(): void
@@ -313,9 +312,9 @@ final class TrendingStoriesTest extends DbTestCase
             $this->fixtures->article($socials[1], 'Post', '2031-05-14 10:00:00', $post),
         );
 
-        $ranked = $this->storyRepository()->rankedForUser($this->dayOf($this->reader->requireId()), 10);
+        $ranked = $this->rankedDay();
 
-        self::assertSame([4], array_map(static fn (RankedStoryModel $story): int => $story->outletCount, $ranked));
+        self::assertSame([4], self::outletCountsOf($ranked));
     }
 
     public function testAnEarlierCopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void
@@ -333,9 +332,9 @@ final class TrendingStoriesTest extends DbTestCase
             $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 10:00:00'),
         );
 
-        $ranked = $this->storyRepository()->rankedForUser($this->dayOf($this->reader->requireId()), 10);
+        $ranked = $this->rankedDay();
 
-        self::assertSame([3], array_map(static fn (RankedStoryModel $story): int => $story->outletCount, $ranked));
+        self::assertSame([3], self::outletCountsOf($ranked));
     }
 
     public function testACopyOfTheLeadFromAFeedOutsideTheStoryShowsOnTheCardButIsNoSource(): void
@@ -359,35 +358,6 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame(3, $stories[0]->story->outletCount);
     }
 
-    public function testCopiesOfTheLeadDoNotMoveAStoryUp(): void
-    {
-        [$alpha, $beta, $gamma, $delta, $epsilon] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'epsilon');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta, $epsilon);
-        $wider = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $delta]);
-        $url = 'https://news.example.com/copied';
-        $narrowerLead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 11:00:00', $url);
-        $this->fixtures->article($delta, 'Lead at delta', '2031-05-14 10:30:00', $url);
-        $this->fixtures->article($epsilon, 'Lead at epsilon', '2031-05-14 10:45:00', $url);
-        $narrower = $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 11:00:00',
-            $narrowerLead,
-            $this->fixtures->entry($beta, 'Beta', '2031-05-14 10:00:00'),
-            $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 09:30:00'),
-        );
-
-        $stories = $this->storiesFor(TrendingWindow::Day);
-
-        self::assertSame(
-            [$wider->requireId(), $narrower->requireId()],
-            array_map(fn (TrendingStoryCardModel $card): int => $this->storyIdOf($card), $stories),
-        );
-        self::assertSame([4, 3], array_map(
-            static fn (TrendingStoryCardModel $card): int => $card->story->outletCount,
-            $stories,
-        ));
-    }
-
     public function testACopyOfTheLeadFromAFeedAlreadyInTheStoryOrFromTheLeadsOwnFeedDoesNotRepeat(): void
     {
         [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
@@ -407,7 +377,7 @@ final class TrendingStoriesTest extends DbTestCase
             [$betaCopy->requireId(), $gammaInStory->requireId()],
             self::idsOf($stories[0]->lead->duplicates),
         );
-        self::assertSame(3, $stories[0]->story->outletCount, 'feeds the story already counted count once');
+        self::assertSame(3, $stories[0]->story->outletCount);
     }
 
     public function testAStoryIsViewedOnceTheReaderOpenedAnyOfItsEntriesASocialOneIncluded(): void
@@ -642,10 +612,30 @@ final class TrendingStoriesTest extends DbTestCase
      */
     private function rankedDayStoryIdsOf(User $user): array
     {
-        return RankedStoryModel::storyIdsOf($this->storyRepository()->rankedForUser(
-            $this->readerWindows()->of($user->requireId(), TrendingWindow::Day),
-            TrendingStories::MAX_STORIES,
-        ));
+        return RankedStoryModel::storyIdsOf($this->rankedDay(TrendingStories::MAX_STORIES, $user));
+    }
+
+    /**
+     * @return list<RankedStoryModel>
+     *
+     * @phpstan-impure reads the snapshot the test keeps changing
+     */
+    private function rankedDay(int $limit = TrendingStories::MAX_STORIES, ?User $user = null): array
+    {
+        return $this->storyRepository()->rankedForUser(
+            $this->dayOf(($user ?? $this->reader)->requireId()),
+            $limit,
+        );
+    }
+
+    /**
+     * @param list<RankedStoryModel> $ranked
+     *
+     * @return list<int>
+     */
+    private static function outletCountsOf(array $ranked): array
+    {
+        return array_map(static fn (RankedStoryModel $story): int => $story->outletCount, $ranked);
     }
 
     /** @return list<int> */

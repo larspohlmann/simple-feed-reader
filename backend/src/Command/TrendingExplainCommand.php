@@ -63,7 +63,7 @@ final class TrendingExplainCommand extends Command
     private function printGroups(SymfonyStyle $io, TrendingExplanationModel $explanation, array $headlines): void
     {
         foreach ($explanation->groups as $group) {
-            $io->section(\sprintf('%d outlets, %d entries', $group->outletCount(), \count($group->members)));
+            $io->section(\sprintf('%d feeds, %d entries', $group->outletCount(), \count($group->members)));
             $io->listing(array_map(
                 static fn (StoryMemberModel $member): string => $headlines[$member->entryId] ?? '#' . $member->entryId,
                 $group->members,

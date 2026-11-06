@@ -35,7 +35,7 @@ final class TrendingExplainCommandTest extends DbTestCase
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         $display = $tester->getDisplay();
-        self::assertStringContainsString('3 outlets', $display);
+        self::assertStringContainsString('3 feeds', $display);
         self::assertStringContainsString('Hafenstreik legt Hamburg lahm', $display);
         self::assertStringContainsString('shared weight 12.4 < 14', $display);
         self::assertStringContainsString('Island Vulkan', $display);
