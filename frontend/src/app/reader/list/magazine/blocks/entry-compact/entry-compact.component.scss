@@ -1,4 +1,5 @@
 @use '../../../post-text';
+@use '../../magazine-card';
 
 :host {
   display: block;
@@ -49,14 +50,7 @@
    Other blocks clamp to 2–3 lines; compact is the demotion floor. The
    template's `@if (snippet())` keeps this element from rendering empty. */
 .dek {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  @include magazine-card.dek(1);
 }
 
 app-entry-kicker-line app-entry-pills {

@@ -61,8 +61,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
 | `--footer-chip-name-max` | `24ch` | the feed name in an "Also in" / "Also covered by" footer chip, which ellipsises past it; the chip's `title` carries the full name (#2017) |
-| `--mini-card-thumb-w` | `104px` | the picture width of a "more sources" mini card (#2055) |
-| `--mini-card-thumb-h` | `68px` | the picture height of a "more sources" mini card (#2055) |
+| `--mini-card-thumb-w` | `104px` | the picture width of a "more sources" mini card, at a 104 / 68 aspect ratio (#2055) |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
@@ -1508,7 +1507,7 @@ boxes tile edge to edge — a tap on the star must never land on keep.
 
 A magazine card's footer slot. A Trending story's other outlets (#2036) get one accent line,
 "x more sources", that opens in place into a stack of full-width mini cards (#2055) — a smaller
-compact card on `--surface-sunken`: the copy's picture at `--mini-card-thumb-w` × `--mini-card-thumb-h`
+compact card on `--surface-sunken`: the copy's picture at `--mini-card-thumb-w`, 104 / 68
 (else its favicon centred on `--surface-1` in the same box), a byline of favicon, feed and relative
 time, the full title, and one line of dek. A mini card opens its copy; it carries no actions.
 

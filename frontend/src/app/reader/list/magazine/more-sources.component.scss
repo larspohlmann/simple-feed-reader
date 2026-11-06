@@ -1,3 +1,5 @@
+@use 'magazine-card';
+
 // No box without sources, or the card's gap reserves dead space below the meta row.
 :host {
   display: contents;
@@ -60,7 +62,7 @@
 .thumb {
   flex: none;
   width: var(--mini-card-thumb-w);
-  height: var(--mini-card-thumb-h);
+  aspect-ratio: 104 / 68;
   border-radius: var(--radius-sm);
   object-fit: cover;
 }
@@ -106,10 +108,5 @@
 }
 
 .dek {
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  @include magazine-card.dek(1);
 }

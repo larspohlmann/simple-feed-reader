@@ -101,7 +101,7 @@ it("shows a source's picture as its thumbnail, its favicon when it has none", ()
   expect(withoutImage.querySelector('.thumb app-favicon')).not.toBeNull();
 });
 
-it("sends no referrer to a source's image host", () => {
+it("loads a source's picture asynchronously and without a referrer", () => {
   const element = mount(storyOf(copies));
   expand(element);
 
