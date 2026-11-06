@@ -1,79 +1,79 @@
 import { DOCUMENT } from '@angular/common';
-import { DestroyRef, Injectable, NgZone, inject } from '@angular/core';
+import { DestroyRef, NgZone, inject } from '@angular/core';
+import { ScrollHosts } from '../../shared/scroll-host/scroll-hosts.service';
 import type { ScrollHost } from '../../shared/scroll-host/scroll-host';
-import { observePageWrites } from '../../shared/scroll-host/page-scroll-host';
 
 export const HOLD_MS = 600;
 const SAME_OFFSET_PX = 2;
+const USER_TAKEOVER_EVENTS = ['touchstart', 'wheel', 'pointerdown', 'keydown'];
 
-/** `from` is read before the switch pins a layer: pinning shortens the page and cuts the offset. */
 export interface PageOffsetHandoff {
   readonly from: number;
   readonly to: number;
 }
-const USER_TAKEOVER_EVENTS = ['touchstart', 'wheel', 'pointerdown', 'keydown'];
 
-/** Holds the page at a handed-off offset. iOS WebKit puts the old offset back 10–220 ms after
- *  a write made in the frame a layer switch resized the document (#2074). */
-@Injectable()
+const sameOffset = (first: number, second: number): boolean =>
+  Math.abs(first - second) <= SAME_OFFSET_PX;
+
+/** Writes a layer switch's page offset and holds it there: iOS WebKit puts the old offset back
+ *  10–220 ms after a write made in the frame the switch resized the document (#2074). Built in
+ *  an injection context. */
 export class PageOffsetHold {
-  private readonly document = inject(DOCUMENT);
-  private readonly view = this.document.defaultView ?? window;
+  private readonly view = inject(DOCUMENT).defaultView ?? window;
   private readonly zone = inject(NgZone);
-  private releaseHold: () => void = () => undefined;
+  private readonly scrollHosts = inject(ScrollHosts);
+  private current: AbortController | null = null;
 
-  constructor() {
+  constructor(private readonly page: ScrollHost) {
     inject(DestroyRef).onDestroy(() => this.release());
   }
 
-  /** Writes `to` through `page`, then undoes any return to `from`, until HOLD_MS pass, the user
-   *  takes the page, or the app writes another offset. */
-  hold(page: ScrollHost, { from, to: top }: PageOffsetHandoff): void {
+  /** Undoes a return to `from` until HOLD_MS pass, the user takes the page, or the app writes
+   *  another offset. */
+  handOff({ from, to }: PageOffsetHandoff): void {
     this.release();
-    page.scrollTop = top;
+    this.page.scrollTop = to;
+    const handoff = new AbortController();
+    this.current = handoff;
     const startedAt = this.view.performance.now();
-    const release = (): void => this.release();
     let frame = 0;
-    const step = (): void => {
-      if (this.view.performance.now() - startedAt > HOLD_MS) {
-        this.release();
+    const step = (now: number): void => {
+      if (now - startedAt > HOLD_MS) {
+        handoff.abort();
         return;
       }
-      if (this.returnedTo(page, from, top)) page.scrollTop = top;
+      if (this.returnedTo(from, to)) this.page.scrollTop = to;
       frame = this.view.requestAnimationFrame(step);
     };
-    const stopObservingWrites = observePageWrites((written) => {
-      if (!this.near(written, top)) release();
+    const stopObservingWrites = this.scrollHosts.observePageWrites((written) => {
+      if (!sameOffset(written, to)) handoff.abort();
+    });
+    handoff.signal.addEventListener('abort', () => {
+      this.view.cancelAnimationFrame(frame);
+      stopObservingWrites();
     });
     this.zone.runOutsideAngular(() => {
       USER_TAKEOVER_EVENTS.forEach((type) =>
-        this.view.addEventListener(type, release, { passive: true, capture: true }),
+        this.view.addEventListener(type, () => handoff.abort(), {
+          passive: true,
+          capture: true,
+          signal: handoff.signal,
+        }),
       );
       frame = this.view.requestAnimationFrame(step);
     });
-    this.releaseHold = () => {
-      this.view.cancelAnimationFrame(frame);
-      stopObservingWrites();
-      USER_TAKEOVER_EVENTS.forEach((type) =>
-        this.view.removeEventListener(type, release, { capture: true }),
-      );
-    };
   }
 
   private release(): void {
-    this.releaseHold();
-    this.releaseHold = () => undefined;
+    this.current?.abort();
+    this.current = null;
   }
 
-  /** The old offset back, or the end of the page when the old offset no longer fits in it. */
-  private returnedTo(page: ScrollHost, replaced: number, top: number): boolean {
-    const current = page.scrollTop;
-    if (this.near(current, top)) return false;
-    const end = Math.max(0, page.scrollHeight - page.clientHeight);
-    return this.near(current, Math.min(replaced, end));
-  }
-
-  private near(offset: number, other: number): boolean {
-    return Math.abs(offset - other) <= SAME_OFFSET_PX;
+  /** Back at `from`, or at the end of the page when `from` no longer fits in it. */
+  private returnedTo(from: number, to: number): boolean {
+    const current = this.page.scrollTop;
+    if (sameOffset(current, to)) return false;
+    const end = Math.max(0, this.page.scrollHeight - this.page.clientHeight);
+    return sameOffset(current, Math.min(from, end));
   }
 }

@@ -5,21 +5,10 @@ import { pageScrollingElement } from '../../core/page-scrolling-element';
 /** The class a CDK BlockScrollStrategy puts on `<html>` while it pins the page. */
 export const PAGE_SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
 
-const pageWriteListeners = new Set<(top: number) => void>();
-
-/** Hears every offset the app writes to the page; returns its removal. */
-export function observePageWrites(listener: (top: number) => void): () => void {
-  pageWriteListeners.add(listener);
-  return () => pageWriteListeners.delete(listener);
-}
-
-function announcePageWrite(top: number): void {
-  pageWriteListeners.forEach((listener) => listener(top));
-}
-
 export interface PageScrollEnvironment {
   readonly view: Window;
   readonly outsideZone: <T>(run: () => T) => T;
+  readonly announceWrite: (top: number) => void;
 }
 
 /** While a CDK block pins the page, or its layer is pinned beneath another (#2038), it reports
@@ -30,6 +19,7 @@ export class PageScrollHost implements ScrollHost {
 
   private readonly view: Window;
   private readonly outsideZone: <T>(run: () => T) => T;
+  private readonly announceWrite: (top: number) => void;
 
   constructor(
     readonly content: HTMLElement,
@@ -38,6 +28,7 @@ export class PageScrollHost implements ScrollHost {
   ) {
     this.view = environment.view;
     this.outsideZone = environment.outsideZone;
+    this.announceWrite = environment.announceWrite;
   }
 
   get scrollTop(): number {
@@ -52,7 +43,7 @@ export class PageScrollHost implements ScrollHost {
       return;
     }
     if (!this.blocked()) {
-      announcePageWrite(top);
+      this.announceWrite(top);
       this.scrollingElement.scrollTop = top;
       return;
     }
@@ -70,7 +61,7 @@ export class PageScrollHost implements ScrollHost {
 
   scrollTo(options: ScrollToOptions): void {
     if (!this.held()) {
-      if (options.top !== undefined) announcePageWrite(options.top);
+      if (options.top !== undefined) this.announceWrite(options.top);
       this.view.scrollTo(options);
       return;
     }
