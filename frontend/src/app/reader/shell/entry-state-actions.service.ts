@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
@@ -31,8 +31,10 @@ export class EntryStateActions implements EntryActionHandler {
 
   private readonly viewedOnOpen = new Set<number>();
   private readonly leaving = signal<ReadonlySet<number>>(new Set());
-  /** Rows fading out of a saved view; they stay in the list data so the magazine plan holds. */
-  readonly leavingIds = this.leaving.asReadonly();
+  /** Rows fading out of a saved view or Trending; they stay in the list data so the magazine plan holds. */
+  readonly leavingIds = computed<ReadonlySet<number>>(
+    () => new Set([...this.leaving(), ...this.entries.hidingTrendingIds()]),
+  );
 
   constructor() {
     // Once per session, even when the PATCH fails and rolls back.

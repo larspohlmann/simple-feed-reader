@@ -1167,6 +1167,7 @@ describe('EntriesStore', () => {
 
   describe('hiding a Trending story (#2017)', () => {
     const listed = () => store.entries().map((row) => row.id);
+    const hiding = () => [...store.hidingTrendingIds()];
     const hideRequest = () => ctrl.expectOne('https://api.test/api/trending/hidden');
     const loadThree = (window: 'day' | 'week' = 'day') => {
       store.load({ view: 'trending', window });
@@ -1175,20 +1176,21 @@ describe('EntriesStore', () => {
         .flush({ window, builtAt: null, stories: [entry(1), entry(2), entry(3)] });
     };
 
-    it('takes the card off the list at once and hides its story in the window on screen', () => {
+    it('lets the card leave at once and hides its story in the window on screen', () => {
       loadThree('week');
       const onSaved = jest.fn();
 
       store.hideTrendingStory(2, { onSaved });
 
-      expect(listed()).toEqual([1, 3]);
+      expect(listed()).toEqual([1, 2, 3]);
+      expect(hiding()).toEqual([2]);
       const request = hideRequest();
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ window: 'week', entryId: 2 });
       expect(onSaved).not.toHaveBeenCalled();
       request.flush(null, { status: 204, statusText: 'No Content' });
       expect(onSaved).toHaveBeenCalledTimes(1);
-      expect(listed()).toEqual([1, 3]);
+      expect(hiding()).toEqual([2]);
     });
 
     it('hides nothing outside a Trending list', () => {
@@ -1199,11 +1201,11 @@ describe('EntriesStore', () => {
 
       store.hideTrendingStory(2);
 
-      expect(listed()).toEqual([1, 2]);
+      expect(hiding()).toEqual([]);
       ctrl.expectNone('https://api.test/api/trending/hidden');
     });
 
-    it('puts a card whose hide failed back where it was, with the error banner and its retry', () => {
+    it('brings back a card whose hide failed, with the error banner and its retry', () => {
       loadThree();
 
       store.hideTrendingStory(2);
@@ -1212,26 +1214,23 @@ describe('EntriesStore', () => {
         { status: 500, statusText: 'err' },
       );
 
-      expect(listed()).toEqual([1, 2, 3]);
+      expect(hiding()).toEqual([]);
       expect(store.error()).not.toBeNull();
 
       store.retry();
-      expect(listed()).toEqual([1, 3]);
+      expect(hiding()).toEqual([2]);
       hideRequest().flush(null, { status: 204, statusText: 'No Content' });
       expect(store.error()).toBeNull();
     });
 
-    it('does not double a card a reload brought back before the hide failed', () => {
+    it('forgets the leaving cards once a reload replaces the list', () => {
       loadThree();
       store.hideTrendingStory(2);
+      hideRequest().flush(null, { status: 204, statusText: 'No Content' });
+
       loadThree();
 
-      hideRequest().flush(
-        { type: 'x', title: 't', status: 500 },
-        { status: 500, statusText: 'err' },
-      );
-
-      expect(listed()).toEqual([1, 2, 3]);
+      expect(hiding()).toEqual([]);
     });
   });
 });

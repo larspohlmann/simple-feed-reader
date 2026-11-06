@@ -29,7 +29,10 @@ function createActions(collaborators: Collaborators): EntryStateActions {
     providers: [
       EntryStateActions,
       provideRouter([]),
-      { provide: EntriesStore, useValue: collaborators.entries },
+      {
+        provide: EntriesStore,
+        useValue: { hidingTrendingIds: signal(new Set()), ...collaborators.entries },
+      },
       { provide: SubscriptionsStore, useValue: collaborators.subscriptions },
       { provide: SavedSearchesStore, useValue: collaborators.savedSearches ?? {} },
       { provide: ReaderRouteState, useValue: collaborators.routeState },
@@ -323,6 +326,25 @@ describe('EntryStateActions unsharing (#2007)', () => {
   });
 });
 
+describe('EntryStateActions leaving Trending (#2066)', () => {
+  it('lets a card whose story is being hidden leave as a saved-view row does', () => {
+    const hidingTrendingIds = signal<ReadonlySet<number>>(new Set());
+    const actions = createActions({
+      entries: { hidingTrendingIds },
+      subscriptions: {},
+      routeState: {
+        openEntryId: signal(null),
+        openEntry: signal(null),
+        selection: signal({ kind: 'trending' }),
+      },
+    });
+
+    hidingTrendingIds.set(new Set([4]));
+
+    expect([...actions.leavingIds()]).toEqual([4]);
+  });
+});
+
 describe('EntryStateActions deleting my own post (#1972)', () => {
   const deletePost = jest.fn<Observable<void>, [EntryDto]>();
   const reloadCountsQuietly = jest.fn();
@@ -339,7 +361,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        { provide: EntriesStore, useValue: {} },
+        { provide: EntriesStore, useValue: { hidingTrendingIds: signal(new Set()) } },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -400,7 +422,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        { provide: EntriesStore, useValue: {} },
+        { provide: EntriesStore, useValue: { hidingTrendingIds: signal(new Set()) } },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
         {

@@ -10,7 +10,7 @@ import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
-import { withCardBack, withPatchedRow } from './entry-rows';
+import { withPatchedRow } from './entry-rows';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -53,6 +53,9 @@ export class EntriesStore {
   private readonly unlisted = accountSignal<EntryDto | null>(null);
   private readonly inFlightPatches = new Set<InFlightPatch>();
   readonly entries = this.rawEntries.asReadonly();
+  private readonly hidingTrending = accountSignal<ReadonlySet<number>>(new Set());
+  /** Trending cards whose hide is saving or saved; they stay in the list to leave it in place. */
+  readonly hidingTrendingIds = this.hidingTrending.asReadonly();
   readonly nextCursor = accountSignal<string | null>(null);
   readonly loading = accountSignal(false);
   /** A mutation that changes the list in place, with no reload to follow — kept off `loading`,
@@ -99,6 +102,7 @@ export class EntriesStore {
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
         this.rawEntries.set(this.withInFlightPatches(page.entries));
+        this.hidingTrending.set(new Set());
         this.nextCursor.set(page.nextCursor);
         this.matchedWords.set(page.matchedWords ?? []);
         this.loading.set(false);
@@ -296,21 +300,20 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Takes a card off the loaded Trending list at once, hiding its story in that list's window (#2017); a failed
-   *  hide puts it back where it was, with the banner and its retry. */
+  /** Hides a card's story in the loaded Trending list's window (#2017): the card leaves at once (#2066);
+   *  a failed hide brings it back, with the banner and its retry. */
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
     const query = this.query();
-    const index = this.rawEntries().findIndex((entry) => entry.id === entryId);
-    if (query?.view !== 'trending' || index < 0) return;
+    if (query?.view !== 'trending' || !this.rawEntries().some((entry) => entry.id === entryId))
+      return;
     const window = query.window ?? DEFAULT_TRENDING_WINDOW;
-    const card = this.rawEntries()[index];
     this.error.set(null);
     this.failedOperation.set(null);
-    this.rawEntries.update((current) => current.filter((entry) => entry.id !== entryId));
+    this.hidingTrending.update((ids) => new Set(ids).add(entryId));
     this.trendingApi.hideStory(window, entryId).subscribe({
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
-        this.rawEntries.update((current) => withCardBack(current, card, index));
+        this.hidingTrending.update((ids) => new Set([...ids].filter((id) => id !== entryId)));
         this.reportMutationFailure(error, () => this.hideTrendingStory(entryId, outcome));
         outcome.onFailed?.();
       },
