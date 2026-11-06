@@ -242,6 +242,19 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->accountLimits->getTrialEndsAt();
     }
 
+    public function isTrialExpiredAt(\DateTimeImmutable $now): bool
+    {
+        $trialEndsAt = $this->getTrialEndsAt();
+
+        return null !== $trialEndsAt && $trialEndsAt <= $now;
+    }
+
+    /** A lapsed trial counts as inactive here before its next request suspends it. */
+    public function isActiveAt(\DateTimeImmutable $now): bool
+    {
+        return UserStatus::Active === $this->status && !$this->isTrialExpiredAt($now);
+    }
+
     public function setTrialEndsAt(?\DateTimeImmutable $trialEndsAt): void
     {
         $this->accountLimits->setTrialEndsAt($trialEndsAt);

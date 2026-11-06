@@ -35,7 +35,7 @@ use Symfony\Component\Mailer\Exception\TransportException;
 
 /**
  * The sweep is the digest's security boundary, because a stale row can outlive the state that made it valid. With the
- * real schedule and composer, digestLastSentAt advances only on a real send: never on an empty compose, an unverified
+ * real schedule and composer, digestLastSentAt advances only on a real send: never on an empty compose, an ineligible
  * or a not-yet-due account.
  */
 final class SendDueDigestsTest extends DbTestCase
@@ -64,10 +64,7 @@ final class SendDueDigestsTest extends DbTestCase
     public function testADueUserWithMatchesIsSentAndTheMarkerAdvancesToTheOccurrence(): void
     {
         $user = $this->verifiedUser();
-        $preferences = $this->duePreferences($user, lastSentAt: null);
-        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $preferences = $this->givenDueWithOneMatch($user);
 
         $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
@@ -174,31 +171,11 @@ final class SendDueDigestsTest extends DbTestCase
     {
         $user = $this->verifiedUser();
         $user->setTrialEndsAt(new \DateTimeImmutable('2026-08-28T09:31:00Z'));
-        $preferences = $this->duePreferences($user, lastSentAt: null);
-        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $this->givenDueWithOneMatch($user);
 
         $this->mailer->expects($this->once())->method('send');
 
         self::assertSame(1, $this->sweep()->run()->sent);
-    }
-
-    private function assertIneligibleUserIsSkipped(User $user): void
-    {
-        $preferences = $this->duePreferences($user, lastSentAt: null);
-        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
-
-        $this->mailer->expects($this->never())->method('send');
-
-        $report = $this->sweep()->run();
-
-        self::assertSame(1, $report->considered);
-        self::assertSame(0, $report->sent);
-        self::assertSame(0, $report->skippedEmpty);
-        self::assertNull($preferences->getDigestLastSentAt());
     }
 
     public function testMailDisabledGloballyShortCircuitsWithoutTouchingAnyPreferences(): void
@@ -272,10 +249,7 @@ final class SendDueDigestsTest extends DbTestCase
     public function testAFailedSendIsLoggedWithTheRecipientAndTheTransportException(): void
     {
         $user = $this->verifiedUser();
-        $preferences = $this->duePreferences($user, lastSentAt: null);
-        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $preferences = $this->givenDueWithOneMatch($user);
         $failure = new TransportException('relay rejected the recipient');
         $this->mailer->expects($this->once())->method('send')->willThrowException($failure);
 
@@ -288,6 +262,30 @@ final class SendDueDigestsTest extends DbTestCase
             ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $failure],
             $this->logger->records[0]['context'],
         );
+    }
+
+    private function assertIneligibleUserIsSkipped(User $user): void
+    {
+        $preferences = $this->givenDueWithOneMatch($user);
+
+        $this->mailer->expects($this->never())->method('send');
+
+        $report = $this->sweep()->run();
+
+        self::assertSame(1, $report->considered);
+        self::assertSame(0, $report->sent);
+        self::assertSame(0, $report->skippedEmpty);
+        self::assertNull($preferences->getDigestLastSentAt());
+    }
+
+    private function givenDueWithOneMatch(User $user): Preferences
+    {
+        $preferences = $this->duePreferences($user, lastSentAt: null);
+        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+
+        return $preferences;
     }
 
     private function sweep(

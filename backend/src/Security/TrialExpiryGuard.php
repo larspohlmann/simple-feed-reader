@@ -23,9 +23,7 @@ final readonly class TrialExpiryGuard
 
     public function enforce(User $user): void
     {
-        $trialEndsAt = $user->getTrialEndsAt();
-
-        if (null === $trialEndsAt || $trialEndsAt > $this->clock->now()) {
+        if (!$user->isTrialExpiredAt($this->clock->now())) {
             return;
         }
 
