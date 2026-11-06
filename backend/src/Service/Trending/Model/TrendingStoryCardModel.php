@@ -30,34 +30,20 @@ final readonly class TrendingStoryCardModel
     }
 
     /**
-     * The lead's own copies elsewhere join its outlets, one per feed, the lead's feed never; a feed the story did not
-     * count yet is one more source.
+     * The lead's own copies elsewhere join its outlets, one per feed, the lead's feed never; a copy is no new source.
      *
      * @param list<EntryListRow> $copies
      */
     public function withCopies(array $copies): self
     {
-        $countedFeedIds = self::feedIdsOf([$this->lead, ...$this->lead->duplicates]);
-        $outlets = self::otherFeedsThan(
-            $this->lead,
-            self::newestPerFeed([...$this->lead->duplicates, ...$copies]),
-        );
-
         return new self(
-            $this->lead->withDuplicates($outlets),
-            $this->story->withMoreOutlets(\count(array_diff(self::feedIdsOf($outlets), $countedFeedIds))),
+            $this->lead->withDuplicates(self::otherFeedsThan(
+                $this->lead,
+                self::newestPerFeed([...$this->lead->duplicates, ...$copies]),
+            )),
+            $this->story,
             $this->viewed,
         );
-    }
-
-    /**
-     * @param list<EntryListRow> $rows
-     *
-     * @return list<int>
-     */
-    private static function feedIdsOf(array $rows): array
-    {
-        return array_map(static fn (EntryListRow $row): int => $row->entry->getFeed()->requireId(), $rows);
     }
 
     /**

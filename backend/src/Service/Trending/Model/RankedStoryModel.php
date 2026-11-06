@@ -6,16 +6,9 @@ namespace App\Service\Trending\Model;
 
 final readonly class RankedStoryModel
 {
-    /** @param int $outletCount distinct feeds of this reader in the story, social accounts included */
+    /** @param int $outletCount distinct feeds of this reader in the story, an article URL once, social posts all */
     public function __construct(public int $storyId, public int $outletCount, public \DateTimeImmutable $lastSeen)
     {
-    }
-
-    /** Widest first, then newest: the order Trending lists its stories in. */
-    public static function compare(self $left, self $right): int
-    {
-        return [$right->outletCount, $right->lastSeen, $right->storyId]
-            <=> [$left->outletCount, $left->lastSeen, $left->storyId];
     }
 
     /**
@@ -26,10 +19,5 @@ final readonly class RankedStoryModel
     public static function storyIdsOf(array $stories): array
     {
         return array_map(static fn (self $story): int => $story->storyId, $stories);
-    }
-
-    public function withMoreOutlets(int $added): self
-    {
-        return new self($this->storyId, $this->outletCount + $added, $this->lastSeen);
     }
 }
