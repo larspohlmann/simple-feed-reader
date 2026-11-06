@@ -195,6 +195,9 @@ Two checkers, one per kind of firewall:
   so a live trial costs a null check and a date comparison. `trialEndsAt` stays set, which is how admin screens tell a
   trial expiry from a manual suspend.
 
+The digest sweep sends no request, so neither checker sees it: `SendDueDigests` mails only a verified, Active account
+whose trial has not ended, and an expired trial is skipped before its next request suspends it (#2070).
+
 `security.yaml`'s `expose_security_errors: AccountStatus` lets the status 403 through while `UserNotFoundException`
 stays masked as bad credentials.
 

@@ -27,7 +27,7 @@ final readonly class UserLimits
 
     public function clearTrial(User $user): void
     {
-        if ($this->isTrialExpired($user)) {
+        if ($user->isTrialExpiredAt($this->clock->now())) {
             $this->reactivateIfNotActive($user);
         }
 
@@ -39,13 +39,6 @@ final readonly class UserLimits
     {
         $user->setMaxSubscriptions($maxSubscriptions);
         $this->entityManager->flush();
-    }
-
-    private function isTrialExpired(User $user): bool
-    {
-        $trialEndsAt = $user->getTrialEndsAt();
-
-        return null !== $trialEndsAt && $trialEndsAt <= $this->clock->now();
     }
 
     private function reactivateIfNotActive(User $user): void

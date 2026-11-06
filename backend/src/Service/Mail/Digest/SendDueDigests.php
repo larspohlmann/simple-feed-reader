@@ -21,8 +21,8 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /**
  * Mails every account whose digest occurrence has passed since its last send, for the worker and the maintenance cron.
- * The digest's security boundary: mail capability and email verification are re-checked here, because a preferences
- * row can outlive the state that made it valid.
+ * The digest's security boundary: mail capability, email verification and account status are re-checked here, because
+ * a preferences row can outlive the state that made it valid.
  */
 final readonly class SendDueDigests
 {
@@ -72,7 +72,7 @@ final readonly class SendDueDigests
         }
 
         $user = $preferences->getUser();
-        if (!$user->isEmailVerified()) {
+        if (!$user->isEmailVerified() || !$user->isActiveAt($now)) {
             return DigestAttempt::Ineligible;
         }
 
