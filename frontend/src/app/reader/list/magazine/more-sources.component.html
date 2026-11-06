@@ -25,14 +25,18 @@
             (keydown.enter)="$event.stopPropagation()"
             (keydown.space)="$event.stopPropagation()"
           >
-            @if (source.copy.imageUrl) {
+            @if (source.picture) {
               <img
                 class="thumb"
-                [src]="source.copy.imageUrl"
+                [src]="source.picture"
+                #renditions="appRenditions"
+                [appRenditions]="source.copy.imageRenditions"
+                [renditionSizes]="thumbSizes"
                 alt=""
                 loading="lazy"
                 decoding="async"
                 referrerpolicy="no-referrer"
+                (error)="renditions.fallBackToSrc() || markBroken(source.copy)"
               />
             } @else {
               <span class="thumb tile">

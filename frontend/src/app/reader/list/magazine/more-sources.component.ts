@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
@@ -11,13 +19,21 @@ import { SubscriptionRows } from '../../state/subscription-rows';
 import { feedAvatarUrl } from '../../state/social-sections';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
+import { RenditionsDirective } from '../renditions.directive';
+import { MINI_CARD_THUMB_SIZES } from '../rendition-sizes';
 
 let nextId = 0;
 
 @Component({
   selector: 'app-more-sources',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe, FaviconComponent, IconComponent, EntryDuplicatesComponent],
+  imports: [
+    TranslocoPipe,
+    FaviconComponent,
+    IconComponent,
+    EntryDuplicatesComponent,
+    RenditionsDirective,
+  ],
   templateUrl: './more-sources.component.html',
   styleUrl: './more-sources.component.scss',
 })
@@ -32,6 +48,11 @@ export class MoreSourcesComponent {
   protected readonly countKey = computed(() =>
     this.copies().length === 1 ? 'reader.moreSourcesOne' : 'reader.moreSources',
   );
+  protected readonly thumbSizes = MINI_CARD_THUMB_SIZES;
+  private readonly brokenThumbs = linkedSignal<readonly EntryDto[], ReadonlySet<number>>({
+    source: this.copies,
+    computation: () => new Set(),
+  });
   protected readonly sources = computed(() =>
     this.copies().map((copy) => ({
       copy,
@@ -39,6 +60,7 @@ export class MoreSourcesComponent {
       avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
       title: entryHeadline(copy) || entryDisplayTitle(copy),
       dek: entryDek(copy),
+      picture: this.brokenThumbs().has(copy.id) ? null : copy.imageUrl,
       when: entryRelativeTime(copy, this.language.lang()),
     })),
   );
@@ -48,6 +70,10 @@ export class MoreSourcesComponent {
   toggle(event: Event): void {
     event.stopPropagation();
     this.expanded.update((open) => !open);
+  }
+
+  markBroken(copy: EntryDto): void {
+    this.brokenThumbs.update((broken) => new Set(broken).add(copy.id));
   }
 
   open(copy: EntryDto, event: Event): void {
