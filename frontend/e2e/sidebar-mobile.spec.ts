@@ -108,4 +108,30 @@ test.describe('Sidebar on a phone', () => {
     await sidebar.getByRole('button', { name: 'Close sidebar' }).click();
     await expect(drawer).not.toHaveClass(/\bopen\b/);
   });
+
+  test('a swipe below an empty list opens the drawer (#2046)', async ({ page }) => {
+    await stubSidebarData(page);
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+    await expect(page.locator('app-list-empty-state')).toBeVisible();
+
+    await page.evaluate(() => {
+      const y = innerHeight - 80;
+      const target = document.elementFromPoint(40, y)!;
+      const fire = (type: string, x: number): void => {
+        const touches =
+          type === 'touchend' ? [] : [new Touch({ identifier: 1, target, clientX: x, clientY: y })];
+        target.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches }));
+      };
+      fire('touchstart', 40);
+      fire('touchmove', 140);
+      fire('touchmove', 240);
+      fire('touchend', 240);
+    });
+
+    await expect(page.locator('aside.sidebar')).toHaveClass(/\bopen\b/);
+  });
 });

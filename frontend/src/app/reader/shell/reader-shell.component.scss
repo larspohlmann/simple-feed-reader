@@ -36,6 +36,9 @@ app-reader-header.hidden {
   /* Clips sideways overflow, a split list held at its min-width, so the page never scrolls sideways. */
   overflow-x: clip;
   display: flex;
+
+  /* A screen at least, as `.rows` is: on a short list the swipes on `.body` still cover the screen. */
+  min-height: calc(100dvh - var(--audio-bar-h, 0rem));
 }
 
 @media (prefers-reduced-motion: reduce) {
