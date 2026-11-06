@@ -4,8 +4,8 @@
 //   node --env-file=.env.screenshots podcast-setup.mjs            # subscribe, prints PODCAST_TAG=<id>
 //   node --env-file=.env.screenshots podcast-setup.mjs teardown   # unsubscribe and delete the tag
 import { chromium } from '@playwright/test';
+import { openApiSession } from './lib.mjs';
 
-const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:4200';
 const TAG_NAME = 'Podcasts';
 const FEEDS = [
   'https://feeds.npr.org/510289/podcast.xml',
@@ -15,27 +15,7 @@ const FEEDS = [
 const teardown = process.argv[2] === 'teardown';
 
 const browser = await chromium.launch();
-const page = await browser.newPage();
-await page.goto(`${BASE}/login`);
-await page.locator('input[type=email]').fill(process.env.SHOT_EMAIL);
-await page.locator('input[type=password]').fill(process.env.SHOT_PASSWORD);
-await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-await page.waitForURL((url) => !url.pathname.startsWith('/login'));
-
-const api = (method, path, body) =>
-  page.evaluate(
-    async ({ method, path, body }) => {
-      const token = localStorage.getItem('sfr.jwt');
-      const response = await fetch(path, {
-        method,
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      const text = await response.text();
-      return { status: response.status, json: text ? JSON.parse(text) : null };
-    },
-    { method, path, body },
-  );
+const api = await openApiSession(browser);
 
 const { json: tagList } = await api('GET', '/api/tags');
 let tag = tagList.tags.find((candidate) => candidate.name === TAG_NAME);

@@ -55,3 +55,27 @@ export async function signIn(page) {
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
   await dismissPasskeyOffer(page);
 }
+
+// A signed-in page for the setup scripts, with a helper that calls the API as the demo account.
+export async function openApiSession(browser) {
+  const page = await browser.newPage();
+  await page.goto(`${BASE}/login`);
+  await page.locator('input[type=email]').fill(process.env.SHOT_EMAIL);
+  await page.locator('input[type=password]').fill(process.env.SHOT_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+  return (method, path, body) =>
+    page.evaluate(
+      async ({ method, path, body }) => {
+        const token = localStorage.getItem('sfr.jwt');
+        const response = await fetch(path, {
+          method,
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+        const text = await response.text();
+        return { status: response.status, json: text ? JSON.parse(text) : null };
+      },
+      { method, path, body },
+    );
+}
