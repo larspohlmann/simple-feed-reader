@@ -53,8 +53,8 @@ final class ReplyThreadOrderTest extends TestCase
     {
         $page = (new ReplyThreadOrder(3, 5))->pageOf([
             $this->engaged('reposted', '2026-01-01', new SocialCountsModel(0, 1, 0, null)),
-            $this->engaged('two likes', '2026-03-01', new SocialCountsModel(2, 0, 0, null)),
-            $this->engaged('one like', '2026-02-01', new SocialCountsModel(1, 0, 0, null)),
+            $this->engaged('two likes', '2026-03-01', new SocialCountsModel(2, 0, 0, 0)),
+            $this->engaged('one like', '2026-02-01', new SocialCountsModel(1, 0, 0, 0)),
         ]);
 
         self::assertSame(['two likes', 'reposted', 'one like'], $this->urls($page->comments));
@@ -71,14 +71,15 @@ final class ReplyThreadOrderTest extends TestCase
         self::assertSame(['two likes', 'quoted', 'one like'], $this->urls($page->comments));
     }
 
-    public function testAReplyWithoutCountsRanksBelowAnyEngagement(): void
+    public function testAReplyWithoutCountsRanksAsOneNobodyEngagedWith(): void
     {
         $page = (new ReplyThreadOrder(3, 5))->pageOf([
             $this->node('uncounted', '2026-03-01'),
+            $this->engaged('unengaged', '2026-02-01', new SocialCountsModel(0, 0, 0, null)),
             $this->engaged('liked', '2026-01-01', new SocialCountsModel(1, 0, 0, null)),
         ]);
 
-        self::assertSame(['liked', 'uncounted'], $this->urls($page->comments));
+        self::assertSame(['liked', 'uncounted', 'unengaged'], $this->urls($page->comments));
     }
 
     public function testEquallyInterestingTopLevelRepliesAreNewestFirst(): void
