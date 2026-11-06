@@ -3,6 +3,7 @@ import { DestroyRef, Injectable, inject } from '@angular/core';
 import { ScrollHosts } from '../../shared/scroll-host/scroll-hosts.service';
 import type { PageLayer } from '../../shared/scroll-host/page-layer';
 import { PageHandoffProbe } from './page-handoff-probe';
+import { PageOffsetHold } from './page-offset-hold';
 
 /** On `<html>` while a layer over the list owns the page; its rail stands in for the scrollbar. */
 export const PAGE_OVERLAID_CLASS = 'page-overlaid';
@@ -14,6 +15,7 @@ export class PageScrollOwner {
   private readonly document = inject(DOCUMENT);
   private readonly page = inject(ScrollHosts).forPage(this.document.body);
   private readonly layers: PageLayer[] = [];
+  private readonly offsetHold = inject(PageOffsetHold);
   private readonly probe = inject(PageHandoffProbe, { optional: true });
 
   constructor() {
@@ -31,7 +33,7 @@ export class PageScrollOwner {
     this.markOverlaid();
     if (!beneath) return;
     beneath.pinAt(this.page.scrollTop);
-    this.page.scrollTop = 0;
+    this.offsetHold.hold(this.page, 0);
     this.probe?.watch('enter', 0);
   }
 
@@ -48,7 +50,7 @@ export class PageScrollOwner {
     const beneath = this.layers.at(-1);
     if (!beneath) return;
     const top = beneath.unpin();
-    this.page.scrollTop = top;
+    this.offsetHold.hold(this.page, top);
     this.probe?.watch('leave', top);
   }
 

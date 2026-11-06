@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { PAGE_OVERLAID_CLASS, PageScrollOwner } from './page-scroll-owner';
+import { PageOffsetHold } from './page-offset-hold';
 import { PageLayer } from '../../shared/scroll-host/page-layer';
 import { PAGE_SCROLL_BLOCK_CLASS } from '../../shared/scroll-host/page-scroll-host';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
@@ -11,7 +12,7 @@ describe('PageScrollOwner', () => {
 
   beforeEach(() => {
     page = trackPageScrollTop();
-    TestBed.configureTestingModule({ providers: [PageScrollOwner] });
+    TestBed.configureTestingModule({ providers: [PageScrollOwner, PageOffsetHold] });
     owner = TestBed.inject(PageScrollOwner);
   });
 
