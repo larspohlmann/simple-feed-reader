@@ -86,7 +86,7 @@ final class SocialAccounts
         return self::mastodonAt(self::owner(), 'alice@mastodon.example', $instanceUrl);
     }
 
-    private static function mastodonAt(User $owner, string $identity, string $instanceUrl): SocialAccount
+    public static function mastodonAt(User $owner, string $identity, string $instanceUrl): SocialAccount
     {
         return new SocialAccount(
             $owner,

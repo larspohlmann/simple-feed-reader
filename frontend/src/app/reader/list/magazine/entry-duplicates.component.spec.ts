@@ -169,7 +169,13 @@ it('closes the popover once the copy is opened', () => {
 });
 
 it("deletes the row's post from a copy and closes the popover (#1972)", () => {
-  const own = { network: 'bluesky', isLiked: false, canLike: true, isOwn: true } as const;
+  const own = {
+    network: 'bluesky',
+    isLiked: false,
+    canLike: true,
+    isOwn: true,
+    openUrl: null,
+  } as const;
   const dup = entry({ id: 2, title: 'Copy', social: own });
   const row = entry({ id: 1, social: own, duplicates: [dup] });
   const fixture = mount(row);
@@ -219,7 +225,7 @@ function openLikePopover() {
   const dup = entry({
     id: 2,
     title: 'Skeet',
-    social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+    social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
   });
   const fixture = mount(entry({ duplicates: [dup] }));
   (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
@@ -233,7 +239,10 @@ function openLikePopover() {
       fixture,
       entry({
         duplicates: [
-          { ...dup, social: { network: 'bluesky', isLiked, canLike: true, isOwn: false } },
+          {
+            ...dup,
+            social: { network: 'bluesky', isLiked, canLike: true, isOwn: false, openUrl: null },
+          },
         ],
       }),
     );

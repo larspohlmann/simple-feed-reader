@@ -10,6 +10,8 @@ use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Comments\Support\SubstackPostAddress;
+use App\Service\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Support\OwnInstancePostUrl;
 use App\Service\Social\Support\PostAuthor;
 use App\Service\Social\Support\SocialPostAddress;
 
@@ -84,26 +86,27 @@ final readonly class EntryListRowEnricher
      */
     private function socialStatesOf(array $entries, int $userId): array
     {
-        $postNetworks = self::postNetworksOf($entries);
-        if ([] === $postNetworks) {
+        $posts = self::postAddressesOf($entries);
+        if ([] === $posts) {
             return [];
         }
-        $accountsByNetwork = self::accountsByNetwork($this->socialAccounts->findAllForUserId($userId));
+        $accountsByNetwork = self::accountsByNetwork($this->socialAccounts->findAllForUserIdInActingOrder($userId));
         $likeable = array_filter(
-            $postNetworks,
-            static fn (SocialNetwork $network): bool => isset($accountsByNetwork[$network->value]),
+            $posts,
+            static fn (SocialPostAddressModel $post): bool => isset($accountsByNetwork[$post->network->value]),
         );
         $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($likeable));
 
         $states = [];
-        foreach ($postNetworks as $entryId => $network) {
-            $networkAccounts = $accountsByNetwork[$network->value] ?? [];
+        foreach ($posts as $entryId => $post) {
+            $networkAccounts = $accountsByNetwork[$post->network->value] ?? [];
             $canLike = [] !== $networkAccounts;
             $states[$entryId] = new EntryListRowSocial(
-                $network,
+                $post->network,
                 isLiked: isset($likedIds[$entryId]),
                 canLike: $canLike,
                 isOwn: $canLike && null !== PostAuthor::accountAmong($entries[$entryId], $networkAccounts),
+                openUrl: OwnInstancePostUrl::of($post, $networkAccounts),
             );
         }
 
@@ -128,19 +131,19 @@ final readonly class EntryListRowEnricher
     /**
      * @param array<int, Entry> $entries
      *
-     * @return array<int, SocialNetwork> the network of each entry that is a social post, decided without a query
+     * @return array<int, SocialPostAddressModel> the address of each social post, decided without a query
      */
-    private static function postNetworksOf(array $entries): array
+    private static function postAddressesOf(array $entries): array
     {
-        $networks = [];
+        $addresses = [];
         foreach ($entries as $entryId => $entry) {
-            $network = SocialPostAddress::of($entry)?->network;
-            if (null !== $network) {
-                $networks[$entryId] = $network;
+            $address = SocialPostAddress::of($entry);
+            if (null !== $address) {
+                $addresses[$entryId] = $address;
             }
         }
 
-        return $networks;
+        return $addresses;
     }
 
     /**

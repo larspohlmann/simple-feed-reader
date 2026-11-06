@@ -273,6 +273,32 @@ describe('ReaderViewComponent', () => {
     expect(link.rel).toContain('noopener');
   });
 
+  it('opens a Mastodon post on the reader’s own instance', () => {
+    const fixture = mount(
+      entry({
+        url: 'https://mastodon.social/@Gargron/1',
+        social: {
+          network: 'mastodon',
+          isLiked: false,
+          canLike: true,
+          isOwn: false,
+          openUrl: 'https://home.test/authorize_interaction?uri=x',
+        },
+      }),
+    );
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(
+      element.querySelector('.meta a[href="https://home.test/authorize_interaction?uri=x"]'),
+    ).not.toBeNull();
+  });
+
+  it('opens an article at its own address', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.meta a[href="https://x/1"]')).not.toBeNull();
+  });
+
   describe('the source link', () => {
     const sourceLink = (over: Partial<EntryDto>): HTMLAnchorElement =>
       (mount(entry(over)).nativeElement as HTMLElement).querySelector('.meta .source')!;
@@ -901,7 +927,13 @@ describe('ReaderViewComponent', () => {
       const fixture = mount(
         entry({
           comments: 'auto',
-          social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+          social: {
+            network: 'bluesky',
+            isLiked: false,
+            canLike: true,
+            isOwn: false,
+            openUrl: null,
+          },
         }),
       );
       const host = fixture.nativeElement as HTMLElement;
@@ -1073,7 +1105,7 @@ describe('ReaderViewComponent', () => {
     const realIntersectionObserver = globalThis.IntersectionObserver;
     const post = (over: Partial<EntryDto> = {}): EntryDto =>
       entry({
-        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
         ...over,
       });
     let counts: { state: () => Signal<SocialCountsState>; load: jest.Mock; reload: jest.Mock };

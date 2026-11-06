@@ -29,6 +29,19 @@ final class SocialAccountRepositoryTest extends DbTestCase
         $this->stranger = $factory->create('social-repo-stranger@example.test');
     }
 
+    public function testFindAllForUserIdInActingOrderPutsTheDefaultFirstWithinANetwork(): void
+    {
+        $first = $this->persistAccount($this->owner, SocialNetwork::Mastodon, 'alice@first.example');
+        $default = $this->persistAccount($this->owner, SocialNetwork::Mastodon, 'alice@second.example');
+        $default->becomeDefault();
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$default, $first],
+            $this->repository()->findAllForUserIdInActingOrder($this->owner->requireId()),
+        );
+    }
+
     public function testFindAllForUserListsOnlyThatUsersAccountsByNetworkThenAge(): void
     {
         $this->persistAccount($this->owner, SocialNetwork::Mastodon, 'alice@mastodon.example');
@@ -79,23 +92,6 @@ final class SocialAccountRepositoryTest extends DbTestCase
             $this->repository()->findAllOnNetwork($this->owner, SocialNetwork::Bluesky),
         );
         self::assertSame(3, $this->repository()->countForUser($this->owner));
-    }
-
-    public function testFindAllForUserIdListsOnlyThatUsersAccountsByNetworkThenAge(): void
-    {
-        $this->persistAccount($this->owner, SocialNetwork::Mastodon, 'alice@mastodon.example');
-        $this->persistAccount($this->owner, SocialNetwork::Bluesky, 'did:plc:one');
-        $this->persistAccount($this->stranger, SocialNetwork::Bluesky, 'did:plc:stranger');
-        $this->entityManager->flush();
-
-        self::assertSame(
-            ['did:plc:one', 'alice@mastodon.example'],
-            array_map(
-                static fn (SocialAccount $account): string => $account->getIdentity(),
-                $this->repository()->findAllForUserId($this->owner->requireId()),
-            ),
-        );
-        self::assertSame([], $this->repository()->findAllForUserId($this->stranger->requireId() + 1000));
     }
 
     public function testTheDefaultAccountActsBeforeAnOlderOne(): void

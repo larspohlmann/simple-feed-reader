@@ -21,6 +21,7 @@ interface StubArticlePageOverrides {
 export class StubArticlePageSource implements ArticlePageSource {
   readonly key = signal('link:https://news.test/a');
   readonly url = signal<string | null>(null);
+  readonly openUrl = signal<string | null>(null);
   readonly title = signal('');
   readonly shareTitle = signal('');
   readonly titleHidden = signal(false);
@@ -39,6 +40,7 @@ export class StubArticlePageSource implements ArticlePageSource {
 
   constructor(overrides: StubArticlePageOverrides = {}) {
     this.url.set(overrides.url ?? null);
+    this.openUrl.set(overrides.url ?? null);
     this.title.set(overrides.title ?? '');
     this.shareTitle.set(overrides.shareTitle ?? '');
     this.nameplate.set(overrides.nameplate ?? '');

@@ -112,6 +112,18 @@ describe('ArticlePageComponent', () => {
     expect(fixture.componentInstance.opened).toBe(1);
   });
 
+  it('opens the original at the source’s open address but shares its own', () => {
+    const element = mount((stub) =>
+      stub.openUrl.set('https://home.test/authorize_interaction?uri=a'),
+    );
+
+    const original = element.querySelector<HTMLAnchorElement>(
+      '.meta a[href^="https://home.test/"]',
+    );
+    expect(original?.textContent).toContain('Open original');
+    expect(element.querySelector('.meta a[href="https://news.test/a"]')).toBeNull();
+  });
+
   it('puts the lead, refresh, share and flags in the bar in that order', () => {
     const element = mount();
 

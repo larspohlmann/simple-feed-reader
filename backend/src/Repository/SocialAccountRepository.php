@@ -31,7 +31,8 @@ final class SocialAccountRepository extends ServiceEntityRepository
     /** @return list<SocialAccount> */
     public function findAllForUser(User $user): array
     {
-        return $this->findAllForUserId($user->requireId());
+        // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
+        return array_values($this->findBy(['user' => $user], ['network' => 'ASC', 'id' => 'ASC']));
     }
 
     public function countForUser(User $user): int
@@ -61,11 +62,11 @@ final class SocialAccountRepository extends ServiceEntityRepository
         ));
     }
 
-    /** @return list<SocialAccount> */
-    public function findAllForUserId(int $userId): array
+    /** @return list<SocialAccount> by network, the acting account of each network first */
+    public function findAllForUserIdInActingOrder(int $userId): array
     {
         // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
-        return array_values($this->findBy(['user' => $userId], ['network' => 'ASC', 'id' => 'ASC']));
+        return array_values($this->findBy(['user' => $userId], ['network' => 'ASC'] + self::ACTING_ORDER));
     }
 
     public function findActingOnNetwork(User $user, SocialNetwork $network): ?SocialAccount

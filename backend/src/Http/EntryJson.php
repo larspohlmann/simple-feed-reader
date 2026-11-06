@@ -48,7 +48,7 @@ use App\Service\Url\Support\YouTubeUrl;
  *   share: 'link'|'media'|'quote'|null,
  *   quote: QuoteRow|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
- *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null,
+ *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
  * }
@@ -157,7 +157,7 @@ final readonly class EntryJson
         return ['discussionUrl' => $discussion->url, 'comments' => $discussion->commentsLoad?->value];
     }
 
-    /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null */
+    /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null */
     private static function socialOf(EntryListRow $row): ?array
     {
         $social = $row->enrichment->social;
@@ -171,6 +171,7 @@ final readonly class EntryJson
             'isLiked' => $social->isLiked,
             'canLike' => $social->canLike,
             'isOwn' => $social->isOwn,
+            'openUrl' => $social->openUrl,
         ];
     }
 

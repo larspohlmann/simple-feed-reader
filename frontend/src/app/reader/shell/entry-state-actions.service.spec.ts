@@ -69,10 +69,10 @@ describe('EntryStateActions liking (#1600)', () => {
 
   it('likes an unliked post and unlikes a liked one', () => {
     const unliked = anEntry({
-      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
     });
     const liked = anEntry({
-      social: { network: 'bluesky', isLiked: true, canLike: true, isOwn: false },
+      social: { network: 'bluesky', isLiked: true, canLike: true, isOwn: false, openUrl: null },
     });
 
     actions.like(unliked);
@@ -86,7 +86,9 @@ describe('EntryStateActions liking (#1600)', () => {
 
   it('toasts the problem when the like fails', () => {
     actions.like(
-      anEntry({ social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false } }),
+      anEntry({
+        social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false, openUrl: null },
+      }),
     );
     const onError = setLiked.mock.calls[0][2];
 
