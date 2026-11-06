@@ -39,14 +39,13 @@ describe('PageOffsetHold', () => {
   it('writes the offset it holds', () => {
     page.top = 1084;
 
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 1084, to: 0 });
 
     expect(page.top).toBe(0);
   });
 
   it('puts the offset back when the page returns to the one it left', () => {
-    page.top = 1084;
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 1084, to: 0 });
 
     webKitRevertsTo(1084);
 
@@ -54,7 +53,7 @@ describe('PageOffsetHold', () => {
   });
 
   it('lets the page go once the hold has run its time', () => {
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 1084, to: 0 });
     jest.advanceTimersByTime(HOLD_MS + FRAME_MS * 2);
 
     page.top = 1084;
@@ -64,7 +63,7 @@ describe('PageOffsetHold', () => {
   });
 
   it('gives the page to a user who touches it', () => {
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 500, to: 0 });
     window.dispatchEvent(new Event('touchstart'));
 
     webKitRevertsTo(500);
@@ -73,7 +72,7 @@ describe('PageOffsetHold', () => {
   });
 
   it('yields to the app writing another offset, such as a restored reading position', () => {
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 500, to: 0 });
     host.scrollTop = 2400;
 
     jest.advanceTimersByTime(FRAME_MS * 4);
@@ -82,8 +81,7 @@ describe('PageOffsetHold', () => {
   });
 
   it('keeps holding through another write of the same offset', () => {
-    page.top = 1084;
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 1084, to: 0 });
     host.scrollTop = 0;
 
     webKitRevertsTo(1084);
@@ -92,8 +90,7 @@ describe('PageOffsetHold', () => {
   });
 
   it('leaves the page alone when it moves anywhere but back', () => {
-    page.top = 1084;
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 1084, to: 0 });
     jest.advanceTimersByTime(100);
 
     page.top = 40;
@@ -103,8 +100,7 @@ describe('PageOffsetHold', () => {
   });
 
   it('undoes a return to the old offset cut short by a shorter page', () => {
-    page.top = 40000;
-    offsetHold.hold(host, 0);
+    offsetHold.hold(host, { from: 40000, to: 0 });
 
     webKitRevertsTo(PAGE_HEIGHT - window.innerHeight);
 
@@ -113,7 +109,7 @@ describe('PageOffsetHold', () => {
 
   it('takes the end of the page as holding a target past it', () => {
     const end = PAGE_HEIGHT - window.innerHeight;
-    offsetHold.hold(host, 40000);
+    offsetHold.hold(host, { from: 0, to: 40000 });
     page.top = end;
 
     jest.advanceTimersByTime(FRAME_MS * 4);

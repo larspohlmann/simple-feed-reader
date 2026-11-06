@@ -5,6 +5,12 @@ import { observePageWrites } from '../../shared/scroll-host/page-scroll-host';
 
 export const HOLD_MS = 600;
 const SAME_OFFSET_PX = 2;
+
+/** `from` is read before the switch pins a layer: pinning shortens the page and cuts the offset. */
+export interface PageOffsetHandoff {
+  readonly from: number;
+  readonly to: number;
+}
 const USER_TAKEOVER_EVENTS = ['touchstart', 'wheel', 'pointerdown', 'keydown'];
 
 /** Holds the page at a handed-off offset. iOS WebKit puts the old offset back 10–220 ms after
@@ -20,11 +26,10 @@ export class PageOffsetHold {
     inject(DestroyRef).onDestroy(() => this.release());
   }
 
-  /** Writes `top` through `page`, then undoes any return to the offset it replaced, until HOLD_MS
-   *  pass, the user takes the page, or the app writes another offset. */
-  hold(page: ScrollHost, top: number): void {
+  /** Writes `to` through `page`, then undoes any return to `from`, until HOLD_MS pass, the user
+   *  takes the page, or the app writes another offset. */
+  hold(page: ScrollHost, { from, to: top }: PageOffsetHandoff): void {
     this.release();
-    const replaced = page.scrollTop;
     page.scrollTop = top;
     const startedAt = this.view.performance.now();
     const release = (): void => this.release();
@@ -34,7 +39,7 @@ export class PageOffsetHold {
         this.release();
         return;
       }
-      if (this.returnedTo(page, replaced, top)) page.scrollTop = top;
+      if (this.returnedTo(page, from, top)) page.scrollTop = top;
       frame = this.view.requestAnimationFrame(step);
     };
     const stopObservingWrites = observePageWrites((written) => {
