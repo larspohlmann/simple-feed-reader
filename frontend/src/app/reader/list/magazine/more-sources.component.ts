@@ -72,8 +72,8 @@ export class MoreSourcesComponent {
     this.expanded.update((open) => !open);
   }
 
-  markBroken(copy: EntryDto): void {
-    this.brokenThumbs.update((broken) => new Set(broken).add(copy.id));
+  protected markBroken(copyId: number): void {
+    this.brokenThumbs.update((broken) => new Set(broken).add(copyId));
   }
 
   open(copy: EntryDto, event: Event): void {
