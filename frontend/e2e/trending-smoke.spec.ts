@@ -123,7 +123,7 @@ for (const layout of ['magazine', 'list'] as const) {
     await opened.hover();
     await opened.getByRole('button', { name: 'Hide story', exact: true }).click();
     expect((await hidden).postDataJSON()).toEqual({ window: 'day', entryId: 9011 });
-    await expect(page.getByText('Trending fixture opened story')).toHaveCount(0);
+    await expect(opened).toHaveClass(/\bleaving\b/);
     await expect(story.getByText('Trending fixture day story')).toBeVisible();
 
     const weekLoaded = page.waitForRequest(trendingRequest('week'));

@@ -10,7 +10,7 @@ import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
-import { withCardBack, withPatchedRow } from './entry-rows';
+import { withPatchedRow } from './entry-rows';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -38,6 +38,8 @@ type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
+  /** Runs as each attempt starts, a retry's included. */
+  readonly onStarted?: () => void;
   readonly onSaved?: () => void;
   readonly onFailed?: () => void;
 }
@@ -214,10 +216,11 @@ export class EntriesStore {
   private saveState(
     entryId: number,
     patch: EntryStatePatch,
-    outcome: { onSaved?: () => void; onFailed?: (error: HttpErrorResponse) => void },
+    outcome: Omit<StateSaveOutcome, 'onFailed'> & { onFailed?: (error: HttpErrorResponse) => void },
   ): void {
     const target = this.entryOrCopy(entryId);
     if (!target) return;
+    outcome.onStarted?.();
     const request$ = this.api.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
       next: () => outcome.onSaved?.(),
@@ -296,21 +299,19 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Takes a card off the loaded Trending list at once, hiding its story in that list's window (#2017); a failed
-   *  hide puts it back where it was, with the banner and its retry. */
+  /** Hides a card's story in the loaded Trending list's window (#2017); the card stays in the list, so the
+   *  caller can let it leave in place (#2066). A failure shows the banner and its retry. */
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
     const query = this.query();
-    const index = this.rawEntries().findIndex((entry) => entry.id === entryId);
-    if (query?.view !== 'trending' || index < 0) return;
+    if (query?.view !== 'trending' || !this.rawEntries().some((entry) => entry.id === entryId))
+      return;
     const window = query.window ?? DEFAULT_TRENDING_WINDOW;
-    const card = this.rawEntries()[index];
     this.error.set(null);
     this.failedOperation.set(null);
-    this.rawEntries.update((current) => current.filter((entry) => entry.id !== entryId));
+    outcome.onStarted?.();
     this.trendingApi.hideStory(window, entryId).subscribe({
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
-        this.rawEntries.update((current) => withCardBack(current, card, index));
         this.reportMutationFailure(error, () => this.hideTrendingStory(entryId, outcome));
         outcome.onFailed?.();
       },

@@ -13,9 +13,3 @@ export function withPatchedRow(
     duplicates: patched.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
   };
 }
-
-/** `current` with `card` back at `index`, unless a reload already brought it back. */
-export function withCardBack(current: EntryDto[], card: EntryDto, index: number): EntryDto[] {
-  if (current.some((entry) => entry.id === card.id)) return current;
-  return [...current.slice(0, index), card, ...current.slice(index)];
-}

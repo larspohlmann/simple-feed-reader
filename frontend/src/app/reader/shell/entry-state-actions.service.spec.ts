@@ -308,6 +308,19 @@ describe('EntryStateActions unsharing (#2007)', () => {
     selection.set({ kind: 'shared' });
 
     actions.unshare(anEntry({ id: 9, isShared: true }));
+    setState.mock.calls[0][2]?.onStarted?.();
+
+    expect(actions.leavingIds().has(9)).toBe(true);
+  });
+
+  it('leaves the Shared list again on each attempt (#2066)', () => {
+    selection.set({ kind: 'shared' });
+    actions.unshare(anEntry({ id: 9, isShared: true }));
+    const outcome = setState.mock.calls[0][2];
+
+    outcome?.onStarted?.();
+    outcome?.onFailed?.();
+    outcome?.onStarted?.();
 
     expect(actions.leavingIds().has(9)).toBe(true);
   });
@@ -315,6 +328,7 @@ describe('EntryStateActions unsharing (#2007)', () => {
   it('restores the count and the row when the save fails', () => {
     selection.set({ kind: 'shared' });
     actions.unshare(anEntry({ id: 9, isShared: true }));
+    setState.mock.calls[0][2]?.onStarted?.();
 
     setState.mock.calls[0][2]?.onFailed?.();
 

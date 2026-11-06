@@ -238,6 +238,23 @@ describe('EntriesStore', () => {
     expect(store.entries()[0].isFavorite).toBe(false); // rolled back
   });
 
+  it('starts each attempt of a state change, its retry included (#2066)', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+    const onStarted = jest.fn();
+
+    store.setState(1, { isFavorite: true }, { onStarted });
+    ctrl
+      .expectOne('https://api.test/api/entries/1/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    store.retry();
+
+    expect(onStarted).toHaveBeenCalledTimes(2);
+    ctrl.expectOne('https://api.test/api/entries/1/state').flush({});
+  });
+
   it('mirrors the unread-clears-viewed coupling locally without sending isViewed (#478)', () => {
     store.load({ view: 'viewed' });
     ctrl
@@ -1175,20 +1192,21 @@ describe('EntriesStore', () => {
         .flush({ window, builtAt: null, stories: [entry(1), entry(2), entry(3)] });
     };
 
-    it('takes the card off the list at once and hides its story in the window on screen', () => {
+    it('keeps the card in the list for its caller to let leave, and hides its story in the window on screen', () => {
       loadThree('week');
+      const onStarted = jest.fn();
       const onSaved = jest.fn();
 
-      store.hideTrendingStory(2, { onSaved });
+      store.hideTrendingStory(2, { onStarted, onSaved });
 
-      expect(listed()).toEqual([1, 3]);
+      expect(onStarted).toHaveBeenCalledTimes(1);
       const request = hideRequest();
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ window: 'week', entryId: 2 });
       expect(onSaved).not.toHaveBeenCalled();
       request.flush(null, { status: 204, statusText: 'No Content' });
       expect(onSaved).toHaveBeenCalledTimes(1);
-      expect(listed()).toEqual([1, 3]);
+      expect(listed()).toEqual([1, 2, 3]);
     });
 
     it('hides nothing outside a Trending list', () => {
@@ -1196,42 +1214,32 @@ describe('EntriesStore', () => {
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry(1), entry(2)], nextCursor: null });
+      const onStarted = jest.fn();
 
-      store.hideTrendingStory(2);
+      store.hideTrendingStory(2, { onStarted });
 
-      expect(listed()).toEqual([1, 2]);
+      expect(onStarted).not.toHaveBeenCalled();
       ctrl.expectNone('https://api.test/api/trending/hidden');
     });
 
-    it('puts a card whose hide failed back where it was, with the error banner and its retry', () => {
+    it('reports a failed hide with the error banner, and starts again on retry', () => {
       loadThree();
+      const onStarted = jest.fn();
+      const onFailed = jest.fn();
 
-      store.hideTrendingStory(2);
+      store.hideTrendingStory(2, { onStarted, onFailed });
       hideRequest().flush(
         { type: 'x', title: 't', status: 500 },
         { status: 500, statusText: 'err' },
       );
 
-      expect(listed()).toEqual([1, 2, 3]);
+      expect(onFailed).toHaveBeenCalledTimes(1);
       expect(store.error()).not.toBeNull();
 
       store.retry();
-      expect(listed()).toEqual([1, 3]);
+      expect(onStarted).toHaveBeenCalledTimes(2);
       hideRequest().flush(null, { status: 204, statusText: 'No Content' });
       expect(store.error()).toBeNull();
-    });
-
-    it('does not double a card a reload brought back before the hide failed', () => {
-      loadThree();
-      store.hideTrendingStory(2);
-      loadThree();
-
-      hideRequest().flush(
-        { type: 'x', title: 't', status: 500 },
-        { status: 500, statusText: 'err' },
-      );
-
-      expect(listed()).toEqual([1, 2, 3]);
     });
   });
 });
