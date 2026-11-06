@@ -101,6 +101,15 @@ it("shows a source's picture as its thumbnail, its favicon when it has none", ()
   expect(withoutImage.querySelector('.thumb app-favicon')).not.toBeNull();
 });
 
+it("loads a source's picture asynchronously and without a referrer", () => {
+  const element = mount(storyOf(copies));
+  expand(element);
+
+  const thumb = element.querySelector('img.thumb')!;
+  expect(thumb.getAttribute('referrerpolicy')).toBe('no-referrer');
+  expect(thumb.getAttribute('decoding')).toBe('async');
+});
+
 it('collapses again on a second click', () => {
   const element = mount(storyOf(copies));
   expand(element);
@@ -152,4 +161,32 @@ it.each([
     .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
   expect(reached).not.toHaveBeenCalled();
+});
+
+it("shows each source's dek under its title", () => {
+  const withDek = anEntry({
+    id: 5,
+    source: 'BBC',
+    title: 'Raman wins',
+    excerpt: 'A second big win.',
+  });
+  const element = mount(storyOf([withDek]));
+  expand(element);
+
+  expect(element.querySelector('.mini .dek')!.textContent).toContain('A second big win.');
+});
+
+it('leaves out the dek line when a source has none', () => {
+  const bare = anEntry({ id: 6, source: 'CBC', title: 'New mayor', excerpt: '' });
+  const element = mount(storyOf([bare]));
+  expand(element);
+
+  expect(element.querySelector('.mini .dek')).toBeNull();
+});
+
+it("puts the source's favicon in its byline", () => {
+  const element = mount(storyOf(copies));
+  expand(element);
+
+  expect(element.querySelector('.mini .byline app-favicon')).not.toBeNull();
 });

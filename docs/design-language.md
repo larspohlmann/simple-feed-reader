@@ -61,8 +61,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
 | `--footer-chip-name-max` | `24ch` | the feed name in an "Also in" / "Also covered by" footer chip, which ellipsises past it; the chip's `title` carries the full name (#2017) |
-| `--mini-card-thumb` | `32px` | the square thumbnail of a magazine card's "more sources" mini card (#2036) |
-| `--mini-card-min-w` | `12rem` | the narrowest a mini card gets before the "more sources" grid drops a column (#2036) |
+| `--mini-card-thumb-w` | `104px` | the picture width of a "more sources" mini card, at a 104 / 68 aspect ratio (#2055) |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
@@ -1507,11 +1506,10 @@ boxes tile edge to edge — a tap on the star must never land on keep.
 ### `<app-more-sources>`
 
 A magazine card's footer slot. A Trending story's other outlets (#2036) get one accent line,
-"x more sources", that opens in place into a grid of mini cards — the smallest card in
-the app, on `--surface-sunken`: a `--mini-card-thumb` square (the copy's picture, else its
-favicon on `--surface-1`), the feed and relative time, and a one-line title. A mini card opens its
-copy; it carries no actions. The grid fills `--mini-card-min-w` columns, so a narrow
-card stacks them and a hero lays out two or three.
+"x more sources", that opens in place into a stack of full-width mini cards (#2055) — a smaller
+compact card on `--surface-sunken`: the copy's picture at `--mini-card-thumb-w`, 104 / 68
+(else its favicon centred on `--surface-1` in the same box), a byline of favicon, feed and relative
+time, the full title, and one line of dek. A mini card opens its copy; it carries no actions.
 
 Any other entry with duplicates — the same post in several feeds — renders
 `<app-entry-duplicates>` instead: the "Also in" pills that open the copy's row in a popover (#2053).

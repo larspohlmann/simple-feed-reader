@@ -4,7 +4,7 @@ import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { entryRelativeTime } from '../../format';
-import { entryDisplayTitle, entryHeadline } from '../../entry/entry-text';
+import { entryDek, entryDisplayTitle, entryHeadline } from '../../entry/entry-text';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
@@ -38,6 +38,7 @@ export class MoreSourcesComponent {
       feed: sourceNameOf(copy, this.rows),
       avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
       title: entryHeadline(copy) || entryDisplayTitle(copy),
+      dek: entryDek(copy),
       when: entryRelativeTime(copy, this.language.lang()),
     })),
   );
