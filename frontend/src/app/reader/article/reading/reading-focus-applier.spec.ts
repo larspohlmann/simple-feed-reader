@@ -108,7 +108,7 @@ it('recomputes when the ResizeObserver fires (orientation/reflow)', async () => 
   applier.destroy();
 });
 
-it('watches the scroller and observes every block', () => {
+it('watches the scroller and observes the content and every block (#2066)', () => {
   const { element, scroller, blocks } = scrollerWith(3);
   const applier = new ReadingFocusApplier({
     scroller,
@@ -117,6 +117,7 @@ it('watches the scroller and observes every block', () => {
     isActive: () => true,
   });
   expect(MockResizeObserver.instances[0].targets.has(element)).toBe(true);
+  expect(observer().targets.has(scroller.content)).toBe(true);
   for (const block of blocks()) expect(observer().targets.has(block)).toBe(true);
   applier.destroy();
 });

@@ -15,8 +15,9 @@ export interface ReadingFocusConfig {
 
 /**
  * Keeps each block's inline opacity in step with its distance from the reading
- * band. It observes the geometry it reads — the scroller and every block —
- * so it never enumerates the causes of a layout change.
+ * band. It observes the geometry it reads — the scroller, the scrolled content's
+ * border box (blocks that move without resizing) and every block — so it never
+ * enumerates the causes of a layout change.
  */
 export class ReadingFocusApplier {
   private readonly runOutsideZone: <T>(run: () => T) => T;
@@ -62,6 +63,7 @@ export class ReadingFocusApplier {
   private observe(): void {
     if (!this.observer) return;
     this.observer.disconnect();
+    this.observer.observe(this.config.scroller.content, { box: 'border-box' });
     for (const block of this.config.blocks()) this.observer.observe(block);
   }
 
