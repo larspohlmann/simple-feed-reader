@@ -321,6 +321,21 @@ password, the Grafana API token, a user's Bluesky app password or Mastodon acces
 What this does not protect against: someone who holds both a database dump and the environment file. The server has
 to read the secret while its owner is away, so the server can always reach it.
 
+## Shared and per-user data
+
+A feed and its entries are stored once, keyed by URL, and shared by every user who subscribes to it. What belongs to a
+user is the subscription, the per-entry state (viewed, hidden, favourite, kept), saved searches and their membership, and
+preferences. Every read of entries joins the reader's own subscription, so a shared row is invisible to a user who does
+not subscribe to its feed.
+
+- **No authenticated RSS feeds.** `UrlGuard` refuses a feed URL that carries credentials, so a shared feed row never
+  holds anyone's secret. The only private feeds are social timelines (see below): one feed row per owning account,
+  unreachable by URL.
+- **Search** runs on one shared index when a search engine is configured, else on the shared entry table, and either
+  way returns only entries from feeds the searcher subscribes to at that moment.
+- **Digests** are composed when they are sent, from the recipient's subscriptions at that moment; nothing is queued in
+  advance. An unsubscribe removes the feed from the next digest. A digest already sent cannot be recalled.
+
 ## Social accounts
 
 A user connects Bluesky and Mastodon accounts with credentials, not OAuth, because some installs are unreachable from
