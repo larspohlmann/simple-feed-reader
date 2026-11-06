@@ -2,7 +2,6 @@ import { DOCUMENT } from '@angular/common';
 import { DestroyRef, Injectable, inject } from '@angular/core';
 import { ScrollHosts } from '../../shared/scroll-host/scroll-hosts.service';
 import type { PageLayer } from '../../shared/scroll-host/page-layer';
-import { PageHandoffProbe } from './page-handoff-probe';
 import { PageOffsetHold } from './page-offset-hold';
 
 /** On `<html>` while a layer over the list owns the page; its rail stands in for the scrollbar. */
@@ -16,7 +15,6 @@ export class PageScrollOwner {
   private readonly page = inject(ScrollHosts).forPage(this.document.body);
   private readonly layers: PageLayer[] = [];
   private readonly offsetHold = inject(PageOffsetHold);
-  private readonly probe = inject(PageHandoffProbe, { optional: true });
 
   constructor() {
     // Listening arms the host's release observer: a write under a CDK block lands after it.
@@ -35,7 +33,6 @@ export class PageScrollOwner {
     const from = this.page.scrollTop;
     beneath.pinAt(from);
     this.offsetHold.hold(this.page, { from, to: 0 });
-    this.probe?.watch('enter', 0);
   }
 
   /** Pins the leaver so its leave animation plays in place, and gives the page back to the
@@ -51,9 +48,7 @@ export class PageScrollOwner {
     layer.pinAt(from);
     const beneath = this.layers.at(-1);
     if (!beneath) return;
-    const top = beneath.unpin();
-    this.offsetHold.hold(this.page, { from, to: top });
-    this.probe?.watch('leave', top);
+    this.offsetHold.hold(this.page, { from, to: beneath.unpin() });
   }
 
   private markOverlaid(): void {
