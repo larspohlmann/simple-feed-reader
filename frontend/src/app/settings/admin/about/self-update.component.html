@@ -3,7 +3,12 @@
     @if (showsManualHint()) {
       <p class="manual">{{ 'settings.about.update.manual' | transloco }}</p>
     } @else if (inProgress()) {
-      <p class="phase">{{ 'settings.about.update.' + current.phase | transloco }}</p>
+      <p class="phase underway">
+        @if (!reconnecting()) {
+          <app-spinner [size]="14" />
+        }
+        {{ 'settings.about.update.' + current.phase | transloco }}
+      </p>
       @if (reconnecting()) {
         <p class="phase reconnecting">
           <app-spinner [size]="14" />

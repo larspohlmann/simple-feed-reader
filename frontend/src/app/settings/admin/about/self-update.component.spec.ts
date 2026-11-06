@@ -275,6 +275,33 @@ describe('SelfUpdateComponent', () => {
     expect(checkButton(fixture)).toBeNull();
   });
 
+  it.each(['requested', 'running'] as const)('spins beside the %s phase', (phase) => {
+    updateStatus.mockReturnValue(of(status(phase)));
+    const fixture = mount();
+
+    expect(element(fixture).querySelectorAll('app-spinner')).toHaveLength(1);
+    expect(element(fixture).querySelector('.underway app-spinner')).not.toBeNull();
+  });
+
+  it('spins only beside the restart notice while the app is unreachable', () => {
+    updateStatus
+      .mockReturnValueOnce(of(status('running')))
+      .mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+    const fixture = mount();
+
+    advancePoll(fixture);
+
+    expect(element(fixture).querySelectorAll('app-spinner')).toHaveLength(1);
+    expect(element(fixture).querySelector('.reconnecting app-spinner')).not.toBeNull();
+  });
+
+  it('does not spin once the update has finished', () => {
+    updateStatus.mockReturnValue(of(status('succeeded')));
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('app-spinner')).toBeNull();
+  });
+
   it('says the app is restarting while an update has it unreachable', () => {
     updateStatus
       .mockReturnValueOnce(of(status('running', { log: 'Updating the production stack' })))
