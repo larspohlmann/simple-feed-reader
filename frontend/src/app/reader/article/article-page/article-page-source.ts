@@ -34,6 +34,8 @@ export interface ArticlePagePaywall {
 export interface ArticlePageSource {
   readonly key: Signal<string>;
   readonly url: Signal<string | null>;
+  /** Where "open original" goes; `url` stays the address a share names. */
+  readonly openUrl: Signal<string | null>;
   readonly title: Signal<string>;
   readonly shareTitle: Signal<string>;
   readonly titleHidden: Signal<boolean>;

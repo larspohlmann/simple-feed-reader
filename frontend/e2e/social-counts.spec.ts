@@ -10,7 +10,7 @@ import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from 
 const POST = entryWire({
   id: 1,
   title: 'A post worth counting',
-  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
 });
 
 type CountsAnswer = Parameters<Route['fulfill']>[0];

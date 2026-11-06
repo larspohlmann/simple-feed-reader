@@ -34,7 +34,10 @@ describe('SocialCountsService', () => {
     ...overrides,
   });
   const post = (id = 1, isLiked = false) =>
-    anEntry({ id, social: { network: 'bluesky', isLiked, canLike: true, isOwn: false } });
+    anEntry({
+      id,
+      social: { network: 'bluesky', isLiked, canLike: true, isOwn: false, openUrl: null },
+    });
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -130,7 +133,13 @@ describe('SocialCountsService', () => {
     service.load(
       anEntry({
         id: 3,
-        social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
+        social: {
+          network: 'mastodon',
+          isLiked: false,
+          canLike: false,
+          isOwn: false,
+          openUrl: null,
+        },
       }),
     );
 
@@ -284,7 +293,13 @@ describe('SocialCountsService', () => {
       service.load(
         anEntry({
           id: 1,
-          social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
+          social: {
+            network: 'mastodon',
+            isLiked: false,
+            canLike: false,
+            isOwn: false,
+            openUrl: null,
+          },
         }),
       );
 

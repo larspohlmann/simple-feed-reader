@@ -54,7 +54,14 @@ describe('SocialCountsComponent', () => {
   const post = (social: Partial<EntrySocialDto> = {}): EntryDto =>
     anEntry({
       id: 1,
-      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, ...social },
+      social: {
+        network: 'bluesky',
+        isLiked: false,
+        canLike: true,
+        isOwn: false,
+        openUrl: null,
+        ...social,
+      },
     });
 
   const loaded = (
@@ -209,7 +216,7 @@ describe('SocialCountsComponent', () => {
     it('opens the composer for the post from the replies count', () => {
       const entry = anEntry({
         id: 1,
-        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
       });
       show(entry);
       const button = replyButton(
@@ -259,7 +266,13 @@ describe('SocialCountsComponent', () => {
         anEntry({
           id: 1,
           excerpt: 'Big news',
-          social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+          social: {
+            network: 'bluesky',
+            isLiked: false,
+            canLike: true,
+            isOwn: false,
+            openUrl: null,
+          },
         }),
       );
       const button = quoteButton(
@@ -374,7 +387,13 @@ describe('SocialCountsComponent', () => {
         anEntry({
           id: 1,
           excerpt: 'Big news',
-          social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+          social: {
+            network: 'bluesky',
+            isLiked: false,
+            canLike: true,
+            isOwn: false,
+            openUrl: null,
+          },
         }),
       );
       repostButton(

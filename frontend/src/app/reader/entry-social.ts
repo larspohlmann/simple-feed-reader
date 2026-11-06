@@ -8,6 +8,8 @@ export interface EntrySocialDto {
   canLike: boolean;
   /** Whether one of the reader's own accounts wrote the post (#1972). */
   isOwn: boolean;
+  /** Where "open original" goes: the post on the reader's own Mastodon instance, else null for the post's own URL. */
+  openUrl: string | null;
 }
 
 /** The answer of `PUT`/`DELETE /api/entries/{id}/like`. */

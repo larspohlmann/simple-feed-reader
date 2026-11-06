@@ -54,7 +54,7 @@
       @if (readingMinutes(); as minutes) {
         · {{ 'reader.readingTime' | transloco: { minutes } }}
       }
-      @if (source.url(); as url) {
+      @if (source.openUrl(); as url) {
         ·
         <a [href]="url" target="_blank" rel="noopener noreferrer" (click)="openOriginal.emit()"
           >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
@@ -113,7 +113,7 @@
           referrerpolicy="no-referrer"
         />
       }
-      @if (source.failure() && !body() && source.url(); as url) {
+      @if (source.failure() && !body() && source.openUrl(); as url) {
         <a class="open-original" [href]="url" target="_blank" rel="noopener noreferrer"
           >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="sm"
         /></a>

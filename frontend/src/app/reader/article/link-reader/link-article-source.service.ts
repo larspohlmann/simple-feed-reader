@@ -36,6 +36,7 @@ export class LinkArticleSource implements ArticlePageSource {
   readonly url = computed(
     () => this.card()?.url ?? this.article()?.url ?? this.load.failure()?.url ?? null,
   );
+  readonly openUrl = this.url;
   readonly body = computed<ArticlePageBody | null>(() => {
     const article = this.article();
     return article === null ? null : { html: article.contentHtml, pageUrl: article.url };

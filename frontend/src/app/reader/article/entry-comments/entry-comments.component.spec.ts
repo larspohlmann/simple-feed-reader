@@ -15,7 +15,13 @@ const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
 
 const FETCHED_AT = '2026-09-24T12:00:00Z';
 
-const BLUESKY: EntrySocialDto = { network: 'bluesky', isLiked: false, canLike: true, isOwn: false };
+const BLUESKY: EntrySocialDto = {
+  network: 'bluesky',
+  isLiked: false,
+  canLike: true,
+  isOwn: false,
+  openUrl: null,
+};
 
 const navigation = { layer: jest.fn() };
 
@@ -412,7 +418,7 @@ describe('EntryCommentsComponent', () => {
       id: 5,
       comments: 'auto',
       discussionUrl: DISCUSSION,
-      social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
+      social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false, openUrl: null },
     });
     const element = settleComments([anEntryComment()], 1);
     expect(element.querySelector('a.all')?.textContent).toContain('1 more on Mastodon');

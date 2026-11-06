@@ -6,6 +6,7 @@ describe('likeableSocial', () => {
     isLiked: false,
     canLike,
     isOwn: false,
+    openUrl: null,
   });
 
   it('returns the social data when the reader can like', () => {

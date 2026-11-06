@@ -268,14 +268,24 @@ describe('EntryActionsComponent', () => {
       ['mastodon', true, 'Take back your like on Mastodon'],
     ] as const)('words the %s like (liked: %s) for its network', (network, isLiked, title) => {
       const like = buttons(
-        mount(anEntry({ social: { network, isLiked, canLike: true, isOwn: false } })),
+        mount(
+          anEntry({ social: { network, isLiked, canLike: true, isOwn: false, openUrl: null } }),
+        ),
       )[1];
       expect(like.getAttribute('title')).toBe(title);
     });
 
     it('translates them', () => {
       const fixture = mount(
-        anEntry({ social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false } }),
+        anEntry({
+          social: {
+            network: 'bluesky',
+            isLiked: false,
+            canLike: true,
+            isOwn: false,
+            openUrl: null,
+          },
+        }),
       );
       const transloco = TestBed.inject(TranslocoService);
       transloco.setActiveLang('de');
@@ -380,7 +390,9 @@ describe('EntryActionsComponent', () => {
 
   describe('on a social post (#1600)', () => {
     const blueskyPost = (isLiked = false): EntryDto =>
-      anEntry({ social: { network: 'bluesky', isLiked, canLike: true, isOwn: false } });
+      anEntry({
+        social: { network: 'bluesky', isLiked, canLike: true, isOwn: false, openUrl: null },
+      });
 
     it('offers the like right after favorite, named for the network', () => {
       const labels = buttons(mount(blueskyPost())).map((button) =>
@@ -391,7 +403,15 @@ describe('EntryActionsComponent', () => {
 
     it('names the undo once liked, pressed and filled', () => {
       const fixture = mount(
-        anEntry({ social: { network: 'mastodon', isLiked: true, canLike: true, isOwn: false } }),
+        anEntry({
+          social: {
+            network: 'mastodon',
+            isLiked: true,
+            canLike: true,
+            isOwn: false,
+            openUrl: null,
+          },
+        }),
       );
       const like = buttons(fixture)[1];
       expect(like.getAttribute('aria-label')).toBe('Unlike on Mastodon');
@@ -426,7 +446,13 @@ describe('EntryActionsComponent', () => {
 
     it('offers no like on a post the user has no account to like from (#1615)', () => {
       const post = anEntry({
-        social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
+        social: {
+          network: 'mastodon',
+          isLiked: false,
+          canLike: false,
+          isOwn: false,
+          openUrl: null,
+        },
       });
 
       expect(mount(post).nativeElement.textContent).not.toContain('thumb_up');
@@ -435,10 +461,10 @@ describe('EntryActionsComponent', () => {
 
   it('offers Delete post last, and only on my own post', () => {
     const own = anEntry({
-      social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: true },
+      social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: true, openUrl: null },
     });
     const foreign = anEntry({
-      social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false },
+      social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false, openUrl: null },
     });
 
     const ownLabels = buttons(mount(own)).map((button) => button.getAttribute('aria-label'));
@@ -452,7 +478,7 @@ describe('EntryActionsComponent', () => {
 
   it('deletes through the handler without opening the card', () => {
     const own = anEntry({
-      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: true },
+      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: true, openUrl: null },
     });
     const fixture = mount(own);
 
