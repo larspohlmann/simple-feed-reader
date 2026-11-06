@@ -10,11 +10,38 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.8.0] - 2026-11-06
+
 ### Highlights
 
 **Trending.** A new view above For you shows the stories several of your feeds
 are covering, ranked by how many sources ran them. Switch between the last
 24 hours and the last 7 days.
+
+## What's Changed
+* fix(#2014): leave a <pre> that holds breaks or links out of code highlighting by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2015
+* Trending: stories several of your feeds cover (#2017), maintenance sweeps behind one interface (#2018) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2019
+* refactor(#2020): drop the unused neighbour body prefetch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2021
+* fix(#2022): the 7-day Trending share drops to 2.5 % by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2023
+* fix(#2016): the weekly Playwright rot — stub-token sign-outs and three stale specs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2024
+* chore(#2025): a commit that brings new src classes during an open PHPMD finding needs Lars's approval by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2026
+* fix(#2028): the PHPMD gate names the developer at the keyboard, not Lars by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2029
+* refactor(#2027): fold RecommendationWaveConcurrency back into BatchWavePhase by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2030
+* refactor(#2027): split FeedOutcomePersister; IncomingPageStore replaces IncomingEntries by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2031
+* refactor(#2027): move the lookups out of AiProviderConfigurator by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2032
+* refactor(#2027): split AdminUserController into read and moderation controllers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2033
+* refactor(#2027): move the mark-read endpoints into EntryMarkReadController by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2034
+* refactor(#2027): fold ResponseClassifier into FeedResponseExchange by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2035
+* feat(#2036): magazine "x more sources" footer that opens into mini cards by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2037
+* refactor(#2038): a ScrollHost seam under every reader scroller by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2039
+* feat(#2038): the list scrolls the page at every width by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2040
+* feat(#2038): a full-screen article scrolls the page by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2041
+* fix(#2046): a swipe below an empty list opens the drawer again by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2047
+* Open original: a Mastodon post opens on the reader's own instance by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2049
+* docs: next release highlights and Trending screenshots by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2050
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.7.1...v1.8.0
 
 ## [v1.7.1] - 2026-11-03
 
