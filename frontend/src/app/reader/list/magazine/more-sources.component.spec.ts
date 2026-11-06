@@ -5,6 +5,7 @@ import { MoreSourcesComponent } from './more-sources.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { anEntry } from '../../../../testing/entry-testing';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const open = jest.fn();
 let fixture: ComponentFixture<MoreSourcesComponent>;
@@ -14,7 +15,11 @@ beforeEach(() => open.mockReset());
 function mount(entry: EntryDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [MoreSourcesComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: { open } }, provideRouter([])],
+    providers: [
+      provideAccountIdentity(),
+      { provide: EntryActionHandler, useValue: { open } },
+      provideRouter([]),
+    ],
   });
   fixture = TestBed.createComponent(MoreSourcesComponent);
   fixture.componentRef.setInput('entry', entry);
@@ -27,6 +32,9 @@ function expand(element: HTMLElement): void {
   fixture.detectChanges();
 }
 
+const storyOf = (duplicates: EntryDto[]): EntryDto =>
+  anEntry({ duplicates, story: { outletCount: duplicates.length + 1, viewed: false } });
+
 const copies = [
   anEntry({ id: 2, source: 'NDR', title: 'Storm hits the coast', imageUrl: 'https://img/2.jpg' }),
   anEntry({ id: 3, source: 'taz', title: 'Coast braces for storm', imageUrl: null }),
@@ -36,8 +44,23 @@ it('renders nothing without other sources', () => {
   expect(mount(anEntry()).querySelector('.more-sources')).toBeNull();
 });
 
-it('counts the other sources on one collapsed line', () => {
+it('keeps a post\'s own copies in their "Also in" pills, not mini cards', () => {
   const element = mount(anEntry({ duplicates: copies }));
+
+  expect(element.querySelector('.more-sources')).toBeNull();
+  expect(element.querySelector('app-entry-duplicates .lead')!.textContent).toContain('Also in');
+  expect(element.querySelectorAll('app-entry-duplicates .also-entry').length).toBe(2);
+});
+
+it("opens a story's other outlets as mini cards, not pills", () => {
+  const element = mount(storyOf(copies));
+
+  expect(element.querySelector('.more-sources')).not.toBeNull();
+  expect(element.querySelector('app-entry-duplicates')).toBeNull();
+});
+
+it('counts the other sources on one collapsed line', () => {
+  const element = mount(storyOf(copies));
 
   const toggle = element.querySelector('.toggle')!;
   expect(toggle.textContent).toContain('2');
@@ -46,7 +69,7 @@ it('counts the other sources on one collapsed line', () => {
 });
 
 it('expands to one mini card per source, naming its feed and title', () => {
-  const element = mount(anEntry({ duplicates: copies }));
+  const element = mount(storyOf(copies));
   expand(element);
 
   const minis = element.querySelectorAll('.mini');
@@ -62,14 +85,14 @@ it('names a copy by its poster when someone other than the feed posted it', () =
     source: 'Home',
     poster: { name: 'Hank Green', url: null, imageUrl: null },
   });
-  const element = mount(anEntry({ duplicates: [post] }));
+  const element = mount(storyOf([post]));
   expand(element);
 
   expect(element.querySelector('.mini .feed')!.textContent).toContain('Hank Green');
 });
 
 it("shows a source's picture as its thumbnail, its favicon when it has none", () => {
-  const element = mount(anEntry({ duplicates: copies }));
+  const element = mount(storyOf(copies));
   expand(element);
 
   const [withImage, withoutImage] = Array.from(element.querySelectorAll('.mini'));
@@ -79,7 +102,7 @@ it("shows a source's picture as its thumbnail, its favicon when it has none", ()
 });
 
 it('collapses again on a second click', () => {
-  const element = mount(anEntry({ duplicates: copies }));
+  const element = mount(storyOf(copies));
   expand(element);
   expand(element);
 
@@ -91,7 +114,7 @@ function mountOnCard(type: 'click' | 'keydown'): { element: HTMLElement; reached
   const card = document.createElement('div');
   const reached = jest.fn();
   card.addEventListener(type, reached);
-  const element = mount(anEntry({ duplicates: copies }));
+  const element = mount(storyOf(copies));
   card.appendChild(element);
   return { element, reached };
 }

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryHeroComponent } from './entry-hero.component';
@@ -192,9 +193,24 @@ describe('EntryHeroComponent', () => {
     expect(fixture.nativeElement.getAttribute('data-entry-id')).toBe('77');
   });
 
-  it('opens a duplicate copy from its mini card, and not the hero', () => {
+  it('bubbles open for a duplicate copy through the footer', () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
     const fixture = mount(entry({ duplicates: [dup] }));
+    const opened = jest.fn();
+    entryActions.open.mockImplementation(opened);
+    (
+      fixture.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement
+    ).click();
+    fixture.detectChanges();
+    const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+    (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
+    expect(opened).toHaveBeenCalledWith(dup);
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a story's other outlet from its mini card, and not the hero", () => {
+    const dup = entry({ id: 9, source: 'NDR SH' });
+    const fixture = mount(entry({ duplicates: [dup], story: { outletCount: 2, viewed: false } }));
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
     fixture.detectChanges();
