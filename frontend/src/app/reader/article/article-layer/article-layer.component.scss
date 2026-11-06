@@ -24,6 +24,7 @@
    scrolls, dimmed paragraphs included, paints over that chrome. */
 .scroller {
   --reader-top: calc(var(--reader-mini-h) + var(--reader-bar-h) + var(--bar-gap));
+  --reader-scroll-pad: calc(var(--reader-mini-h) + var(--bar-gap));
 
   container: reader-pane / size;
   height: 100%;
@@ -32,7 +33,7 @@
   /* At its end, a wheel or touch must not go on to scroll the list behind (#2038). */
   overscroll-behavior: contain;
   isolation: isolate;
-  scroll-padding-top: calc(var(--reader-mini-h) + var(--bar-gap));
+  scroll-padding-top: var(--reader-scroll-pad);
 }
 
 /* Opaque and full-height so this overlay hides the still-mounted list until a
@@ -48,8 +49,33 @@
    beneath it, never retracting, so the whole stack stays covered. */
 .with-bar .scroller {
   --reader-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
+  --reader-scroll-pad: var(--reader-top);
+}
 
-  scroll-padding-top: var(--reader-top);
+/* The pane's chrome, outside the scroller so a tap reaches it (#1332). */
+.chrome-head,
+.chrome-foot {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.chrome-head {
+  top: 0;
+  bottom: 0;
+}
+
+.chrome-foot {
+  bottom: 0;
+}
+
+.mini,
+.bar,
+.corner-actions,
+.dock,
+.end-corner {
+  pointer-events: auto;
 }
 
 /* Set on .reader, not the projected article this layer's styles cannot reach;
@@ -157,4 +183,59 @@
   background: none;
   color: var(--text-secondary);
   cursor: pointer;
+}
+
+/* Full screen on the page (#2038): the document scrolls, and the layer grows with its article. */
+:host(.on-page),
+:host(.on-page) .frame {
+  height: auto;
+}
+
+/* No longer a scroller; an inline-size container only, so `cqb` reads the viewport. */
+:host(.on-page) .scroller {
+  height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+  container: reader-pane / inline-size;
+}
+
+/* The page's own scroll-padding would cover the sticky chrome and sidebar too, so focusing
+   them would scroll the article away; the margin pads only what the article holds. */
+:host(.on-page) .reader ::ng-deep * {
+  scroll-margin-top: var(--reader-scroll-pad);
+}
+
+/* Covers the pinned list even when short, and runs clear of the fixed audio bar. */
+:host(.on-page) .reader {
+  min-height: 100dvh;
+  padding-bottom: var(--audio-bar-h, 0);
+}
+
+/* Sticky, not fixed: the swipe and the slide transform an ancestor, which traps a fixed box (#100). */
+:host(.on-page) .chrome-head {
+  position: sticky;
+  bottom: auto;
+  height: 0;
+}
+
+:host(.on-page) .chrome-foot {
+  position: sticky;
+  bottom: var(--audio-bar-h, 0);
+}
+
+:host(.on-page) app-progress-rail:not(.horizontal) {
+  bottom: auto;
+  height: calc(100dvh - var(--audio-bar-h, 0rem));
+}
+
+/* Pinned beneath a layer or leaving: held where the viewport was. Must follow the rules above. */
+:host-context(.page-pinned) .chrome-head {
+  position: absolute;
+  top: var(--page-pin-top, 0);
+}
+
+:host-context(.page-pinned) .chrome-foot {
+  position: absolute;
+  top: calc(var(--page-pin-top, 0rem) + 100dvh - var(--audio-bar-h, 0rem));
+  bottom: auto;
 }

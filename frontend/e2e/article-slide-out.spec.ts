@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { settleAnimations } from './support/animations';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
@@ -53,19 +54,19 @@ async function openArticle(page: Page): Promise<void> {
   await page.getByText('Entry number 1', { exact: false }).first().click();
   const overlay = page.locator('.article-overlay');
   await expect(overlay.locator('app-reader-view')).toBeVisible();
-  await overlay.evaluate((element) =>
-    Promise.all(element.getAnimations().map((animation) => animation.finished)),
-  );
+  await settleAnimations(overlay);
 }
 
 /** Closes the article and returns the animation each leaving overlay was given. */
 async function closeArticle(page: Page, close: () => Promise<unknown>): Promise<string[]> {
   await page.evaluate(() => {
     window.leaveAnimations = [];
+    const leaving = new Set<Element>();
     new MutationObserver((records) => {
       for (const record of records) {
         const target = record.target as HTMLElement;
-        if (target.matches('.article-overlay.article-leave')) {
+        if (!leaving.has(target) && target.matches('.article-overlay.article-leave')) {
+          leaving.add(target);
           window.leaveAnimations.push(getComputedStyle(target).animationName);
         }
       }

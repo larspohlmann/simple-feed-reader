@@ -60,6 +60,10 @@ import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../../testing/refresh-report';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
+import {
+  MockResizeObserver,
+  installMockResizeObserver,
+} from '../../../testing/resize-observer-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
 
@@ -527,6 +531,21 @@ describe('ReaderShellComponent', () => {
       expect(element.querySelector('.list-header [aria-label="Show sidebar"]')).not.toBeNull();
     });
 
+    it('focuses the show button without scrolling the page when the sidebar hides', () => {
+      const fixture = boot();
+      const focus = jest.spyOn(HTMLButtonElement.prototype, 'focus');
+
+      TestBed.inject(SidebarVisibilityService).hide();
+      fixture.detectChanges();
+
+      const { contexts, calls } = focus.mock;
+      focus.mockRestore();
+      const show = (fixture.nativeElement as HTMLElement).querySelector(
+        '[aria-label="Show sidebar"]',
+      );
+      expect(calls[contexts.indexOf(show)]).toEqual([{ preventScroll: true }]);
+    });
+
     it('shows the sidebar again when the show button is clicked', () => {
       const fixture = boot();
       const element = fixture.nativeElement as HTMLElement;
@@ -849,6 +868,9 @@ describe('ReaderShellComponent', () => {
   function listScroller() {
     const page = trackPageScrollTop();
     return {
+      get top(): number {
+        return page.top;
+      },
       scrollTo(top: number): void {
         page.top = top;
         window.dispatchEvent(new Event('scroll'));
@@ -970,6 +992,65 @@ describe('ReaderShellComponent', () => {
       fixture.componentInstance.setSidebarOpen(false);
       fixture.detectChanges();
       expect(fixture.componentInstance.headerHidden()).toBe(false);
+    });
+
+    afterEach(() => {
+      const root = document.documentElement;
+      delete (root as unknown as { scrollHeight?: number }).scrollHeight;
+      root.classList.remove('cdk-global-scrollblock');
+      root.style.top = '';
+      jest.restoreAllMocks();
+    });
+
+    it('pins the list where it stood and starts the article at the top of the page (#2038)', () => {
+      const { fixture, rows } = bootNarrowScrolledDown();
+      const list = (fixture.nativeElement as HTMLElement).querySelector('section.list')!;
+
+      openArticle(fixture);
+      expect(list.classList).toContain('page-pinned');
+      expect(rows.top).toBe(0);
+
+      closeArticle(fixture);
+      expect(list.classList).not.toContain('page-pinned');
+      expect(rows.top).toBe(800);
+    });
+
+    it('leaves the list bar alone while the article scrolls the page (#2038)', () => {
+      const { fixture, rows } = bootNarrowScrolledDown();
+      openArticle(fixture);
+
+      rows.scrollTo(100);
+      rows.scrollTo(30); // a scroll UP would expand a list that heard it
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
+    });
+
+    it('hands the next route a page at the top when the reader goes with an article open (#2038)', () => {
+      const { fixture, rows } = bootNarrowScrolledDown();
+      openArticle(fixture);
+      rows.scrollTo(500);
+
+      fixture.destroy();
+
+      expect(rows.top).toBe(0);
+      expect(document.documentElement.classList).not.toContain('page-overlaid');
+    });
+
+    it('takes no CDK block for the article, while the drawer still does (#2038)', () => {
+      const root = document.documentElement;
+      Object.defineProperty(root, 'scrollHeight', { value: 5000, configurable: true });
+      jest.spyOn(window, 'scroll').mockImplementation(() => undefined);
+      const { fixture } = bootNarrowScrolledDown();
+      screen.isNarrow.set(true);
+
+      openArticle(fixture);
+      expect(root.classList).not.toContain('cdk-global-scrollblock');
+      closeArticle(fixture);
+
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+      expect(root.classList).toContain('cdk-global-scrollblock');
     });
   });
 
@@ -4867,6 +4948,65 @@ describe('ReaderShellComponent', () => {
       expect(dismiss).toHaveBeenCalledTimes(1);
     });
   });
+  describe('the page across the split ↔ full-screen switch (#2038)', () => {
+    const originalResizeObserver = globalThis.ResizeObserver;
+
+    afterEach(() => {
+      globalThis.ResizeObserver = originalResizeObserver;
+    });
+
+    function openEntry(fixture: ReturnType<typeof boot>): void {
+      qp.next(convertToParamMap({ entry: '1' }));
+      fixture.detectChanges();
+      ctrl.match(() => true);
+      fixture.detectChanges();
+    }
+
+    it('remounts the article on the page over a pinned list, and back into the pane', () => {
+      const fixture = boot();
+      screen.isWide.set(true);
+      fixture.componentInstance.layout.set('pane');
+      fixture.detectChanges();
+      openEntry(fixture);
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.querySelector('section.reader app-article-layer')!.classList).not.toContain(
+        'on-page',
+      );
+
+      screen.isWide.set(false);
+      fixture.detectChanges();
+      expect(host.querySelector('section.list')!.classList).toContain('page-pinned');
+      expect(host.querySelector('.article-overlay')!.classList).not.toContain('page-pinned');
+      expect(host.querySelector('.article-overlay app-article-layer')!.classList).toContain(
+        'on-page',
+      );
+
+      screen.isWide.set(true);
+      fixture.detectChanges();
+      expect(host.querySelector('section.list')!.classList).not.toContain('page-pinned');
+      expect(host.querySelector('section.reader app-article-layer')!.classList).not.toContain(
+        'on-page',
+      );
+    });
+
+    it('measures the list column off main, which keeps its box while the list is pinned', () => {
+      installMockResizeObserver();
+      const fixture = boot();
+      const host = fixture.nativeElement as HTMLElement;
+      const main = host.querySelector<HTMLElement>('.main')!;
+      jest
+        .spyOn(main, 'getBoundingClientRect')
+        .mockReturnValue({ left: 280, width: 1160 } as DOMRect);
+
+      MockResizeObserver.instances
+        .filter((observer) => observer.targets.has(main))
+        .forEach((observer) => observer.fire());
+
+      expect(host.style.getPropertyValue('--list-column-left')).toBe('280px');
+      expect(host.style.getPropertyValue('--list-column-width')).toBe('1160px');
+    });
+  });
+
   describe('link reader (#1664)', () => {
     const LINK = `${A_READER_TOKEN}~https://news.test/story`;
     const UNKNOWN_LINK = `${A_READER_TOKEN}~https://news.test/unknown`;

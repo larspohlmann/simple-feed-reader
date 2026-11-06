@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-import { scrollPageTo } from './support/scroll';
+import { scrollPageTo, scrollPageToEnd } from './support/scroll';
 
 const PHONE = { width: 375, height: 667 };
 const SIDE_RAIL = 'app-progress-rail:not(.horizontal)';
@@ -79,7 +79,6 @@ test.describe('Article reading progress', () => {
     await stubArticle(page, LONG_BODY);
     await page.reload();
     const pane = await openArticle(page);
-    const scroller = pane.locator('.scroller');
 
     const rail = pane.locator(SIDE_RAIL);
     await expect(rail).toBeVisible();
@@ -90,10 +89,9 @@ test.describe('Article reading progress', () => {
 
     // The end of the text — NOT the end of the scroller, which carries half a
     // viewport of reading tail past it.
-    await scroller.evaluate((el) => {
-      const content = el.querySelector('.content')!;
-      const bottom = content.getBoundingClientRect().bottom - el.getBoundingClientRect().top;
-      el.scrollTo({ top: el.scrollTop + bottom - el.clientHeight, behavior: 'instant' });
+    await pane.evaluate((el) => {
+      const bottom = el.querySelector('.content')!.getBoundingClientRect().bottom;
+      window.scrollTo({ top: window.scrollY + bottom - window.innerHeight, behavior: 'instant' });
     });
     await page.waitForTimeout(200);
 
@@ -104,25 +102,24 @@ test.describe('Article reading progress', () => {
 
   // The cue has to survive the reading tail, which is half a viewport of blank
   // space below the last paragraph — exactly where the reader finishes the
-  // article. The rail must lie over the scroller, not in the scrolled content, or
-  // the text carries it away.
-  test('the rail spans the scrollport, including over the reading tail', async ({ page }) => {
+  // article. The rail holds the viewport; ridden in the scrolled content, the
+  // text would carry it away.
+  test('the rail spans the viewport, including over the reading tail', async ({ page }) => {
     const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
-    const scroller = (await openArticle(page)).locator('.scroller');
+    const pane = await openArticle(page);
 
-    await scroller.evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
+    await scrollPageToEnd(page);
     await page.waitForTimeout(300);
 
-    const gaps = await scroller.evaluate((el) => {
-      const rail = el.parentElement!.querySelector('app-progress-rail')!.getBoundingClientRect();
-      const scrollport = el.getBoundingClientRect();
+    const gaps = await pane.evaluate((el) => {
+      const rail = el.querySelector('app-progress-rail')!.getBoundingClientRect();
       return {
-        fromTop: rail.top - scrollport.top,
-        fromBottom: scrollport.bottom - rail.bottom,
-        fromRightEdge: scrollport.right - rail.right,
+        fromTop: rail.top,
+        fromBottom: window.innerHeight - rail.bottom,
+        fromRightEdge: el.getBoundingClientRect().right - rail.right,
       };
     });
     expect(Math.abs(gaps.fromTop)).toBeLessThanOrEqual(1);

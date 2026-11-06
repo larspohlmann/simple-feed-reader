@@ -22,8 +22,11 @@ import { LayoutService } from '../../layout.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
+import { PageLayer } from '../../../shared/scroll-host/page-layer';
+import { ListScrollState } from './list-scroll-state';
 import {
   ElementBackedScrollHosts,
+  elementScrollHost,
   restorePageScroll,
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
@@ -358,6 +361,18 @@ describe('EntryListComponent', () => {
       const element = mount().nativeElement as HTMLElement;
       expect(element.querySelector('app-list-header .top-marker')).toBeNull();
     });
+  });
+
+  it('hands its page layer to the page host (#2038)', () => {
+    const layer = new PageLayer(document.createElement('section'));
+    const forPage = jest.fn((content: HTMLElement) => elementScrollHost(content));
+
+    mount({}, [
+      { provide: PageLayer, useValue: layer },
+      { provide: ScrollHosts, useValue: { forPage } },
+    ]);
+
+    expect(forPage).toHaveBeenCalledWith(expect.any(HTMLElement), layer);
   });
 
   it('renders a row per entry and the header title', () => {
@@ -1633,6 +1648,28 @@ describe('EntryListComponent', () => {
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
     }
+
+    it('lands a list built anew, rows already loaded, on its remembered offset (#2038)', () => {
+      const apply = jest.spyOn(ListScrollState.prototype, 'applyScroll');
+
+      mount({}, [{ provide: ListScrollMemory, useValue: { save: jest.fn(), read: () => 420 } }]);
+
+      expect(apply).toHaveBeenCalledWith(expect.anything(), 420);
+      apply.mockRestore();
+    });
+
+    it('does not re-land rows rebuilt without a selection change (#2038)', () => {
+      const fixture = mount();
+      memory.read.mockReturnValue(420);
+      const apply = jest.spyOn(fixture.componentInstance.scrolling, 'applyScroll');
+
+      fixture.componentRef.setInput('entries', []);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('entries', [entry(1), entry(2)]);
+      fixture.detectChanges();
+
+      expect(apply).not.toHaveBeenCalled();
+    });
 
     it('returns to the top when the incoming view has no remembered offset', () => {
       const fixture = mount();

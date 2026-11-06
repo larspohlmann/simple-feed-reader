@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, NgZone, inject } from '@angular/core';
 import { ElementScrollHost, ScrollHost } from './scroll-host';
 import { PageScrollHost } from './page-scroll-host';
+import type { PageLayer } from './page-layer';
 
 @Injectable({ providedIn: 'root' })
 export class ScrollHosts {
@@ -13,7 +14,11 @@ export class ScrollHosts {
     return new ElementScrollHost(element, this.outsideZone);
   }
 
-  forPage(content: HTMLElement): ScrollHost {
-    return new PageScrollHost(content, this.document.defaultView ?? window, this.outsideZone);
+  forPage(content: HTMLElement, layer: PageLayer | null = null): ScrollHost {
+    return new PageScrollHost(
+      content,
+      { view: this.document.defaultView ?? window, outsideZone: this.outsideZone },
+      layer,
+    );
   }
 }

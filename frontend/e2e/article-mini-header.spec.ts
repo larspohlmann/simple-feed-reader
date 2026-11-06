@@ -1,9 +1,10 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
+import { scrollPageTo } from './support/scroll';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
-/** Past the 900px `isWide` boundary, so the article renders in the split pane. */
+/** Past the 900px `isWide` boundary, so the full-screen article sits beneath the app bar. */
 const DESKTOP = { width: 1280, height: 800 };
 
 /** Far wider than a phone, so the one-line rule is what has to cut it. */
@@ -96,9 +97,7 @@ test.describe('Article mini header on a phone', () => {
     await expect(bar).not.toHaveClass(/hidden/);
 
     // Scroll well past HEADER_NEAR_TOP, then let the 0.2s transform settle.
-    await pane
-      .locator('.scroller')
-      .evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
+    await scrollPageTo(page, 600);
     await page.waitForTimeout(400);
 
     // The toolbar really did retract — otherwise this proves nothing.
@@ -142,7 +141,7 @@ test.describe('Article mini header on a phone', () => {
   });
 });
 
-test.describe('Article mini header on the split pane', () => {
+test.describe('Article mini header on a wide full-screen article', () => {
   test.use({ viewport: DESKTOP });
 
   // The wide layout never retracts its toolbar, so the name rides inside that
@@ -161,9 +160,7 @@ test.describe('Article mini header on the split pane', () => {
     await expect(pane.locator('.mini')).toHaveCount(0);
     await expect(bar.locator('.bar-title')).toHaveText('Entry number one');
 
-    await pane
-      .locator('.scroller')
-      .evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
+    await scrollPageTo(page, 600);
     await page.waitForTimeout(300);
 
     // Flush under the app bar, with no band of article showing between them,

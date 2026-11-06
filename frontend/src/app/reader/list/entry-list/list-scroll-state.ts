@@ -96,12 +96,15 @@ export class ListScrollState {
   // A view switch leaves the previous view's list on screen until the new page
   // lands. Hand the scroller the incoming view's place right away, so the wait
   // shows that view's window, not the one left. The restore above repeats it.
+  private landedOnScroller = false;
   private readonly _scrollOnSelectionChange = effect(() => {
     const selection = this.options.selection();
-    untracked(() => {
-      const scroller = this.options.scroller();
-      if (scroller) this.applyScroll(scroller, this.scroll.read(selection));
-    });
+    const scroller = this.landedOnScroller
+      ? untracked(() => this.options.scroller())
+      : this.options.scroller();
+    if (!scroller) return;
+    this.landedOnScroller = true;
+    untracked(() => this.applyScroll(scroller, this.scroll.read(selection)));
   });
 
   private readonly _listenToScroll = effect((onCleanup) => {

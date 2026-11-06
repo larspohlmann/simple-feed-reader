@@ -76,11 +76,11 @@ app-reader-header.hidden {
   position: relative;
 }
 
-/* Full-screen article over the still-mounted list (#128), sliding in from the
-   right. Lives on a wrapper, not `app-reader-view` itself: a transform on that
-   component would hijack its `position: fixed` descendants (#100). */
+/* Full-screen article over the still-mounted list (#128), sliding in from the right:
+   a page layer, in the flow while it owns the page (#2038). Transparent, so a swipe-back
+   shows the pinned list; the opaque background is the sliding frame's. */
 .article-overlay {
-  @include page-chrome.list-column-box;
+  position: relative;
 
   /* Wide: beneath the app bar (10) — brand and account stay visible, and the
      article panel reserves the bar's height like the split pane does. */
@@ -95,6 +95,15 @@ app-reader-header.hidden {
   .article-overlay {
     z-index: 12;
   }
+}
+
+/* A page layer beneath the one that owns the page (PageScrollOwner): held in the list
+   column's box where it showed. After `.article-overlay`, whose position it overrides. */
+.page-pinned {
+  position: fixed;
+  top: calc(-1 * var(--page-pin-top, 0rem));
+  left: var(--list-column-left, 0);
+  width: var(--list-column-width, 100%);
 }
 
 .article-overlay.article-leave {
@@ -243,12 +252,13 @@ app-reader-header.hidden {
   }
 }
 
-/* The shell publishes this bar's height as `--audio-bar-h`; everything pinned to the foot leaves it free. */
+/* The shell publishes this bar's height as `--audio-bar-h`; everything pinned to the foot
+   leaves it free. Above a narrow full-screen article (12), whose page runs on beneath it. */
 app-audio-player-bar {
   position: fixed;
   inset-inline: 0;
   bottom: 0;
-  z-index: 9;
+  z-index: 13;
 }
 
 /* The post-onboarding fetch banner: an in-flow strip inside `.under-header`. */

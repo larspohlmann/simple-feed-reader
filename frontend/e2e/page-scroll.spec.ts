@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-import { pageScrollY, scrollPageTo } from './support/scroll';
+import { pageScrollY, rowTitleInView, scrollPageTo } from './support/scroll';
 
 // The list scrolls the document at every width (#2038): a mobile browser collapses its
 // bar only for a page scroll. Every entry is stubbed, so the spec owns what it scrolls.
@@ -61,19 +61,6 @@ async function stubReader(page: Page): Promise<void> {
   );
 }
 
-/** The title of a row in the middle third, so clicking it scrolls nothing into view. */
-function rowTitleInView(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const titles = Array.from(document.querySelectorAll<HTMLElement>('app-entry-row .title'));
-    const third = window.innerHeight / 3;
-    const visible = titles.find((title) => {
-      const box = title.getBoundingClientRect();
-      return box.top > third && box.bottom < 2 * third;
-    });
-    return visible?.textContent?.trim() ?? '';
-  });
-}
-
 async function dragDivider(page: Page, deltaX: number): Promise<void> {
   const box = (await page.locator('.pane-divider').boundingBox())!;
   const centreX = box.x + box.width / 2;
@@ -127,12 +114,13 @@ test.describe('The list scrolls the page on a phone', () => {
 
     await page.getByText(title, { exact: true }).first().click();
     await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
-    await expect(page.locator('html')).toHaveClass(/cdk-global-scrollblock/);
-    await expect(page.locator('app-reader-view .scroller')).toHaveJSProperty('scrollTop', 0);
+    await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
+    await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
+    expect(await pageScrollY(page)).toBe(0);
 
     await page.locator('app-reader-view .bar .close').click();
     await expect(page.locator('.article-overlay')).toHaveCount(0);
-    await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
+    await expect(page.locator('section.list')).not.toHaveClass(/page-pinned/);
     expect(await pageScrollY(page)).toBe(LIST_OFFSET);
   });
 

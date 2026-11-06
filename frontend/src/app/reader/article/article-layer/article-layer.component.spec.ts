@@ -1,11 +1,19 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { scrollerOf } from '../../../../testing/scroll-testing';
-import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
+import {
+  restorePageScroll,
+  scrollerOf,
+  trackPageScrollTop,
+} from '../../../../testing/scroll-testing';
+import {
+  MockResizeObserver,
+  installMockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
+import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import { ArticleLayerComponent } from './article-layer.component';
 
 @Component({
@@ -38,6 +46,34 @@ class LayerHostComponent {
   });
   closes = 0;
   toTops = 0;
+  readonly scrolledTo: number[] = [];
+}
+
+@Component({
+  imports: [ArticleLayerComponent],
+  providers: [
+    { provide: PageLayer, useFactory: () => new PageLayer(document.createElement('div')) },
+  ],
+  template: `
+    <app-article-layer
+      [fullscreen]="true"
+      [resetKey]="page()"
+      [progressRail]="progressRail"
+      backLabel="Back"
+      (scrolled)="scrolledTo.push($event)"
+    >
+      <article>body</article>
+    </app-article-layer>
+  `,
+})
+class PageLayerHostComponent {
+  readonly page = signal('entry:1');
+  readonly layer = inject(PageLayer);
+  readonly progressRail = new ScrollProgressRail({
+    scroller: () => undefined,
+    contentBottom: () => null,
+    layout: signal(0),
+  });
   readonly scrolledTo: number[] = [];
 }
 
@@ -80,6 +116,21 @@ describe('ArticleLayerComponent', () => {
   it('projects the dock slot over the pane, outside the scroller', () => {
     expect(element.querySelector('.dock .dock-probe')).not.toBeNull();
     expect(element.querySelector('.scroller .dock-probe')).toBeNull();
+  });
+
+  it('holds the chrome in a head and a foot around the scroller (#2038)', () => {
+    goFullscreen();
+    const frame = element.querySelector('.frame')!;
+
+    const order = Array.from(frame.children).map((child) => child.className.split(' ')[0]);
+
+    expect(order).toEqual(['chrome-head', 'scroller', 'chrome-foot']);
+    expect(element.querySelector('.chrome-head .mini')).not.toBeNull();
+    expect(element.querySelector('.chrome-head .bar .probe')).not.toBeNull();
+    expect(element.querySelector('.chrome-head app-progress-rail')).not.toBeNull();
+    expect(element.querySelector('.chrome-foot .corner-actions .corner-probe')).not.toBeNull();
+    expect(element.querySelector('.chrome-foot .dock .dock-probe')).not.toBeNull();
+    expect(element.querySelector('.chrome-foot .end-corner .corner-back')).not.toBeNull();
   });
 
   it('emits back from the back button in the split pane', () => {
@@ -178,5 +229,72 @@ describe('ArticleLayerComponent', () => {
     expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
     expect(document.activeElement).toBe(heading);
     heading.remove();
+  });
+});
+
+describe('ArticleLayerComponent on the page (#2038)', () => {
+  let fixture: ComponentFixture<PageLayerHostComponent>;
+  let page: { top: number };
+
+  beforeEach(() => {
+    installMockResizeObserver();
+    page = trackPageScrollTop();
+    TestBed.configureTestingModule({
+      imports: [PageLayerHostComponent, provideTranslocoTesting()],
+    });
+    fixture = TestBed.createComponent(PageLayerHostComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(restorePageScroll);
+
+  const layerElement = (): HTMLElement =>
+    (fixture.nativeElement as HTMLElement).querySelector('app-article-layer') as HTMLElement;
+
+  function scrollPage(top: number): void {
+    page.top = top;
+    window.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+  }
+
+  it('marks itself on the page', () => {
+    expect(layerElement().classList).toContain('on-page');
+  });
+
+  it('hears the page, not its own box, and retracts its toolbar on it', () => {
+    scrollPage(400);
+
+    expect(fixture.componentInstance.scrolledTo).toEqual([400]);
+    expect(layerElement().querySelector('.bar')!.classList).toContain('hidden');
+  });
+
+  it('starts a new page at the top of the document', () => {
+    scrollPage(400);
+
+    fixture.componentInstance.page.set('entry:2');
+    fixture.detectChanges();
+
+    expect(page.top).toBe(0);
+  });
+
+  it('hears nothing while pinned beneath another layer, and moves its pin on a reset', () => {
+    const { layer } = fixture.componentInstance;
+    layer.pinAt(300);
+
+    scrollPage(1200);
+    fixture.componentInstance.page.set('entry:2');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.scrolledTo).toEqual([]);
+    expect(layer.pinnedTop).toBe(0);
+    expect(page.top).toBe(1200);
+  });
+
+  it('leaves the page’s own scroll-padding alone when its toolbar resizes', () => {
+    scrollerOf(fixture).style.setProperty('scroll-padding-top', '44px');
+    const bar = layerElement().querySelector('.bar')!;
+    MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
+
+    expect(document.documentElement.style.getPropertyValue('scroll-padding-top')).toBe('');
   });
 });
