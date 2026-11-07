@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Text\Support\PlainText;
 
 final readonly class SocialSearchPreviewJson
 {
@@ -29,7 +30,7 @@ final readonly class SocialSearchPreviewJson
             'url' => $entry->url,
             'author' => $entry->author,
             'authorAvatarUrl' => $entry->authorAvatarUrl,
-            'text' => $entry->headline->text,
+            'text' => PlainText::fromHtmlBlocks($entry->contentHtml) ?? $entry->headline->text,
             'publishedAt' => $entry->publishedAt?->format(\DateTimeInterface::ATOM),
         ];
     }

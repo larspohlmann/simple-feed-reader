@@ -98,6 +98,17 @@ final class SocialSearchControllerTest extends ApiTestCase
         );
     }
 
+    public function testAPreviewPostWithoutTextShowsItsHeadline(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageWith([self::postWith(1, null)])));
+        $user = $this->signIn($client, 'search-headline@example.test');
+
+        $this->requestSearchPreview($client, $this->blueskyAccountOf($user), 'rss');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([self::previewPost(1, 'Post 1')], $this->payload($client)['posts']);
+    }
+
     public function testASearchPreviewWithoutMatchesIsEmpty(): void
     {
         $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
@@ -257,30 +268,45 @@ final class SocialSearchControllerTest extends ApiTestCase
 
     private static function pageOf(int $entries): TimelinePageModel
     {
-        return TimelinePageModel::of(
-            array_map(static fn (int $number): ParsedEntryModel => new ParsedEntryModel(
-                'guid-' . $number,
-                'https://bsky.app/profile/amy/post/' . $number,
-                Headline::fromFeed('Post ' . $number),
-                '@amy.bsky.social',
-                null,
-                null,
-                new \DateTimeImmutable(self::publishedAt($number)),
-                authorAvatarUrl: 'https://cdn.test/amy.jpg',
-            ), 0 === $entries ? [] : range(1, $entries)),
-            KnownSharesModel::none(),
+        return self::pageWith(array_map(
+            static fn (int $number): ParsedEntryModel => self::postWith($number, self::postHtml($number)),
+            0 === $entries ? [] : range(1, $entries),
+        ));
+    }
+
+    /** @param list<ParsedEntryModel> $posts */
+    private static function pageWith(array $posts): TimelinePageModel
+    {
+        return TimelinePageModel::of($posts, KnownSharesModel::none(), null);
+    }
+
+    private static function postWith(int $number, ?string $contentHtml): ParsedEntryModel
+    {
+        return new ParsedEntryModel(
+            'guid-' . $number,
+            'https://bsky.app/profile/amy/post/' . $number,
+            Headline::fromFeed('Post ' . $number),
+            '@amy.bsky.social',
             null,
+            $contentHtml,
+            new \DateTimeImmutable(self::publishedAt($number)),
+            authorAvatarUrl: 'https://cdn.test/amy.jpg',
         );
     }
 
+    private static function postHtml(int $number): string
+    {
+        return sprintf('<p>Post %d at St. Pauli, the <b>whole</b> text</p>', $number);
+    }
+
     /** @return array<string, string> */
-    private static function previewPost(int $number): array
+    private static function previewPost(int $number, ?string $text = null): array
     {
         return [
             'url' => 'https://bsky.app/profile/amy/post/' . $number,
             'author' => '@amy.bsky.social',
             'authorAvatarUrl' => 'https://cdn.test/amy.jpg',
-            'text' => 'Post ' . $number,
+            'text' => $text ?? sprintf('Post %d at St. Pauli, the whole text', $number),
             'publishedAt' => self::publishedAt($number),
         ];
     }
