@@ -14,7 +14,8 @@ import { parseProblem } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
 import { SubscriptionDto } from '../../models';
-import { isUnrenamedHome, isUnrenamedSearch } from '../display-title';
+import { titleFollowsSource } from '../display-title';
+import { isSearchFeed } from '../../state/social-sections';
 import { SocialSearchFormComponent } from '../social-picker/social-search-form.component';
 import { SocialSearchService } from '../social-picker/social-search.service';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -60,7 +61,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly search = this.data.social?.kind === 'search' ? this.data.social : null;
+  readonly search = isSearchFeed(this.data) ? this.data.social : null;
   private readonly queryForm = viewChild(SocialSearchFormComponent);
   private readonly newQuery = computed(() => this.queryForm()?.normalizedQuery() ?? '');
   readonly blankQuery = computed(() => this.search !== null && this.newQuery() === '');
@@ -75,11 +76,10 @@ export class EditSubscriptionDialogComponent implements OnInit {
     this.form.controls.customTitle.setValue('');
   }
 
-  /** Left as prefilled, an unrenamed Home or search stays unrenamed, so its label keeps following its source. */
+  /** Left as prefilled, a title that follows its source stays unset. */
   private submittedTitle(): string | null {
     const title = this.form.getRawValue().customTitle.trim();
-    const followsItsSource = isUnrenamedHome(this.data) || isUnrenamedSearch(this.data);
-    if (followsItsSource && title === this.prefilledTitle) return null;
+    if (titleFollowsSource(this.data) && title === this.prefilledTitle) return null;
     return title || null;
   }
 

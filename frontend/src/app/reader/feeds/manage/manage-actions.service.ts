@@ -31,6 +31,7 @@ import {
 import { TagFormData, TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
+import { isSearchFeed } from '../../state/social-sections';
 import { bulkUnsubscribeConfirm, unsubscribeConfirm } from './unsubscribe-messages';
 
 /** The single place a management dialog is opened and its side effects applied.
@@ -359,5 +360,5 @@ export class ManageActions {
 }
 
 function searchQueryOf(subscription: SubscriptionDto): string | null {
-  return subscription.social?.kind === 'search' ? subscription.social.query : null;
+  return isSearchFeed(subscription) ? subscription.social.query : null;
 }

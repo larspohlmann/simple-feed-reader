@@ -1,14 +1,18 @@
 import { TranslocoService } from '@jsverse/transloco';
 import { SubscriptionDto } from '../models';
 import { SocialNetworkName } from '../../core/social-network';
-import { isSavedFeed } from '../state/social-sections';
+import { isSavedFeed, isSearchFeed } from '../state/social-sections';
 
 export function isUnrenamedHome(subscription: SubscriptionDto): boolean {
   return subscription.social?.kind === 'home' && subscription.customTitle === null;
 }
 
-export function isUnrenamedSearch(subscription: SubscriptionDto): boolean {
-  return subscription.social?.kind === 'search' && subscription.customTitle === null;
+/** An unrenamed Home follows the language, an unrenamed search its query. */
+export function titleFollowsSource(subscription: SubscriptionDto): boolean {
+  return (
+    isUnrenamedHome(subscription) ||
+    (isSearchFeed(subscription) && subscription.customTitle === null)
+  );
 }
 
 export function homeLabel(i18n: TranslocoService, network: SocialNetworkName): string {

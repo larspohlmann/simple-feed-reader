@@ -1,5 +1,5 @@
 import { makeSubscription } from '../testing/subscription.factory';
-import { isUnrenamedHome } from './display-title';
+import { isUnrenamedHome, titleFollowsSource } from './display-title';
 
 const home = { network: 'bluesky', accountId: 3, kind: 'home' } as const;
 
@@ -14,5 +14,25 @@ describe('isUnrenamedHome', () => {
     const ordinary = makeSubscription({ title: 'Heise' });
 
     expect([renamed, list, ordinary].map(isUnrenamedHome)).toEqual([false, false, false]);
+  });
+});
+
+describe('titleFollowsSource', () => {
+  const search = { network: 'bluesky', accountId: 3, kind: 'search', query: 'rss' } as const;
+
+  it('holds for an unrenamed Home and an unrenamed search', () => {
+    const subscriptions = [
+      makeSubscription({ social: home }),
+      makeSubscription({ social: search }),
+    ];
+
+    expect(subscriptions.map(titleFollowsSource)).toEqual([true, true]);
+  });
+
+  it('fails for a renamed search and an unrenamed list', () => {
+    const renamed = makeSubscription({ customTitle: 'Readers', social: search });
+    const list = makeSubscription({ social: { ...home, kind: 'list' } });
+
+    expect([renamed, list].map(titleFollowsSource)).toEqual([false, false]);
   });
 });

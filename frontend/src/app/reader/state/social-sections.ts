@@ -1,5 +1,5 @@
 import { SubscriptionDto } from '../models';
-import { PrivateFeedRefDto, SocialAccountRefDto } from '../social-feed';
+import { PrivateFeedRefDto, SocialAccountRefDto, SocialFeedRefDto } from '../social-feed';
 import { NetworkFeedKind, SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
 import type { UnreadTotals } from './unread-totals';
 
@@ -52,7 +52,11 @@ export function isProfileFeed(subscription: SubscriptionDto): boolean {
   return subscription.social?.kind === 'profile';
 }
 
-export function isSearchFeed(subscription: SubscriptionDto): boolean {
+export type SearchSubscription = SubscriptionDto & {
+  social: Extract<SocialFeedRefDto, { kind: 'search' }>;
+};
+
+export function isSearchFeed(subscription: SubscriptionDto): subscription is SearchSubscription {
   return subscription.social?.kind === 'search';
 }
 
