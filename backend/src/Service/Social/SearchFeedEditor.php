@@ -46,12 +46,15 @@ final readonly class SearchFeedEditor
         $this->refuseAnotherSearchFor($socialFeed, $search);
         $nonMatchingIds = $this->nonMatchingIds($socialFeed, $search);
 
-        $this->entityManager->wrapInTransaction(function () use ($socialFeed, $search, $nonMatchingIds): void {
-            $this->retarget($socialFeed, $search);
-            $this->entityManager->flush();
-            $this->retention->deleteEntries($nonMatchingIds);
-        });
-        $this->indexer->forget($nonMatchingIds);
+        $removedIds = $this->entityManager->wrapInTransaction(
+            function () use ($socialFeed, $search, $nonMatchingIds): array {
+                $this->retarget($socialFeed, $search);
+                $this->entityManager->flush();
+
+                return $this->retention->deleteUnprotectedEntries($nonMatchingIds);
+            },
+        );
+        $this->indexer->forget($removedIds);
     }
 
     private function searchFeedOf(Subscription $subscription): SocialFeed

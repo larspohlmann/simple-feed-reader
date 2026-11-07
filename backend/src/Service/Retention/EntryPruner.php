@@ -116,9 +116,9 @@ final readonly class EntryPruner
         }
 
         // A bulk DELETE fires no lifecycle event, so the index is told here.
-        $this->retention->deleteEntries($ids);
-        $this->indexer->forget($ids);
+        $deletedIds = $this->retention->deleteUnprotectedEntries($ids);
+        $this->indexer->forget($deletedIds);
 
-        return \count($ids);
+        return \count($deletedIds);
     }
 }

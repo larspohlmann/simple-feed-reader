@@ -15,7 +15,7 @@ use Doctrine\ORM\QueryBuilder;
 /** The retention passes' queries; EntryPruner picks the feeds. */
 final readonly class RetentionRepository
 {
-    private const int DELETE_CHUNK_SIZE = 500;
+    private const int ID_CHUNK_SIZE = 500;
 
     public function __construct(private EntityManagerInterface $entityManager, private RowIds $rowIds)
     {
@@ -84,12 +84,23 @@ final readonly class RetentionRepository
         return self::idsOf($qb);
     }
 
-    /** @param list<int> $ids */
-    public function deleteEntries(array $ids): void
+    /**
+     * A protected entry is skipped: it may have been favourited, kept or shared since its id was read.
+     *
+     * @param list<int> $ids
+     *
+     * @return list<int> the deleted ids
+     */
+    public function deleteUnprotectedEntries(array $ids): array
     {
-        foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
-            $this->rowIds->delete(Entry::class, $chunk);
+        $deleted = [];
+        foreach (array_chunk($ids, self::ID_CHUNK_SIZE) as $chunk) {
+            $unprotected = $this->unprotectedAmong($chunk);
+            $this->rowIds->delete(Entry::class, $unprotected);
+            $deleted = [...$deleted, ...$unprotected];
         }
+
+        return $deleted;
     }
 
     /** A completed run whose items were all pruned; pending and running runs legitimately have none yet. */
@@ -102,6 +113,23 @@ final readonly class RetentionRepository
         ))
             ->setParameter('completed', RunStatus::Completed)
             ->execute();
+    }
+
+    /**
+     * @param list<int> $ids
+     *
+     * @return list<int>
+     */
+    private function unprotectedAmong(array $ids): array
+    {
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('e.id')
+            ->from(Entry::class, 'e')
+            ->where('e.id IN (:ids)')
+            ->setParameter('ids', $ids);
+        ProtectedEntryDql::exclude($qb, 'e');
+
+        return self::idsOf($qb);
     }
 
     /** @return list<int> */
