@@ -53,7 +53,7 @@ final class StoredSearchedPost
             return [];
         }
         [$user, $host] = explode('@', $identity, 2);
-        $instanceHost = mb_strtolower((string) parse_url($account->getServiceUrl(), \PHP_URL_HOST));
+        $instanceHost = mb_strtolower($account->getServiceHost() ?? '');
 
         return $host === $instanceHost ? [$identity, $user] : [$identity];
     }

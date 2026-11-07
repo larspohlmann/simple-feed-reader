@@ -115,6 +115,13 @@ final class SocialAccount
         return $this->serviceUrl;
     }
 
+    public function getServiceHost(): ?string
+    {
+        $host = parse_url($this->serviceUrl, \PHP_URL_HOST);
+
+        return \is_string($host) ? $host : null;
+    }
+
     public function getSealedCredential(): SealedSecret
     {
         return new SealedSecret(
