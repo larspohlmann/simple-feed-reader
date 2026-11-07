@@ -51,6 +51,7 @@ export class BodyAudio implements ListenOffer {
 function sourceOf(element: HTMLAudioElement): string | null {
   const own = element.getAttribute('src')?.trim();
   if (own) return own;
+  // Feed bodies, and reader bodies cached before the backend normalizer, still carry <source> lists.
   for (const source of Array.from(element.querySelectorAll(':scope > source[src]'))) {
     const url = source.getAttribute('src')?.trim();
     if (url && isAudioType(source.getAttribute('type'))) return url;
@@ -63,6 +64,6 @@ function isAudioType(type: string | null): boolean {
 }
 
 function secondsOf(iso: string | null | undefined): number | null {
-  const seconds = Number(ISO_WHOLE_SECONDS.exec(iso ?? '')?.[1] ?? 0);
+  const seconds = Number(ISO_WHOLE_SECONDS.exec(iso ?? '')?.[1]);
   return seconds > 0 ? seconds : null;
 }
