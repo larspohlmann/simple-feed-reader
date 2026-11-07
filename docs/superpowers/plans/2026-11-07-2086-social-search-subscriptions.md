@@ -935,3 +935,27 @@ Added after the live check (2026-11-07, Lars, screenshot): search feeds sat amon
 - Tests: social-sections spec (searches leave account groups, land in `searches`, counts), sidebar section spec (group renders, toggles, selects with `feedKind: 'search'`), list-heading spec (title).
 
 **Steps:** failing tests (backend + frontend) → RED → implement → GREEN → `composer check`, `composer md`, `php bin/phpunit` for the touched areas, `docker compose exec -T frontend npm run check` → commit `feat(#2086): searches get their own group in a network's sidebar section`.
+
+---
+
+### Task 9: Edit a search's query
+
+Added 2026-11-07 (Lars): searches become editable, reversing the earlier "not editable" decision. Runs **after** the final-review fix wave (which adds `from:` author matching and reshapes the Search tab form).
+
+**Decisions (Lars):**
+- Edited in the existing **Edit feed** dialog (sidebar row menu → edit subscription), which gains a query field for search feeds with the same syntax help and **Preview** as the Search tab. The Search tab's form (field + example + syntax help + preview result) becomes one shared component used by both; the tab keeps its Subscribe button, the dialog its Save.
+- On save, the feed is re-queried in place — same subscription, same position, tags, inclusion flags, custom title and read state — and the stored posts are **re-checked against the new query and the non-matching ones removed**. Favourited and saved posts are kept (find how unsubscribe/"Saved from" treats them and follow the same rule; never delete a favourited or saved entry).
+
+**Backend**
+- Endpoint: `PUT /api/subscriptions/{id}/search-query` with `{"query": "…"}` (same validation as the preview: normalised, non-blank, ≤ 512 → 422). 404 when the subscription is not the user's, 422 (problem) when it is not a search feed, 409 (problem, existing already-subscribed mapping if there is one) when the account already has a search with that normalised query. Response: the updated subscription in the same JSON shape the subscriptions endpoints return. Thin controller; JSON via the existing subscription mapper.
+- A service in `Service/Social` performs the change in one transaction: update the `SocialFeed` remote id (add an intention-revealing entity method, e.g. `requery(string $query)`, which also clears `newestSeenId`), the `Feed` url (`SocialFeedUrl::of`), site url (`PrivateFeedSite::of`), and the feed title when it still equals the old query (a custom title on the subscription is untouched); schedule the feed due now; then prune.
+- Prune: a repository method returns the feed's entries that are neither favourited nor saved, with what the matcher needs (stored text and author identity); the service evaluates `SocialSearchMatch` against each (own text from the stored content — quotes are not stored separately, so the stored body is the text; author from the entry's author URL/handle as stored — read how `BlueskyTimelinePage`/`MastodonTimelinePage` store author fields and match `from:` against the same identity the live filter uses) and deletes the non-matching ones through the repository (bulk delete; mind the FTS triggers on SQLite and any entry-dependent tables — read how existing entry deletion, e.g. retention/purge, does it and reuse that path).
+- Tests: service unit tests (re-query fields, custom title kept, duplicate → exception, non-search → exception, prune keeps matching + favourited + saved, removes the rest); controller tests for each status; both DB legs for the repository methods.
+
+**Frontend**
+- Extract the shared search form component from `social-search-tab` (query field, example line, syntax help, preview + result, emits the query/preview state); `social-search-tab` = form + Subscribe; the edit-subscription dialog shows the form for `subscription.social?.kind === 'search'`, pre-filled with the current query (the feed's remote id — expose it in the subscription JSON as `social.query` for search feeds if it is not already derivable; read `SubscriptionJson`), Preview needs the account id (`social.accountId`).
+- Save calls the new endpoint, then reloads subscriptions and the entry list and runs a refresh of that feed; errors show via the existing problem banner.
+- i18n en/de for the field label and any new messages.
+- Tests: form component spec (moved from the tab spec), tab spec (Subscribe still works), edit dialog spec (search feed shows the form pre-filled; Save posts to the endpoint; a non-search feed shows no query field).
+
+**Steps:** failing tests → RED → implement → GREEN → backend gates (`composer check`, `composer md`, SQLite + MySQL for touched tests) and `npm run check` → commit `feat(#2086): a search's query can be edited, its stored posts re-checked`.
