@@ -3441,6 +3441,20 @@ describe('ReaderShellComponent', () => {
 
       expect(fixture.componentInstance.sidebarOpen()).toBe(false);
     });
+
+    it('closes the drawer when the already-active entry is tapped', async () => {
+      const fixture = bootDrawerShell();
+      await TestBed.inject(Router).navigateByUrl('/');
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLAnchorElement>('app-sidebar a.nav.active')!
+        .click();
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.sidebarOpen()).toBe(false);
+    });
   });
 
   describe('the mobile drawer and the settings menu never overlap', () => {

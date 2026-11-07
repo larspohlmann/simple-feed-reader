@@ -26,7 +26,9 @@ import { SavedSearchToggle } from './saved-search-toggle.service';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationSkipped, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { flattenTagTree } from '../state/subscription-derivations';
@@ -341,6 +343,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selection();
     untracked(() => this.sidebarOpen.set(false));
   });
+
+  /** …and once the already-active entry is tapped: the router skips that same-URL navigation. */
+  private readonly _closeDrawerOnSkippedNavigation = this.router.events
+    .pipe(
+      filter((event) => event instanceof NavigationSkipped),
+      takeUntilDestroyed(),
+    )
+    .subscribe(() => this.setSidebarOpen(false));
 
   private readonly tabTitle = inject(ReaderTabTitle);
 
