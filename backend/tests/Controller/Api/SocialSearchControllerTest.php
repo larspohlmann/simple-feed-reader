@@ -80,9 +80,9 @@ final class SocialSearchControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
-    public function testTheSearchPreviewCountsEveryMatchAndShowsTheFirstThreeOfTheNormalisedQuery(): void
+    public function testTheSearchPreviewCountsEveryMatchAndShowsTheFirstTenOfTheNormalisedQuery(): void
     {
-        $search = new StubSocialSearch(self::pageOf(5));
+        $search = new StubSocialSearch(self::pageOf(12));
         $client = $this->searchClientWith($search);
         $user = $this->signIn($client, 'search-preview@example.test');
 
@@ -91,9 +91,9 @@ final class SocialSearchControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         self::assertSame('rss reader', $search->query);
         $payload = $this->payload($client);
-        self::assertSame(5, $payload['count']);
+        self::assertSame(12, $payload['count']);
         self::assertSame(
-            array_map(self::previewPost(...), [1, 2, 3]),
+            array_map(self::previewPost(...), range(1, 10)),
             $payload['posts'],
         );
     }
@@ -154,7 +154,7 @@ final class SocialSearchControllerTest extends ApiTestCase
                 '@amy.bsky.social',
                 null,
                 null,
-                new \DateTimeImmutable('2026-11-07T10:0' . $number . ':00+00:00'),
+                new \DateTimeImmutable(self::publishedAt($number)),
                 authorAvatarUrl: 'https://cdn.test/amy.jpg',
             ), 0 === $entries ? [] : range(1, $entries)),
             KnownSharesModel::none(),
@@ -170,7 +170,7 @@ final class SocialSearchControllerTest extends ApiTestCase
             'author' => '@amy.bsky.social',
             'authorAvatarUrl' => 'https://cdn.test/amy.jpg',
             'text' => 'Post ' . $number,
-            'publishedAt' => '2026-11-07T10:0' . $number . ':00+00:00',
+            'publishedAt' => self::publishedAt($number),
         ];
     }
 
@@ -297,6 +297,11 @@ final class SocialSearchControllerTest extends ApiTestCase
         self::assertInstanceOf(PrivateFeeds::class, $privateFeeds);
 
         return $privateFeeds;
+    }
+
+    private static function publishedAt(int $number): string
+    {
+        return sprintf('2026-11-07T10:%02d:00+00:00', $number);
     }
 
     private function nothingFollowed(): StubSocialCandidates

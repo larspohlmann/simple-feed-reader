@@ -32,7 +32,7 @@ type PreviewOutcome =
   | { readonly query: string; readonly preview: SearchPreview }
   | { readonly query: string; readonly failure: string };
 
-const SHOWN_POSTS = 3;
+const SHOWN_POSTS = 10;
 
 interface SyntaxRule {
   readonly operator: string;

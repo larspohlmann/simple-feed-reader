@@ -9,7 +9,7 @@ use App\Service\Social\Model\TimelinePageModel;
 
 final readonly class SocialSearchPreviewJson
 {
-    private const int SHOWN_POSTS = 3;
+    private const int SHOWN_POSTS = 10;
 
     /** @return array{count: int, posts: list<array{url: ?string, author: ?string, authorAvatarUrl: ?string, text: string, publishedAt: ?string}>} */
     public function preview(TimelinePageModel $page): array

@@ -56,9 +56,13 @@ app-field {
   font-size: var(--fs-sm);
 }
 
+/* Ten rows would stretch the dialog: the list scrolls on its own. The inline padding makes room for the rows'
+   bleeding hover background, which the scroll box would otherwise clip. */
 .posts {
-  margin: 0 0 var(--space-3);
-  padding: 0;
+  max-height: calc(var(--control-h) * 8);
+  margin: 0 calc(-1 * var(--row-pad-x)) var(--space-3);
+  padding: 0 var(--row-pad-x);
+  overflow-y: auto;
   list-style: none;
 }
 
