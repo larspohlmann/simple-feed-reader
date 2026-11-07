@@ -82,6 +82,44 @@ final class MastodonTimelineSourceTest extends TestCase
         self::assertSame('https://mastodon.example/api/v1/trends/statuses?limit=40', $request->url);
     }
 
+    public function testASearchAsksForTheLatestStatusesMatching(): void
+    {
+        $request = $this->source(new RoutedHttpClient([]))
+            ->request(self::socialFeed(SocialFeedKind::Search, 'rss reader'));
+
+        self::assertSame(
+            'https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss%20reader',
+            $request->url,
+        );
+    }
+
+    public function testASearchAsksOnlyForWhatCameAfterTheNewestSeenStatus(): void
+    {
+        $search = self::socialFeed(SocialFeedKind::Search, 'rss reader');
+        $search->recordNewestSeen('110');
+
+        $request = $this->source(new RoutedHttpClient([]))->request($search);
+
+        self::assertSame(
+            'https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss%20reader&min_id=110',
+            $request->url,
+        );
+    }
+
+    public function testASearchAnswerMapsToItsStatusesWithoutReplies(): void
+    {
+        $body = json_encode(['accounts' => [], 'hashtags' => [], 'statuses' => [
+            self::searchStatus('111', null),
+            self::searchStatus('112', '100'),
+        ]], \JSON_THROW_ON_ERROR);
+
+        $page = $this->source(new RoutedHttpClient([]))
+            ->pageOf(self::socialFeed(SocialFeedKind::Search, 'rss'), self::answered($body));
+
+        self::assertCount(1, $page->parsed->entries);
+        self::assertSame('111', $page->newestId);
+    }
+
     /** @return iterable<string, array{SocialFeedKind}> */
     public static function kindsMastodonHasNoTimelineFor(): iterable
     {
@@ -206,13 +244,20 @@ final class MastodonTimelineSourceTest extends TestCase
 
     private static function statusesBody(string $newestId): string
     {
-        return json_encode([[
-            'id' => $newestId,
-            'uri' => 'https://mastodon.example/users/bob/statuses/' . $newestId,
-            'url' => 'https://mastodon.example/@bob/' . $newestId,
+        return json_encode([self::searchStatus($newestId, null)], \JSON_THROW_ON_ERROR);
+    }
+
+    /** @return array<string, mixed> */
+    private static function searchStatus(string $id, ?string $inReplyToId): array
+    {
+        return [
+            'id' => $id,
+            'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
+            'url' => 'https://mastodon.example/@bob/' . $id,
             'created_at' => '2026-10-12T10:00:00Z',
             'content' => '<p>Hello</p>',
+            'in_reply_to_id' => $inReplyToId,
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
-        ]], \JSON_THROW_ON_ERROR);
+        ];
     }
 }

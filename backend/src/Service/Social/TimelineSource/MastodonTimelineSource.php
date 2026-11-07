@@ -16,8 +16,10 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Social\Support\MastodonSearchPage;
 use App\Service\Social\Support\MastodonTimelinePage;
 use App\Service\Social\Support\PrivateFeedRules;
+use App\Service\Social\Support\SocialSearchPaths;
 
 final readonly class MastodonTimelineSource implements TimelineSourceInterface
 {
@@ -39,7 +41,11 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
     public function pageOf(SocialFeed $socialFeed, FetchOutcomeModel $outcome): TimelinePageModel
     {
-        return self::pageFrom(MastodonApiClient::accepted(MastodonApiClient::answerOf($outcome)));
+        $accepted = MastodonApiClient::accepted(MastodonApiClient::answerOf($outcome));
+
+        return SocialFeedKind::Search === $socialFeed->getKind()
+            ? MastodonSearchPage::of($accepted)
+            : self::pageFrom($accepted);
     }
 
     public function dropSession(SocialAccount $account): void
@@ -79,9 +85,12 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             SocialFeedKind::UserList => self::timelinePath($socialFeed, 'list/' . self::listId($socialFeed)),
             SocialFeedKind::Tag => self::timelinePath($socialFeed, 'tag/' . rawurlencode(self::tagName($socialFeed))),
             SocialFeedKind::Trending => '/api/v1/trends/statuses?limit=' . self::PAGE_SIZE,
+            SocialFeedKind::Search => SocialSearchPaths::mastodon(
+                $socialFeed->getRemoteId(),
+                $socialFeed->getNewestSeenId(),
+            ),
             SocialFeedKind::Author,
-            SocialFeedKind::CustomFeed,
-            SocialFeedKind::Search => throw new SocialNetworkUnreachableException('Mastodon has no such timeline.'),
+            SocialFeedKind::CustomFeed => throw new SocialNetworkUnreachableException('Mastodon has no such timeline.'),
         };
     }
 
