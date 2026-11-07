@@ -175,7 +175,7 @@ describe('SocialSearchFormComponent', () => {
     expect(socialSearch.preview).toHaveBeenCalledWith(4, '"rss reader" -gazette');
     expect(fixture.componentInstance.normalizedQuery()).toBe('"rss reader" -gazette');
     type(fixture, '"rss reader" -gazette');
-    expect(fixture.componentInstance.hasPreview()).toBe(true);
+    expect(fixture.componentInstance.preview()).not.toBeNull();
   });
 
   it('shows placeholder rows while the preview runs and disables Preview', () => {
@@ -199,7 +199,7 @@ describe('SocialSearchFormComponent', () => {
     const empty = byTestId(fixture, 'social-search-empty') as HTMLElement;
     expect(empty.textContent).toContain('No recent posts match.');
     expect(empty.textContent).not.toContain('full-text search');
-    expect(fixture.componentInstance.hasPreview()).toBe(true);
+    expect(fixture.componentInstance.preview()).not.toBeNull();
   });
 
   it('adds on Mastodon that the instance may not search full text', () => {
@@ -228,21 +228,21 @@ describe('SocialSearchFormComponent', () => {
     expect(byTestId(fixture, 'social-search-result')?.textContent).toContain(
       'Bluesky did not answer',
     );
-    expect(fixture.componentInstance.hasPreview()).toBe(false);
+    expect(fixture.componentInstance.preview()).toBeNull();
   });
 
   it('has a preview only of the query as it reads now', () => {
     socialSearch.preview.mockReturnValue(of(TEN_POSTS));
     const fixture = mount();
     type(fixture, ' rss reader ');
-    expect(fixture.componentInstance.hasPreview()).toBe(false);
+    expect(fixture.componentInstance.preview()).toBeNull();
 
     press(fixture, 'social-search-preview');
-    expect(fixture.componentInstance.hasPreview()).toBe(true);
+    expect(fixture.componentInstance.preview()).not.toBeNull();
     expect(fixture.componentInstance.normalizedQuery()).toBe('rss reader');
 
     type(fixture, 'rss readers');
-    expect(fixture.componentInstance.hasPreview()).toBe(false);
+    expect(fixture.componentInstance.preview()).toBeNull();
   });
 
   it('starts from the query it is given', () => {

@@ -28,9 +28,11 @@ import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.com
 import { relativeTime } from '../../format';
 import { SearchPreview, SocialSearchService } from './social-search.service';
 
-type PreviewOutcome =
-  | { readonly query: string; readonly preview: SearchPreview }
-  | { readonly query: string; readonly failure: string };
+interface PreviewOutcome {
+  readonly query: string;
+  readonly preview: SearchPreview | null;
+  readonly failure: string | null;
+}
 
 interface SyntaxRule {
   readonly operator: string;
@@ -113,15 +115,8 @@ export class SocialSearchFormComponent {
     const outcome = this.outcome();
     return outcome?.query === this.normalizedQuery() ? outcome : null;
   });
-  protected readonly preview = computed(() => {
-    const outcome = this.currentOutcome();
-    return outcome !== null && 'preview' in outcome ? outcome.preview : null;
-  });
-  protected readonly failure = computed(() => {
-    const outcome = this.currentOutcome();
-    return outcome !== null && 'failure' in outcome ? outcome.failure : null;
-  });
-  readonly hasPreview = computed(() => this.preview() !== null);
+  readonly preview = computed(() => this.currentOutcome()?.preview ?? null);
+  protected readonly failure = computed(() => this.currentOutcome()?.failure ?? null);
   protected readonly matchCountKey = computed(() =>
     pluralKey('settings.social.search.matchCount', this.preview()?.count ?? 0),
   );
@@ -143,9 +138,9 @@ export class SocialSearchFormComponent {
       .preview(this.accountId(), query)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (preview) => this.settle({ query, preview }),
+        next: (preview) => this.settle({ query, preview, failure: null }),
         error: (error: HttpErrorResponse) =>
-          this.settle({ query, failure: problemMessage(parseProblem(error)) }),
+          this.settle({ query, preview: null, failure: problemMessage(parseProblem(error)) }),
       });
   }
 

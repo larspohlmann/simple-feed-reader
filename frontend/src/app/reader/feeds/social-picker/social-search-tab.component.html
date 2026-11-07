@@ -2,7 +2,7 @@
   <app-button
     variant="primary"
     data-testid="social-search-subscribe"
-    [disabled]="!form.hasPreview()"
+    [disabled]="!form.preview()"
     [loading]="importer.importing()"
     (click)="subscribe.emit(form.normalizedQuery())"
   >
