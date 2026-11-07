@@ -6,6 +6,7 @@ namespace App\Service\Reader\Media;
 
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
+use App\Service\Reader\Media\Support\LiveAudioStream;
 
 /**
  * What a URL is and the durable form to emit for it; every source asks this rather than judging media URLs itself.
@@ -37,6 +38,10 @@ final readonly class MediaUrlKind
     {
         $bare = $this->withoutQuery($url);
         if ($bare === null || !$this->durable->accepts($bare)) {
+            return null;
+        }
+
+        if (LiveAudioStream::is($bare)) {
             return null;
         }
 
