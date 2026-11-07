@@ -14,6 +14,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionCache;
 use App\Service\Social\BlueskySessionOpener;
@@ -135,17 +136,21 @@ final class BlueskyTimelineSourceTest extends TestCase
         );
     }
 
-    public function testASearchAnswerMapsToItsPostsWithoutReplies(): void
+    public function testASearchAnswerMapsToItsPostsWithoutRepliesOrPostsTheQueryDoesNotMatch(): void
     {
         $page = $this->source(new MockHttpClient())->pageOf(
             $this->socialFeed(SocialFeedKind::Search, 'rss'),
             self::answer(['posts' => [
                 self::searchPost('at://did:plc:amy/app.bsky.feed.post/1', null),
                 self::searchPost('at://did:plc:bob/app.bsky.feed.post/2', 'at://did:plc:amy/app.bsky.feed.post/1'),
+                self::searchPost('at://did:plc:amy/app.bsky.feed.post/3', null, 'Which Atom reader?'),
             ]]),
         );
 
-        self::assertCount(1, $page->parsed->entries);
+        self::assertSame(
+            ['at://did:plc:amy/app.bsky.feed.post/1'],
+            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
+        );
     }
 
     public function testAnAuthorFeedAsksForTheProfilesPostsAndSelfThreads(): void
@@ -346,11 +351,11 @@ final class BlueskyTimelineSourceTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function searchPost(string $uri, ?string $repliesTo): array
+    private static function searchPost(string $uri, ?string $repliesTo, string $text = 'Which RSS reader?'): array
     {
         $record = [
             '$type' => 'app.bsky.feed.post',
-            'text' => 'Which RSS reader?',
+            'text' => $text,
             'createdAt' => '2026-11-07T10:00:00.000Z',
         ];
         if (null !== $repliesTo) {

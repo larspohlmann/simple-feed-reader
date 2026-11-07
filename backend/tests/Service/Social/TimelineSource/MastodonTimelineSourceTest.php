@@ -10,6 +10,7 @@ use App\Enum\SocialFeedKind;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -106,17 +107,21 @@ final class MastodonTimelineSourceTest extends TestCase
         );
     }
 
-    public function testASearchAnswerMapsToItsStatusesWithoutReplies(): void
+    public function testASearchAnswerMapsToItsStatusesWithoutRepliesOrStatusesTheQueryDoesNotMatch(): void
     {
         $body = json_encode(['accounts' => [], 'hashtags' => [], 'statuses' => [
             self::searchStatus('111', null),
             self::searchStatus('112', '100'),
+            self::searchStatus('110', null, '<p>Goodbye</p>'),
         ]], \JSON_THROW_ON_ERROR);
 
         $page = $this->source(new RoutedHttpClient([]))
             ->pageOf(self::socialFeed(SocialFeedKind::Search, 'hello'), self::answered($body));
 
-        self::assertCount(1, $page->parsed->entries);
+        self::assertSame(['https://mastodon.example/@bob/111'], array_map(
+            static fn (ParsedEntryModel $entry): ?string => $entry->url,
+            $page->parsed->entries,
+        ));
         self::assertSame('111', $page->newestId);
     }
 
@@ -248,14 +253,14 @@ final class MastodonTimelineSourceTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function searchStatus(string $id, ?string $inReplyToId): array
+    private static function searchStatus(string $id, ?string $inReplyToId, string $content = '<p>Hello</p>'): array
     {
         return [
             'id' => $id,
             'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
             'url' => 'https://mastodon.example/@bob/' . $id,
             'created_at' => '2026-10-12T10:00:00Z',
-            'content' => '<p>Hello</p>',
+            'content' => $content,
             'in_reply_to_id' => $inReplyToId,
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
         ];
