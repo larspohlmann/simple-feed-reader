@@ -6,6 +6,7 @@ namespace App\Service\Social\SocialSearch;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
@@ -20,10 +21,16 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
         private BlueskySessions $blueskySessions,
         private MastodonAccountApi $mastodon,
         private MastodonApiClient $mastodonClient,
+        private ActingAccountGuard $guard,
     ) {
     }
 
     public function newest(SocialAccount $account, string $query): TimelinePageModel
+    {
+        return $this->guard->actAs($account, fn (): TimelinePageModel => $this->searchAs($account, $query));
+    }
+
+    private function searchAs(SocialAccount $account, string $query): TimelinePageModel
     {
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => BlueskySearchPage::of(

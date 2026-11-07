@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\SocialSearch;
 
+use App\Enum\SocialAccountStatus;
 use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\SocialSearch\NetworkSocialSearch;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -27,9 +30,12 @@ final class NetworkSocialSearchTest extends TestCase
 
     private ArrayAdapter $cache;
 
+    private EntityManagerInterface $entityManager;
+
     protected function setUp(): void
     {
         $this->cache = new ArrayAdapter();
+        $this->entityManager = $this->createStub(EntityManagerInterface::class);
     }
 
     public function testABlueskySearchAsksForTheLatestMatchesWithTheSessionsTokenAndReadsThePosts(): void
@@ -106,13 +112,20 @@ final class NetworkSocialSearchTest extends TestCase
         self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
     }
 
-    public function testARefusedMastodonTokenIsARefusedCredential(): void
+    public function testARefusedMastodonTokenMarksTheAccountForReconnecting(): void
     {
         $http = new RoutedHttpClient([self::MASTODON_SEARCH => self::json([], Response::HTTP_UNAUTHORIZED)]);
+        $account = SocialAccounts::mastodon();
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())->method('flush');
+        $this->entityManager = $entityManager;
 
-        $this->expectException(SocialCredentialsRejectedException::class);
-
-        $this->search($http->client())->newest(SocialAccounts::mastodon(), 'rss reader');
+        try {
+            $this->search($http->client())->newest($account, 'rss reader');
+            self::fail('A refused token must be a refused credential.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertSame(SocialAccountStatus::NeedsReconnect, $account->getStatus());
+        }
     }
 
     private function search(HttpClientInterface $http): NetworkSocialSearch
@@ -121,6 +134,7 @@ final class NetworkSocialSearchTest extends TestCase
             SocialApiWiring::blueskySessions($http, $this->cache),
             SocialApiWiring::mastodonAccountApi($http),
             SocialApiWiring::mastodonApiClient($http),
+            new ActingAccountGuard($this->entityManager),
         );
     }
 
