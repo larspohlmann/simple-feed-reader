@@ -17,6 +17,8 @@ final class LiveAudioStreamTest extends TestCase
         yield 'bare stream mount' => ['https://radio.test/stream'];
         yield 'live aac' => ['https://radio.test/live.aac'];
         yield 'livestream' => ['https://radio.test/LiveStream.MP3'];
+        yield 'sslstream host' => ['https://st01.sslstream.test/dlf/01/128/mp3/radio.mp3'];
+        yield 'live path segment' => ['https://radio.test/live/episode.mp3'];
         yield 'pls playlist' => ['https://radio.test/listen.pls'];
         yield 'm3u playlist' => ['https://radio.test/listen.m3u'];
     }

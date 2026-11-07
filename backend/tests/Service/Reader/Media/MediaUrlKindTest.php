@@ -116,8 +116,6 @@ final class MediaUrlKindTest extends TestCase
 
     public function testRefusesALiveAudioStream(): void
     {
-        $url = 'https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3?aggregator=web';
-
-        self::assertNull($this->kind->resolve($url));
+        self::assertNull($this->kind->resolve('https://radio.test/live.aac'));
     }
 }

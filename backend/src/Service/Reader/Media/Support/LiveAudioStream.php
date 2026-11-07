@@ -17,6 +17,10 @@ final class LiveAudioStream
             return false;
         }
 
+        if (self::isStationHost($url) || self::hasLiveSegment($path)) {
+            return true;
+        }
+
         $extension = strtolower(pathinfo($path, \PATHINFO_EXTENSION));
         if (\in_array($extension, self::PLAYLIST_EXTENSIONS, true)) {
             return true;
@@ -25,5 +29,15 @@ final class LiveAudioStream
         $stem = strtolower(pathinfo($path, \PATHINFO_FILENAME));
 
         return \in_array($stem, self::STREAM_STEMS, true) && \in_array($extension, self::AUDIO_EXTENSIONS, true);
+    }
+
+    private static function isStationHost(string $url): bool
+    {
+        return preg_match('#(^|\.)sslstream\.#i', (string) parse_url($url, \PHP_URL_HOST)) === 1;
+    }
+
+    private static function hasLiveSegment(string $path): bool
+    {
+        return stripos($path, '/live/') !== false;
     }
 }
