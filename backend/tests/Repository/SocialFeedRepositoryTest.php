@@ -299,12 +299,8 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->post($elsewhere->getFeed(), 'elsewhere', '<p>atom</p>', null);
         $this->entityManager->flush();
 
-        $posts = SocialFeeds::repository($this->entityManager)->unprotectedPostsIn($search);
+        $posts = SocialFeeds::repository($this->entityManager)->unprotectedPostsAfter($search, 0);
 
-        usort(
-            $posts,
-            static fn (StoredPostModel $left, StoredPostModel $right): int => $left->entryId <=> $right->entryId,
-        );
         self::assertEquals(
             [
                 new StoredPostModel($plain->requireId(), 'plain', '<p>rss reader</p>', self::AMY),
@@ -327,7 +323,22 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->entityManager->persist(new EntryShare($this->user, $shared, new \DateTimeImmutable(self::FETCHED_AT)));
         $this->entityManager->flush();
 
-        self::assertSame([], SocialFeeds::repository($this->entityManager)->unprotectedPostsIn($search));
+        self::assertSame([], SocialFeeds::repository($this->entityManager)->unprotectedPostsAfter($search, 0));
+    }
+
+    public function testTheUnprotectedPostsArePagedByEntryId(): void
+    {
+        $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
+        $first = $this->post($search->getFeed(), 'first', null, null);
+        $second = $this->post($search->getFeed(), 'second', null, null);
+        $third = $this->post($search->getFeed(), 'third', null, null);
+
+        $posts = SocialFeeds::repository($this->entityManager)->unprotectedPostsAfter($search, $first->requireId());
+
+        self::assertSame(
+            [$second->requireId(), $third->requireId()],
+            array_map(static fn (StoredPostModel $post): int => $post->entryId, $posts),
+        );
     }
 
     private function post(Feed $feed, string $guid, ?string $contentHtml, ?string $authorUrl): Entry

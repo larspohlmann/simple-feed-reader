@@ -12,9 +12,11 @@ use App\Enum\RunStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
-/** The retention passes' queries; EntryPruner picks the feeds and chunks the deletes. */
+/** The retention passes' queries; EntryPruner picks the feeds. */
 final readonly class RetentionRepository
 {
+    private const int DELETE_CHUNK_SIZE = 500;
+
     public function __construct(private EntityManagerInterface $entityManager, private RowIds $rowIds)
     {
     }
@@ -85,7 +87,9 @@ final readonly class RetentionRepository
     /** @param list<int> $ids */
     public function deleteEntries(array $ids): void
     {
-        $this->rowIds->delete(Entry::class, $ids);
+        foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
+            $this->rowIds->delete(Entry::class, $chunk);
+        }
     }
 
     /** A completed run whose items were all pruned; pending and running runs legitimately have none yet. */

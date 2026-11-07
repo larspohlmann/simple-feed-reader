@@ -23,8 +23,6 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Points a search feed at another query in place, its stored posts that no longer match removed unless protected. */
 final readonly class SearchFeedEditor
 {
-    private const int DELETE_CHUNK_SIZE = 500;
-
     public function __construct(
         private SocialFeedRepository $socialFeeds,
         private RetentionRepository $retention,
@@ -46,21 +44,14 @@ final readonly class SearchFeedEditor
             return;
         }
         $this->refuseAnotherSearchFor($socialFeed, $search);
+        $nonMatchingIds = $this->nonMatchingIds($socialFeed, $search);
 
-        $this->entityManager->beginTransaction();
-        try {
+        $this->entityManager->wrapInTransaction(function () use ($socialFeed, $search, $nonMatchingIds): void {
             $this->retarget($socialFeed, $search);
             $this->entityManager->flush();
-            $removedChunks = $this->removeNonMatching($socialFeed);
-            $this->entityManager->commit();
-        } catch (\Throwable $exception) {
-            $this->entityManager->rollback();
-
-            throw $exception;
-        }
-        foreach ($removedChunks as $removedIds) {
-            $this->indexer->forget($removedIds);
-        }
+            $this->retention->deleteEntries($nonMatchingIds);
+        });
+        $this->indexer->forget($nonMatchingIds);
     }
 
     private function searchFeedOf(Subscription $subscription): SocialFeed
@@ -95,22 +86,23 @@ final readonly class SearchFeedEditor
         $feed->scheduleNextFetchAt($this->clock->now());
     }
 
-    /** @return list<list<int>> the ids of the removed entries, in the chunks they were deleted in */
-    private function removeNonMatching(SocialFeed $socialFeed): array
+    /** @return list<int> the ids of the feed's unprotected posts the new query no longer matches */
+    private function nonMatchingIds(SocialFeed $socialFeed, PrivateFeedModel $search): array
     {
         $account = $socialFeed->getSocialAccount();
-        $matches = SocialSearchMatch::matcher($socialFeed->getRemoteId());
-        $removedIds = [];
-        foreach ($this->socialFeeds->unprotectedPostsIn($socialFeed) as $post) {
-            if (!$matches(StoredSearchedPost::of($account, $post))) {
-                $removedIds[] = $post->entryId;
+        $matches = SocialSearchMatch::matcher($search->remoteId);
+        $nonMatchingIds = [];
+        $lastEntryId = 0;
+        do {
+            $posts = $this->socialFeeds->unprotectedPostsAfter($socialFeed, $lastEntryId);
+            foreach ($posts as $post) {
+                if (!$matches(StoredSearchedPost::of($account, $post))) {
+                    $nonMatchingIds[] = $post->entryId;
+                }
+                $lastEntryId = $post->entryId;
             }
-        }
-        $removedChunks = array_chunk($removedIds, self::DELETE_CHUNK_SIZE);
-        foreach ($removedChunks as $chunk) {
-            $this->retention->deleteEntries($chunk);
-        }
+        } while ([] !== $posts);
 
-        return $removedChunks;
+        return $nonMatchingIds;
     }
 }

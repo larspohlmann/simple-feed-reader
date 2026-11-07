@@ -20,6 +20,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class SocialFeedRepository extends ServiceEntityRepository
 {
+    private const int POST_BATCH_SIZE = 500;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, SocialFeed::class);
@@ -143,15 +145,19 @@ final class SocialFeedRepository extends ServiceEntityRepository
         return $this->findOneBy(['feed' => $feed]);
     }
 
-    /** @return list<StoredPostModel> the feed's posts nobody favourites, keeps or shares */
-    public function unprotectedPostsIn(SocialFeed $socialFeed): array
+    /** @return list<StoredPostModel> the next batch, in id order, of the feed's posts nobody favourites, keeps or shares */
+    public function unprotectedPostsAfter(SocialFeed $socialFeed, int $lastEntryId): array
     {
         $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('e.id AS id', 'e.guid.value AS guid')
             ->addSelect('e.contentHtml AS contentHtml', 'e.author.profileUrl AS authorUrl')
             ->from(Entry::class, 'e')
             ->where('e.feed = :feed')
-            ->setParameter('feed', $socialFeed->getFeed());
+            ->andWhere('e.id > :lastEntryId')
+            ->orderBy('e.id')
+            ->setMaxResults(self::POST_BATCH_SIZE)
+            ->setParameter('feed', $socialFeed->getFeed())
+            ->setParameter('lastEntryId', $lastEntryId);
         ProtectedEntryDql::exclude($qb, 'e');
         /** @var list<array{id: int, guid: string, contentHtml: string|null, authorUrl: string|null}> $rows */
         $rows = $qb->getQuery()->getArrayResult();
