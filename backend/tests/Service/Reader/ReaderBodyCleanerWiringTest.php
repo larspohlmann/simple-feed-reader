@@ -23,6 +23,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
@@ -46,6 +47,7 @@ final class ReaderBodyCleanerWiringTest extends KernelTestCase
         DuplicateBlockCollapser::class,
         PageMediaPlacement::class,
         TeaserPlayerInserter::class,
+        AudioPlayerNormalizer::class,
         MediaOnlyLede::class,
         AuthorBioSeparator::class,
         FeedDimensionStamper::class,

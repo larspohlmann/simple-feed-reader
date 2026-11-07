@@ -153,6 +153,8 @@ services:
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement'
                 # After placement, so a teaser is never rebuilt over placed lead media (#948).
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter'
+                # After every step that builds a player, so each body <audio> leaves in the one shape.
+                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer'
                 # These judge the settled body; the feed's pixel sizes go on last.
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede'
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator'

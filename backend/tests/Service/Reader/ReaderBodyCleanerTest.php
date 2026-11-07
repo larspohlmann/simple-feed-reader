@@ -21,6 +21,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EmptiedWrapperRemover;
@@ -83,6 +84,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new DuplicateBlockCollapser($embedProviders, new EmptiedWrapperRemover()),
             new PageMediaPlacement(new PageMediaInserter($markup, $audioMarkup), new ReaderLeadImage()),
             new TeaserPlayerInserter(new TeaserPlayerMarkup($audioMarkup)),
+            new AudioPlayerNormalizer($audioMarkup),
             new MediaOnlyLede(),
             new AuthorBioSeparator(new AuthorProfileLink(), new SubstantialProseDetector(new LinkListDetector())),
             new FeedDimensionStamper(),
