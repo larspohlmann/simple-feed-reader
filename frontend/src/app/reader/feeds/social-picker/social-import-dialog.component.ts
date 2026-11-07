@@ -28,7 +28,9 @@ import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { SocialNetworkName } from '../../../core/social-network';
+import { SocialSearchTabComponent } from './social-search-tab.component';
 import {
+  DialogTab,
   FILTER_KEYS,
   ImportRow,
   ImportTab,
@@ -75,6 +77,7 @@ const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
     OverlayPanelComponent,
     SegmentedChoiceComponent,
     SkeletonComponent,
+    SocialSearchTabComponent,
     TranslocoPipe,
     WarningBoxComponent,
   ],
@@ -101,11 +104,16 @@ export class SocialImportDialogComponent {
   protected readonly badgeClasses = BADGE_CLASSES;
   protected readonly tabTestIds = TAB_TEST_IDS;
   protected readonly inputValue = inputValue;
-  protected readonly tabs: readonly ImportTab[] =
+  private readonly listTabs: readonly ImportTab[] =
     this.data.network === 'bluesky'
       ? ['accounts', 'lists', 'customFeeds']
       : ['accounts', 'lists', 'tags'];
-  protected readonly tab = signal<ImportTab>('accounts');
+  protected readonly tabs: readonly DialogTab[] = [...this.listTabs, 'search'];
+  protected readonly tab = signal<DialogTab>('accounts');
+  protected readonly listTab = computed(() => {
+    const tab = this.tab();
+    return tab === 'search' ? null : tab;
+  });
   protected readonly stateFilter = signal<StateFilter>('all');
   protected readonly filter = signal('');
   protected readonly chosen = signal<ReadonlySet<string>>(new Set());
@@ -116,7 +124,7 @@ export class SocialImportDialogComponent {
   });
   private readonly needle = computed(() => this.filter().trim().toLowerCase());
   private readonly tally = computed(() =>
-    tally(this.rows(), { tabs: this.tabs, current: this.tab(), needle: this.needle() }),
+    tally(this.rows(), { tabs: this.listTabs, current: this.tab(), needle: this.needle() }),
   );
 
   protected readonly tabCounts = computed(() => this.tally().tabCounts);
@@ -199,6 +207,18 @@ export class SocialImportDialogComponent {
       collections: this.chosenCollections(),
     };
 
+    this.importer.importSelection(this.data.accountId, selection).subscribe({
+      next: (result) => this.finish(result),
+      error: () => undefined,
+    });
+  }
+
+  protected subscribeSearch(query: string): void {
+    const selection = {
+      subscribe: [],
+      unsubscribe: [],
+      collections: [{ kind: 'search' as const, id: query, name: query }],
+    };
     this.importer.importSelection(this.data.accountId, selection).subscribe({
       next: (result) => this.finish(result),
       error: () => undefined,

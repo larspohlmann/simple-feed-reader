@@ -207,11 +207,11 @@ describe('SocialImportDialogComponent', () => {
 
   it('counts each tab, and the counts follow the filter', () => {
     const fixture = loaded(candidates({ follows: [follow(), CAROL], lists: [collection()] }));
-    expect(tabLabels(fixture)).toEqual(['Accounts 2', 'Lists 1', 'Feeds 0']);
+    expect(tabLabels(fixture)).toEqual(['Accounts 2', 'Lists 1', 'Feeds 0', 'Search']);
 
     filterBy(fixture, 'carol');
 
-    expect(tabLabels(fixture)).toEqual(['Accounts 1', 'Lists 0', 'Feeds 0']);
+    expect(tabLabels(fixture)).toEqual(['Accounts 1', 'Lists 0', 'Feeds 0', 'Search']);
   });
 
   it('opens on the accounts and shows one tab at a time', () => {
@@ -233,7 +233,52 @@ describe('SocialImportDialogComponent', () => {
       'mastodon',
     );
 
-    expect(tabLabels(fixture)).toEqual(['Accounts 0', 'Lists 0', 'Tags 1']);
+    expect(tabLabels(fixture)).toEqual(['Accounts 0', 'Lists 0', 'Tags 1', 'Search']);
+  });
+
+  it('swaps the filter, the rows and Save for the search on the Search tab', () => {
+    const fixture = loaded(candidates({ follows: [follow()] }), 'mastodon');
+
+    showTab(fixture, 'Search');
+
+    expect(byTestId(fixture, 'social-import-filter')).toBeNull();
+    expect(byTestId(fixture, 'social-import-state-all')).toBeNull();
+    expect(byTestId(fixture, 'social-import-follows')).toBeNull();
+    expect(byTestId(fixture, 'social-import-apply')).toBeNull();
+    expect(byTestId(fixture, 'social-search-query')).not.toBeNull();
+  });
+
+  it('subscribes to a previewed search as a collection and closes with the result', () => {
+    const fixture = loaded(candidates());
+    showTab(fixture, 'Search');
+    const query = byTestId<HTMLInputElement>(fixture, 'social-search-query') as HTMLInputElement;
+    query.value = ' rss reader ';
+    query.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    press(fixture, 'social-search-preview');
+    http
+      .expectOne((request) => request.url === `${BASE}/api/me/social-accounts/4/search-preview`)
+      .flush({ count: 0, posts: [] });
+    fixture.detectChanges();
+
+    press(fixture, 'social-search-subscribe');
+
+    const post = http.expectOne(IMPORT);
+    expect(post.request.body).toEqual({
+      subscribe: [],
+      unsubscribe: [],
+      collections: [{ kind: 'search', id: 'rss reader', name: 'rss reader' }],
+    });
+    const result = {
+      imported: 1,
+      alreadySubscribed: 0,
+      invalid: 0,
+      skippedOverLimit: 0,
+      removed: 0,
+    };
+    post.flush(result);
+    expect(refreshStub.run).toHaveBeenCalled();
+    expect(close).toHaveBeenCalledWith(result);
   });
 
   it("names the trending row in the user's language", () => {

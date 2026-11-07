@@ -1,0 +1,97 @@
+<app-field [label]="'settings.social.search.queryLabel' | transloco">
+  <input
+    #queryInput
+    type="search"
+    maxlength="512"
+    cdkFocusInitial
+    data-testid="social-search-query"
+    [value]="query()"
+    (input)="query.set(inputValue($event))"
+    (keydown.enter)="runPreview()"
+  />
+</app-field>
+
+<p class="example">
+  {{ 'settings.social.search.example' | transloco }} <code>{{ exampleQuery }}</code>
+</p>
+
+<app-disclosure
+  class="syntax"
+  data-testid="social-search-syntax"
+  [label]="'settings.social.search.syntax' | transloco"
+>
+  <dl class="rules">
+    @for (rule of syntaxRules(); track rule.key) {
+      <dt>
+        <code>{{ rule.operator }}</code>
+      </dt>
+      <dd>{{ rule.key | transloco }}</dd>
+    }
+  </dl>
+  @if (network() === 'mastodon') {
+    <p class="note">{{ 'settings.social.search.syntaxMastodonNote' | transloco }}</p>
+  }
+</app-disclosure>
+
+<div class="actions">
+  <app-button
+    data-testid="social-search-preview"
+    [disabled]="!canPreview()"
+    [loading]="previewing()"
+    (click)="runPreview()"
+  >
+    {{ 'settings.social.search.preview' | transloco }}
+  </app-button>
+  <app-button
+    variant="primary"
+    data-testid="social-search-subscribe"
+    [disabled]="!canSubscribe()"
+    [loading]="importer.importing()"
+    (click)="subscribeToQuery()"
+  >
+    {{ 'settings.social.search.subscribe' | transloco }}
+  </app-button>
+</div>
+
+<div class="result" data-testid="social-search-result">
+  @if (previewing()) {
+    <app-skeleton
+      data-testid="social-search-loading"
+      [label]="'settings.social.search.loading' | transloco"
+      [rows]="3"
+    />
+  } @else if (failure(); as message) {
+    <app-error-banner [message]="message" />
+  } @else if (preview(); as found) {
+    @if (found.count > 0) {
+      <p class="count">{{ matchCountKey() | transloco: { count: found.count } }}</p>
+      <ul class="posts">
+        @for (post of shownPosts(); track $index) {
+          <li>
+            <a class="post" target="_blank" rel="noopener noreferrer" [attr.href]="post.url">
+              <app-avatar size="md" [url]="post.authorAvatarUrl" [name]="post.author ?? ''" />
+              <span class="body">
+                <span class="meta">
+                  <span class="author">{{ post.author }}</span>
+                  @if (when(post.publishedAt); as at) {
+                    <span class="when">{{ at }}</span>
+                  }
+                </span>
+                <span class="text">{{ post.text }}</span>
+              </span>
+            </a>
+          </li>
+        }
+      </ul>
+    } @else {
+      <app-warning-box data-testid="social-search-empty">
+        <span class="warning-text">
+          {{ 'settings.social.search.empty' | transloco }}
+          @if (network() === 'mastodon') {
+            {{ 'settings.social.search.emptyMastodon' | transloco }}
+          }
+        </span>
+      </app-warning-box>
+    }
+  }
+</div>

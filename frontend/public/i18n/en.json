@@ -409,7 +409,27 @@
         "accounts": "Accounts",
         "lists": "Lists",
         "customFeeds": "Feeds",
-        "tags": "Tags"
+        "tags": "Tags",
+        "search": "Search"
+      },
+      "search": {
+        "queryLabel": "Search query",
+        "example": "Example:",
+        "syntax": "Search syntax",
+        "syntaxPhrase": "exact phrase",
+        "syntaxEither": "either word",
+        "syntaxExclude": "leaves out posts with the word",
+        "syntaxGroup": "groups terms",
+        "syntaxCombined": "all of it combined",
+        "syntaxAllWords": "every word must appear",
+        "syntaxMastodonNote": "Needs full-text search on your instance; only posts from people who allow search are found.",
+        "preview": "Preview",
+        "subscribe": "Subscribe",
+        "loading": "Searching for recent posts…",
+        "matchCountOne": "1 recent post matches",
+        "matchCountOther": "{{count}} recent posts match",
+        "empty": "No recent posts match. You can still subscribe; new matches will appear.",
+        "emptyMastodon": "Your instance may not support full-text search."
       },
       "importStates": "Show",
       "importStateAll": "All",

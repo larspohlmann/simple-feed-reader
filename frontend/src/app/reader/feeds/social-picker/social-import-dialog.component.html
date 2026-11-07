@@ -15,119 +15,129 @@
         [counts]="tabCounts()"
         (pick)="tab.set($event)"
       />
-      <div class="search">
-        <app-icon class="search-icon" name="search" size="sm" />
-        <input
-          type="search"
-          class="filter"
-          cdkFocusInitial
-          data-testid="social-import-filter"
-          [attr.aria-label]="'settings.social.importFilter' | transloco"
-          [placeholder]="'settings.social.importFilter' | transloco"
-          [value]="filter()"
-          (input)="filter.set(inputValue($event))"
-        />
-      </div>
-      <div
-        class="states"
-        role="group"
-        [attr.aria-label]="'settings.social.importStates' | transloco"
-      >
-        @for (state of stateOptions(); track state) {
-          <button
-            type="button"
-            class="state-chip"
-            [attr.data-testid]="'social-import-state-' + state"
-            [class.on]="activeFilter() === state"
-            [attr.aria-pressed]="activeFilter() === state"
-            (click)="stateFilter.set(state)"
-          >
-            <span>
-              {{ filterKeys[state] | transloco }}
-              <span class="count">{{ stateCounts()[state] }}</span>
-            </span>
-          </button>
-        }
-      </div>
+      @if (listTab()) {
+        <div class="search">
+          <app-icon class="search-icon" name="search" size="sm" />
+          <input
+            type="search"
+            class="filter"
+            cdkFocusInitial
+            data-testid="social-import-filter"
+            [attr.aria-label]="'settings.social.importFilter' | transloco"
+            [placeholder]="'settings.social.importFilter' | transloco"
+            [value]="filter()"
+            (input)="filter.set(inputValue($event))"
+          />
+        </div>
+        <div
+          class="states"
+          role="group"
+          [attr.aria-label]="'settings.social.importStates' | transloco"
+        >
+          @for (state of stateOptions(); track state) {
+            <button
+              type="button"
+              class="state-chip"
+              [attr.data-testid]="'social-import-state-' + state"
+              [class.on]="activeFilter() === state"
+              [attr.aria-pressed]="activeFilter() === state"
+              (click)="stateFilter.set(state)"
+            >
+              <span>
+                {{ filterKeys[state] | transloco }}
+                <span class="count">{{ stateCounts()[state] }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      }
     </div>
   }
 
-  @if (importer.candidates(); as candidates) {
-    @if (candidates.truncated) {
-      <app-warning-box class="truncated" data-testid="social-import-truncated">
-        {{ 'settings.social.importTruncated' | transloco }}
-      </app-warning-box>
-    }
-
-    <div class="list-head">
-      <p class="note">
-        @if (hasSubscribedRows()) {
-          {{ 'settings.social.importUnsubscribeHint' | transloco }}
-        }
-      </p>
-      <app-button
-        variant="ghost"
-        size="sm"
-        data-testid="social-import-select-new"
-        [disabled]="visibleNewCount() === 0"
-        (click)="selectAllNew()"
-      >
-        {{ 'settings.social.importSelectAllNew' | transloco: { count: visibleNewCount() } }}
-      </app-button>
-    </div>
-
-    <ul class="rows" [attr.data-testid]="tabTestIds[tab()]">
-      @for (row of renderedRows(); track row.key) {
-        @let picked = chosen().has(row.key);
-        <li>
-          <label
-            class="row"
-            [class.is-chosen]="picked"
-            [class.is-done]="row.state === 'subscribed' && !picked"
-            [attr.data-testid]="row.testId"
-          >
-            <input
-              type="checkbox"
-              [checked]="row.removable ? !picked : picked"
-              [attr.aria-label]="row.checkboxLabel"
-              (change)="toggle(row)"
-            />
-            @if (row.icon; as icon) {
-              <span class="tile" aria-hidden="true"><app-icon [name]="icon" size="sm" /></span>
-            } @else {
-              <app-avatar size="md" [url]="row.avatarUrl" [name]="row.name" />
-            }
-            <span class="who">
-              <span class="name">{{ row.name }}</span>
-              @if (row.handle) {
-                <span class="handle">{{ row.handle }}</span>
-              }
-            </span>
-            @if (activeFilter() === 'all') {
-              <span [class]="badgeClasses[row.state]">{{ row.stateLabel }}</span>
-            }
-          </label>
-        </li>
-      } @empty {
-        <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
+  @if (listTab(); as listTab) {
+    @if (importer.candidates(); as candidates) {
+      @if (candidates.truncated) {
+        <app-warning-box class="truncated" data-testid="social-import-truncated">
+          {{ 'settings.social.importTruncated' | transloco }}
+        </app-warning-box>
       }
-    </ul>
-    @if (nextPageSize() > 0) {
-      <app-button
-        class="more"
-        variant="ghost"
-        size="sm"
-        data-testid="social-import-show-more"
-        (click)="showMore()"
-      >
-        {{ 'settings.social.importShowMore' | transloco: { count: nextPageSize() } }}
-      </app-button>
+
+      <div class="list-head">
+        <p class="note">
+          @if (hasSubscribedRows()) {
+            {{ 'settings.social.importUnsubscribeHint' | transloco }}
+          }
+        </p>
+        <app-button
+          variant="ghost"
+          size="sm"
+          data-testid="social-import-select-new"
+          [disabled]="visibleNewCount() === 0"
+          (click)="selectAllNew()"
+        >
+          {{ 'settings.social.importSelectAllNew' | transloco: { count: visibleNewCount() } }}
+        </app-button>
+      </div>
+
+      <ul class="rows" [attr.data-testid]="tabTestIds[listTab]">
+        @for (row of renderedRows(); track row.key) {
+          @let picked = chosen().has(row.key);
+          <li>
+            <label
+              class="row"
+              [class.is-chosen]="picked"
+              [class.is-done]="row.state === 'subscribed' && !picked"
+              [attr.data-testid]="row.testId"
+            >
+              <input
+                type="checkbox"
+                [checked]="row.removable ? !picked : picked"
+                [attr.aria-label]="row.checkboxLabel"
+                (change)="toggle(row)"
+              />
+              @if (row.icon; as icon) {
+                <span class="tile" aria-hidden="true"><app-icon [name]="icon" size="sm" /></span>
+              } @else {
+                <app-avatar size="md" [url]="row.avatarUrl" [name]="row.name" />
+              }
+              <span class="who">
+                <span class="name">{{ row.name }}</span>
+                @if (row.handle) {
+                  <span class="handle">{{ row.handle }}</span>
+                }
+              </span>
+              @if (activeFilter() === 'all') {
+                <span [class]="badgeClasses[row.state]">{{ row.stateLabel }}</span>
+              }
+            </label>
+          </li>
+        } @empty {
+          <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
+        }
+      </ul>
+      @if (nextPageSize() > 0) {
+        <app-button
+          class="more"
+          variant="ghost"
+          size="sm"
+          data-testid="social-import-show-more"
+          (click)="showMore()"
+        >
+          {{ 'settings.social.importShowMore' | transloco: { count: nextPageSize() } }}
+        </app-button>
+      }
+    } @else if (importer.loading()) {
+      <app-skeleton
+        data-testid="social-import-loading"
+        [label]="'settings.social.importLoading' | transloco"
+        [rows]="6"
+      />
     }
-  } @else if (importer.loading()) {
-    <app-skeleton
-      data-testid="social-import-loading"
-      [label]="'settings.social.importLoading' | transloco"
-      [rows]="6"
+  } @else {
+    <app-social-search-tab
+      [network]="data.network"
+      [accountId]="data.accountId"
+      (subscribe)="subscribeSearch($event)"
     />
   }
 
@@ -150,18 +160,20 @@
   >
     {{ 'common.cancel' | transloco }}
   </app-button>
-  <app-button
-    footer
-    variant="primary"
-    data-testid="social-import-apply"
-    [disabled]="chosen().size === 0"
-    [loading]="importer.importing()"
-    (click)="apply()"
-  >
-    @if (chosen().size > 0) {
-      {{ applyCountKey() | transloco: { count: chosen().size } }}
-    } @else {
-      {{ 'settings.social.importApply' | transloco }}
-    }
-  </app-button>
+  @if (listTab()) {
+    <app-button
+      footer
+      variant="primary"
+      data-testid="social-import-apply"
+      [disabled]="chosen().size === 0"
+      [loading]="importer.importing()"
+      (click)="apply()"
+    >
+      @if (chosen().size > 0) {
+        {{ applyCountKey() | transloco: { count: chosen().size } }}
+      } @else {
+        {{ 'settings.social.importApply' | transloco }}
+      }
+    </app-button>
+  }
 </app-overlay-panel>

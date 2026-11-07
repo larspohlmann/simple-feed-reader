@@ -409,7 +409,27 @@
         "accounts": "Konten",
         "lists": "Listen",
         "customFeeds": "Feeds",
-        "tags": "Hashtags"
+        "tags": "Hashtags",
+        "search": "Suche"
+      },
+      "search": {
+        "queryLabel": "Suchbegriff",
+        "example": "Beispiel:",
+        "syntax": "Suchsyntax",
+        "syntaxPhrase": "genau diese Wortfolge",
+        "syntaxEither": "eines der beiden Wörter",
+        "syntaxExclude": "lässt Beiträge mit dem Wort weg",
+        "syntaxGroup": "fasst Begriffe zusammen",
+        "syntaxCombined": "alles zusammen",
+        "syntaxAllWords": "jedes Wort muss vorkommen",
+        "syntaxMastodonNote": "Setzt die Volltextsuche deiner Instanz voraus; gefunden werden nur Beiträge von Leuten, die die Suche erlauben.",
+        "preview": "Vorschau",
+        "subscribe": "Abonnieren",
+        "loading": "Suche nach neuen Beiträgen…",
+        "matchCountOne": "1 aktueller Beitrag passt",
+        "matchCountOther": "{{count}} aktuelle Beiträge passen",
+        "empty": "Keine aktuellen Beiträge gefunden. Du kannst trotzdem abonnieren; neue Treffer erscheinen dann hier.",
+        "emptyMastodon": "Deine Instanz unterstützt die Volltextsuche womöglich nicht."
       },
       "importStates": "Anzeigen",
       "importStateAll": "Alle",
