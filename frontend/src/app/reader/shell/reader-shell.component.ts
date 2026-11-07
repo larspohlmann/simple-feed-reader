@@ -10,7 +10,6 @@ import {
   effect,
   inject,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -26,7 +25,7 @@ import { SavedSearchToggle } from './saved-search-toggle.service';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
-import { NavigationSkipped, Router, RouterLink } from '@angular/router';
+import { NavigationEnd, NavigationSkipped, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -338,16 +337,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly listReload = inject(ListReload);
 
-  /** Dismiss the mobile drawer once a new selection is chosen from it. */
-  private readonly _closeDrawerOnSelection = effect(() => {
-    this.selection();
-    untracked(() => this.sidebarOpen.set(false));
-  });
-
-  /** …and once the already-active entry is tapped: the router skips that same-URL navigation. */
-  private readonly _closeDrawerOnSkippedNavigation = this.router.events
+  /** Dismiss the mobile drawer once a link in it is followed, the already-active one included:
+   *  the router skips that same-URL navigation rather than ending it. */
+  private readonly _closeDrawerOnNavigation = this.router.events
     .pipe(
-      filter((event) => event instanceof NavigationSkipped),
+      filter((event) => event instanceof NavigationEnd || event instanceof NavigationSkipped),
+      filter(() => this.sidebarOpen()),
       takeUntilDestroyed(),
     )
     .subscribe(() => this.setSidebarOpen(false));

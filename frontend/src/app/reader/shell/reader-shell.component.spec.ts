@@ -837,7 +837,7 @@ describe('ReaderShellComponent', () => {
       expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
 
-    it('shows the bar again when a new list is chosen while scrolled down (#630)', () => {
+    it('shows the bar again when a new list is chosen while scrolled down (#630)', async () => {
       // The drawer auto-closes while the OUTGOING list is still rendered and
       // scrolled down (#254); the bar must not take its state from that offset.
       const fixture = boot();
@@ -848,12 +848,14 @@ describe('ReaderShellComponent', () => {
       expect(fixture.componentInstance.headerHidden()).toBe(true);
 
       // Open the drawer (bar shows), then pick a saved search from it. The
-      // selection change auto-closes the drawer; the outgoing list is still at
+      // navigation auto-closes the drawer; the outgoing list is still at
       // 500 at that instant.
       fixture.componentInstance.setSidebarOpen(true);
       fixture.detectChanges();
       qp.next(convertToParamMap({ q: 'news' }));
+      await TestBed.inject(Router).navigateByUrl('/?q=news');
       fixture.detectChanges();
+      expect(fixture.componentInstance.sidebarOpen()).toBe(false);
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry], nextCursor: null });
@@ -3454,6 +3456,15 @@ describe('ReaderShellComponent', () => {
       await fixture.whenStable();
 
       expect(fixture.componentInstance.sidebarOpen()).toBe(false);
+    });
+
+    it('leaves organising alone on a navigation while the drawer is closed', async () => {
+      const fixture = bootDrawerShell();
+      fixture.componentInstance.sidebarOrganising.set(true);
+
+      await TestBed.inject(Router).navigateByUrl('/?q=news');
+
+      expect(fixture.componentInstance.sidebarOrganising()).toBe(true);
     });
   });
 
