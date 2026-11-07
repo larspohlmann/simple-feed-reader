@@ -11,7 +11,7 @@ final readonly class SocialSearchQueryRequest
 {
     public function __construct(
         #[Assert\NotBlank(normalizer: [SocialSearchQuery::class, 'normalized'])]
-        #[Assert\Length(max: 512, normalizer: [SocialSearchQuery::class, 'normalized'])]
+        #[Assert\Length(max: SocialSearchQuery::MAX_LENGTH, normalizer: [SocialSearchQuery::class, 'normalized'])]
         public string $query = '',
     ) {
     }
