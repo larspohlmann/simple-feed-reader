@@ -83,6 +83,7 @@ final readonly class SearchFeedEditor
         $socialFeed->requery($search->remoteId);
         $feed->setUrl(SocialFeedUrl::of($account, $search));
         $feed->setSiteUrl(PrivateFeedSite::of($account, $search));
+        $feed->setTitle($search->remoteId);
         $feed->scheduleNextFetchAt($this->clock->now());
     }
 
