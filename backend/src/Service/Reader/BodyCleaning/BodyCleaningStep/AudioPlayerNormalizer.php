@@ -7,6 +7,7 @@ namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Media\AudioPlayerMarkup;
 use App\Service\Reader\Media\Model\AudioClipModel;
+use App\Service\Reader\Media\Support\ClipDuration;
 use App\Service\Reader\Media\Support\LiveAudioStream;
 use Dom\Element;
 
@@ -39,9 +40,20 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
         return new AudioClipModel(
             $url,
             $player->getAttribute('title'),
-            AudioClipModel::secondsFrom($player->getAttribute('data-duration')),
+            $this->durationOf($player),
             $player->classList->contains('reader-narration'),
         );
+    }
+
+    private function durationOf(Element $player): ?int
+    {
+        foreach ($player->getElementsByTagName('time') as $time) {
+            if ($time->parentNode === $player) {
+                return ClipDuration::fromIso($time->getAttribute('datetime'));
+            }
+        }
+
+        return null;
     }
 
     private function sourceOf(Element $player): ?string

@@ -54,7 +54,7 @@ final class PageMediaInserterTest extends TestCase
 
         self::assertStringContainsString(
             '<audio controls="" preload="none" src="https://x.test/a.mp3"'
-            . ' title="Ohne echte Lobby" data-duration="2871">',
+            . ' title="Ohne echte Lobby"><time datetime="PT2871S">47:51</time></audio>',
             $out,
         );
     }

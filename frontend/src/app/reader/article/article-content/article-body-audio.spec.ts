@@ -12,7 +12,7 @@ import { ArticleBodyAudio } from './article-body-audio';
 
 const ORIGIN = embedTrackOrigin(anEntry({ id: 7, title: 'The article' }));
 const CLIP =
-  '<audio controls src="https://x.test/a.mp3" title="Clip" data-duration="2871"></audio>';
+  '<audio controls src="https://x.test/a.mp3" title="Clip"><time datetime="PT2871S">47:51</time></audio>';
 
 describe('ArticleBodyAudio', () => {
   let islands: ArticleIslands;

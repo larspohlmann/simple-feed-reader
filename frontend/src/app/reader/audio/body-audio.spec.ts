@@ -16,7 +16,8 @@ describe('bodyAudioTrack', () => {
   it('names and times the clip from its own attributes', () => {
     const track = bodyAudioTrack(
       audioOf(
-        '<audio src="https://x.test/a.mp3" title="Ohne echte Lobby" data-duration="2871"></audio>',
+        '<audio src="https://x.test/a.mp3" title="Ohne echte Lobby">' +
+          '<time datetime="PT2871S">47:51</time></audio>',
       ),
       ORIGIN,
     );
@@ -35,7 +36,7 @@ describe('bodyAudioTrack', () => {
 
   it('falls back to the article title and an unknown length', () => {
     const track = bodyAudioTrack(
-      audioOf('<audio src="https://x.test/a.mp3" data-duration="5:00"></audio>'),
+      audioOf('<audio src="https://x.test/a.mp3"><time datetime="PT5M">5:00</time></audio>'),
       ORIGIN,
     );
 
@@ -53,6 +54,53 @@ describe('bodyAudioTrack', () => {
     expect(track?.url).toBe('https://x.test/b.mp3');
   });
 
+  it('reads the length only from its own time', () => {
+    const track = bodyAudioTrack(
+      audioOf(
+        '<audio src="https://x.test/a.mp3"><span><time datetime="PT300S">5:00</time></span></audio>',
+      ),
+      ORIGIN,
+    );
+
+    expect(track?.durationInSeconds).toBeNull();
+  });
+
+  it('skips a video source for the first audio one', () => {
+    const track = bodyAudioTrack(
+      audioOf(
+        '<audio><source src="https://x.test/a.webm" type="video/webm">' +
+          '<source src="https://x.test/a.mp3" type="audio/mpeg"></audio>',
+      ),
+      ORIGIN,
+    );
+
+    expect(track?.url).toBe('https://x.test/a.mp3');
+  });
+
+  it('counts an untyped source as audio', () => {
+    const track = bodyAudioTrack(
+      audioOf(
+        '<audio><source src="https://x.test/a.webm" type="video/webm">' +
+          '<source src="https://x.test/untyped"></audio>',
+      ),
+      ORIGIN,
+    );
+
+    expect(track?.url).toBe('https://x.test/untyped');
+  });
+
+  it('ignores a source nested deeper than the player', () => {
+    const track = bodyAudioTrack(
+      audioOf(
+        '<audio><span><source src="https://x.test/nested.mp3"></span>' +
+          '<source src="https://x.test/good.mp3"></audio>',
+      ),
+      ORIGIN,
+    );
+
+    expect(track?.url).toBe('https://x.test/good.mp3');
+  });
+
   it('has no track for a player with nothing to play', () => {
     expect(bodyAudioTrack(audioOf('<audio></audio>'), ORIGIN)).toBeNull();
   });
@@ -62,7 +110,7 @@ describe('BodyAudio', () => {
   function setUp() {
     const player = new StubAudioPlayer();
     const track = bodyAudioTrack(
-      audioOf('<audio src="https://x.test/a.mp3" data-duration="2871"></audio>'),
+      audioOf('<audio src="https://x.test/a.mp3"><time datetime="PT2871S">47:51</time></audio>'),
       ORIGIN,
     )!;
     const offer = new BodyAudio(

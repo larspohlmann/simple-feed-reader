@@ -7,6 +7,8 @@ import { ListAutoplayService } from '../../../core/preferences/list-autoplay.ser
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { anEntry } from '../../../../testing/entry-testing';
+import { embedTrackOrigin } from '../../audio/embed-track';
 
 @Component({
   imports: [ArticleContentComponent],
@@ -20,6 +22,18 @@ import { provideAccountIdentity } from '../../../../testing/account-identity-tes
 class HostComponent {
   readonly html = signal('<p>One <a href="https://example.com">link</a></p>');
   readonly decorated: HTMLElement[] = [];
+}
+
+@Component({
+  imports: [ArticleContentComponent],
+  providers: [ListAutoplayCoordinator, UnlockedVideoElements],
+  template: `<app-article-content [html]="html" [pageUrl]="null" [origin]="origin" />`,
+})
+class BodyAudioHostComponent {
+  readonly html =
+    '<audio controls="" preload="none" src="https://x.test/a.mp3" title="Ohne echte Lobby">' +
+    '<time datetime="PT2871S">47:51</time></audio>';
+  readonly origin = embedTrackOrigin(anEntry({ id: 7 }));
 }
 
 describe('ArticleContentComponent', () => {
@@ -44,5 +58,15 @@ describe('ArticleContentComponent', () => {
     expect(content.querySelector('p')?.textContent).toContain('One');
     expect(content.querySelector('a')?.target).toBe('_blank');
     expect(fixture.componentInstance.decorated).toEqual([content]);
+  });
+
+  it("times the body audio's Listen row from markup that crossed Angular's sanitizer", async () => {
+    const fixture = TestBed.createComponent(BodyAudioHostComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const row = (fixture.nativeElement as HTMLElement).querySelector('app-listen-row');
+    expect(row?.querySelector('.listen-duration')?.textContent).toBe('47:51');
   });
 });

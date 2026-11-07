@@ -37,21 +37,60 @@ final class AudioPlayerNormalizerTest extends TestCase
 
     public function testKeepsTheTitleAWholeDurationAndTheNarrationMark(): void
     {
-        $out = $this->normalize('<audio class="reader-narration" title="Clip" data-duration="300"'
-            . ' src="https://x.test/full.mp3"></audio>');
+        $out = $this->normalize('<audio class="reader-narration" title="Clip" src="https://x.test/full.mp3">'
+            . '<time datetime="PT300S">5:00</time></audio>');
 
         self::assertStringContainsString(
-            '<audio controls="" preload="none" src="https://x.test/full.mp3" title="Clip" data-duration="300"'
-            . ' class="reader-narration"></audio>',
+            '<audio controls="" preload="none" src="https://x.test/full.mp3" title="Clip" class="reader-narration">'
+            . '<time datetime="PT300S">5:00</time></audio>',
             $out,
         );
     }
 
     public function testDropsADurationThatIsNotWholeSeconds(): void
     {
-        $out = $this->normalize('<audio data-duration="5:00" src="https://x.test/a.mp3"></audio>');
+        $out = $this->normalize('<audio src="https://x.test/a.mp3"><time datetime="PT5M">5:00</time></audio>');
 
-        self::assertStringNotContainsString('data-duration', $out);
+        self::assertStringContainsString('<audio controls="" preload="none" src="https://x.test/a.mp3"></audio>', $out);
+    }
+
+    public function testReadsTheDurationOnlyFromItsOwnTime(): void
+    {
+        $out = $this->normalize('<audio src="https://x.test/a.mp3"><span><time datetime="PT300S">5:00</time></span>'
+            . '</audio>');
+
+        self::assertStringNotContainsString('<time', $out);
+    }
+
+    public function testAnUntypedSourceCountsAsAudio(): void
+    {
+        $out = $this->normalize('<audio><source src="https://x.test/a.webm" type="video/webm">'
+            . '<source src="https://x.test/untyped"></audio>');
+
+        self::assertStringContainsString('src="https://x.test/untyped"', $out);
+    }
+
+    public function testIgnoresASourceNestedDeeperThanTheElement(): void
+    {
+        $out = $this->normalize('<audio><span><source src="https://x.test/nested.mp3" type="audio/mpeg"></span>'
+            . '<source src="https://x.test/good.mp3" type="audio/mpeg"></audio>');
+
+        self::assertStringContainsString('src="https://x.test/good.mp3"', $out);
+        self::assertStringNotContainsString('nested.mp3', $out);
+    }
+
+    public function testTrimsAPaddedSource(): void
+    {
+        $out = $this->normalize('<audio src="  https://x.test/own.mp3 "></audio>');
+
+        self::assertStringContainsString('src="https://x.test/own.mp3">', $out);
+    }
+
+    public function testTrimsAPaddedChildSource(): void
+    {
+        $out = $this->normalize('<audio><source src=" https://x.test/child.mp3 " type="audio/mpeg"></audio>');
+
+        self::assertStringContainsString('src="https://x.test/child.mp3">', $out);
     }
 
     public function testRemovesALiveStream(): void
@@ -72,7 +111,7 @@ final class AudioPlayerNormalizerTest extends TestCase
     public function testAPlayerAlreadyInShapeIsUnchanged(): void
     {
         $canonical = '<audio controls="" preload="none" src="https://x.test/a.mp3"'
-            . ' title="Clip" data-duration="300"></audio>';
+            . ' title="Clip"><time datetime="PT300S">5:00</time></audio>';
 
         self::assertStringContainsString($canonical, $this->normalize($canonical));
     }

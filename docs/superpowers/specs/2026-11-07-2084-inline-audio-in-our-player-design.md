@@ -22,11 +22,12 @@ The body keeps a real, playable `<audio>`, so a client without the upgrade (a na
 still plays it. Ingest emits exactly one shape:
 
 ```html
-<audio controls preload="none" src="https://…/clip.mp3" title="Clip title" data-duration="2871"></audio>
+<audio controls preload="none" src="https://…/clip.mp3" title="Clip title"><time datetime="PT2871S">47:51</time></audio>
 ```
 
-`title` and `data-duration` (whole seconds) appear only when the page stated them; narration adds
-`class="reader-narration"`. No `<source>` children.
+`title` and the `<time>` child (whole seconds as `PT…S`, the clock as fallback text) appear only when the
+page stated them; narration adds `class="reader-narration"`. No `<source>` children. The duration rides in a
+`<time>` rather than a `data-` attribute because Angular's `[innerHTML]` sanitizer strips every `data-*`.
 
 ## Backend
 
@@ -58,7 +59,7 @@ A new `BodyCleaningStep`, ordered after `PageMediaPlacement` and `TeaserPlayerIn
 `<audio>` already in the body (from the page or feed HTML) through `AudioPlayerMarkup`:
 
 - the source is the element's `src`, else its first `<source>` with an audio or absent `type`;
-- `title` and a positive integer `data-duration` survive, everything else (inline `controls` variants,
+- `title` and a direct-child `<time datetime="PT…S">` with positive whole seconds survive, everything else (inline `controls` variants,
   `autoplay`, `loop`, `<source>` lists) is rebuilt away;
 - `reader-narration` survives;
 - an `<audio>` with no usable source, or whose source is a live stream, is removed.
@@ -78,8 +79,9 @@ check: the URL's path, case-insensitively, ends in `/stream`, `/stream.mp3`, `/s
 
 ### Sanitizer
 
-`EntrySanitizer` allows `title` and `data-duration` on `<audio>`. Neither carries script; the existing
-`allowMediaSchemes(['http', 'https'])` still guards `src`.
+`EntrySanitizer`'s safe-element set already keeps `title` on `<audio>` and `<time datetime>` inside it; no
+attribute is added. Angular's sanitizer keeps both too, which is why the duration is a `<time>` and not a
+`data-` attribute. The existing `allowMediaSchemes(['http', 'https'])` still guards `src`.
 
 ### Cache
 
@@ -99,10 +101,10 @@ structurally. The row's template and styles are unchanged.
 `reader/audio/body-audio.ts`: given an `<audio>` and the `EmbedTrackOrigin` of the entry, it builds the
 `AudioTrack` —
 
-- `url`: the element's `src`, else its first `<source>`'s `src` (bare `<audio>` in older entries and feed
-  bodies);
+- `url`: the element's `src`, else its first direct-child `<source>` with an audio or absent `type` (bare
+  `<audio>` in older entries and feed bodies);
 - `title`: the `title` attribute, else `origin.title`;
-- `durationInSeconds`: `data-duration` as a positive integer, else null;
+- `durationInSeconds`: the direct-child `<time datetime="PT…S">` as positive whole seconds, else null;
 - `imageUrl`, `faviconUrl`, `entry`: from the origin;
 
 and implements `ListenOffer` against `AudioPlayerService` and `ListenLauncher`, like `EntryAudio`.
@@ -133,7 +135,7 @@ Backend (PHPUnit, SQLite and MySQL legs):
 - `LiveAudioStreamTest`: each suffix, `.m3u8` and an ordinary `.mp3` not matched.
 - `AttributeMediaSourceTest`: DLF-shaped fixture yields the episode MP3 with title and 2871 s, not the live
   stream.
-- `EntrySanitizerTest`: `title` and `data-duration` survive on `<audio>`, an `onplay` does not.
+- `EntrySanitizerTest`: `title` and `<time datetime>` survive on `<audio>`, an `onplay` does not.
 - `PageMediaInserterTest`, `TeaserPlayerMarkupTest`: updated to the one-source shape.
 
 Frontend (Jest in the Docker frontend container):
@@ -142,6 +144,8 @@ Frontend (Jest in the Docker frontend container):
 - `article-body-audio.spec.ts`: audio replaced by a row; narration untouched; source-less untouched;
   no origin → untouched.
 - `listen-row` spec still green against `ListenOffer`.
+- `article-content.component.spec.ts`: the canonical markup rendered through the real `[innerHTML]` binding
+  (Angular's sanitizer) still shows 47:51 on the row.
 
 Live check on :4200 with entry 724939: the native player is gone, Listen plays the episode in the bottom
 bar with its own title and 47:51, Add to playlist queues it.
