@@ -41,12 +41,8 @@ final class PageMediaInserterTest extends TestCase
             new MediaCandidateModel(
                 MediaKind::Audio,
                 'https://x.test/a.mp3',
-                null,
-                'Ohne echte Lobby',
-                null,
-                false,
-                null,
-                2871,
+                label: 'Ohne echte Lobby',
+                durationSeconds: 2871,
             ),
         ]);
 
