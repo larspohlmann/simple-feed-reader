@@ -95,12 +95,12 @@
             }
             <app-sidebar-group-row
               [link]="selectionQueryParams({ network: current.network, feedKind: group.kind })"
-              [label]="group.label | transloco"
+              [label]="group.labelKey | transloco"
               [glyph]="group.glyph"
               [count]="group.feeds.unreadCount"
               [active]="activeFeedKind() === group.kind"
               [expanded]="groupExpanded"
-              [toggleLabel]="group.toggleLabel | transloco: { network: networkName }"
+              [toggleLabel]="group.toggleKey | transloco: { network: networkName }"
               (toggled)="groupToggles[group.kind].toggle()"
             >
               <span class="slot" aria-hidden="true"></span>

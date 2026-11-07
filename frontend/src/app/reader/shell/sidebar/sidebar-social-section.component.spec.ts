@@ -39,8 +39,7 @@ const ONE_ACCOUNT: SocialSection = {
   networkAccounts: [
     { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
   ],
-  searches: socialFeedGroup([], 0),
-  profiles: socialFeedGroup([], 0),
+  groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
   unreadCount: 3,
   entryCount: 0,
   saved: null,
@@ -160,8 +159,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: false,
       networkAccounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [
         {
           accountId: 3,
@@ -184,8 +182,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: true,
       networkAccounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [
         {
           accountId: 3,
@@ -239,8 +236,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: true,
       networkAccounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
         { accountId: 4, handle: '@work.bsky.social', subscriptions: [feed(2, 'home')] },
@@ -267,8 +263,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: false,
       networkAccounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
@@ -297,14 +292,16 @@ describe('SidebarSocialSectionComponent', () => {
 
   const WITH_PROFILES: SocialSection = {
     ...ONE_ACCOUNT,
-    searches: socialFeedGroup([], 0),
-    profiles: socialFeedGroup(
-      [
-        { ...person(7, 'Amy'), unreadCount: 2 },
-        { ...person(8, 'Zed'), unreadCount: 3 },
-      ],
-      5,
-    ),
+    groups: {
+      search: socialFeedGroup([], 0),
+      profile: socialFeedGroup(
+        [
+          { ...person(7, 'Amy'), unreadCount: 2 },
+          { ...person(8, 'Zed'), unreadCount: 3 },
+        ],
+        5,
+      ),
+    },
   };
   const feedsRow = (root: HTMLElement) =>
     root.querySelector('[data-testid="sidebar-social-feeds"]') as HTMLElement | null;
@@ -382,7 +379,10 @@ describe('SidebarSocialSectionComponent', () => {
     });
   const WITH_SEARCHES: SocialSection = {
     ...WITH_PROFILES,
-    searches: socialFeedGroup([search(4, 'atproto'), search(5, 'rust')], 9),
+    groups: {
+      ...WITH_PROFILES.groups,
+      search: socialFeedGroup([search(4, 'atproto'), search(5, 'rust')], 9),
+    },
   };
   const searchesRow = (root: HTMLElement) =>
     root.querySelector('[data-testid="sidebar-social-searches"]') as HTMLElement | null;
@@ -447,8 +447,7 @@ describe('SidebarSocialSectionComponent', () => {
       showsHandles: false,
       networkAccounts: [],
       accounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([person(7, 'Amy')], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([person(7, 'Amy')], 0) },
     };
 
     expandProfiles('mastodon');
@@ -464,8 +463,7 @@ describe('SidebarSocialSectionComponent', () => {
     const section: SocialSection = {
       network: 'bluesky',
       accounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([excluded], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([excluded], 0) },
       unreadCount: 0,
       entryCount: 0,
       saved: null,
@@ -684,8 +682,7 @@ describe('SidebarSocialSectionComponent', () => {
       ...ONE_ACCOUNT,
       networkAccounts: [],
       accounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([subscription], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([subscription], 0) },
     });
 
     it('leaves a profile row of an unincluded network unmarked while its own flags are on', () => {
@@ -735,8 +732,7 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        searches: socialFeedGroup([], 0),
-        profiles: socialFeedGroup([subscription], 0),
+        groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([subscription], 0) },
         unreadCount: 0,
         entryCount: 0,
         saved: null,
@@ -775,8 +771,7 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        searches: socialFeedGroup([], 0),
-        profiles: socialFeedGroup([amy], 0),
+        groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([amy], 0) },
         unreadCount: 0,
         entryCount: 0,
         saved: null,

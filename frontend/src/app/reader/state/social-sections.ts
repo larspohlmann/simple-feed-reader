@@ -17,13 +17,50 @@ export interface SocialFeedGroup {
   readonly entryCount: number;
 }
 
+/** How the sidebar and the list heading show a network feed kind. */
+export interface NetworkFeedKindDescriptor {
+  readonly labelKey: string;
+  readonly toggleKey: string;
+  readonly glyph: string;
+  readonly testId: string;
+  readonly storageName: string;
+  readonly order: number;
+}
+
+export const NETWORK_FEED_KIND_DESCRIPTORS: Readonly<
+  Record<NetworkFeedKind, NetworkFeedKindDescriptor>
+> = {
+  search: {
+    labelKey: 'reader.socialSearches',
+    toggleKey: 'reader.toggleSocialSearches',
+    glyph: 'search',
+    testId: 'sidebar-social-searches',
+    storageName: 'searches',
+    order: 0,
+  },
+  profile: {
+    labelKey: 'reader.socialFeeds',
+    toggleKey: 'reader.toggleSocialFeeds',
+    glyph: 'group',
+    testId: 'sidebar-social-feeds',
+    storageName: 'profiles',
+    order: 1,
+  },
+};
+
+export const NETWORK_FEED_KINDS_IN_ORDER: readonly NetworkFeedKind[] = (
+  Object.keys(NETWORK_FEED_KIND_DESCRIPTORS) as NetworkFeedKind[]
+).sort(
+  (left, right) =>
+    NETWORK_FEED_KIND_DESCRIPTORS[left].order - NETWORK_FEED_KIND_DESCRIPTORS[right].order,
+);
+
 export interface SocialSection {
   readonly network: SocialNetworkName;
   readonly accounts: readonly SocialAccountGroup[];
   /** Every connected account of the network, by id: the head's menu opens each one's picker. */
   readonly networkAccounts: readonly SocialAccountRefDto[];
-  readonly searches: SocialFeedGroup;
-  readonly profiles: SocialFeedGroup;
+  readonly groups: Readonly<Record<NetworkFeedKind, SocialFeedGroup>>;
   /** Shown only while it holds posts. */
   readonly saved: SubscriptionDto | null;
   /** Every feed of the network, one excluded from All items too, as a tag counts. */
@@ -112,16 +149,18 @@ export function buildSocialSections(
       networkAccounts: socialAccounts
         .filter((account) => account.network === network)
         .sort((left, right) => left.id - right.id),
-      searches: socialFeedGroup(
-        searches,
-        sum(searches, (subscription) => subscription.unreadCount),
-      ),
-      profiles: socialFeedGroup(
-        ofNetwork.filter(
-          (subscription) => !isPrivateFeed(subscription) && !isSavedFeed(subscription),
+      groups: {
+        search: socialFeedGroup(
+          searches,
+          sum(searches, (subscription) => subscription.unreadCount),
         ),
-        totals.networkProfiles.get(network) ?? 0,
-      ),
+        profile: socialFeedGroup(
+          ofNetwork.filter(
+            (subscription) => !isPrivateFeed(subscription) && !isSavedFeed(subscription),
+          ),
+          totals.networkProfiles.get(network) ?? 0,
+        ),
+      },
       saved:
         ofNetwork.find(
           (subscription) => isSavedFeed(subscription) && !isEmptySavedFeed(subscription),
@@ -134,8 +173,7 @@ export function buildSocialSections(
     (section) =>
       section.accounts.length > 0 ||
       section.networkAccounts.length > 0 ||
-      section.searches.subscriptions.length > 0 ||
-      section.profiles.subscriptions.length > 0 ||
+      Object.values(section.groups).some((group) => group.subscriptions.length > 0) ||
       section.saved !== null,
   );
 }
@@ -150,16 +188,6 @@ export function socialFeedGroup(
     unreadCount,
     entryCount: sum(sorted, (subscription) => subscription.entryCount),
   };
-}
-
-const FEED_GROUPS: Readonly<Record<NetworkFeedKind, (section: SocialSection) => SocialFeedGroup>> =
-  {
-    profile: (section) => section.profiles,
-    search: (section) => section.searches,
-  };
-
-export function feedGroupOf(section: SocialSection, kind: NetworkFeedKind): SocialFeedGroup {
-  return FEED_GROUPS[kind](section);
 }
 
 function sum(

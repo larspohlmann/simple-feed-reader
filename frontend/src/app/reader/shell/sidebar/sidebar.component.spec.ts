@@ -2693,8 +2693,7 @@ describe('organise mode', () => {
     const section: SocialSection = {
       network: 'bluesky',
       networkAccounts: [],
-      searches: socialFeedGroup([], 0),
-      profiles: socialFeedGroup([], 0),
+      groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       unreadCount: 2,
       entryCount: 0,
       saved: null,

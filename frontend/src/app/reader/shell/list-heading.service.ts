@@ -11,9 +11,13 @@ import { TitleCount } from '../list/list-header/list-header.component';
 import { isUnrenamedHome } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 import { FeedGroupName } from '../../core/feed-group';
-import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
+import { SocialNetworkName } from '../../core/social-network';
 import { ReaderRouteState } from './reader-route-state.service';
-import { SocialSection, feedAvatarUrl, feedGroupOf } from '../state/social-sections';
+import {
+  NETWORK_FEED_KIND_DESCRIPTORS,
+  SocialSection,
+  feedAvatarUrl,
+} from '../state/social-sections';
 
 @Injectable()
 export class ListHeading {
@@ -82,7 +86,7 @@ export class ListHeading {
     const section = this.selectedNetworkSection();
     if (section === null) return { unreadCount: 0, entryCount: 0 };
     const feedKind = this.routeState.selection().feedKind;
-    return feedKind ? feedGroupOf(section, feedKind) : section;
+    return feedKind ? section.groups[feedKind] : section;
   });
 
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
@@ -133,7 +137,7 @@ export class ListHeading {
   private networkTitle(selection: Selection): string {
     const network = this.i18n.translate(`settings.social.${selection.network}`);
     return selection.feedKind
-      ? `${network} · ${this.i18n.translate(FEED_KIND_TITLE_KEY[selection.feedKind])}`
+      ? `${network} · ${this.i18n.translate(NETWORK_FEED_KIND_DESCRIPTORS[selection.feedKind].labelKey)}`
       : network;
   }
 
@@ -247,11 +251,6 @@ export class ListHeading {
 const GROUP_TITLE_KEY: Record<FeedGroupName, string> = {
   tags: 'reader.tags',
   feeds: 'reader.feeds',
-};
-
-const FEED_KIND_TITLE_KEY: Record<NetworkFeedKind, string> = {
-  profile: 'reader.socialFeeds',
-  search: 'reader.socialSearches',
 };
 
 function unread(value: number): TitleCount {

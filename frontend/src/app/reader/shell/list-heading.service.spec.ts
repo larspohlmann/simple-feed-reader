@@ -58,8 +58,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
 const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
   networkAccounts: [],
-  searches: socialFeedGroup([], 0),
-  profiles: socialFeedGroup([], 0),
+  groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
   unreadCount: 0,
   entryCount: 0,
   saved: null,

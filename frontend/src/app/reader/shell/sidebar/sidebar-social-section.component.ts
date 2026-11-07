@@ -9,7 +9,11 @@ import { PersistedToggle, persistedToggle } from '../../../core/preferences/pers
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
 import { ExclusionSurface, exclusionTitle } from '../../feed-exclusions';
-import { SocialSection, feedGroupOf } from '../../state/social-sections';
+import {
+  NETWORK_FEED_KINDS_IN_ORDER,
+  NETWORK_FEED_KIND_DESCRIPTORS,
+  SocialSection,
+} from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
@@ -18,34 +22,7 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 
 const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.collapsed`;
 const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): string =>
-  `sfr.${network}.${FEED_GROUP_ROWS[kind].storageName}.collapsed`;
-
-interface FeedGroupRow {
-  readonly label: string;
-  readonly toggleLabel: string;
-  readonly glyph: string;
-  readonly testId: string;
-  readonly storageName: string;
-}
-
-const FEED_GROUP_ROWS: Readonly<Record<NetworkFeedKind, FeedGroupRow>> = {
-  search: {
-    label: 'reader.socialSearches',
-    toggleLabel: 'reader.toggleSocialSearches',
-    glyph: 'search',
-    testId: 'sidebar-social-searches',
-    storageName: 'searches',
-  },
-  profile: {
-    label: 'reader.socialFeeds',
-    toggleLabel: 'reader.toggleSocialFeeds',
-    glyph: 'group',
-    testId: 'sidebar-social-feeds',
-    storageName: 'profiles',
-  },
-};
-
-const FEED_GROUP_ORDER: readonly NetworkFeedKind[] = ['search', 'profile'];
+  `sfr.${network}.${NETWORK_FEED_KIND_DESCRIPTORS[kind].storageName}.collapsed`;
 
 /** One network's social feeds, collapsible and remembered like Tags; a handle heads each of several accounts. */
 @Component({
@@ -75,16 +52,15 @@ export class SidebarSocialSectionComponent {
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
-  protected readonly groupToggles: Readonly<Record<NetworkFeedKind, PersistedToggle>> = {
-    search: this.groupToggle('search'),
-    profile: this.groupToggle('profile'),
-  };
+  protected readonly groupToggles = Object.fromEntries(
+    NETWORK_FEED_KINDS_IN_ORDER.map((kind) => [kind, this.groupToggle(kind)]),
+  ) as Readonly<Record<NetworkFeedKind, PersistedToggle>>;
   protected readonly feedGroups = computed(() => {
     const section = this.section();
-    return FEED_GROUP_ORDER.map((kind) => ({
+    return NETWORK_FEED_KINDS_IN_ORDER.map((kind) => ({
       kind,
-      ...FEED_GROUP_ROWS[kind],
-      feeds: feedGroupOf(section, kind),
+      ...NETWORK_FEED_KIND_DESCRIPTORS[kind],
+      feeds: section.groups[kind],
     })).filter((group) => group.feeds.subscriptions.length > 0);
   });
   private readonly onThisNetwork = computed(() => {
