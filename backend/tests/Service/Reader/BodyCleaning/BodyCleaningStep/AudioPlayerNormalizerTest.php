@@ -101,6 +101,13 @@ final class AudioPlayerNormalizerTest extends TestCase
         self::assertStringContainsString('Intro', $out);
     }
 
+    public function testRebuildsThePlayersAfterARemovedOne(): void
+    {
+        $out = $this->normalize('<audio controls></audio><audio autoplay src="https://x.test/a.mp3"></audio>');
+
+        self::assertStringContainsString('<audio controls="" preload="none" src="https://x.test/a.mp3"></audio>', $out);
+    }
+
     public function testRemovesAPlayerWithNothingToPlay(): void
     {
         $out = $this->normalize('<audio controls>Your browser cannot play this.</audio>');
