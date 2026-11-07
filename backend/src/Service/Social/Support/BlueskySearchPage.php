@@ -7,11 +7,12 @@ namespace App\Service\Social\Support;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Model\SearchedPostModel;
 use App\Service\Social\Model\TimelinePageModel;
 
 /**
- * A search answer as entries: every post but a reply whose own text, or the post it quotes, matches the query; each is
- * read as a timeline item of its own.
+ * A search answer as entries: every post but a reply whose author and own text, or the post it quotes, match the query;
+ * each is read as a timeline item of its own.
  */
 final class BlueskySearchPage
 {
@@ -30,8 +31,8 @@ final class BlueskySearchPage
     }
 
     /**
-     * @param list<mixed>               $posts
-     * @param \Closure(string...): bool $matches
+     * @param list<mixed>                        $posts
+     * @param \Closure(SearchedPostModel): bool $matches
      *
      * @return list<JsonNodeModel>
      */
@@ -40,12 +41,22 @@ final class BlueskySearchPage
         $items = [];
         foreach ($posts as $post) {
             $node = JsonNodeModel::of($post);
-            if (!$node->node('record')->has('reply') && $matches(...self::ownTextsOf($node))) {
+            if (!$node->node('record')->has('reply') && $matches(self::searchedPostOf($node))) {
                 $items[] = JsonNodeModel::of(['post' => $post]);
             }
         }
 
         return $items;
+    }
+
+    private static function searchedPostOf(JsonNodeModel $post): SearchedPostModel
+    {
+        $author = $post->node('author');
+
+        return new SearchedPostModel(
+            array_values(array_filter([$author->string('handle'), $author->string('did')], \is_string(...))),
+            self::ownTextsOf($post),
+        );
     }
 
     /** @return list<string> */

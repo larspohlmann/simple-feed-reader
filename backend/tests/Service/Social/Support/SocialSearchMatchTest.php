@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Support;
 
+use App\Service\Social\Model\SearchedPostModel;
 use App\Service\Social\Support\SocialSearchMatch;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -40,9 +41,21 @@ final class SocialSearchMatchTest extends TestCase
         yield 'phrase last word matches as a prefix' => ['"rss read"', 'rss reader', true];
         yield 'no match inside a word' => ['ssreader', 'rssreader', false];
         yield 'no match after a digit' => ['rss', '2rss', false];
-        yield 'a filter token is not checked' => ['from:alice rss', 'rss news', true];
+        yield 'a filter token is not checked' => ['lang:de rss', 'rss news', true];
         yield 'an excluded filter token is not checked' => ['rss -lang:de', 'rss news', true];
-        yield 'only a filter token' => ['from:alice', 'anything', true];
+        yield 'only a filter token' => ['lang:de', 'anything', true];
+        yield 'an excluded group with a filter token keeps a match' => ['-(lang:de rss)', 'rss by carol', true];
+        yield 'an excluded nested group with a filter token keeps a match' => [
+            '-((lang:de rss) news)',
+            'rss news',
+            true,
+        ];
+        yield 'an excluded alternative with a filter token keeps a match' => [
+            '-(rss || (lang:de news))',
+            'news',
+            true,
+        ];
+        yield 'an alternative with a filter token still checks its words' => ['rss || (lang:de news)', 'atom', false];
         yield 'unicode case' => ['über', 'Über alles', true];
         yield 'unicode letter is no boundary' => ['ber', 'Über', false];
         yield 'unicode word after punctuation' => ['über', '(über)', true];
@@ -63,16 +76,48 @@ final class SocialSearchMatchTest extends TestCase
     #[DataProvider('verdicts')]
     public function testAPostMatchesWhenItsTextSatisfiesTheQuery(string $query, string $text, bool $matches): void
     {
-        self::assertSame($matches, SocialSearchMatch::matcher($query)($text));
+        self::assertSame($matches, SocialSearchMatch::matcher($query)(self::byCarol($text)));
     }
 
-    public function testOneMatcherJudgesManyTexts(): void
+    /** @return iterable<string, array{string, list<string>, bool}> */
+    public static function authorVerdicts(): iterable
+    {
+        $hamburgNews = ['hamburgnews.bsky.social', 'did:plc:hamburgnews'];
+        $alice = ['alice.bsky.social', 'did:plc:alice'];
+        $carol = ['carol.bsky.social', 'did:plc:carol'];
+        yield 'an excluded author' => ['rss -from:hamburgnews.bsky.social', $hamburgNews, false];
+        yield 'another author than the excluded one' => ['rss -from:hamburgnews.bsky.social', $carol, true];
+        yield 'the author, with an at sign and in another case' => ['rss from:@Alice.bsky.social', $alice, true];
+        yield 'another author than the one asked for' => ['rss from:@Alice.bsky.social', $carol, false];
+        yield 'the author by their DID' => ['rss from:did:plc:alice', $alice, true];
+        yield 'another author than the DID asked for' => ['rss from:did:plc:alice', $carol, false];
+        yield 'an excluded group naming the author' => ['-(from:carol.bsky.social rss)', $carol, false];
+        yield 'the searching account is not checked' => ['rss from:me', $carol, true];
+        yield 'an at sign alone is not checked' => ['rss from:@', $carol, true];
+    }
+
+    /** @param list<string> $authorNames */
+    #[DataProvider('authorVerdicts')]
+    public function testAFromFilterIsCheckedAgainstTheAuthor(string $query, array $authorNames, bool $matches): void
+    {
+        self::assertSame(
+            $matches,
+            SocialSearchMatch::matcher($query)(new SearchedPostModel($authorNames, ['rss news'])),
+        );
+    }
+
+    public function testOneMatcherJudgesManyPosts(): void
     {
         $matches = SocialSearchMatch::matcher('rss -gazette');
 
-        self::assertSame(
-            [true, false, false],
-            [$matches('rss news'), $matches('atom news'), $matches('rss gazette')],
-        );
+        self::assertSame([true, false, false], array_map(
+            static fn (string $text): bool => $matches(self::byCarol($text)),
+            ['rss news', 'atom news', 'rss gazette'],
+        ));
+    }
+
+    private static function byCarol(string $text): SearchedPostModel
+    {
+        return new SearchedPostModel(['carol.bsky.social'], [$text]);
     }
 }

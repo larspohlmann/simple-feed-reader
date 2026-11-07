@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model\SearchExpression;
 
+use App\Service\Social\Model\SearchedPostModel;
+
 final readonly class AnyOfSearchModel implements SearchExpressionModelInterface
 {
     /** @param list<SearchExpressionModelInterface> $operands */
@@ -11,10 +13,10 @@ final readonly class AnyOfSearchModel implements SearchExpressionModelInterface
     {
     }
 
-    public function matches(string ...$lowerCasedTexts): bool
+    public function matches(SearchedPostModel $post): bool
     {
         foreach ($this->operands as $operand) {
-            if ($operand->matches(...$lowerCasedTexts)) {
+            if ($operand->matches($post)) {
                 return true;
             }
         }

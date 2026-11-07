@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model\SearchExpression;
 
+use App\Service\Social\Model\SearchedPostModel;
+
 /**
- * A parsed search query, judged against a post's lower-cased texts: each term may match in any one of them.
+ * A parsed search query, judged against a post: each term may match in any one of its texts.
  *
- * @phpstan-sealed SearchTermModel|AllOfSearchModel|AnyOfSearchModel|NotSearchModel|UncheckedSearchModel
+ * @phpstan-sealed SearchTermModel|AuthorSearchModel|AllOfSearchModel|AnyOfSearchModel|NotSearchModel|UncheckedSearchModel|PartlyCheckedSearchModel
  */
 interface SearchExpressionModelInterface
 {
-    public function matches(string ...$lowerCasedTexts): bool;
+    public function matches(SearchedPostModel $post): bool;
 }

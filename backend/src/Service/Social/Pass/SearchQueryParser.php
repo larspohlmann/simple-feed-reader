@@ -6,7 +6,9 @@ namespace App\Service\Social\Pass;
 
 use App\Service\Social\Model\SearchExpression\AllOfSearchModel;
 use App\Service\Social\Model\SearchExpression\AnyOfSearchModel;
+use App\Service\Social\Model\SearchExpression\AuthorSearchModel;
 use App\Service\Social\Model\SearchExpression\NotSearchModel;
+use App\Service\Social\Model\SearchExpression\PartlyCheckedSearchModel;
 use App\Service\Social\Model\SearchExpression\SearchExpressionModelInterface;
 use App\Service\Social\Model\SearchExpression\SearchTermModel;
 use App\Service\Social\Model\SearchExpression\UncheckedSearchModel;
@@ -26,6 +28,8 @@ final class SearchQueryParser
     private const string TOKEN_PATTERN = '/(?<or>\|\|)|(?<open>\()|(?<close>\))|"(?<phrase>[^"]*)"?'
         . '|(?<not>-)(?=[^\s|)])|(?<word>[^\s()"|]+)|\S/u';
     private const string NETWORK_FILTER_PATTERN = '/^\p{L}+:./u';
+    // `from:me` names the searching account, which the reader cannot tell from an author called "me".
+    private const string AUTHOR_FILTER_PATTERN = '/^from:@?(?!me$)(?<author>[^@].*)$/iu';
 
     /** @var list<array{string, string}> kind and text */
     private readonly array $tokens;
@@ -128,9 +132,11 @@ final class SearchQueryParser
     /** @return list<SearchExpressionModelInterface> */
     private static function wordOf(string $text): array
     {
-        return 1 === preg_match(self::NETWORK_FILTER_PATTERN, $text)
-            ? [new UncheckedSearchModel()]
-            : self::termOf($text);
+        return match (true) {
+            1 === preg_match(self::AUTHOR_FILTER_PATTERN, $text, $filter) => [new AuthorSearchModel($filter['author'])],
+            1 === preg_match(self::NETWORK_FILTER_PATTERN, $text) => [new UncheckedSearchModel()],
+            default => self::termOf($text),
+        };
     }
 
     /** @return list<SearchExpressionModelInterface> */
@@ -149,8 +155,11 @@ final class SearchQueryParser
     private static function negated(array $operand): array
     {
         return array_map(
-            static fn (SearchExpressionModelInterface $expression): SearchExpressionModelInterface
-                => $expression instanceof UncheckedSearchModel ? $expression : new NotSearchModel($expression),
+            static fn (SearchExpressionModelInterface $expression): SearchExpressionModelInterface => match (true) {
+                $expression instanceof UncheckedSearchModel,
+                $expression instanceof PartlyCheckedSearchModel => new UncheckedSearchModel(),
+                default => new NotSearchModel($expression),
+            },
             $operand,
         );
     }
@@ -167,11 +176,11 @@ final class SearchQueryParser
             static fn (SearchExpressionModelInterface $factor): bool => !$factor instanceof UncheckedSearchModel,
         ));
 
-        return match (true) {
-            [] === $checked => \array_slice($factors, 0, 1),
-            1 === \count($checked) => $checked,
-            default => [new AllOfSearchModel($checked)],
-        };
+        if ([] === $checked) {
+            return \array_slice($factors, 0, 1);
+        }
+
+        return [self::markedIfPartial(1 === \count($checked) ? $checked[0] : new AllOfSearchModel($checked), $factors)];
     }
 
     /**
@@ -187,6 +196,32 @@ final class SearchQueryParser
             }
         }
 
-        return \count($alternatives) > 1 ? [new AnyOfSearchModel($alternatives)] : $alternatives;
+        return \count($alternatives) > 1
+            ? [self::markedIfPartial(new AnyOfSearchModel($alternatives), $alternatives)]
+            : $alternatives;
+    }
+
+    /** @param list<SearchExpressionModelInterface> $operands */
+    private static function markedIfPartial(
+        SearchExpressionModelInterface $expression,
+        array $operands,
+    ): SearchExpressionModelInterface {
+        if ($expression instanceof PartlyCheckedSearchModel || !self::anyPartial($operands)) {
+            return $expression;
+        }
+
+        return new PartlyCheckedSearchModel($expression);
+    }
+
+    /** @param list<SearchExpressionModelInterface> $operands */
+    private static function anyPartial(array $operands): bool
+    {
+        foreach ($operands as $operand) {
+            if ($operand instanceof UncheckedSearchModel || $operand instanceof PartlyCheckedSearchModel) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

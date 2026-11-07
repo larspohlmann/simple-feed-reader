@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model\SearchExpression;
 
+use App\Service\Social\Model\SearchedPostModel;
+
 /** Words in order, the first starting a word of the text; the last may run on, so `reader` finds "readers". */
 final readonly class SearchTermModel implements SearchExpressionModelInterface
 {
@@ -18,9 +20,9 @@ final readonly class SearchTermModel implements SearchExpressionModelInterface
         )) . '/u';
     }
 
-    public function matches(string ...$lowerCasedTexts): bool
+    public function matches(SearchedPostModel $post): bool
     {
-        foreach ($lowerCasedTexts as $text) {
+        foreach ($post->lowerCasedTexts as $text) {
             if (1 === preg_match($this->pattern, $text)) {
                 return true;
             }

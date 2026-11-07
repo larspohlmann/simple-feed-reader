@@ -92,6 +92,32 @@ final class BlueskySearchPageTest extends TestCase
         self::assertSame([], $page->parsed->entries);
     }
 
+    /** @return iterable<string, array{string, list<string>}> */
+    public static function authorFilters(): iterable
+    {
+        yield 'an excluded author' => ['rss -from:hamburgnews.bsky.social', ['amy']];
+        yield 'an author by handle' => ['rss from:@HamburgNews.bsky.social', ['hamburg']];
+        yield 'an author by DID' => ['rss from:did:plc:hamburgnews', ['hamburg']];
+    }
+
+    /** @param list<string> $kept */
+    #[DataProvider('authorFilters')]
+    public function testAFromFilterIsCheckedAgainstTheAuthorsHandleAndDid(string $query, array $kept): void
+    {
+        $hamburg = self::post('at://did:plc:hamburgnews/app.bsky.feed.post/hamburg', 'RSS news');
+        $hamburg['author'] = ['did' => 'did:plc:hamburgnews', 'handle' => 'hamburgnews.bsky.social'];
+
+        $page = BlueskySearchPage::of(self::answer(['posts' => [
+            $hamburg,
+            self::post('at://did:plc:amy/app.bsky.feed.post/amy', 'RSS news'),
+        ]]), 'did:plc:me', $query);
+
+        self::assertSame($kept, array_map(
+            static fn (ParsedEntryModel $entry): string => basename($entry->guid),
+            $page->parsed->entries,
+        ));
+    }
+
     /** @param array<mixed> $body */
     private static function answer(array $body): ApiResponseModel
     {

@@ -8,6 +8,7 @@ use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Support\MastodonSearchPage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -89,6 +90,33 @@ final class MastodonSearchPageTest extends TestCase
         $page = MastodonSearchPage::of(self::answer(['statuses' => [$boost]]), '"rss reader"');
 
         self::assertCount(1, $page->parsed->entries);
+    }
+
+    /** @return iterable<string, array{string, list<string>}> */
+    public static function authorFilters(): iterable
+    {
+        yield 'a local account by its acct' => ['rss from:amy', ['111']];
+        yield 'a local account with its instance' => ['rss from:@Amy@mastodon.example', ['111']];
+        yield 'a remote account by its acct' => ['rss from:bob@other.example', ['112']];
+        yield 'an excluded remote account' => ['rss -from:bob@other.example', ['111']];
+        yield 'a remote account by its name alone' => ['rss from:bob', []];
+    }
+
+    /** @param list<string> $kept */
+    #[DataProvider('authorFilters')]
+    public function testAFromFilterIsCheckedAgainstTheAuthorsAcct(string $query, array $kept): void
+    {
+        $remote = self::searchStatus('112', null);
+        $remote['account'] = ['id' => '8', 'acct' => 'bob@other.example', 'url' => 'https://other.example/@bob'];
+
+        $answer = self::answer(['statuses' => [self::searchStatus('111', null), $remote]]);
+
+        $page = MastodonSearchPage::of($answer, $query);
+
+        self::assertSame($kept, array_map(
+            static fn (ParsedEntryModel $entry): string => basename((string) $entry->url),
+            $page->parsed->entries,
+        ));
     }
 
     /** @param array<mixed> $body */
