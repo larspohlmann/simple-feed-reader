@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\SocialSearch;
 
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\SocialSearch\NetworkSocialSearch;
@@ -45,6 +46,26 @@ final class NetworkSocialSearchTest extends TestCase
         self::assertCount(1, $page->parsed->entries);
         self::assertSame([self::BLUESKY_SEARCH], $http->requestLines());
         self::assertContains('Authorization: Bearer cached-jwt', $http->requests[0]['headers']);
+    }
+
+    public function testAPreviewHoldsOnlyThePostsWhoseOwnTextMatches(): void
+    {
+        $account = SocialApiWiring::blueskyAccount();
+        SocialApiWiring::blueskySessionCache($this->cache)->remember(
+            $account,
+            new BlueskySessionModel('cached-jwt', 'alice.bsky.social'),
+        );
+        $http = new RoutedHttpClient([self::BLUESKY_SEARCH => self::json(['posts' => [
+            self::blueskyPost(),
+            self::blueskyPost('2', 'A link worth reading'),
+        ]])]);
+
+        $page = $this->search($http->client())->newest($account, 'rss reader');
+
+        self::assertSame(
+            ['at://did:plc:amy/app.bsky.feed.post/1'],
+            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
+        );
     }
 
     public function testAStaleBlueskySessionIsRenewedOnceAndTheSearchRetried(): void
@@ -104,15 +125,15 @@ final class NetworkSocialSearchTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function blueskyPost(): array
+    private static function blueskyPost(string $postId = '1', string $text = 'Which RSS reader?'): array
     {
         return [
-            'uri' => 'at://did:plc:amy/app.bsky.feed.post/1',
+            'uri' => 'at://did:plc:amy/app.bsky.feed.post/' . $postId,
             'cid' => 'c1',
             'author' => ['did' => 'did:plc:amy', 'handle' => 'amy.bsky.social'],
             'record' => [
                 '$type' => 'app.bsky.feed.post',
-                'text' => 'Which RSS reader?',
+                'text' => $text,
                 'createdAt' => '2026-11-07T10:00:00.000Z',
             ],
             'indexedAt' => '2026-11-07T10:00:01.000Z',
@@ -127,7 +148,7 @@ final class NetworkSocialSearchTest extends TestCase
             'uri' => 'https://mastodon.example/users/bob/statuses/1',
             'url' => 'https://mastodon.example/@bob/1',
             'created_at' => '2026-10-12T10:00:00Z',
-            'content' => '<p>Hello</p>',
+            'content' => '<p>Which RSS reader?</p>',
             'in_reply_to_id' => null,
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
         ];

@@ -114,7 +114,7 @@ final class MastodonTimelineSourceTest extends TestCase
         ]], \JSON_THROW_ON_ERROR);
 
         $page = $this->source(new RoutedHttpClient([]))
-            ->pageOf(self::socialFeed(SocialFeedKind::Search, 'rss'), self::answered($body));
+            ->pageOf(self::socialFeed(SocialFeedKind::Search, 'hello'), self::answered($body));
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame('111', $page->newestId);

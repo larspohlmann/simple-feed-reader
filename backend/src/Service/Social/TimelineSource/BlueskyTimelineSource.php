@@ -51,7 +51,11 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         $accepted = BlueskySessions::accepted($answer);
 
         return SocialFeedKind::Search === $socialFeed->getKind()
-            ? BlueskySearchPage::of($accepted, $socialFeed->getSocialAccount()->getIdentity())
+            ? BlueskySearchPage::of(
+                $accepted,
+                $socialFeed->getSocialAccount()->getIdentity(),
+                $socialFeed->getRemoteId(),
+            )
             : self::timelinePageOf($socialFeed, $accepted);
     }
 

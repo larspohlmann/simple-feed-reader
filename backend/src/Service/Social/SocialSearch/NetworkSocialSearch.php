@@ -29,12 +29,13 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
             SocialNetwork::Bluesky => BlueskySearchPage::of(
                 BlueskySessions::accepted($this->blueskySessions->askAs($account, SocialSearchPaths::bluesky($query))),
                 $account->getIdentity(),
+                $query,
             ),
             SocialNetwork::Mastodon => MastodonSearchPage::of(MastodonApiClient::accepted(
                 $this->mastodonClient->send(
                     $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($query, null)),
                 ),
-            )),
+            ), $query),
         };
     }
 }

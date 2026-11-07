@@ -44,7 +44,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
         $accepted = MastodonApiClient::accepted(MastodonApiClient::answerOf($outcome));
 
         return SocialFeedKind::Search === $socialFeed->getKind()
-            ? MastodonSearchPage::of($accepted)
+            ? MastodonSearchPage::of($accepted, $socialFeed->getRemoteId())
             : self::pageFrom($accepted);
     }
 

@@ -8,6 +8,7 @@ use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Support\BlueskySearchPage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -17,8 +18,8 @@ final class BlueskySearchPageTest extends TestCase
     {
         $page = BlueskySearchPage::of(self::answer(['posts' => [
             self::post('at://did:plc:amy/app.bsky.feed.post/1', 'Which RSS reader do you use?'),
-            self::post('at://did:plc:bob/app.bsky.feed.post/2', 'NetNewsWire!', reply: true),
-        ]]), 'did:plc:me');
+            self::post('at://did:plc:bob/app.bsky.feed.post/2', 'NetNewsWire is my RSS reader', reply: true),
+        ]]), 'did:plc:me', 'rss reader');
 
         self::assertSame(
             ['at://did:plc:amy/app.bsky.feed.post/1'],
@@ -31,7 +32,7 @@ final class BlueskySearchPageTest extends TestCase
     {
         $uri = 'at://did:plc:amy/app.bsky.feed.post/1';
 
-        $page = BlueskySearchPage::of(self::answer(['posts' => [self::post($uri, 'Hello')]]), 'did:plc:me');
+        $page = BlueskySearchPage::of(self::answer(['posts' => [self::post($uri, 'Hello')]]), 'did:plc:me', 'hello');
 
         self::assertSame('https://bsky.app/profile/did:plc:amy/post/1', $page->parsed->entries[0]->url);
         self::assertSame($uri, $page->knownShares->blueskyPostFor($uri)?->string('uri'));
@@ -41,7 +42,54 @@ final class BlueskySearchPageTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        BlueskySearchPage::of(self::answer(['cursor' => 'x']), 'did:plc:me');
+        BlueskySearchPage::of(self::answer(['cursor' => 'x']), 'did:plc:me', 'rss');
+    }
+
+    public function testAPostMatchingOnlyInItsLinkCardIsLeftOut(): void
+    {
+        $post = self::post('at://did:plc:amy/app.bsky.feed.post/1', 'Worth a read');
+        $post['embed'] = ['$type' => 'app.bsky.embed.external#view', 'external' => [
+            'uri' => 'https://example.com/rss',
+            'title' => 'The best RSS reader',
+            'description' => 'An RSS reader review',
+        ]];
+
+        $page = BlueskySearchPage::of(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
+
+        self::assertSame([], $page->parsed->entries);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function quoteEmbeds(): iterable
+    {
+        $quoted = ['$type' => 'app.bsky.embed.record#viewRecord', 'value' => ['text' => 'My RSS reader of choice']];
+        yield 'a quote' => [['$type' => 'app.bsky.embed.record#view', 'record' => $quoted]];
+        yield 'a quote with media' => [[
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'record' => ['$type' => 'app.bsky.embed.record#view', 'record' => $quoted],
+        ]];
+    }
+
+    /** @param array<string, mixed> $embed */
+    #[DataProvider('quoteEmbeds')]
+    public function testAPostMatchingInThePostItQuotesIsKept(array $embed): void
+    {
+        $post = self::post('at://did:plc:amy/app.bsky.feed.post/1', 'Same here');
+        $post['embed'] = $embed;
+
+        $page = BlueskySearchPage::of(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
+
+        self::assertCount(1, $page->parsed->entries);
+    }
+
+    public function testAPhraseNeverSpansAPostAndTheOneItQuotes(): void
+    {
+        $post = self::post('at://did:plc:amy/app.bsky.feed.post/1', 'I want rss');
+        $post['embed'] = ['$type' => 'app.bsky.embed.record#view', 'record' => ['value' => ['text' => 'reader apps']]];
+
+        $page = BlueskySearchPage::of(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
+
+        self::assertSame([], $page->parsed->entries);
     }
 
     /** @param array<mixed> $body */

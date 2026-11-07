@@ -162,7 +162,8 @@ final class MastodonTimelinePage
         );
     }
 
-    private static function originalOf(JsonNodeModel $status): JsonNodeModel
+    /** The status a boost boosts; any other status itself. */
+    public static function originalOf(JsonNodeModel $status): JsonNodeModel
     {
         return self::isBoost($status) ? $status->node('reblog') : $status;
     }
