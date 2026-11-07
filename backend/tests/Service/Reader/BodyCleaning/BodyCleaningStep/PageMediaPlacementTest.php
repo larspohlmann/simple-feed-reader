@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
 use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Reader\Media\AudioPlayerMarkup;
 use App\Service\Reader\Media\MediaMarkup;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
@@ -27,7 +28,10 @@ final class PageMediaPlacementTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->placement = new PageMediaPlacement(new PageMediaInserter(new MediaMarkup()), new ReaderLeadImage());
+        $this->placement = new PageMediaPlacement(
+            new PageMediaInserter(new MediaMarkup(), new AudioPlayerMarkup()),
+            new ReaderLeadImage(),
+        );
     }
 
     public function testRestoresTheHeroIntoABodyWithNoMediaToPlace(): void

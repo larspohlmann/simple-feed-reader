@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Reader\Media\AudioPlayerMarkup;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
@@ -24,7 +25,7 @@ final class TeaserPlayerInserterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->inserter = new TeaserPlayerInserter(new TeaserPlayerMarkup());
+        $this->inserter = new TeaserPlayerInserter(new TeaserPlayerMarkup(new AudioPlayerMarkup()));
     }
 
     /** @param list<TeaserPlayerModel> $teasers */

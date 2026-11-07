@@ -21,7 +21,7 @@ use Dom\HTMLDocument;
  */
 final readonly class PageMediaInserter
 {
-    public function __construct(private MediaMarkup $markup)
+    public function __construct(private MediaMarkup $markup, private AudioPlayerMarkup $audioMarkup)
     {
     }
 
@@ -139,9 +139,8 @@ final readonly class PageMediaInserter
     private function element(HTMLDocument $document, MediaCandidateModel $candidate): Element
     {
         return match ($candidate->kind) {
-            MediaKind::Audio => $this->player($document, 'audio', $candidate),
-            MediaKind::Video => $this->player($document, 'video', $candidate),
-            MediaKind::Stream => $this->player($document, 'video', $candidate),
+            MediaKind::Audio => $this->audioMarkup->element($document, $candidate->toAudioClip()),
+            MediaKind::Video, MediaKind::Stream => $this->video($document, $candidate),
             MediaKind::Embed => $this->markup->embedLink(
                 $document,
                 new EmbedTargetModel($candidate->url, $candidate->posterUrl, $candidate->label ?? 'Open the media'),
@@ -149,19 +148,15 @@ final readonly class PageMediaInserter
         };
     }
 
-    private function player(HTMLDocument $document, string $tag, MediaCandidateModel $candidate): Element
+    private function video(HTMLDocument $document, MediaCandidateModel $candidate): Element
     {
-        $player = $document->createElement($tag);
+        $player = $document->createElement('video');
         $player->setAttribute('controls', '');
         // Never fetch megabytes for an article the reader may only be skimming.
         $player->setAttribute('preload', 'none');
         $this->attachSource($document, $player, $candidate);
-        if ($candidate->kind->isVideo() && $candidate->posterUrl !== null) {
+        if ($candidate->posterUrl !== null) {
             $player->setAttribute('poster', $candidate->posterUrl);
-        }
-        // The client keys its compact, translated presentation off this class, the only mark both sanitizers keep.
-        if ($candidate->kind === MediaKind::Audio && $candidate->narrated) {
-            $player->setAttribute('class', 'reader-narration');
         }
 
         return $player;
