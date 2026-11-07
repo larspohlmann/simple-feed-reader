@@ -31,7 +31,14 @@
   @if (syntax().combined; as combined) {
     <p class="combined" data-testid="social-search-combined">
       {{ 'settings.social.search.syntaxCombined' | transloco }}
-      <code>{{ combined }}</code>
+      <code>
+        @for (term of combined.split(' '); track $index; let last = $last) {
+          <span class="term">{{ term }}</span>
+          @if (!last) {
+            {{ ' ' }}
+          }
+        }
+      </code>
     </p>
   }
   @if (network() === 'mastodon') {

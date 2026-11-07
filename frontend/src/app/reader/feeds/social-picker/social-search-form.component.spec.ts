@@ -307,9 +307,11 @@ describe('SocialSearchFormComponent', () => {
     expect(syntax.querySelector('.rules')?.textContent).not.toContain('rssreader');
     const combined = byTestId(fixture, 'social-search-combined') as HTMLElement;
     expect(combined.textContent).toContain('All of it combined:');
-    expect(combined.querySelector('code')?.textContent).toBe(
+    expect(combined.querySelector('code')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       '("rss reader" || "feed reader" || rssreader) -gazette',
     );
+    const terms = Array.from(combined.querySelectorAll('.term'), (term) => term.textContent);
+    expect(terms).toContain('-gazette');
   });
 
   it.each<SocialNetworkName>(['bluesky', 'mastodon'])(

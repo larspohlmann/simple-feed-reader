@@ -45,7 +45,10 @@ textarea {
 .combined code {
   display: block;
   color: var(--text-primary);
-  overflow-wrap: anywhere;
+}
+
+.combined .term {
+  white-space: nowrap;
 }
 
 .actions {
