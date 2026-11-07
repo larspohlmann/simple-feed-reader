@@ -13,7 +13,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { A11yModule } from '@angular/cdk/a11y';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { pluralKey } from '../../../core/i18n/plural-key';
@@ -43,28 +42,41 @@ interface SyntaxRule {
 
 const EXAMPLE_QUERY = '"rss reader" -gazette';
 
-const SYNTAX_RULES: Readonly<Record<SocialNetworkName, readonly SyntaxRule[]>> = {
-  bluesky: [
-    { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' },
-    { operator: 'rss || atom', key: 'settings.social.search.syntaxEither' },
-    { operator: '-gazette', key: 'settings.social.search.syntaxExclude' },
-    { operator: '( … )', key: 'settings.social.search.syntaxGroup' },
-    {
-      operator: '("rss reader" || "feed reader" || rssreader) -gazette',
-      key: 'settings.social.search.syntaxCombined',
-    },
-  ],
-  mastodon: [
-    { operator: 'rss reader', key: 'settings.social.search.syntaxAllWords' },
-    { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' },
-    { operator: '-gazette', key: 'settings.social.search.syntaxExclude' },
-  ],
+interface SearchSyntax {
+  readonly rules: readonly SyntaxRule[];
+  readonly combined: string | null;
+}
+
+const EXCLUDE_AUTHOR: SyntaxRule = {
+  operator: '-from:handle',
+  key: 'settings.social.search.syntaxExcludeAuthor',
+};
+
+const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, SearchSyntax>> = {
+  bluesky: {
+    rules: [
+      { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' },
+      { operator: 'rss || atom', key: 'settings.social.search.syntaxEither' },
+      { operator: '-gazette', key: 'settings.social.search.syntaxExclude' },
+      EXCLUDE_AUTHOR,
+      { operator: '( … )', key: 'settings.social.search.syntaxGroup' },
+    ],
+    combined: '("rss reader" || "feed reader" || rssreader) -gazette',
+  },
+  mastodon: {
+    rules: [
+      { operator: 'rss reader', key: 'settings.social.search.syntaxAllWords' },
+      { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' },
+      { operator: '-gazette', key: 'settings.social.search.syntaxExclude' },
+      EXCLUDE_AUTHOR,
+    ],
+    combined: null,
+  },
 };
 
 @Component({
   selector: 'app-social-search-tab',
   imports: [
-    A11yModule,
     AvatarComponent,
     ButtonComponent,
     DisclosureComponent,
@@ -95,20 +107,21 @@ export class SocialSearchTabComponent {
 
   private readonly trimmed = computed(() => this.query().trim());
   protected readonly exampleQuery = EXAMPLE_QUERY;
-  protected readonly syntaxRules = computed(() => SYNTAX_RULES[this.network()]);
+  protected readonly syntax = computed(() => SEARCH_SYNTAX[this.network()]);
   protected readonly canPreview = computed(() => this.trimmed() !== '' && !this.previewing());
-  protected readonly canSubscribe = computed(() => {
+  private readonly currentOutcome = computed(() => {
     const outcome = this.outcome();
-    return outcome !== null && 'preview' in outcome && outcome.query === this.trimmed();
+    return outcome?.query === this.trimmed() ? outcome : null;
   });
   protected readonly preview = computed(() => {
-    const outcome = this.outcome();
+    const outcome = this.currentOutcome();
     return outcome !== null && 'preview' in outcome ? outcome.preview : null;
   });
   protected readonly failure = computed(() => {
-    const outcome = this.outcome();
+    const outcome = this.currentOutcome();
     return outcome !== null && 'failure' in outcome ? outcome.failure : null;
   });
+  protected readonly canSubscribe = computed(() => this.preview() !== null);
   protected readonly shownPosts = computed(() => this.preview()?.posts.slice(0, SHOWN_POSTS) ?? []);
   protected readonly matchCountKey = computed(() =>
     pluralKey('settings.social.search.matchCount', this.preview()?.count ?? 0),

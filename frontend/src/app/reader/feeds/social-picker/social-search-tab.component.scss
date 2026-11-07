@@ -18,7 +18,7 @@ app-field {
 
 .rules {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: max-content 1fr;
   gap: var(--space-1) var(--space-3);
   margin: var(--space-2) 0;
   font-size: var(--fs-sm);
@@ -31,6 +31,18 @@ app-field {
 
 .rules dd {
   color: var(--text-secondary);
+}
+
+.combined {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.combined code {
+  display: block;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .actions {

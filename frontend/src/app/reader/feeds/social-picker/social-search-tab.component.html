@@ -3,7 +3,6 @@
     #queryInput
     type="search"
     maxlength="512"
-    cdkFocusInitial
     data-testid="social-search-query"
     [value]="query()"
     (input)="query.set(inputValue($event))"
@@ -21,13 +20,19 @@
   [label]="'settings.social.search.syntax' | transloco"
 >
   <dl class="rules">
-    @for (rule of syntaxRules(); track rule.key) {
+    @for (rule of syntax().rules; track rule.key) {
       <dt>
         <code>{{ rule.operator }}</code>
       </dt>
       <dd>{{ rule.key | transloco }}</dd>
     }
   </dl>
+  @if (syntax().combined; as combined) {
+    <p class="combined" data-testid="social-search-combined">
+      {{ 'settings.social.search.syntaxCombined' | transloco }}
+      <code>{{ combined }}</code>
+    </p>
+  }
   @if (network() === 'mastodon') {
     <p class="note">{{ 'settings.social.search.syntaxMastodonNote' | transloco }}</p>
   }

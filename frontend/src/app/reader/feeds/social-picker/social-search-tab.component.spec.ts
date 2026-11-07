@@ -208,6 +208,70 @@ describe('SocialSearchTabComponent', () => {
     expect(emitted).toEqual(['rss reader']);
   });
 
+  it('hides the result of a preview once the query is edited, and shows it again for that query', () => {
+    const fixture = previewed(FOUR_POSTS);
+    const result = (): string => byTestId(fixture, 'social-search-result')?.textContent ?? '';
+    expect(result()).toContain('42 recent posts match');
+
+    type(fixture, 'rss readers');
+    expect(result()).not.toContain('42 recent posts match');
+    expect(result()).not.toContain('Amy');
+
+    type(fixture, ' rss reader ');
+    expect(result()).toContain('42 recent posts match');
+  });
+
+  it('hides the empty warning once the query is edited', () => {
+    const fixture = previewed({ count: 0, posts: [] });
+
+    type(fixture, 'atom');
+
+    expect(byTestId(fixture, 'social-search-empty')).toBeNull();
+  });
+
+  it('hides a failed preview once the query is edited', () => {
+    importer.preview.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 502,
+            error: { type: 'about:blank', title: 'Bluesky did not answer', status: 502 },
+          }),
+      ),
+    );
+    const fixture = mount();
+    type(fixture, 'rss');
+    press(fixture, 'social-search-preview');
+
+    type(fixture, 'atom');
+
+    expect(byTestId(fixture, 'social-search-result')?.textContent).not.toContain(
+      'Bluesky did not answer',
+    );
+  });
+
+  it('shows the combined Bluesky example on a line of its own, apart from the rules', () => {
+    const fixture = mount('bluesky');
+    const syntax = byTestId(fixture, 'social-search-syntax') as HTMLElement;
+
+    expect(syntax.querySelector('.rules')?.textContent).not.toContain('rssreader');
+    const combined = byTestId(fixture, 'social-search-combined') as HTMLElement;
+    expect(combined.textContent).toContain('All of it combined:');
+    expect(combined.querySelector('code')?.textContent).toBe(
+      '("rss reader" || "feed reader" || rssreader) -gazette',
+    );
+  });
+
+  it.each<SocialNetworkName>(['bluesky', 'mastodon'])(
+    'lists leaving out an account on %s',
+    (network) => {
+      const rules = byTestId(mount(network), 'social-search-syntax')?.querySelector('.rules');
+
+      expect(rules?.textContent).toContain('-from:handle');
+      expect(rules?.textContent).toContain('leaves out posts by this account');
+    },
+  );
+
   it('lists the either-or operator for Bluesky only', () => {
     const bluesky = mount('bluesky');
     expect(byTestId(bluesky, 'social-search-syntax')?.textContent).toContain('||');
