@@ -13,4 +13,9 @@ final readonly class UncheckedSearchModel implements SearchExpressionModelInterf
     {
         return true;
     }
+
+    public function isFullyChecked(): bool
+    {
+        return false;
+    }
 }

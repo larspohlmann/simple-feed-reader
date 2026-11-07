@@ -16,4 +16,9 @@ final readonly class NotSearchModel implements SearchExpressionModelInterface
     {
         return !$this->operand->matches($post);
     }
+
+    public function isFullyChecked(): bool
+    {
+        return $this->operand->isFullyChecked();
+    }
 }

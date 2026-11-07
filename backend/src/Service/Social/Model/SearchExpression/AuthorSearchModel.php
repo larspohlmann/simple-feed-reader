@@ -16,4 +16,9 @@ final readonly class AuthorSearchModel implements SearchExpressionModelInterface
     {
         return $post->isBy($this->author);
     }
+
+    public function isFullyChecked(): bool
+    {
+        return true;
+    }
 }

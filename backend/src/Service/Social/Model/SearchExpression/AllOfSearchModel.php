@@ -15,12 +15,17 @@ final readonly class AllOfSearchModel implements SearchExpressionModelInterface
 
     public function matches(SearchedPostModel $post): bool
     {
-        foreach ($this->operands as $operand) {
-            if (!$operand->matches($post)) {
-                return false;
-            }
-        }
+        return array_all(
+            $this->operands,
+            static fn (SearchExpressionModelInterface $operand): bool => $operand->matches($post),
+        );
+    }
 
-        return true;
+    public function isFullyChecked(): bool
+    {
+        return array_all(
+            $this->operands,
+            static fn (SearchExpressionModelInterface $operand): bool => $operand->isFullyChecked(),
+        );
     }
 }

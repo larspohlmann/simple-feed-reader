@@ -22,12 +22,11 @@ final readonly class SearchTermModel implements SearchExpressionModelInterface
 
     public function matches(SearchedPostModel $post): bool
     {
-        foreach ($post->lowerCasedTexts as $text) {
-            if (1 === preg_match($this->pattern, $text)) {
-                return true;
-            }
-        }
+        return array_any($post->lowerCasedTexts, fn (string $text): bool => 1 === preg_match($this->pattern, $text));
+    }
 
-        return false;
+    public function isFullyChecked(): bool
+    {
+        return true;
     }
 }

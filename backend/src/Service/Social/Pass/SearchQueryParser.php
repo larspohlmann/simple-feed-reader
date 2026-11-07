@@ -8,14 +8,13 @@ use App\Service\Social\Model\SearchExpression\AllOfSearchModel;
 use App\Service\Social\Model\SearchExpression\AnyOfSearchModel;
 use App\Service\Social\Model\SearchExpression\AuthorSearchModel;
 use App\Service\Social\Model\SearchExpression\NotSearchModel;
-use App\Service\Social\Model\SearchExpression\PartlyCheckedSearchModel;
 use App\Service\Social\Model\SearchExpression\SearchExpressionModelInterface;
 use App\Service\Social\Model\SearchExpression\SearchTermModel;
 use App\Service\Social\Model\SearchExpression\UncheckedSearchModel;
 
 /**
  * One query read as `||` over runs of ANDed terms, `-` and `( )`; the network has validated it already, so odd input
- * degrades instead of failing. A list of operands holds one expression, or none where nothing checkable was written.
+ * degrades instead of failing.
  */
 final class SearchQueryParser
 {
@@ -46,36 +45,33 @@ final class SearchQueryParser
 
     public function expression(): SearchExpressionModelInterface
     {
-        return $this->alternatives()[0] ?? new UncheckedSearchModel();
+        return $this->alternatives() ?? new UncheckedSearchModel();
     }
 
-    /** @return list<SearchExpressionModelInterface> */
-    private function alternatives(): array
+    private function alternatives(): ?SearchExpressionModelInterface
     {
         $alternatives = [$this->conjunction()];
         while ($this->accepts(self::OR)) {
             $alternatives[] = $this->conjunction();
         }
 
-        return self::anyOf(array_merge(...$alternatives));
+        return self::anyOf(array_values(array_filter($alternatives)));
     }
 
-    /** @return list<SearchExpressionModelInterface> */
-    private function conjunction(): array
+    private function conjunction(): ?SearchExpressionModelInterface
     {
         $factors = [];
         while (null !== $kind = $this->tokens[$this->position][0] ?? null) {
             if (self::OR === $kind || (self::CLOSE === $kind && $this->groupDepth > 0)) {
                 break;
             }
-            array_push($factors, ...$this->factor());
+            $factors[] = $this->factor();
         }
 
-        return self::allOf($factors);
+        return self::allOf(array_values(array_filter($factors)));
     }
 
-    /** @return list<SearchExpressionModelInterface> */
-    private function factor(): array
+    private function factor(): ?SearchExpressionModelInterface
     {
         [$kind, $text] = $this->tokens[$this->position++] ?? ['', ''];
 
@@ -84,12 +80,11 @@ final class SearchQueryParser
             self::OPEN => $this->group(),
             self::PHRASE => self::termOf($text),
             self::WORD => self::wordOf($text),
-            default => [],
+            default => null,
         };
     }
 
-    /** @return list<SearchExpressionModelInterface> */
-    private function group(): array
+    private function group(): ?SearchExpressionModelInterface
     {
         ++$this->groupDepth;
         $alternatives = $this->alternatives();
@@ -129,99 +124,40 @@ final class SearchQueryParser
         return $tokens;
     }
 
-    /** @return list<SearchExpressionModelInterface> */
-    private static function wordOf(string $text): array
+    private static function wordOf(string $text): ?SearchExpressionModelInterface
     {
         return match (true) {
-            1 === preg_match(self::AUTHOR_FILTER_PATTERN, $text, $filter) => [new AuthorSearchModel($filter['author'])],
-            1 === preg_match(self::NETWORK_FILTER_PATTERN, $text) => [new UncheckedSearchModel()],
+            1 === preg_match(self::AUTHOR_FILTER_PATTERN, $text, $filter) => new AuthorSearchModel($filter['author']),
+            1 === preg_match(self::NETWORK_FILTER_PATTERN, $text) => new UncheckedSearchModel(),
             default => self::termOf($text),
         };
     }
 
-    /** @return list<SearchExpressionModelInterface> */
-    private static function termOf(string $text): array
+    private static function termOf(string $text): ?SearchExpressionModelInterface
     {
         preg_match_all('/[\p{L}\p{N}]+/u', mb_strtolower($text), $words);
 
-        return [] === $words[0] ? [] : [new SearchTermModel($words[0])];
+        return [] === $words[0] ? null : new SearchTermModel($words[0]);
     }
 
-    /**
-     * @param list<SearchExpressionModelInterface> $operand
-     *
-     * @return list<SearchExpressionModelInterface>
-     */
-    private static function negated(array $operand): array
+    private static function negated(?SearchExpressionModelInterface $operand): ?SearchExpressionModelInterface
     {
-        return array_map(
-            static fn (SearchExpressionModelInterface $expression): SearchExpressionModelInterface => match (true) {
-                $expression instanceof UncheckedSearchModel,
-                $expression instanceof PartlyCheckedSearchModel => new UncheckedSearchModel(),
-                default => new NotSearchModel($expression),
-            },
-            $operand,
-        );
+        return match (true) {
+            null === $operand => null,
+            $operand->isFullyChecked() => new NotSearchModel($operand),
+            default => new UncheckedSearchModel(),
+        };
     }
 
-    /**
-     * @param list<SearchExpressionModelInterface> $factors
-     *
-     * @return list<SearchExpressionModelInterface>
-     */
-    private static function allOf(array $factors): array
+    /** @param list<SearchExpressionModelInterface> $factors */
+    private static function allOf(array $factors): ?SearchExpressionModelInterface
     {
-        $checked = array_values(array_filter(
-            $factors,
-            static fn (SearchExpressionModelInterface $factor): bool => !$factor instanceof UncheckedSearchModel,
-        ));
-
-        if ([] === $checked) {
-            return \array_slice($factors, 0, 1);
-        }
-
-        return [self::markedIfPartial(1 === \count($checked) ? $checked[0] : new AllOfSearchModel($checked), $factors)];
+        return \count($factors) > 1 ? new AllOfSearchModel($factors) : $factors[0] ?? null;
     }
 
-    /**
-     * @param list<SearchExpressionModelInterface> $alternatives
-     *
-     * @return list<SearchExpressionModelInterface>
-     */
-    private static function anyOf(array $alternatives): array
+    /** @param list<SearchExpressionModelInterface> $alternatives */
+    private static function anyOf(array $alternatives): ?SearchExpressionModelInterface
     {
-        foreach ($alternatives as $alternative) {
-            if ($alternative instanceof UncheckedSearchModel) {
-                return [$alternative];
-            }
-        }
-
-        return \count($alternatives) > 1
-            ? [self::markedIfPartial(new AnyOfSearchModel($alternatives), $alternatives)]
-            : $alternatives;
-    }
-
-    /** @param list<SearchExpressionModelInterface> $operands */
-    private static function markedIfPartial(
-        SearchExpressionModelInterface $expression,
-        array $operands,
-    ): SearchExpressionModelInterface {
-        if ($expression instanceof PartlyCheckedSearchModel || !self::anyPartial($operands)) {
-            return $expression;
-        }
-
-        return new PartlyCheckedSearchModel($expression);
-    }
-
-    /** @param list<SearchExpressionModelInterface> $operands */
-    private static function anyPartial(array $operands): bool
-    {
-        foreach ($operands as $operand) {
-            if ($operand instanceof UncheckedSearchModel || $operand instanceof PartlyCheckedSearchModel) {
-                return true;
-            }
-        }
-
-        return false;
+        return \count($alternatives) > 1 ? new AnyOfSearchModel($alternatives) : $alternatives[0] ?? null;
     }
 }
