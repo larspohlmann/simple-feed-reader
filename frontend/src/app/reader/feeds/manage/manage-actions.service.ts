@@ -8,6 +8,7 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
 import { RefreshService } from '../../state/refresh.service';
+import { EntriesStore } from '../../state/entries.store';
 import {
   MoveFeedToTag,
   RefreshReport,
@@ -49,6 +50,7 @@ export class ManageActions {
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
   private readonly refresh = inject(RefreshService);
+  private readonly entries = inject(EntriesStore);
 
   editSubscription(sub: SubscriptionDto): void {
     const ref = this.dialog.open<EditSubscriptionResult>(EditSubscriptionDialogComponent, {
@@ -63,9 +65,7 @@ export class ManageActions {
       if (!updated) return;
       this.subs.reloadQuietly();
       if (updated.includeInSavedSearches !== sub.includeInSavedSearches) this.savedSearches.load();
-      // The finished refresh reloads the list, which drops the posts the new query no longer matches.
-      if (searchQueryOf(updated) !== searchQueryOf(sub))
-        this.refresh.run(undefined, { feedId: sub.feedId });
+      if (searchQueryOf(updated) !== searchQueryOf(sub)) this.requeried(sub);
     });
   }
 
@@ -339,6 +339,13 @@ export class ManageActions {
       // show the error either way.
       catchError(() => of(true)),
     );
+  }
+
+  /** The save removed the posts the new query no longer matches, so the list drops them now; the refresh then
+   *  fetches what the new query finds, and its finish reloads the list again. */
+  private requeried(sub: SubscriptionDto): void {
+    this.entries.reload();
+    this.refresh.run(undefined, { feedId: sub.feedId });
   }
 
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
