@@ -27,6 +27,8 @@ final class PrivateFeedRules
             SocialFeedKind::Tag => SocialNetwork::Mastodon === $network
                 && self::isMastodonTagName($privateFeed->remoteId),
             SocialFeedKind::Trending => SocialNetwork::Mastodon === $network,
+            SocialFeedKind::Search => '' !== $privateFeed->remoteId
+                && mb_strlen($privateFeed->remoteId) <= SocialSearchQuery::MAX_LENGTH,
         };
     }
 

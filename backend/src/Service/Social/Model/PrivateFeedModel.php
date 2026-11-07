@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Model;
 
 use App\Enum\SocialFeedKind;
+use App\Service\Social\Support\SocialSearchQuery;
 
 final readonly class PrivateFeedModel
 {
@@ -49,6 +50,13 @@ final readonly class PrivateFeedModel
         return new self(SocialFeedKind::Author, $did, $name);
     }
 
+    public static function search(string $query): self
+    {
+        $normalized = SocialSearchQuery::normalized($query);
+
+        return new self(SocialFeedKind::Search, $normalized, $normalized);
+    }
+
     public static function of(SocialFeedKind $kind, string $remoteId, string $name): self
     {
         return match ($kind) {
@@ -58,6 +66,7 @@ final readonly class PrivateFeedModel
             SocialFeedKind::Author => self::author($remoteId, $name),
             SocialFeedKind::Tag => self::followedTag($remoteId, $name),
             SocialFeedKind::Trending => self::trending(),
+            SocialFeedKind::Search => self::search($remoteId),
         };
     }
 

@@ -45,7 +45,7 @@ describe('EditSubscriptionDialogComponent', () => {
   const close = jest.fn();
   let ctrl: HttpTestingController;
 
-  function mount() {
+  function mount(data: SubscriptionDto = sub) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -53,7 +53,7 @@ describe('EditSubscriptionDialogComponent', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: DialogRef, useValue: { close } },
-        { provide: DIALOG_DATA, useValue: sub },
+        { provide: DIALOG_DATA, useValue: data },
       ],
     });
     const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);
@@ -282,5 +282,157 @@ describe('EditSubscriptionDialogComponent', () => {
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
     expect(testRequest.request.body.customTitle).toBeNull();
     testRequest.flush({ subscription: home });
+  });
+
+  describe('a search feed', () => {
+    const search: SubscriptionDto = {
+      ...sub,
+      title: 'rss reader',
+      tags: [],
+      feedUrl: 'social:bluesky:3:search:rss reader',
+      sourceFormat: 'bluesky-api',
+      social: { network: 'bluesky', accountId: 3, kind: 'search', query: 'rss reader' },
+    };
+    const SEARCH_QUERY = 'https://api.test/api/subscriptions/5/search-query';
+    const UPDATE = 'https://api.test/api/subscriptions/5';
+
+    const queryField = (
+      fixture: ComponentFixture<EditSubscriptionDialogComponent>,
+    ): HTMLTextAreaElement | null =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLTextAreaElement>(
+        '[data-testid="social-search-query"]',
+      );
+
+    function retype(fixture: ComponentFixture<EditSubscriptionDialogComponent>, query: string) {
+      const field = queryField(fixture) as HTMLTextAreaElement;
+      field.value = query;
+      field.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    it('shows its query, ready to edit', () => {
+      expect(queryField(mount(search))?.value).toBe('rss reader');
+    });
+
+    it('shows no query field for any other feed', () => {
+      expect(queryField(mount())).toBeNull();
+    });
+
+    it('saves a new query first, then the rest, and closes with the answer', () => {
+      const fixture = mount(search);
+      retype(fixture, ' feed reader ');
+
+      fixture.componentInstance.submit();
+
+      const requery = ctrl.expectOne(SEARCH_QUERY);
+      expect(requery.request.method).toBe('PUT');
+      expect(requery.request.body).toEqual({ query: 'feed reader' });
+      ctrl.expectNone(UPDATE);
+      requery.flush({ subscription: search });
+      const update = ctrl.expectOne(UPDATE);
+      expect(update.request.method).toBe('PATCH');
+      const updated = {
+        ...search,
+        title: 'feed reader',
+        social: { ...search.social, query: 'feed reader' },
+      };
+      update.flush({ subscription: updated });
+      expect(close).toHaveBeenCalledWith(updated);
+    });
+
+    it('saves an unchanged query as nothing, however it is broken over lines', () => {
+      const fixture = mount(search);
+      retype(fixture, 'rss\n  reader');
+
+      fixture.componentInstance.submit();
+
+      ctrl.expectNone(SEARCH_QUERY);
+      ctrl.expectOne(UPDATE).flush({ subscription: search });
+    });
+
+    it('leaves the name following the query when it was never renamed', () => {
+      const fixture = mount(search);
+      retype(fixture, 'feed reader');
+
+      fixture.componentInstance.submit();
+
+      ctrl.expectOne(SEARCH_QUERY).flush({ subscription: search });
+      const update = ctrl.expectOne(UPDATE);
+      expect(update.request.body.customTitle).toBeNull();
+      update.flush({ subscription: search });
+    });
+
+    it('prefills an unrenamed search with its current query, whatever title the feed stored', () => {
+      TestBed.configureTestingModule({
+        imports: [provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: DialogRef, useValue: { close } },
+          {
+            provide: DIALOG_DATA,
+            useFactory: () => {
+              const rows = inject(SubscriptionRows);
+              rows.stored.set([{ ...search, title: 'old query' }]);
+              return rows.find(search.id);
+            },
+          },
+        ],
+      });
+      const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);
+      fixture.detectChanges();
+      ctrl = TestBed.inject(HttpTestingController);
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+
+      expect(fixture.componentInstance.form.controls.customTitle.value).toBe('rss reader');
+      fixture.componentInstance.submit();
+
+      const update = ctrl.expectOne(UPDATE);
+      expect(update.request.body.customTitle).toBeNull();
+      update.flush({ subscription: search });
+    });
+
+    it('keeps a name the reader gave it', () => {
+      const fixture = mount({ ...search, title: 'Readers', customTitle: 'Readers' });
+
+      fixture.componentInstance.submit();
+
+      const update = ctrl.expectOne(UPDATE);
+      expect(update.request.body.customTitle).toBe('Readers');
+      update.flush({ subscription: search });
+    });
+
+    it('shows why a new query was refused and saves nothing else', () => {
+      const fixture = mount(search);
+      retype(fixture, 'feed reader');
+
+      fixture.componentInstance.submit();
+      ctrl.expectOne(SEARCH_QUERY).flush(
+        {
+          type: 'already_subscribed',
+          title: 'Already subscribed to that feed',
+          status: 409,
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      fixture.detectChanges();
+
+      ctrl.expectNone(UPDATE);
+      expect(close).not.toHaveBeenCalled();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.error')?.textContent).toContain(
+        'Already subscribed to that feed',
+      );
+    });
+
+    it('cannot save a blank query', () => {
+      const fixture = mount(search);
+      retype(fixture, '   ');
+
+      fixture.componentInstance.submit();
+
+      ctrl.expectNone(SEARCH_QUERY);
+      ctrl.expectNone(UPDATE);
+    });
   });
 });

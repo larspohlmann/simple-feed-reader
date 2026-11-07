@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Subscription;
+use App\Enum\SocialFeedKind;
+use App\Service\Social\Support\SocialFeedUrl;
 
 /** The one definition of a subscription's display title, shared by every projection that names a subscription. */
 final class SubscriptionDisplayTitle
@@ -15,8 +17,9 @@ final class SubscriptionDisplayTitle
             return $customTitle;
         }
 
-        if (null !== $feedTitle && '' !== $feedTitle) {
-            return $feedTitle;
+        $sourceTitle = self::searchQueryOf($feedUrl) ?? $feedTitle;
+        if (null !== $sourceTitle && '' !== $sourceTitle) {
+            return $sourceTitle;
         }
 
         return $feedUrl;
@@ -27,5 +30,13 @@ final class SubscriptionDisplayTitle
         $feed = $subscription->getFeed();
 
         return self::from($subscription->getCustomTitle(), $feed->getTitle(), $feed->getUrl());
+    }
+
+    /** An unrenamed search follows its query, which a requery changes without touching the stored title. */
+    private static function searchQueryOf(string $feedUrl): ?string
+    {
+        $address = SocialFeedUrl::addressOf($feedUrl);
+
+        return SocialFeedKind::Search === $address?->kind ? $address->remoteId : null;
     }
 }

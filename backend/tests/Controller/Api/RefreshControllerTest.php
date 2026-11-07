@@ -252,7 +252,7 @@ final class RefreshControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
-        self::assertSame(['feedKind' => ['Unknown feedKind. Use one of: profile.']], $body['errors']);
+        self::assertSame(['feedKind' => ['Unknown feedKind. Use one of: profile, search.']], $body['errors']);
     }
 
     /**

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\SocialFeedKind;
 use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Model\StoredPostModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -18,6 +20,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class SocialFeedRepository extends ServiceEntityRepository
 {
+    private const int POST_BATCH_SIZE = 500;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, SocialFeed::class);
@@ -139,5 +143,33 @@ final class SocialFeedRepository extends ServiceEntityRepository
     public function forFeed(Feed $feed): ?SocialFeed
     {
         return $this->findOneBy(['feed' => $feed]);
+    }
+
+    /** @return list<StoredPostModel> the next batch, in id order, of the feed's posts nobody favourites, keeps or shares */
+    public function unprotectedPostsAfter(SocialFeed $socialFeed, int $lastEntryId): array
+    {
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->select('e.id AS id', 'e.guid.value AS guid')
+            ->addSelect('e.contentHtml AS contentHtml', 'e.author.profileUrl AS authorUrl')
+            ->from(Entry::class, 'e')
+            ->where('e.feed = :feed')
+            ->andWhere('e.id > :lastEntryId')
+            ->orderBy('e.id')
+            ->setMaxResults(self::POST_BATCH_SIZE)
+            ->setParameter('feed', $socialFeed->getFeed())
+            ->setParameter('lastEntryId', $lastEntryId);
+        ProtectedEntryDql::exclude($qb, 'e');
+        /** @var list<array{id: int, guid: string, contentHtml: string|null, authorUrl: string|null}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
+
+        return array_map(
+            static fn (array $row): StoredPostModel => new StoredPostModel(
+                $row['id'],
+                $row['guid'],
+                $row['contentHtml'],
+                $row['authorUrl'],
+            ),
+            $rows,
+        );
     }
 }

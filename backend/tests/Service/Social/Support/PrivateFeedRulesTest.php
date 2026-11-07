@@ -26,6 +26,17 @@ final class PrivateFeedRulesTest extends TestCase
         self::assertSame($allowed, PrivateFeedRules::allows($network, $privateFeed));
     }
 
+    public function testASearchIsAllowedOnBothNetworksWhenItHasAQuery(): void
+    {
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Bluesky, PrivateFeedModel::search('rss reader')));
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Mastodon, PrivateFeedModel::search('rss reader')));
+        self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Bluesky, PrivateFeedModel::search("  \t ")));
+        $tooLong = PrivateFeedModel::search(str_repeat('a', 513));
+        $longestInCharacters = PrivateFeedModel::search(str_repeat('ä', 512));
+        self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Bluesky, $tooLong));
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Bluesky, $longestInCharacters));
+    }
+
     #[DataProvider('mastodonListIds')]
     public function testAMastodonListIdIsDigitsOnly(string $listId, bool $allowed): void
     {

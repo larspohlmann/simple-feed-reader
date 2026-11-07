@@ -2,10 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { Observable } from 'rxjs';
 import { SocialAccountRefDto } from '../../social-feed';
-import {
-  SocialImportDialogComponent,
-  SocialImportDialogData,
-} from './social-import-dialog.component';
+import { SocialImportDialogComponent } from './social-import-dialog.component';
+import { SocialImportDialogData } from './social-import-list';
 import { SocialImportResult } from './social-import.service';
 
 @Injectable({ providedIn: 'root' })

@@ -7,6 +7,7 @@ import {
 } from './social-import.service';
 
 export type ImportTab = 'accounts' | 'lists' | 'customFeeds' | 'tags';
+export type DialogTab = ImportTab | 'search';
 export type StateFilter = 'all' | ImportCandidateState;
 export type Translate = (key: string, params?: Record<string, string>) => string;
 
@@ -29,7 +30,7 @@ export type StateCounts = Record<StateFilter, number>;
 
 export interface TallyQuery {
   readonly tabs: readonly ImportTab[];
-  readonly current: ImportTab;
+  readonly current: DialogTab;
   readonly needle: string;
 }
 
@@ -52,6 +53,7 @@ const COLLECTION_ICONS: Readonly<Record<CollectionKind, string>> = {
   list: 'list',
   custom_feed: 'dynamic_feed',
   tag: 'tag',
+  search: 'search',
 };
 
 const SINGLETON_NAME_KEYS: Readonly<Partial<Record<CollectionKind, string>>> = {

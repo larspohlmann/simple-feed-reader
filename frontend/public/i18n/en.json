@@ -409,7 +409,28 @@
         "accounts": "Accounts",
         "lists": "Lists",
         "customFeeds": "Feeds",
-        "tags": "Tags"
+        "tags": "Tags",
+        "search": "Search"
+      },
+      "search": {
+        "queryLabel": "Search query",
+        "example": "Example:",
+        "syntax": "Search syntax",
+        "syntaxPhrase": "exact phrase",
+        "syntaxEither": "either word",
+        "syntaxExclude": "leaves out posts with the word",
+        "syntaxExcludeAuthor": "leaves out posts by this account",
+        "syntaxGroup": "groups terms",
+        "syntaxCombined": "All of it combined:",
+        "syntaxAllWords": "every word must appear",
+        "syntaxMastodonNote": "Needs full-text search on your instance; only posts from people who allow search are found.",
+        "preview": "Preview",
+        "subscribe": "Subscribe",
+        "loading": "Searching for recent posts…",
+        "matchCountOne": "1 recent post matches",
+        "matchCountOther": "{{count}} recent posts match",
+        "empty": "No recent posts match. You can still subscribe; new matches will appear.",
+        "emptyMastodon": "Your instance may not support full-text search."
       },
       "importStates": "Show",
       "importStateAll": "All",
@@ -912,6 +933,7 @@
       "title": "Edit feed",
       "customTitle": "Custom title",
       "resetTitle": "Use the feed's title",
+      "queryNote": "Saving a new query removes the stored posts it no longer matches; favourites and kept posts stay.",
       "feedUrl": "Feed URL",
       "siteUrl": "Website",
       "tags": "Tags",
@@ -1271,6 +1293,7 @@
     "reconnectSocialAccount": "Reconnect {{handle}} in settings",
     "manageSocialSection": "{{network}} options",
     "socialFeeds": "Feeds",
+    "socialSearches": "Searches",
     "socialHome": "Home@{{network}}",
     "savedFrom": {
       "bluesky": "Saved from Bluesky",
@@ -1278,6 +1301,7 @@
       "feeds": "Saved from feeds"
     },
     "toggleSocialFeeds": "Toggle {{network}} feeds",
+    "toggleSocialSearches": "Toggle {{network}} searches",
     "socialNetworkShort": {
       "bluesky": "bsky",
       "mastodon": "mastodon"

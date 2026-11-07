@@ -233,6 +233,17 @@ final class EntryIndexerTest extends DbTestCase
         self::assertSame([[11, 12, 13]], $writer->forgets);
     }
 
+    public function testForgetSendsAtMostFiveHundredIdsPerRequest(): void
+    {
+        $writer = new RecordingSearchIndexWriter();
+        $indexer = EntryIndexers::with($writer);
+
+        $indexer->forget(range(1, 1001));
+
+        self::assertSame([500, 500, 1], array_map(\count(...), $writer->forgets));
+        self::assertSame(range(1, 1001), array_merge(...$writer->forgets));
+    }
+
     public function testForgetSwallowsAnEngineFailureTheSameWayIndexDoes(): void
     {
         $failure = new SearchEngineUnavailableException('down');

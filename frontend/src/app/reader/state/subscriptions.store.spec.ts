@@ -9,7 +9,7 @@ import { API_BASE_URL } from '../../core/api';
 import { TokenStore } from '../../core/auth/token.store';
 import { ReaderApi } from '../reader-api';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
-import { socialProfiles } from './social-sections';
+import { socialFeedGroup } from './social-sections';
 import { SubscriptionsStore } from './subscriptions.store';
 import { SubscriptionRows } from './subscription-rows';
 import {
@@ -777,7 +777,7 @@ describe('SubscriptionsStore', () => {
               subscriptions: [{ ...untaggedHome, title: 'Home@bsky' }, taggedList],
             },
           ],
-          profiles: socialProfiles([], 0),
+          groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
           unreadCount: 6,
           entryCount: 120,
           saved: null,
@@ -787,7 +787,10 @@ describe('SubscriptionsStore', () => {
           network: 'mastodon',
           networkAccounts: [],
           accounts: [],
-          profiles: socialProfiles([untaggedProfile], 8),
+          groups: {
+            search: socialFeedGroup([], 0),
+            profile: socialFeedGroup([untaggedProfile], 8),
+          },
           unreadCount: 8,
           entryCount: 160,
           saved: null,

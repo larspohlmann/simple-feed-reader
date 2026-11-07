@@ -25,6 +25,7 @@ final class SocialFeedUrl
         'author' => 'author',
         'tag' => 'tag',
         'trending' => 'trending',
+        'search' => 'search',
     ];
 
     public static function of(SocialAccount $account, PrivateFeedModel $privateFeed): string

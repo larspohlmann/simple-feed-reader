@@ -403,4 +403,17 @@ final class SubscriptionJsonTest extends TestCase
             SubscriptionJson::one($this->subscriptionTo($feed))['social'],
         );
     }
+
+    public function testAnUnrenamedSearchIsTitledByItsCurrentQuery(): void
+    {
+        $feed = new Feed('social:mastodon:12:search:feed reader');
+        $feed->setSourceFormat(SourceFormat::MASTODON_API);
+        $feed->classifyAs(SocialNetwork::Mastodon);
+        $feed->setTitle('rss reader');
+
+        $json = SubscriptionJson::one($this->subscriptionTo($feed));
+
+        self::assertSame('feed reader', $json['title']);
+        self::assertNull($json['customTitle']);
+    }
 }

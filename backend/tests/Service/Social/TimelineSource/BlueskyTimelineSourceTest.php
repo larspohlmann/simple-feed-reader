@@ -14,6 +14,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionCache;
 use App\Service\Social\BlueskySessionOpener;
@@ -119,6 +120,37 @@ final class BlueskyTimelineSourceTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
 
         $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Trending, ''));
+    }
+
+    public function testASearchAsksForTheLatestHundredMatches(): void
+    {
+        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
+
+        $request = $this->source($http->client())
+            ->request($this->socialFeed(SocialFeedKind::Search, '"rss reader" || feedreader'));
+
+        self::assertSame(
+            'GET https://pds.example.test/xrpc/app.bsky.feed.searchPosts?q=%22rss%20reader%22%20%7C%7C%20feedreader'
+                . '&sort=latest&limit=100',
+            $request->method . ' ' . $request->url,
+        );
+    }
+
+    public function testASearchAnswerMapsToItsPostsWithoutRepliesOrPostsTheQueryDoesNotMatch(): void
+    {
+        $page = $this->source(new MockHttpClient())->pageOf(
+            $this->socialFeed(SocialFeedKind::Search, 'rss'),
+            self::answer(['posts' => [
+                self::searchPost('at://did:plc:amy/app.bsky.feed.post/1', null),
+                self::searchPost('at://did:plc:bob/app.bsky.feed.post/2', 'at://did:plc:amy/app.bsky.feed.post/1'),
+                self::searchPost('at://did:plc:amy/app.bsky.feed.post/3', null, 'Which Atom reader?'),
+            ]]),
+        );
+
+        self::assertSame(
+            ['at://did:plc:amy/app.bsky.feed.post/1'],
+            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
+        );
     }
 
     public function testAnAuthorFeedAsksForTheProfilesPostsAndSelfThreads(): void
@@ -316,6 +348,28 @@ final class BlueskyTimelineSourceTest extends TestCase
                 'record' => ['text' => 'Hello', 'createdAt' => '2026-10-12T10:00:00Z'],
             ],
         ]]];
+    }
+
+    /** @return array<string, mixed> */
+    private static function searchPost(string $uri, ?string $repliesTo, string $text = 'Which RSS reader?'): array
+    {
+        $record = [
+            '$type' => 'app.bsky.feed.post',
+            'text' => $text,
+            'createdAt' => '2026-11-07T10:00:00.000Z',
+        ];
+        if (null !== $repliesTo) {
+            $parent = ['uri' => $repliesTo, 'cid' => 'c1'];
+            $record['reply'] = ['parent' => $parent, 'root' => $parent];
+        }
+
+        return [
+            'uri' => $uri,
+            'cid' => 'c2',
+            'author' => ['did' => 'did:plc:amy', 'handle' => 'amy.bsky.social'],
+            'record' => $record,
+            'indexedAt' => '2026-11-07T10:00:01.000Z',
+        ];
     }
 
     /**

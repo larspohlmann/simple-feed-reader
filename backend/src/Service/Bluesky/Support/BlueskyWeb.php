@@ -15,6 +15,11 @@ final class BlueskyWeb
         return self::URL . '/profile/' . $actor;
     }
 
+    public static function searchUrl(string $query): string
+    {
+        return self::URL . '/search?q=' . rawurlencode($query);
+    }
+
     private function __construct()
     {
     }

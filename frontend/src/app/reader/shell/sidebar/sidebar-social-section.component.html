@@ -83,31 +83,32 @@
           </div>
         }
       }
-      @if (current.profiles.subscriptions.length) {
-        @if (current.accounts.length) {
+      @for (group of feedGroups(); track group.kind; let first = $first) {
+        @let groupExpanded = groupToggles[group.kind].expanded();
+        @if (first && current.accounts.length) {
           <div class="divider" aria-hidden="true"></div>
         }
-        <div class="group" [class.open]="profilesExpanded()">
-          <div class="tag" data-testid="sidebar-social-feeds">
+        <div class="group" [class.open]="groupExpanded">
+          <div class="tag" [attr.data-testid]="group.testId">
             @if (organising()) {
               <span class="handle-gap" aria-hidden="true"></span>
             }
             <app-sidebar-group-row
-              [link]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
-              [label]="'reader.socialFeeds' | transloco"
-              glyph="group"
-              [count]="current.profiles.unreadCount"
-              [active]="profilesActive()"
-              [expanded]="profilesExpanded()"
-              [toggleLabel]="'reader.toggleSocialFeeds' | transloco: { network: networkName }"
-              (toggled)="toggleProfiles()"
+              [link]="selectionQueryParams({ network: current.network, feedKind: group.kind })"
+              [label]="group.labelKey | transloco"
+              [glyph]="group.glyph"
+              [count]="group.feeds.unreadCount"
+              [active]="activeFeedKind() === group.kind"
+              [expanded]="groupExpanded"
+              [toggleLabel]="group.toggleKey | transloco: { network: networkName }"
+              (toggled)="groupToggles[group.kind].toggle()"
             >
               <span class="slot" aria-hidden="true"></span>
             </app-sidebar-group-row>
           </div>
-          @if (profilesExpanded()) {
+          @if (groupExpanded) {
             <div class="tagfeeds">
-              @for (subscription of current.profiles.subscriptions; track subscription.id) {
+              @for (subscription of group.feeds.subscriptions; track subscription.id) {
                 <div class="feedrow">
                   <app-sidebar-feed-row
                     [subscription]="subscription"

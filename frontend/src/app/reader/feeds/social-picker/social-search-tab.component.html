@@ -1,0 +1,11 @@
+<app-social-search-form #form [network]="network()" [accountId]="accountId()">
+  <app-button
+    variant="primary"
+    data-testid="social-search-subscribe"
+    [disabled]="!form.preview()"
+    [loading]="importer.importing()"
+    (click)="subscribe.emit(form.normalizedQuery())"
+  >
+    {{ 'settings.social.search.subscribe' | transloco }}
+  </app-button>
+</app-social-search-form>

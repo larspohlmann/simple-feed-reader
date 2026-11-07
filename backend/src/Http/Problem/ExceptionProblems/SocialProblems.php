@@ -10,6 +10,7 @@ use App\Service\Social\Exception\BlueskyProfileHiddenException;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Exception\NotAnAppPasswordException;
+use App\Service\Social\Exception\NotASearchFeedException;
 use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
 use App\Service\Social\Exception\SocialAccountMismatchException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
@@ -57,6 +58,12 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
             $exception instanceof InvalidSocialImportFeedException => new ResolvedProblem(new ApiProblem(
                 'social_import_invalid_feed',
                 'Not importable from this account',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof NotASearchFeedException => new ResolvedProblem(new ApiProblem(
+                'not_a_search_feed',
+                'Not a search feed',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

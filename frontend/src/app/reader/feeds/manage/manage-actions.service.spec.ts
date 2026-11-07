@@ -10,6 +10,8 @@ import { UNSUBSCRIBE_REQUESTED } from './edit-subscription-dialog.component';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
+import { RefreshService } from '../../state/refresh.service';
+import { EntriesStore } from '../../state/entries.store';
 import { TagDrop } from '../../tag-drop';
 import { RefreshReport, SubscriptionDto, TagDto } from '../../models';
 import { makeSubscription } from '../../testing/subscription.factory';
@@ -73,6 +75,51 @@ describe('ManageActions', () => {
       .mockImplementation(() => undefined);
     service.editSubscription(sub);
     expect(savedSearchesLoad).toHaveBeenCalled();
+  });
+
+  it('refreshes a search whose query the edit changed, and only then', () => {
+    const search = makeSubscription({
+      id: 9,
+      feedId: 90,
+      social: { network: 'bluesky', accountId: 3, kind: 'search', query: 'rss' },
+    });
+    jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+      .mockImplementation(() => undefined);
+    const run = jest
+      .spyOn(TestBed.inject(RefreshService), 'run')
+      .mockImplementation(() => undefined);
+
+    closed = search;
+    service.editSubscription(search);
+    expect(run).not.toHaveBeenCalled();
+
+    closed = { ...search, social: { ...search.social, query: 'atom' } };
+    service.editSubscription(search);
+    expect(run).toHaveBeenCalledWith(undefined, { feedId: 90 });
+  });
+
+  it('reloads the entry list at once after a new query, even while another refresh runs', () => {
+    const search = makeSubscription({
+      id: 9,
+      feedId: 90,
+      social: { network: 'bluesky', accountId: 3, kind: 'search', query: 'rss' },
+    });
+    jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+      .mockImplementation(() => undefined);
+    const reload = jest
+      .spyOn(TestBed.inject(EntriesStore), 'reload')
+      .mockImplementation(() => undefined);
+    TestBed.inject(RefreshService).running.set(true);
+
+    closed = search;
+    service.editSubscription(search);
+    expect(reload).not.toHaveBeenCalled();
+
+    closed = { ...search, social: { ...search.social, query: 'atom' } };
+    service.editSubscription(search);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('opens the unsubscribe confirmation when the edit dialog asks for it', () => {

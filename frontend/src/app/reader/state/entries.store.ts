@@ -117,6 +117,12 @@ export class EntriesStore {
     });
   }
 
+  /** Loads the list last asked for again, for a caller that changed it without knowing the view. */
+  reload(): void {
+    const query = this.query();
+    if (query !== null) this.load(query);
+  }
+
   /** Runs `mutation$` with the loading cue raised from the call, not from its
    *  response — so a bulk mark-read shows the wait at once. `reload` refreshes
    *  the list on success (which lowers the cue); a failed mutation lowers it. */

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\Entry;
+use App\Entity\EntryAuthor;
+use App\Entity\EntryShare;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
@@ -12,6 +16,7 @@ use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Model\StoredPostModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\ProfileFeedSubscriptions;
@@ -24,6 +29,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialFeedRepositoryTest extends DbTestCase
 {
+    private const string AMY = 'https://bsky.app/profile/amy.bsky.social';
+    private const string FETCHED_AT = '2026-11-07 10:00:00';
     private const string WRITERS = 'at://did:plc:alice/app.bsky.graph.list/3l1';
 
     private User $user;
@@ -278,6 +285,90 @@ final class SocialFeedRepositoryTest extends DbTestCase
 
         self::assertSame($home, SocialFeeds::repository($this->entityManager)->forFeed($home->getFeed()));
         self::assertNull(SocialFeeds::repository($this->entityManager)->forFeed($ordinary));
+    }
+
+    public function testTheUnprotectedPostsOfAFeedCarryTheirTextAndAuthorPage(): void
+    {
+        $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
+        $plain = $this->post($search->getFeed(), 'plain', '<p>rss reader</p>', self::AMY);
+        $read = $this->post($search->getFeed(), 'read', null, null);
+        $readState = new EntryState($this->user, $read);
+        $readState->hide(new \DateTimeImmutable(self::FETCHED_AT));
+        $this->entityManager->persist($readState);
+        $elsewhere = $this->socialFeed($this->account, SocialFeedKind::Search, 'atom');
+        $this->post($elsewhere->getFeed(), 'elsewhere', '<p>atom</p>', null);
+        $this->entityManager->flush();
+
+        $posts = SocialFeeds::repository($this->entityManager)->unprotectedPostsAfter($search, 0);
+
+        self::assertEquals(
+            [
+                new StoredPostModel($plain->requireId(), 'plain', '<p>rss reader</p>', self::AMY),
+                new StoredPostModel($read->requireId(), 'read', null, null),
+            ],
+            $posts,
+        );
+    }
+
+    public function testAFavouritedKeptOrSharedPostIsProtected(): void
+    {
+        $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
+        $favourite = new EntryState($this->user, $this->post($search->getFeed(), 'favourite', null, null));
+        $favourite->markFavorite();
+        $kept = new EntryState($this->user, $this->post($search->getFeed(), 'kept', null, null));
+        $kept->markKept();
+        $this->entityManager->persist($favourite);
+        $this->entityManager->persist($kept);
+        $shared = $this->post($search->getFeed(), 'shared', null, null);
+        $this->entityManager->persist(new EntryShare($this->user, $shared, new \DateTimeImmutable(self::FETCHED_AT)));
+        $this->entityManager->flush();
+
+        self::assertSame([], SocialFeeds::repository($this->entityManager)->unprotectedPostsAfter($search, 0));
+    }
+
+    public function testTheUnprotectedPostsArePagedByEntryId(): void
+    {
+        $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
+        $first = $this->post($search->getFeed(), 'first', null, null);
+        $second = $this->post($search->getFeed(), 'second', null, null);
+        $third = $this->post($search->getFeed(), 'third', null, null);
+
+        $posts = SocialFeeds::repository($this->entityManager)->unprotectedPostsAfter($search, $first->requireId());
+
+        self::assertSame(
+            [$second->requireId(), $third->requireId()],
+            array_map(static fn (StoredPostModel $post): int => $post->entryId, $posts),
+        );
+    }
+
+    public function testTheUnprotectedPostsComeAtMostFiveHundredAtATime(): void
+    {
+        $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
+        $fetchedAt = new \DateTimeImmutable(self::FETCHED_AT);
+        for ($index = 0; $index < 501; ++$index) {
+            $post = new Entry($search->getFeed(), 'post-' . $index, null, 'Post', $fetchedAt, $fetchedAt);
+            $this->entityManager->persist($post);
+        }
+        $this->entityManager->flush();
+        $socialFeeds = SocialFeeds::repository($this->entityManager);
+
+        $firstBatch = $socialFeeds->unprotectedPostsAfter($search, 0);
+        $rest = $socialFeeds->unprotectedPostsAfter($search, $firstBatch[499]->entryId);
+
+        self::assertCount(500, $firstBatch);
+        self::assertCount(1, $rest);
+    }
+
+    private function post(Feed $feed, string $guid, ?string $contentHtml, ?string $authorUrl): Entry
+    {
+        $fetchedAt = new \DateTimeImmutable(self::FETCHED_AT);
+        $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $fetchedAt, $fetchedAt);
+        $entry->setContentHtml($contentHtml);
+        $entry->setAuthor(new EntryAuthor('Someone', $authorUrl));
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        return $entry;
     }
 
     private function socialFeed(SocialAccount $account, SocialFeedKind $kind, string $remoteId): SocialFeed

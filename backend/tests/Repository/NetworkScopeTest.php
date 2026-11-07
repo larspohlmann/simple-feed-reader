@@ -33,10 +33,19 @@ final class NetworkScopeTest extends TestCase
         self::assertSame(NetworkFeedKind::Profile, $scope->feedKind);
     }
 
+    public function testASearchFeedKindScopesTheNetworksSearches(): void
+    {
+        $scope = NetworkScope::fromRequestValues('bluesky', 'search');
+
+        self::assertSame(SocialNetwork::Bluesky, $scope?->network);
+        self::assertSame(NetworkFeedKind::Search, $scope->feedKind);
+        self::assertSame('bluesky-search', $scope->toRunKey());
+    }
+
     public function testAnUnknownFeedKindIsAValidationError(): void
     {
         $this->assertRefused(
-            ['feedKind' => ['Unknown feedKind. Use one of: profile.']],
+            ['feedKind' => ['Unknown feedKind. Use one of: profile, search.']],
             static fn () => NetworkScope::fromRequestValues('bluesky', 'home'),
         );
     }

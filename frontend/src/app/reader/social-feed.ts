@@ -5,6 +5,7 @@ export type SocialFeedRefDto = { network: SocialNetworkName } & (
   | { kind: 'profile'; accountId: null }
   | { kind: 'saved'; accountId: null }
   | { kind: 'home' | 'trending' | 'list' | 'custom_feed' | 'tag'; accountId: number }
+  | { kind: 'search'; accountId: number; query: string }
 );
 
 export type PrivateFeedRefDto = Extract<SocialFeedRefDto, { accountId: number }>;

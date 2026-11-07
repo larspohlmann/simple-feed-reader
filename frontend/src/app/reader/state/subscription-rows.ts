@@ -5,6 +5,7 @@ import {
   homeLabel,
   isUnrenamedHome,
   isUnrenamedSavedFeed,
+  isUnrenamedSearch,
   savedFeedLabel,
 } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
@@ -24,7 +25,10 @@ export class SubscriptionRows {
   /** As the server sent them: the rows an optimistic edit patches. */
   readonly stored = signal<SubscriptionDto[]>([]);
 
-  /** The rows every surface shows: an unrenamed Home or saved feed is titled in the active language. */
+  /**
+   * The rows every surface shows: an unrenamed Home or saved feed is titled in the active language, an unrenamed
+   * search by its current query.
+   */
   readonly all = computed(() => {
     // translate() is one-shot: reading the language re-resolves the titles on a switch.
     this.activeLang();
@@ -41,6 +45,8 @@ export class SubscriptionRows {
 
   private withDisplayTitle(subscription: SubscriptionDto): SubscriptionDto {
     const social = subscription.social;
+    if (isUnrenamedSearch(subscription))
+      return { ...subscription, title: subscription.social.query };
     if (isUnrenamedSavedFeed(subscription)) {
       return { ...subscription, title: savedFeedLabel(this.i18n, networkOf(subscription)) };
     }

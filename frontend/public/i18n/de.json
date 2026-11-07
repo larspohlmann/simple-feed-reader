@@ -409,7 +409,28 @@
         "accounts": "Konten",
         "lists": "Listen",
         "customFeeds": "Feeds",
-        "tags": "Hashtags"
+        "tags": "Hashtags",
+        "search": "Suche"
+      },
+      "search": {
+        "queryLabel": "Suchbegriff",
+        "example": "Beispiel:",
+        "syntax": "Suchsyntax",
+        "syntaxPhrase": "genau diese Wortfolge",
+        "syntaxEither": "eines der beiden Wörter",
+        "syntaxExclude": "lässt Beiträge mit dem Wort weg",
+        "syntaxExcludeAuthor": "lässt Beiträge dieses Kontos weg",
+        "syntaxGroup": "fasst Begriffe zusammen",
+        "syntaxCombined": "Alles zusammen:",
+        "syntaxAllWords": "jedes Wort muss vorkommen",
+        "syntaxMastodonNote": "Setzt die Volltextsuche deiner Instanz voraus; gefunden werden nur Beiträge von Leuten, die die Suche erlauben.",
+        "preview": "Vorschau",
+        "subscribe": "Abonnieren",
+        "loading": "Suche nach neuen Beiträgen…",
+        "matchCountOne": "1 aktueller Beitrag passt",
+        "matchCountOther": "{{count}} aktuelle Beiträge passen",
+        "empty": "Keine aktuellen Beiträge gefunden. Du kannst trotzdem abonnieren; neue Treffer erscheinen dann hier.",
+        "emptyMastodon": "Deine Instanz unterstützt die Volltextsuche womöglich nicht."
       },
       "importStates": "Anzeigen",
       "importStateAll": "Alle",
@@ -912,6 +933,7 @@
       "title": "Feed bearbeiten",
       "customTitle": "Eigener Titel",
       "resetTitle": "Feed-Titel verwenden",
+      "queryNote": "Eine neue Suche entfernt beim Speichern die gespeicherten Beiträge, die nicht mehr passen; Favoriten und behaltene Beiträge bleiben.",
       "feedUrl": "Feed-URL",
       "siteUrl": "Website",
       "tags": "Tags",
@@ -1271,6 +1293,7 @@
     "reconnectSocialAccount": "{{handle}} in den Einstellungen neu verbinden",
     "manageSocialSection": "{{network}}-Optionen",
     "socialFeeds": "Feeds",
+    "socialSearches": "Suchen",
     "socialHome": "Startseite@{{network}}",
     "savedFrom": {
       "bluesky": "Gespeichert aus Bluesky",
@@ -1278,6 +1301,7 @@
       "feeds": "Gespeichert aus Feeds"
     },
     "toggleSocialFeeds": "{{network}}-Feeds ein-/ausklappen",
+    "toggleSocialSearches": "{{network}}-Suchen ein-/ausklappen",
     "socialNetworkShort": {
       "bluesky": "bsky",
       "mastodon": "mastodon"

@@ -19,7 +19,9 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialSessionStaleException;
 use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Social\Support\BlueskySearchPage;
 use App\Service\Social\Support\BlueskyTimelinePage;
+use App\Service\Social\Support\SocialSearchPaths;
 
 final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 {
@@ -46,11 +48,15 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
             throw new SocialSessionStaleException(BlueskySessions::SESSION_REFUSED);
         }
 
-        $items = self::itemsOf($answer);
+        $accepted = BlueskySessions::accepted($answer);
 
-        return SocialFeedKind::Author === $socialFeed->getKind()
-            ? BlueskyTimelinePage::ofAuthor($items, $socialFeed->getRemoteId())
-            : BlueskyTimelinePage::of($items, $socialFeed->getSocialAccount()->getIdentity());
+        return SocialFeedKind::Search === $socialFeed->getKind()
+            ? BlueskySearchPage::of(
+                $accepted,
+                $socialFeed->getSocialAccount()->getIdentity(),
+                $socialFeed->getRemoteId(),
+            )
+            : self::timelinePageOf($socialFeed, $accepted);
     }
 
     public function dropSession(SocialAccount $account): void
@@ -58,11 +64,30 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         $this->sessions->forget($account);
     }
 
+    /**
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    private static function timelinePageOf(SocialFeed $socialFeed, ApiResponseModel $accepted): TimelinePageModel
+    {
+        $items = JsonNodeModel::of($accepted->json())->listAt('feed')
+            ?? throw new SocialNetworkUnreachableException('Bluesky answered without a feed.');
+
+        return SocialFeedKind::Author === $socialFeed->getKind()
+            ? BlueskyTimelinePage::ofAuthor($items, $socialFeed->getRemoteId())
+            : BlueskyTimelinePage::of($items, $socialFeed->getSocialAccount()->getIdentity());
+    }
+
     private static function pathOf(SocialFeed $socialFeed): string
     {
+        $kind = $socialFeed->getKind();
+        if (SocialFeedKind::Search === $kind) {
+            return SocialSearchPaths::bluesky($socialFeed->getRemoteId());
+        }
         $remoteId = rawurlencode($socialFeed->getRemoteId());
 
-        return match ($socialFeed->getKind()) {
+        return match ($kind) {
             SocialFeedKind::Home => '/xrpc/app.bsky.feed.getTimeline?',
             SocialFeedKind::UserList => '/xrpc/app.bsky.feed.getListFeed?list=' . $remoteId . '&',
             SocialFeedKind::CustomFeed => '/xrpc/app.bsky.feed.getFeed?feed=' . $remoteId . '&',
@@ -72,18 +97,5 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
                 'Bluesky has no such timeline.',
             ),
         } . 'limit=' . self::PAGE_SIZE;
-    }
-
-    /**
-     * @return list<JsonNodeModel>
-     *
-     * @throws SocialCredentialsRejectedException
-     * @throws SocialNetworkThrottledException
-     * @throws SocialNetworkUnreachableException
-     */
-    private static function itemsOf(ApiResponseModel $answer): array
-    {
-        return JsonNodeModel::of(BlueskySessions::accepted($answer)->json())->listAt('feed')
-            ?? throw new SocialNetworkUnreachableException('Bluesky answered without a feed.');
     }
 }

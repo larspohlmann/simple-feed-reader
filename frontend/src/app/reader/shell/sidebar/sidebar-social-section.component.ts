@@ -4,12 +4,16 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
-import { SocialNetworkName } from '../../../core/social-network';
-import { persistedToggle } from '../../../core/preferences/persisted-toggle';
+import { NetworkFeedKind, SocialNetworkName } from '../../../core/social-network';
+import { PersistedToggle, persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
 import { ExclusionSurface, exclusionTitle } from '../../feed-exclusions';
-import { SocialSection } from '../../state/social-sections';
+import {
+  NETWORK_FEED_KINDS_IN_ORDER,
+  NETWORK_FEED_KIND_DESCRIPTORS,
+  SocialSection,
+} from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
@@ -17,8 +21,8 @@ import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 
 const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.collapsed`;
-const profilesCollapsedKey = (network: SocialNetworkName): string =>
-  `sfr.${network}.profiles.collapsed`;
+const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): string =>
+  `sfr.${network}.${NETWORK_FEED_KIND_DESCRIPTORS[kind].storageName}.collapsed`;
 
 /** One network's social feeds, collapsible and remembered like Tags; a handle heads each of several accounts. */
 @Component({
@@ -48,18 +52,24 @@ export class SidebarSocialSectionComponent {
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
-  private readonly profilesCollapsible = persistedToggle(
-    () => profilesCollapsedKey(this.section().network),
-    'collapsed',
-  );
-  protected readonly profilesExpanded = this.profilesCollapsible.expanded;
+  protected readonly groupToggles = Object.fromEntries(
+    NETWORK_FEED_KINDS_IN_ORDER.map((kind) => [kind, this.groupToggle(kind)]),
+  ) as Readonly<Record<NetworkFeedKind, PersistedToggle>>;
+  protected readonly feedGroups = computed(() => {
+    const section = this.section();
+    return NETWORK_FEED_KINDS_IN_ORDER.map((kind) => ({
+      kind,
+      ...NETWORK_FEED_KIND_DESCRIPTORS[kind],
+      feeds: section.groups[kind],
+    })).filter((group) => group.feeds.subscriptions.length > 0);
+  });
   private readonly onThisNetwork = computed(() => {
     const selection = this.selection();
     return selection.kind === 'network' && selection.network === this.section().network;
   });
   protected readonly active = computed(() => this.onThisNetwork() && !this.selection().feedKind);
-  protected readonly profilesActive = computed(
-    () => this.onThisNetwork() && this.selection().feedKind === 'profile',
+  protected readonly activeFeedKind = computed(() =>
+    this.onThisNetwork() ? this.selection().feedKind : undefined,
   );
   protected readonly selectionQueryParams = selectionQueryParams;
 
@@ -78,7 +88,7 @@ export class SidebarSocialSectionComponent {
     this.collapsible.toggle();
   }
 
-  protected toggleProfiles(): void {
-    this.profilesCollapsible.toggle();
+  private groupToggle(kind: NetworkFeedKind): PersistedToggle {
+    return persistedToggle(() => groupCollapsedKey(this.section().network, kind), 'collapsed');
   }
 }

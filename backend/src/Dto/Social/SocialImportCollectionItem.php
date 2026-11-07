@@ -17,6 +17,7 @@ final readonly class SocialImportCollectionItem
             SocialFeedKind::CustomFeed->value,
             SocialFeedKind::Tag->value,
             SocialFeedKind::Trending->value,
+            SocialFeedKind::Search->value,
         ])]
         public string $kind = '',
         #[Assert\Length(max: 512)]

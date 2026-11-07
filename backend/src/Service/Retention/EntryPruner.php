@@ -15,7 +15,6 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final readonly class EntryPruner
 {
-    private const int DELETE_CHUNK_SIZE = 500;
     private const int DEFAULT_MAX_ENTRIES_PER_FEED = 2000;
 
     /** A floor, not a skip: both passes keep a feed's newest 20, however old. */
@@ -116,12 +115,10 @@ final readonly class EntryPruner
             return 0;
         }
 
-        // A bulk DELETE fires no lifecycle event, so the index is told here, one chunk at a time.
-        foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
-            $this->retention->deleteEntries($chunk);
-            $this->indexer->forget($chunk);
-        }
+        // A bulk DELETE fires no lifecycle event, so the index is told here.
+        $deletedIds = $this->retention->deleteUnprotectedEntries($ids);
+        $this->indexer->forget($deletedIds);
 
-        return \count($ids);
+        return \count($deletedIds);
     }
 }

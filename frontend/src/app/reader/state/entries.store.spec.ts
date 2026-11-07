@@ -67,6 +67,26 @@ describe('EntriesStore', () => {
     expect(store.loadedAt()).not.toBe('');
   });
 
+  it('reloads the list it last loaded', () => {
+    store.load({ view: 'all', subscription: 7 });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1), entry(2)], nextCursor: null });
+
+    store.reload();
+
+    const again = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+    expect(again.request.params.get('view')).toBe('all');
+    again.flush({ entries: [entry(2)], nextCursor: null });
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([2]);
+  });
+
+  it('reloads nothing before any list was loaded', () => {
+    store.reload();
+
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+  });
+
   it('keeps the previous entries visible while a reload is on the wire', () => {
     store.load({ view: 'unread' });
     ctrl

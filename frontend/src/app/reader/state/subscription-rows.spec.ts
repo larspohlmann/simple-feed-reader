@@ -34,6 +34,14 @@ const savedRenamed = makeSubscription({
   sourceFormat: 'saved',
 });
 const ordinary = makeSubscription({ id: 5, title: 'Heise' });
+const search = { network: 'bluesky', accountId: 1, kind: 'search', query: 'feed reader' } as const;
+const requeried = makeSubscription({ id: 9, title: 'rss reader', social: search });
+const renamedSearch = makeSubscription({
+  id: 10,
+  title: 'Readers',
+  customTitle: 'Readers',
+  social: search,
+});
 
 function rows(): SubscriptionRows {
   TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
@@ -81,5 +89,13 @@ describe('SubscriptionRows', () => {
 
     expect(held.find(7)?.title).toBe('Saved from Mastodon');
     expect(held.find(8)?.title).toBe('My keepers');
+  });
+
+  it('titles an unrenamed search by its current query and keeps a custom title', () => {
+    const held = rows();
+    held.stored.set([requeried, renamedSearch]);
+
+    expect(held.find(9)?.title).toBe('feed reader');
+    expect(held.find(10)?.title).toBe('Readers');
   });
 });

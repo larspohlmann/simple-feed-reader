@@ -41,6 +41,7 @@ final class SocialFeed
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $newestSeenId = null;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(SocialAccount $socialAccount, Feed $feed, SocialFeedKind $kind, string $remoteId)
     {
         $this->socialAccount = $socialAccount;
@@ -77,6 +78,12 @@ final class SocialFeed
     public function getNewestSeenId(): ?string
     {
         return $this->newestSeenId;
+    }
+
+    public function requery(string $query): void
+    {
+        $this->remoteId = $query;
+        $this->newestSeenId = null;
     }
 
     public function recordNewestSeen(?string $statusId): void

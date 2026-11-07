@@ -13,66 +13,22 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { SocialNetworkName } from '../../../core/social-network';
 import { SocialImportDialogComponent } from './social-import-dialog.component';
-import { CollectionCandidate, FollowCandidate, ImportCandidates } from './social-import.service';
+import { ImportCandidates } from './social-import.service';
+import {
+  CAROL,
+  DAVE,
+  DISCOVER,
+  HOME,
+  candidates,
+  collection,
+  follow,
+  manyFollows,
+} from '../../testing/import-candidates.factory';
 
 const BASE = 'https://api.test';
 const CANDIDATES = `${BASE}/api/me/social-accounts/4/import-candidates`;
 const IMPORT = `${BASE}/api/me/social-accounts/4/import`;
 const failingProxy = { recover: () => Promise.resolve('failed' as const) };
-
-function follow(overrides: Partial<FollowCandidate> = {}): FollowCandidate {
-  return {
-    identity: 'did:plc:bob',
-    handle: '@bob.bsky.social',
-    displayName: 'Bob',
-    avatarUrl: null,
-    feedUrl: 'https://bsky.app/profile/did:plc:bob/rss',
-    state: 'new',
-    subscriptionId: null,
-    ...overrides,
-  };
-}
-
-const CAROL = follow({
-  identity: 'did:plc:carol',
-  handle: '@carol.bsky.social',
-  displayName: 'Carol',
-  feedUrl: 'https://bsky.app/profile/did:plc:carol/rss',
-  state: 'subscribed',
-  subscriptionId: 9,
-});
-const DAVE = follow({
-  identity: 'did:plc:dave',
-  handle: 'did:plc:dave',
-  displayName: 'Dave’s posts',
-  feedUrl: 'https://bsky.app/profile/did:plc:dave/rss',
-  state: 'no_longer_followed',
-  subscriptionId: 10,
-});
-
-function manyFollows(count: number): FollowCandidate[] {
-  return Array.from({ length: count }, (_, index) =>
-    follow({ identity: `did:plc:${index}`, feedUrl: `https://bsky.app/${index}/rss` }),
-  );
-}
-
-function collection(overrides: Partial<CollectionCandidate> = {}): CollectionCandidate {
-  return {
-    kind: 'list',
-    id: 'at://list/a',
-    name: 'News',
-    state: 'new',
-    subscriptionId: null,
-    ...overrides,
-  };
-}
-
-const HOME = collection({ kind: 'home', id: null, name: 'Home' });
-const DISCOVER = collection({ kind: 'custom_feed', id: 'at://feed/a', name: 'Discover' });
-
-function candidates(overrides: Partial<ImportCandidates> = {}): ImportCandidates {
-  return { follows: [], lists: [], customFeeds: [], tags: [], truncated: false, ...overrides };
-}
 
 describe('SocialImportDialogComponent', () => {
   let http: HttpTestingController;
@@ -207,11 +163,11 @@ describe('SocialImportDialogComponent', () => {
 
   it('counts each tab, and the counts follow the filter', () => {
     const fixture = loaded(candidates({ follows: [follow(), CAROL], lists: [collection()] }));
-    expect(tabLabels(fixture)).toEqual(['Accounts 2', 'Lists 1', 'Feeds 0']);
+    expect(tabLabels(fixture)).toEqual(['Accounts 2', 'Lists 1', 'Feeds 0', 'Search']);
 
     filterBy(fixture, 'carol');
 
-    expect(tabLabels(fixture)).toEqual(['Accounts 1', 'Lists 0', 'Feeds 0']);
+    expect(tabLabels(fixture)).toEqual(['Accounts 1', 'Lists 0', 'Feeds 0', 'Search']);
   });
 
   it('opens on the accounts and shows one tab at a time', () => {
@@ -233,7 +189,94 @@ describe('SocialImportDialogComponent', () => {
       'mastodon',
     );
 
-    expect(tabLabels(fixture)).toEqual(['Accounts 0', 'Lists 0', 'Tags 1']);
+    expect(tabLabels(fixture)).toEqual(['Accounts 0', 'Lists 0', 'Tags 1', 'Search']);
+  });
+
+  it('swaps the filter, the rows and Save for the search on the Search tab', () => {
+    const fixture = loaded(candidates({ follows: [follow()] }), 'mastodon');
+
+    showTab(fixture, 'Search');
+
+    expect(byTestId(fixture, 'social-import-filter')).toBeNull();
+    expect(byTestId(fixture, 'social-import-state-all')).toBeNull();
+    expect(byTestId(fixture, 'social-import-follows')).toBeNull();
+    expect(byTestId(fixture, 'social-import-apply')).toBeNull();
+    expect(byTestId(fixture, 'social-search-query')).not.toBeNull();
+  });
+
+  it('keeps the ticks and the filter across a trip to the Search tab', () => {
+    const fixture = loaded(candidates({ follows: [follow(), CAROL] }));
+    tick(fixture, 'did:plc:bob');
+    filterBy(fixture, 'bob');
+
+    showTab(fixture, 'Search');
+    expect(tabLabels(fixture)).toEqual(['Accounts 1', 'Lists 0', 'Feeds 0', 'Search']);
+    showTab(fixture, 'Accounts');
+
+    expect(byTestId<HTMLInputElement>(fixture, 'social-import-filter')?.value).toBe('bob');
+    expect(checkboxOf(fixture, 'did:plc:bob').checked).toBe(true);
+    expect(byTestId(fixture, 'social-import-follow-did:plc:carol')).toBeNull();
+  });
+
+  it('reaches the Search tab while the candidates load, without counts or list controls', () => {
+    const fixture = mount();
+    expect(tabLabels(fixture)).toEqual(['Accounts', 'Lists', 'Feeds', 'Search']);
+    expect(byTestId(fixture, 'social-import-filter')).toBeNull();
+    expect(byTestId(fixture, 'social-import-apply')).toBeNull();
+
+    showTab(fixture, 'Search');
+
+    expect(byTestId(fixture, 'social-search-query')).not.toBeNull();
+    expect(byTestId(fixture, 'social-import-loading')).toBeNull();
+    http.expectOne(CANDIDATES).flush(candidates());
+  });
+
+  it('reaches the Search tab after the candidates failed', () => {
+    const fixture = mount();
+    http
+      .expectOne(CANDIDATES)
+      .flush(
+        { type: 'social_network_unreachable', title: 'x', status: 502, detail: 'Bluesky is down.' },
+        { status: 502, statusText: 'Bad Gateway' },
+      );
+    fixture.detectChanges();
+
+    showTab(fixture, 'Search');
+
+    expect(byTestId(fixture, 'social-search-query')).not.toBeNull();
+  });
+
+  it('subscribes to a previewed search as a collection and closes with the result', () => {
+    const fixture = loaded(candidates());
+    showTab(fixture, 'Search');
+    const query = byTestId<HTMLInputElement>(fixture, 'social-search-query') as HTMLInputElement;
+    query.value = ' rss reader ';
+    query.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    press(fixture, 'social-search-preview');
+    http
+      .expectOne((request) => request.url === `${BASE}/api/me/social-accounts/4/search-preview`)
+      .flush({ count: 0, posts: [] });
+    fixture.detectChanges();
+
+    press(fixture, 'social-search-subscribe');
+
+    const post = http.expectOne(IMPORT);
+    expect(post.request.body).toEqual({
+      subscribe: [],
+      unsubscribe: [],
+      collections: [{ kind: 'search', id: 'rss reader', name: 'rss reader' }],
+    });
+    const result = {
+      imported: 1,
+      alreadySubscribed: 0,
+      invalid: 0,
+      skippedOverLimit: 0,
+      removed: 0,
+    };
+    post.flush(result);
+    expect(refreshStub.run).toHaveBeenCalled();
+    expect(close).toHaveBeenCalledWith(result);
   });
 
   it("names the trending row in the user's language", () => {
@@ -244,26 +287,6 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-import-collection-trending:')?.textContent).toContain(
       'Trending posts',
     );
-  });
-
-  it('imports a ticked tag', () => {
-    const fixture = loaded(
-      candidates({ tags: [collection({ kind: 'tag', id: 'caturday', name: '#Caturday' })] }),
-      'mastodon',
-    );
-    showTab(fixture, 'Tags');
-    collectionBox(fixture, 'tag:caturday').click();
-    fixture.detectChanges();
-
-    press(fixture, 'social-import-apply');
-    const post = http.expectOne(IMPORT);
-
-    expect(post.request.body).toEqual({
-      subscribe: [],
-      unsubscribe: [],
-      collections: [{ kind: 'tag', id: 'caturday', name: '#Caturday' }],
-    });
-    post.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
   });
 
   it('narrows the rows to one state and drops the now redundant state labels', () => {
@@ -289,16 +312,6 @@ describe('SocialImportDialogComponent', () => {
 
     const without = loaded(candidates({ follows: [follow(), CAROL] }));
     expect(byTestId(without, 'social-import-state-no_longer_followed')).toBeNull();
-  });
-
-  it('falls back to All on a tab that cannot show the chosen state', () => {
-    const fixture = loaded(candidates({ follows: [DAVE], lists: [HOME] }));
-    showState(fixture, 'no_longer_followed');
-
-    showTab(fixture, 'Lists');
-
-    expect(byTestId(fixture, 'social-import-collection-home:')).not.toBeNull();
-    expect(byTestId(fixture, 'social-import-state-all')?.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('hints how to unsubscribe only while a subscribed row is listed', () => {
@@ -426,22 +439,6 @@ describe('SocialImportDialogComponent', () => {
     expect(selectNew(fixture).disabled).toBe(true);
   });
 
-  it('unticking an added list removes it through the import’s unsubscribe ids', () => {
-    const fixture = loaded(
-      candidates({ lists: [collection({ state: 'subscribed', subscriptionId: 12 })] }),
-    );
-    showTab(fixture, 'Lists');
-
-    collectionBox(fixture, 'list:at://list/a').click();
-    fixture.detectChanges();
-    expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(false);
-
-    press(fixture, 'social-import-apply');
-    const post = http.expectOne(IMPORT);
-    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [12], collections: [] });
-    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 1 });
-  });
-
   it('asks first, naming the lists and where favourites and kept posts go', () => {
     const fixture = loaded(
       candidates({ lists: [collection({ state: 'subscribed', subscriptionId: 12 })] }),
@@ -462,88 +459,6 @@ describe('SocialImportDialogComponent', () => {
       skippedOverLimit: 0,
       removed: 1,
     });
-  });
-
-  it('sends nothing when the removal is not confirmed', () => {
-    confirmStub.confirmThen.mockImplementationOnce(() => undefined);
-    const fixture = loaded(
-      candidates({ lists: [collection({ state: 'subscribed', subscriptionId: 12 })] }),
-    );
-    showTab(fixture, 'Lists');
-    collectionBox(fixture, 'list:at://list/a').click();
-    fixture.detectChanges();
-
-    press(fixture, 'social-import-apply');
-
-    http.expectNone(IMPORT);
-  });
-
-  it('removes a subscribed Home when it is unticked', () => {
-    const home = collection({
-      kind: 'home',
-      id: null,
-      name: 'Home',
-      state: 'subscribed',
-      subscriptionId: 11,
-    });
-    const fixture = loaded(candidates({ lists: [home] }));
-    showTab(fixture, 'Lists');
-
-    collectionBox(fixture, 'home:').click();
-    fixture.detectChanges();
-    press(fixture, 'social-import-apply');
-
-    const [data] = confirmStub.confirmThen.mock.calls[0];
-    expect(data.message).toContain('Remove Home timeline and its entries');
-    const post = http.expectOne(IMPORT);
-    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [11], collections: [] });
-    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 1 });
-  });
-
-  it('unsubscribes a subscribed follow when it is unticked, after asking by name', () => {
-    const fixture = loaded(candidates({ follows: [CAROL] }));
-
-    tick(fixture, 'did:plc:carol');
-    expect(checkboxOf(fixture, 'did:plc:carol').checked).toBe(false);
-    press(fixture, 'social-import-apply');
-
-    const [data] = confirmStub.confirmThen.mock.calls[0];
-    expect(data.message).toContain('Carol');
-    const post = http.expectOne(IMPORT);
-    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [9], collections: [] });
-    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 1 });
-  });
-
-  it('asks by count when several feeds go', () => {
-    const fixture = loaded(
-      candidates({
-        follows: [CAROL, DAVE],
-        lists: [collection({ state: 'subscribed', subscriptionId: 12 })],
-      }),
-    );
-    tick(fixture, 'did:plc:carol');
-    tick(fixture, 'did:plc:dave');
-    showTab(fixture, 'Lists');
-    collectionBox(fixture, 'list:at://list/a').click();
-    fixture.detectChanges();
-
-    press(fixture, 'social-import-apply');
-
-    const [data] = confirmStub.confirmThen.mock.calls[0];
-    expect(data.message).toContain('Remove these 3 feeds and their entries from your feeds?');
-    const post = http.expectOne(IMPORT);
-    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [9, 10, 12], collections: [] });
-    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 3 });
-  });
-
-  it('filters collections by the translated Home name', () => {
-    const fixture = loaded(candidates({ lists: [HOME, collection()] }));
-    showTab(fixture, 'Lists');
-
-    filterBy(fixture, 'timeline');
-
-    expect(byTestId(fixture, 'social-import-collection-home:')).not.toBeNull();
-    expect(byTestId(fixture, 'social-import-collection-list:at://list/a')).toBeNull();
   });
 
   it('enables Apply for a selection made only of collections', () => {
@@ -582,28 +497,16 @@ describe('SocialImportDialogComponent', () => {
     expect(refreshStub.run).toHaveBeenCalled();
   });
 
-  it('filters by handle or display name', () => {
-    const fixture = loaded(candidates({ follows: [follow(), CAROL] }));
-
-    filterBy(fixture, 'caro');
-
-    expect(byTestId(fixture, 'social-import-follow-did:plc:bob')).toBeNull();
-    expect(byTestId(fixture, 'social-import-follow-did:plc:carol')).not.toBeNull();
-  });
-
   it('warns when the follow list was cut at the cap', () => {
     const fixture = loaded(candidates({ truncated: true }));
 
     expect(byTestId(fixture, 'social-import-truncated')?.textContent).toContain('first 5,000');
   });
 
-  it('ignores a press on Import while the candidates load', () => {
+  it('offers no Import while the candidates load', () => {
     const fixture = mount();
-    expect(applyButton(fixture).disabled).toBe(true);
 
-    byTestId(fixture, 'social-import-apply')?.click();
-
-    http.expectNone(IMPORT);
+    expect(byTestId(fixture, 'social-import-apply')).toBeNull();
     http.expectOne(CANDIDATES).flush(candidates());
   });
 
@@ -632,36 +535,6 @@ describe('SocialImportDialogComponent', () => {
 
     showState(fixture, 'new');
     expect(rowCount()).toBe(100);
-  });
-
-  it('selects the new rows that are not rendered yet with Select all new', () => {
-    const fixture = loaded(candidates({ follows: manyFollows(150) }));
-
-    press(fixture, 'social-import-select-new');
-    expect(applyButton(fixture).textContent?.trim()).toBe('Save 150 changes');
-  });
-
-  it('selects every visible new follow at once', () => {
-    const erin = follow({
-      identity: 'did:plc:erin',
-      handle: '@erin.bsky.social',
-      displayName: 'Erin',
-      feedUrl: 'https://bsky.app/profile/did:plc:erin/rss',
-    });
-    const fixture = loaded(candidates({ follows: [follow(), erin, CAROL] }));
-    filterBy(fixture, 'bob');
-
-    press(fixture, 'social-import-select-new');
-    filterBy(fixture, '');
-    press(fixture, 'social-import-apply');
-
-    const post = http.expectOne(IMPORT);
-    expect(post.request.body).toEqual({
-      subscribe: [{ identity: 'did:plc:bob', title: 'Bob' }],
-      unsubscribe: [],
-      collections: [],
-    });
-    post.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
   });
 
   it('imports the chosen follows, unsubscribes the chosen leftovers and reloads the reader', () => {

@@ -27,6 +27,15 @@ final class SocialAccountTest extends TestCase
         );
     }
 
+    public function testTheServiceHostIsTheHostOfTheServiceUrl(): void
+    {
+        $account = $this->account();
+
+        self::assertSame('pds.example.test', $account->getServiceHost());
+        $account->moveTo('not a url');
+        self::assertNull($account->getServiceHost());
+    }
+
     public function testANewAccountIsConnectedAndNotTheDefault(): void
     {
         $account = $this->account();

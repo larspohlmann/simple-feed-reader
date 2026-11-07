@@ -9,6 +9,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\FollowedAccountModel;
@@ -479,6 +480,48 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertNotNull($subscription);
         self::assertFalse($subscription->isIncludeInAllItems());
         self::assertFalse($subscription->isIncludeInForYou());
+    }
+
+    public function testASearchIsSubscribedAsAPrivateFeedNamedByItsQuery(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-search@example.test');
+        $account = $this->blueskyAccountOf($user);
+
+        $this->postImport($client, $account, ['collections' => [
+            ['kind' => 'search', 'id' => '  rss   reader ', 'name' => 'rss reader'],
+        ]]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(1, $this->payload($client)['imported']);
+        $feed = $this->entityManager()->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('social:bluesky:%d:search:rss reader', $account->requireId()),
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('rss reader', $feed->getTitle());
+        self::assertSame('https://bsky.app/search?q=rss%20reader', $feed->getSiteUrl());
+        $subscription = $this->entityManager()->getRepository(Subscription::class)->findOneBy(['feed' => $feed]);
+        self::assertNotNull($subscription);
+        self::assertFalse($subscription->isIncludeInAllItems());
+        self::assertFalse($subscription->isIncludeInForYou());
+        $socialFeed = $this->entityManager()->getRepository(SocialFeed::class)->findOneBy(['feed' => $feed]);
+        self::assertNotNull($socialFeed);
+        self::assertSame(SocialFeedKind::Search, $socialFeed->getKind());
+        self::assertSame('rss reader', $socialFeed->getRemoteId());
+    }
+
+    public function testABlankSearchIsRefused(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-blank-search@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['collections' => [
+            ['kind' => 'search', 'id' => '   ', 'name' => 'rss reader'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(0, $this->entityManager()->getRepository(SocialFeed::class)->count());
+        self::assertSame(0, $this->entityManager()->getRepository(Subscription::class)->count());
     }
 
     public function testTrendingIsRefusedForABlueskyAccount(): void

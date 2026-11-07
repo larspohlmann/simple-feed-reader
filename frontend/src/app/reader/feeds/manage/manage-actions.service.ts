@@ -7,6 +7,8 @@ import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
+import { RefreshService } from '../../state/refresh.service';
+import { EntriesStore } from '../../state/entries.store';
 import {
   MoveFeedToTag,
   RefreshReport,
@@ -29,6 +31,7 @@ import {
 import { TagFormData, TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
+import { isSearchFeed } from '../../state/social-sections';
 import { bulkUnsubscribeConfirm, unsubscribeConfirm } from './unsubscribe-messages';
 
 /** The single place a management dialog is opened and its side effects applied.
@@ -47,6 +50,8 @@ export class ManageActions {
   private readonly tagPlacement = inject(TagPlacement);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
+  private readonly refresh = inject(RefreshService);
+  private readonly entries = inject(EntriesStore);
 
   editSubscription(sub: SubscriptionDto): void {
     const ref = this.dialog.open<EditSubscriptionResult>(EditSubscriptionDialogComponent, {
@@ -61,6 +66,7 @@ export class ManageActions {
       if (!updated) return;
       this.subs.reloadQuietly();
       if (updated.includeInSavedSearches !== sub.includeInSavedSearches) this.savedSearches.load();
+      if (searchQueryOf(updated) !== searchQueryOf(sub)) this.requeried(sub);
     });
   }
 
@@ -336,6 +342,12 @@ export class ManageActions {
     );
   }
 
+  /** The list drops the removed posts now; the refresh's finish reloads it with what the new query finds. */
+  private requeried(sub: SubscriptionDto): void {
+    this.entries.reload();
+    this.refresh.run(undefined, { feedId: sub.feedId });
+  }
+
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
     return this.api.bulkUpdateSubscriptions(body).pipe(
       tap(() => {
@@ -345,4 +357,8 @@ export class ManageActions {
       map(() => undefined),
     );
   }
+}
+
+function searchQueryOf(subscription: SubscriptionDto): string | null {
+  return isSearchFeed(subscription) ? subscription.social.query : null;
 }

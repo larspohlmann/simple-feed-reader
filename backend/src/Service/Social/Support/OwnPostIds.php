@@ -42,8 +42,8 @@ final class OwnPostIds
     private static function mastodonStatusId(string $address, SocialAccount $account): string
     {
         $status = MastodonStatusAddress::ofOrNull($address);
-        $ownHost = parse_url($account->getServiceUrl(), \PHP_URL_HOST);
-        if (null === $status || !\is_string($ownHost) || 0 !== strcasecmp($status->host, $ownHost)) {
+        $ownHost = $account->getServiceHost();
+        if (null === $status || null === $ownHost || 0 !== strcasecmp($status->host, $ownHost)) {
             throw new SocialPostRefusedException('The post is not on this account\'s own Mastodon server.');
         }
 

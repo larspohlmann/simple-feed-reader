@@ -5,19 +5,18 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
-use App\Entity\EntryShare;
-use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Enum\RunStatus;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
-/** The retention passes' queries; EntryPruner picks the feeds and chunks the deletes. */
+/** The retention passes' queries; EntryPruner picks the feeds. */
 final readonly class RetentionRepository
 {
+    private const int ID_CHUNK_SIZE = 500;
+
     public function __construct(private EntityManagerInterface $entityManager, private RowIds $rowIds)
     {
     }
@@ -75,21 +74,33 @@ final readonly class RetentionRepository
     /** @return list<int> the saved feed's entries that nobody favourites or keeps any more (#1666) */
     public function unsavedIdsInSavedFeed(int $feedId): array
     {
-        return self::idsOf(
-            $this->entityManager->createQueryBuilder()
-                ->select('e.id')
-                ->from(Entry::class, 'e')
-                ->where('e.feed = :feed')
-                ->andWhere($this->notProtectedDql())
-                ->setParameter('feed', $feedId)
-                ->setParameter('true', true, Types::BOOLEAN),
-        );
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('e.id')
+            ->from(Entry::class, 'e')
+            ->where('e.feed = :feed')
+            ->setParameter('feed', $feedId);
+        ProtectedEntryDql::exclude($qb, 'e');
+
+        return self::idsOf($qb);
     }
 
-    /** @param list<int> $ids */
-    public function deleteEntries(array $ids): void
+    /**
+     * A protected entry is skipped: it may have been favourited, kept or shared since its id was read.
+     *
+     * @param list<int> $ids
+     *
+     * @return list<int> the deleted ids
+     */
+    public function deleteUnprotectedEntries(array $ids): array
     {
-        $this->rowIds->delete(Entry::class, $ids);
+        $deleted = [];
+        foreach (array_chunk($ids, self::ID_CHUNK_SIZE) as $chunk) {
+            $unprotected = $this->unprotectedAmong($chunk);
+            $this->rowIds->delete(Entry::class, $unprotected);
+            $deleted = [...$deleted, ...$unprotected];
+        }
+
+        return $deleted;
     }
 
     /** A completed run whose items were all pruned; pending and running runs legitimately have none yet. */
@@ -102,6 +113,23 @@ final readonly class RetentionRepository
         ))
             ->setParameter('completed', RunStatus::Completed)
             ->execute();
+    }
+
+    /**
+     * @param list<int> $ids
+     *
+     * @return list<int>
+     */
+    private function unprotectedAmong(array $ids): array
+    {
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('e.id')
+            ->from(Entry::class, 'e')
+            ->where('e.id IN (:ids)')
+            ->setParameter('ids', $ids);
+        ProtectedEntryDql::exclude($qb, 'e');
+
+        return self::idsOf($qb);
     }
 
     /** @return list<int> */
@@ -127,16 +155,17 @@ final readonly class RetentionRepository
             return null;
         }
 
-        return $this->entityManager->createQueryBuilder()
+        $qb = $this->entityManager->createQueryBuilder()
             ->select('e.id')
             ->from(Entry::class, 'e')
             ->where('e.feed = :feed')
             ->andWhere($this->pastBoundaryDql())
-            ->andWhere($this->notProtectedDql())
             ->setParameter('feed', $feedId)
             ->setParameter('boundaryCreatedAt', $boundary->createdAt)
-            ->setParameter('boundaryId', $boundary->id)
-            ->setParameter('true', true, Types::BOOLEAN);
+            ->setParameter('boundaryId', $boundary->id);
+        ProtectedEntryDql::exclude($qb, 'e');
+
+        return $qb;
     }
 
     /**
@@ -169,19 +198,6 @@ final readonly class RetentionRepository
     {
         return '(e.createdAt < :boundaryCreatedAt
                  OR (e.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
-    }
-
-    /** An entry is protected iff any user favorited, kept or shared it. */
-    private function notProtectedDql(): string
-    {
-        return sprintf(
-            'NOT EXISTS (
-                SELECT IDENTITY(s.user) FROM %s s
-                WHERE s.entry = e AND (s.isFavorite = :true OR s.isKept = :true)
-            ) AND NOT EXISTS (SELECT IDENTITY(share.user) FROM %s share WHERE share.entry = e)',
-            EntryState::class,
-            EntryShare::class,
-        );
     }
 
     /** @return list<int> */

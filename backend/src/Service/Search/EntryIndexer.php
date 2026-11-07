@@ -21,6 +21,8 @@ use Psr\Log\LoggerInterface;
 #[ProcessLifetimeState('The index settings are pushed once per process')]
 final class EntryIndexer
 {
+    private const int FORGET_CHUNK_SIZE = 500;
+
     private bool $configured = false;
 
     public function __construct(
@@ -100,7 +102,9 @@ final class EntryIndexer
         }
 
         try {
-            $this->index->forget($entryIds);
+            foreach (array_chunk($entryIds, self::FORGET_CHUNK_SIZE) as $chunk) {
+                $this->index->forget($chunk);
+            }
         } catch (SearchEngineUnavailableException $exception) {
             $this->logger->error('Failed to remove entries from the index', ['exception' => $exception]);
         }

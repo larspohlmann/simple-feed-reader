@@ -11,6 +11,7 @@ enum NetworkFeedKind: string
     use RequestValueParsing;
 
     case Profile = 'profile';
+    case Search = 'search';
 
     /**
      * @throws ValidationException when the value names no feed kind
