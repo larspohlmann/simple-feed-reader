@@ -341,8 +341,7 @@ export class ManageActions {
     );
   }
 
-  /** The save removed the posts the new query no longer matches, so the list drops them now; the refresh then
-   *  fetches what the new query finds, and its finish reloads the list again. */
+  /** The list drops the removed posts now; the refresh's finish reloads it with what the new query finds. */
   private requeried(sub: SubscriptionDto): void {
     this.entries.reload();
     this.refresh.run(undefined, { feedId: sub.feedId });

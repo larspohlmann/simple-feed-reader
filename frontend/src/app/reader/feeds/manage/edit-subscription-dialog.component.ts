@@ -75,8 +75,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
     this.form.controls.customTitle.setValue('');
   }
 
-  /** An unrenamed Home or search left as prefilled stays unrenamed, so its label keeps following the language or
-   *  the query. */
+  /** Left as prefilled, an unrenamed Home or search stays unrenamed, so its label keeps following its source. */
   private submittedTitle(): string | null {
     const title = this.form.getRawValue().customTitle.trim();
     const followsItsSource = isUnrenamedHome(this.data) || isUnrenamedSearch(this.data);
@@ -124,7 +123,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
       });
   }
 
-  /** The search's new query, saved first: its 409 or 422 must stop the rest of the save. */
+  /** Saved first: its 409 or 422 must stop the rest of the save. */
   private requeried(): Observable<unknown> {
     const query = this.newQuery();
     if (this.search === null || query === this.search.query) return of(null);

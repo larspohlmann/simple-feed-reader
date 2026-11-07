@@ -10,7 +10,7 @@ final class SocialSearchQuery
 
     public static function normalized(string $query): string
     {
-        return trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $query) ?? $query);
+        return trim(preg_replace('/\s+/u', ' ', $query) ?? $query);
     }
 
     private function __construct()
