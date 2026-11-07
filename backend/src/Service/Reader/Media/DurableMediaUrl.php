@@ -25,11 +25,12 @@ final readonly class DurableMediaUrl
             return false;
         }
 
-        return !$this->isExcluded($url, $parts['host'] . $parts['path']);
+        return !$this->isExcluded($url);
     }
 
-    private function isExcluded(string $url, string $hostAndPath): bool
+    private function isExcluded(string $url): bool
     {
-        return preg_match(self::NARRATION_PATTERN, $hostAndPath) === 1 || LiveAudioStream::is($url);
+        return preg_match(self::NARRATION_PATTERN, (string) parse_url($url, \PHP_URL_PATH)) === 1
+            || LiveAudioStream::is($url);
     }
 }
