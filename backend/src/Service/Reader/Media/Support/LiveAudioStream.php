@@ -10,6 +10,10 @@ final class LiveAudioStream
     private const array AUDIO_EXTENSIONS = ['', 'mp3', 'aac', 'm4a', 'ogg', 'oga', 'opus'];
     private const array PLAYLIST_EXTENSIONS = ['pls', 'm3u'];
 
+    private function __construct()
+    {
+    }
+
     public static function is(string $url): bool
     {
         $path = parse_url($url, \PHP_URL_PATH);
