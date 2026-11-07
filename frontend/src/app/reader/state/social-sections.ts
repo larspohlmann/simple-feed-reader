@@ -39,6 +39,7 @@ const KIND_ORDER: Readonly<Record<PrivateFeedRefDto['kind'], number>> = {
   list: 2,
   custom_feed: 3,
   tag: 4,
+  search: 5,
 };
 
 export function isSocialFeed(subscription: SubscriptionDto): boolean {

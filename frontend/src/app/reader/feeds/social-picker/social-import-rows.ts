@@ -52,6 +52,7 @@ const COLLECTION_ICONS: Readonly<Record<CollectionKind, string>> = {
   list: 'list',
   custom_feed: 'dynamic_feed',
   tag: 'tag',
+  search: 'search',
 };
 
 const SINGLETON_NAME_KEYS: Readonly<Partial<Record<CollectionKind, string>>> = {

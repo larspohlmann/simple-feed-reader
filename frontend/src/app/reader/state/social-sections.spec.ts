@@ -13,7 +13,7 @@ const sectionsOf = (
 const ref = (
   network: 'bluesky' | 'mastodon',
   accountId: number,
-  kind: 'home' | 'list' | 'custom_feed',
+  kind: 'home' | 'list' | 'custom_feed' | 'tag' | 'search',
 ): SocialFeedRefDto => ({ network, accountId, kind });
 
 const profile = (id: number, network: 'bluesky' | 'mastodon', title: string): SubscriptionDto =>
@@ -86,6 +86,17 @@ describe('buildSocialSections', () => {
       [9, null, [1]],
     ]);
     expect(sections[0].showsHandles).toBe(true);
+  });
+
+  it("sorts an account's search feeds after its tag feeds", () => {
+    const sections = sectionsOf(
+      [feed(1, ref('bluesky', 3, 'search'), 'Alpha'), feed(2, ref('bluesky', 3, 'tag'), 'Zulu')],
+      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
+    );
+
+    expect(sections[0].accounts[0].subscriptions.map((subscription) => subscription.id)).toEqual([
+      2, 1,
+    ]);
   });
 
   it('shows a network that has only profile feeds, with no account group', () => {
