@@ -97,7 +97,7 @@ final class DurableEmissionTest extends TestCase
                 new PageFurniture(),
                 new NarrationSignals(),
                 new PlayerPoster(),
-                new AudioClipFacts(new PageFurniture()),
+                new AudioClipFacts(),
             ),
         };
     }

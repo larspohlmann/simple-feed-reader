@@ -14,14 +14,4 @@ final readonly class AudioClipModel
         public bool $narrated = false,
     ) {
     }
-
-    public static function secondsFrom(?string $value): ?int
-    {
-        $trimmed = trim((string) $value);
-        if (!ctype_digit($trimmed) || (int) $trimmed === 0) {
-            return null;
-        }
-
-        return (int) $trimmed;
-    }
 }

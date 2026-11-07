@@ -4,86 +4,57 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
-use App\Service\Reader\Media\Model\AudioClipModel;
-use Dom\Attr;
+use App\Service\Parser\Support\MediaDuration;
 use Dom\Element;
-use Dom\HTMLDocument;
 
 /**
- * What a page says of one clip in the data attributes beside its URL. A bare `title` names the play button's action,
- * not the clip, so only `data-…title` counts.
+ * What a page says of one clip in the data attributes of the elements holding its URL; the first holder stating a
+ * fact wins. A bare `title` names the play button's action, not the clip, so only `data-…title` counts.
  */
 final readonly class AudioClipFacts
 {
     private const string TITLE_ATTRIBUTE = '/^data-[\w-]*title$/';
     private const string DURATION_ATTRIBUTE = '/^data-[\w-]*duration$/';
 
-    public function __construct(private PageFurniture $furniture)
+    /** @param list<Element> $holders */
+    public function titleOf(array $holders): ?string
     {
-    }
-
-    public function of(HTMLDocument $document, string $clipUrl): AudioClipModel
-    {
-        $title = null;
-        $durationSeconds = null;
-        foreach ($this->holders($document, $clipUrl) as $holder) {
-            $title ??= $this->titleOn($holder);
-            $durationSeconds ??= $this->durationOn($holder);
-        }
-
-        return new AudioClipModel($clipUrl, $title, $durationSeconds);
-    }
-
-    /** @return iterable<Element> */
-    private function holders(HTMLDocument $document, string $clipUrl): iterable
-    {
-        foreach ($document->querySelectorAll('*') as $element) {
-            if (!$this->furniture->holds($element) && $this->holdsUrl($element, $clipUrl)) {
-                yield $element;
-            }
-        }
-    }
-
-    private function holdsUrl(Element $element, string $clipUrl): bool
-    {
-        foreach ($element->attributes as $attribute) {
-            if (str_contains($attribute->value, $clipUrl)) {
-                return true;
+        foreach ($this->valuesNamed($holders, self::TITLE_ATTRIBUTE) as $value) {
+            $title = trim($value);
+            if ($title !== '') {
+                return $title;
             }
         }
 
-        return false;
+        return null;
     }
 
-    private function titleOn(Element $element): ?string
+    /** @param list<Element> $holders */
+    public function durationOf(array $holders): ?int
     {
-        $title = trim($this->firstNamed($element, self::TITLE_ATTRIBUTE)->value ?? '');
+        foreach ($this->valuesNamed($holders, self::DURATION_ATTRIBUTE) as $value) {
+            $seconds = MediaDuration::seconds($value);
+            if ($seconds !== null) {
+                return $seconds;
+            }
+        }
 
-        return $title === '' ? null : $title;
+        return null;
     }
 
-    private function durationOn(Element $element): ?int
+    /**
+     * @param list<Element> $holders
+     *
+     * @return iterable<string>
+     */
+    private function valuesNamed(array $holders, string $namePattern): iterable
     {
-        foreach ($element->attributes as $attribute) {
-            if (preg_match(self::DURATION_ATTRIBUTE, $attribute->name) === 1) {
-                $seconds = AudioClipModel::secondsFrom($attribute->value);
-                if ($seconds !== null) {
-                    return $seconds;
+        foreach ($holders as $holder) {
+            foreach ($holder->attributes as $attribute) {
+                if (preg_match($namePattern, $attribute->name) === 1) {
+                    yield $attribute->value;
                 }
             }
         }
-
-        return null;
-    }
-
-    private function firstNamed(Element $element, string $pattern): ?Attr
-    {
-        foreach ($element->attributes as $attribute) {
-            if (preg_match($pattern, $attribute->name) === 1) {
-                return $attribute;
-            }
-        }
-
-        return null;
     }
 }

@@ -33,7 +33,7 @@ final class AttributeMediaSourceTest extends TestCase
             new PageFurniture(),
             new NarrationSignals(),
             new PlayerPoster(),
-            new AudioClipFacts(new PageFurniture()),
+            new AudioClipFacts(),
         );
     }
 

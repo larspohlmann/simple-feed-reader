@@ -154,7 +154,7 @@ final class ArticleExtractorTest extends TestCase
                 new PageFurniture(),
                 new NarrationSignals(),
                 new PlayerPoster(),
-                new AudioClipFacts(new PageFurniture()),
+                new AudioClipFacts(),
             ),
             new YouTubeIdAttributeSource($providers, new PageFurniture()),
             new SemanticMediaSource($urlKind, new PageFurniture(), new NarrationSignals()),

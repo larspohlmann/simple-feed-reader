@@ -10,6 +10,7 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
 use App\Service\Reader\Media\Model\ScannedPageModel;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageFurniture;
@@ -39,30 +40,42 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
 
     public function find(RawPageModel $page): array
     {
-        return $this->candidates($this->originsByKind($page->document), ScannedPageModel::from($page));
+        return $this->candidates($this->holdersByKind($page->document), ScannedPageModel::from($page));
     }
 
     /**
-     * Every media URL any attribute holds, with the first element that holds it: where the media first appears.
+     * Every media URL any attribute holds, with the elements that hold it in document order: the first is where the
+     * media first appears.
      *
-     * @return array<value-of<MediaKind>, array<string, Element>> durable url => element
+     * @return array<value-of<MediaKind>, array<string, list<Element>>> durable url => holders
      */
-    private function originsByKind(HTMLDocument $document): array
+    private function holdersByKind(HTMLDocument $document): array
     {
         $byKind = [];
         foreach ($document->querySelectorAll('*') as $element) {
             if ($this->furniture->holds($element)) {
                 continue;
             }
-            foreach ($this->urlsOn($element) as $url) {
-                $resolved = $this->kind->resolve($url);
-                if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {
-                    $byKind[$resolved->kind->value][$resolved->url] ??= $element;
-                }
+            foreach ($this->mediaUrlsOn($element) as $resolved) {
+                $byKind[$resolved->kind->value][$resolved->url][] = $element;
             }
         }
 
         return $byKind;
+    }
+
+    /** @return array<string, ResolvedMediaUrlModel> durable url => its resolution, once per element */
+    private function mediaUrlsOn(Element $element): array
+    {
+        $resolutions = [];
+        foreach ($this->urlsOn($element) as $url) {
+            $resolved = $this->kind->resolve($url);
+            if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {
+                $resolutions[$resolved->url] = $resolved;
+            }
+        }
+
+        return $resolutions;
     }
 
     /** @return list<string> */
@@ -89,42 +102,38 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     }
 
     /**
-     * @param array<value-of<MediaKind>, array<string, Element>> $originsByKind
+     * @param array<value-of<MediaKind>, array<string, list<Element>>> $holdersByKind
      *
      * @return list<MediaCandidateModel>
      */
-    private function candidates(array $originsByKind, ScannedPageModel $page): array
+    private function candidates(array $holdersByKind, ScannedPageModel $page): array
     {
         $candidates = [];
-        foreach ($originsByKind as $kindValue => $origins) {
-            $candidates[] = $this->bestCandidate(MediaKind::from($kindValue), $origins, $page);
+        foreach ($holdersByKind as $kindValue => $holdersByUrl) {
+            $candidates[] = $this->bestCandidate(MediaKind::from($kindValue), $holdersByUrl, $page);
         }
 
         return $candidates;
     }
 
-    /** @param array<string, Element> $origins durable url => the element holding it */
-    private function bestCandidate(MediaKind $kind, array $origins, ScannedPageModel $page): MediaCandidateModel
+    /** @param array<string, list<Element>> $holdersByUrl durable url => the elements holding it */
+    private function bestCandidate(MediaKind $kind, array $holdersByUrl, ScannedPageModel $page): MediaCandidateModel
     {
-        $best = $this->relevance->rank(array_keys($origins), $page->url)[0];
-        $precedingText = $page->blocks->before($origins[$best]);
+        $best = $this->relevance->rank(array_keys($holdersByUrl), $page->url)[0];
+        $holders = $holdersByUrl[$best];
+        $precedingText = $page->blocks->before($holders[0]);
         if ($kind === MediaKind::Audio) {
-            $narrated = $this->narration->narrates($best, $origins[$best]);
-            $facts = $this->clipFacts->of($page->document, $best);
-
             return new MediaCandidateModel(
                 MediaKind::Audio,
                 $best,
-                null,
-                $facts->title,
-                $precedingText,
-                $narrated,
-                null,
-                $facts->durationSeconds,
+                label: $this->clipFacts->titleOf($holders),
+                precedingText: $precedingText,
+                narrated: $this->narration->narrates($best, $holders[0]),
+                durationSeconds: $this->clipFacts->durationOf($holders),
             );
         }
 
-        $poster = $page->posterUrl ?? $this->playerPoster->near($origins[$best]);
+        $poster = $page->posterUrl ?? $this->playerPoster->near($holders[0]);
 
         return new MediaCandidateModel($kind, $best, $poster, null, $precedingText);
     }

@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\AudioClipFacts;
-use App\Service\Reader\Media\Model\AudioClipModel;
-use App\Service\Reader\Media\PageFurniture;
 use App\Tests\Support\ParsesHtml;
+use Dom\Element;
 use PHPUnit\Framework\TestCase;
 
 final class AudioClipFactsTest extends TestCase
@@ -17,64 +16,69 @@ final class AudioClipFactsTest extends TestCase
     private const string CLIP = 'https://ondemand.test/file/2026/11/07/episode.mp3';
 
     /** The first holder is a JSON blob; the play button beside it names the clip, its bare title the action. */
-    public function testReadsTheClipFactsFromAnyElementHoldingItsUrl(): void
+    public function testReadsTheClipFactsFromAnyHolder(): void
     {
-        $html = '<body><script class="js-client-queries" data-json=\'{"url":"' . self::CLIP . '"}\'></script>'
+        $holders = $this->holders(
+            '<script class="js-client-queries" data-json=\'{"url":"' . self::CLIP . '"}\'></script>'
             . '<button title="Audio abspielen" data-audio-src="' . self::CLIP . '?tracking=1"'
             . ' data-audiotitle="Ohne echte Lobby" data-audio-duration="2871"'
-            . ' data-audio-download-tracking-title="Tracking copy"></button></body>';
+            . ' data-audio-download-tracking-title="Tracking copy"></button>',
+        );
 
-        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
-
-        self::assertEquals(new AudioClipModel(self::CLIP, 'Ohne echte Lobby', 2871), $facts);
+        self::assertSame('Ohne echte Lobby', new AudioClipFacts()->titleOf($holders));
+        self::assertSame(2871, new AudioClipFacts()->durationOf($holders));
     }
 
-    public function testSkipsADurationThatIsNotWholeSeconds(): void
+    public function testReadsAClockDuration(): void
     {
-        $html = '<body><div data-src="' . self::CLIP . '" data-duration="47:51"></div>'
-            . '<a href="' . self::CLIP . '" data-media-duration="2871"></a></body>';
+        $holders = $this->holders('<div data-duration="47:51"></div>');
 
-        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
-
-        self::assertSame(2871, $facts->durationSeconds);
+        self::assertSame(2871, new AudioClipFacts()->durationOf($holders));
     }
 
-    public function testTheFirstElementThatStatesAFactWins(): void
+    public function testSkipsADurationThatIsNoDuration(): void
     {
-        $html = '<body><div data-src="' . self::CLIP . '" data-title="First" data-duration="300"></div>'
-            . '<a href="' . self::CLIP . '" data-title="Later" data-duration="120"></a></body>';
+        $holders = $this->holders('<div data-duration="abc"></div><a data-media-duration="300"></a>');
 
-        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
+        self::assertSame(300, new AudioClipFacts()->durationOf($holders));
+    }
 
-        self::assertEquals(new AudioClipModel(self::CLIP, 'First', 300), $facts);
+    public function testTheFirstHolderThatStatesAFactWins(): void
+    {
+        $holders = $this->holders('<div data-title="First" data-duration="300"></div>'
+            . '<a data-title="Later" data-duration="120"></a>');
+
+        self::assertSame('First', new AudioClipFacts()->titleOf($holders));
+        self::assertSame(300, new AudioClipFacts()->durationOf($holders));
     }
 
     public function testTrimsAPaddedTitle(): void
     {
-        $html = '<body><div data-src="' . self::CLIP . '" data-title="  Clip  "></div></body>';
+        $holders = $this->holders('<div data-title="  Clip  "></div>');
 
-        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
-
-        self::assertSame('Clip', $facts->title);
+        self::assertSame('Clip', new AudioClipFacts()->titleOf($holders));
     }
 
-    public function testABlankTitleLeavesTheNextElementToNameTheClip(): void
+    public function testABlankTitleLeavesTheNextHolderToNameTheClip(): void
     {
-        $html = '<body><div data-src="' . self::CLIP . '" data-title="   "></div>'
-            . '<a href="' . self::CLIP . '" data-title="Named"></a></body>';
+        $holders = $this->holders('<div data-title="   "></div><a data-title="Named"></a>');
 
-        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
-
-        self::assertSame('Named', $facts->title);
+        self::assertSame('Named', new AudioClipFacts()->titleOf($holders));
     }
 
-    public function testKnowsNothingOfAClipNoElementDescribes(): void
+    public function testKnowsNothingAHolderDoesNotState(): void
     {
-        $html = '<body><audio title="Play" src="' . self::CLIP . '"></audio>'
-            . '<div data-audio-title="Another clip" data-src="https://ondemand.test/other.mp3"></div></body>';
+        $holders = $this->holders('<audio title="Play" src="' . self::CLIP . '"></audio>');
 
-        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
+        self::assertNull(new AudioClipFacts()->titleOf($holders));
+        self::assertNull(new AudioClipFacts()->durationOf($holders));
+    }
 
-        self::assertEquals(new AudioClipModel(self::CLIP), $facts);
+    /** @return list<Element> */
+    private function holders(string $bodyHtml): array
+    {
+        $document = $this->document('<body>' . $bodyHtml . '</body>');
+
+        return array_values(iterator_to_array($document->querySelectorAll('body > *')));
     }
 }
