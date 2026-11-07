@@ -8,6 +8,10 @@ app-field {
   display: block;
 }
 
+textarea {
+  resize: vertical;
+}
+
 .example,
 .note {
   margin: 0;

@@ -62,9 +62,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly search = this.data.social?.kind === 'search' ? this.data.social : null;
   private readonly queryForm = viewChild(SocialSearchFormComponent);
-  private readonly newQuery = computed(
-    () => this.queryForm()?.trimmed().replace(/\s+/g, ' ') ?? '',
-  );
+  private readonly newQuery = computed(() => this.queryForm()?.normalizedQuery() ?? '');
   readonly blankQuery = computed(() => this.search !== null && this.newQuery() === '');
 
   ngOnInit(): void {

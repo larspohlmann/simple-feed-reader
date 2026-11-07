@@ -35,11 +35,11 @@ describe('SocialSearchTabComponent', () => {
     element(fixture).querySelector(`[data-testid="${testId}"] button`) as HTMLButtonElement;
 
   function type(fixture: ComponentFixture<SocialSearchTabComponent>, text: string): void {
-    const input = element(fixture).querySelector(
+    const field = element(fixture).querySelector(
       '[data-testid="social-search-query"]',
-    ) as HTMLInputElement;
-    input.value = text;
-    input.dispatchEvent(new Event('input'));
+    ) as HTMLTextAreaElement;
+    field.value = text;
+    field.dispatchEvent(new Event('input'));
     fixture.detectChanges();
   }
 
@@ -65,6 +65,19 @@ describe('SocialSearchTabComponent', () => {
 
     type(fixture, 'rss reader');
     press(fixture, 'social-search-subscribe');
+    expect(emitted).toEqual(['rss reader']);
+  });
+
+  it('subscribes to a query typed over several lines as one line', () => {
+    const fixture = mount();
+    const emitted: string[] = [];
+    fixture.componentInstance.subscribe.subscribe((query) => emitted.push(query));
+    type(fixture, 'rss\nreader');
+    press(fixture, 'social-search-preview');
+
+    press(fixture, 'social-search-subscribe');
+
+    expect(socialSearch.preview).toHaveBeenCalledWith(4, 'rss reader');
     expect(emitted).toEqual(['rss reader']);
   });
 

@@ -62,10 +62,22 @@ describe('SocialSearchFormComponent', () => {
   ): HTMLButtonElement => byTestId(fixture, testId)?.querySelector('button') as HTMLButtonElement;
 
   function type(fixture: ComponentFixture<SocialSearchFormComponent>, text: string): void {
-    const input = byTestId<HTMLInputElement>(fixture, 'social-search-query') as HTMLInputElement;
-    input.value = text;
-    input.dispatchEvent(new Event('input'));
+    const field = byTestId<HTMLTextAreaElement>(
+      fixture,
+      'social-search-query',
+    ) as HTMLTextAreaElement;
+    field.value = text;
+    field.dispatchEvent(new Event('input'));
     fixture.detectChanges();
+  }
+
+  function keyDown(
+    fixture: ComponentFixture<SocialSearchFormComponent>,
+    init: KeyboardEventInit,
+  ): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, ...init });
+    byTestId(fixture, 'social-search-query')?.dispatchEvent(event);
+    return event;
   }
 
   function press(fixture: ComponentFixture<SocialSearchFormComponent>, testId: string): void {
@@ -123,16 +135,49 @@ describe('SocialSearchFormComponent', () => {
     );
   });
 
-  it('previews on Enter in the field', () => {
+  it('takes the query in a three-row field of at most 512 characters', () => {
+    const field = byTestId<HTMLTextAreaElement>(mount(), 'social-search-query');
+
+    expect(field?.tagName).toBe('TEXTAREA');
+    expect(field?.rows).toBe(3);
+    expect(field?.maxLength).toBe(512);
+  });
+
+  it.each<[string, KeyboardEventInit]>([
+    ['Ctrl', { ctrlKey: true }],
+    ['Cmd', { metaKey: true }],
+  ])('previews on %s+Enter', (_modifier, init) => {
     socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
     const fixture = mount();
     type(fixture, 'rss');
 
-    byTestId(fixture, 'social-search-query')?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter' }),
-    );
+    const event = keyDown(fixture, init);
 
     expect(socialSearch.preview).toHaveBeenCalledWith(4, 'rss');
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('leaves Enter alone to start a new line', () => {
+    const fixture = mount();
+    type(fixture, 'rss');
+
+    const event = keyDown(fixture, {});
+
+    expect(socialSearch.preview).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('previews a query typed over several lines as one line', () => {
+    socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
+    const fixture = mount();
+    type(fixture, '"rss reader"\n  -gazette\n');
+
+    press(fixture, 'social-search-preview');
+
+    expect(socialSearch.preview).toHaveBeenCalledWith(4, '"rss reader" -gazette');
+    expect(fixture.componentInstance.normalizedQuery()).toBe('"rss reader" -gazette');
+    type(fixture, '"rss reader" -gazette');
+    expect(fixture.componentInstance.hasPreview()).toBe(true);
   });
 
   it('shows placeholder rows while the preview runs and disables Preview', () => {
@@ -196,7 +241,7 @@ describe('SocialSearchFormComponent', () => {
 
     press(fixture, 'social-search-preview');
     expect(fixture.componentInstance.hasPreview()).toBe(true);
-    expect(fixture.componentInstance.trimmed()).toBe('rss reader');
+    expect(fixture.componentInstance.normalizedQuery()).toBe('rss reader');
 
     type(fixture, 'rss readers');
     expect(fixture.componentInstance.hasPreview()).toBe(false);
@@ -206,20 +251,11 @@ describe('SocialSearchFormComponent', () => {
     socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
     const fixture = mount('bluesky', 'rss -gazette');
 
-    expect(byTestId<HTMLInputElement>(fixture, 'social-search-query')?.value).toBe('rss -gazette');
+    expect(byTestId<HTMLTextAreaElement>(fixture, 'social-search-query')?.value).toBe(
+      'rss -gazette',
+    );
     press(fixture, 'social-search-preview');
     expect(socialSearch.preview).toHaveBeenCalledWith(4, 'rss -gazette');
-  });
-
-  it('keeps Enter from submitting a form it sits in', () => {
-    socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
-    const fixture = mount();
-    type(fixture, 'rss');
-    const enter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
-
-    byTestId(fixture, 'social-search-query')?.dispatchEvent(enter);
-
-    expect(enter.defaultPrevented).toBe(true);
   });
 
   it('hides the result of a preview once the query is edited, and shows it again for that query', () => {

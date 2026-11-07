@@ -298,13 +298,13 @@ describe('EditSubscriptionDialogComponent', () => {
 
     const queryField = (
       fixture: ComponentFixture<EditSubscriptionDialogComponent>,
-    ): HTMLInputElement | null =>
-      (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+    ): HTMLTextAreaElement | null =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLTextAreaElement>(
         '[data-testid="social-search-query"]',
       );
 
     function retype(fixture: ComponentFixture<EditSubscriptionDialogComponent>, query: string) {
-      const field = queryField(fixture) as HTMLInputElement;
+      const field = queryField(fixture) as HTMLTextAreaElement;
       field.value = query;
       field.dispatchEvent(new Event('input'));
       fixture.detectChanges();
@@ -340,9 +340,9 @@ describe('EditSubscriptionDialogComponent', () => {
       expect(close).toHaveBeenCalledWith(updated);
     });
 
-    it('saves an unchanged query as nothing', () => {
+    it('saves an unchanged query as nothing, however it is broken over lines', () => {
       const fixture = mount(search);
-      retype(fixture, 'rss  reader');
+      retype(fixture, 'rss\n  reader');
 
       fixture.componentInstance.submit();
 

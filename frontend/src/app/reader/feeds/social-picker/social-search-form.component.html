@@ -1,13 +1,14 @@
 <app-field [label]="'settings.social.search.queryLabel' | transloco">
-  <input
+  <textarea
     #queryInput
-    type="search"
+    rows="3"
     maxlength="512"
     data-testid="social-search-query"
     [value]="query()"
     (input)="query.set(inputValue($event))"
-    (keydown.enter)="previewOnEnter($event)"
-  />
+    (keydown.control.enter)="previewOnShortcut($event)"
+    (keydown.meta.enter)="previewOnShortcut($event)"
+  ></textarea>
 </app-field>
 
 <p class="example">

@@ -98,20 +98,22 @@ export class SocialSearchFormComponent {
   private readonly socialSearch = inject(SocialSearchService);
   private readonly language = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly queryInput = viewChild.required<ElementRef<HTMLInputElement>>('queryInput');
+  private readonly queryInput = viewChild.required<ElementRef<HTMLTextAreaElement>>('queryInput');
 
   protected readonly inputValue = inputValue;
   protected readonly query = linkedSignal(() => this.initialQuery());
   protected readonly previewing = signal(false);
   protected readonly outcome = signal<PreviewOutcome | null>(null);
 
-  readonly trimmed = computed(() => this.query().trim());
+  readonly normalizedQuery = computed(() => this.query().trim().replace(/\s+/g, ' '));
   protected readonly exampleQuery = EXAMPLE_QUERY;
   protected readonly syntax = computed(() => SEARCH_SYNTAX[this.network()]);
-  protected readonly canPreview = computed(() => this.trimmed() !== '' && !this.previewing());
+  protected readonly canPreview = computed(
+    () => this.normalizedQuery() !== '' && !this.previewing(),
+  );
   private readonly currentOutcome = computed(() => {
     const outcome = this.outcome();
-    return outcome?.query === this.trimmed() ? outcome : null;
+    return outcome?.query === this.normalizedQuery() ? outcome : null;
   });
   protected readonly preview = computed(() => {
     const outcome = this.currentOutcome();
@@ -131,15 +133,14 @@ export class SocialSearchFormComponent {
     this.queryInput().nativeElement.focus();
   }
 
-  /** Enter previews; inside a host's form it must not submit that form too. */
-  protected previewOnEnter(event: Event): void {
+  protected previewOnShortcut(event: Event): void {
     event.preventDefault();
     this.runPreview();
   }
 
   protected runPreview(): void {
     if (!this.canPreview()) return;
-    const query = this.trimmed();
+    const query = this.normalizedQuery();
     this.previewing.set(true);
     this.socialSearch
       .preview(this.accountId(), query)

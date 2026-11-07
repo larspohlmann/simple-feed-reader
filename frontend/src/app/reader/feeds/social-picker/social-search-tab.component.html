@@ -4,7 +4,7 @@
     data-testid="social-search-subscribe"
     [disabled]="!form.hasPreview()"
     [loading]="importer.importing()"
-    (click)="subscribe.emit(form.trimmed())"
+    (click)="subscribe.emit(form.normalizedQuery())"
   >
     {{ 'settings.social.search.subscribe' | transloco }}
   </app-button>
