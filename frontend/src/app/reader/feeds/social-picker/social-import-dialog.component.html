@@ -3,56 +3,54 @@
   fillOnMobile
   [heading]="'settings.social.importTitle' | transloco: { handle: data.handle }"
 >
-  @if (importer.candidates()) {
-    <div subheader class="controls">
-      <app-segmented-choice
-        class="tabs"
-        data-testid="social-import-tabs"
-        ariaLabelKey="settings.social.importTabs"
-        labelPrefix="settings.social.importTab."
-        [options]="tabs"
-        [selected]="tab()"
-        [counts]="tabCounts()"
-        (pick)="tab.set($event)"
-      />
-      @if (listTab()) {
-        <div class="search">
-          <app-icon class="search-icon" name="search" size="sm" />
-          <input
-            type="search"
-            class="filter"
-            cdkFocusInitial
-            data-testid="social-import-filter"
-            [attr.aria-label]="'settings.social.importFilter' | transloco"
-            [placeholder]="'settings.social.importFilter' | transloco"
-            [value]="filter()"
-            (input)="filter.set(inputValue($event))"
-          />
-        </div>
-        <div
-          class="states"
-          role="group"
-          [attr.aria-label]="'settings.social.importStates' | transloco"
-        >
-          @for (state of stateOptions(); track state) {
-            <button
-              type="button"
-              class="state-chip"
-              [attr.data-testid]="'social-import-state-' + state"
-              [class.on]="activeFilter() === state"
-              [attr.aria-pressed]="activeFilter() === state"
-              (click)="stateFilter.set(state)"
-            >
-              <span>
-                {{ filterKeys[state] | transloco }}
-                <span class="count">{{ stateCounts()[state] }}</span>
-              </span>
-            </button>
-          }
-        </div>
-      }
-    </div>
-  }
+  <div subheader class="controls">
+    <app-segmented-choice
+      class="tabs"
+      data-testid="social-import-tabs"
+      ariaLabelKey="settings.social.importTabs"
+      labelPrefix="settings.social.importTab."
+      [options]="tabs"
+      [selected]="tab()"
+      [counts]="tabCounts()"
+      (pick)="tab.set($event)"
+    />
+    @if (listTab() && importer.candidates()) {
+      <div class="search">
+        <app-icon class="search-icon" name="search" size="sm" />
+        <input
+          type="search"
+          class="filter"
+          cdkFocusInitial
+          data-testid="social-import-filter"
+          [attr.aria-label]="'settings.social.importFilter' | transloco"
+          [placeholder]="'settings.social.importFilter' | transloco"
+          [value]="filter()"
+          (input)="filter.set(inputValue($event))"
+        />
+      </div>
+      <div
+        class="states"
+        role="group"
+        [attr.aria-label]="'settings.social.importStates' | transloco"
+      >
+        @for (state of stateOptions(); track state) {
+          <button
+            type="button"
+            class="state-chip"
+            [attr.data-testid]="'social-import-state-' + state"
+            [class.on]="activeFilter() === state"
+            [attr.aria-pressed]="activeFilter() === state"
+            (click)="stateFilter.set(state)"
+          >
+            <span>
+              {{ filterKeys[state] | transloco }}
+              <span class="count">{{ stateCounts()[state] }}</span>
+            </span>
+          </button>
+        }
+      </div>
+    }
+  </div>
 
   @if (listTab(); as listTab) {
     @if (importer.candidates(); as candidates) {
@@ -160,7 +158,7 @@
   >
     {{ 'common.cancel' | transloco }}
   </app-button>
-  @if (listTab()) {
+  @if (listTab() && importer.candidates()) {
     <app-button
       footer
       variant="primary"

@@ -127,7 +127,9 @@ export class SocialImportDialogComponent {
     tally(this.rows(), { tabs: this.listTabs, current: this.tab(), needle: this.needle() }),
   );
 
-  protected readonly tabCounts = computed(() => this.tally().tabCounts);
+  protected readonly tabCounts = computed(() =>
+    this.importer.candidates() === null ? {} : this.tally().tabCounts,
+  );
   protected readonly stateOptions = computed<readonly StateFilter[]>(() =>
     this.tally().stateCounts.no_longer_followed > 0
       ? ['all', 'new', 'subscribed', 'no_longer_followed']

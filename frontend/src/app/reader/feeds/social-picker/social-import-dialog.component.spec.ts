@@ -248,6 +248,34 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-search-query')).not.toBeNull();
   });
 
+  it('reaches the Search tab while the candidates load, without counts or list controls', () => {
+    const fixture = mount();
+    expect(tabLabels(fixture)).toEqual(['Accounts', 'Lists', 'Feeds', 'Search']);
+    expect(byTestId(fixture, 'social-import-filter')).toBeNull();
+    expect(byTestId(fixture, 'social-import-apply')).toBeNull();
+
+    showTab(fixture, 'Search');
+
+    expect(byTestId(fixture, 'social-search-query')).not.toBeNull();
+    expect(byTestId(fixture, 'social-import-loading')).toBeNull();
+    http.expectOne(CANDIDATES).flush(candidates());
+  });
+
+  it('reaches the Search tab after the candidates failed', () => {
+    const fixture = mount();
+    http
+      .expectOne(CANDIDATES)
+      .flush(
+        { type: 'social_network_unreachable', title: 'x', status: 502, detail: 'Bluesky is down.' },
+        { status: 502, statusText: 'Bad Gateway' },
+      );
+    fixture.detectChanges();
+
+    showTab(fixture, 'Search');
+
+    expect(byTestId(fixture, 'social-search-query')).not.toBeNull();
+  });
+
   it('subscribes to a previewed search as a collection and closes with the result', () => {
     const fixture = loaded(candidates());
     showTab(fixture, 'Search');
@@ -642,13 +670,10 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-import-truncated')?.textContent).toContain('first 5,000');
   });
 
-  it('ignores a press on Import while the candidates load', () => {
+  it('offers no Import while the candidates load', () => {
     const fixture = mount();
-    expect(applyButton(fixture).disabled).toBe(true);
 
-    byTestId(fixture, 'social-import-apply')?.click();
-
-    http.expectNone(IMPORT);
+    expect(byTestId(fixture, 'social-import-apply')).toBeNull();
     http.expectOne(CANDIDATES).flush(candidates());
   });
 
