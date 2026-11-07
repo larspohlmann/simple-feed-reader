@@ -81,23 +81,21 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 
     private static function pathOf(SocialFeed $socialFeed): string
     {
+        $kind = $socialFeed->getKind();
+        if (SocialFeedKind::Search === $kind) {
+            return SocialSearchPaths::bluesky($socialFeed->getRemoteId());
+        }
         $remoteId = rawurlencode($socialFeed->getRemoteId());
 
-        return match ($socialFeed->getKind()) {
-            SocialFeedKind::Home => self::timelinePath('/xrpc/app.bsky.feed.getTimeline?'),
-            SocialFeedKind::UserList => self::timelinePath('/xrpc/app.bsky.feed.getListFeed?list=' . $remoteId . '&'),
-            SocialFeedKind::CustomFeed => self::timelinePath('/xrpc/app.bsky.feed.getFeed?feed=' . $remoteId . '&'),
-            SocialFeedKind::Author => self::timelinePath(
-                '/xrpc/app.bsky.feed.getAuthorFeed?actor=' . $remoteId . '&filter=posts_and_author_threads&',
+        return match ($kind) {
+            SocialFeedKind::Home => '/xrpc/app.bsky.feed.getTimeline?',
+            SocialFeedKind::UserList => '/xrpc/app.bsky.feed.getListFeed?list=' . $remoteId . '&',
+            SocialFeedKind::CustomFeed => '/xrpc/app.bsky.feed.getFeed?feed=' . $remoteId . '&',
+            SocialFeedKind::Author => '/xrpc/app.bsky.feed.getAuthorFeed?actor=' . $remoteId
+                . '&filter=posts_and_author_threads&',
+            SocialFeedKind::Tag, SocialFeedKind::Trending => throw new SocialNetworkUnreachableException(
+                'Bluesky has no such timeline.',
             ),
-            SocialFeedKind::Search => SocialSearchPaths::bluesky($socialFeed->getRemoteId()),
-            SocialFeedKind::Tag,
-            SocialFeedKind::Trending => throw new SocialNetworkUnreachableException('Bluesky has no such timeline.'),
-        };
-    }
-
-    private static function timelinePath(string $pathAndQuery): string
-    {
-        return $pathAndQuery . 'limit=' . self::PAGE_SIZE;
+        } . 'limit=' . self::PAGE_SIZE;
     }
 }
