@@ -9,7 +9,7 @@ use Dom\HTMLDocument;
 /**
  * What a scanning layer needs from the page once it has picked a URL: the
  * prose blocks to anchor it to, the page URL its relevance is ranked against,
- * and the Open Graph image that stands in as a poster.
+ * the Open Graph image that stands in as a poster, and the document, for what the page says beside the URL.
  */
 final readonly class ScannedPageModel
 {
@@ -19,12 +19,13 @@ final readonly class ScannedPageModel
         public PageTextBlocksModel $blocks,
         public string $url,
         public ?string $posterUrl,
+        public HTMLDocument $document,
     ) {
     }
 
     public static function from(RawPageModel $page): self
     {
-        return new self($page->blocks, $page->url, self::ogImage($page->document));
+        return new self($page->blocks, $page->url, self::ogImage($page->document), $page->document);
     }
 
     private static function ogImage(HTMLDocument $document): ?string

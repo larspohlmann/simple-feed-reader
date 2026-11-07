@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\Model;
 
+use App\Service\Reader\Media\Model\AudioClipModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use PHPUnit\Framework\TestCase;
@@ -140,5 +141,56 @@ final class MediaCandidateModelTest extends TestCase
         self::assertSame('p.jpg', $landed->posterUrl);
         self::assertSame('prose', $landed->precedingText);
         self::assertTrue($landed->narrated);
+    }
+
+    public function testCompletingKeepsTheFirstDurationAndFillsAMissingOne(): void
+    {
+        $first = new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3');
+        $later = new MediaCandidateModel(
+            MediaKind::Audio,
+            'https://x.test/a.mp3',
+            null,
+            'Title',
+            null,
+            false,
+            null,
+            300,
+        );
+
+        self::assertSame(300, $first->completedBy($later)->durationSeconds);
+        self::assertSame('Title', $first->completedBy($later)->label);
+    }
+
+    public function testBecomesTheAudioClipItPlays(): void
+    {
+        $candidate = new MediaCandidateModel(
+            MediaKind::Audio,
+            'https://x.test/a.mp3',
+            null,
+            'Title',
+            null,
+            true,
+            null,
+            300,
+        );
+
+        self::assertEquals(new AudioClipModel('https://x.test/a.mp3', 'Title', 300, true), $candidate->toAudioClip());
+    }
+
+    public function testTheOtherCopiesKeepTheDuration(): void
+    {
+        $candidate = new MediaCandidateModel(
+            MediaKind::Audio,
+            'https://x.test/a.mp3',
+            null,
+            null,
+            null,
+            false,
+            null,
+            300,
+        );
+
+        self::assertSame(300, $candidate->withMimeType('audio/mpeg')->durationSeconds);
+        self::assertSame(300, $candidate->at('https://cdn.test/a.mp3')->durationSeconds);
     }
 }

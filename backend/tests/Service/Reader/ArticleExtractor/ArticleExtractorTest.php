@@ -17,6 +17,7 @@ use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\Media\BodyMediaResolver;
+use App\Service\Reader\Media\AudioClipFacts;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProvider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\DailymotionEmbedProvider;
@@ -153,6 +154,7 @@ final class ArticleExtractorTest extends TestCase
                 new PageFurniture(),
                 new NarrationSignals(),
                 new PlayerPoster(),
+                new AudioClipFacts(new PageFurniture()),
             ),
             new YouTubeIdAttributeSource($providers, new PageFurniture()),
             new SemanticMediaSource($urlKind, new PageFurniture(), new NarrationSignals()),

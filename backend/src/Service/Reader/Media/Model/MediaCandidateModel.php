@@ -18,6 +18,7 @@ final readonly class MediaCandidateModel
         public ?string $precedingText = null,
         public bool $narrated = false,
         public ?string $mimeType = null,
+        public ?int $durationSeconds = null,
     ) {
     }
 
@@ -36,6 +37,7 @@ final readonly class MediaCandidateModel
             $this->precedingText,
             $this->narrated,
             $mimeType,
+            $this->durationSeconds,
         );
     }
 
@@ -59,10 +61,11 @@ final readonly class MediaCandidateModel
                 $this->precedingText,
                 $this->narrated,
                 $this->mimeType,
+                $this->durationSeconds,
             );
     }
 
-    /** The same media with the gaps a later, weaker source can fill: poster, label, the prose anchor, and the narration tell. */
+    /** The same media with the gaps a later, weaker source can fill: poster, label, the prose anchor, the narration tell, and the duration. */
     public function completedBy(self $later): self
     {
         return new self(
@@ -73,6 +76,7 @@ final readonly class MediaCandidateModel
             $this->precedingText ?? $later->precedingText,
             $this->narrated || $later->narrated,
             $this->mimeType ?? $later->mimeType,
+            $this->durationSeconds ?? $later->durationSeconds,
         );
     }
 
@@ -87,6 +91,12 @@ final readonly class MediaCandidateModel
             $this->precedingText,
             $this->narrated,
             $this->mimeType,
+            $this->durationSeconds,
         );
+    }
+
+    public function toAudioClip(): AudioClipModel
+    {
+        return new AudioClipModel($this->url, $this->label, $this->durationSeconds, $this->narrated);
     }
 }

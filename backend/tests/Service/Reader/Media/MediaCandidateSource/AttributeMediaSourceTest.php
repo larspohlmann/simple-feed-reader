@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
 
+use App\Service\Reader\Media\AudioClipFacts;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
@@ -32,6 +33,7 @@ final class AttributeMediaSourceTest extends TestCase
             new PageFurniture(),
             new NarrationSignals(),
             new PlayerPoster(),
+            new AudioClipFacts(new PageFurniture()),
         );
     }
 
@@ -236,5 +238,21 @@ final class AttributeMediaSourceTest extends TestCase
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/the-article-clip.mp4', $found[0]->url);
+    }
+
+    /** Deutschlandfunk's shape: the episode beside a live stream, named and timed on its play button. */
+    public function testAnAudioCandidateCarriesTheClipsTitleAndDurationAndNeverTheLiveStream(): void
+    {
+        $html = '<body><button data-audio-src="https://ondemand-mp3.test/file/2026/11/07/lobby_dlf.mp3"'
+            . ' data-audio-title="Ohne echte Lobby" data-audio-duration="2871"></button>'
+            . '<button data-audio-src="https://st01.sslstream.test/dlf/01/128/mp3/stream.mp3?aggregator=web"'
+            . ' data-audio-title="Deutschlandfunk live"></button></body>';
+
+        $found = $this->find($html, 'https://www.x.test/ohne-echte-lobby-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://ondemand-mp3.test/file/2026/11/07/lobby_dlf.mp3', $found[0]->url);
+        self::assertSame('Ohne echte Lobby', $found[0]->label);
+        self::assertSame(2871, $found[0]->durationSeconds);
     }
 }

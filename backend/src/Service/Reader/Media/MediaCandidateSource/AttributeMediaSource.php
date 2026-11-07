@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
+use App\Service\Reader\Media\AudioClipFacts;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
@@ -32,6 +33,7 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         private PageFurniture $furniture,
         private NarrationSignals $narration,
         private PlayerPoster $playerPoster,
+        private AudioClipFacts $clipFacts,
     ) {
     }
 
@@ -108,8 +110,18 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         $precedingText = $page->blocks->before($origins[$best]);
         if ($kind === MediaKind::Audio) {
             $narrated = $this->narration->narrates($best, $origins[$best]);
+            $facts = $this->clipFacts->of($page->document, $best);
 
-            return new MediaCandidateModel(MediaKind::Audio, $best, null, null, $precedingText, $narrated);
+            return new MediaCandidateModel(
+                MediaKind::Audio,
+                $best,
+                null,
+                $facts->title,
+                $precedingText,
+                $narrated,
+                null,
+                $facts->durationSeconds,
+            );
         }
 
         $poster = $page->posterUrl ?? $this->playerPoster->near($origins[$best]);
