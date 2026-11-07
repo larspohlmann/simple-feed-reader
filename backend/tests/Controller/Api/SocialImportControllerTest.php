@@ -12,14 +12,20 @@ use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Entity\Headline;
+use App\Service\Completion\Model\KnownSharesModel;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\SocialCollectionModel;
+use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
+use App\Service\Social\SocialSearch\SocialSearchInterface;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubSocialCandidates;
+use App\Tests\Support\StubSocialSearch;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -212,6 +218,77 @@ final class SocialImportControllerTest extends ApiTestCase
         $this->requestCandidates($client, $account);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    public function testTheSearchPreviewRefusesAnAnonymousCaller(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/api/me/social-accounts/1/search-preview?query=rss');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testTheSearchPreviewOfAnotherUsersAccountAnswers404(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
+        $owner = $this->signIn($client, 'search-owner@example.test');
+        $account = $this->blueskyAccountOf($owner);
+        $this->signIn($client, 'search-intruder@example.test');
+
+        $this->requestSearchPreview($client, $account, 'rss');
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_account_not_found', $this->payload($client)['type']);
+    }
+
+    public function testABlankSearchPreviewQueryIsRefused(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
+        $user = $this->signIn($client, 'search-blank@example.test');
+
+        $this->requestSearchPreview($client, $this->blueskyAccountOf($user), '  ');
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testATooLongSearchPreviewQueryIsRefused(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
+        $user = $this->signIn($client, 'search-long@example.test');
+
+        $this->requestSearchPreview($client, $this->blueskyAccountOf($user), str_repeat('a', 513));
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testTheSearchPreviewCountsEveryMatchAndShowsTheFirstThreeOfTheNormalisedQuery(): void
+    {
+        $search = new StubSocialSearch(self::pageOf(5));
+        $client = $this->searchClientWith($search);
+        $user = $this->signIn($client, 'search-preview@example.test');
+
+        $this->requestSearchPreview($client, $this->blueskyAccountOf($user), ' rss  reader');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('rss reader', $search->query);
+        $payload = $this->payload($client);
+        self::assertSame(5, $payload['count']);
+        self::assertSame(
+            array_map(self::previewPost(...), [1, 2, 3]),
+            $payload['posts'],
+        );
+    }
+
+    public function testASearchPreviewWithoutMatchesIsEmpty(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
+        $user = $this->signIn($client, 'search-empty@example.test');
+
+        $this->requestSearchPreview($client, $this->blueskyAccountOf($user), 'rss');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['count' => 0, 'posts' => []], $this->payload($client));
     }
 
     public function testAnImportCannotSetTheImageOfAFeed(): void
@@ -671,6 +748,54 @@ final class SocialImportControllerTest extends ApiTestCase
             'https://bsky.app/profile/' . $did . '/rss',
             $avatarUrl,
         );
+    }
+
+    private function searchClientWith(SocialSearchInterface $search): KernelBrowser
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        self::getContainer()->set(SocialSearchInterface::class, $search);
+
+        return $client;
+    }
+
+    private function requestSearchPreview(KernelBrowser $client, SocialAccount $account, string $query): void
+    {
+        $client->request('GET', sprintf(
+            '/api/me/social-accounts/%d/search-preview?query=%s',
+            $account->requireId(),
+            rawurlencode($query),
+        ));
+    }
+
+    private static function pageOf(int $entries): TimelinePageModel
+    {
+        return TimelinePageModel::of(
+            array_map(static fn (int $number): ParsedEntryModel => new ParsedEntryModel(
+                'guid-' . $number,
+                'https://bsky.app/profile/amy/post/' . $number,
+                Headline::fromFeed('Post ' . $number),
+                '@amy.bsky.social',
+                null,
+                null,
+                new \DateTimeImmutable('2026-11-07T10:0' . $number . ':00+00:00'),
+                authorAvatarUrl: 'https://cdn.test/amy.jpg',
+            ), 0 === $entries ? [] : range(1, $entries)),
+            KnownSharesModel::none(),
+            null,
+        );
+    }
+
+    /** @return array<string, string> */
+    private static function previewPost(int $number): array
+    {
+        return [
+            'url' => 'https://bsky.app/profile/amy/post/' . $number,
+            'author' => '@amy.bsky.social',
+            'authorAvatarUrl' => 'https://cdn.test/amy.jpg',
+            'text' => 'Post ' . $number,
+            'publishedAt' => '2026-11-07T10:0' . $number . ':00+00:00',
+        ];
     }
 
     private function nothingFollowed(): StubSocialCandidates
