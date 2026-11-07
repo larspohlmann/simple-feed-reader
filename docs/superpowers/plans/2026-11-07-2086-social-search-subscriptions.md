@@ -877,3 +877,39 @@ git commit -m "feat(#2086): a Search tab previews a query and subscribes to it"
 - [ ] **Step 1: Gates.** Backend: `php bin/phpunit` and `docker compose exec php composer test:parallel` (in parallel), `composer check`, `composer md`, `composer infection:diff`. Frontend: `docker compose exec -T frontend npm run check`. PhpStorm inspections on changed PHP. Scan today's dev log (`ls -t var/log/dev-*.log | head -1 | xargs tail -n 100 | jq .`).
 - [ ] **Step 2: Live check on :4200** with Lars's connected Bluesky account: open the picker → Search tab → preview `("rss reader" || "feed reader" || rssreader || feedreader) -gazette` → expect a non-zero count and three on-topic posts → Subscribe → the feed appears after the account's tags, titled by the query, fills on the first refresh with no replies, and "visit site" opens the same search on bsky.app. Preview `zzqqxxnonexistent` → the empty warning. If a Mastodon account is connected, repeat with `rss reader -feedly` and note what the instance returns.
 - [ ] **Step 3:** `/simplify`, then open the PR into `develop` with `Closes #2086`.
+
+---
+
+### Task 7: Keep only posts whose own text matches the query
+
+Added after the live check (2026-11-07): Bluesky's search also matches link-card titles/descriptions, image alt text and quoted posts, so about a third of the results showed no match in what the reader displays. Lars chose **own text only**: the reader evaluates the query itself and keeps a result only when the post's own text — or the text of a post it quotes — matches. Same rule for Mastodon. The preview count reflects the filtered set.
+
+**Files:**
+- Create: `backend/src/Service/Social/Support/SocialSearchMatch.php` (or a small set of classes in the right role folders if PHPMD/clean code demands it — a parsed expression tree belongs in `Model/`, a per-call parser built with `new` in `Pass/`; a static entry point stays in `Support/`)
+- Modify: `backend/src/Service/Social/Support/BlueskySearchPage.php`, `MastodonSearchPage.php` (take the query; filter before mapping)
+- Modify: `backend/src/Service/Social/TimelineSource/BlueskyTimelineSource.php`, `MastodonTimelineSource.php`, `backend/src/Service/Social/SocialSearch/NetworkSocialSearch.php` (pass the query)
+- Test: `backend/tests/Service/Social/Support/SocialSearchMatchTest.php` (new), the two `*SearchPageTest`s, source tests as needed
+
+**Interfaces:**
+- Produces: `SocialSearchMatch::matcher(string $query): \Closure(string): bool` — parse once, test many posts. (Name may change if the structure needs to; keep one public entry point.)
+- Changes: `BlueskySearchPage::of(ApiResponseModel $accepted, string $accountDid, string $query)`, `MastodonSearchPage::of(ApiResponseModel $accepted, string $query)`.
+
+**Query semantics (the syntax the Search tab documents):**
+- Terms are ANDed by default.
+- `a || b` — OR; binds looser than AND (`a b || c` = `(a AND b) OR c`).
+- `-term`, `-"phrase"`, `-( … )` — NOT.
+- `"phrase"` — the words in order, separated by any run of non-letter/non-digit characters (so `"rss reader"` matches `RSS-Reader`, `rss  reader`).
+- `( … )` — grouping.
+- Matching is case-insensitive (`mb_strtolower`), Unicode-aware. A word matches at the start of a word in the text: preceded by start-of-text or a non-letter/non-digit (`(?<![\p{L}\p{N}])`), not necessarily ending at a word boundary — so `reader` matches `readers`, `rssreader` matches `#RSSReader`. The same prefix rule applies to a phrase's last word.
+- A token with a `prefix:` (e.g. `from:alice`, `lang:de`, `since:…`, Mastodon's `has:`) is a network-side filter the reader cannot check: treat it as matching.
+- Never throw on odd input: unbalanced quotes/parentheses, a lone `-`, a lone `||`, an empty query — degrade leniently (unclosed quote = phrase to end; stray `)` ignored; an expression with no checkable terms matches everything). The network already validated the query; this filter only narrows.
+
+**Which text counts:**
+- Bluesky: `post.record.text`, plus the quoted post's text when the post embeds a record — `post.embed.record.value.text` (`app.bsky.embed.record#view`) or `post.embed.record.record.value.text` (`app.bsky.embed.recordWithMedia#view`). Not link cards, not alt text. Joined with a newline so a phrase never spans the two.
+- Mastodon: `content` with tags stripped and entities decoded (reuse the helper `MastodonTimelinePage` uses for the body if there is one), plus `quote.quoted_status.content` when present. A boost's own text is its `reblog`'s.
+
+- [ ] **Step 1: Failing tests.** `SocialSearchMatchTest` with a data provider covering at least: plain AND (`rss reader` matches "reader for rss", not "rss only"); phrase across hyphen/case; `||`; precedence (`a b || c`); `-word` and `-"phrase"`; parentheses with exclusion (`("rss reader" || feedreader) -gazette` against a post naming gazette → false); prefix match (`reader` ↔ "readers", `rssreader` ↔ "#RSSReader"); no infix match (`rss` must not match "ProgRSS"... i.e. `ssreader` does not match "rssreader"); `from:alice` ignored; Unicode (`über` ↔ "Über", `\p{L}` boundary before "über"); lenient inputs (unclosed quote, stray `)`, lone `-`, empty query → true). `BlueskySearchPageTest`: a post whose text lacks the term but whose link card has it is dropped; a post whose quoted record has it is kept. `MastodonSearchPageTest`: HTML content `<p>Best <a …>#RSSReader</a></p>` matches `rssreader`; a status that only matches in a media description is dropped.
+- [ ] **Step 2: Run, see RED.**
+- [ ] **Step 3: Implement** — parse once per page, filter before handing to `BlueskyTimelinePage::of` / `MastodonTimelinePage::of`. Keep every touched src file PHPMD-clean and phptramp-clean (the query is passed one hop; if it would tunnel, hold it in a per-call object).
+- [ ] **Step 4: GREEN**, then `php bin/phpunit tests/Service/Social tests/Controller/Api/SocialImportControllerTest.php`, `composer check`, `composer md`.
+- [ ] **Step 5: Commit** `feat(#2086): a search keeps only posts whose own text matches the query`
