@@ -63,10 +63,7 @@ export class ListScrollState {
     this.options.selection();
     this.screen.isWide();
     this.options.layout();
-    this.collapsed.set(false);
-    this.showToTop.set(false);
-    this.hasAboveFold.set(false);
-    this.lastScrollTop = 0;
+    this.resetToTop();
   });
 
   /** The selection whose entries are on screen — see rowsBelongToSelection(). */
@@ -107,9 +104,15 @@ export class ListScrollState {
     untracked(() => this.applyScroll(scroller, this.scroll.read(selection)));
   });
 
+  // No scroller means no rows, so nothing is scrolled: an emptied list (mark-all-read) brings
+  // the bars back, since the page's return to the top reaches no listener.
   private readonly _listenToScroll = effect((onCleanup) => {
     const scroller = this.options.scroller();
-    if (scroller) onCleanup(scroller.listen(() => this.onScroll(scroller.scrollTop)));
+    if (!scroller) {
+      this.resetToTop();
+      return;
+    }
+    onCleanup(scroller.listen(() => this.onScroll(scroller.scrollTop)));
   });
 
   // A resume-reload re-renders the list from scratch; block heights firm up over
@@ -210,6 +213,13 @@ export class ListScrollState {
       cancelAnimationFrame(this.settleRaf);
     }
     this.settleRaf = 0;
+  }
+
+  private resetToTop(): void {
+    this.collapsed.set(false);
+    this.showToTop.set(false);
+    this.hasAboveFold.set(false);
+    this.lastScrollTop = 0;
   }
 
   /** Whether the rows on screen match the current selection — false between a

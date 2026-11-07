@@ -2906,5 +2906,19 @@ describe('EntryListComponent', () => {
 
       expect(fixture.componentInstance.collapsed()).toBe(true);
     });
+
+    it('brings its bars back when the list empties, as mark-all-read leaves it (#2080)', () => {
+      const fixture = mount({}, [{ provide: ScrollHosts, useClass: ScrollHosts }]);
+      const page = trackPageScrollTop();
+      page.top = 100;
+      window.dispatchEvent(new Event('scroll'));
+      page.top = 800;
+      window.dispatchEvent(new Event('scroll'));
+
+      fixture.componentRef.setInput('entries', []);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.collapsed()).toBe(false);
+    });
   });
 });
