@@ -47,10 +47,8 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
 
     private function durationOf(Element $player): ?int
     {
-        foreach ($player->getElementsByTagName('time') as $time) {
-            if ($time->parentNode === $player) {
-                return ClipDuration::fromIso($time->getAttribute('datetime'));
-            }
+        foreach ($this->directChildren($player, 'time') as $time) {
+            return ClipDuration::fromIso($time->getAttribute('datetime'));
         }
 
         return null;
@@ -62,10 +60,7 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
         if ($own !== '') {
             return $own;
         }
-        foreach ($player->getElementsByTagName('source') as $source) {
-            if ($source->parentNode !== $player) {
-                continue;
-            }
+        foreach ($this->directChildren($player, 'source') as $source) {
             $type = $source->getAttribute('type') ?? '';
             $url = trim($source->getAttribute('src') ?? '');
             if ($url !== '' && ($type === '' || str_starts_with($type, 'audio/'))) {
@@ -74,5 +69,15 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
         }
 
         return null;
+    }
+
+    /** @return iterable<Element> */
+    private function directChildren(Element $player, string $tag): iterable
+    {
+        for ($child = $player->firstElementChild; $child !== null; $child = $child->nextElementSibling) {
+            if ($child->localName === $tag) {
+                yield $child;
+            }
+        }
     }
 }
