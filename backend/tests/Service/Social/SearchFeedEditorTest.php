@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
+use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
@@ -104,6 +105,29 @@ final class SearchFeedEditorTest extends DbTestCase
         $this->expectException(AlreadySubscribedException::class);
 
         $this->editor()->requery($subscription, 'feed reader');
+    }
+
+    public function testARefusedQueryLeavesTheSearchAsItWas(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $subscription = $this->searchFor($account, 'rss reader');
+        $this->searchFor($account, 'feed reader');
+        $this->post($subscription, 'atom', '<p>atom only</p>', null);
+        $feedId = $subscription->getFeed()->requireId();
+
+        try {
+            $this->editor()->requery($subscription, 'feed reader');
+            self::fail('The account already searches for that query.');
+        } catch (AlreadySubscribedException) {
+            $this->entityManager->clear();
+            $feed = $this->entityManager->find(Feed::class, $feedId);
+            self::assertNotNull($feed);
+            self::assertSame(sprintf('social:bluesky:%d:search:rss reader', $account->requireId()), $feed->getUrl());
+            self::assertSame('rss reader', $feed->getTitle());
+            $socialFeed = SocialFeeds::repository($this->entityManager)->forFeed($feed);
+            self::assertSame('rss reader', $socialFeed?->getRemoteId());
+            self::assertSame(['atom'], $this->remainingGuids($subscription));
+        }
     }
 
     public function testAFeedThatIsNoSearchIsRefused(): void

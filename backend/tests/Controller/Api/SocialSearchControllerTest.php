@@ -126,52 +126,18 @@ final class SocialSearchControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
     }
 
-    private function searchClientWith(SocialSearchInterface $search): KernelBrowser
+    public function testANewQueryRefusesAnAnonymousCaller(): void
     {
         $client = static::createClient();
-        $client->disableReboot();
-        self::getContainer()->set(SocialSearchInterface::class, $search);
 
-        return $client;
-    }
-
-    private function requestSearchPreview(KernelBrowser $client, SocialAccount $account, string $query): void
-    {
-        $client->request('GET', sprintf(
-            '/api/me/social-accounts/%d/search-preview?query=%s',
-            $account->requireId(),
-            rawurlencode($query),
-        ));
-    }
-
-    private static function pageOf(int $entries): TimelinePageModel
-    {
-        return TimelinePageModel::of(
-            array_map(static fn (int $number): ParsedEntryModel => new ParsedEntryModel(
-                'guid-' . $number,
-                'https://bsky.app/profile/amy/post/' . $number,
-                Headline::fromFeed('Post ' . $number),
-                '@amy.bsky.social',
-                null,
-                null,
-                new \DateTimeImmutable(self::publishedAt($number)),
-                authorAvatarUrl: 'https://cdn.test/amy.jpg',
-            ), 0 === $entries ? [] : range(1, $entries)),
-            KnownSharesModel::none(),
-            null,
+        $client->request(
+            'PUT',
+            '/api/subscriptions/1/search-query',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: '{"query": "rss"}',
         );
-    }
 
-    /** @return array<string, string> */
-    private static function previewPost(int $number): array
-    {
-        return [
-            'url' => 'https://bsky.app/profile/amy/post/' . $number,
-            'author' => '@amy.bsky.social',
-            'authorAvatarUrl' => 'https://cdn.test/amy.jpg',
-            'text' => 'Post ' . $number,
-            'publishedAt' => self::publishedAt($number),
-        ];
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testANewQueryAnswersTheSubscriptionWithIt(): void
@@ -269,6 +235,54 @@ final class SocialSearchControllerTest extends ApiTestCase
 
         $this->assertRejected($client, Response::HTTP_CONFLICT);
         self::assertSame('already_subscribed', $this->payload($client)['type']);
+    }
+
+    private function searchClientWith(SocialSearchInterface $search): KernelBrowser
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        self::getContainer()->set(SocialSearchInterface::class, $search);
+
+        return $client;
+    }
+
+    private function requestSearchPreview(KernelBrowser $client, SocialAccount $account, string $query): void
+    {
+        $client->request('GET', sprintf(
+            '/api/me/social-accounts/%d/search-preview?query=%s',
+            $account->requireId(),
+            rawurlencode($query),
+        ));
+    }
+
+    private static function pageOf(int $entries): TimelinePageModel
+    {
+        return TimelinePageModel::of(
+            array_map(static fn (int $number): ParsedEntryModel => new ParsedEntryModel(
+                'guid-' . $number,
+                'https://bsky.app/profile/amy/post/' . $number,
+                Headline::fromFeed('Post ' . $number),
+                '@amy.bsky.social',
+                null,
+                null,
+                new \DateTimeImmutable(self::publishedAt($number)),
+                authorAvatarUrl: 'https://cdn.test/amy.jpg',
+            ), 0 === $entries ? [] : range(1, $entries)),
+            KnownSharesModel::none(),
+            null,
+        );
+    }
+
+    /** @return array<string, string> */
+    private static function previewPost(int $number): array
+    {
+        return [
+            'url' => 'https://bsky.app/profile/amy/post/' . $number,
+            'author' => '@amy.bsky.social',
+            'authorAvatarUrl' => 'https://cdn.test/amy.jpg',
+            'text' => 'Post ' . $number,
+            'publishedAt' => self::publishedAt($number),
+        ];
     }
 
     private function putQuery(KernelBrowser $client, Subscription $subscription, string $query): void
