@@ -161,7 +161,7 @@ final class SearchFeedEditorTest extends DbTestCase
         self::assertEqualsCanonicalizing([$gone, $alsoGone], $this->indexWriter->forgets[0]);
     }
 
-    public function testAFeedFullOfNonMatchingPostsIsReadInBatchesAndForgottenAtOnce(): void
+    public function testAFeedFullOfNonMatchingPostsIsRemovedAndForgottenInBatches(): void
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
         $subscription = $this->searchFor($account, 'rss');
@@ -175,7 +175,7 @@ final class SearchFeedEditorTest extends DbTestCase
 
         $this->editor()->requery($subscription, 'rss reader');
 
-        self::assertSame([501], array_map(\count(...), $this->indexWriter->forgets));
+        self::assertSame([500, 1], array_map(\count(...), $this->indexWriter->forgets));
         self::assertSame([], $this->remainingGuids($subscription));
     }
 

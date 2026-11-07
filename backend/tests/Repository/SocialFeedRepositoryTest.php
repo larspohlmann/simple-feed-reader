@@ -341,6 +341,24 @@ final class SocialFeedRepositoryTest extends DbTestCase
         );
     }
 
+    public function testTheUnprotectedPostsComeAtMostFiveHundredAtATime(): void
+    {
+        $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
+        $fetchedAt = new \DateTimeImmutable(self::FETCHED_AT);
+        for ($index = 0; $index < 501; ++$index) {
+            $post = new Entry($search->getFeed(), 'post-' . $index, null, 'Post', $fetchedAt, $fetchedAt);
+            $this->entityManager->persist($post);
+        }
+        $this->entityManager->flush();
+        $socialFeeds = SocialFeeds::repository($this->entityManager);
+
+        $firstBatch = $socialFeeds->unprotectedPostsAfter($search, 0);
+        $rest = $socialFeeds->unprotectedPostsAfter($search, $firstBatch[499]->entryId);
+
+        self::assertCount(500, $firstBatch);
+        self::assertCount(1, $rest);
+    }
+
     private function post(Feed $feed, string $guid, ?string $contentHtml, ?string $authorUrl): Entry
     {
         $fetchedAt = new \DateTimeImmutable(self::FETCHED_AT);
