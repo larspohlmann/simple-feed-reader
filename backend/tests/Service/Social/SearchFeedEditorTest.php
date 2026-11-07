@@ -137,6 +137,24 @@ final class SearchFeedEditorTest extends DbTestCase
         self::assertEqualsCanonicalizing([$gone, $alsoGone], $this->indexWriter->forgets[0]);
     }
 
+    public function testAFeedFullOfNonMatchingPostsIsRemovedInChunks(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $subscription = $this->searchFor($account, 'rss');
+        $fetchedAt = new \DateTimeImmutable(self::NOW);
+        for ($index = 0; $index < 501; ++$index) {
+            $entry = new Entry($subscription->getFeed(), 'atom-' . $index, null, 'atom', $fetchedAt, $fetchedAt);
+            $entry->setContentHtml('<p>atom</p>');
+            $this->entityManager->persist($entry);
+        }
+        $this->entityManager->flush();
+
+        $this->editor()->requery($subscription, 'rss reader');
+
+        self::assertSame([500, 1], array_map(\count(...), $this->indexWriter->forgets));
+        self::assertSame([], $this->remainingGuids($subscription));
+    }
+
     public function testTheAuthorIsCheckedAgainstTheStoredBlueskyProfile(): void
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));

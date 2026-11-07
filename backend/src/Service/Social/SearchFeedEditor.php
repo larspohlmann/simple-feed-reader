@@ -23,6 +23,8 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Points a search feed at another query in place, its stored posts that no longer match removed unless protected. */
 final readonly class SearchFeedEditor
 {
+    private const int DELETE_CHUNK_SIZE = 500;
+
     public function __construct(
         private SocialFeedRepository $socialFeeds,
         private RetentionRepository $retention,
@@ -49,14 +51,16 @@ final readonly class SearchFeedEditor
         try {
             $this->retarget($socialFeed, $search);
             $this->entityManager->flush();
-            $removedIds = $this->removeNonMatching($socialFeed);
+            $removedChunks = $this->removeNonMatching($socialFeed);
             $this->entityManager->commit();
         } catch (\Throwable $exception) {
             $this->entityManager->rollback();
 
             throw $exception;
         }
-        $this->indexer->forget($removedIds);
+        foreach ($removedChunks as $removedIds) {
+            $this->indexer->forget($removedIds);
+        }
     }
 
     private function searchFeedOf(Subscription $subscription): SocialFeed
@@ -91,7 +95,7 @@ final readonly class SearchFeedEditor
         $feed->scheduleNextFetchAt($this->clock->now());
     }
 
-    /** @return list<int> the ids of the removed entries */
+    /** @return list<list<int>> the ids of the removed entries, in the chunks they were deleted in */
     private function removeNonMatching(SocialFeed $socialFeed): array
     {
         $account = $socialFeed->getSocialAccount();
@@ -102,8 +106,11 @@ final readonly class SearchFeedEditor
                 $removedIds[] = $post->entryId;
             }
         }
-        $this->retention->deleteEntries($removedIds);
+        $removedChunks = array_chunk($removedIds, self::DELETE_CHUNK_SIZE);
+        foreach ($removedChunks as $chunk) {
+            $this->retention->deleteEntries($chunk);
+        }
 
-        return $removedIds;
+        return $removedChunks;
     }
 }
