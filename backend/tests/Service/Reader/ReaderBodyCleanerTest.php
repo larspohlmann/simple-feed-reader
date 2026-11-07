@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\AuthorBio\AuthorProfileLink;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
@@ -21,7 +22,6 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EmptiedWrapperRemover;
