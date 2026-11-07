@@ -9,12 +9,12 @@
       data-testid="social-import-tabs"
       ariaLabelKey="settings.social.importTabs"
       labelPrefix="settings.social.importTab."
-      [options]="tabs"
-      [selected]="tab()"
-      [counts]="tabCounts()"
-      (pick)="tab.set($event)"
+      [options]="list.tabs"
+      [selected]="list.tab()"
+      [counts]="list.tabCounts()"
+      (pick)="list.tab.set($event)"
     />
-    @if (showsCandidates()) {
+    @if (list.visible()) {
       <div class="search">
         <app-icon class="search-icon" name="search" size="sm" />
         <input
@@ -24,8 +24,8 @@
           data-testid="social-import-filter"
           [attr.aria-label]="'settings.social.importFilter' | transloco"
           [placeholder]="'settings.social.importFilter' | transloco"
-          [value]="filter()"
-          (input)="filter.set(inputValue($event))"
+          [value]="list.filter()"
+          (input)="list.filter.set(inputValue($event))"
         />
       </div>
       <div
@@ -33,18 +33,18 @@
         role="group"
         [attr.aria-label]="'settings.social.importStates' | transloco"
       >
-        @for (state of stateOptions(); track state) {
+        @for (state of list.stateOptions(); track state) {
           <button
             type="button"
             class="state-chip"
             [attr.data-testid]="'social-import-state-' + state"
-            [class.on]="activeFilter() === state"
-            [attr.aria-pressed]="activeFilter() === state"
-            (click)="stateFilter.set(state)"
+            [class.on]="list.activeFilter() === state"
+            [attr.aria-pressed]="list.activeFilter() === state"
+            (click)="list.stateFilter.set(state)"
           >
             <span>
               {{ filterKeys[state] | transloco }}
-              <span class="count">{{ stateCounts()[state] }}</span>
+              <span class="count">{{ list.stateCounts()[state] }}</span>
             </span>
           </button>
         }
@@ -52,7 +52,7 @@
     }
   </div>
 
-  @if (listTab(); as shownTab) {
+  @if (list.listTab(); as shownTab) {
     @if (importer.candidates(); as candidates) {
       @if (candidates.truncated) {
         <app-warning-box class="truncated" data-testid="social-import-truncated">
@@ -62,7 +62,7 @@
 
       <div class="list-head">
         <p class="note">
-          @if (hasSubscribedRows()) {
+          @if (list.hasSubscribedRows()) {
             {{ 'settings.social.importUnsubscribeHint' | transloco }}
           }
         </p>
@@ -70,16 +70,16 @@
           variant="ghost"
           size="sm"
           data-testid="social-import-select-new"
-          [disabled]="visibleNewCount() === 0"
-          (click)="selectAllNew()"
+          [disabled]="list.visibleNewCount() === 0"
+          (click)="list.selectAllNew()"
         >
-          {{ 'settings.social.importSelectAllNew' | transloco: { count: visibleNewCount() } }}
+          {{ 'settings.social.importSelectAllNew' | transloco: { count: list.visibleNewCount() } }}
         </app-button>
       </div>
 
       <ul class="rows" [attr.data-testid]="tabTestIds[shownTab]">
-        @for (row of renderedRows(); track row.key) {
-          @let picked = chosen().has(row.key);
+        @for (row of list.renderedRows(); track row.key) {
+          @let picked = list.chosen().has(row.key);
           <li>
             <label
               class="row"
@@ -91,7 +91,7 @@
                 type="checkbox"
                 [checked]="row.removable ? !picked : picked"
                 [attr.aria-label]="row.checkboxLabel"
-                (change)="toggle(row)"
+                (change)="list.toggle(row)"
               />
               @if (row.icon; as icon) {
                 <span class="tile" aria-hidden="true"><app-icon [name]="icon" size="sm" /></span>
@@ -104,7 +104,7 @@
                   <span class="handle">{{ row.handle }}</span>
                 }
               </span>
-              @if (activeFilter() === 'all') {
+              @if (list.activeFilter() === 'all') {
                 <span [class]="badgeClasses[row.state]">{{ row.stateLabel }}</span>
               }
             </label>
@@ -113,15 +113,15 @@
           <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
         }
       </ul>
-      @if (nextPageSize() > 0) {
+      @if (list.nextPageSize() > 0) {
         <app-button
           class="more"
           variant="ghost"
           size="sm"
           data-testid="social-import-show-more"
-          (click)="showMore()"
+          (click)="list.showMore()"
         >
-          {{ 'settings.social.importShowMore' | transloco: { count: nextPageSize() } }}
+          {{ 'settings.social.importShowMore' | transloco: { count: list.nextPageSize() } }}
         </app-button>
       }
     } @else if (importer.loading()) {
@@ -158,17 +158,17 @@
   >
     {{ 'common.cancel' | transloco }}
   </app-button>
-  @if (showsCandidates()) {
+  @if (list.visible()) {
     <app-button
       footer
       variant="primary"
       data-testid="social-import-apply"
-      [disabled]="chosen().size === 0"
+      [disabled]="list.chosen().size === 0"
       [loading]="importer.importing()"
       (click)="apply()"
     >
-      @if (chosen().size > 0) {
-        {{ applyCountKey() | transloco: { count: chosen().size } }}
+      @if (list.chosen().size > 0) {
+        {{ list.applyCountKey() | transloco: { count: list.chosen().size } }}
       } @else {
         {{ 'settings.social.importApply' | transloco }}
       }
