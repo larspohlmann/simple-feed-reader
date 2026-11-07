@@ -161,6 +161,14 @@ final class MediaCandidateModelTest extends TestCase
         self::assertSame('Title', $first->completedBy($later)->label);
     }
 
+    public function testCompletingKeepsTheFirstDurationOverALaterOne(): void
+    {
+        $first = new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', null, null, null, false, null, 300);
+        $later = new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', null, null, null, false, null, 120);
+
+        self::assertSame(300, $first->completedBy($later)->durationSeconds);
+    }
+
     public function testBecomesTheAudioClipItPlays(): void
     {
         $candidate = new MediaCandidateModel(

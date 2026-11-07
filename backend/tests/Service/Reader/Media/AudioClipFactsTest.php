@@ -39,6 +39,35 @@ final class AudioClipFactsTest extends TestCase
         self::assertSame(2871, $facts->durationSeconds);
     }
 
+    public function testTheFirstElementThatStatesAFactWins(): void
+    {
+        $html = '<body><div data-src="' . self::CLIP . '" data-title="First" data-duration="300"></div>'
+            . '<a href="' . self::CLIP . '" data-title="Later" data-duration="120"></a></body>';
+
+        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
+
+        self::assertEquals(new AudioClipModel(self::CLIP, 'First', 300), $facts);
+    }
+
+    public function testTrimsAPaddedTitle(): void
+    {
+        $html = '<body><div data-src="' . self::CLIP . '" data-title="  Clip  "></div></body>';
+
+        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
+
+        self::assertSame('Clip', $facts->title);
+    }
+
+    public function testABlankTitleLeavesTheNextElementToNameTheClip(): void
+    {
+        $html = '<body><div data-src="' . self::CLIP . '" data-title="   "></div>'
+            . '<a href="' . self::CLIP . '" data-title="Named"></a></body>';
+
+        $facts = new AudioClipFacts(new PageFurniture())->of($this->document($html), self::CLIP);
+
+        self::assertSame('Named', $facts->title);
+    }
+
     public function testKnowsNothingOfAClipNoElementDescribes(): void
     {
         $html = '<body><audio title="Play" src="' . self::CLIP . '"></audio>'
