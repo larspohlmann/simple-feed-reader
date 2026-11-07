@@ -14,6 +14,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
+use App\Repository\SubscriptionDisplayTitle;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Exception\NotASearchFeedException;
 use App\Service\Social\Model\PrivateFeedModel;
@@ -60,7 +61,8 @@ final class SearchFeedEditorTest extends DbTestCase
         $feed = $subscription->getFeed();
         self::assertSame(sprintf('social:bluesky:%d:search:feed reader', $account->requireId()), $feed->getUrl());
         self::assertSame('https://bsky.app/search?q=feed%20reader', $feed->getSiteUrl());
-        self::assertSame('feed reader', $feed->getTitle());
+        self::assertSame('rss reader', $feed->getTitle());
+        self::assertSame('feed reader', SubscriptionDisplayTitle::ofSubscription($subscription));
         self::assertSame('feed reader', $socialFeed->getRemoteId());
         self::assertNull($socialFeed->getNewestSeenId());
         self::assertEquals(new \DateTimeImmutable(self::NOW), $feed->getNextFetchAt());
@@ -69,18 +71,16 @@ final class SearchFeedEditorTest extends DbTestCase
         self::assertSame('feed reader', $stored?->getRemoteId());
     }
 
-    public function testACustomTitleAndARenamedFeedTitleStay(): void
+    public function testACustomTitleStays(): void
     {
         $account = $this->stored(SocialAccounts::mastodonOf($this->user));
         $subscription = $this->searchFor($account, 'rss reader');
         $subscription->setCustomTitle('My readers');
-        $subscription->getFeed()->setTitle('Readers');
         $this->entityManager->flush();
 
         $this->editor()->requery($subscription, 'feed reader');
 
         self::assertSame('My readers', $subscription->getCustomTitle());
-        self::assertSame('Readers', $subscription->getFeed()->getTitle());
         self::assertSame('https://mastodon.example/search?q=feed%20reader', $subscription->getFeed()->getSiteUrl());
     }
 

@@ -9,6 +9,7 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
+use App\Repository\SubscriptionDisplayTitle;
 use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
@@ -76,7 +77,7 @@ final class SubscriptionJson
     public static function one(Subscription $subscription, int $unreadCount = 0, int $entryCount = 0): array
     {
         $feed = $subscription->getFeed();
-        $title = $subscription->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
+        $title = SubscriptionDisplayTitle::ofSubscription($subscription);
 
         $tags = [];
         foreach ($subscription->getSubscriptionTags() as $subscriptionTag) {

@@ -77,9 +77,6 @@ final readonly class SearchFeedEditor
     {
         $account = $socialFeed->getSocialAccount();
         $feed = $socialFeed->getFeed();
-        if ($feed->getTitle() === $socialFeed->getRemoteId()) {
-            $feed->setTitle($search->name);
-        }
         $socialFeed->requery($search->remoteId);
         $feed->setUrl(SocialFeedUrl::of($account, $search));
         $feed->setSiteUrl(PrivateFeedSite::of($account, $search));

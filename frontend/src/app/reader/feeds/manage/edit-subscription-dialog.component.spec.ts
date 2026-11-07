@@ -362,6 +362,37 @@ describe('EditSubscriptionDialogComponent', () => {
       update.flush({ subscription: search });
     });
 
+    it('prefills an unrenamed search with its current query, whatever title the feed stored', () => {
+      TestBed.configureTestingModule({
+        imports: [provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: DialogRef, useValue: { close } },
+          {
+            provide: DIALOG_DATA,
+            useFactory: () => {
+              const rows = inject(SubscriptionRows);
+              rows.stored.set([{ ...search, title: 'old query' }]);
+              return rows.find(search.id);
+            },
+          },
+        ],
+      });
+      const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);
+      fixture.detectChanges();
+      ctrl = TestBed.inject(HttpTestingController);
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+
+      expect(fixture.componentInstance.form.controls.customTitle.value).toBe('rss reader');
+      fixture.componentInstance.submit();
+
+      const update = ctrl.expectOne(UPDATE);
+      expect(update.request.body.customTitle).toBeNull();
+      update.flush({ subscription: search });
+    });
+
     it('keeps a name the reader gave it', () => {
       const fixture = mount({ ...search, title: 'Readers', customTitle: 'Readers' });
 
