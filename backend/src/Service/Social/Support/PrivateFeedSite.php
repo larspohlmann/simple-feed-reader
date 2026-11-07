@@ -23,16 +23,12 @@ final class PrivateFeedSite
 
     private static function bluesky(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
-        if (SocialFeedKind::Search === $privateFeed->kind) {
-            return BlueskyWeb::searchUrl($privateFeed->remoteId);
-        }
-
-        if ($privateFeed->kind->followsOnePerson()) {
-            return BlueskyWeb::profileUrl($privateFeed->remoteId);
-        }
-
-        return BlueskyRecordUri::webUrl($privateFeed->remoteId)
-            ?? BlueskyWeb::profileUrl($account->getIdentity());
+        return match (true) {
+            SocialFeedKind::Search === $privateFeed->kind => BlueskyWeb::searchUrl($privateFeed->remoteId),
+            $privateFeed->kind->followsOnePerson() => BlueskyWeb::profileUrl($privateFeed->remoteId),
+            default => BlueskyRecordUri::webUrl($privateFeed->remoteId)
+                ?? BlueskyWeb::profileUrl($account->getIdentity()),
+        };
     }
 
     private static function mastodon(SocialAccount $account, PrivateFeedModel $privateFeed): string
