@@ -37,6 +37,9 @@ final class SocialImportControllerTest extends ApiTestCase
     /** Must match framework.rate_limiter.social_import.limit in rate_limiter.yaml. */
     private const int IMPORT_BUDGET = 10;
 
+    /** Must match framework.rate_limiter.social_search_preview.limit in rate_limiter.yaml. */
+    private const int SEARCH_PREVIEW_BUDGET = 30;
+
     protected function setUp(): void
     {
         self::bootKernel();
@@ -289,6 +292,23 @@ final class SocialImportControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(['count' => 0, 'posts' => []], $this->payload($client));
+    }
+
+    public function testTheSearchPreviewHasABudgetOfItsOwn(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
+        self::getContainer()->set(SocialCandidatesInterface::class, $this->nothingFollowed());
+        $user = $this->signIn($client, 'search-budget@example.test');
+        $account = $this->blueskyAccountOf($user);
+        for ($attempt = 0; $attempt < self::SEARCH_PREVIEW_BUDGET; ++$attempt) {
+            $this->requestSearchPreview($client, $account, 'rss');
+            self::assertResponseIsSuccessful();
+        }
+
+        $this->requestSearchPreview($client, $account, 'rss');
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+        $this->requestCandidates($client, $account);
+        self::assertResponseIsSuccessful();
     }
 
     public function testAnImportCannotSetTheImageOfAFeed(): void

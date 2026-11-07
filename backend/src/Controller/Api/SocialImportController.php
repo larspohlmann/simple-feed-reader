@@ -31,6 +31,7 @@ final readonly class SocialImportController
         private SocialImporter $importer,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialImportLimiter,
+        private RateLimiterFactoryInterface $socialSearchPreviewLimiter,
         private SocialImportJson $importJson,
         private SocialSearchInterface $socialSearch,
         private SocialSearchPreviewJson $searchPreviewJson,
@@ -75,7 +76,7 @@ final readonly class SocialImportController
         SocialSearchPreviewRequest $request,
     ): JsonResponse {
         $account = $this->socialAccount->requireConnected($user, $id);
-        $this->rateLimitGuard->enforceForUser($this->socialImportLimiter, $user);
+        $this->rateLimitGuard->enforceForUser($this->socialSearchPreviewLimiter, $user);
 
         return new JsonResponse(
             $this->searchPreviewJson->preview($this->socialSearch->newest($account, $request->toQuery())),
