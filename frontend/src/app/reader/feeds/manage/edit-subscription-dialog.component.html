@@ -13,6 +13,16 @@
         </app-button>
       </div>
 
+      @if (search; as searched) {
+        <app-social-search-form
+          class="query"
+          [network]="searched.network"
+          [accountId]="searched.accountId"
+          [initialQuery]="searched.query"
+        />
+        <p class="query-note">{{ 'dialog.editFeed.queryNote' | transloco }}</p>
+      }
+
       <p class="lbl">{{ 'dialog.editFeed.feedUrl' | transloco }}</p>
       <!-- No copy button: `user-select: all` hands the whole URL over on one
            click or long-press, which is the gesture people already reach for. -->
@@ -86,7 +96,7 @@
     <app-button footer (click)="ref.close()">
       {{ 'dialog.cancel' | transloco }}
     </app-button>
-    <app-button footer type="submit" variant="primary" [disabled]="loading()">
+    <app-button footer type="submit" variant="primary" [disabled]="loading() || blankQuery()">
       {{ (loading() ? 'dialog.editFeed.saving' : 'dialog.editFeed.save') | transloco }}
     </app-button>
   </app-overlay-panel>

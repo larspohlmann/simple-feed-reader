@@ -378,7 +378,7 @@ describe('SidebarSocialSectionComponent', () => {
       id,
       title,
       unreadCount: id,
-      social: { network: 'bluesky', accountId: 3, kind: 'search' },
+      social: { network: 'bluesky', accountId: 3, kind: 'search', query: 'rss' },
     });
   const WITH_SEARCHES: SocialSection = {
     ...WITH_PROFILES,

@@ -30,6 +30,16 @@ form {
   justify-content: flex-end;
 }
 
+.query {
+  margin-top: var(--space-2);
+}
+
+.query-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
 /* The feed's identity, shown so it can be read and copied -- never edited.
    Monospace because a URL is a string to compare character by character. */
 .url {

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\SocialFeedKind;
 use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Model\StoredPostModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -139,5 +141,27 @@ final class SocialFeedRepository extends ServiceEntityRepository
     public function forFeed(Feed $feed): ?SocialFeed
     {
         return $this->findOneBy(['feed' => $feed]);
+    }
+
+    /** @return list<StoredPostModel> the feed's posts nobody favourites, keeps or shares */
+    public function unprotectedPostsIn(SocialFeed $socialFeed): array
+    {
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->select('e.id AS id', 'e.contentHtml AS contentHtml', 'e.author.profileUrl AS authorUrl')
+            ->from(Entry::class, 'e')
+            ->where('e.feed = :feed')
+            ->setParameter('feed', $socialFeed->getFeed());
+        ProtectedEntryDql::exclude($qb, 'e');
+        /** @var list<array{id: int, contentHtml: string|null, authorUrl: string|null}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
+
+        return array_map(
+            static fn (array $row): StoredPostModel => new StoredPostModel(
+                $row['id'],
+                $row['contentHtml'],
+                $row['authorUrl'],
+            ),
+            $rows,
+        );
     }
 }

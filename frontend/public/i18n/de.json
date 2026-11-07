@@ -933,6 +933,7 @@
       "title": "Feed bearbeiten",
       "customTitle": "Eigener Titel",
       "resetTitle": "Feed-Titel verwenden",
+      "queryNote": "Eine neue Suche entfernt beim Speichern die gespeicherten Beiträge, die nicht mehr passen; Favoriten und behaltene Beiträge bleiben.",
       "feedUrl": "Feed-URL",
       "siteUrl": "Website",
       "tags": "Tags",

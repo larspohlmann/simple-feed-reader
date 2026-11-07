@@ -7,6 +7,10 @@ export function isUnrenamedHome(subscription: SubscriptionDto): boolean {
   return subscription.social?.kind === 'home' && subscription.customTitle === null;
 }
 
+export function isUnrenamedSearch(subscription: SubscriptionDto): boolean {
+  return subscription.social?.kind === 'search' && subscription.customTitle === null;
+}
+
 export function homeLabel(i18n: TranslocoService, network: SocialNetworkName): string {
   return i18n.translate('reader.socialHome', {
     network: i18n.translate(`reader.socialNetworkShort.${network}`),

@@ -61,19 +61,6 @@ export interface SocialImportResult {
   readonly removed: number;
 }
 
-export interface SearchPreviewPost {
-  readonly url: string | null;
-  readonly author: string | null;
-  readonly authorAvatarUrl: string | null;
-  readonly text: string;
-  readonly publishedAt: string | null;
-}
-
-export interface SearchPreview {
-  readonly count: number;
-  readonly posts: readonly SearchPreviewPost[];
-}
-
 @Injectable()
 export class SocialImportService {
   private readonly http = inject(HttpClient);
@@ -108,12 +95,6 @@ export class SocialImportService {
         tap({ error: (error: HttpErrorResponse) => this.fail(error) }),
         finalize(() => this.importing.set(false)),
       );
-  }
-
-  preview(accountId: number, query: string): Observable<SearchPreview> {
-    return this.http.get<SearchPreview>(`${this.endpoint}/${accountId}/search-preview`, {
-      params: { query },
-    });
   }
 
   private fail(error: HttpErrorResponse): void {

@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
@@ -69,7 +70,7 @@ final class SubscriptionJson
      *   }>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
      *   includeInSavedSearches: bool,
-     *   social: array{network: string, accountId: int|null, kind: string}|null
+     *   social: array{network: string, accountId: int|null, kind: string, query?: string}|null
      * }
      */
     public static function one(Subscription $subscription, int $unreadCount = 0, int $entryCount = 0): array
@@ -115,9 +116,9 @@ final class SubscriptionJson
 
     /**
      * A private feed's synthetic URL also names its account and kind; a saved feed is `saved`; any other networked
-     * feed is a profile feed, and so is an author feed, which follows one person.
+     * feed is a profile feed, and so is an author feed, which follows one person. A search also names its query.
      *
-     * @return array{network: string, accountId: int|null, kind: string}|null
+     * @return array{network: string, accountId: int|null, kind: string, query?: string}|null
      */
     private static function social(Feed $feed): ?array
     {
@@ -133,7 +134,9 @@ final class SubscriptionJson
             return ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
         }
 
-        return ['network' => $network->value, 'accountId' => $address->accountId, 'kind' => $address->kind->value];
+        $social = ['network' => $network->value, 'accountId' => $address->accountId, 'kind' => $address->kind->value];
+
+        return SocialFeedKind::Search === $address->kind ? [...$social, 'query' => $address->remoteId] : $social;
     }
 
     /** @return array{id: int, network: string, handle: string, status: string} */

@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
-use App\Entity\EntryShare;
-use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Enum\RunStatus;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
@@ -75,15 +72,14 @@ final readonly class RetentionRepository
     /** @return list<int> the saved feed's entries that nobody favourites or keeps any more (#1666) */
     public function unsavedIdsInSavedFeed(int $feedId): array
     {
-        return self::idsOf(
-            $this->entityManager->createQueryBuilder()
-                ->select('e.id')
-                ->from(Entry::class, 'e')
-                ->where('e.feed = :feed')
-                ->andWhere($this->notProtectedDql())
-                ->setParameter('feed', $feedId)
-                ->setParameter('true', true, Types::BOOLEAN),
-        );
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('e.id')
+            ->from(Entry::class, 'e')
+            ->where('e.feed = :feed')
+            ->setParameter('feed', $feedId);
+        ProtectedEntryDql::exclude($qb, 'e');
+
+        return self::idsOf($qb);
     }
 
     /** @param list<int> $ids */
@@ -127,16 +123,17 @@ final readonly class RetentionRepository
             return null;
         }
 
-        return $this->entityManager->createQueryBuilder()
+        $qb = $this->entityManager->createQueryBuilder()
             ->select('e.id')
             ->from(Entry::class, 'e')
             ->where('e.feed = :feed')
             ->andWhere($this->pastBoundaryDql())
-            ->andWhere($this->notProtectedDql())
             ->setParameter('feed', $feedId)
             ->setParameter('boundaryCreatedAt', $boundary->createdAt)
-            ->setParameter('boundaryId', $boundary->id)
-            ->setParameter('true', true, Types::BOOLEAN);
+            ->setParameter('boundaryId', $boundary->id);
+        ProtectedEntryDql::exclude($qb, 'e');
+
+        return $qb;
     }
 
     /**
@@ -169,19 +166,6 @@ final readonly class RetentionRepository
     {
         return '(e.createdAt < :boundaryCreatedAt
                  OR (e.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
-    }
-
-    /** An entry is protected iff any user favorited, kept or shared it. */
-    private function notProtectedDql(): string
-    {
-        return sprintf(
-            'NOT EXISTS (
-                SELECT IDENTITY(s.user) FROM %s s
-                WHERE s.entry = e AND (s.isFavorite = :true OR s.isKept = :true)
-            ) AND NOT EXISTS (SELECT IDENTITY(share.user) FROM %s share WHERE share.entry = e)',
-            EntryState::class,
-            EntryShare::class,
-        );
     }
 
     /** @return list<int> */

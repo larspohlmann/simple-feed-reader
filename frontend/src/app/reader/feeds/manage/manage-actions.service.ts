@@ -7,6 +7,7 @@ import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
+import { RefreshService } from '../../state/refresh.service';
 import {
   MoveFeedToTag,
   RefreshReport,
@@ -47,6 +48,7 @@ export class ManageActions {
   private readonly tagPlacement = inject(TagPlacement);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
+  private readonly refresh = inject(RefreshService);
 
   editSubscription(sub: SubscriptionDto): void {
     const ref = this.dialog.open<EditSubscriptionResult>(EditSubscriptionDialogComponent, {
@@ -61,6 +63,9 @@ export class ManageActions {
       if (!updated) return;
       this.subs.reloadQuietly();
       if (updated.includeInSavedSearches !== sub.includeInSavedSearches) this.savedSearches.load();
+      // The finished refresh reloads the list, which drops the posts the new query no longer matches.
+      if (searchQueryOf(updated) !== searchQueryOf(sub))
+        this.refresh.run(undefined, { feedId: sub.feedId });
     });
   }
 
@@ -345,4 +350,8 @@ export class ManageActions {
       map(() => undefined),
     );
   }
+}
+
+function searchQueryOf(subscription: SubscriptionDto): string | null {
+  return subscription.social?.kind === 'search' ? subscription.social.query : null;
 }

@@ -933,6 +933,7 @@
       "title": "Edit feed",
       "customTitle": "Custom title",
       "resetTitle": "Use the feed's title",
+      "queryNote": "Saving a new query removes the stored posts it no longer matches; favourites and kept posts stay.",
       "feedUrl": "Feed URL",
       "siteUrl": "Website",
       "tags": "Tags",

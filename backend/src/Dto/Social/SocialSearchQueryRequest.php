@@ -7,7 +7,7 @@ namespace App\Dto\Social;
 use App\Service\Social\Support\SocialSearchQuery;
 use Symfony\Component\Validator\Constraints as Assert;
 
-final readonly class SocialSearchPreviewRequest
+final readonly class SocialSearchQueryRequest
 {
     public function __construct(
         #[Assert\NotBlank(normalizer: [SocialSearchQuery::class, 'normalized'])]

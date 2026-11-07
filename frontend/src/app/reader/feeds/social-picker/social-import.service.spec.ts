@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../../core/api';
-import { ImportCandidates, SearchPreview, SocialImportService } from './social-import.service';
+import { ImportCandidates, SocialImportService } from './social-import.service';
 
 const BASE = 'https://api.test';
 const CANDIDATES = `${BASE}/api/me/social-accounts/4/import-candidates`;
@@ -86,21 +86,5 @@ describe('SocialImportService', () => {
 
     expect(answered).toEqual(result);
     expect(service.importing()).toBe(false);
-  });
-
-  it('previews a search with the query as a parameter', () => {
-    let preview: SearchPreview | undefined;
-    service.preview(7, '"rss reader" || feedreader').subscribe((answer) => (preview = answer));
-
-    const request = http.expectOne(
-      (candidate) =>
-        candidate.url.endsWith('/api/me/social-accounts/7/search-preview') &&
-        candidate.params.get('query') === '"rss reader" || feedreader',
-    );
-    request.flush({ count: 0, posts: [] });
-
-    expect(preview).toEqual({ count: 0, posts: [] });
-    expect(service.loading()).toBe(false);
-    expect(service.failure()).toBeNull();
   });
 });

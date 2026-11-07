@@ -5,18 +5,13 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Social\SocialImportRequest;
-use App\Dto\Social\SocialSearchPreviewRequest;
 use App\Entity\User;
 use App\Http\SocialImportJson;
-use App\Http\SocialSearchPreviewJson;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\ImportCandidates;
 use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialImporter;
-use App\Service\Social\SocialSearch\SocialSearchInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -31,10 +26,7 @@ final readonly class SocialImportController
         private SocialImporter $importer,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialImportLimiter,
-        private RateLimiterFactoryInterface $socialSearchPreviewLimiter,
         private SocialImportJson $importJson,
-        private SocialSearchInterface $socialSearch,
-        private SocialSearchPreviewJson $searchPreviewJson,
     ) {
     }
 
@@ -61,25 +53,5 @@ final readonly class SocialImportController
         $account = $this->socialAccount->require($user, $id);
 
         return new JsonResponse($this->importJson->result($this->importer->import($account, $request->toImport())));
-    }
-
-    #[Route(
-        '/{id}/search-preview',
-        name: 'api_me_social_accounts_search_preview',
-        requirements: ['id' => '\d+'],
-        methods: ['GET'],
-    )]
-    public function searchPreview(
-        #[CurrentUser] User $user,
-        int $id,
-        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
-        SocialSearchPreviewRequest $request,
-    ): JsonResponse {
-        $account = $this->socialAccount->requireConnected($user, $id);
-        $this->rateLimitGuard->enforceForUser($this->socialSearchPreviewLimiter, $user);
-
-        return new JsonResponse(
-            $this->searchPreviewJson->preview($this->socialSearch->newest($account, $request->toQuery())),
-        );
     }
 }

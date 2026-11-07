@@ -14,7 +14,8 @@ const ref = (
   network: 'bluesky' | 'mastodon',
   accountId: number,
   kind: 'home' | 'list' | 'custom_feed' | 'tag' | 'search',
-): SocialFeedRefDto => ({ network, accountId, kind });
+): SocialFeedRefDto =>
+  kind === 'search' ? { network, accountId, kind, query: 'rss' } : { network, accountId, kind };
 
 const profile = (id: number, network: 'bluesky' | 'mastodon', title: string): SubscriptionDto =>
   feed(id, { network, accountId: null, kind: 'profile' }, title);

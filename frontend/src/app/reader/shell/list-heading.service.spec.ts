@@ -131,7 +131,7 @@ describe("ListHeading for a network's combined view", () => {
       id: 6,
       unreadCount: 6,
       entryCount: 60,
-      social: { network: 'bluesky', accountId: 1, kind: 'search' },
+      social: { network: 'bluesky', accountId: 1, kind: 'search', query: 'rss' },
     }),
   ];
 
