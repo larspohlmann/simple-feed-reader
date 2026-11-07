@@ -88,15 +88,60 @@ describe('buildSocialSections', () => {
     expect(sections[0].showsHandles).toBe(true);
   });
 
-  it("sorts an account's search feeds after its tag feeds", () => {
+  it("takes search feeds out of their account's group into the network's searches, by title", () => {
     const sections = sectionsOf(
-      [feed(1, ref('bluesky', 3, 'search'), 'Alpha'), feed(2, ref('bluesky', 3, 'tag'), 'Zulu')],
+      [
+        feed(1, ref('bluesky', 3, 'search'), 'Zulu'),
+        feed(2, ref('bluesky', 3, 'tag'), 'Tag'),
+        feed(3, ref('bluesky', 9, 'search'), 'alpha'),
+      ],
       [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
     );
 
-    expect(sections[0].accounts[0].subscriptions.map((subscription) => subscription.id)).toEqual([
-      2, 1,
+    expect(sections[0].accounts.map((group) => group.subscriptions.map(({ id }) => id))).toEqual([
+      [2],
     ]);
+    expect(sections[0].searches.subscriptions.map(({ id }) => id)).toEqual([3, 1]);
+    expect(sections[0].profiles.subscriptions).toEqual([]);
+  });
+
+  it("sums the searches' unread and entries, and keeps them in the network's totals", () => {
+    const [section] = sectionsOf(
+      [
+        makeSubscription({
+          id: 1,
+          unreadCount: 2,
+          entryCount: 5,
+          social: ref('bluesky', 3, 'search'),
+        }),
+        makeSubscription({
+          id: 2,
+          unreadCount: 3,
+          entryCount: 7,
+          social: ref('bluesky', 3, 'search'),
+        }),
+        makeSubscription({
+          id: 3,
+          unreadCount: 4,
+          entryCount: 11,
+          social: ref('bluesky', 3, 'home'),
+        }),
+      ],
+      [],
+      { ...NO_UNREAD_TOTALS, networks: new Map([['bluesky', 9]]) },
+    );
+
+    expect([section.searches.unreadCount, section.searches.entryCount]).toEqual([5, 12]);
+    expect([section.unreadCount, section.entryCount]).toEqual([9, 23]);
+  });
+
+  it('shows a network that holds only searches', () => {
+    const sections = sectionsOf([feed(1, ref('mastodon', 8, 'search'), 'rust')], []);
+
+    expect(sections.map((section) => [section.network, section.accounts.length])).toEqual([
+      ['mastodon', 0],
+    ]);
+    expect(sections[0].searches.subscriptions.map(({ id }) => id)).toEqual([1]);
   });
 
   it('shows a network that has only profile feeds, with no account group', () => {

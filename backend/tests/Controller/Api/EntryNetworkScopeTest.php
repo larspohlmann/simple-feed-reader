@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\SocialFeed;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -55,6 +59,44 @@ final class EntryNetworkScopeTest extends ApiTestCase
         self::assertSame(['profile-post'], $this->guidsOfResponse());
     }
 
+    public function testASearchFeedKindListsOnlyTheNetworksSearchFeeds(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('network-searches@example.com');
+        $this->seedNetworks($user);
+        $this->seedSearch($user);
+
+        $this->client->request('GET', '/api/entries?network=bluesky&feedKind=search', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['search-post'], $this->guidsOfResponse());
+    }
+
+    public function testMarkingANetworksSearchesReadLeavesItsOtherFeedsUnread(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('network-mark-searches@example.com');
+        $this->seedNetworks($user);
+        $this->seedSearch($user);
+
+        $this->client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                [
+                    'scope' => 'network',
+                    'network' => 'bluesky',
+                    'feedKind' => 'search',
+                    'until' => '2026-10-12T00:00:00Z',
+                ],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+
+        $this->client->request('GET', '/api/entries?network=bluesky&view=unread', server: $headers);
+        self::assertSame(['profile-post', 'home-post'], $this->guidsOfResponse());
+    }
+
     public function testAnUnknownFeedKindIsAValidationError(): void
     {
         $headers = $this->bearerFor($this->factory()->create('network-feedkind-unknown@example.com'));
@@ -63,7 +105,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame(
-            ['feedKind' => ['Unknown feedKind. Use one of: profile.']],
+            ['feedKind' => ['Unknown feedKind. Use one of: profile, search.']],
             $this->payload($this->client)['errors'],
         );
     }
@@ -167,6 +209,21 @@ final class EntryNetworkScopeTest extends ApiTestCase
         $fixtures->post($mastodon, 'mastodon-post', '2026-10-07T00:00:00Z');
         $plain = $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
         $fixtures->post($plain, 'plain-post', '2026-10-08T00:00:00Z');
+    }
+
+    private function seedSearch(User $user): void
+    {
+        $account = SocialFeeds::persistedAccount($this->entityManager(), SocialAccounts::blueskyOf($user));
+        $search = $this->fixtures()->subscribe(
+            $user,
+            sprintf('social:bluesky:%d:search:rust', $account->requireId()),
+            SourceFormat::BLUESKY_API,
+        );
+        SocialFeeds::persisted(
+            $this->entityManager(),
+            new SocialFeed($account, $search->getFeed(), SocialFeedKind::Search, 'rust'),
+        );
+        $this->fixtures()->post($search, 'search-post', '2026-10-04T00:00:00Z');
     }
 
     /** @return list<string> */

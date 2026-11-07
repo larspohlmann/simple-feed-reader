@@ -107,6 +107,30 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
         self::assertSame([$author->requireId()], $this->idsOf($this->feeds()->findDue($criteria, 50)));
     }
 
+    public function testASearchScopeSelectsOnlyTheNetworksSearchFeeds(): void
+    {
+        $owner = $this->user('network-scope-searches@example.com');
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($owner));
+        $search = $this->fixtures()->subscribe(
+            $owner,
+            sprintf('social:bluesky:%d:search:rust', $account->requireId()),
+            SourceFormat::BLUESKY_API,
+        )->getFeed();
+        SocialFeeds::persisted($this->entityManager, new SocialFeed($account, $search, SocialFeedKind::Search, 'rust'));
+        $home = $this->fixtures()->subscribe(
+            $owner,
+            NetworkFeedSubscriptions::blueskyHome($account->requireId()),
+            SourceFormat::BLUESKY_API,
+        )->getFeed();
+        SocialFeeds::persisted($this->entityManager, new SocialFeed($account, $home, SocialFeedKind::Home, ''));
+        $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+
+        $criteria = $this->criteria($owner, NetworkScope::searches(SocialNetwork::Bluesky));
+
+        self::assertSame([$search->requireId()], $this->idsOf($this->feeds()->findDue($criteria, 50)));
+        self::assertSame(1, $this->feeds()->countDue($criteria));
+    }
+
     public function testANetworkScopeNeverReachesAFeedTheUserDoesNotSubscribeTo(): void
     {
         $owner = $this->user('network-scope-self@example.com');

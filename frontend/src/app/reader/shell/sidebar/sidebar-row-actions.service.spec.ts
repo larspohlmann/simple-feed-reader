@@ -9,7 +9,7 @@ import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
-import { socialProfiles, SocialSection } from '../../state/social-sections';
+import { socialFeedGroup, SocialSection } from '../../state/social-sections';
 import { TagsStore } from '../../state/tags.store';
 import { tagsStoreStub } from '../../testing/tags-store.stub';
 import { TagDto } from '../../models';
@@ -55,7 +55,8 @@ describe('SidebarRowActions', () => {
       network: 'bluesky',
       accounts: [],
       networkAccounts,
-      profiles: socialProfiles([], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([], 0),
       saved: null,
       unreadCount: 0,
       entryCount: 0,

@@ -1291,6 +1291,7 @@
     "reconnectSocialAccount": "{{handle}} in den Einstellungen neu verbinden",
     "manageSocialSection": "{{network}}-Optionen",
     "socialFeeds": "Feeds",
+    "socialSearches": "Suchen",
     "socialHome": "Startseite@{{network}}",
     "savedFrom": {
       "bluesky": "Gespeichert aus Bluesky",
@@ -1298,6 +1299,7 @@
       "feeds": "Gespeichert aus Feeds"
     },
     "toggleSocialFeeds": "{{network}}-Feeds ein-/ausklappen",
+    "toggleSocialSearches": "{{network}}-Suchen ein-/ausklappen",
     "socialNetworkShort": {
       "bluesky": "bsky",
       "mastodon": "mastodon"

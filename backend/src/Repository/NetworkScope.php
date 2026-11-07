@@ -24,6 +24,11 @@ final readonly class NetworkScope
         return new self($network, NetworkFeedKind::Profile);
     }
 
+    public static function searches(SocialNetwork $network): self
+    {
+        return new self($network, NetworkFeedKind::Search);
+    }
+
     /**
      * @throws ValidationException for an unknown network or feed kind, or a feed kind without a network
      */
@@ -39,7 +44,7 @@ final readonly class NetworkScope
             return null;
         }
 
-        return $kind === null ? self::whole($socialNetwork) : self::profiles($socialNetwork);
+        return new self($socialNetwork, $kind);
     }
 
     public function toRunKey(): string

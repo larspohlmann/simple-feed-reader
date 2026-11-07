@@ -1,6 +1,6 @@
 import { SubscriptionDto } from '../models';
 import { PrivateFeedRefDto, SocialAccountRefDto } from '../social-feed';
-import { SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
+import { NetworkFeedKind, SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
 import type { UnreadTotals } from './unread-totals';
 
 export interface SocialAccountGroup {
@@ -9,8 +9,9 @@ export interface SocialAccountGroup {
   readonly subscriptions: readonly SubscriptionDto[];
 }
 
-export interface SocialProfiles {
-  /** Alphabetically: the people followed rather than an account's own feeds. */
+/** The people followed, or the searches, of every account together. */
+export interface SocialFeedGroup {
+  /** Alphabetically. */
   readonly subscriptions: readonly SubscriptionDto[];
   readonly unreadCount: number;
   readonly entryCount: number;
@@ -21,7 +22,8 @@ export interface SocialSection {
   readonly accounts: readonly SocialAccountGroup[];
   /** Every connected account of the network, by id: the head's menu opens each one's picker. */
   readonly networkAccounts: readonly SocialAccountRefDto[];
-  readonly profiles: SocialProfiles;
+  readonly searches: SocialFeedGroup;
+  readonly profiles: SocialFeedGroup;
   /** Shown only while it holds posts. */
   readonly saved: SubscriptionDto | null;
   /** Every feed of the network, one excluded from All items too, as a tag counts. */
@@ -50,6 +52,10 @@ export function isProfileFeed(subscription: SubscriptionDto): boolean {
   return subscription.social?.kind === 'profile';
 }
 
+export function isSearchFeed(subscription: SubscriptionDto): boolean {
+  return subscription.social?.kind === 'search';
+}
+
 /** A "Saved from …" feed: favourites and kept posts of feeds the user left. */
 export function isSavedFeed(subscription: SubscriptionDto): boolean {
   return subscription.sourceFormat === 'saved';
@@ -69,6 +75,10 @@ export function isPrivateFeed(subscription: SubscriptionDto): subscription is Pr
   return isSocialFeed(subscription) && !isProfileFeed(subscription) && !isSavedFeed(subscription);
 }
 
+function isAccountFeed(subscription: SubscriptionDto): subscription is PrivateSubscription {
+  return isPrivateFeed(subscription) && !isSearchFeed(subscription);
+}
+
 /** A social feed other than Home is shown by its picture when it has one; today only profile feeds get one. */
 export function feedAvatarUrl(subscription: SubscriptionDto | null): string | null {
   if (
@@ -81,7 +91,7 @@ export function feedAvatarUrl(subscription: SubscriptionDto | null): string | nu
   return subscription.imageUrl;
 }
 
-/** One section per network holding a social feed: private feeds per account by id, each Home first, then the profiles. */
+/** One section per network holding a social feed: private feeds per account by id, each Home first, then the searches and the profiles. */
 export function buildSocialSections(
   subscriptions: readonly SubscriptionDto[],
   socialAccounts: readonly SocialAccountRefDto[],
@@ -90,14 +100,19 @@ export function buildSocialSections(
   const handles = new Map(socialAccounts.map((account) => [account.id, account.handle]));
   return SOCIAL_NETWORKS.map((network) => {
     const ofNetwork = subscriptions.filter((subscription) => networkOf(subscription) === network);
-    const accounts = accountGroups(ofNetwork.filter(isPrivateFeed), handles);
+    const searches = ofNetwork.filter(isSearchFeed);
+    const accounts = accountGroups(ofNetwork.filter(isAccountFeed), handles);
     return {
       network,
       accounts,
       networkAccounts: socialAccounts
         .filter((account) => account.network === network)
         .sort((left, right) => left.id - right.id),
-      profiles: socialProfiles(
+      searches: socialFeedGroup(
+        searches,
+        sum(searches, (subscription) => subscription.unreadCount),
+      ),
+      profiles: socialFeedGroup(
         ofNetwork.filter(
           (subscription) => !isPrivateFeed(subscription) && !isSavedFeed(subscription),
         ),
@@ -115,21 +130,26 @@ export function buildSocialSections(
     (section) =>
       section.accounts.length > 0 ||
       section.networkAccounts.length > 0 ||
+      section.searches.subscriptions.length > 0 ||
       section.profiles.subscriptions.length > 0 ||
       section.saved !== null,
   );
 }
 
-export function socialProfiles(
+export function socialFeedGroup(
   subscriptions: readonly SubscriptionDto[],
   unreadCount: number,
-): SocialProfiles {
+): SocialFeedGroup {
   const sorted = [...subscriptions].sort((left, right) => left.title.localeCompare(right.title));
   return {
     subscriptions: sorted,
     unreadCount,
     entryCount: sum(sorted, (subscription) => subscription.entryCount),
   };
+}
+
+export function feedGroupOf(section: SocialSection, kind: NetworkFeedKind): SocialFeedGroup {
+  return kind === 'search' ? section.searches : section.profiles;
 }
 
 function sum(

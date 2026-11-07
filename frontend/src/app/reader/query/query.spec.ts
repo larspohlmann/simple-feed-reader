@@ -885,6 +885,12 @@ describe("a network's profile feeds", () => {
     ).toEqual(profiles);
   });
 
+  it('reads a search feed kind beside the network', () => {
+    expect(
+      selectionFromParams(params({ network: 'bluesky', feedKind: 'search' }), ON).selection,
+    ).toEqual({ ...profiles, network: 'bluesky', feedKind: 'search' });
+  });
+
   it('ignores an unknown feed kind', () => {
     expect(
       selectionFromParams(params({ network: 'mastodon', feedKind: 'home' }), ON).selection.feedKind,

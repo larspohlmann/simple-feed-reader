@@ -13,7 +13,7 @@ import { SubscriptionDto } from '../../models';
 import { ExclusionSurface } from '../../feed-exclusions';
 import { Selection } from '../../query/query';
 import { SocialNetworkName } from '../../../core/social-network';
-import { SocialSection, socialProfiles } from '../../state/social-sections';
+import { SocialSection, socialFeedGroup } from '../../state/social-sections';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
@@ -39,7 +39,8 @@ const ONE_ACCOUNT: SocialSection = {
   networkAccounts: [
     { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
   ],
-  profiles: socialProfiles([], 0),
+  searches: socialFeedGroup([], 0),
+  profiles: socialFeedGroup([], 0),
   unreadCount: 3,
   entryCount: 0,
   saved: null,
@@ -159,7 +160,8 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: false,
       networkAccounts: [],
-      profiles: socialProfiles([], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([], 0),
       accounts: [
         {
           accountId: 3,
@@ -182,7 +184,8 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: true,
       networkAccounts: [],
-      profiles: socialProfiles([], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([], 0),
       accounts: [
         {
           accountId: 3,
@@ -236,7 +239,8 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: true,
       networkAccounts: [],
-      profiles: socialProfiles([], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([], 0),
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
         { accountId: 4, handle: '@work.bsky.social', subscriptions: [feed(2, 'home')] },
@@ -263,7 +267,8 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: false,
       networkAccounts: [],
-      profiles: socialProfiles([], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([], 0),
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
@@ -292,7 +297,8 @@ describe('SidebarSocialSectionComponent', () => {
 
   const WITH_PROFILES: SocialSection = {
     ...ONE_ACCOUNT,
-    profiles: socialProfiles(
+    searches: socialFeedGroup([], 0),
+    profiles: socialFeedGroup(
       [
         { ...person(7, 'Amy'), unreadCount: 2 },
         { ...person(8, 'Zed'), unreadCount: 3 },
@@ -367,6 +373,71 @@ describe('SidebarSocialSectionComponent', () => {
     expect(feedsRow(element(mount(ONE_ACCOUNT)))).toBeNull();
   });
 
+  const search = (id: number, title: string): SubscriptionDto =>
+    makeSubscription({
+      id,
+      title,
+      unreadCount: id,
+      social: { network: 'bluesky', accountId: 3, kind: 'search' },
+    });
+  const WITH_SEARCHES: SocialSection = {
+    ...WITH_PROFILES,
+    searches: socialFeedGroup([search(4, 'atproto'), search(5, 'rust')], 9),
+  };
+  const searchesRow = (root: HTMLElement) =>
+    root.querySelector('[data-testid="sidebar-social-searches"]') as HTMLElement | null;
+
+  it('shows the searches as a collapsed Searches row between the accounts and Feeds', () => {
+    const root = element(mount(WITH_SEARCHES));
+
+    expect(searchesRow(root)?.textContent).toContain('Searches');
+    expect(searchesRow(root)?.querySelector('app-tag-glyph')?.textContent?.trim()).toBe('search');
+    expect(searchesRow(root)?.querySelector('.count')?.textContent?.trim()).toBe('9');
+    expect(root.querySelectorAll('app-sidebar-feed-row').length).toBe(2);
+    const order = [
+      ...root.querySelectorAll(
+        '[data-testid="sidebar-social-searches"], [data-testid="sidebar-social-feeds"]',
+      ),
+    ].map((row) => row.getAttribute('data-testid'));
+    expect(order).toEqual(['sidebar-social-searches', 'sidebar-social-feeds']);
+    expect(root.querySelectorAll('.divider').length).toBe(1);
+  });
+
+  it('opens the searches on their own chevron and remembers that apart from Feeds', () => {
+    const fixture = mount(WITH_SEARCHES);
+
+    (searchesRow(element(fixture))?.querySelector('.chevzone') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const names = [
+      ...element(fixture).querySelectorAll('.tagfeeds app-sidebar-feed-row .nav > .name'),
+    ].map((name) => name.textContent);
+    expect(names).toEqual(['atproto', 'rust']);
+    expect(localStorage.getItem('sfr.bluesky.searches.collapsed')).toBe('false');
+    expect(localStorage.getItem('sfr.bluesky.profiles.collapsed')).toBeNull();
+  });
+
+  it("links the Searches row to the network's combined search list and marks it active there", () => {
+    const searches: Selection = {
+      kind: 'network',
+      id: null,
+      unread: true,
+      network: 'bluesky',
+      feedKind: 'search',
+    };
+    const root = element(mount(WITH_SEARCHES, searches));
+    const link = searchesRow(root)?.querySelector('a.nav') as HTMLAnchorElement;
+
+    expect(link.getAttribute('href')).toContain('feedKind=search');
+    expect(link.classList).toContain('active');
+    expect(feedsRow(root)?.querySelector('a.nav.active')).toBeNull();
+    expect(root.querySelector('.section-head.current')).toBeNull();
+  });
+
+  it('shows no Searches row without search feeds', () => {
+    expect(searchesRow(element(mount(WITH_PROFILES)))).toBeNull();
+  });
+
   it('shows a network that has only people, without an account heading', () => {
     const section: SocialSection = {
       network: 'mastodon',
@@ -376,7 +447,8 @@ describe('SidebarSocialSectionComponent', () => {
       showsHandles: false,
       networkAccounts: [],
       accounts: [],
-      profiles: socialProfiles([person(7, 'Amy')], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([person(7, 'Amy')], 0),
     };
 
     expandProfiles('mastodon');
@@ -392,7 +464,8 @@ describe('SidebarSocialSectionComponent', () => {
     const section: SocialSection = {
       network: 'bluesky',
       accounts: [],
-      profiles: socialProfiles([excluded], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([excluded], 0),
       unreadCount: 0,
       entryCount: 0,
       saved: null,
@@ -611,7 +684,8 @@ describe('SidebarSocialSectionComponent', () => {
       ...ONE_ACCOUNT,
       networkAccounts: [],
       accounts: [],
-      profiles: socialProfiles([subscription], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([subscription], 0),
     });
 
     it('leaves a profile row of an unincluded network unmarked while its own flags are on', () => {
@@ -661,7 +735,8 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        profiles: socialProfiles([subscription], 0),
+        searches: socialFeedGroup([], 0),
+        profiles: socialFeedGroup([subscription], 0),
         unreadCount: 0,
         entryCount: 0,
         saved: null,
@@ -700,7 +775,8 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        profiles: socialProfiles([amy], 0),
+        searches: socialFeedGroup([], 0),
+        profiles: socialFeedGroup([amy], 0),
         unreadCount: 0,
         entryCount: 0,
         saved: null,

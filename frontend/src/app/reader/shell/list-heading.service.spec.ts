@@ -8,7 +8,7 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { SocialSection, buildSocialSections, socialProfiles } from '../state/social-sections';
+import { SocialSection, buildSocialSections, socialFeedGroup } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { TagNode, countDescendants, tagNodesById } from '../state/subscription-derivations';
@@ -58,7 +58,8 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
 const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
   networkAccounts: [],
-  profiles: socialProfiles([], 0),
+  searches: socialFeedGroup([], 0),
+  profiles: socialFeedGroup([], 0),
   unreadCount: 0,
   entryCount: 0,
   saved: null,
@@ -126,12 +127,18 @@ describe("ListHeading for a network's combined view", () => {
       entryCount: 50,
       social: { network: 'mastodon', accountId: 7, kind: 'home' },
     }),
+    makeSubscription({
+      id: 6,
+      unreadCount: 6,
+      entryCount: 60,
+      social: { network: 'bluesky', accountId: 1, kind: 'search' },
+    }),
   ];
 
   const NETWORK_TOTALS: UnreadTotals = {
     ...NO_UNREAD_TOTALS,
     networks: new Map([
-      ['bluesky', 7],
+      ['bluesky', 13],
       ['mastodon', 14],
     ]),
     networkProfiles: new Map([
@@ -159,11 +166,11 @@ describe("ListHeading for a network's combined view", () => {
   });
 
   it("counts the unread of the network's feeds, excluded ones included", () => {
-    expect(networkHeading(true).titleCount()).toEqual({ value: 7, counts: 'unread' });
+    expect(networkHeading(true).titleCount()).toEqual({ value: 13, counts: 'unread' });
   });
 
   it("counts every post of the network's feeds under All posts", () => {
-    expect(networkHeading(false).titleCount()).toEqual({ value: 70, counts: 'items' });
+    expect(networkHeading(false).titleCount()).toEqual({ value: 130, counts: 'items' });
   });
 
   it("titles a network's profile feeds as Feeds", () => {
@@ -176,6 +183,26 @@ describe("ListHeading for a network's combined view", () => {
     const selected = { network: 'mastodon', feedKind: 'profile' } as const;
 
     expect(networkHeading(true, selected).titleCount()).toEqual({ value: 9, counts: 'unread' });
+  });
+
+  it("titles a network's search feeds as Searches", () => {
+    const heading = networkHeading(true, { feedKind: 'search' });
+
+    expect(heading.title()).toBe('Bluesky · Searches');
+  });
+
+  it("counts only the unread of the network's search feeds when narrowed to them", () => {
+    expect(networkHeading(true, { feedKind: 'search' }).titleCount()).toEqual({
+      value: 6,
+      counts: 'unread',
+    });
+  });
+
+  it("counts only the posts of the network's search feeds under All posts", () => {
+    expect(networkHeading(false, { feedKind: 'search' }).titleCount()).toEqual({
+      value: 60,
+      counts: 'items',
+    });
   });
 });
 

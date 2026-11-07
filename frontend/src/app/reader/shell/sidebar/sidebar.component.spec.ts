@@ -14,7 +14,7 @@ import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { TagNode, countDescendants, flattenTagTree } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
-import { SocialSection, socialProfiles } from '../../state/social-sections';
+import { SocialSection, socialFeedGroup } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
@@ -2693,7 +2693,8 @@ describe('organise mode', () => {
     const section: SocialSection = {
       network: 'bluesky',
       networkAccounts: [],
-      profiles: socialProfiles([], 0),
+      searches: socialFeedGroup([], 0),
+      profiles: socialFeedGroup([], 0),
       unreadCount: 2,
       entryCount: 0,
       saved: null,
