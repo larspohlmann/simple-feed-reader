@@ -64,6 +64,20 @@ final class PrivateFeedSiteTest extends TestCase
         );
     }
 
+    public function testASearchOpensTheSameSearchOnTheNetwork(): void
+    {
+        $search = PrivateFeedModel::search('"rss reader" || feedreader');
+
+        self::assertSame(
+            'https://bsky.app/search?q=%22rss%20reader%22%20%7C%7C%20feedreader',
+            PrivateFeedSite::of(SocialAccounts::bluesky(), $search),
+        );
+        self::assertSame(
+            'https://mastodon.example.test/search?q=%22rss%20reader%22%20%7C%7C%20feedreader',
+            PrivateFeedSite::of(SocialAccounts::mastodonOn('https://mastodon.example.test/'), $search),
+        );
+    }
+
     public function testAMastodonAuthorOrCustomFeedLinksToTheInstance(): void
     {
         self::assertSame(

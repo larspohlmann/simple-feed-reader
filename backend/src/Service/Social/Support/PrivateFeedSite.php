@@ -23,6 +23,10 @@ final class PrivateFeedSite
 
     private static function bluesky(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
+        if (SocialFeedKind::Search === $privateFeed->kind) {
+            return BlueskyWeb::searchUrl($privateFeed->remoteId);
+        }
+
         if ($privateFeed->kind->followsOnePerson()) {
             return BlueskyWeb::profileUrl($privateFeed->remoteId);
         }
@@ -39,6 +43,7 @@ final class PrivateFeedSite
             SocialFeedKind::UserList => $instance . '/lists/' . rawurlencode($privateFeed->remoteId),
             SocialFeedKind::Tag => $instance . '/tags/' . rawurlencode($privateFeed->remoteId),
             SocialFeedKind::Trending => $instance . '/explore',
+            SocialFeedKind::Search => $instance . '/search?q=' . rawurlencode($privateFeed->remoteId),
             SocialFeedKind::Home, SocialFeedKind::Author, SocialFeedKind::CustomFeed => $instance,
         };
     }

@@ -44,4 +44,14 @@ final class PrivateFeedModelTest extends TestCase
         self::assertSame('trending:', $trending->key());
         self::assertEquals($trending, PrivateFeedModel::of(SocialFeedKind::Trending, 'ignored', 'ignored'));
     }
+
+    public function testASearchIsNamedAndKeyedByItsNormalisedQuery(): void
+    {
+        $search = PrivateFeedModel::search('  rss   reader ');
+
+        self::assertSame(SocialFeedKind::Search, $search->kind);
+        self::assertSame('rss reader', $search->remoteId);
+        self::assertSame('rss reader', $search->name);
+        self::assertEquals($search, PrivateFeedModel::of(SocialFeedKind::Search, ' rss reader', 'ignored'));
+    }
 }

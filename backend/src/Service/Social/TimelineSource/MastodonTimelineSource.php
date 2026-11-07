@@ -79,9 +79,9 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             SocialFeedKind::UserList => self::timelinePath($socialFeed, 'list/' . self::listId($socialFeed)),
             SocialFeedKind::Tag => self::timelinePath($socialFeed, 'tag/' . rawurlencode(self::tagName($socialFeed))),
             SocialFeedKind::Trending => '/api/v1/trends/statuses?limit=' . self::PAGE_SIZE,
-            SocialFeedKind::Author, SocialFeedKind::CustomFeed => throw new SocialNetworkUnreachableException(
-                'Mastodon has no such timeline.',
-            ),
+            SocialFeedKind::Author,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Search => throw new SocialNetworkUnreachableException('Mastodon has no such timeline.'),
         };
     }
 

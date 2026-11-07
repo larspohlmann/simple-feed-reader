@@ -12,6 +12,7 @@ enum SocialFeedKind: string
     case Author = 'author';
     case Tag = 'tag';
     case Trending = 'trending';
+    case Search = 'search';
 
     public function followsOnePerson(): bool
     {
