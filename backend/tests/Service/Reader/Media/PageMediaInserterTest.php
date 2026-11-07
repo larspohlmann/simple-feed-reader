@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
+use App\Service\Reader\Media\AudioPlayerMarkup;
 use App\Service\Reader\Media\MediaMarkup;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
@@ -22,7 +23,7 @@ final class PageMediaInserterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->inserter = new PageMediaInserter(new MediaMarkup());
+        $this->inserter = new PageMediaInserter(new MediaMarkup(), new AudioPlayerMarkup());
     }
 
     private function insert(string $html, ArticleMediaModel $media): string
@@ -32,6 +33,38 @@ final class PageMediaInserterTest extends TestCase
         $this->inserter->apply($document, $plan);
 
         return $document->saveHtml();
+    }
+
+    public function testAnAudioPlayerCarriesTheClipsTitleAndDuration(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                label: 'Ohne echte Lobby',
+                durationSeconds: 2871,
+            ),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString(
+            '<audio controls="" preload="none" src="https://x.test/a.mp3"'
+            . ' title="Ohne echte Lobby"><time datetime="PT2871S">47:51</time></audio>',
+            $out,
+        );
+    }
+
+    public function testAFeedDeclaredAudioTypeStillPlaysFromOneSource(): void
+    {
+        $media = new ArticleMediaModel([
+            (new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3'))->withMimeType('audio/mpeg'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('<audio controls="" preload="none" src="https://x.test/a.mp3">', $out);
+        self::assertStringNotContainsString('<source', $out);
     }
 
     public function testPutsAudioAtTheTopAboveTheTeaser(): void

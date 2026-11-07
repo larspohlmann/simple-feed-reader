@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader;
 use App\Service\Reader\ArticleExtractor\ArticleExtractor;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\ArticleExtractor\PlayerPageExtractor;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
@@ -46,6 +47,7 @@ final class ReaderBodyCleanerWiringTest extends KernelTestCase
         DuplicateBlockCollapser::class,
         PageMediaPlacement::class,
         TeaserPlayerInserter::class,
+        AudioPlayerNormalizer::class,
         MediaOnlyLede::class,
         AuthorBioSeparator::class,
         FeedDimensionStamper::class,

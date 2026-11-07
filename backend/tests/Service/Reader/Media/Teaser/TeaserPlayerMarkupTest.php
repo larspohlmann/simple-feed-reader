@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\Teaser;
 
+use App\Service\Reader\Media\AudioPlayerMarkup;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
@@ -17,7 +18,7 @@ final class TeaserPlayerMarkupTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->markup = new TeaserPlayerMarkup();
+        $this->markup = new TeaserPlayerMarkup(new AudioPlayerMarkup());
         $this->document = HTMLDocument::createEmpty();
     }
 
@@ -68,6 +69,22 @@ final class TeaserPlayerMarkupTest extends TestCase
         self::assertStringContainsString('src="https://x.test/ep.mp3"', $html);
         // The audio player carries no poster attribute of its own.
         self::assertStringNotContainsString('poster=', $html);
+    }
+
+    public function testAnAudioTeaserNamesItsClipAfterItsHeadline(): void
+    {
+        $html = $this->html(new TeaserPlayerModel(
+            MediaKind::Audio,
+            'https://x.test/clip.mp3',
+            'https://x.test/still.jpg',
+            'The headline',
+            'https://x.test/related.html',
+        ));
+
+        self::assertStringContainsString(
+            '<audio controls="" preload="none" src="https://x.test/clip.mp3" title="The headline">',
+            $html,
+        );
     }
 
     public function testAPlainCaptionHasNoLink(): void

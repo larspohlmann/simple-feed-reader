@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { EntryAudio } from '../../audio/entry-audio';
+import { ListenOffer } from '../../audio/listen-offer';
 
 @Component({
   selector: 'app-listen-row',
@@ -11,5 +11,5 @@ import { EntryAudio } from '../../audio/entry-audio';
   styleUrl: './listen-row.component.scss',
 })
 export class ListenRowComponent {
-  readonly audio = input.required<EntryAudio>();
+  readonly audio = input.required<ListenOffer>();
 }

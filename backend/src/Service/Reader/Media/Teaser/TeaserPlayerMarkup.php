@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Teaser;
 
+use App\Service\Reader\Media\AudioPlayerMarkup;
+use App\Service\Reader\Media\Model\AudioClipModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use Dom\Element;
@@ -15,6 +17,10 @@ use Dom\HTMLDocument;
  */
 final readonly class TeaserPlayerMarkup
 {
+    public function __construct(private AudioPlayerMarkup $audioMarkup)
+    {
+    }
+
     public function figureFor(HTMLDocument $document, TeaserPlayerModel $teaser): Element
     {
         $figure = $document->createElement('figure');
@@ -31,19 +37,22 @@ final readonly class TeaserPlayerMarkup
     {
         if ($teaser->kind === MediaKind::Audio) {
             $figure->appendChild($this->still($document, $teaser));
-            $figure->appendChild($this->player($document, 'audio', $teaser->mediaUrl));
+            $figure->appendChild($this->audioMarkup->element(
+                $document,
+                new AudioClipModel($teaser->mediaUrl, $teaser->caption),
+            ));
 
             return;
         }
 
-        $video = $this->player($document, 'video', $teaser->mediaUrl);
+        $video = $this->video($document, $teaser->mediaUrl);
         $video->setAttribute('poster', $teaser->posterUrl);
         $figure->appendChild($video);
     }
 
-    private function player(HTMLDocument $document, string $tag, string $mediaUrl): Element
+    private function video(HTMLDocument $document, string $mediaUrl): Element
     {
-        $player = $document->createElement($tag);
+        $player = $document->createElement('video');
         $player->setAttribute('controls', '');
         $player->setAttribute('preload', 'none');
         $player->setAttribute('src', $mediaUrl);

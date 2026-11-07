@@ -157,4 +157,16 @@ final class EntrySanitizerTest extends TestCase
         self::assertStringNotContainsString('onclick', $clean);
         self::assertStringContainsString('class="reader-slideshow"', $clean);
     }
+
+    public function testKeepsTheClipTitleAndItsDurationTimeOnAnAudioPlayer(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            '<audio controls preload="none" src="https://x.test/a.mp3" title="Clip" onplay="evil()">'
+            . '<time datetime="PT2871S">47:51</time></audio>',
+        );
+
+        self::assertStringContainsString('title="Clip"', $clean);
+        self::assertStringContainsString('<time datetime="PT2871S">47:51</time></audio>', $clean);
+        self::assertStringNotContainsString('onplay', $clean);
+    }
 }

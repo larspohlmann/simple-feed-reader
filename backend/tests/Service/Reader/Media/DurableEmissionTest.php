@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
+use App\Service\Reader\Media\AudioClipFacts;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
@@ -96,6 +97,7 @@ final class DurableEmissionTest extends TestCase
                 new PageFurniture(),
                 new NarrationSignals(),
                 new PlayerPoster(),
+                new AudioClipFacts(),
             ),
         };
     }

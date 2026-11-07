@@ -113,4 +113,9 @@ final class MediaUrlKindTest extends TestCase
     {
         self::assertNull($this->kind->resolve('https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3'));
     }
+
+    public function testRefusesALiveAudioStream(): void
+    {
+        self::assertNull($this->kind->resolve('https://radio.test/live.aac'));
+    }
 }

@@ -24,6 +24,7 @@ import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
 import { ArticleIslands, isInIsland } from './article-islands';
 import { ListenLauncher } from '../../audio/listen-launcher';
+import { ArticleBodyAudio } from './article-body-audio';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleNarration } from './article-narration';
 import { ArticleSlideshows } from './article-slideshows';
@@ -62,7 +63,9 @@ export class ArticleBody {
   private readonly narration = new ArticleNarration(this.islands);
   private readonly slideshows = new ArticleSlideshows(this.islands);
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
-  private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
+  private readonly launcher = inject(ListenLauncher);
+  private readonly embedAudio = new ArticleEmbedAudio(this.audio, this.launcher);
+  private readonly bodyAudio = new ArticleBodyAudio(this.islands, this.audio, this.launcher);
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
 
   constructor() {
@@ -147,6 +150,7 @@ export class ArticleBody {
       this.playerBars.mount(host, listen);
       this.unplayableVideos.mount(host, parts.pageUrl());
       this.narration.mount(host);
+      this.bodyAudio.mount(host, parts.origin());
       this.slideshows.mount(host);
       this.attachBodyChapters(host, chapterList, track);
     });

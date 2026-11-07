@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\AuthorBio\AuthorProfileLink;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
@@ -25,6 +26,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\LinkListDetector;
+use App\Service\Reader\Media\AudioPlayerMarkup;
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
@@ -63,6 +65,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public static function steps(EmbedProviders $embedProviders): array
     {
         $markup = new MediaMarkup();
+        $audioMarkup = new AudioPlayerMarkup();
 
         return [
             new InBodyEmbedRewriter($embedProviders, $markup),
@@ -79,8 +82,9 @@ final class ReaderBodyCleanerTest extends TestCase
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup()),
             new DuplicateBlockCollapser($embedProviders, new EmptiedWrapperRemover()),
-            new PageMediaPlacement(new PageMediaInserter($markup), new ReaderLeadImage()),
-            new TeaserPlayerInserter(new TeaserPlayerMarkup()),
+            new PageMediaPlacement(new PageMediaInserter($markup, $audioMarkup), new ReaderLeadImage()),
+            new TeaserPlayerInserter(new TeaserPlayerMarkup($audioMarkup)),
+            new AudioPlayerNormalizer($audioMarkup),
             new MediaOnlyLede(),
             new AuthorBioSeparator(new AuthorProfileLink(), new SubstantialProseDetector(new LinkListDetector())),
             new FeedDimensionStamper(),

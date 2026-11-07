@@ -429,6 +429,14 @@ $prose: ':where(:not(.reader-island *))';
   margin: var(--space-2) 0 var(--space-3);
 }
 
+:host ::ng-deep audio.reader-audio--replaced {
+  display: none;
+}
+
+:host ::ng-deep app-listen-row.reader-island {
+  margin: var(--space-5) 0;
+}
+
 /* Publisher FAQ disclosures (#1071): the reader-faq pass opens each <details>
    and tags it, replacing the near-invisible default marker with a bordered card,
    an accent question and a clear accent chevron (inheriting the summary colour). */
