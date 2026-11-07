@@ -71,7 +71,7 @@
     @if (found.count > 0) {
       <p class="count">{{ matchCountKey() | transloco: { count: found.count } }}</p>
       <ul class="posts">
-        @for (post of shownPosts(); track $index) {
+        @for (post of found.posts; track $index) {
           <li>
             <a class="post" target="_blank" rel="noopener noreferrer" [attr.href]="post.url">
               <app-avatar size="md" [url]="post.authorAvatarUrl" [name]="post.author ?? ''" />

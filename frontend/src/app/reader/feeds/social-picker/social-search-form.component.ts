@@ -32,8 +32,6 @@ type PreviewOutcome =
   | { readonly query: string; readonly preview: SearchPreview }
   | { readonly query: string; readonly failure: string };
 
-const SHOWN_POSTS = 10;
-
 interface SyntaxRule {
   readonly operator: string;
   readonly key: string;
@@ -124,7 +122,6 @@ export class SocialSearchFormComponent {
     return outcome !== null && 'failure' in outcome ? outcome.failure : null;
   });
   readonly hasPreview = computed(() => this.preview() !== null);
-  protected readonly shownPosts = computed(() => this.preview()?.posts.slice(0, SHOWN_POSTS) ?? []);
   protected readonly matchCountKey = computed(() =>
     pluralKey('settings.social.search.matchCount', this.preview()?.count ?? 0),
   );

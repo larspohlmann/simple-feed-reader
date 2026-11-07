@@ -20,9 +20,9 @@ function post(overrides: Partial<SearchPreviewPost> = {}): SearchPreviewPost {
   };
 }
 
-const AUTHORS = ['Amy', 'Ben', 'Cy', 'Dee', 'Eve', 'Fay', 'Gus', 'Hal', 'Ivy', 'Jo', 'Kit'];
+const AUTHORS = ['Amy', 'Ben', 'Cy', 'Dee', 'Eve', 'Fay', 'Gus', 'Hal', 'Ivy', 'Jo'];
 
-const ELEVEN_POSTS: SearchPreview = {
+const TEN_POSTS: SearchPreview = {
   count: 42,
   posts: AUTHORS.map((author) => post({ author })),
 };
@@ -109,8 +109,8 @@ describe('SocialSearchFormComponent', () => {
     expect(buttonOf(fixture, 'social-search-preview').disabled).toBe(false);
   });
 
-  it('previews the trimmed query and shows the count and the newest ten posts', () => {
-    socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
+  it('previews the trimmed query and shows the count and the posts it found', () => {
+    socialSearch.preview.mockReturnValue(of(TEN_POSTS));
     const fixture = mount();
     type(fixture, '  "rss reader" -gazette  ');
 
@@ -120,9 +120,7 @@ describe('SocialSearchFormComponent', () => {
     const result = byTestId(fixture, 'social-search-result') as HTMLElement;
     expect(result.textContent).toContain('42 recent posts match');
     const rows = Array.from(result.querySelectorAll('li'));
-    expect(rows.map((row) => row.querySelector('.author')?.textContent?.trim())).toEqual(
-      AUTHORS.slice(0, 10),
-    );
+    expect(rows.map((row) => row.querySelector('.author')?.textContent?.trim())).toEqual(AUTHORS);
     const link = rows[0].querySelector('a') as HTMLAnchorElement;
     expect(link.href).toBe('https://bsky.app/profile/amy/post/1');
     expect(link.target).toBe('_blank');
@@ -147,7 +145,7 @@ describe('SocialSearchFormComponent', () => {
     ['Ctrl', { ctrlKey: true }],
     ['Cmd', { metaKey: true }],
   ])('previews on %s+Enter', (_modifier, init) => {
-    socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
+    socialSearch.preview.mockReturnValue(of(TEN_POSTS));
     const fixture = mount();
     type(fixture, 'rss');
 
@@ -168,7 +166,7 @@ describe('SocialSearchFormComponent', () => {
   });
 
   it('previews a query typed over several lines as one line', () => {
-    socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
+    socialSearch.preview.mockReturnValue(of(TEN_POSTS));
     const fixture = mount();
     type(fixture, '"rss reader"\n  -gazette\n');
 
@@ -190,7 +188,7 @@ describe('SocialSearchFormComponent', () => {
 
     expect(byTestId(fixture, 'social-search-loading')).not.toBeNull();
     expect(buttonOf(fixture, 'social-search-preview').disabled).toBe(true);
-    answer.next(ELEVEN_POSTS);
+    answer.next(TEN_POSTS);
     fixture.detectChanges();
     expect(byTestId(fixture, 'social-search-loading')).toBeNull();
   });
@@ -234,7 +232,7 @@ describe('SocialSearchFormComponent', () => {
   });
 
   it('has a preview only of the query as it reads now', () => {
-    socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
+    socialSearch.preview.mockReturnValue(of(TEN_POSTS));
     const fixture = mount();
     type(fixture, ' rss reader ');
     expect(fixture.componentInstance.hasPreview()).toBe(false);
@@ -248,7 +246,7 @@ describe('SocialSearchFormComponent', () => {
   });
 
   it('starts from the query it is given', () => {
-    socialSearch.preview.mockReturnValue(of(ELEVEN_POSTS));
+    socialSearch.preview.mockReturnValue(of(TEN_POSTS));
     const fixture = mount('bluesky', 'rss -gazette');
 
     expect(byTestId<HTMLTextAreaElement>(fixture, 'social-search-query')?.value).toBe(
@@ -259,7 +257,7 @@ describe('SocialSearchFormComponent', () => {
   });
 
   it('hides the result of a preview once the query is edited, and shows it again for that query', () => {
-    const fixture = previewed(ELEVEN_POSTS);
+    const fixture = previewed(TEN_POSTS);
     const result = (): string => byTestId(fixture, 'social-search-result')?.textContent ?? '';
     expect(result()).toContain('42 recent posts match');
 
