@@ -148,8 +148,14 @@ export function socialFeedGroup(
   };
 }
 
+const FEED_GROUPS: Readonly<Record<NetworkFeedKind, (section: SocialSection) => SocialFeedGroup>> =
+  {
+    profile: (section) => section.profiles,
+    search: (section) => section.searches,
+  };
+
 export function feedGroupOf(section: SocialSection, kind: NetworkFeedKind): SocialFeedGroup {
-  return kind === 'search' ? section.searches : section.profiles;
+  return FEED_GROUPS[kind](section);
 }
 
 function sum(
