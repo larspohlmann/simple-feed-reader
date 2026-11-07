@@ -16,12 +16,13 @@ final class LiveAudioStream
 
     public static function is(string $url): bool
     {
-        $path = parse_url($url, \PHP_URL_PATH);
-        if (!\is_string($path) || parse_url($url, \PHP_URL_HOST) === null) {
+        $parts = parse_url($url);
+        if ($parts === false || !isset($parts['host'], $parts['path'])) {
             return false;
         }
 
-        if (self::isStationHost($url) || self::hasLiveSegment($path)) {
+        $path = $parts['path'];
+        if (self::isStationHost($parts['host']) || stripos($path, '/live/') !== false) {
             return true;
         }
 
@@ -35,13 +36,8 @@ final class LiveAudioStream
         return \in_array($stem, self::STREAM_STEMS, true) && \in_array($extension, self::AUDIO_EXTENSIONS, true);
     }
 
-    private static function isStationHost(string $url): bool
+    private static function isStationHost(string $host): bool
     {
-        return preg_match('#(^|\.)sslstream\.#i', (string) parse_url($url, \PHP_URL_HOST)) === 1;
-    }
-
-    private static function hasLiveSegment(string $path): bool
-    {
-        return stripos($path, '/live/') !== false;
+        return preg_match('#(^|\.)sslstream\.#i', $host) === 1;
     }
 }
