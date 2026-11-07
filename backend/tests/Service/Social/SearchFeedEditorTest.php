@@ -149,6 +149,20 @@ final class SearchFeedEditorTest extends DbTestCase
         self::assertSame(['ben'], $this->remainingGuids($subscription));
     }
 
+    public function testABlueskyAuthorIsAlsoKnownByTheDidInThePostsAddress(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $subscription = $this->searchFor($account, 'rss');
+        $amy = 'at://did:plc:amy/app.bsky.feed.post/1';
+        $this->post($subscription, $amy, '<p>rss</p>', 'https://bsky.app/profile/amy-renamed.bsky.social');
+        $ben = 'at://did:plc:ben/app.bsky.feed.post/2';
+        $this->post($subscription, $ben, '<p>rss</p>', 'https://bsky.app/profile/ben.bsky.social');
+
+        $this->editor()->requery($subscription, 'rss from:did:plc:amy');
+
+        self::assertSame([$amy], $this->remainingGuids($subscription));
+    }
+
     public function testAMastodonAuthorMatchesInFullAndALocalOneByUserNameAlone(): void
     {
         $account = $this->stored(SocialAccounts::mastodonOf($this->user));

@@ -6,6 +6,7 @@ namespace App\Service\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Social\Model\SearchedPostModel;
 use App\Service\Social\Model\StoredPostModel;
 use App\Service\Text\Support\PlainText;
@@ -19,34 +20,33 @@ final class StoredSearchedPost
     public static function of(SocialAccount $account, StoredPostModel $post): SearchedPostModel
     {
         return new SearchedPostModel(
-            self::authorNamesOf($account, $post->authorUrl),
+            self::authorNamesOf($account, $post),
             [PlainText::fromHtmlBlocks($post->contentHtml) ?? ''],
         );
     }
 
     /** @return list<string> */
-    private static function authorNamesOf(SocialAccount $account, ?string $authorUrl): array
+    private static function authorNamesOf(SocialAccount $account, StoredPostModel $post): array
     {
-        if (null === $authorUrl) {
-            return [];
-        }
-
         return match ($account->getNetwork()) {
-            SocialNetwork::Bluesky => self::blueskyNamesOf($authorUrl),
-            SocialNetwork::Mastodon => self::mastodonNamesOf($account, $authorUrl),
+            SocialNetwork::Bluesky => self::blueskyNamesOf($post),
+            SocialNetwork::Mastodon => self::mastodonNamesOf($account, $post->authorUrl),
         };
     }
 
-    /** @return list<string> */
-    private static function blueskyNamesOf(string $authorUrl): array
+    /** @return list<string> the handle the author page shows and the DID the post's at:// address carries */
+    private static function blueskyNamesOf(StoredPostModel $post): array
     {
-        $actor = ProfileFeedUrl::blueskyProfileActorOf($authorUrl);
+        $handle = null === $post->authorUrl ? null : ProfileFeedUrl::blueskyProfileActorOf($post->authorUrl);
 
-        return null === $actor ? [] : [$actor];
+        return array_values(array_filter(
+            [$handle, AtPostUri::authorityOf($post->guid)],
+            static fn (?string $name): bool => null !== $name,
+        ));
     }
 
     /** @return list<string> */
-    private static function mastodonNamesOf(SocialAccount $account, string $authorUrl): array
+    private static function mastodonNamesOf(SocialAccount $account, ?string $authorUrl): array
     {
         $identity = MastodonAuthor::identityOfProfileUrl($authorUrl);
         if (null === $identity) {

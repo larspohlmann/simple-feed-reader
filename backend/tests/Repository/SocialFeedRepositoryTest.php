@@ -307,8 +307,8 @@ final class SocialFeedRepositoryTest extends DbTestCase
         );
         self::assertEquals(
             [
-                new StoredPostModel($plain->requireId(), '<p>rss reader</p>', self::AMY),
-                new StoredPostModel($read->requireId(), null, null),
+                new StoredPostModel($plain->requireId(), 'plain', '<p>rss reader</p>', self::AMY),
+                new StoredPostModel($read->requireId(), 'read', null, null),
             ],
             $posts,
         );
