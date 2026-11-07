@@ -114,6 +114,9 @@ export class SocialImportDialogComponent {
     const tab = this.tab();
     return tab === 'search' ? null : tab;
   });
+  protected readonly showsCandidates = computed(
+    () => this.listTab() !== null && this.importer.candidates() !== null,
+  );
   protected readonly stateFilter = signal<StateFilter>('all');
   protected readonly filter = signal('');
   protected readonly chosen = signal<ReadonlySet<string>>(new Set());
