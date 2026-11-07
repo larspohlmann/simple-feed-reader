@@ -71,17 +71,11 @@ describe('FeedIntroComponent', () => {
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
-  it('labels the homepage with its own address, not a generic word', () => {
-    const link = render({ siteUrl: 'https://www.djmag.com/' }).querySelector('a');
-    // Scheme and bare trailing slash dropped: identical on every feed, so they
-    // cost width and say nothing. The full URL stays reachable on the title.
-    expect(linkLabel(link)).toBe('www.djmag.com');
-    expect(link?.getAttribute('title')).toBe('https://www.djmag.com/');
-  });
-
-  it('keeps a path in the label', () => {
-    const link = render({ siteUrl: 'https://example.com/news' }).querySelector('a');
-    expect(linkLabel(link)).toBe('example.com/news');
+  it('labels the homepage link Open original and keeps the full address on its title', () => {
+    const link = render({ siteUrl: 'https://www.djmag.com/news' }).querySelector('a');
+    expect(linkLabel(link)).toBe('Open original');
+    expect(link?.getAttribute('href')).toBe('https://www.djmag.com/news');
+    expect(link?.getAttribute('title')).toBe('https://www.djmag.com/news');
   });
 
   it('omits each part whose value is null', () => {

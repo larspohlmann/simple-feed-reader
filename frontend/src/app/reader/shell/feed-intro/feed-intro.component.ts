@@ -39,11 +39,4 @@ export class FeedIntroComponent {
    *  favicon branch, so a dead logo URL degrades to the site icon rather than
    *  to nothing. */
   protected readonly logoUrl = computed(() => (this.broken() ? null : this.imageUrl()));
-
-  /** The homepage shown as its own address, not a generic word. The scheme and
-   *  a bare trailing slash are dropped — same on every feed, so they cost width
-   *  for nothing. The full URL stays on the link's title/href. */
-  protected readonly homepageLabel = computed(() =>
-    (this.siteUrl() ?? '').replace(/^https?:\/\//i, '').replace(/\/$/, ''),
-  );
 }
