@@ -23,9 +23,10 @@ final readonly class EntrySanitizer
         $config = (new HtmlSanitizerConfig())
             ->allowSafeElements()
             ->allowElement('img', ['src', 'alt', 'title', 'width', 'height', 'loading'])
-            // The narration mark on <audio> and the slideshow mark on <figure> must cross this barrier; class
-            // carries no script, so no styling or XSS hole opens.
+            // The client's marks must cross this barrier: narration and slideshow classes, an audio clip's duration.
+            // Class and data-duration carry no script, so no styling or XSS hole opens.
             ->allowAttribute('class', ['audio', 'figure'])
+            ->allowAttribute('data-duration', ['audio'])
             ->forceAttribute('a', 'rel', 'noopener noreferrer')
             ->forceAttribute('a', 'target', '_blank')
             ->allowLinkSchemes(['http', 'https', 'mailto'])
