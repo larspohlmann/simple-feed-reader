@@ -913,3 +913,25 @@ Added after the live check (2026-11-07): Bluesky's search also matches link-card
 - [ ] **Step 3: Implement** — parse once per page, filter before handing to `BlueskyTimelinePage::of` / `MastodonTimelinePage::of`. Keep every touched src file PHPMD-clean and phptramp-clean (the query is passed one hop; if it would tunnel, hold it in a per-call object).
 - [ ] **Step 4: GREEN**, then `php bin/phpunit tests/Service/Social tests/Controller/Api/SocialImportControllerTest.php`, `composer check`, `composer md`.
 - [ ] **Step 5: Commit** `feat(#2086): a search keeps only posts whose own text matches the query`
+
+---
+
+### Task 8: A "Searches" group in each network's sidebar section
+
+Added after the live check (2026-11-07, Lars, screenshot): search feeds sat among the account's lists and custom feeds. They get their own expandable group, built and behaving like the existing **Feeds** group (profiles): a group row with glyph, label, unread count, a chevron that expands/collapses (state remembered like the Feeds group's), the search feeds listed beneath, and the group row itself selectable — selecting it lists the entries of all that network's search feeds, with mark-read and refresh scoped to them.
+
+**Backend**
+- `backend/src/Enum/NetworkFeedKind.php`: `case Search = 'search';`.
+- `backend/src/Repository/NetworkScopeDql.php`: `NetworkFeedKind::Search` restricts to feeds that have a `SocialFeed` of kind `SocialFeedKind::Search` (an `EXISTS` subquery on `App\Entity\SocialFeed` joined by feed; queries stay in `src/Repository`). Read how `Profile` is wired through `NetworkScope`, entry list, unread counts, mark-read (`MarkReadRequest`) and refresh (`RefreshController`) and make sure every one of them handles `Search` — the enum may be matched exhaustively somewhere.
+- Tests: the repository/controller tests that cover `feedKind=profile` get a `feedKind=search` sibling: list returns only search-feed entries of that network; mark-read with `scope=network&network=bluesky&feedKind=search` marks only those; refresh scope likewise.
+
+**Frontend** (read `docs/design-language.md` and the Feeds group first)
+- `core/social-network.ts` (or wherever `NetworkFeedKind` is declared): add `'search'`.
+- `state/social-sections.ts`: `SocialSection` gains `searches` (same shape as `profiles`: subscriptions sorted by title, unreadCount, entryCount); search subscriptions are taken out of the account groups; the section's own totals still include them; a section with only searches still renders.
+- `shell/sidebar/sidebar-social-section.component.{ts,html}`: render the Searches group after the account groups and before Feeds (order: accounts → Searches → Feeds → Saved), with its own collapsible state and active state (`selection.feedKind === 'search'`). The Feeds block and the Searches block are the same markup with different inputs — extract the shared part (a small child component or an `ng-template` driven by a group descriptor) rather than duplicating it. Glyph: `search`. Divider handling as for Feeds.
+- `shell/list-heading.service.ts`: the network title for `feedKind === 'search'` reads `Bluesky · Searches` (map feedKind → label key instead of the current profile-only ternary); `sectionOf`/selection lookups that assume `feedKind ⇒ profiles` must pick `searches` for `'search'`.
+- Any other place that branches on `feedKind` (grep `feedKind` and `'profile'` under `src/app/reader`) handles `'search'`.
+- i18n (`public/i18n/en.json`, `de.json`): `reader.socialSearches` "Searches" / "Suchen", `reader.toggleSocialSearches` mirroring `reader.toggleSocialFeeds`.
+- Tests: social-sections spec (searches leave account groups, land in `searches`, counts), sidebar section spec (group renders, toggles, selects with `feedKind: 'search'`), list-heading spec (title).
+
+**Steps:** failing tests (backend + frontend) → RED → implement → GREEN → `composer check`, `composer md`, `php bin/phpunit` for the touched areas, `docker compose exec -T frontend npm run check` → commit `feat(#2086): searches get their own group in a network's sidebar section`.
