@@ -101,8 +101,8 @@ terminal:
 gh workflow run announce-release.yml
 ```
 
-A re-run posts again. If one network had already succeeded, delete the
-duplicate there by hand.
+Re-running within an hour is safe on Mastodon, which returns the posts it
+already has. Bluesky always posts again, so delete the duplicate thread there.
 
 ## Steps
 
