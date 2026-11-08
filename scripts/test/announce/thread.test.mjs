@@ -1,6 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildThread, extractHighlights, graphemeLength, splitToFit } from '../../announce/thread.mjs';
+import { readFileSync } from 'node:fs';
+import { buildThread, extractHighlights, graphemeLength, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, splitToFit } from '../../announce/thread.mjs';
+
+const homepage = readFileSync(new URL('../../../docs/homepage/index.html', import.meta.url), 'utf8');
+
+function ogContent(property) {
+  return homepage.match(new RegExp(`<meta property="${property}" content="([^"]*)">`))[1];
+}
+
+test('the card title and description are the homepage og tags', () => {
+  assert.equal(HOMEPAGE_TITLE, ogContent('og:title'));
+  assert.equal(HOMEPAGE_DESCRIPTION, ogContent('og:description'));
+});
 
 const releaseBody = [
   '### Highlights',

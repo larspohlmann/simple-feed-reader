@@ -74,7 +74,7 @@ function pack(pieces, limit) {
 }
 
 export const HOMEPAGE_URL = 'https://lars-pohlmann.de/simplefeedreader/';
-export const HOMEPAGE_TITLE = 'simple-feed-reader';
+export const HOMEPAGE_TITLE = 'simple feed reader — an RSS reader that lays feeds out like a magazine';
 export const HOMEPAGE_DESCRIPTION =
   'A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, '
   + 'YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.';
