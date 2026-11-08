@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-import { pageScrollY, rowTitleInView, scrollPageTo } from './support/scroll';
+import { pageScrollY, rowTitleInView, scrollPageTo, pageScrollHeight } from './support/scroll';
 
 // The list scrolls the document at every width (#2038): a mobile browser collapses its
 // bar only for a page scroll. Every entry is stubbed, so the spec owns what it scrolls.
@@ -126,7 +126,7 @@ test.describe('The list scrolls the page on a phone', () => {
 
   test('the open drawer holds the page at its offset and height', async ({ page }) => {
     await scrollPageTo(page, LIST_OFFSET);
-    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    const height = await pageScrollHeight(page);
     // The retracted bar hides the menu button, so the drawer opens the way a thumb opens it.
     await page.locator('.rows').evaluate((rows) => {
       const touch = (x: number) => [
@@ -138,7 +138,7 @@ test.describe('The list scrolls the page on a phone', () => {
     });
     await expect(page.locator('html')).toHaveClass(/page-held/);
     // A page that shrinks to the viewport expands Brave's collapsed toolbar (#2088).
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
+    expect(await pageScrollHeight(page)).toBe(height);
     await page.mouse.wheel(0, 600);
     expect(await pageScrollY(page)).toBe(LIST_OFFSET);
 

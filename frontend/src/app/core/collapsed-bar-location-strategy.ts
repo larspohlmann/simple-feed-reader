@@ -1,5 +1,6 @@
 import { APP_BASE_HREF, DOCUMENT, PathLocationStrategy, PlatformLocation } from '@angular/common';
 import { Injectable, NgZone, inject } from '@angular/core';
+import { COARSE_QUERY } from './coarse-pointer';
 
 /** The page grows by at least this much when a mobile browser collapses its address bar. */
 const COLLAPSED_BAR_GROWTH_PX = 30;
@@ -18,7 +19,7 @@ interface HeldWrite {
 @Injectable()
 export class CollapsedBarLocationStrategy extends PathLocationStrategy {
   private readonly view = inject(DOCUMENT).defaultView ?? window;
-  private readonly touch = this.view.matchMedia('(pointer: coarse)');
+  private readonly touch = this.view.matchMedia(COARSE_QUERY);
   private shortestHeight = this.view.innerHeight;
   private width = this.view.innerWidth;
   private held: HeldWrite | null = null;
@@ -39,33 +40,31 @@ export class CollapsedBarLocationStrategy extends PathLocationStrategy {
   }
 
   override pushState(...write: HistoryWrite): void {
-    if (this.barCollapsed()) {
-      this.held = { push: true, write };
-      return;
-    }
-    this.release();
-    super.pushState(...write);
+    this.writeOrHold({ push: true, write });
   }
 
+  /** A replace of a held push stays a push: the entry it replaces was never written. */
   override replaceState(...write: HistoryWrite): void {
-    if (this.barCollapsed()) {
-      this.held = { push: this.held?.push ?? false, write };
-      return;
-    }
-    this.release();
-    super.replaceState(...write);
+    this.writeOrHold({ push: this.held?.push ?? false, write });
   }
 
   override getState(): unknown {
     return this.held ? this.held.write[0] : super.getState();
   }
 
-  private onResize(): void {
-    if (this.view.innerWidth !== this.width) {
-      this.width = this.view.innerWidth;
-      this.shortestHeight = this.view.innerHeight;
+  private writeOrHold(write: HeldWrite): void {
+    if (this.barCollapsed()) {
+      this.held = write;
+      return;
     }
-    this.shortestHeight = Math.min(this.shortestHeight, this.view.innerHeight);
+    this.release();
+    this.make(write);
+  }
+
+  private onResize(): void {
+    const { innerWidth: width, innerHeight: height } = this.view;
+    this.shortestHeight = width === this.width ? Math.min(this.shortestHeight, height) : height;
+    this.width = width;
     if (!this.barCollapsed()) this.release();
   }
 
@@ -79,7 +78,11 @@ export class CollapsedBarLocationStrategy extends PathLocationStrategy {
     const held = this.held;
     if (!held) return;
     this.held = null;
-    if (held.push) super.pushState(...held.write);
-    else super.replaceState(...held.write);
+    this.make(held);
+  }
+
+  private make({ push, write }: HeldWrite): void {
+    if (push) super.pushState(...write);
+    else super.replaceState(...write);
   }
 }

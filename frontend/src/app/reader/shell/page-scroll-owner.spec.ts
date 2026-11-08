@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { PAGE_LEAD_REM, PAGE_OVERLAID_CLASS, PageScrollOwner } from './page-scroll-owner';
-import { PageLayer } from '../../shared/scroll-host/page-layer';
+import { PAGE_LEAD, PageLayer } from '../../shared/scroll-host/page-layer';
 import { PAGE_SCROLL_BLOCK_CLASS } from '../../shared/scroll-host/page-scroll-host';
 import { LayoutService } from '../layout.service';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
@@ -78,7 +78,7 @@ describe('PageScrollOwner', () => {
 
     expect(list.lead).toBe(0);
     expect(article.lead).toBe(lead);
-    expect(article.element.style.getPropertyValue('--page-lead')).toBe(`${lead}px`);
+    expect(article.element.style.getPropertyValue(PAGE_LEAD)).toBe(`${lead}px`);
   });
 
   it('opens a layer at the very top on a desktop, which has no bar to keep collapsed', () => {

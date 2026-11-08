@@ -10,7 +10,7 @@ export const PAGE_LEAD = '--page-lead';
 export class PageLayer {
   private top: number | null = null;
   private documentTop = 0;
-  private leadPx = 0;
+  private leadTop = 0;
 
   constructor(readonly element: HTMLElement) {}
 
@@ -25,11 +25,11 @@ export class PageLayer {
 
   /** The page offset at which the layer's content starts. */
   get lead(): number {
-    return this.leadPx;
+    return this.leadTop;
   }
 
   leadBy(lead: number): void {
-    this.leadPx = lead;
+    this.leadTop = lead;
     this.element.style.setProperty(PAGE_LEAD, `${lead}px`);
   }
 
