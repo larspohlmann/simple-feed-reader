@@ -869,7 +869,7 @@ git commit -m "feat(#2096): announce a release on every configured network"
 
 **Interfaces:**
 - Consumes: the CLI from Task 4
-- Produces: the workflow `announce-release.yml`, with `workflow_call` input `tag` and `workflow_dispatch` input `tag`
+- Produces: the workflow `announce-release.yml`, with the required `workflow_call` input `tag` and the optional `workflow_dispatch` input `tag` (empty means the latest release)
 
 - [ ] **Step 1: Create the reusable workflow**
 
@@ -890,8 +890,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to announce, e.g. v1.9.0
-        required: true
+        description: Release tag to announce, e.g. v1.9.0; empty announces the latest release
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -899,7 +900,7 @@ permissions:
 
 jobs:
   announce:
-    name: Announce ${{ inputs.tag }}
+    name: Announce ${{ inputs.tag || 'the latest release' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.repository == 'larspohlmann/simple-feed-reader'
@@ -925,6 +926,10 @@ jobs:
           BLUESKY_SERVICE: ${{ secrets.BLUESKY_SERVICE }}
         run: |
           set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            TAG="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+            echo "==> announcing the latest release, ${TAG}"
+          fi
           if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "!!! ${TAG} is not a vX.Y.Z release tag." >&2
             exit 1
@@ -1006,9 +1011,16 @@ gh release view v1.9.0 --json body --jq .body \
   | node scripts/announce-release.mjs v1.9.0 https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0 --dry-run
 ```
 
-Announce an existing release by hand: Actions → Announce release → Run workflow,
-with the tag. A re-run posts again; delete the duplicate by hand if one network
-had already succeeded.
+To announce a release by hand, go to Actions → Announce release → Run workflow.
+Leave the tag empty for the latest release, or enter an older one. From the
+terminal:
+
+```bash
+gh workflow run announce-release.yml
+```
+
+A re-run posts again. If one network had already succeeded, delete the
+duplicate there by hand.
 ````
 
 - [ ] **Step 5: Commit**
