@@ -10,6 +10,11 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Social searches as feeds.** You can now subscribe to a Bluesky or Mastodon search,
+and it shows up as a feed of its own under a new Searches group in the sidebar.
+
 ## [v1.8.2] - 2026-11-06
 
 ## What's Changed
