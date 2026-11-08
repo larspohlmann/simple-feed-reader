@@ -6,6 +6,9 @@ import { PageOffsetHold } from './page-offset-hold';
 
 /** On `<html>` while a layer over the list owns the page; its rail stands in for the scrollbar. */
 export const PAGE_OVERLAID_CLASS = 'page-overlaid';
+/** A layer over another opens this far down: offset 0 shows Safari's bar, and a drag ending within
+ *  a toolbar's height of the top shows Brave's (#2088). */
+export const PAGE_LEAD_REM = 6;
 
 /** One page, stacked layers (#2038): the top one is in the flow and owns the document's offset,
  *  every one beneath is pinned at its own. The one place a layer switch writes the page offset. */
@@ -30,9 +33,10 @@ export class PageScrollOwner {
     this.layers.push(layer);
     this.markOverlaid();
     if (!beneath) return;
+    layer.leadBy(PAGE_LEAD_REM * this.remPx());
     const from = this.page.scrollTop;
     beneath.pinAt(from);
-    this.offsetHold.handOff({ from, to: 0 });
+    this.offsetHold.handOff({ from, to: layer.lead });
   }
 
   /** Pins the leaver so its leave animation plays in place, and gives the page back to the
@@ -49,6 +53,10 @@ export class PageScrollOwner {
     const beneath = this.layers.at(-1);
     if (!beneath) return;
     this.offsetHold.handOff({ from, to: beneath.unpin() });
+  }
+
+  private remPx(): number {
+    return parseFloat(getComputedStyle(this.document.documentElement).fontSize) || 16;
   }
 
   private markOverlaid(): void {

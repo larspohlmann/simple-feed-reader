@@ -2,12 +2,15 @@
 export const PAGE_PINNED_CLASS = 'page-pinned';
 /** How far the page had scrolled into a pinned layer; its pinned box is shifted up by it. */
 export const PAGE_PIN_TOP = '--page-pin-top';
+/** How far a leading layer's content starts below its top; it pads that much above its content. */
+export const PAGE_LEAD = '--page-lead';
 
 /** One of the reader's page-sized layers, the list or a full-screen article (#2038): in the
  *  page's flow while it owns the page, pinned at its own offset while a layer above does. */
 export class PageLayer {
   private top: number | null = null;
   private documentTop = 0;
+  private leadPx = 0;
 
   constructor(readonly element: HTMLElement) {}
 
@@ -18,6 +21,16 @@ export class PageLayer {
   /** The page offset the layer is held at, and takes again when unpinned. */
   get pinnedTop(): number {
     return this.top ?? 0;
+  }
+
+  /** The page offset at which the layer's content starts. */
+  get lead(): number {
+    return this.leadPx;
+  }
+
+  leadBy(lead: number): void {
+    this.leadPx = lead;
+    this.element.style.setProperty(PAGE_LEAD, `${lead}px`);
   }
 
   /** Out of the flow, showing exactly what it showed with the page at `top`. */

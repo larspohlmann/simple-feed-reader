@@ -47,6 +47,49 @@ describe('PageScrollHost', () => {
     page.top = top;
   }
 
+  describe('for a layer that leads by 96 (#2088)', () => {
+    const announced: number[] = [];
+    const leadingHost = (): PageScrollHost => {
+      const layer = new PageLayer(document.createElement('div'));
+      layer.leadBy(96);
+      return new PageScrollHost(
+        content,
+        { view: window, outsideZone: inZone, announceWrite: (top) => announced.push(top) },
+        layer,
+      );
+    };
+
+    beforeEach(() => (announced.length = 0));
+
+    it('counts from where its content starts', () => {
+      const host = leadingHost();
+      page.top = 400;
+      expect(host.scrollTop).toBe(304);
+
+      host.scrollTop = 0;
+      expect(page.top).toBe(96);
+      expect(announced).toEqual([96]);
+    });
+
+    it('reads 0 in the spacer above its content', () => {
+      page.top = 40;
+      expect(leadingHost().scrollTop).toBe(0);
+    });
+
+    it('scrolls to and measures past its lead', () => {
+      Object.defineProperty(root, 'scrollHeight', { value: 5000, configurable: true });
+      const scrollTo = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+      const host = leadingHost();
+
+      host.scrollTo({ top: 0, behavior: 'smooth' });
+
+      expect(scrollTo).toHaveBeenCalledWith({ top: 96, behavior: 'smooth' });
+      expect(announced).toEqual([96]);
+      expect(host.scrollHeight).toBe(4904);
+      delete (root as unknown as { scrollHeight?: number }).scrollHeight;
+    });
+  });
+
   it('reads and writes the document offset', () => {
     const host = pageHost();
     host.scrollTop = 640;

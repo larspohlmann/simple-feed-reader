@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PAGE_LEAD_REM } from './page-scroll-owner';
 import { Dialog } from '@angular/cdk/dialog';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -1004,13 +1005,13 @@ describe('ReaderShellComponent', () => {
       jest.restoreAllMocks();
     });
 
-    it('pins the list where it stood and starts the article at the top of the page (#2038)', () => {
+    it('pins the list where it stood and opens the article at its lead (#2038, #2088)', () => {
       const { fixture, rows } = bootNarrowScrolledDown();
       const list = (fixture.nativeElement as HTMLElement).querySelector('section.list')!;
 
       openArticle(fixture);
       expect(list.classList).toContain('page-pinned');
-      expect(rows.top).toBe(0);
+      expect(rows.top).toBe(PAGE_LEAD_REM * 16);
 
       closeArticle(fixture);
       expect(list.classList).not.toContain('page-pinned');

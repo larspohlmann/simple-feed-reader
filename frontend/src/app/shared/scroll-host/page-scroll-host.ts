@@ -31,24 +31,13 @@ export class PageScrollHost implements ScrollHost {
     this.announceWrite = environment.announceWrite;
   }
 
+  /** In the layer's own terms: 0 is where its content starts, below its lead (#2088). */
   get scrollTop(): number {
-    if (this.layer?.pinned) return this.layer.pinnedTop;
-    if (this.blocked()) return -parseFloat(this.root.style.top) || 0;
-    return this.scrollingElement.scrollTop;
+    return Math.max(0, this.pageTop - this.lead);
   }
 
   set scrollTop(top: number) {
-    if (this.layer?.pinned) {
-      this.layer.moveTo(top);
-      return;
-    }
-    if (!this.blocked()) {
-      this.announceWrite(top);
-      this.scrollingElement.scrollTop = top;
-      return;
-    }
-    this.pendingTop = top;
-    this.root.style.top = `${-top}px`;
+    this.pageTop = top + this.lead;
   }
 
   get clientHeight(): number {
@@ -56,16 +45,21 @@ export class PageScrollHost implements ScrollHost {
   }
 
   get scrollHeight(): number {
-    return this.scrollingElement.scrollHeight;
+    return this.scrollingElement.scrollHeight - this.lead;
   }
 
   scrollTo(options: ScrollToOptions): void {
-    if (!this.held()) {
-      if (options.top !== undefined) this.announceWrite(options.top);
-      this.view.scrollTo(options);
+    if (options.top === undefined) {
+      if (!this.held()) this.view.scrollTo(options);
       return;
     }
-    if (options.top !== undefined) this.scrollTop = options.top;
+    const top = options.top + this.lead;
+    if (this.held()) {
+      this.pageTop = top;
+      return;
+    }
+    this.announceWrite(top);
+    this.view.scrollTo({ ...options, top });
   }
 
   viewportTop(): number {
@@ -111,11 +105,35 @@ export class PageScrollHost implements ScrollHost {
     };
   }
 
+  private get pageTop(): number {
+    if (this.layer?.pinned) return this.layer.pinnedTop;
+    if (this.blocked()) return -parseFloat(this.root.style.top) || 0;
+    return this.scrollingElement.scrollTop;
+  }
+
+  private set pageTop(top: number) {
+    if (this.layer?.pinned) {
+      this.layer.moveTo(top);
+      return;
+    }
+    if (!this.blocked()) {
+      this.announceWrite(top);
+      this.scrollingElement.scrollTop = top;
+      return;
+    }
+    this.pendingTop = top;
+    this.root.style.top = `${-top}px`;
+  }
+
+  private get lead(): number {
+    return this.layer?.lead ?? 0;
+  }
+
   private landPendingTop(): void {
     if (this.pendingTop === null || this.blocked()) return;
     const top = this.pendingTop;
     this.pendingTop = null;
-    this.scrollTop = top;
+    this.pageTop = top;
   }
 
   private held(): boolean {

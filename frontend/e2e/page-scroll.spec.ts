@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-import { pageScrollY, rowTitleInView, scrollPageTo } from './support/scroll';
+import { pageScrollY, rowTitleInView, scrollPageTo, ARTICLE_OPEN_TOP } from './support/scroll';
 
 // The list scrolls the document at every width (#2038): a mobile browser collapses its
 // bar only for a page scroll. Every entry is stubbed, so the spec owns what it scrolls.
@@ -116,7 +116,7 @@ test.describe('The list scrolls the page on a phone', () => {
     await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
     await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
-    expect(await pageScrollY(page)).toBe(0);
+    expect(await pageScrollY(page)).toBe(ARTICLE_OPEN_TOP);
 
     await page.locator('app-reader-view .bar .close').click();
     await expect(page.locator('.article-overlay')).toHaveCount(0);

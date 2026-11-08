@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { PAGE_OVERLAID_CLASS, PageScrollOwner } from './page-scroll-owner';
+import { PAGE_LEAD_REM, PAGE_OVERLAID_CLASS, PageScrollOwner } from './page-scroll-owner';
 import { PageLayer } from '../../shared/scroll-host/page-layer';
 import { PAGE_SCROLL_BLOCK_CLASS } from '../../shared/scroll-host/page-scroll-host';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
 describe('PageScrollOwner', () => {
   const root = document.documentElement;
+  const lead = PAGE_LEAD_REM * 16;
   let page: { top: number };
   let owner: PageScrollOwner;
 
@@ -54,14 +55,22 @@ describe('PageScrollOwner', () => {
     expect(root.classList).not.toContain(PAGE_OVERLAID_CLASS);
   });
 
-  it('pins the layer beneath where it stands and starts the entering one at the top', () => {
+  it('pins the layer beneath where it stands and opens the entering one at its lead', () => {
     const { list, article } = listUnderArticle();
 
     expect(list.pinned).toBe(true);
     expect(list.pinnedTop).toBe(1200);
     expect(article.pinned).toBe(false);
-    expect(page.top).toBe(0);
+    expect(page.top).toBe(lead);
     expect(root.classList).toContain(PAGE_OVERLAID_CLASS);
+  });
+
+  it('leads every layer over another, never the first (#2088)', () => {
+    const { list, article } = listUnderArticle();
+
+    expect(list.lead).toBe(0);
+    expect(article.lead).toBe(lead);
+    expect(article.element.style.getPropertyValue('--page-lead')).toBe(`${lead}px`);
   });
 
   it('hands the page back in one call: the leaver pinned and the list in flow before it moves', () => {
@@ -176,7 +185,7 @@ describe('PageScrollOwner', () => {
       delete (root as unknown as { scrollHeight?: number }).scrollHeight;
     });
 
-    it('holds the entering layer at the top, though pinning cut the offset short first', () => {
+    it('holds the entering layer at its lead, though pinning cut the offset short first', () => {
       const list = layerAt(0);
       owner.enter(list);
       page.top = 4970;
@@ -191,7 +200,7 @@ describe('PageScrollOwner', () => {
       page.top = 4970;
       jest.advanceTimersByTime(32);
 
-      expect(page.top).toBe(0);
+      expect(page.top).toBe(lead);
     });
   });
 });
