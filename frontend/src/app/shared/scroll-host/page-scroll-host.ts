@@ -8,7 +8,8 @@ export interface PageScrollEnvironment {
   readonly announceWrite: (top: number) => void;
 }
 
-/** While its layer is pinned beneath another (#2038), it reports the pinned offset, stays silent, and moves the pin on writes. */
+/** Pinned beneath another layer (#2038), it reports its pin, stays silent,
+ *  and writes move the pin. */
 export class PageScrollHost implements ScrollHost {
   readonly intersectionRoot = null;
 
