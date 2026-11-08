@@ -1,9 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
+import { LayoutService } from '../layout.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { PageLayerDirective } from './page-layer.directive';
-import { PageScrollOwner } from './page-scroll-owner';
+import { PageScrollOwner, PAGE_LEAD_REM } from './page-scroll-owner';
 import { PAGE_PINNED_CLASS, PageLayer } from '../../shared/scroll-host/page-layer';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
@@ -36,7 +37,10 @@ describe('PageLayerDirective', () => {
 
   beforeEach(() => {
     page = trackPageScrollTop();
-    TestBed.configureTestingModule({ imports: [PageLayersHostComponent] });
+    TestBed.configureTestingModule({
+      imports: [PageLayersHostComponent],
+      providers: [{ provide: LayoutService, useValue: { isCoarse: () => true } }],
+    });
     fixture = TestBed.createComponent(PageLayersHostComponent);
     fixture.detectChanges();
     page.top = 1200;
@@ -52,12 +56,12 @@ describe('PageLayerDirective', () => {
     fixture.detectChanges();
   }
 
-  it('pins the list where it stood when an overlay enters, and starts the page at the top', () => {
+  it("pins the list where it stood when an overlay enters, and opens the page at the overlay's lead", () => {
     setOpen(true);
 
     expect(host().querySelector('.list')!.classList).toContain(PAGE_PINNED_CLASS);
     expect(host().querySelector('.overlay')!.classList).not.toContain(PAGE_PINNED_CLASS);
-    expect(page.top).toBe(0);
+    expect(page.top).toBe(PAGE_LEAD_REM * 16);
   });
 
   it('hands the page back to the list as the overlay leaves', () => {

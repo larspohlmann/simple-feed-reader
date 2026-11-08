@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PAGE_LEAD_REM } from './page-scroll-owner';
 import { Dialog } from '@angular/cdk/dialog';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -1004,13 +1005,14 @@ describe('ReaderShellComponent', () => {
       jest.restoreAllMocks();
     });
 
-    it('pins the list where it stood and starts the article at the top of the page (#2038)', () => {
+    it('pins the list where it stood and opens the article at its lead (#2038, #2088)', () => {
+      screen.isCoarse.set(true);
       const { fixture, rows } = bootNarrowScrolledDown();
       const list = (fixture.nativeElement as HTMLElement).querySelector('section.list')!;
 
       openArticle(fixture);
       expect(list.classList).toContain('page-pinned');
-      expect(rows.top).toBe(0);
+      expect(rows.top).toBe(PAGE_LEAD_REM * 16);
 
       closeArticle(fixture);
       expect(list.classList).not.toContain('page-pinned');
@@ -1039,7 +1041,7 @@ describe('ReaderShellComponent', () => {
       expect(document.documentElement.classList).not.toContain('page-overlaid');
     });
 
-    it('takes no CDK block for the article, while the drawer still does (#2038)', () => {
+    it('holds the page for the drawer only, never with a CDK block (#2038, #2088)', () => {
       const root = document.documentElement;
       Object.defineProperty(root, 'scrollHeight', { value: 5000, configurable: true });
       jest.spyOn(window, 'scroll').mockImplementation(() => undefined);
@@ -1047,12 +1049,13 @@ describe('ReaderShellComponent', () => {
       screen.isNarrow.set(true);
 
       openArticle(fixture);
-      expect(root.classList).not.toContain('cdk-global-scrollblock');
+      expect(root.classList).not.toContain('page-held');
       closeArticle(fixture);
 
       fixture.componentInstance.setSidebarOpen(true);
       fixture.detectChanges();
-      expect(root.classList).toContain('cdk-global-scrollblock');
+      expect(root.classList).toContain('page-held');
+      expect(root.classList).not.toContain('cdk-global-scrollblock');
     });
   });
 

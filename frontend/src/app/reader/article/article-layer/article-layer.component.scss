@@ -205,9 +205,12 @@
   scroll-margin-top: var(--reader-scroll-pad);
 }
 
-/* Covers the pinned list even when short, and runs clear of the fixed audio bar. */
+/* Covers the pinned list even when short, and runs clear of the fixed audio bar. The page opens
+   below the lead's spacer (PageScrollOwner); a page not past the screen's height plus a margin
+   expands Brave's collapsed toolbar (#2088). */
 :host(.on-page) .reader {
-  min-height: 100dvh;
+  min-height: calc(100vh + var(--page-lead, 0rem) + 8rem);
+  padding-top: calc(var(--reader-top) + var(--page-lead, 0rem));
   padding-bottom: var(--audio-bar-h, 0);
 }
 

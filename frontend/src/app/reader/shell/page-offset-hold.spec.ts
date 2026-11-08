@@ -106,6 +106,24 @@ describe('PageOffsetHold', () => {
     expect(page.top).toBe(0);
   });
 
+  it('lands an offset the page was too short for once it grows (#2088)', () => {
+    let height = window.innerHeight;
+    Object.defineProperty(root, 'scrollHeight', { get: () => height, configurable: true });
+    Object.defineProperty(root, 'scrollTop', {
+      configurable: true,
+      get: () => page.top,
+      set: (top: number) => (page.top = Math.min(top, height - window.innerHeight)),
+    });
+    offsetHold.handOff({ from: 1084, to: 96 });
+    jest.advanceTimersByTime(FRAME_MS * 2);
+    expect(page.top).toBe(0);
+
+    height = PAGE_HEIGHT;
+    jest.advanceTimersByTime(FRAME_MS * 2);
+
+    expect(page.top).toBe(96);
+  });
+
   it('takes the end of the page as holding a target past it', () => {
     const end = PAGE_HEIGHT - window.innerHeight;
     offsetHold.handOff({ from: 0, to: 40000 });

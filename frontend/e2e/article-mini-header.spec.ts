@@ -91,9 +91,8 @@ test.describe('Article mini header on a phone', () => {
 
     const mini = pane.locator('.mini');
     const bar = pane.locator('.bar');
-    const paneTop = (await pane.boundingBox())!.y;
     const before = (await mini.boundingBox())!;
-    expect(before.y).toBeCloseTo(paneTop, 0);
+    expect(before.y).toBeCloseTo(0, 0);
     await expect(bar).not.toHaveClass(/hidden/);
 
     // Scroll well past HEADER_NEAR_TOP, then let the 0.2s transform settle.
@@ -106,7 +105,7 @@ test.describe('Article mini header on a phone', () => {
     const after = (await mini.boundingBox())!;
 
     // The strip has not moved a pixel, and still names the article.
-    expect(after.y).toBeCloseTo(paneTop, 0);
+    expect(after.y).toBeCloseTo(0, 0);
     expect(after.height).toBeCloseTo(before.height, 0);
     await expect(mini.locator('.mini-title')).toHaveText('Entry number one');
 

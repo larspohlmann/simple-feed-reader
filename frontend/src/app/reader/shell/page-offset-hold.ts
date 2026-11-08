@@ -16,8 +16,8 @@ const sameOffset = (first: number, second: number): boolean =>
   Math.abs(first - second) <= SAME_OFFSET_PX;
 
 /** Writes a layer switch's page offset and holds it there: iOS WebKit puts the old offset back
- *  10–220 ms after a write made in the frame the switch resized the document (#2074). Built in
- *  an injection context. */
+ *  10–220 ms after a write made in the frame the switch resized the document (#2074), and a layer
+ *  not in the page yet cuts the write short (#2088). Built in an injection context. */
 export class PageOffsetHold {
   private readonly view = inject(DOCUMENT).defaultView ?? window;
   private readonly zone = inject(NgZone);
@@ -33,6 +33,7 @@ export class PageOffsetHold {
   handOff({ from, to }: PageOffsetHandoff): void {
     this.release();
     this.page.scrollTop = to;
+    let cutShort = !sameOffset(this.page.scrollTop, to);
     const handoff = new AbortController();
     this.current = handoff;
     const startedAt = this.view.performance.now();
@@ -42,7 +43,13 @@ export class PageOffsetHold {
         handoff.abort();
         return;
       }
-      if (this.returnedTo(from, to)) this.page.scrollTop = to;
+      const end = this.end();
+      if (cutShort && end + SAME_OFFSET_PX >= to) {
+        cutShort = false;
+        this.page.scrollTop = to;
+      } else if (this.returnedTo(from, to, end)) {
+        this.page.scrollTop = to;
+      }
       frame = this.view.requestAnimationFrame(step);
     };
     const stopObservingWrites = this.scrollHosts.observePageWrites((written) => {
@@ -70,10 +77,13 @@ export class PageOffsetHold {
   }
 
   /** Back at `from`, or at the end of the page when `from` no longer fits in it. */
-  private returnedTo(from: number, to: number): boolean {
+  private returnedTo(from: number, to: number, end: number): boolean {
     const current = this.page.scrollTop;
     if (sameOffset(current, to)) return false;
-    const end = Math.max(0, this.page.scrollHeight - this.page.clientHeight);
     return sameOffset(current, Math.min(from, end));
+  }
+
+  private end(): number {
+    return Math.max(0, this.page.scrollHeight - this.page.clientHeight);
   }
 }

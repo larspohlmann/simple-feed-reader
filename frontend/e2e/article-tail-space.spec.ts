@@ -3,6 +3,9 @@ import { signInWithLayout } from './support/auth';
 import { scrollPageToEnd } from './support/scroll';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
+/** The 8rem a short article grows by on the page so Brave can keep its toolbar collapsed. */
+const BRAVE_MARGIN = 128;
+
 const PHONE = { width: 375, height: 667 };
 
 const LONG_BODY = Array.from(
@@ -101,13 +104,14 @@ test.describe('Article tail space', () => {
     expect(opacity).toBeGreaterThan(0.99);
   });
 
-  test('an article that fits the screen gains no dead scroll', async ({ page }) => {
+  // #2088: only the margin that keeps Brave's collapsed toolbar collapsed.
+  test('an article that fits the screen gains no tail scroll', async ({ page }) => {
     await openStubbedArticle(page, SHORT_BODY);
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollHeight - window.innerHeight,
     );
-    expect(overflow).toBeLessThanOrEqual(2);
+    expect(overflow).toBeLessThanOrEqual(BRAVE_MARGIN + 2);
   });
 });
 
@@ -117,7 +121,9 @@ const VIDEO = '<video src="https://example.invalid/v.mp4" width="1280" height="7
 async function tailMetrics(pane: Locator) {
   return pane.locator('.scroller').evaluate((scroller) => {
     const article = scroller.querySelector('article')!;
-    const readerTop = parseFloat(getComputedStyle(scroller.querySelector('.reader')!).paddingTop);
+    const reader = getComputedStyle(scroller.querySelector('.reader')!);
+    const lead = parseFloat(reader.getPropertyValue('--page-lead')) || 0;
+    const readerTop = parseFloat(reader.paddingTop) - lead;
     return {
       padding: parseFloat(getComputedStyle(article).paddingBottom),
       cinemaRoom: window.innerHeight - readerTop,

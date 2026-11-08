@@ -10,7 +10,9 @@ import {
 import { TitleStrategy, provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TranslocoService, provideTransloco } from '@jsverse/transloco';
+import { LocationStrategy } from '@angular/common';
 import { routes } from './app.routes';
+import { CollapsedBarLocationStrategy } from './core/collapsed-bar-location-strategy';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { readerOutputVersionInterceptor } from './core/http/reader-output-version';
@@ -55,6 +57,7 @@ export const appConfig: ApplicationConfig = {
     // Every navigation writes the document title, so a page can never keep the
     // title of the page before it.
     { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
+    { provide: LocationStrategy, useClass: CollapsedBarLocationStrategy },
     provideHttpClient(
       withInterceptors([
         authInterceptor,

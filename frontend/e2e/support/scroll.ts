@@ -5,6 +5,10 @@ export function pageScrollY(page: Page): Promise<number> {
   return page.evaluate(() => window.scrollY);
 }
 
+export function pageScrollHeight(page: Page): Promise<number> {
+  return page.evaluate(() => document.documentElement.scrollHeight);
+}
+
 export async function scrollPageTo(page: Page, top: number): Promise<void> {
   await page.evaluate((to) => window.scrollTo({ top: to, behavior: 'instant' }), top);
   await expect.poll(() => pageScrollY(page)).toBe(top);
@@ -12,7 +16,7 @@ export async function scrollPageTo(page: Page, top: number): Promise<void> {
 
 /** Scrolls the page to its last offset and returns it. */
 export async function scrollPageToEnd(page: Page): Promise<number> {
-  const end = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+  const end = (await pageScrollHeight(page)) - (await page.evaluate(() => window.innerHeight));
   await scrollPageTo(page, end);
   return end;
 }

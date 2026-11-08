@@ -241,7 +241,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** The open drawer covers the list; nothing may scroll it beneath. A full-screen article
    *  pins the list itself (PageScrollOwner, #2038). */
   private readonly _holdPage = holdReaderPage(
-    this.hostRef.nativeElement,
     computed(() => this.sidebarOpen() && this.screen.isNarrow()),
   );
 

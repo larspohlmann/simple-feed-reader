@@ -2,6 +2,7 @@ import { Injectable, Signal, inject } from '@angular/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
+import { COARSE_QUERY } from '../core/coarse-pointer';
 
 /** True when the viewport is wide enough to place the reader in a side pane. */
 export const WIDE_QUERY = '(min-width: 900px)';
@@ -10,8 +11,7 @@ export const WIDE_QUERY = '(min-width: 900px)';
  *  this signal and the stylesheet keys every drawer rule to that class — no
  *  media query may re-declare this width (#185). */
 export const NARROW_QUERY = '(max-width: 720px)';
-/** True on devices whose primary pointer is coarse (touch), not fine (mouse/trackpad). */
-export const COARSE_QUERY = '(pointer: coarse)';
+export { COARSE_QUERY };
 
 /** True below `$bp-sm`, where the big player is a full-screen sheet rather than a card. */
 export const PHONE_QUERY = '(max-width: 559.98px)';
