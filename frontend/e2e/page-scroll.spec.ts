@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { nextFrames } from './support/animations';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 import { pageScrollY, rowTitleInView, scrollPageTo, pageScrollHeight } from './support/scroll';
@@ -115,7 +116,6 @@ test.describe('The list scrolls the page on a phone', () => {
     await page.getByText(title, { exact: true }).first().click();
     await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
-    await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
     expect(await pageScrollY(page)).toBe(0);
 
     await page.locator('app-reader-view .bar .close').click();
@@ -140,6 +140,7 @@ test.describe('The list scrolls the page on a phone', () => {
     // A page that shrinks to the viewport expands Brave's collapsed toolbar (#2088).
     expect(await pageScrollHeight(page)).toBe(height);
     await page.mouse.wheel(0, 600);
+    await nextFrames(page);
     expect(await pageScrollY(page)).toBe(LIST_OFFSET);
 
     await page

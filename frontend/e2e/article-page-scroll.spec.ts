@@ -13,6 +13,7 @@ import {
 import {
   liftTouch,
   pageScrollY,
+  pageScrollHeight,
   rowTitleInView,
   textInView,
   scrollPageTo,
@@ -133,7 +134,6 @@ test.describe('A full-screen article owns the page on a phone', () => {
 
     expect(await pageScrollY(page)).toBe(0);
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
-    await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
     expect((await row.boundingBox())!.y).toBeCloseTo(rowY, 0);
   });
 
@@ -389,18 +389,23 @@ test.describe('An action sheet over a full-screen article', () => {
     const fill = (): Promise<number> =>
       rail.evaluate((el) => parseFloat(el.style.getPropertyValue('--rail-fill')));
     const fillBefore = await fill();
+    const height = await pageScrollHeight(page);
     expect(fillBefore, 'the rail is empty — the case proves nothing').toBeGreaterThan(0);
 
     await clickWhereItStands(page, page.locator(`${LAYER} .corner-actions button.corner-share`));
     await expect(page.locator('.app-action-sheet')).toBeVisible();
-    await expect(page.locator('html')).toHaveClass(/cdk-global-scrollblock/);
+    await expect(page.locator('html')).toHaveClass(/page-held/);
+    // A page that shrinks to the viewport expands Brave's collapsed toolbar (#2100).
+    expect(await pageScrollHeight(page)).toBe(height);
+    await page.mouse.wheel(0, 600);
     await nextFrames(page);
+    expect(await pageScrollY(page)).toBe(ARTICLE_OFFSET);
     await expect(bar).toHaveClass(/hidden/);
     expect(await fill()).toBeCloseTo(fillBefore, 1);
 
     await page.keyboard.press('Escape');
     await expect(page.locator('.app-action-sheet')).toHaveCount(0);
-    await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
+    await expect(page.locator('html')).not.toHaveClass(/page-held/);
     expect(await pageScrollY(page)).toBe(ARTICLE_OFFSET);
     await expect(bar).toHaveClass(/hidden/);
     expect(await fill()).toBeCloseTo(fillBefore, 1);

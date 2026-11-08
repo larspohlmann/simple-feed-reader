@@ -2,20 +2,16 @@ import type { ScrollHost } from './scroll-host';
 import type { PageLayer } from './page-layer';
 import { pageScrollingElement } from '../../core/page-scrolling-element';
 
-/** The class a CDK BlockScrollStrategy puts on `<html>` while it pins the page. */
-export const PAGE_SCROLL_BLOCK_CLASS = 'cdk-global-scrollblock';
-
 export interface PageScrollEnvironment {
   readonly view: Window;
   readonly outsideZone: <T>(run: () => T) => T;
   readonly announceWrite: (top: number) => void;
 }
 
-/** While a CDK block pins the page, or its layer is pinned beneath another (#2038), it reports
- *  the pinned offset, stays silent, and defers writes. */
+/** Pinned beneath another layer (#2038), it reports its pin, stays silent,
+ *  and writes move the pin. */
 export class PageScrollHost implements ScrollHost {
   readonly intersectionRoot = null;
-  private pendingTop: number | null = null;
 
   private readonly view: Window;
   private readonly outsideZone: <T>(run: () => T) => T;
@@ -79,16 +75,8 @@ export class PageScrollHost implements ScrollHost {
     const onScroll = (): void => {
       if (!this.held()) listener();
     };
-    const release = this.outsideZone(() => {
-      view.addEventListener('scroll', onScroll, { passive: true });
-      const observer = new MutationObserver(() => this.landPendingTop());
-      observer.observe(this.root, { attributes: true, attributeFilter: ['class'] });
-      return observer;
-    });
-    return () => {
-      view.removeEventListener('scroll', onScroll);
-      release.disconnect();
-    };
+    this.outsideZone(() => view.addEventListener('scroll', onScroll, { passive: true }));
+    return () => view.removeEventListener('scroll', onScroll);
   }
 
   watchResize(listener: () => void): () => void {
@@ -107,7 +95,6 @@ export class PageScrollHost implements ScrollHost {
 
   private get pageTop(): number {
     if (this.layer?.pinned) return this.layer.pinnedTop;
-    if (this.blocked()) return -parseFloat(this.root.style.top) || 0;
     return this.scrollingElement.scrollTop;
   }
 
@@ -116,36 +103,16 @@ export class PageScrollHost implements ScrollHost {
       this.layer.moveTo(top);
       return;
     }
-    if (!this.blocked()) {
-      this.announceWrite(top);
-      this.scrollingElement.scrollTop = top;
-      return;
-    }
-    this.pendingTop = top;
-    this.root.style.top = `${-top}px`;
+    this.announceWrite(top);
+    this.scrollingElement.scrollTop = top;
   }
 
   private get lead(): number {
     return this.layer?.lead ?? 0;
   }
 
-  private landPendingTop(): void {
-    if (this.pendingTop === null || this.blocked()) return;
-    const top = this.pendingTop;
-    this.pendingTop = null;
-    this.pageTop = top;
-  }
-
   private held(): boolean {
-    return (this.layer?.pinned ?? false) || this.blocked();
-  }
-
-  private blocked(): boolean {
-    return this.root.classList.contains(PAGE_SCROLL_BLOCK_CLASS);
-  }
-
-  private get root(): HTMLElement {
-    return this.view.document.documentElement;
+    return this.layer?.pinned ?? false;
   }
 
   private get scrollingElement(): Element {
