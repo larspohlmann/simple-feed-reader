@@ -77,9 +77,10 @@ values only you know:
   articles; L adds roughly 45 MB per 1,000 articles on top of its base.
 
   Two more keys decide how much you are asked. **Q**, **the default**, is the
-  quick install: the S stack, and no other question at all — it answers the
-  rest for you, `http://localhost:3333` and no account mail, so pressing return
-  here brings the instance up. Both are changeable afterwards with
+  quick install: the S stack, and no other question at all, which is what the
+  question itself says under it:
+  *It picks http://localhost:3333, and no mail until you add a relay.*
+  Pressing return here brings the instance up. Both are changeable afterwards with
   `./scripts/prod-configure.sh` (§7). **C** is the opposite: choose everything
   yourself. S, M and L still ask the origin and mail-transport questions below;
   C adds the database and the search-engine ones to them — the only way to reach a
