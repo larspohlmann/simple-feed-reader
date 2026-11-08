@@ -29,7 +29,7 @@ const releaseBody = [
 test('extractHighlights returns one plain-text entry per paragraph', () => {
   assert.deepEqual(extractHighlights(releaseBody), [
     'Social searches as feeds. You can now subscribe to a Bluesky or Mastodon search, and it shows up as a feed of its own.',
-    'Trending. See the docs (https://example.org/trending) and npm ci.',
+    'Trending. See the docs: https://example.org/trending and npm ci.',
   ]);
 });
 

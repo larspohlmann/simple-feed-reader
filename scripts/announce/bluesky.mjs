@@ -3,13 +3,29 @@ export const DEFAULT_BLUESKY_SERVICE = 'https://bsky.social';
 
 export function richTextFacets(text) {
   const links = [...text.matchAll(/https?:\/\/\S+/g)].map((match) => {
-    const uri = match[0].replace(/[.,;:!?]+$/, '');
+    const uri = trimLink(match[0]);
     return facet(text, match.index, uri, { $type: 'app.bsky.richtext.facet#link', uri });
   });
   const tags = [...text.matchAll(/(?<=^|\s)#([\p{L}\p{N}_]+)/gu)].map((match) =>
     facet(text, match.index, match[0], { $type: 'app.bsky.richtext.facet#tag', tag: match[1] }),
   );
   return [...links, ...tags].sort((left, right) => left.index.byteStart - right.index.byteStart);
+}
+
+function trimLink(link) {
+  let trimmed = link;
+  for (;;) {
+    const next = trimmed.replace(/[.,;:!?"']+$/, '');
+    const unbalanced = next.endsWith(')') && count(next, ')') > count(next, '(');
+    if (next === trimmed && !unbalanced) {
+      return trimmed;
+    }
+    trimmed = unbalanced ? next.slice(0, -1) : next;
+  }
+}
+
+function count(text, character) {
+  return text.split(character).length - 1;
 }
 
 function facet(text, index, matched, feature) {

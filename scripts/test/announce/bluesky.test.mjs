@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { extractHighlights } from '../../announce/thread.mjs';
 import { postBlueskyThread, richTextFacets } from '../../announce/bluesky.mjs';
 
 function fakeFetch(responses) {
@@ -121,4 +122,27 @@ test('a refused post throws with its number and status', async () => {
     postBlueskyThread(['root'], { service: 'https://pds.example', handle: 'h', appPassword: 'p', card, fetch }),
     /Bluesky refused post 1: HTTP 400/,
   );
+});
+
+const linkOf = (text) => richTextFacets(text).find((found) => found.features[0].uri).features[0].uri;
+
+test('richTextFacets leaves a closing parenthesis out of the link', () => {
+  assert.equal(linkOf('(see https://x.org/a)'), 'https://x.org/a');
+  assert.equal(linkOf('(https://x.org/a).'), 'https://x.org/a');
+});
+
+test('richTextFacets keeps the parenthesis of a balanced address', () => {
+  assert.equal(linkOf('See https://en.wikipedia.org/wiki/Foo_(bar)'), 'https://en.wikipedia.org/wiki/Foo_(bar)');
+});
+
+test('richTextFacets leaves a closing quote out of the link', () => {
+  assert.equal(linkOf('"https://q.org/b"'), 'https://q.org/b');
+});
+
+test('a markdown link in a highlight becomes a facet over exactly its address', () => {
+  const [text] = extractHighlights('### Highlights\n\n**X.** See [the docs](https://example.org/a).\n');
+  const { index, features } = richTextFacets(text).find((found) => found.features[0].uri);
+  const covered = Buffer.from(text).subarray(index.byteStart, index.byteEnd).toString();
+  assert.equal(features[0].uri, 'https://example.org/a');
+  assert.equal(covered, 'https://example.org/a');
 });

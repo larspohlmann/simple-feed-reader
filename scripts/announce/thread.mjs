@@ -25,7 +25,7 @@ export function extractHighlights(releaseBody) {
 function toPlainText(markdown) {
   return markdown
     .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1 ($2)')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1: $2')
     .replace(/`([^`]+)`/g, '$1')
     .trim();
 }
