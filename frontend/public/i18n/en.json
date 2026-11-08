@@ -413,6 +413,7 @@
         "search": "Search"
       },
       "search": {
+        "intro": "Turn a search into a feed: new posts that match your query appear in the sidebar under Searches. Preview first to see what it finds.",
         "queryLabel": "Search query",
         "example": "Example:",
         "syntax": "Search syntax",
