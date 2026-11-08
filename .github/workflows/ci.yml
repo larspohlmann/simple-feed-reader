@@ -355,7 +355,7 @@ jobs:
       # The package question (#453) -- the first thing a fresh install asks,
       # and the one that decides the two questions below at once. It also
       # prints the measured memory figure of each package, so the test compares
-      # those figures against the ones README.md states: an operator who reads
+      # those figures against the ones docs/docker-production.md states: an operator who reads
       # both must not find two different numbers.
       - name: configure_package
         run: scripts/test/configure-package.test.sh

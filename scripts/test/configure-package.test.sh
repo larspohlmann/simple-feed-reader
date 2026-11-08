@@ -19,7 +19,7 @@ set -euo pipefail
 #
 # The question's own text is tested too, for the reasons the ticket names. The
 # figures it prints are measured numbers that must not drift away from the ones
-# README.md states -- so the assertions below read README.md and compare. And
+# docs/docker-production.md states -- so the assertions below read it and compare. And
 # the operator has to SEE which line pressing return selects, and what that
 # line decides on their behalf, so the default is bold where the others are
 # dim, with the key emphasised in every line. All of it flows through the _c_*
@@ -240,7 +240,7 @@ can_prompt() { return 0; }
 
 # --- 9. the question states the measured memory figure of every package -----
 # Measured numbers (see the issue), not estimates, so they are asserted here
-# and compared against README.md below: an operator who reads both must not
+# and compared against docs/docker-production.md below: an operator who reads both must not
 # find two different numbers.
 answer_with S
 question=$(cat "${screen}")
@@ -261,19 +261,19 @@ assert_contains 'S, M and L ask for the public URL, and for a mail transport' "$
 assert_contains 'SMTP relay' "${question}" \
   'what answering the mail question means'
 
-# --- 10. README.md states the same words and the same figures ---------------
-# The operator chooses the package while reading README.md, and answers it in
+# --- 10. docker-production.md states the same words and the same figures ----
+# The operator chooses the package while reading docs/docker-production.md, and answers it in
 # the terminal. Both texts are written from one measurement, so a change to one
 # of them has to fail here rather than leave the two disagreeing.
-readme=$(cat "${_dir}/../../README.md")
+guide=$(cat "${_dir}/../../docs/docker-production.md")
 for key in S M L; do
-  assert_contains "$(package_description "${key}")" "${readme}" "README.md's ${key} row"
-  assert_contains "$(package_memory "${key}")" "${readme}" "README.md's ${key} memory figure"
+  assert_contains "$(package_description "${key}")" "${guide}" "docker-production.md's ${key} row"
+  assert_contains "$(package_memory "${key}")" "${guide}" "docker-production.md's ${key} memory figure"
 done
 # Q is not a row -- it runs S's containers, so a row would repeat S's numbers
 # -- but the reader still has to meet the default before the terminal does,
 # with what it decides on their behalf spelled out the same way.
-assert_contains "$(package_note Q)" "${readme}" "README.md's note on the default"
+assert_contains "$(package_note Q)" "${guide}" "docker-production.md's note on the default"
 
 # --- 11. the default line is emphasised, every key is -----------------------
 # The operator has to see which line pressing return selects, so the default

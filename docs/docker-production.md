@@ -21,7 +21,7 @@ password reset all depend on real delivery (issue #65). Mailpit is
 unreachable from the production stack by construction.
 
 **Contents:**
-[1 Install](#1-install) ·
+[1 Install](#1-install) ([everyday scripts](#everyday-scripts)) ·
 [2 TLS](#2-tls) ·
 [3 First admin](#3-first-admin) ·
 [4 Verify mail delivery](#4-verify-mail-delivery) ·
@@ -63,14 +63,24 @@ values only you know:
   **L** adds MySQL and a Meilisearch container (about 2.5 GB). Every package
   runs the same application, with every feature, and **search works in all
   three**: S and M answer it from the database, which matches titles and
-  summaries, and L matches the full text of every article as well. The packages
-  and their measured figures are in the
-  [README](../README.md#which-package); the installer prints the same lines.
+  summaries, and L matches the full text of every article as well. The
+  installer prints the same lines:
+
+  | Package | What you get | Containers | RAM |
+  |---|---|---|---|
+  | **S** | a personal instance. SQLite, title and summary search. | php, worker, web | needs about 250 MB |
+  | **M** | several users. MySQL, title and summary search. | php, worker, web, mysql | needs about 1 GB |
+  | **L** | like M, plus Meilisearch for full-content search. | php, worker, web, mysql, meilisearch | needs about 2.5 GB |
+
+  The figures are measured on an idle, healthy stack holding a real account of
+  107 feeds and 17,427 articles. S and M do not grow with the number of
+  articles; L adds roughly 45 MB per 1,000 articles on top of its base.
 
   Two more keys decide how much you are asked. **Q**, **the default**, is the
-  quick install: the S stack, and no other question at all — it answers the
-  rest for you, `http://localhost:3333` and no account mail, so pressing return
-  here brings the instance up. Both are changeable afterwards with
+  quick install: the S stack, and no other question at all, which is what the
+  question itself says under it:
+  *It picks http://localhost:3333, and no mail until you add a relay.*
+  Pressing return here brings the instance up. Both are changeable afterwards with
   `./scripts/prod-configure.sh` (§7). **C** is the opposite: choose everything
   yourself. S, M and L still ask the origin and mail-transport questions below;
   C adds the database and the search-engine ones to them — the only way to reach a
@@ -166,6 +176,20 @@ it stops, because the passwords in those volumes are the ones in the *old*
 Prefer doing it manually? Clone the repository, check out the latest
 `vX.Y.Z` tag, copy `.env.prod.example` to `.env.prod`, fill it in (the
 comments explain every value), and run `./scripts/prod-start.sh`.
+
+### Everyday scripts
+
+Run these from inside the `simple-feed-reader` directory. Every one of them,
+and both installers, prints `--help`.
+
+| Task | Command |
+|---|---|
+| Update to the latest release (prod and/or dev) | `./scripts/update.sh` |
+| Update to a branch or tag instead | `./scripts/update.sh --ref <branch-or-tag>` |
+| Start / stop the production stack | `./scripts/prod-start.sh` / `./scripts/prod-stop.sh` |
+| Change the public origin, search engine, mail or Grafana settings | `./scripts/prod-configure.sh` |
+| Start / stop the dev frontend (:4200) | `./scripts/frontend-start.sh` / `./scripts/frontend-stop.sh` |
+| Stop the dev stack (keeps your data) | `docker compose down` |
 
 ## 2. TLS
 
