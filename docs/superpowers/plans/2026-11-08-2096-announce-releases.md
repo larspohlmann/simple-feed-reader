@@ -362,7 +362,7 @@ export async function postMastodonThread(posts, { instance, token, fetch }) {
 - [ ] **Step 4: Run the tests to see them pass**
 
 Run: `node --test "scripts/test/announce/*.test.mjs"`
-Expected: PASS, 18 tests
+Expected: PASS, 14 tests
 
 - [ ] **Step 5: Commit**
 
