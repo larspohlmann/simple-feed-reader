@@ -53,11 +53,30 @@ jobs:
       - name: PHPCS (PSR-12)
         run: composer cs
 
+      - name: Warm cache for symfony-lsp
+        run: php bin/console cache:warmup
+
       # PHPMD codesize was a local-only discipline gate and silently broke once
       # (pdepend could not parse PHP 8.4 syntax, #183) — so the sweep now runs
       # here too.
       - name: PHPMD (codesize)
         run: composer md
+
+      # Symfony-aware diagnostics PHPStan cannot see: unknown routes, services,
+      # config keys, Messenger buses, firewalls (#1779). The pinned release is
+      # committed: downloading it from GitHub kept failing with 504 (#2091).
+      - name: Install symfony-lsp
+        env:
+          SYMFONY_LSP_ARCHIVE: ../tools/symfony-lsp/symfony-lsp-v0.24.2-linux-x64.tar.gz
+          SYMFONY_LSP_SHA256: d7e39420ad9058fb1edeaf13f0846c5e7c351467b90702336c12b8ce13f8a09f
+        run: |
+          echo "${SYMFONY_LSP_SHA256}  ${SYMFONY_LSP_ARCHIVE}" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/symfony-lsp"
+          tar xzf "$SYMFONY_LSP_ARCHIVE" -C "$RUNNER_TEMP/symfony-lsp" --strip-components=1
+          echo "$RUNNER_TEMP/symfony-lsp" >> "$GITHUB_PATH"
+
+      - name: symfony-lsp check
+        run: symfony-lsp check --format=github
 
       # This repository doubles as phptramp's proving ground, so the gate runs
       # the tip of its develop branch rather than the commit in composer.lock —
