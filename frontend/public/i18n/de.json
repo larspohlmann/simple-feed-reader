@@ -413,6 +413,7 @@
         "search": "Suche"
       },
       "search": {
+        "intro": "Mach aus einer Suche einen Feed: Neue Beiträge, die zu deiner Suche passen, erscheinen in der Seitenleiste unter Suchen. Die Vorschau zeigt vorher, was sie findet.",
         "queryLabel": "Suchbegriff",
         "example": "Beispiel:",
         "syntax": "Suchsyntax",

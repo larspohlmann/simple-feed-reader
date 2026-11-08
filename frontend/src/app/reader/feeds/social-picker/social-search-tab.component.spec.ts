@@ -50,6 +50,12 @@ describe('SocialSearchTabComponent', () => {
 
   beforeEach(() => socialSearch.preview.mockReset().mockReturnValue(of({ count: 0, posts: [] })));
 
+  it('explains that a subscribed search becomes a feed', () => {
+    const fixture = mount();
+    const intro = element(fixture).querySelector('[data-testid="social-search-intro"]');
+    expect(intro?.textContent?.trim()).toContain('Turn a search into a feed');
+  });
+
   it('subscribes only to the query it has previewed, even when nothing matches yet', () => {
     const fixture = mount();
     const emitted: string[] = [];
