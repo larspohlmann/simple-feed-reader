@@ -13,15 +13,9 @@ export function richTextFacets(text) {
 }
 
 function trimLink(link) {
-  let trimmed = link;
-  for (;;) {
-    const next = trimmed.replace(/[.,;:!?"']+$/, '');
-    const unbalanced = next.endsWith(')') && count(next, ')') > count(next, '(');
-    if (next === trimmed && !unbalanced) {
-      return trimmed;
-    }
-    trimmed = unbalanced ? next.slice(0, -1) : next;
-  }
+  const trimmed = link.replace(/[.,;:!?"']+$/, '');
+  const unbalanced = trimmed.endsWith(')') && count(trimmed, ')') > count(trimmed, '(');
+  return unbalanced ? trimLink(trimmed.slice(0, -1)) : trimmed;
 }
 
 function count(text, character) {
@@ -38,12 +32,7 @@ export async function postBlueskyThread(posts, { service, handle, appPassword, c
   const session = await call(fetch, `${xrpc}/com.atproto.server.createSession`, {
     body: JSON.stringify({ identifier: handle, password: appPassword }),
   }, 'Bluesky login failed');
-  const embed = await cardEmbed(card, async ({ bytes, mimeType }) => {
-    const uploaded = await call(fetch, `${xrpc}/com.atproto.repo.uploadBlob`, {
-      accessJwt: session.accessJwt, contentType: mimeType, body: bytes,
-    }, 'Bluesky refused the card image');
-    return uploaded.blob;
-  });
+  const embed = { $type: 'app.bsky.embed.external', external: await cardExternal(fetch, xrpc, session.accessJwt, card) };
   let root = null;
   let parent = null;
   for (const [index, text] of posts.entries()) {
@@ -65,12 +54,14 @@ export async function postBlueskyThread(posts, { service, handle, appPassword, c
   return `https://bsky.app/profile/${session.did}/post/${root.uri.split('/').pop()}`;
 }
 
-async function cardEmbed({ uri, title, description, thumb }, uploadThumb) {
-  const external = { uri, title, description };
-  return {
-    $type: 'app.bsky.embed.external',
-    external: thumb === null ? external : { ...external, thumb: await uploadThumb(thumb) },
-  };
+async function cardExternal(fetch, xrpc, accessJwt, { uri, title, description, thumb }) {
+  if (thumb === null) {
+    return { uri, title, description };
+  }
+  const uploaded = await call(fetch, `${xrpc}/com.atproto.repo.uploadBlob`, {
+    accessJwt, contentType: thumb.mimeType, body: thumb.bytes,
+  }, 'Bluesky refused the card image');
+  return { uri, title, description, thumb: uploaded.blob };
 }
 
 async function call(fetch, url, { accessJwt = null, contentType = 'application/json', body }, failure) {

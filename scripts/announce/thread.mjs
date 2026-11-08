@@ -1,7 +1,17 @@
+export const HOMEPAGE_URL = 'https://lars-pohlmann.de/simplefeedreader/';
+export const HOMEPAGE_TITLE = 'simple feed reader — an RSS reader that lays feeds out like a magazine';
+export const HOMEPAGE_DESCRIPTION =
+  'A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, '
+  + 'YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.';
+
 const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
 
+function graphemes(text) {
+  return [...segmenter.segment(text)].map((segment) => segment.segment);
+}
+
 export function graphemeLength(text) {
-  return [...segmenter.segment(text)].length;
+  return graphemes(text).length;
 }
 
 export function extractHighlights(releaseBody) {
@@ -47,10 +57,10 @@ function wordsWithin(sentence, limit) {
 }
 
 function graphemeChunks(word, limit) {
-  const graphemes = [...segmenter.segment(word)].map((segment) => segment.segment);
+  const characters = graphemes(word);
   const chunks = [];
-  for (let index = 0; index < graphemes.length; index += limit) {
-    chunks.push(graphemes.slice(index, index + limit).join(''));
+  for (let index = 0; index < characters.length; index += limit) {
+    chunks.push(characters.slice(index, index + limit).join(''));
   }
   return chunks;
 }
@@ -72,12 +82,6 @@ function pack(pieces, limit) {
   }
   return posts;
 }
-
-export const HOMEPAGE_URL = 'https://lars-pohlmann.de/simplefeedreader/';
-export const HOMEPAGE_TITLE = 'simple feed reader — an RSS reader that lays feeds out like a magazine';
-export const HOMEPAGE_DESCRIPTION =
-  'A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, '
-  + 'YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.';
 
 export function buildThread({ tag, releaseUrl, highlights, limit }) {
   return [

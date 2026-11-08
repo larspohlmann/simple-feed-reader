@@ -1,16 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { postMastodonThread } from '../../announce/mastodon.mjs';
-
-function fakeFetch(responses) {
-  const calls = [];
-  const fetch = async (url, init) => {
-    calls.push({ url, init, body: JSON.parse(init.body) });
-    const [status, payload] = responses.shift();
-    return new Response(JSON.stringify(payload), { status });
-  };
-  return { fetch, calls };
-}
+import { fakeFetch } from './fake-fetch.mjs';
 
 test('posts each status as a reply to the one before', async () => {
   const { fetch, calls } = fakeFetch([

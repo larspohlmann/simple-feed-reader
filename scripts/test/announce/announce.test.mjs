@@ -12,10 +12,13 @@ function recorder() {
   return { lines, log: (line) => lines.push(line) };
 }
 
-function respondingFetch() {
+function respondingFetch({ failingHost = null } = {}) {
   const urls = [];
   const fetch = async (url) => {
     urls.push(url);
+    if (failingHost !== null && url.startsWith(failingHost)) {
+      return new Response('{"error":"down"}', { status: 503 });
+    }
     const payload = url.includes('createSession')
       ? { accessJwt: 'jwt', did: 'did:plc:x' }
       : { id: '1', url: 'https://m.example/@l/1', uri: 'at://did:plc:x/app.bsky.feed.post/r', cid: 'c' };
@@ -60,17 +63,7 @@ test('a network without secrets is skipped with a warning', async () => {
 
 test('a failing network fails the run but the other still posts', async () => {
   const { lines, log } = recorder();
-  const urls = [];
-  const fetch = async (url) => {
-    urls.push(url);
-    if (url.startsWith('https://m.example')) {
-      return new Response('{"error":"down"}', { status: 503 });
-    }
-    const payload = url.includes('createSession')
-      ? { accessJwt: 'jwt', did: 'did:plc:x' }
-      : { uri: 'at://did:plc:x/app.bsky.feed.post/r', cid: 'c' };
-    return new Response(JSON.stringify(payload), { status: 200 });
-  };
+  const { fetch, urls } = respondingFetch({ failingHost: 'https://m.example' });
 
   const code = await announce({ ...base, env: { ...mastodonEnv, ...blueskyEnv }, fetch, log });
 
