@@ -1,6 +1,4 @@
-# Posts a release's highlights to Bluesky and Mastodon (#2096): release.yml calls
-# it once the images are tagged; run it by hand for an existing release.
-# A re-run posts again: Mastodon dedupes within an hour, Bluesky does not.
+# See docs/releasing.md#announcements (#2096).
 name: Announce release
 
 on:
@@ -30,12 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
-
-      - name: Verify the announcer
-        run: node --test "scripts/test/announce/*.test.mjs"
 
       - name: Announce
         env:
@@ -48,14 +43,10 @@ jobs:
           BLUESKY_SERVICE: ${{ secrets.BLUESKY_SERVICE }}
         run: |
           set -euo pipefail
-          if [ -z "${TAG}" ]; then
-            TAG="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
-            echo "==> announcing the latest release, ${TAG}"
-          fi
-          if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [ -n "${TAG}" ] && ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "!!! ${TAG} is not a vX.Y.Z release tag." >&2
             exit 1
           fi
-          url="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json url --jq .url)"
-          gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json body --jq .body \
-            | node scripts/announce-release.mjs "${TAG}" "${url}"
+          release="$(gh release view ${TAG:+"${TAG}"} --repo "${GITHUB_REPOSITORY}" --json tagName,url,body)"
+          jq -r .body <<< "${release}" \
+            | node scripts/announce-release.mjs "$(jq -r .tagName <<< "${release}")" "$(jq -r .url <<< "${release}")"

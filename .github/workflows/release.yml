@@ -322,8 +322,6 @@ jobs:
           docker buildx imagetools create -t "${REPOSITORY}:${GITHUB_REF_NAME}" "${sources[@]}"
           docker buildx imagetools inspect "${REPOSITORY}:${GITHUB_REF_NAME}"
 
-  # Posts the highlights once the images exist (#2096); a release without
-  # highlights posts nothing.
   announce:
     name: Announce
     needs: manifests
