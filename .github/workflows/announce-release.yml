@@ -1,0 +1,52 @@
+# See docs/releasing.md#announcements (#2096).
+name: Announce release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to announce, e.g. v1.9.0; empty announces the latest release
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    name: Announce ${{ inputs.tag || 'the latest release' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.repository == 'larspohlmann/simple-feed-reader'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Announce
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          MASTODON_INSTANCE: ${{ secrets.MASTODON_INSTANCE }}
+          MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          BLUESKY_SERVICE: ${{ secrets.BLUESKY_SERVICE }}
+        run: |
+          set -euo pipefail
+          if [ -n "${TAG}" ] && ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "!!! ${TAG} is not a vX.Y.Z release tag." >&2
+            exit 1
+          fi
+          release="$(gh release view ${TAG:+"${TAG}"} --repo "${GITHUB_REPOSITORY}" --json tagName,url,body)"
+          jq -r .body <<< "${release}" \
+            | node scripts/announce-release.mjs "$(jq -r .tagName <<< "${release}")" "$(jq -r .url <<< "${release}")"

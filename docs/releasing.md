@@ -13,6 +13,8 @@ which:
   `ghcr.io/larspohlmann/simple-feed-reader-php:vX.Y.Z` and
   `…/simple-feed-reader-web:vX.Y.Z`, each for `linux/amd64` and `linux/arm64`
   (see [Release images](#release-images)),
+- once the images are tagged, posts the release's highlights as a thread to
+  Bluesky and Mastodon (see [Announcements](#announcements)),
 - for every release after the first, writes the generated release notes into
   [CHANGELOG.md](../CHANGELOG.md) and commits that to `main` as
   `github-actions[bot]`, and
@@ -55,6 +57,52 @@ The `grep` is load-bearing. When `develop` is merged into `main`, every
 `-dev.N` tag — possibly a newer one than the real release. The plain-semver
 pattern is what keeps deploy tags out of the release line, so **a release tag
 must never carry a `-dev.N` (or any other) suffix.**
+
+## Announcements
+
+When the `### Highlights` block under `## [Unreleased]` is non-empty at tag time,
+[`announce-release.yml`](../.github/workflows/announce-release.yml) posts a thread
+to each configured network:
+- a root post that links the [homepage](https://lars-pohlmann.de/simplefeedreader/)
+  and carries `#rss #rssreader`. On Bluesky it shows a card with the homepage's
+  share image.
+- each highlight as a reply, split at sentence ends when it is longer than
+  Bluesky's 300 or Mastodon's 500 characters.
+- a closing reply that links the GitHub Release.
+
+A release without highlights posts nothing.
+
+Repository secrets (a network whose secrets are missing is skipped with a warning):
+
+| Secret | Value |
+|---|---|
+| `MASTODON_INSTANCE` | e.g. `https://mastodon.social` |
+| `MASTODON_TOKEN` | Preferences → Development → New application, scope `write:statuses` only |
+| `BLUESKY_HANDLE` | e.g. `lars.bsky.social` |
+| `BLUESKY_APP_PASSWORD` | Settings → Privacy and security → App passwords |
+| `BLUESKY_SERVICE` | optional; your PDS if not `https://bsky.social` |
+
+```bash
+gh secret set MASTODON_TOKEN
+```
+
+Preview a thread locally without posting:
+
+```bash
+gh release view v1.9.0 --json body --jq .body \
+  | node scripts/announce-release.mjs v1.9.0 https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0 --dry-run
+```
+
+To announce a release by hand, go to Actions → Announce release → Run workflow.
+Leave the tag empty for the latest release, or enter an older one. From the
+terminal:
+
+```bash
+gh workflow run announce-release.yml
+```
+
+Re-running within an hour is safe on Mastodon, which returns the posts it
+already has. Bluesky always posts again, so delete the duplicate thread there.
 
 ## Steps
 

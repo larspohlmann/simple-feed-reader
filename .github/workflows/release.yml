@@ -1,6 +1,6 @@
 # Publishes a GitHub Release when a plain vX.Y.Z tag is pushed on main, writes
-# the release notes back into CHANGELOG.md, and pushes the release's php and web
-# images to GHCR.
+# the release notes back into CHANGELOG.md, pushes the release's php and web
+# images to GHCR, and announces its highlights on Bluesky and Mastodon.
 #
 # Like the Strato deploy, a tag push proves nothing on its own: it can name any
 # commit, and CI does not run on tags. Two guard steps supply what the trigger
@@ -321,3 +321,13 @@ jobs:
           done
           docker buildx imagetools create -t "${REPOSITORY}:${GITHUB_REF_NAME}" "${sources[@]}"
           docker buildx imagetools inspect "${REPOSITORY}:${GITHUB_REF_NAME}"
+
+  announce:
+    name: Announce
+    needs: manifests
+    uses: ./.github/workflows/announce-release.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
+    permissions:
+      contents: read
