@@ -53,7 +53,7 @@
   - `graphemeLength(text: string): number`
   - `splitToFit(text: string, limit: number): string[]`
   - `buildThread({ tag: string, releaseUrl: string, highlights: string[], limit: number }): string[]`: the root post (homepage link, `#rss #rssreader`), the highlights, and a closing `Full release notes: <releaseUrl>` post
-  - `HOMEPAGE_URL`, `HOMEPAGE_TITLE`, `HOMEPAGE_DESCRIPTION`: the homepage link and its card text, copied from the `og:` tags in `docs/homepage/index.html`
+  - `HOMEPAGE_URL`, `HOMEPAGE_TITLE`, `HOMEPAGE_DESCRIPTION`: the homepage link and its card text, copied from the `og:` tags in `docs/homepage/index.html`, and pinned to them by a test that reads the file
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -78,7 +78,7 @@ const releaseBody = [
 test('extractHighlights returns one plain-text entry per paragraph', () => {
   assert.deepEqual(extractHighlights(releaseBody), [
     'Social searches as feeds. You can now subscribe to a Bluesky or Mastodon search, and it shows up as a feed of its own.',
-    'Trending. See the docs (https://example.org/trending) and npm ci.',
+    'Trending. See the docs: https://example.org/trending and npm ci.',
   ]);
 });
 
@@ -136,7 +136,7 @@ test('buildThread leads with the homepage and tags, and closes with the release 
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test scripts/test/announce/`
+Run: `node --test "scripts/test/announce/*.test.mjs"`
 Expected: FAIL with `Cannot find module '…/scripts/announce/thread.mjs'`
 
 - [ ] **Step 3: Implement**
@@ -170,7 +170,7 @@ export function extractHighlights(releaseBody) {
 function toPlainText(markdown) {
   return markdown
     .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1 ($2)')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1: $2')
     .replace(/`([^`]+)`/g, '$1')
     .trim();
 }
@@ -219,7 +219,7 @@ function pack(pieces, limit) {
 }
 
 export const HOMEPAGE_URL = 'https://lars-pohlmann.de/simplefeedreader/';
-export const HOMEPAGE_TITLE = 'simple-feed-reader';
+export const HOMEPAGE_TITLE = 'simple feed reader — an RSS reader that lays feeds out like a magazine';
 export const HOMEPAGE_DESCRIPTION =
   'A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, '
   + 'YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.';
@@ -235,8 +235,8 @@ export function buildThread({ tag, releaseUrl, highlights, limit }) {
 
 - [ ] **Step 4: Run the tests to see them pass**
 
-Run: `node --test scripts/test/announce/`
-Expected: PASS, 10 tests
+Run: `node --test "scripts/test/announce/*.test.mjs"`
+Expected: PASS, 11 tests
 
 - [ ] **Step 5: Commit**
 
@@ -318,7 +318,7 @@ test('a refused post throws with its number and status', async () => {
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test scripts/test/announce/`
+Run: `node --test "scripts/test/announce/*.test.mjs"`
 Expected: FAIL with `Cannot find module '…/scripts/announce/mastodon.mjs'`
 
 - [ ] **Step 3: Implement**
@@ -361,8 +361,8 @@ export async function postMastodonThread(posts, { instance, token, fetch }) {
 
 - [ ] **Step 4: Run the tests to see them pass**
 
-Run: `node --test scripts/test/announce/`
-Expected: PASS, 13 tests
+Run: `node --test "scripts/test/announce/*.test.mjs"`
+Expected: PASS, 18 tests
 
 - [ ] **Step 5: Commit**
 
@@ -383,7 +383,7 @@ git commit -m "feat(#2096): post a release thread to Mastodon"
 - Produces:
   - `BLUESKY_LIMIT = 300`
   - `DEFAULT_BLUESKY_SERVICE = 'https://bsky.social'`
-  - `richTextFacets(text: string): object[]`: one `app.bsky.richtext.facet#link` per `http(s)` URL, with trailing `.,;:!?` left out of the link, and one `app.bsky.richtext.facet#tag` per `#hashtag` at the start of the text or after whitespace. Offsets are UTF-8 bytes, and facets are sorted by `byteStart`.
+  - `richTextFacets(text: string): object[]`: one `app.bsky.richtext.facet#link` per `http(s)` URL, with trailing `.,;:!?`, quotes and an unbalanced `)` left out of the link, and one `app.bsky.richtext.facet#tag` per `#hashtag` at the start of the text or after whitespace. Offsets are UTF-8 bytes, and facets are sorted by `byteStart`.
   - `postBlueskyThread(posts: string[], { service: string, handle: string, appPassword: string, card: { uri, title, description, thumb: { bytes: Uint8Array, mimeType: string } | null }, fetch }): Promise<string>`: the root post carries the card as an `app.bsky.embed.external`, with `thumb` uploaded through `com.atproto.repo.uploadBlob` when given. Resolves to the root post's `https://bsky.app/profile/<did>/post/<rkey>` URL. Throws an `Error` naming the step and HTTP status on any non-2xx response.
 
 - [ ] **Step 1: Write the failing tests**
@@ -392,6 +392,7 @@ git commit -m "feat(#2096): post a release thread to Mastodon"
 // scripts/test/announce/bluesky.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { extractHighlights } from '../../announce/thread.mjs';
 import { postBlueskyThread, richTextFacets } from '../../announce/bluesky.mjs';
 
 function fakeFetch(responses) {
@@ -432,6 +433,29 @@ test('richTextFacets reads a fragment inside a URL as part of the link, not as a
 
 test('richTextFacets finds nothing in plain text', () => {
   assert.deepEqual(richTextFacets('no links here'), []);
+});
+
+const linkOf = (text) => richTextFacets(text).find((found) => found.features[0].uri).features[0].uri;
+
+test('richTextFacets leaves a closing parenthesis out of the link', () => {
+  assert.equal(linkOf('(see https://x.org/a)'), 'https://x.org/a');
+  assert.equal(linkOf('(https://x.org/a).'), 'https://x.org/a');
+});
+
+test('richTextFacets keeps the parenthesis of a balanced address', () => {
+  assert.equal(linkOf('See https://en.wikipedia.org/wiki/Foo_(bar)'), 'https://en.wikipedia.org/wiki/Foo_(bar)');
+});
+
+test('richTextFacets leaves a closing quote out of the link', () => {
+  assert.equal(linkOf('"https://q.org/b"'), 'https://q.org/b');
+});
+
+test('a markdown link in a highlight becomes a facet over exactly its address', () => {
+  const [text] = extractHighlights('### Highlights\n\n**X.** See [the docs](https://example.org/a).\n');
+  const { index, features } = richTextFacets(text).find((found) => found.features[0].uri);
+  const covered = Buffer.from(text).subarray(index.byteStart, index.byteEnd).toString();
+  assert.equal(features[0].uri, 'https://example.org/a');
+  assert.equal(covered, 'https://example.org/a');
 });
 
 test('logs in, then threads each post under the root and the post before', async () => {
@@ -518,7 +542,7 @@ test('a refused post throws with its number and status', async () => {
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test scripts/test/announce/`
+Run: `node --test "scripts/test/announce/*.test.mjs"`
 Expected: FAIL with `Cannot find module '…/scripts/announce/bluesky.mjs'`
 
 - [ ] **Step 3: Implement**
@@ -530,13 +554,29 @@ export const DEFAULT_BLUESKY_SERVICE = 'https://bsky.social';
 
 export function richTextFacets(text) {
   const links = [...text.matchAll(/https?:\/\/\S+/g)].map((match) => {
-    const uri = match[0].replace(/[.,;:!?]+$/, '');
+    const uri = trimLink(match[0]);
     return facet(text, match.index, uri, { $type: 'app.bsky.richtext.facet#link', uri });
   });
   const tags = [...text.matchAll(/(?<=^|\s)#([\p{L}\p{N}_]+)/gu)].map((match) =>
     facet(text, match.index, match[0], { $type: 'app.bsky.richtext.facet#tag', tag: match[1] }),
   );
   return [...links, ...tags].sort((left, right) => left.index.byteStart - right.index.byteStart);
+}
+
+function trimLink(link) {
+  let trimmed = link;
+  for (;;) {
+    const next = trimmed.replace(/[.,;:!?"']+$/, '');
+    const unbalanced = next.endsWith(')') && count(next, ')') > count(next, '(');
+    if (next === trimmed && !unbalanced) {
+      return trimmed;
+    }
+    trimmed = unbalanced ? next.slice(0, -1) : next;
+  }
+}
+
+function count(text, character) {
+  return text.split(character).length - 1;
 }
 
 function facet(text, index, matched, feature) {
@@ -602,8 +642,8 @@ async function call(fetch, url, { accessJwt = null, contentType = 'application/j
 
 - [ ] **Step 4: Run the tests to see them pass**
 
-Run: `node --test scripts/test/announce/`
-Expected: PASS, 21 tests
+Run: `node --test "scripts/test/announce/*.test.mjs"`
+Expected: PASS, 26 tests
 
 - [ ] **Step 5: Commit**
 
@@ -676,7 +716,7 @@ test('posts to every configured network', async () => {
 
   assert.equal(code, 0);
   assert.equal(urls.filter((url) => url.endsWith('/api/v1/statuses')).length, 3);
-  assert.equal(urls.filter((url) => url.endsWith('/createRecord')).length, 3);
+  assert.equal(urls.filter((url) => url.endsWith('.createRecord')).length, 3);
   assert.ok(urls.includes('https://bsky.social/xrpc/com.atproto.server.createSession'));
 });
 
@@ -709,7 +749,7 @@ test('a failing network fails the run but the other still posts', async () => {
 
   assert.equal(code, 1);
   assert.ok(lines.some((line) => line.startsWith('::error::Mastodon: Mastodon refused post 1: HTTP 503')));
-  assert.equal(urls.filter((url) => url.endsWith('/createRecord')).length, 3);
+  assert.equal(urls.filter((url) => url.endsWith('.createRecord')).length, 3);
 });
 
 test('a dry run prints both threads and calls nothing', async () => {
@@ -731,7 +771,7 @@ test('a dry run prints both threads and calls nothing', async () => {
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test scripts/test/announce/`
+Run: `node --test "scripts/test/announce/*.test.mjs"`
 Expected: FAIL with `Cannot find module '…/scripts/announce/announce.mjs'`
 
 - [ ] **Step 3: Implement the orchestration**
@@ -826,8 +866,8 @@ Then make it executable: `chmod +x scripts/announce-release.mjs`
 
 - [ ] **Step 5: Run the tests to see them pass, then dry-run against v1.9.0**
 
-Run: `node --test scripts/test/announce/`
-Expected: PASS, 26 tests
+Run: `node --test "scripts/test/announce/*.test.mjs"`
+Expected: PASS, 31 tests
 
 Run:
 ```bash
@@ -848,7 +888,7 @@ In `.github/workflows/ci.yml`, in the `scripts` job, directly after the `ShellCh
           node-version: '22'
 
       - name: announce-release
-        run: node --test scripts/test/announce/
+        run: node --test "scripts/test/announce/*.test.mjs"
 ```
 
 - [ ] **Step 7: Commit**
@@ -913,7 +953,7 @@ jobs:
           node-version: '22'
 
       - name: Verify the announcer
-        run: node --test scripts/test/announce/
+        run: node --test "scripts/test/announce/*.test.mjs"
 
       - name: Announce
         env:
@@ -1034,6 +1074,6 @@ git commit -m "feat(#2096): announce releases with highlights after the images a
 
 ### After the tasks
 
-- Whole-branch review, then `/simplify`, then the gates: `node --test scripts/test/announce/`, `actionlint`, `shellcheck scripts/*.sh scripts/test/*.sh` (unchanged, but CI runs it).
+- Whole-branch review, then `/simplify`, then the gates: `node --test "scripts/test/announce/*.test.mjs"`, `actionlint`, `shellcheck scripts/*.sh scripts/test/*.sh` (unchanged, but CI runs it).
 - Open the PR into `develop` with `Closes #2096`.
 - After Lars sets the secrets: run the workflow by hand for `v1.9.0`, which is the first real end-to-end check.
