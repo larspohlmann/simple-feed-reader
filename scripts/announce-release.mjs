@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// scripts/announce-release.mjs
-//   gh release view v1.9.0 --json body --jq .body \
-//     | node scripts/announce-release.mjs v1.9.0 <release-url> [--dry-run]
 import { readFileSync } from 'node:fs';
 import { announce } from './announce/announce.mjs';
 
