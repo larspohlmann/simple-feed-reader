@@ -1,7 +1,6 @@
-# Posts a release's highlights as a thread to Bluesky and Mastodon (#2096).
-# release.yml calls it once the images are tagged; run it by hand to announce
-# an existing release. A re-run posts again: Mastodon dedupes within an hour,
-# Bluesky does not.
+# Posts a release's highlights to Bluesky and Mastodon (#2096): release.yml calls
+# it once the images are tagged; run it by hand for an existing release.
+# A re-run posts again: Mastodon dedupes within an hour, Bluesky does not.
 name: Announce release
 
 on:
