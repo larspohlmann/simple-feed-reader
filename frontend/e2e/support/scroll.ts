@@ -1,8 +1,5 @@
 import { expect, Page } from '@playwright/test';
 
-/** The page offset a full-screen article opens at: PageScrollOwner's 6rem lead (#2088). */
-export const ARTICLE_OPEN_TOP = 96;
-
 /** The reader's list scrolls the document (#2038). */
 export function pageScrollY(page: Page): Promise<number> {
   return page.evaluate(() => window.scrollY);

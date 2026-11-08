@@ -1,0 +1,85 @@
+import { APP_BASE_HREF, DOCUMENT, PathLocationStrategy, PlatformLocation } from '@angular/common';
+import { Injectable, NgZone, inject } from '@angular/core';
+
+/** The page grows by at least this much when a mobile browser collapses its address bar. */
+const COLLAPSED_BAR_GROWTH_PX = 30;
+
+/** A history write's arguments: state, title, url, query string. */
+type HistoryWrite = Parameters<PathLocationStrategy['pushState']>;
+
+interface HeldWrite {
+  readonly push: boolean;
+  readonly write: HistoryWrite;
+}
+
+/** Holds a history write back while a touch browser's address bar is collapsed, and makes it once
+ *  the bar is back: Brave expands its bar on every URL change, pushState included (#2088). A
+ *  bookmark or a shared link needs the bar, so it still sees the current URL. */
+@Injectable()
+export class CollapsedBarLocationStrategy extends PathLocationStrategy {
+  private readonly view = inject(DOCUMENT).defaultView ?? window;
+  private readonly touch = this.view.matchMedia('(pointer: coarse)');
+  private shortestHeight = this.view.innerHeight;
+  private width = this.view.innerWidth;
+  private held: HeldWrite | null = null;
+
+  constructor() {
+    const platformLocation = inject(PlatformLocation);
+    super(platformLocation, inject(APP_BASE_HREF, { optional: true }) ?? undefined);
+    platformLocation.onPopState(() => (this.held = null));
+    inject(NgZone).runOutsideAngular(() =>
+      this.view.addEventListener('resize', () => this.onResize(), { passive: true }),
+    );
+  }
+
+  override path(includeHash = false): string {
+    if (!this.held) return super.path(includeHash);
+    const [, , url, queryParams] = this.held.write;
+    return url + (queryParams ? `?${queryParams}` : '');
+  }
+
+  override pushState(...write: HistoryWrite): void {
+    if (this.barCollapsed()) {
+      this.held = { push: true, write };
+      return;
+    }
+    this.release();
+    super.pushState(...write);
+  }
+
+  override replaceState(...write: HistoryWrite): void {
+    if (this.barCollapsed()) {
+      this.held = { push: this.held?.push ?? false, write };
+      return;
+    }
+    this.release();
+    super.replaceState(...write);
+  }
+
+  override getState(): unknown {
+    return this.held ? this.held.write[0] : super.getState();
+  }
+
+  private onResize(): void {
+    if (this.view.innerWidth !== this.width) {
+      this.width = this.view.innerWidth;
+      this.shortestHeight = this.view.innerHeight;
+    }
+    this.shortestHeight = Math.min(this.shortestHeight, this.view.innerHeight);
+    if (!this.barCollapsed()) this.release();
+  }
+
+  private barCollapsed(): boolean {
+    return (
+      this.touch.matches && this.view.innerHeight > this.shortestHeight + COLLAPSED_BAR_GROWTH_PX
+    );
+  }
+
+  private release(): void {
+    const held = this.held;
+    if (!held) return;
+    this.held = null;
+    if (held.push) super.pushState(...held.write);
+    else super.replaceState(...held.write);
+  }
+}

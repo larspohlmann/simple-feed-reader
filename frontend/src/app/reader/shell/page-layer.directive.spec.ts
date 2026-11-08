@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { LayoutService } from '../layout.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -36,7 +37,10 @@ describe('PageLayerDirective', () => {
 
   beforeEach(() => {
     page = trackPageScrollTop();
-    TestBed.configureTestingModule({ imports: [PageLayersHostComponent] });
+    TestBed.configureTestingModule({
+      imports: [PageLayersHostComponent],
+      providers: [{ provide: LayoutService, useValue: { isCoarse: () => true } }],
+    });
     fixture = TestBed.createComponent(PageLayersHostComponent);
     fixture.detectChanges();
     page.top = 1200;

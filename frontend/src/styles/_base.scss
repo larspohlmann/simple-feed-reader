@@ -45,6 +45,11 @@ html.reader-page {
   overscroll-behavior-y: none;
 }
 
+/* PAGE_HELD_CLASS (reader-page.ts): stops the page scrolling and keeps its height. */
+html.reader-page.page-held {
+  overflow: hidden;
+}
+
 /* A full-screen article's rail always knows its length, so it always stands in. */
 html.reader-page:is(.page-scrollbar-hidden, .page-overlaid) {
   scrollbar-width: none;

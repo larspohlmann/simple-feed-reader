@@ -18,7 +18,6 @@ import {
   scrollPageTo,
   scrollPageToEnd,
   touchDrag,
-  ARTICLE_OPEN_TOP,
 } from './support/scroll';
 
 // A full-screen article takes the page from the list and hands it back (#2038): the browser
@@ -129,12 +128,10 @@ test.describe('A full-screen article owns the page on a phone', () => {
     await openReader(page, 'list');
   });
 
-  test('opens a lead below the top of the page over the list, held where it was', async ({
-    page,
-  }) => {
+  test('opens at the top of the page over the list, held where it was', async ({ page }) => {
     const { row, rowY } = await openArticleFromList(page);
 
-    expect(await pageScrollY(page)).toBe(ARTICLE_OPEN_TOP);
+    expect(await pageScrollY(page)).toBe(0);
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
     await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
     expect((await row.boundingBox())!.y).toBeCloseTo(rowY, 0);
@@ -203,7 +200,7 @@ test.describe('A full-screen article owns the page on a phone', () => {
     await openLink.click();
     const linkReader = page.locator('app-link-reader');
     await expect(linkReader.getByText(LAST_PARAGRAPH)).toBeAttached();
-    expect(await pageScrollY(page)).toBe(ARTICLE_OPEN_TOP);
+    expect(await pageScrollY(page)).toBe(0);
     await expect(page.locator('.article-overlay').first()).toHaveClass(/page-pinned/);
     await scrollPageTo(page, ARTICLE_OFFSET);
 
@@ -225,7 +222,7 @@ test.describe('A full-screen article owns the page beneath the app bar on a wide
   }) => {
     await openReader(page, 'list');
     await openArticleFromList(page);
-    expect(await pageScrollY(page)).toBe(ARTICLE_OPEN_TOP);
+    expect(await pageScrollY(page)).toBe(0);
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
     const sidebar = page.locator('aside.sidebar');
     const sidebarY = (await sidebar.boundingBox())!.y;

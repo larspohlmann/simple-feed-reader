@@ -1,6 +1,6 @@
 import { test, expect, Locator, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
-import { ARTICLE_OPEN_TOP, scrollPageToEnd } from './support/scroll';
+import { scrollPageToEnd } from './support/scroll';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 /** The 8rem a short article grows by on the page so Brave can keep its toolbar collapsed. */
@@ -104,14 +104,14 @@ test.describe('Article tail space', () => {
     expect(opacity).toBeGreaterThan(0.99);
   });
 
-  // #2088: past its lead, only the margin that keeps Brave's collapsed toolbar collapsed.
+  // #2088: only the margin that keeps Brave's collapsed toolbar collapsed.
   test('an article that fits the screen gains no tail scroll', async ({ page }) => {
     await openStubbedArticle(page, SHORT_BODY);
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollHeight - window.innerHeight,
     );
-    expect(overflow).toBeLessThanOrEqual(ARTICLE_OPEN_TOP + BRAVE_MARGIN + 2);
+    expect(overflow).toBeLessThanOrEqual(BRAVE_MARGIN + 2);
   });
 });
 

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { PAGE_LEAD_REM, PAGE_OVERLAID_CLASS, PageScrollOwner } from './page-scroll-owner';
 import { PageLayer } from '../../shared/scroll-host/page-layer';
 import { PAGE_SCROLL_BLOCK_CLASS } from '../../shared/scroll-host/page-scroll-host';
+import { LayoutService } from '../layout.service';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
 describe('PageScrollOwner', () => {
@@ -9,10 +10,17 @@ describe('PageScrollOwner', () => {
   const lead = PAGE_LEAD_REM * 16;
   let page: { top: number };
   let owner: PageScrollOwner;
+  let coarse: boolean;
 
   beforeEach(() => {
     page = trackPageScrollTop();
-    TestBed.configureTestingModule({ providers: [PageScrollOwner] });
+    coarse = true;
+    TestBed.configureTestingModule({
+      providers: [
+        PageScrollOwner,
+        { provide: LayoutService, useValue: { isCoarse: () => coarse } },
+      ],
+    });
     owner = TestBed.inject(PageScrollOwner);
   });
 
@@ -71,6 +79,14 @@ describe('PageScrollOwner', () => {
     expect(list.lead).toBe(0);
     expect(article.lead).toBe(lead);
     expect(article.element.style.getPropertyValue('--page-lead')).toBe(`${lead}px`);
+  });
+
+  it('opens a layer at the very top on a desktop, which has no bar to keep collapsed', () => {
+    coarse = false;
+    const { article } = listUnderArticle();
+
+    expect(article.lead).toBe(0);
+    expect(page.top).toBe(0);
   });
 
   it('hands the page back in one call: the leaver pinned and the list in flow before it moves', () => {

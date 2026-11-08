@@ -1006,6 +1006,7 @@ describe('ReaderShellComponent', () => {
     });
 
     it('pins the list where it stood and opens the article at its lead (#2038, #2088)', () => {
+      screen.isCoarse.set(true);
       const { fixture, rows } = bootNarrowScrolledDown();
       const list = (fixture.nativeElement as HTMLElement).querySelector('section.list')!;
 
@@ -1040,7 +1041,7 @@ describe('ReaderShellComponent', () => {
       expect(document.documentElement.classList).not.toContain('page-overlaid');
     });
 
-    it('takes no CDK block for the article, while the drawer still does (#2038)', () => {
+    it('holds the page for the drawer only, never with a CDK block (#2038, #2088)', () => {
       const root = document.documentElement;
       Object.defineProperty(root, 'scrollHeight', { value: 5000, configurable: true });
       jest.spyOn(window, 'scroll').mockImplementation(() => undefined);
@@ -1048,12 +1049,13 @@ describe('ReaderShellComponent', () => {
       screen.isNarrow.set(true);
 
       openArticle(fixture);
-      expect(root.classList).not.toContain('cdk-global-scrollblock');
+      expect(root.classList).not.toContain('page-held');
       closeArticle(fixture);
 
       fixture.componentInstance.setSidebarOpen(true);
       fixture.detectChanges();
-      expect(root.classList).toContain('cdk-global-scrollblock');
+      expect(root.classList).toContain('page-held');
+      expect(root.classList).not.toContain('cdk-global-scrollblock');
     });
   });
 

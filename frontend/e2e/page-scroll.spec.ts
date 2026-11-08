@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-import { pageScrollY, rowTitleInView, scrollPageTo, ARTICLE_OPEN_TOP } from './support/scroll';
+import { pageScrollY, rowTitleInView, scrollPageTo } from './support/scroll';
 
 // The list scrolls the document at every width (#2038): a mobile browser collapses its
 // bar only for a page scroll. Every entry is stubbed, so the spec owns what it scrolls.
@@ -116,7 +116,7 @@ test.describe('The list scrolls the page on a phone', () => {
     await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
     await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
-    expect(await pageScrollY(page)).toBe(ARTICLE_OPEN_TOP);
+    expect(await pageScrollY(page)).toBe(0);
 
     await page.locator('app-reader-view .bar .close').click();
     await expect(page.locator('.article-overlay')).toHaveCount(0);
@@ -124,8 +124,9 @@ test.describe('The list scrolls the page on a phone', () => {
     expect(await pageScrollY(page)).toBe(LIST_OFFSET);
   });
 
-  test('the open drawer pins the page', async ({ page }) => {
+  test('the open drawer holds the page at its offset and height', async ({ page }) => {
     await scrollPageTo(page, LIST_OFFSET);
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
     // The retracted bar hides the menu button, so the drawer opens the way a thumb opens it.
     await page.locator('.rows').evaluate((rows) => {
       const touch = (x: number) => [
@@ -135,12 +136,16 @@ test.describe('The list scrolls the page on a phone', () => {
       rows.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, touches: touch(220) }));
       rows.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [] }));
     });
-    await expect(page.locator('html')).toHaveClass(/cdk-global-scrollblock/);
+    await expect(page.locator('html')).toHaveClass(/page-held/);
+    // A page that shrinks to the viewport expands Brave's collapsed toolbar (#2088).
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
+    await page.mouse.wheel(0, 600);
+    expect(await pageScrollY(page)).toBe(LIST_OFFSET);
 
     await page
       .locator('.backdrop')
       .click({ position: { x: PHONE.width - 10, y: PHONE.height / 2 } });
-    await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
+    await expect(page.locator('html')).not.toHaveClass(/page-held/);
     expect(await pageScrollY(page)).toBe(LIST_OFFSET);
   });
 });
