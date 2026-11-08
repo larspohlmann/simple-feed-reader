@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PAGE_HELD_CLASS, READER_PAGE_CLASS, holdReaderPage } from './reader-page';
-import { PAGE_SCROLL_BLOCK_CLASS } from '../../shared/scroll-host/page-scroll-host';
+import { READER_PAGE_CLASS, holdReaderPage } from './reader-page';
+import { PAGE_HELD_CLASS } from '../../shared/page-hold/page-hold';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
 describe('holdReaderPage', () => {
@@ -57,7 +57,7 @@ describe('holdReaderPage', () => {
 
     lock(locked, true);
     expect(root.classList).toContain(PAGE_HELD_CLASS);
-    expect(root.classList).not.toContain(PAGE_SCROLL_BLOCK_CLASS);
+    expect(root.classList).not.toContain('cdk-global-scrollblock');
     expect(page.top).toBe(1200);
 
     lock(locked, false);

@@ -45,8 +45,8 @@ html.reader-page {
   overscroll-behavior-y: none;
 }
 
-/* PAGE_HELD_CLASS (reader-page.ts): stops the page scrolling and keeps its height. */
-html.reader-page.page-held {
+/* PAGE_HELD_CLASS (shared/page-hold): stops the page scrolling and keeps its height. */
+html.page-held {
   overflow: hidden;
 }
 
