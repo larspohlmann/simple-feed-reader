@@ -10,10 +10,25 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.9.0] - 2026-11-08
+
 ### Highlights
 
 **Social searches as feeds.** You can now subscribe to a Bluesky or Mastodon search,
 and it shows up as a feed of its own under a new Searches group in the sidebar.
+
+## What's Changed
+* fix(#2080): an emptied list brings the bars back by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2081
+* fix(#2082): tapping the active sidebar entry closes the mobile drawer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2083
+* Inline article audio plays in our player and joins the playlist (#2084) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2085
+* Subscribe to a Bluesky or Mastodon search (#2086) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2087
+* fix(#2088): keep the collapsed address bar collapsed across reader navigation by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2089
+* feat(#2093): explain what the Search tab in Manage feeds does by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2094
+* ci(#2091): run symfony-lsp from a committed release by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2092
+* docs: v1.9.0 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2095
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.8.2...v1.9.0
 
 ## [v1.8.2] - 2026-11-06
 
