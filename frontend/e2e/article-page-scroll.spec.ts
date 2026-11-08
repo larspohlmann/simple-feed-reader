@@ -398,8 +398,8 @@ test.describe('An action sheet over a full-screen article', () => {
     // A page that shrinks to the viewport expands Brave's collapsed toolbar (#2100).
     expect(await pageScrollHeight(page)).toBe(height);
     await page.mouse.wheel(0, 600);
-    expect(await pageScrollY(page)).toBe(ARTICLE_OFFSET);
     await nextFrames(page);
+    expect(await pageScrollY(page)).toBe(ARTICLE_OFFSET);
     await expect(bar).toHaveClass(/hidden/);
     expect(await fill()).toBeCloseTo(fillBefore, 1);
 
