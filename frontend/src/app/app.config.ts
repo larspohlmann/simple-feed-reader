@@ -13,6 +13,7 @@ import { TranslocoService, provideTransloco } from '@jsverse/transloco';
 import { LocationStrategy } from '@angular/common';
 import { routes } from './app.routes';
 import { CollapsedBarLocationStrategy } from './core/collapsed-bar-location-strategy';
+import { provideHeldPageDialogs } from './shared/page-hold/page-hold-scroll-strategy';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { readerOutputVersionInterceptor } from './core/http/reader-output-version';
@@ -58,6 +59,7 @@ export const appConfig: ApplicationConfig = {
     // title of the page before it.
     { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
     { provide: LocationStrategy, useClass: CollapsedBarLocationStrategy },
+    provideHeldPageDialogs(),
     provideHttpClient(
       withInterceptors([
         authInterceptor,
