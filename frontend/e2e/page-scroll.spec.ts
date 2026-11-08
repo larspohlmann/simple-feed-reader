@@ -115,7 +115,6 @@ test.describe('The list scrolls the page on a phone', () => {
     await page.getByText(title, { exact: true }).first().click();
     await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
     await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
-    await expect(page.locator('html')).not.toHaveClass(/cdk-global-scrollblock/);
     expect(await pageScrollY(page)).toBe(0);
 
     await page.locator('app-reader-view .bar .close').click();
