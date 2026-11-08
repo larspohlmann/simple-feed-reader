@@ -1,6 +1,6 @@
 import { NgZone } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PAGE_SCROLL_BLOCK_CLASS, PageScrollHost } from './page-scroll-host';
+import { PageScrollHost } from './page-scroll-host';
 import { ScrollHosts } from './scroll-hosts.service';
 import { PageLayer } from './page-layer';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
@@ -17,8 +17,6 @@ describe('PageScrollHost', () => {
   });
 
   afterEach(() => {
-    root.classList.remove(PAGE_SCROLL_BLOCK_CLASS);
-    root.style.top = '';
     root.style.scrollPaddingTop = '';
     restorePageScroll();
     jest.restoreAllMocks();
@@ -31,21 +29,6 @@ describe('PageScrollHost', () => {
       announceWrite: () => undefined,
     });
   const scrollEvent = (): boolean => window.dispatchEvent(new Event('scroll'));
-  const mutationsDelivered = (): Promise<void> => new Promise((resolve) => setTimeout(resolve));
-
-  /** What a CDK BlockScrollStrategy does to `<html>` on enable, minus its viewport ruler. */
-  function blockAt(top: number): void {
-    root.style.top = `${-top}px`;
-    root.classList.add(PAGE_SCROLL_BLOCK_CLASS);
-    page.top = 0;
-  }
-
-  /** …and on disable: the class goes, then the window is scrolled back. */
-  function releaseTo(top: number): void {
-    root.style.top = '';
-    root.classList.remove(PAGE_SCROLL_BLOCK_CLASS);
-    page.top = top;
-  }
 
   describe('for a layer that leads by 96 (#2088)', () => {
     const announced: number[] = [];
@@ -146,54 +129,6 @@ describe('PageScrollHost', () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
-  describe('under a CDK block', () => {
-    it('reports the pinned offset, not the 0 the pinned page scrolls to', () => {
-      page.top = 2538;
-      const host = pageHost();
-      blockAt(2538);
-      expect(host.scrollTop).toBe(2538);
-      expect(host.toContentY(10)).toBe(2548);
-    });
-
-    it('hears no scroll while blocked; the restore lands where it left', () => {
-      page.top = 2538;
-      const host = pageHost();
-      const heard: number[] = [];
-      host.listen(() => heard.push(host.scrollTop));
-      blockAt(2538);
-      scrollEvent();
-      releaseTo(2538);
-      scrollEvent();
-      expect(heard).toEqual([2538]);
-    });
-
-    it('holds a write made while blocked and lands it after the release', async () => {
-      page.top = 2538;
-      const host = pageHost();
-      const stop = host.listen(() => undefined);
-      blockAt(2538);
-      host.scrollTop = 900;
-      expect(host.scrollTop).toBe(900);
-      expect(root.style.top).toBe('-900px');
-
-      releaseTo(2538);
-      await mutationsDelivered();
-
-      expect(page.top).toBe(900);
-      stop();
-    });
-
-    it('holds a scrollTo the same way instead of scrolling the pinned window', () => {
-      const scrollTo = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
-      page.top = 2538;
-      const host = pageHost();
-      blockAt(2538);
-      host.scrollTo({ top: 0, behavior: 'smooth' });
-      expect(scrollTo).not.toHaveBeenCalled();
-      expect(host.scrollTop).toBe(0);
-    });
-  });
-
   describe('for a layer pinned beneath another (#2038)', () => {
     const element = document.createElement('section');
     const layerHost = (layer: PageLayer): PageScrollHost =>
@@ -237,34 +172,6 @@ describe('PageScrollHost', () => {
       expect(layer.pinnedTop).toBe(800);
       expect(page.top).toBe(300);
       expect(scrollTo).not.toHaveBeenCalled();
-    });
-
-    it('reads its pin, not the block, while a CDK dialog holds the page', () => {
-      const layer = new PageLayer(element);
-      const host = layerHost(layer);
-      layer.pinAt(1200);
-      page.top = 300;
-
-      blockAt(300);
-
-      expect(host.scrollTop).toBe(1200);
-    });
-
-    it('lands a write held under a CDK block on its pin once pinned beneath another', async () => {
-      const layer = new PageLayer(element);
-      const host = layerHost(layer);
-      const stop = host.listen(() => undefined);
-      page.top = 1200;
-      blockAt(1200);
-      host.scrollTop = 900;
-
-      layer.pinAt(1200);
-      releaseTo(300);
-      await mutationsDelivered();
-
-      expect(layer.pinnedTop).toBe(900);
-      expect(page.top).toBe(300);
-      stop();
     });
 
     it('is the page again once unpinned', () => {

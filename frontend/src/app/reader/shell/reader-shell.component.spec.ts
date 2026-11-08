@@ -1000,8 +1000,6 @@ describe('ReaderShellComponent', () => {
     afterEach(() => {
       const root = document.documentElement;
       delete (root as unknown as { scrollHeight?: number }).scrollHeight;
-      root.classList.remove('cdk-global-scrollblock');
-      root.style.top = '';
       jest.restoreAllMocks();
     });
 

@@ -22,12 +22,9 @@ export class PageScrollOwner {
   private readonly layers: PageLayer[] = [];
 
   constructor() {
-    // Listening arms the host's release observer: a write under a CDK block lands after it.
-    const stopListening = this.page.listen(() => undefined);
-    inject(DestroyRef).onDestroy(() => {
-      stopListening();
-      this.document.documentElement.classList.remove(PAGE_OVERLAID_CLASS);
-    });
+    inject(DestroyRef).onDestroy(() =>
+      this.document.documentElement.classList.remove(PAGE_OVERLAID_CLASS),
+    );
   }
 
   enter(layer: PageLayer): void {

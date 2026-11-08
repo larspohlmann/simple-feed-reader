@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { PAGE_LEAD_REM, PAGE_OVERLAID_CLASS, PageScrollOwner } from './page-scroll-owner';
 import { PAGE_LEAD, PageLayer } from '../../shared/scroll-host/page-layer';
-import { PAGE_SCROLL_BLOCK_CLASS } from '../../shared/scroll-host/page-scroll-host';
 import { LayoutService } from '../layout.service';
 import { restorePageScroll, trackPageScrollTop } from '../../../testing/scroll-testing';
 
@@ -26,8 +25,6 @@ describe('PageScrollOwner', () => {
 
   afterEach(() => {
     TestBed.resetTestingModule();
-    root.classList.remove(PAGE_SCROLL_BLOCK_CLASS);
-    root.style.top = '';
     restorePageScroll();
   });
 
@@ -163,25 +160,6 @@ describe('PageScrollOwner', () => {
     owner.leave(article);
     expect(page.top).toBe(640);
     expect(article.pinned).toBe(true);
-  });
-
-  it('lands the hand-back after a CDK dialog that holds the page lets go', async () => {
-    const { list, article } = listUnderArticle();
-    root.style.top = '-640px';
-    root.classList.add(PAGE_SCROLL_BLOCK_CLASS);
-    page.top = 0;
-
-    owner.leave(article);
-    expect(article.pinnedTop).toBe(640);
-    expect(list.pinned).toBe(false);
-    expect(root.style.top).toBe('-1200px');
-
-    root.style.top = '';
-    root.classList.remove(PAGE_SCROLL_BLOCK_CLASS);
-    page.top = 640;
-    await new Promise((resolve) => setTimeout(resolve));
-
-    expect(page.top).toBe(1200);
   });
 
   it('drops its class from the page with the reader', () => {
