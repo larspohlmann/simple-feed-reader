@@ -30,7 +30,7 @@ function facet(text, index, matched, feature) {
 export async function postBlueskyThread(posts, { service, handle, appPassword, card, fetch }) {
   const xrpc = `${service.replace(/\/+$/, '')}/xrpc`;
   const session = await call(fetch, `${xrpc}/com.atproto.server.createSession`, {
-    body: JSON.stringify({ identifier: handle, password: appPassword }),
+    body: JSON.stringify({ identifier: handle.trim().replace(/^@/, ''), password: appPassword }),
   }, 'Bluesky login failed');
   const embed = { $type: 'app.bsky.embed.external', external: await cardExternal(fetch, xrpc, session.accessJwt, card) };
   let root = null;

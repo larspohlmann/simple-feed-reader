@@ -117,6 +117,17 @@ test('uploads the card image and puts the blob on the root card', async () => {
   assert.deepEqual(calls[2].body.record.embed.external.thumb, blob);
 });
 
+test('logs in with a handle written with a leading @', async () => {
+  const { fetch, calls } = fakeFetch([
+    [200, { accessJwt: 'jwt', did: 'did:plc:lars' }],
+    [200, { uri: 'at://did:plc:lars/app.bsky.feed.post/root1', cid: 'c1' }],
+  ]);
+
+  await postBlueskyThread(['root'], { service: 'https://pds.example', handle: ' @lars.example ', appPassword: 'p', card, fetch });
+
+  assert.equal(calls[0].body.identifier, 'lars.example');
+});
+
 test('a failed login throws naming the login', async () => {
   const { fetch } = fakeFetch([[401, { error: 'AuthenticationRequired' }]]);
 
