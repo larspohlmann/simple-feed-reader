@@ -4,13 +4,16 @@
 
 **Goal:** When a `vX.Y.Z` release carries a `### Highlights` block, post it automatically as a thread to Lars's personal Bluesky and Mastodon accounts.
 
-**Architecture:** A dependency-free Node 22 script (`scripts/announce-release.mjs`) reads a published GitHub Release body on stdin, extracts the highlights, and builds one thread per network: a root post that names the release and links it, then one reply per highlight, split further where a highlight exceeds the network's limit. A reusable workflow (`announce-release.yml`) runs it; `release.yml` calls it after the images are tagged, and `workflow_dispatch` runs it by hand for an existing tag.
+**Architecture:** A dependency-free Node 22 script (`scripts/announce-release.mjs`) reads a published GitHub Release body on stdin, extracts the highlights, and builds one thread per network: a root post that names the release, links the homepage and carries `#rss #rssreader`, then one reply per highlight (split further where a highlight exceeds the network's limit), then a closing reply linking the GitHub Release. A reusable workflow (`announce-release.yml`) runs it; `release.yml` calls it after the images are tagged, and `workflow_dispatch` runs it by hand for an existing tag.
 
 **Tech Stack:** Node 22 (built-in `fetch`, `Intl.Segmenter`, `node:test`), GitHub Actions, Mastodon REST API, AT Protocol XRPC.
 
-**Spec:** issue [#2096](https://github.com/larspohlmann/simple-feed-reader/issues/2096) and the design agreed in chat: personal accounts, full highlights as a thread, automatic posting with no approval step.
+**Spec:** issue [#2096](https://github.com/larspohlmann/simple-feed-reader/issues/2096) and the design agreed in chat: personal accounts, full highlights as a thread, automatic posting with no approval step. The root post links `https://lars-pohlmann.de/simplefeedreader/` and carries `#rss #rssreader`; the release link goes in the thread.
 
 ## Global Constraints
+
+- The root post links `https://lars-pohlmann.de/simplefeedreader/` and carries the hashtags `#rss #rssreader`. The GitHub Release link is the last post of the thread, never the root.
+- On Bluesky, hashtags need `app.bsky.richtext.facet#tag` facets to be clickable and searchable; Mastodon parses them itself. The Bluesky root carries a homepage link card whose thumbnail is `docs/homepage/share.png` (210 KB, under the 1 MB blob limit), uploaded as a blob.
 
 - No npm dependencies and no third-party GitHub action that sees the credentials. Only `node:` built-ins and global `fetch`.
 - Secrets: `MASTODON_INSTANCE` (e.g. `https://mastodon.social`), `MASTODON_TOKEN` (scope `write:statuses` only), `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`, and optional `BLUESKY_SERVICE` (default `https://bsky.social`).
@@ -27,7 +30,7 @@
 |---|---|
 | `scripts/announce/thread.mjs` | Pure text work: extract highlights from a release body, turn Markdown into plain text, split text to fit a limit, build a thread |
 | `scripts/announce/mastodon.mjs` | Post a thread to Mastodon |
-| `scripts/announce/bluesky.mjs` | Log in, add link facets, post a thread to Bluesky with a link card on the root |
+| `scripts/announce/bluesky.mjs` | Log in, add link and tag facets, post a thread to Bluesky with a homepage card (with thumbnail) on the root |
 | `scripts/announce/announce.mjs` | Orchestration: which networks are configured, dry run, error collection, exit code |
 | `scripts/announce-release.mjs` | CLI entry: argv + stdin → `announce()` |
 | `scripts/test/announce/*.test.mjs` | `node --test` suites, one per module |
@@ -49,7 +52,8 @@
   - `extractHighlights(releaseBody: string): string[]`: plain-text highlight paragraphs, `[]` when there is no block
   - `graphemeLength(text: string): number`
   - `splitToFit(text: string, limit: number): string[]`
-  - `buildThread({ tag: string, releaseUrl: string, highlights: string[], limit: number }): string[]`
+  - `buildThread({ tag: string, releaseUrl: string, highlights: string[], limit: number }): string[]`: the root post (homepage link, `#rss #rssreader`), the highlights, and a closing `Full release notes: <releaseUrl>` post
+  - `HOMEPAGE_URL`, `HOMEPAGE_TITLE`, `HOMEPAGE_DESCRIPTION`: the homepage link and its card text, copied from the `og:` tags in `docs/homepage/index.html`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -114,7 +118,7 @@ test('splitToFit never returns a piece over the limit', () => {
   }
 });
 
-test('buildThread leads with a root post linking the release', () => {
+test('buildThread leads with the homepage and tags, and closes with the release notes', () => {
   const thread = buildThread({
     tag: 'v1.9.0',
     releaseUrl: 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0',
@@ -122,9 +126,10 @@ test('buildThread leads with a root post linking the release', () => {
     limit: 300,
   });
   assert.deepEqual(thread, [
-    'simple-feed-reader v1.9.0 is out. The highlights follow in this thread.\n\nhttps://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0',
+    'simple-feed-reader v1.9.0 is out. The highlights follow in this thread. #rss #rssreader\n\nhttps://lars-pohlmann.de/simplefeedreader/',
     'One. First.',
     'Two. Second.',
+    'Full release notes: https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0',
   ]);
 });
 ```
@@ -213,9 +218,18 @@ function pack(pieces, limit) {
   return posts;
 }
 
+export const HOMEPAGE_URL = 'https://lars-pohlmann.de/simplefeedreader/';
+export const HOMEPAGE_TITLE = 'simple-feed-reader';
+export const HOMEPAGE_DESCRIPTION =
+  'A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, '
+  + 'YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.';
+
 export function buildThread({ tag, releaseUrl, highlights, limit }) {
-  const root = `simple-feed-reader ${tag} is out. The highlights follow in this thread.\n\n${releaseUrl}`;
-  return [root, ...highlights.flatMap((highlight) => splitToFit(highlight, limit))];
+  return [
+    `simple-feed-reader ${tag} is out. The highlights follow in this thread. #rss #rssreader\n\n${HOMEPAGE_URL}`,
+    ...highlights.flatMap((highlight) => splitToFit(highlight, limit)),
+    `Full release notes: ${releaseUrl}`,
+  ];
 }
 ```
 
@@ -369,8 +383,8 @@ git commit -m "feat(#2096): post a release thread to Mastodon"
 - Produces:
   - `BLUESKY_LIMIT = 300`
   - `DEFAULT_BLUESKY_SERVICE = 'https://bsky.social'`
-  - `linkFacets(text: string): object[]`: one `app.bsky.richtext.facet#link` per `http(s)` URL, using UTF-8 byte offsets, with trailing `.,;:!?` left out of the link
-  - `postBlueskyThread(posts: string[], { service: string, handle: string, appPassword: string, card: { uri, title, description }, fetch }): Promise<string>`: resolves to the root post's `https://bsky.app/profile/<did>/post/<rkey>` URL and throws `Error` naming the step and HTTP status on any non-2xx response.
+  - `richTextFacets(text: string): object[]`: one `app.bsky.richtext.facet#link` per `http(s)` URL, with trailing `.,;:!?` left out of the link, and one `app.bsky.richtext.facet#tag` per `#hashtag` at the start of the text or after whitespace. Offsets are UTF-8 bytes, and facets are sorted by `byteStart`.
+  - `postBlueskyThread(posts: string[], { service: string, handle: string, appPassword: string, card: { uri, title, description, thumb: { bytes: Uint8Array, mimeType: string } | null }, fetch }): Promise<string>`: the root post carries the card as an `app.bsky.embed.external`, with `thumb` uploaded through `com.atproto.repo.uploadBlob` when given. Resolves to the root post's `https://bsky.app/profile/<did>/post/<rkey>` URL. Throws an `Error` naming the step and HTTP status on any non-2xx response.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -378,22 +392,22 @@ git commit -m "feat(#2096): post a release thread to Mastodon"
 // scripts/test/announce/bluesky.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { linkFacets, postBlueskyThread } from '../../announce/bluesky.mjs';
+import { postBlueskyThread, richTextFacets } from '../../announce/bluesky.mjs';
 
 function fakeFetch(responses) {
   const calls = [];
   const fetch = async (url, init) => {
-    calls.push({ url, init, body: JSON.parse(init.body) });
+    calls.push({ url, init, body: typeof init.body === 'string' ? JSON.parse(init.body) : init.body });
     const [status, payload] = responses.shift();
     return new Response(JSON.stringify(payload), { status });
   };
   return { fetch, calls };
 }
 
-const card = { uri: 'https://example.org/release', title: 'simple-feed-reader v1.9.0', description: 'One. First.' };
+const card = { uri: 'https://lars-pohlmann.de/simplefeedreader/', title: 'simple-feed-reader', description: 'A reader.', thumb: null };
 
-test('linkFacets marks URLs by UTF-8 byte offsets without trailing punctuation', () => {
-  assert.deepEqual(linkFacets('Größe: https://example.org/a.'), [
+test('richTextFacets marks URLs by UTF-8 byte offsets without trailing punctuation', () => {
+  assert.deepEqual(richTextFacets('Größe: https://example.org/a.'), [
     {
       index: { byteStart: 9, byteEnd: 30 },
       features: [{ $type: 'app.bsky.richtext.facet#link', uri: 'https://example.org/a' }],
@@ -401,8 +415,23 @@ test('linkFacets marks URLs by UTF-8 byte offsets without trailing punctuation',
   ]);
 });
 
-test('linkFacets finds nothing in plain text', () => {
-  assert.deepEqual(linkFacets('no links here'), []);
+test('richTextFacets marks hashtags, in text order with links', () => {
+  assert.deepEqual(richTextFacets('Neu: #rss #rssreader\n\nhttps://x.org/'), [
+    { index: { byteStart: 5, byteEnd: 9 }, features: [{ $type: 'app.bsky.richtext.facet#tag', tag: 'rss' }] },
+    { index: { byteStart: 10, byteEnd: 20 }, features: [{ $type: 'app.bsky.richtext.facet#tag', tag: 'rssreader' }] },
+    { index: { byteStart: 22, byteEnd: 36 }, features: [{ $type: 'app.bsky.richtext.facet#link', uri: 'https://x.org/' }] },
+  ]);
+});
+
+test('richTextFacets reads a fragment inside a URL as part of the link, not as a tag', () => {
+  assert.deepEqual(
+    richTextFacets('see https://x.org/a#b').map((facet) => facet.features[0].$type),
+    ['app.bsky.richtext.facet#link'],
+  );
+});
+
+test('richTextFacets finds nothing in plain text', () => {
+  assert.deepEqual(richTextFacets('no links here'), []);
 });
 
 test('logs in, then threads each post under the root and the post before', async () => {
@@ -413,11 +442,12 @@ test('logs in, then threads each post under the root and the post before', async
     [200, { uri: 'at://did:plc:lars/app.bsky.feed.post/reply3', cid: 'c3' }],
   ]);
 
-  const url = await postBlueskyThread(['root https://example.org/release', 'two', 'three'], {
+  const url = await postBlueskyThread(['root #rss https://lars-pohlmann.de/simplefeedreader/', 'two', 'three'], {
     service: 'https://pds.example/', handle: 'lars.example', appPassword: 'app-pw', card, fetch,
   });
 
   assert.equal(url, 'https://bsky.app/profile/did:plc:lars/post/root1');
+  assert.equal(calls.length, 4);
   assert.equal(calls[0].url, 'https://pds.example/xrpc/com.atproto.server.createSession');
   assert.deepEqual(calls[0].body, { identifier: 'lars.example', password: 'app-pw' });
   assert.equal(calls[1].url, 'https://pds.example/xrpc/com.atproto.repo.createRecord');
@@ -427,9 +457,9 @@ test('logs in, then threads each post under the root and the post before', async
 
   const root = calls[1].body.record;
   assert.equal(root.$type, 'app.bsky.feed.post');
-  assert.equal(root.text, 'root https://example.org/release');
+  assert.equal(root.text, 'root #rss https://lars-pohlmann.de/simplefeedreader/');
   assert.deepEqual(root.langs, ['en']);
-  assert.equal(root.facets.length, 1);
+  assert.equal(root.facets.length, 2);
   assert.deepEqual(root.embed, {
     $type: 'app.bsky.embed.external',
     external: { uri: card.uri, title: card.title, description: card.description },
@@ -442,6 +472,26 @@ test('logs in, then threads each post under the root and the post before', async
     root: { uri: 'at://did:plc:lars/app.bsky.feed.post/root1', cid: 'c1' },
     parent: { uri: 'at://did:plc:lars/app.bsky.feed.post/reply2', cid: 'c2' },
   });
+});
+
+test('uploads the card image and puts the blob on the root card', async () => {
+  const bytes = new Uint8Array([137, 80, 78, 71]);
+  const blob = { $type: 'blob', ref: { $link: 'bafkrei' }, mimeType: 'image/png', size: 4 };
+  const { fetch, calls } = fakeFetch([
+    [200, { accessJwt: 'jwt', did: 'did:plc:lars' }],
+    [200, { blob }],
+    [200, { uri: 'at://did:plc:lars/app.bsky.feed.post/root1', cid: 'c1' }],
+  ]);
+
+  await postBlueskyThread(['root'], {
+    service: 'https://pds.example', handle: 'h', appPassword: 'p', card: { ...card, thumb: { bytes, mimeType: 'image/png' } }, fetch,
+  });
+
+  assert.equal(calls[1].url, 'https://pds.example/xrpc/com.atproto.repo.uploadBlob');
+  assert.equal(calls[1].init.headers['Content-Type'], 'image/png');
+  assert.equal(calls[1].init.headers.Authorization, 'Bearer jwt');
+  assert.equal(calls[1].body, bytes);
+  assert.deepEqual(calls[2].body.record.embed.external.thumb, blob);
 });
 
 test('a failed login throws naming the login', async () => {
@@ -478,20 +528,33 @@ Expected: FAIL with `Cannot find module '…/scripts/announce/bluesky.mjs'`
 export const BLUESKY_LIMIT = 300;
 export const DEFAULT_BLUESKY_SERVICE = 'https://bsky.social';
 
-export function linkFacets(text) {
-  return [...text.matchAll(/https?:\/\/\S+/g)].map((match) => {
+export function richTextFacets(text) {
+  const links = [...text.matchAll(/https?:\/\/\S+/g)].map((match) => {
     const uri = match[0].replace(/[.,;:!?]+$/, '');
-    const byteStart = Buffer.byteLength(text.slice(0, match.index));
-    return {
-      index: { byteStart, byteEnd: byteStart + Buffer.byteLength(uri) },
-      features: [{ $type: 'app.bsky.richtext.facet#link', uri }],
-    };
+    return facet(text, match.index, uri, { $type: 'app.bsky.richtext.facet#link', uri });
   });
+  const tags = [...text.matchAll(/(?<=^|\s)#([\p{L}\p{N}_]+)/gu)].map((match) =>
+    facet(text, match.index, match[0], { $type: 'app.bsky.richtext.facet#tag', tag: match[1] }),
+  );
+  return [...links, ...tags].sort((left, right) => left.index.byteStart - right.index.byteStart);
+}
+
+function facet(text, index, matched, feature) {
+  const byteStart = Buffer.byteLength(text.slice(0, index));
+  return { index: { byteStart, byteEnd: byteStart + Buffer.byteLength(matched) }, features: [feature] };
 }
 
 export async function postBlueskyThread(posts, { service, handle, appPassword, card, fetch }) {
   const xrpc = `${service.replace(/\/+$/, '')}/xrpc`;
-  const session = await call(fetch, `${xrpc}/com.atproto.server.createSession`, null, { identifier: handle, password: appPassword }, 'Bluesky login failed');
+  const session = await call(fetch, `${xrpc}/com.atproto.server.createSession`, {
+    body: JSON.stringify({ identifier: handle, password: appPassword }),
+  }, 'Bluesky login failed');
+  const embed = await cardEmbed(card, async ({ bytes, mimeType }) => {
+    const uploaded = await call(fetch, `${xrpc}/com.atproto.repo.uploadBlob`, {
+      accessJwt: session.accessJwt, contentType: mimeType, body: bytes,
+    }, 'Bluesky refused the card image');
+    return uploaded.blob;
+  });
   let root = null;
   let parent = null;
   for (const [index, text] of posts.entries()) {
@@ -500,13 +563,12 @@ export async function postBlueskyThread(posts, { service, handle, appPassword, c
       text,
       createdAt: new Date().toISOString(),
       langs: ['en'],
-      facets: linkFacets(text),
-      ...(root === null ? { embed: externalEmbed(card) } : { reply: { root, parent } }),
+      facets: richTextFacets(text),
+      ...(root === null ? { embed } : { reply: { root, parent } }),
     };
-    const created = await call(fetch, `${xrpc}/com.atproto.repo.createRecord`, session.accessJwt, {
-      repo: session.did,
-      collection: 'app.bsky.feed.post',
-      record,
+    const created = await call(fetch, `${xrpc}/com.atproto.repo.createRecord`, {
+      accessJwt: session.accessJwt,
+      body: JSON.stringify({ repo: session.did, collection: 'app.bsky.feed.post', record }),
     }, `Bluesky refused post ${index + 1}`);
     parent = { uri: created.uri, cid: created.cid };
     root ??= parent;
@@ -514,18 +576,22 @@ export async function postBlueskyThread(posts, { service, handle, appPassword, c
   return `https://bsky.app/profile/${session.did}/post/${root.uri.split('/').pop()}`;
 }
 
-function externalEmbed({ uri, title, description }) {
-  return { $type: 'app.bsky.embed.external', external: { uri, title, description } };
+async function cardEmbed({ uri, title, description, thumb }, uploadThumb) {
+  const external = { uri, title, description };
+  return {
+    $type: 'app.bsky.embed.external',
+    external: thumb === null ? external : { ...external, thumb: await uploadThumb(thumb) },
+  };
 }
 
-async function call(fetch, url, accessJwt, body, failure) {
+async function call(fetch, url, { accessJwt = null, contentType = 'application/json', body }, failure) {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': contentType,
       ...(accessJwt === null ? {} : { Authorization: `Bearer ${accessJwt}` }),
     },
-    body: JSON.stringify(body),
+    body,
   });
   if (!response.ok) {
     throw new Error(`${failure}: HTTP ${response.status} ${await response.text()}`);
@@ -537,7 +603,7 @@ async function call(fetch, url, accessJwt, body, failure) {
 - [ ] **Step 4: Run the tests to see them pass**
 
 Run: `node --test scripts/test/announce/`
-Expected: PASS, 18 tests
+Expected: PASS, 21 tests
 
 - [ ] **Step 5: Commit**
 
@@ -556,9 +622,9 @@ git commit -m "feat(#2096): post a release thread to Bluesky"
 - Modify: `.github/workflows/ci.yml` (`scripts` job, after the ShellCheck step)
 
 **Interfaces:**
-- Consumes: `extractHighlights` and `buildThread` (Task 1), `MASTODON_LIMIT` and `postMastodonThread` (Task 2), `BLUESKY_LIMIT`, `DEFAULT_BLUESKY_SERVICE` and `postBlueskyThread` (Task 3)
+- Consumes: `extractHighlights`, `buildThread`, `HOMEPAGE_URL`, `HOMEPAGE_TITLE` and `HOMEPAGE_DESCRIPTION` (Task 1), `MASTODON_LIMIT` and `postMastodonThread` (Task 2), `BLUESKY_LIMIT`, `DEFAULT_BLUESKY_SERVICE` and `postBlueskyThread` (Task 3)
 - Produces:
-  - `announce({ tag, releaseUrl, releaseBody, env, fetch, log, dryRun }): Promise<number>`: the exit code, `0` when every configured network posted or there was nothing to post
+  - `announce({ tag, releaseUrl, releaseBody, cardImage, env, fetch, log, dryRun }): Promise<number>`: the exit code, `0` when every configured network posted or there was nothing to post. `cardImage` is `{ bytes, mimeType } | null`, the Bluesky card thumbnail; the CLI reads `docs/homepage/share.png`.
   - CLI `node scripts/announce-release.mjs <tag> <release-url> [--dry-run] < body.md`
 
 - [ ] **Step 1: Write the failing tests**
@@ -570,7 +636,7 @@ import assert from 'node:assert/strict';
 import { announce } from '../../announce/announce.mjs';
 
 const releaseBody = '### Highlights\n\n**One.** First.\n\n## What\'s Changed\n';
-const base = { tag: 'v1.9.0', releaseUrl: 'https://example.org/release', releaseBody, dryRun: false };
+const base = { tag: 'v1.9.0', releaseUrl: 'https://example.org/release', releaseBody, cardImage: null, dryRun: false };
 const mastodonEnv = { MASTODON_INSTANCE: 'https://m.example', MASTODON_TOKEN: 't' };
 const blueskyEnv = { BLUESKY_HANDLE: 'h', BLUESKY_APP_PASSWORD: 'p' };
 
@@ -609,8 +675,8 @@ test('posts to every configured network', async () => {
   const code = await announce({ ...base, env: { ...mastodonEnv, ...blueskyEnv }, fetch, log });
 
   assert.equal(code, 0);
-  assert.equal(urls.filter((url) => url.endsWith('/api/v1/statuses')).length, 2);
-  assert.equal(urls.filter((url) => url.endsWith('/createRecord')).length, 2);
+  assert.equal(urls.filter((url) => url.endsWith('/api/v1/statuses')).length, 3);
+  assert.equal(urls.filter((url) => url.endsWith('/createRecord')).length, 3);
   assert.ok(urls.includes('https://bsky.social/xrpc/com.atproto.server.createSession'));
 });
 
@@ -643,7 +709,7 @@ test('a failing network fails the run but the other still posts', async () => {
 
   assert.equal(code, 1);
   assert.ok(lines.some((line) => line.startsWith('::error::Mastodon: Mastodon refused post 1: HTTP 503')));
-  assert.equal(urls.filter((url) => url.endsWith('/createRecord')).length, 2);
+  assert.equal(urls.filter((url) => url.endsWith('/createRecord')).length, 3);
 });
 
 test('a dry run prints both threads and calls nothing', async () => {
@@ -654,14 +720,12 @@ test('a dry run prints both threads and calls nothing', async () => {
 
   assert.equal(code, 0);
   assert.deepEqual(urls, []);
-  assert.deepEqual(lines, [
-    '--- Mastodon (2 posts)',
-    '[1] simple-feed-reader v1.9.0 is out. The highlights follow in this thread.\n\nhttps://example.org/release',
+  const thread = [
+    '[1] simple-feed-reader v1.9.0 is out. The highlights follow in this thread. #rss #rssreader\n\nhttps://lars-pohlmann.de/simplefeedreader/',
     '[2] One. First.',
-    '--- Bluesky (2 posts)',
-    '[1] simple-feed-reader v1.9.0 is out. The highlights follow in this thread.\n\nhttps://example.org/release',
-    '[2] One. First.',
-  ]);
+    '[3] Full release notes: https://example.org/release',
+  ];
+  assert.deepEqual(lines, ['--- Mastodon (3 posts)', ...thread, '--- Bluesky (3 posts)', ...thread]);
 });
 ```
 
@@ -676,16 +740,16 @@ Expected: FAIL with `Cannot find module '…/scripts/announce/announce.mjs'`
 // scripts/announce/announce.mjs
 import { BLUESKY_LIMIT, DEFAULT_BLUESKY_SERVICE, postBlueskyThread } from './bluesky.mjs';
 import { MASTODON_LIMIT, postMastodonThread } from './mastodon.mjs';
-import { buildThread, extractHighlights } from './thread.mjs';
+import { buildThread, extractHighlights, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, HOMEPAGE_URL } from './thread.mjs';
 
-export async function announce({ tag, releaseUrl, releaseBody, env, fetch, log, dryRun }) {
+export async function announce({ tag, releaseUrl, releaseBody, cardImage, env, fetch, log, dryRun }) {
   const highlights = extractHighlights(releaseBody);
   if (highlights.length === 0) {
     log(`${tag} has no highlights; nothing to announce.`);
     return 0;
   }
   let failures = 0;
-  for (const network of networks({ tag, releaseUrl, highlights, env, fetch })) {
+  for (const network of networks({ cardImage, env, fetch })) {
     const posts = buildThread({ tag, releaseUrl, highlights, limit: network.limit });
     if (dryRun) {
       log(`--- ${network.name} (${posts.length} posts)`);
@@ -706,7 +770,7 @@ export async function announce({ tag, releaseUrl, releaseBody, env, fetch, log, 
   return failures === 0 ? 0 : 1;
 }
 
-function networks({ tag, releaseUrl, highlights, env, fetch }) {
+function networks({ cardImage, env, fetch }) {
   return [
     {
       name: 'Mastodon',
@@ -722,7 +786,7 @@ function networks({ tag, releaseUrl, highlights, env, fetch }) {
         service: env.BLUESKY_SERVICE || DEFAULT_BLUESKY_SERVICE,
         handle: env.BLUESKY_HANDLE,
         appPassword: env.BLUESKY_APP_PASSWORD,
-        card: { uri: releaseUrl, title: `simple-feed-reader ${tag}`, description: highlights[0] },
+        card: { uri: HOMEPAGE_URL, title: HOMEPAGE_TITLE, description: HOMEPAGE_DESCRIPTION, thumb: cardImage },
         fetch,
       }),
     },
@@ -750,6 +814,7 @@ process.exitCode = await announce({
   tag,
   releaseUrl,
   releaseBody: readFileSync(0, 'utf8'),
+  cardImage: { bytes: readFileSync(new URL('../docs/homepage/share.png', import.meta.url)), mimeType: 'image/png' },
   env: process.env,
   fetch: globalThis.fetch,
   log: console.log,
@@ -762,13 +827,16 @@ Then make it executable: `chmod +x scripts/announce-release.mjs`
 - [ ] **Step 5: Run the tests to see them pass, then dry-run against v1.9.0**
 
 Run: `node --test scripts/test/announce/`
-Expected: PASS, 23 tests
+Expected: PASS, 26 tests
 
 Run:
 ```bash
-gh release view v1.9.0 --json body,url --jq .body | node scripts/announce-release.mjs v1.9.0 https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0 --dry-run
+gh release view v1.9.0 --json body --jq .body | node scripts/announce-release.mjs v1.9.0 https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0 --dry-run
 ```
-Expected: a Mastodon and a Bluesky thread, each a root post plus `[2] Social searches as feeds. You can now subscribe to a Bluesky or Mastodon search, and it shows up as a feed of its own under a new Searches group in the sidebar.`
+Expected: a Mastodon thread and a Bluesky thread, each with 3 posts:
+- `[1]` is the root post, with `#rss #rssreader` and the homepage link.
+- `[2]` is `Social searches as feeds. You can now subscribe to a Bluesky or Mastodon search, and it shows up as a feed of its own under a new Searches group in the sidebar.`
+- `[3]` is `Full release notes: https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0`.
 
 - [ ] **Step 6: Run the tests in CI**
 
@@ -907,9 +975,15 @@ Add before `## Steps`:
 
 When the `### Highlights` block under `## [Unreleased]` is non-empty at tag time,
 [`announce-release.yml`](../.github/workflows/announce-release.yml) posts a thread
-to each configured network: a root post linking the GitHub Release, then each
-highlight as a reply (split at sentences when it exceeds Bluesky's 300 or
-Mastodon's 500 graphemes). A release without highlights posts nothing.
+to each configured network:
+- a root post that links the [homepage](https://lars-pohlmann.de/simplefeedreader/)
+  and carries `#rss #rssreader`. On Bluesky it shows a card with the homepage's
+  share image.
+- each highlight as a reply, split at sentence ends when it is longer than
+  Bluesky's 300 or Mastodon's 500 characters.
+- a closing reply that links the GitHub Release.
+
+A release without highlights posts nothing.
 
 Repository secrets (a network whose secrets are missing is skipped with a warning):
 
