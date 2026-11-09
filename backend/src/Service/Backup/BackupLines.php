@@ -9,19 +9,11 @@ use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Entity\SavedSearch;
-use App\Entity\Subscription;
-use App\Entity\SubscriptionTag;
-use App\Entity\Tag;
-use App\Entity\User;
-use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\BackupTotals;
-use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
-use App\Service\Social\Model\ExportedSubscriptionModel;
 
 /**
  * Encodes one backup record as its NDJSON line, the schema BackupReader parses back. The exporter decides which
@@ -55,93 +47,6 @@ final readonly class BackupLines
             'parts' => null,
             'totals' => null,
         ]);
-    }
-
-    public function accountLine(User $user, AccountNetworkSwitchesModel $networks): string
-    {
-        return BackupLineFormat::encode([
-            'kind' => BackupSchema::KIND_ACCOUNT,
-            'locale' => $user->getLocale(),
-            'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
-            'magazineStyle' => $user->getPreferences()->getMagazineStyle()->value,
-            'sharingEnabled' => $user->getPreferences()->isSharingEnabled(),
-            'hiddenShareTargets' => $user->getPreferences()->getHiddenShareTargets(),
-            'rememberShares' => $user->getPreferences()->isRememberingShares(),
-            'trendingEnabled' => $user->getPreferences()->isTrendingEnabled(),
-            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($networks->savedSearchIncludedNetworks),
-            'forYouExcludedNetworks' => SocialNetwork::valuesOf($networks->forYouExcludedNetworks),
-        ]);
-    }
-
-    public function tagLine(Tag $tag): string
-    {
-        return BackupLineFormat::encode([
-            'kind' => BackupSchema::KIND_TAG,
-            'name' => $tag->getName(),
-            'color' => $tag->getColor(),
-            'icon' => $tag->getIcon(),
-            'position' => $tag->getPosition(),
-            'parent' => $tag->getParent()?->getName(),
-        ]);
-    }
-
-    public function savedSearchLine(SavedSearch $savedSearch): string
-    {
-        return BackupLineFormat::encode([
-            'kind' => BackupSchema::KIND_SAVED_SEARCH,
-            'term' => $savedSearch->getTerm(),
-            'wholeWord' => $savedSearch->isWholeWord(),
-            'phrase' => $savedSearch->isPhrase(),
-            'position' => $savedSearch->getPosition(),
-        ]);
-    }
-
-    public function feedLine(ExportedSubscriptionModel $exported): string
-    {
-        $feed = $exported->subscription->getFeed();
-
-        return BackupLineFormat::encode([
-            'kind' => BackupSchema::KIND_FEED,
-            'url' => $exported->feedUrl,
-            'siteUrl' => $feed->getSiteUrl(),
-            'title' => $feed->getTitle(),
-            'description' => $feed->getDescription(),
-            'faviconUrl' => $feed->getFaviconUrl(),
-            'imageUrl' => $feed->getImageUrl(),
-            'sourceFormat' => $exported->feedSourceFormat,
-        ]);
-    }
-
-    public function subscriptionLine(ExportedSubscriptionModel $exported): string
-    {
-        $subscription = $exported->subscription;
-
-        return BackupLineFormat::encode([
-            'kind' => BackupSchema::KIND_SUBSCRIPTION,
-            'feedUrl' => $exported->feedUrl,
-            'customTitle' => $subscription->getCustomTitle(),
-            'position' => $subscription->getPosition(),
-            'markedReadUntil' => BackupLineFormat::dateOrNull($subscription->getMarkedReadUntil()),
-            'createdAt' => BackupLineFormat::date($subscription->getCreatedAt()),
-            'tags' => $this->subscriptionTagRefs($subscription),
-            'includeInAllItems' => $subscription->isIncludeInAllItems(),
-            'includeInForYou' => $subscription->isIncludeInForYou(),
-            'includeInSavedSearches' => $subscription->isIncludeInSavedSearches(),
-        ]);
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function subscriptionTagRefs(Subscription $subscription): array
-    {
-        return array_map(
-            static fn (SubscriptionTag $subscriptionTag): array => [
-                'name' => $subscriptionTag->getTag()->getName(),
-                'position' => $subscriptionTag->getPosition(),
-            ],
-            $subscription->getSubscriptionTags(),
-        );
     }
 
     public function entryLine(Entry $entry, string $feedUrl, EntryCompanionsModel $companions): string

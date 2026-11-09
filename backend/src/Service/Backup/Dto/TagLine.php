@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\Tag;
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 
 /**
@@ -32,5 +35,28 @@ final readonly class TagLine
             position: LineField::int($line, 'position'),
             parent: LineField::stringOrNull($line, 'parent'),
         );
+    }
+
+    public static function of(Tag $tag): self
+    {
+        return new self(
+            name: $tag->getName(),
+            color: $tag->getColor(),
+            icon: $tag->getIcon(),
+            position: $tag->getPosition(),
+            parent: $tag->getParent()?->getName(),
+        );
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode([
+            'kind' => BackupSchema::KIND_TAG,
+            'name' => $this->name,
+            'color' => $this->color,
+            'icon' => $this->icon,
+            'position' => $this->position,
+            'parent' => $this->parent,
+        ]);
     }
 }

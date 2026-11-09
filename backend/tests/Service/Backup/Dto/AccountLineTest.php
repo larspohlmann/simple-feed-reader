@@ -8,6 +8,8 @@ use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\AccountNetworkSwitchesModel;
+use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\TestCase;
 
 final class AccountLineTest extends TestCase
@@ -137,5 +139,26 @@ final class AccountLineTest extends TestCase
         $this->expectExceptionMessage('Field "magazineStyle" is missing or not a string.');
 
         AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'magazineStyle' => 5]);
+    }
+
+    public function testItWritesTheAccountsSettingsAndNetworkSwitches(): void
+    {
+        $user = BackupLineRecords::user();
+        $user->setLocale('de');
+        $preferences = $user->getPreferences();
+        $preferences->setScrapeFallbackEnabled(true);
+        $preferences->setMagazineStyle(MagazineStyle::Airy);
+        $preferences->setHiddenShareTargets(['mastodon', 'email']);
+        $preferences->setRememberingShares(false);
+        $preferences->setTrendingEnabled(false);
+        $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [SocialNetwork::Mastodon]);
+
+        self::assertSame(
+            '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
+            . '"sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],"rememberShares":false,'
+            . '"trendingEnabled":false,"savedSearchIncludedNetworks":["bluesky"],'
+            . '"forYouExcludedNetworks":["mastodon"]}',
+            AccountLine::of($user, $networks)->toBackupLine(),
+        );
     }
 }

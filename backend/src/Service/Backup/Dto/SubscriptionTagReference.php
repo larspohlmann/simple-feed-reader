@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\SubscriptionTag;
 use App\Service\Backup\Support\LineField;
 
 /**
@@ -28,5 +29,16 @@ final readonly class SubscriptionTagReference
             name: LineField::string($line, 'name'),
             position: LineField::int($line, 'position'),
         );
+    }
+
+    public static function of(SubscriptionTag $subscriptionTag): self
+    {
+        return new self(name: $subscriptionTag->getTag()->getName(), position: $subscriptionTag->getPosition());
+    }
+
+    /** @return array{name: string, position: int} */
+    public function toBackupFields(): array
+    {
+        return ['name' => $this->name, 'position' => $this->position];
     }
 }
