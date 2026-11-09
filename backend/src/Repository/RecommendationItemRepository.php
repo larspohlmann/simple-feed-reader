@@ -21,8 +21,11 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationItemRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry, private readonly RowIds $rowIds)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly RowIds $rowIds,
+        private readonly EntryListRowHydrator $rowHydrator,
+    ) {
         parent::__construct($registry, RecommendationItem::class);
     }
 
@@ -184,56 +187,15 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     {
         /** @var RecommendationItem $item */
         $item = $row[0];
-        $entry = $item->getEntry();
-        $esHidden = $row['esHidden'];
-        $markedReadUntil = $row['markedReadUntil'];
         $runCompletedAt = $row['runCompletedAt'];
 
-        $listRow = new EntryListRow(
-            entry: $entry,
-            subscription: new EntryListRowSubscription(self::toInt($row['subscriptionId']), $this->rowTitle($row)),
-            marks: new EntryListRowMarks(
-                isHidden: EffectiveReadState::isHidden(
-                    $esHidden === null ? null : (bool) $esHidden,
-                    $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
-                    $entry->getEffectiveDate(),
-                ),
-                isFavorite: (bool) ($row['esFavorite'] ?? false),
-                isKept: (bool) ($row['esKept'] ?? false),
-                viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable ? $row['esViewedAt'] : null,
-                sharedAt: $row['eshSharedAt'] instanceof \DateTimeImmutable ? $row['eshSharedAt'] : null,
-            ),
-            markedReadUntil: $markedReadUntil instanceof \DateTimeImmutable ? $markedReadUntil : null,
-        );
-
         return new RecommendationFeedRow(
-            row: $listRow,
+            row: $this->rowHydrator->hydrateEntry($item->getEntry(), $row),
             reason: $item->getReason(),
             runId: $item->getRun()->requireId(),
             position: $item->getPosition(),
             score: $item->getScore(),
             runGeneratedAt: $runCompletedAt instanceof \DateTimeImmutable ? $runCompletedAt : null,
-        );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return \is_numeric($value) ? (int) $value : 0;
-    }
-
-    /**
-     * @param array<array-key, mixed> $row
-     */
-    private function rowTitle(array $row): string
-    {
-        $customTitle = $row['customTitle'];
-        $feedTitle = $row['feedTitle'];
-        $feedUrl = $row['feedUrl'];
-
-        return SubscriptionDisplayTitle::from(
-            \is_string($customTitle) ? $customTitle : null,
-            \is_string($feedTitle) ? $feedTitle : null,
-            \is_string($feedUrl) ? $feedUrl : '',
         );
     }
 }
