@@ -32,6 +32,7 @@ final class SearchQueryAlternativesTest extends TestCase
         yield 'a negated group of alternatives is left out' => ['rss -(atom || json)', ['rss']];
         yield 'a negated group of two terms is left out' => ['rss -(atom json)', ['rss']];
         yield 'a negated group of one term is that term negated' => ['rss -(atom)', ['rss -atom']];
+        yield 'a negated negation is left out' => ['rss --atom', ['rss']];
         yield 'repeated alternatives once' => ['rss || rss', ['rss']];
         yield 'an empty phrase is nothing' => ['rss ""', ['rss']];
         yield 'a stray closing bracket is nothing' => ['rss ) reader', ['rss reader']];

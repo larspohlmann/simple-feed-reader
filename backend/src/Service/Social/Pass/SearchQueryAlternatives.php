@@ -106,7 +106,11 @@ final class SearchQueryAlternatives
      */
     private static function negated(array $operand): array
     {
-        return 1 === \count($operand) && 1 === \count($operand[0]) ? [['-' . $operand[0][0]]] : [[]];
+        if (1 !== \count($operand) || 1 !== \count($operand[0]) || str_starts_with($operand[0][0], '-')) {
+            return [[]];
+        }
+
+        return [['-' . $operand[0][0]]];
     }
 
     /**
