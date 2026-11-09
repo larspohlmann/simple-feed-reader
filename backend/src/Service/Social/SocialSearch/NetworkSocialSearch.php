@@ -16,11 +16,11 @@ use App\Service\Social\BlueskySessions;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\Support\BlueskySearchPage;
 use App\Service\Social\Support\MastodonSearchPage;
 use App\Service\Social\Support\MastodonSearchQueries;
 use App\Service\Social\Support\SocialSearchPaths;
+use App\Service\Social\TimelineRounds;
 
 final readonly class NetworkSocialSearch implements SocialSearchInterface
 {
@@ -31,7 +31,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
         private ConcurrentRequestEngine $engine,
         private AnswerSettlerInterface $settler,
         private ActingAccountGuard $guard,
-        private TimelineSlotsModel $slots,
+        private TimelineRounds $timelineRounds,
     ) {
     }
 
@@ -55,8 +55,9 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
     /** @return list<ApiResponseModel> one accepted answer per alternative, in the alternatives' order */
     private function mastodonAnswers(SocialAccount $account, string $query): array
     {
+        $slots = $this->timelineRounds->slots();
         $tickets = array_map(
-            fn (string $alternative): RequestTicketModel => $this->slots->ticketFor(
+            fn (string $alternative): RequestTicketModel => $slots->ticketFor(
                 $account,
                 $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($alternative, null)),
             ),

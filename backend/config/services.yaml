@@ -235,11 +235,6 @@ services:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
 
-    App\Service\Social\Model\TimelineSlotsModel:
-        arguments:
-            $perAccount: '%social_account_concurrency%'
-            $perHost: '%social_host_concurrency%'
-
     App\Service\Social\SocialSearch\NetworkSocialSearch:
         arguments:
             $settler: '@App\Service\Fetch\AnswerSettler\PassThroughSettler'

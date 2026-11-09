@@ -24,10 +24,11 @@ final readonly class TimelineRounds
     /** @param array<int, SocialFeed> $socialFeedsByFeedId the refresh's private feeds, each with its account loaded */
     public function start(array $socialFeedsByFeedId): TimelineRound
     {
-        return new TimelineRound(
-            $this->sources,
-            new TimelineSlotsModel($this->accountConcurrency, $this->hostConcurrency),
-            $socialFeedsByFeedId,
-        );
+        return new TimelineRound($this->sources, $this->slots(), $socialFeedsByFeedId);
+    }
+
+    public function slots(): TimelineSlotsModel
+    {
+        return new TimelineSlotsModel($this->accountConcurrency, $this->hostConcurrency);
     }
 }

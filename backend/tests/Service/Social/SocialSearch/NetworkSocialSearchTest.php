@@ -11,7 +11,6 @@ use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\SocialSearch\NetworkSocialSearch;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -212,7 +211,7 @@ final class NetworkSocialSearchTest extends TestCase
             SocialApiWiring::requestEngine($http),
             new PassThroughSettler(),
             new ActingAccountGuard($this->entityManager),
-            new TimelineSlotsModel(2, 4),
+            SocialApiWiring::timelineRounds($http, $this->cache),
         );
     }
 
