@@ -64,10 +64,7 @@ final class CatalogControllerTest extends ApiTestCase
         self::assertSame('#3b82f6', $body['categories'][0]['color']);
         self::assertSame(['The Verge'], array_column($body['categories'][0]['feeds'], 'title'));
         self::assertFalse($body['categories'][0]['feeds'][0]['subscribed']);
-        self::assertSame(
-            '/api/catalog/feeds/' . $verge->getId() . '/favicon',
-            $body['categories'][0]['feeds'][0]['faviconUrl'],
-        );
+        self::assertArrayNotHasKey('faviconUrl', $body['categories'][0]['feeds'][0]);
     }
 
     public function testAFeedTheUserAlreadySubscribesToIsMarkedSubscribed(): void

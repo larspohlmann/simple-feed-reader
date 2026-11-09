@@ -13,8 +13,8 @@ use App\Service\Catalog\Pass\CatalogImportPass;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Applies a validated catalog document in one transaction, matching rows by natural key (category key, feed URL) so
- * a surviving feed keeps its cached favicon. Locked rows belong to the admin: never overwritten, never removed.
+ * Applies a validated catalog document in one transaction, matching rows by natural key (category key, feed URL).
+ * Locked rows belong to the admin: never overwritten, never removed.
  */
 final readonly class CatalogImporter
 {

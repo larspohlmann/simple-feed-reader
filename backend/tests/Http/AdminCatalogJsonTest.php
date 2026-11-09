@@ -10,7 +10,6 @@ use App\Http\AdminCatalogJson;
 use App\Service\Catalog\Model\BundledCatalogSummaryModel;
 use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
 use App\Service\Catalog\Model\CatalogDocumentFeedModel;
-use App\Service\Catalog\Model\CatalogWarmReportModel;
 use App\Service\Catalog\Model\ParsedCatalogModel;
 use PHPUnit\Framework\TestCase;
 
@@ -24,14 +23,6 @@ final class AdminCatalogJsonTest extends TestCase
         self::assertSame(
             ['categories' => [AdminCatalogJson::category($category)], 'feeds' => [AdminCatalogJson::feed($feed)]],
             AdminCatalogJson::listing([$category], [$feed]),
-        );
-    }
-
-    public function testTheWarmReportMapsEveryCount(): void
-    {
-        self::assertSame(
-            ['warmed' => 3, 'failed' => 1, 'remaining' => 7],
-            AdminCatalogJson::warmReport(new CatalogWarmReportModel(3, 1, 7)),
         );
     }
 

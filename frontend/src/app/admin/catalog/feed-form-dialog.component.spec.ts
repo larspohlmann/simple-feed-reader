@@ -41,8 +41,6 @@ const feed: AdminCatalogFeedDto = {
   position: 0,
   enabled: true,
   locked: false,
-  faviconFetchedAt: null,
-  faviconFailedAt: null,
 };
 
 describe('FeedFormDialogComponent', () => {

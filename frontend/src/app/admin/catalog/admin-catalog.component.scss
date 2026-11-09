@@ -43,18 +43,6 @@
   margin-bottom: 0;
 }
 
-.warm {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.progress {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
 .progress-panel {
   display: flex;
   flex: 1 1 14rem;

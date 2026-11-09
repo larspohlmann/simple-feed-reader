@@ -17,9 +17,6 @@ const MANY = 23;
 /** Short enough that the rail fits, which is what strands a sticky box. */
 const FEW = 5;
 
-/** A 1x1 transparent GIF, so the picker's favicons never leave the page. */
-const BLANK_ICON = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
 function catalog(categories: number, feedsEach = 1) {
   return {
     categories: Array.from({ length: categories }, (_, index) => ({
@@ -31,7 +28,6 @@ function catalog(categories: number, feedsEach = 1) {
         id: (index + 1) * 100 + feed,
         title: `Feed ${index + 1}-${feed}`,
         description: 'A stubbed catalog feed',
-        faviconUrl: BLANK_ICON,
         subscribed: false,
       })),
     })),

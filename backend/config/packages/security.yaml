@@ -75,8 +75,6 @@ security:
         - { path: ^/api/auth/passkeys, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/auth/, roles: PUBLIC_ACCESS }
         - { path: ^/api/setup/, roles: PUBLIC_ACCESS }
-        # Catalog favicons are public image bytes for plain <img> tags, which cannot send the JWT; no user data.
-        - { path: '^/api/catalog/feeds/\d+/favicon$', roles: PUBLIC_ACCESS }
         # Frontend error ingest (#984). Anonymous is allowed — errors happen
         # while logged out — but the api firewall still runs the JWT
         # authenticator, so a logged-in report resolves a #[CurrentUser].

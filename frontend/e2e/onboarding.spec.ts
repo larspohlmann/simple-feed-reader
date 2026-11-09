@@ -198,21 +198,6 @@ async function dismissPasskeyOffer(page: Page): Promise<void> {
 }
 
 test('a new user is sent to the picker and lands in a reader with their tags', async ({ page }) => {
-  const failures: string[] = [];
-  // The picker must make NO request to a publisher domain — favicons come from
-  // our own origin (/api/catalog/feeds/{id}/favicon), cached or monogram. This
-  // is the assertion that keeps it so. Attached from the start so it catches
-  // every favicon load the picker fires, but scoped to requests made WHILE the
-  // picker is on screen: sign-in transiently mounts the reader (whose header
-  // loads the user's gravatar avatar) before the redirect to /discover, and
-  // that benign external avatar request is not the publisher-domain favicon
-  // fetch this guards against.
-  page.on('request', (request) => {
-    if (!page.url().includes('/discover')) return;
-    const url = new URL(request.url());
-    if (!['localhost', '127.0.0.1'].includes(url.hostname)) failures.push(request.url());
-  });
-
   await registerAndVerify(page);
 
   await expect(page).toHaveURL(/\/discover$/, { timeout: NAV_TIMEOUT });
@@ -234,8 +219,6 @@ test('a new user is sent to the picker and lands in a reader with their tags', a
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
   await expect(sidebar.getByRole('link', { name: 'Technology' })).toBeVisible();
   await expect(sidebar.getByRole('link', { name: 'Science' })).toBeVisible();
-
-  expect(failures).toEqual([]);
 });
 
 test('skipping goes to the reader and leaves a way back', async ({ page }) => {

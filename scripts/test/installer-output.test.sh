@@ -135,12 +135,12 @@ notes_start
 [ -n "${SFR_NOTES_FILE}" ] || fail 'notes_start did not open a collection'
 
 warn 'The bundled catalog was not imported.' 2>/dev/null
-warn 'Some catalog favicons are missing.' 2>/dev/null
+warn 'The mail relay was not tested.' 2>/dev/null
 
 notes=$(print_notes)
 assert_contains 'Things to check' "${notes}" 'the notes heading'
 assert_contains 'The bundled catalog was not imported.' "${notes}" 'the first warning'
-assert_contains 'Some catalog favicons are missing.' "${notes}" 'the second warning'
+assert_contains 'The mail relay was not tested.' "${notes}" 'the second warning'
 
 # Printing empties the collection: update.sh prints one block per updated
 # stack, and the warnings belong under the first one only.

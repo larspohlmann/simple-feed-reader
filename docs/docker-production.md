@@ -150,17 +150,13 @@ values only you know:
   `./scripts/prod-configure.sh` asks again at any time.
 
 Once the stack is up, the installer fills the **onboarding catalog** from the
-document this release ships and fetches an icon for every feed in it — a few
-minutes of requests, paid once and cached in the database. Only the installer
-does this: from then on the catalog is yours, and neither an update nor a
-restart re-applies the shipped document over your edits. A manual install
-does the same in two commands:
+document this release ships. Only the installer does this: from then on the
+catalog is yours, and neither an update nor a restart re-applies the shipped
+document over your edits. A manual install does the same in one command:
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
   exec -u www-data php bin/console app:catalog:import --if-empty
-docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
-  exec -u www-data php bin/console app:catalog:warm-favicons
 ```
 
 At the end it offers to send a **test mail** — accept, and a wrong relay

@@ -11,8 +11,6 @@ const CATEGORY_COUNT = 23;
 /** The one deliberately placed out of the first screenful. */
 const BURIED = 13;
 
-const BLANK_ICON = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
 const CATALOG = {
   categories: Array.from({ length: CATEGORY_COUNT }, (_, index) => ({
     id: index + 1,
@@ -24,7 +22,6 @@ const CATALOG = {
         id: (index + 1) * 100,
         title: `Feed ${index + 1}`,
         description: 'A stubbed catalog feed',
-        faviconUrl: BLANK_ICON,
         subscribed: false,
       },
     ],

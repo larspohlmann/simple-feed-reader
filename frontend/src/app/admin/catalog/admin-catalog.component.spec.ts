@@ -35,8 +35,6 @@ const PAYLOAD = {
       position: 0,
       enabled: true,
       locked: false,
-      faviconFetchedAt: null,
-      faviconFailedAt: null,
     },
   ],
 };
@@ -86,17 +84,6 @@ describe('AdminCatalogComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('[data-testid="admin-feed"]')).toHaveLength(1);
   });
 
-  it('refreshes a favicon on demand', () => {
-    const fixture = mountLoaded();
-    fixture.nativeElement.querySelector('[data-testid="refresh-favicon"]').click();
-
-    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/feeds/10/favicon');
-    expect(testRequest.request.method).toBe('POST');
-    testRequest.flush({
-      feed: { ...PAYLOAD.feeds[0], faviconFetchedAt: '2026-07-26T10:00:00+00:00' },
-    });
-  });
-
   it('imports the bundled document without transferring a file', () => {
     const fixture = mountLoaded();
     const button: HTMLButtonElement = fixture.nativeElement.querySelector(
@@ -119,20 +106,6 @@ describe('AdminCatalogComponent', () => {
     });
 
     ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
-
-    // A freshly imported catalog has no icons, so warming starts on its own —
-    // this is what makes icons work without any deployment-specific step.
-    ctrl
-      .expectOne('https://api.test/api/admin/catalog/favicons/warm')
-      .flush({ warmed: 25, failed: 0, remaining: 86 });
-    fixture.detectChanges();
-    const progress = fixture.nativeElement.querySelector('[role="progressbar"]') as HTMLElement;
-    expect(progress).not.toBeNull();
-    expect(progress.textContent).toContain('86');
-    expect(progress.getAttribute('aria-valuetext')).toBe('Fetching icons — 86 left');
-    ctrl
-      .expectOne('https://api.test/api/admin/catalog/favicons/warm')
-      .flush({ warmed: 86, failed: 0, remaining: 0 });
   });
 
   it('keeps import controls disabled and visible while it reloads the catalog', () => {
@@ -171,37 +144,6 @@ describe('AdminCatalogComponent', () => {
     expect(root.querySelector('app-skeleton')).not.toBeNull();
 
     ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
-  });
-
-  it('does not show a zero remaining count before favicon warming reports progress', () => {
-    const fixture = mountLoaded();
-    fixture.componentInstance.warm();
-    fixture.detectChanges();
-
-    const progress = fixture.nativeElement.querySelector('[role="progressbar"]') as HTMLElement;
-    expect(progress.textContent).toContain('Fetching icons');
-    expect(progress.textContent).not.toContain('0 left');
-
-    ctrl.expectOne('https://api.test/api/admin/catalog/favicons/warm').flush({
-      warmed: 0,
-      failed: 0,
-      remaining: 0,
-    });
-  });
-
-  it('explains when favicon warming fails', () => {
-    const fixture = mountLoaded();
-    fixture.componentInstance.warm();
-    ctrl
-      .expectOne('https://api.test/api/admin/catalog/favicons/warm')
-      .flush(
-        { type: 'about:blank', title: 'Icon service unavailable', status: 503 },
-        { status: 503, statusText: 'Service Unavailable' },
-      );
-    fixture.detectChanges();
-
-    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
-    expect(alert.textContent).toContain('Icon service unavailable');
   });
 
   it('posts a chosen document with the selected mode and reloads afterwards', async () => {

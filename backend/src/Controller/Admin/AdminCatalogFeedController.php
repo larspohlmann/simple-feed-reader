@@ -8,7 +8,6 @@ use App\Dto\Admin\CatalogFeedRequest;
 use App\Dto\Admin\ReorderRequest;
 use App\Http\AdminCatalogJson;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Catalog\CatalogFaviconWarmer;
 use App\Service\Catalog\CatalogFeedEditor;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,7 +19,6 @@ final readonly class AdminCatalogFeedController
 {
     public function __construct(
         private CatalogFeedRepository $feeds,
-        private CatalogFaviconWarmer $warmer,
         private CatalogFeedEditor $editor,
     ) {
     }
@@ -57,20 +55,5 @@ final readonly class AdminCatalogFeedController
         $this->editor->delete($this->feeds->getById($id));
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
-    }
-
-    /**
-     * Re-fetch one row's icon, for a publisher that changed its icon.
-     * A failed fetch is a recorded failure and a 200 — the same outcome the warm
-     * command produces — not a 500.
-     */
-    #[Route('/{id}/favicon', name: 'api_admin_catalog_feed_favicon', methods: ['POST'], requirements: ['id' => '\d+'])]
-    public function refreshFavicon(int $id): JsonResponse
-    {
-        $feed = $this->feeds->getById($id);
-
-        $this->warmer->refresh($feed);
-
-        return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)]);
     }
 }

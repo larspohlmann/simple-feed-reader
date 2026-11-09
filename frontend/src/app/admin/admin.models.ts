@@ -116,12 +116,6 @@ export interface BundledCatalogInfo {
   feeds: number;
 }
 
-export interface CatalogWarmReport {
-  warmed: number;
-  failed: number;
-  remaining: number;
-}
-
 export interface CatalogImportCounts {
   categoriesCreated: number;
   categoriesUpdated: number;
@@ -144,8 +138,6 @@ export interface AdminCatalogFeedDto {
   enabled: boolean;
   /** Locked rows survive an import untouched — neither overwritten nor deleted. */
   locked: boolean;
-  faviconFetchedAt: string | null;
-  faviconFailedAt: string | null;
 }
 
 export type QueueNameDto =
