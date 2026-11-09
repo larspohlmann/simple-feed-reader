@@ -512,6 +512,71 @@ git add frontend/src
 git commit -m "fix(#2106): refresh only never-fetched feeds after a social or OPML import"
 ```
 
+### Task 4b: `RefreshScope` becomes a discriminated union
+
+Task 4 met ESLint's complexity limit in `ReaderApi.refresh` by extracting `refreshScopeParams` plus a `networkParams` helper whose only job was to lower the count. The rule is "lint limit → refactor": the weakness the metric points at is `RefreshScope` itself — optional `feedId`/`tagId`/`network`/`group`/`neverFetched` fields that are mutually exclusive, so any mix type-checks and `refreshScopeParams` resolves a mix by silent precedence. This is the frontend twin of Task 2's `RefreshTarget`. Behaviour (the query parameters each scope sends) must not change.
+
+**Files:**
+- Modify: `frontend/src/app/reader/query/query.ts` (`RefreshScope` and its docblock)
+- Modify: `frontend/src/app/reader/refresh-params.ts` (`refreshScopeParams`; delete `networkParams`)
+- Modify: every construction site — `frontend/src/app/reader/shell/refresh-actions.service.ts` (`refreshScope`, `sectionScope`, `addFeed`), `frontend/src/app/reader/feeds/manage/manage-actions.service.ts` (two `{ feedId: … }` sites), `frontend/src/app/reader/feeds/social-picker/social-import-dialog.component.ts`, `frontend/src/app/settings/import/opml-section.component.ts`; `reader-api.ts` and `state/refresh.service.ts` only if their signatures need it
+- Test: `frontend/src/app/reader/reader-api.spec.ts`, the specs asserting on scopes (`social-import-dialog.component.spec.ts`, `refresh.service.spec.ts`, `refresh-actions`/`manage-actions` specs — find them with `grep -rln "feedId:\|tagId:\|neverFetched\|group: '\|network: '" frontend/src/app --include='*.spec.ts'`), and a new `frontend/src/app/reader/refresh-params.spec.ts`
+
+**Interfaces:**
+- Produces:
+
+```ts
+export type RefreshScope =
+  | { kind: 'all' }
+  | { kind: 'feed'; feedId: number }
+  | { kind: 'tag'; tagId: number }
+  | { kind: 'network'; network: SocialNetworkName; feedKind?: NetworkFeedKind }
+  | { kind: 'group'; group: FeedGroupName }
+  | { kind: 'neverFetched' };
+```
+
+  `{ kind: 'all' }` replaces the empty object `{}` that `refreshScope()` returns for the "all" selection today. Callers that pass no scope keep meaning "all" (`RefreshService.run(onDone?, scope?)` and `ReaderApi.refresh(scope?)` stay optional).
+
+- [ ] **Step 1: Write the failing test** — `frontend/src/app/reader/refresh-params.spec.ts`:
+
+```ts
+import { refreshScopeParams } from './refresh-params';
+
+describe('refreshScopeParams', () => {
+  it.each([
+    [{ kind: 'all' } as const, {}],
+    [{ kind: 'feed', feedId: 42 } as const, { feedId: '42' }],
+    [{ kind: 'tag', tagId: 3 } as const, { tag: '3' }],
+    [{ kind: 'network', network: 'mastodon' } as const, { network: 'mastodon' }],
+    [
+      { kind: 'network', network: 'mastodon', feedKind: 'profile' } as const,
+      { network: 'mastodon', feedKind: 'profile' },
+    ],
+    [{ kind: 'group', group: 'feeds' } as const, { group: 'feeds' }],
+    [{ kind: 'neverFetched' } as const, { neverFetched: '1' }],
+  ])('maps %o to its query parameters', (scope, params) => {
+    expect(refreshScopeParams(scope)).toEqual(params);
+  });
+
+  it('maps no scope to every due feed', () => {
+    expect(refreshScopeParams()).toEqual({});
+  });
+});
+```
+
+- [ ] **Step 2: Run it to see it fail** (type errors on `kind`): `docker compose exec -T frontend npm test -- refresh-params`
+
+- [ ] **Step 3: Implement** — change the type; rewrite `refreshScopeParams(scope: RefreshScope = { kind: 'all' })` as one exhaustive `switch (scope.kind)` with no helper (the `network` case spreads `feedKind` only when set); delete `networkParams`; update every construction site to the union (`{ kind: 'feed', feedId }`, `{ kind: 'tag', tagId: selection.id }`, `{ kind: 'network', network, feedKind }`, `{ kind: 'group', group }`, `{ kind: 'all' }`, `{ kind: 'neverFetched' }`); update spec expectations the same way. `npm run check`'s `tsc` passes over app, spec and e2e will list every site you missed. Rewrite the `RefreshScope` docblock to describe the union in one or two lines; keep `reader-api.ts`'s `refresh` docblock accurate.
+
+- [ ] **Step 4: Verify** — the touched specs, then `docker compose exec -T frontend npm run check` (ESLint complexity must pass without `networkParams`).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src
+git commit -m "refactor(#2106): make RefreshScope a discriminated union"
+```
+
 ### Task 5: Gates
 
 - [ ] `composer check`, `composer md` (touched files clean), `php bin/phpunit` and `docker compose exec php composer test:parallel` in parallel.
