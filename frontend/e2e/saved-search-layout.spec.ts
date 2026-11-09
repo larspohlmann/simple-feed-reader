@@ -38,7 +38,11 @@ async function stubReader(page: Page): Promise<void> {
       return json({ needsSetup: false, mailEnabled: false, passkeySignInAvailable: false });
     }
     if (path.endsWith('/me'))
-      return json({ email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
+      return json({
+        email: 'fixture@example.invalid',
+        roles: ['ROLE_USER'],
+        catalog: { hasEntries: false },
+      });
     if (path.endsWith('/subscriptions')) {
       return json(
         subscriptionsJson([aSubscription({ feedId: 10, title: 'Fixture feed' })], {

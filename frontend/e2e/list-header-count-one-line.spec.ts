@@ -64,7 +64,11 @@ async function stubReader(page: Page): Promise<void> {
     // empty body throws inside a computed and stops the render mid-pass, which
     // leaves the heading on its fallback name.
     if (path.endsWith('/api/me')) {
-      return json({ email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
+      return json({
+        email: 'fixture@example.invalid',
+        roles: ['ROLE_USER'],
+        catalog: { hasEntries: false },
+      });
     }
     if (path.endsWith('/api/tags')) return json({ tags: [] });
     if (path.endsWith('/api/saved-searches')) return json({ savedSearches: [] });

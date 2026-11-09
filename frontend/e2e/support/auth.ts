@@ -25,7 +25,9 @@ export async function stubAuthToken(page: Page): Promise<void> {
     });
   });
   await page.route(/\/api\/me(?:[?#]|$)/, (route) =>
-    route.fulfill({ json: { id: 1, email: '', roles: [], preferences: {} } }),
+    route.fulfill({
+      json: { id: 1, email: '', roles: [], preferences: {}, catalog: { hasEntries: false } },
+    }),
   );
   await page.route('**/api/for-you/excluded-networks', (route) =>
     route.fulfill({ json: { excludedNetworks: [] } }),
