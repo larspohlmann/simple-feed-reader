@@ -26,6 +26,7 @@ final readonly class DueFeedCriteria
         public array $excludedFeedIds = [],
         public ?NetworkScope $networkScope = null,
         public ?FeedGroup $feedGroup = null,
+        public bool $neverFetched = false,
     ) {
     }
 
@@ -44,6 +45,7 @@ final readonly class DueFeedCriteria
             $feedIds,
             $this->networkScope,
             $this->feedGroup,
+            $this->neverFetched,
         );
     }
 }

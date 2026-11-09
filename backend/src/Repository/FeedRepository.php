@@ -220,6 +220,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         $this->restrictToOwnership($qb, $criteria);
         $this->restrictToNetwork($qb, $criteria);
         $this->restrictToFeedGroup($qb, $criteria);
+        $this->restrictToNeverFetched($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
         $this->restrictToConnectedAccounts($qb);
 
@@ -299,6 +300,15 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         }
 
         NetworkScopeDql::restrict($qb, 'f', $criteria->networkScope);
+    }
+
+    private function restrictToNeverFetched(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if (!$criteria->neverFetched) {
+            return;
+        }
+
+        $qb->andWhere('f.fetchSchedule.lastFetchedAt IS NULL');
     }
 
     private function restrictToFeedGroup(QueryBuilder $qb, DueFeedCriteria $criteria): void
