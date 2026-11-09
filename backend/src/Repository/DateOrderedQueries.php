@@ -12,7 +12,7 @@ final readonly class DateOrderedQueries
     /**
      * @param \Closure(): QueryBuilder $page        the complete page query; called up to twice
      * @param \Closure(): QueryBuilder $windowProbe an Entry-only effectiveDate query in the page's order, cursored
-     * @param \Closure(): QueryBuilder $scopeProbe  the reader's in-scope entry ids, read state ignored
+     * @param \Closure(): QueryBuilder $scopeProbe  in-scope entry ids, read state ignored, duplicates counted
      */
     public function __construct(
         public \Closure $page,

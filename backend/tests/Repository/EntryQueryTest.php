@@ -106,16 +106,35 @@ final class EntryQueryTest extends TestCase
         self::assertSame(ListOrder::NewestFirst, $all->order);
     }
 
-    public function testTheAllViewKeepsTheScopeAndThePage(): void
+    public function testTheAllViewKeepsEveryOtherConstructorField(): void
     {
-        $cursor = new EntryCursor(new \DateTimeImmutable('2026-07-01T00:00:00Z'), 9);
-        $network = NetworkScope::whole(SocialNetwork::Bluesky);
-        $order = ListOrder::OldestFirst;
-        $unread = new EntryQuery(1, EntryView::Unread, 5, 3, $cursor, 20, $order, $network, FeedGroup::Tags);
-
-        self::assertEquals(
-            new EntryQuery(1, EntryView::All, 5, 3, $cursor, 20, $order, $network, FeedGroup::Tags),
-            $unread->inAllView(),
+        $unread = new EntryQuery(
+            1,
+            EntryView::Unread,
+            5,
+            3,
+            new EntryCursor(new \DateTimeImmutable('2026-07-01T00:00:00Z'), 9),
+            20,
+            ListOrder::OldestFirst,
+            NetworkScope::whole(SocialNetwork::Bluesky),
+            FeedGroup::Tags,
         );
+
+        $allView = $unread->inAllView();
+
+        self::assertSame(EntryView::All, $allView->view);
+        $constructor = new \ReflectionMethod(EntryQuery::class, '__construct');
+        foreach ($constructor->getParameters() as $parameter) {
+            $name = $parameter->getName();
+            if ($name === 'view') {
+                continue;
+            }
+            $field = new \ReflectionProperty(EntryQuery::class, $name);
+            if ($parameter->isDefaultValueAvailable()) {
+                $default = $parameter->getDefaultValue();
+                self::assertNotSame($default, $field->getValue($unread), 'the fixture sets ' . $name);
+            }
+            self::assertSame($field->getValue($unread), $field->getValue($allView), $name);
+        }
     }
 }

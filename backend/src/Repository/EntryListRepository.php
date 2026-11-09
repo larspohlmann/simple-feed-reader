@@ -73,7 +73,7 @@ final class EntryListRepository extends ServiceEntityRepository
             new DateOrderedQueries(
                 $pageQuery,
                 $windowProbe,
-                $this->scopeProbe($query->userId, $this->listScope($query->inAllView(), $groupSubscriptionIds)),
+                $this->scopeProbe($query, $groupSubscriptionIds),
             ),
         );
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
@@ -97,18 +97,18 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param \Closure(QueryBuilder, EntryAliases): void $applyScope
+     * @param non-empty-list<int>|null $groupSubscriptionIds
      *
      * @return \Closure(): QueryBuilder
      */
-    private function scopeProbe(int $userId, \Closure $applyScope): \Closure
+    private function scopeProbe(EntryQuery $query, ?array $groupSubscriptionIds): \Closure
     {
-        return function () use ($userId, $applyScope): QueryBuilder {
+        return function () use ($query, $groupSubscriptionIds): QueryBuilder {
             $qb = $this->createQueryBuilder('e')
                 ->select('e.id')
                 ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-                ->setParameter('user', $userId);
-            $applyScope($qb, EntryAliases::primary());
+                ->setParameter('user', $query->userId);
+            $this->listScope($query->inAllView(), $groupSubscriptionIds)($qb, EntryAliases::primary());
 
             return $qb;
         };

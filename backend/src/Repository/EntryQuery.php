@@ -71,7 +71,6 @@ final readonly class EntryQuery
         return $this->view->isChronological();
     }
 
-    /** The same scope and page with read state ignored, the way the All view lists it. */
     public function inAllView(): self
     {
         return new self(
@@ -87,7 +86,7 @@ final readonly class EntryQuery
         );
     }
 
-    private function isNarrowed(): bool
+    public function isNarrowed(): bool
     {
         return $this->tagId !== null || $this->networkScope !== null || $this->feedGroup !== null;
     }

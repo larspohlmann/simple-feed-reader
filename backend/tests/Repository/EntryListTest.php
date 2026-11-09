@@ -205,7 +205,7 @@ final class EntryListTest extends DbTestCase
         return $feed;
     }
 
-    private function anotherReadersBusyFeed(): void
+    private function anotherReadersBusyFeed(ListOrder $order): void
     {
         $reader = new User('busy-reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $feed = new Feed('https://busy.example.com/feed.xml');
@@ -215,8 +215,16 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->flush();
 
         foreach (range(10, 14) as $day) {
-            $this->entryIn($feed, 'busy-' . $day, sprintf('2026-07-%02dT00:00:00Z', $day));
+            $this->entryIn($feed, 'busy-' . $day, $this->dayToward($order, $day));
         }
+    }
+
+    /** A July date on the 31st-minus-day for oldest-first, so a fixture leads the page in either order. */
+    private function dayToward(ListOrder $order, int $day): string
+    {
+        $dayOfMonth = $order === ListOrder::NewestFirst ? $day : 31 - $day;
+
+        return sprintf('2026-07-%02dT00:00:00Z', $dayOfMonth);
     }
 
     private function newcomer(): User
@@ -912,12 +920,25 @@ final class EntryListTest extends DbTestCase
     }
 
     /**
-     * @return iterable<string, array{EntryView}>
+     * @return iterable<string, array{EntryView, ListOrder}>
      */
-    public static function chronologicalViews(): iterable
+    public static function chronologicalViewsInBothOrders(): iterable
     {
-        yield 'all' => [EntryView::All];
-        yield 'unread' => [EntryView::Unread];
+        foreach ([EntryView::All, EntryView::Unread] as $view) {
+            foreach (ListOrder::cases() as $order) {
+                yield $view->value . ', ' . $order->value => [$view, $order];
+            }
+        }
+    }
+
+    /**
+     * @return iterable<string, array{ListOrder}>
+     */
+    public static function bothOrders(): iterable
+    {
+        foreach (ListOrder::cases() as $order) {
+            yield $order->value => [$order];
+        }
     }
 
     public function testAnAllViewBelowTheWindowSizeRunsTheProbeThenOneHintedPage(): void
@@ -934,13 +955,13 @@ final class EntryListTest extends DbTestCase
         self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
     }
 
-    #[DataProvider('chronologicalViews')]
-    public function testADenseReaderStaysHintedInsideTheWindow(EntryView $view): void
+    #[DataProvider('chronologicalViewsInBothOrders')]
+    public function testADenseReaderStaysHintedInsideTheWindow(EntryView $view, ListOrder $order): void
     {
-        $this->entryIn($this->feed, 'own-1', '2026-07-10T00:00:00Z');
-        $this->entryIn($this->feed, 'own-2', '2026-07-09T00:00:00Z');
-        $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
-        $query = new EntryQuery($this->user->requireId(), $view, limit: 2);
+        $this->entryIn($this->feed, 'own-1', $this->dayToward($order, 10));
+        $this->entryIn($this->feed, 'own-2', $this->dayToward($order, 9));
+        $this->entryIn($this->fillerFeed(), 'filler', $this->dayToward($order, 8));
+        $query = new EntryQuery($this->user->requireId(), $view, limit: 2, order: $order);
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
@@ -949,13 +970,15 @@ final class EntryListTest extends DbTestCase
         self::assertSame(['own-1', 'own-2'], $this->guids($recorded['rows']));
     }
 
-    #[DataProvider('chronologicalViews')]
-    public function testASparseReaderNextToABusyFeedFallsBackToThePlainUnhintedQuery(EntryView $view): void
-    {
-        $this->anotherReadersBusyFeed();
-        $this->entryIn($this->feed, 'own-1', '2026-07-05T00:00:00Z');
-        $this->entryIn($this->feed, 'own-2', '2026-07-04T00:00:00Z');
-        $query = new EntryQuery($this->user->requireId(), $view, limit: 2);
+    #[DataProvider('chronologicalViewsInBothOrders')]
+    public function testASparseReaderNextToABusyFeedFallsBackToThePlainUnhintedQuery(
+        EntryView $view,
+        ListOrder $order,
+    ): void {
+        $this->anotherReadersBusyFeed($order);
+        $this->entryIn($this->feed, 'own-1', $this->dayToward($order, 5));
+        $this->entryIn($this->feed, 'own-2', $this->dayToward($order, 4));
+        $query = new EntryQuery($this->user->requireId(), $view, limit: 2, order: $order);
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
@@ -965,11 +988,13 @@ final class EntryListTest extends DbTestCase
         self::assertSame(['own-1', 'own-2'], $this->guids($recorded['rows']));
     }
 
-    #[DataProvider('chronologicalViews')]
-    public function testAReaderWithoutSubscriptionsGetsTheUnhintedPlanNextToABusyFeed(EntryView $view): void
-    {
-        $this->anotherReadersBusyFeed();
-        $query = new EntryQuery($this->newcomer()->requireId(), $view, limit: 2);
+    #[DataProvider('chronologicalViewsInBothOrders')]
+    public function testAReaderWithoutSubscriptionsGetsTheUnhintedPlanNextToABusyFeed(
+        EntryView $view,
+        ListOrder $order,
+    ): void {
+        $this->anotherReadersBusyFeed($order);
+        $query = new EntryQuery($this->newcomer()->requireId(), $view, limit: 2, order: $order);
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
@@ -978,22 +1003,70 @@ final class EntryListTest extends DbTestCase
         self::assertSame([], $recorded['rows']);
     }
 
-    public function testACaughtUpReaderWithAScopeBeyondTheWindowFallsBackToTheHintedWalk(): void
+    #[DataProvider('bothOrders')]
+    public function testACaughtUpReaderWithAScopeBeyondTheWindowFallsBackToTheHintedWalk(ListOrder $order): void
     {
         foreach (range(10, 13) as $day) {
-            $read = $this->entryIn($this->feed, 'read-' . $day, sprintf('2026-07-%02dT00:00:00Z', $day));
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
             $this->entityManager->persist($this->hidden($read));
         }
-        $this->entryIn($this->feed, 'unread', '2026-07-02T00:00:00Z');
+        $this->entryIn($this->feed, 'unread', $this->dayToward($order, 2));
         $this->entityManager->flush();
-        $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2);
+        $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2, order: $order);
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
         self::assertCount(4, $recorded['queries'], 'a short window probes the scope first');
         self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the scope probe is never hinted');
-        self::assertStringContainsString('LIMIT 3', $recorded['queries'][2], 'the probe stops one past the window');
+        self::assertStringContainsString('LIMIT 1 OFFSET 2', $recorded['queries'][2], 'the probe reads one row');
         self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
+        self::assertSame(['unread'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testAFeedExcludedFromAllItemsDoesNotCountTowardTheScope(ListOrder $order): void
+    {
+        [$excludedFeed, $excluded] = $this->secondSubscription('https://excluded.example.com/feed.xml');
+        $excluded->setIncludeInAllItems(false);
+        $this->entityManager->flush();
+        foreach (range(10, 14) as $day) {
+            $this->entryIn($excludedFeed, 'excluded-' . $day, $this->dayToward($order, $day));
+        }
+        $this->entryIn($this->feed, 'own-1', $this->dayToward($order, 5));
+        $query = new EntryQuery($this->user->requireId(), EntryView::All, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(4, $recorded['queries']);
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'only the All scope is counted');
+        self::assertSame(['own-1'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testADenseFeedGroupWithAShortWindowFallsBackPlainWithoutAScopeProbe(ListOrder $order): void
+    {
+        foreach (range(10, 13) as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $this->entryIn($this->feed, 'unread', $this->dayToward($order, 2));
+        $this->entityManager->flush();
+        $query = new EntryQuery(
+            $this->user->requireId(),
+            EntryView::Unread,
+            limit: 2,
+            order: $order,
+            feedGroup: FeedGroup::Feeds,
+        );
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        $listQueries = array_values(array_filter(
+            $recorded['queries'],
+            static fn (string $sql): bool => str_contains($sql, 'FROM entry'),
+        ));
+        self::assertCount(3, $listQueries, 'a narrowed scope falls back without probing its size');
+        self::assertStringNotContainsString('JOIN_PREFIX', $listQueries[2], 'a narrowed scope falls back plain');
         self::assertSame(['unread'], $this->guids($recorded['rows']));
     }
 
@@ -1054,30 +1127,13 @@ final class EntryListTest extends DbTestCase
 
         $recorded = $this->recordedList($repository, $query);
         $queries = $recorded['queries'];
-        self::assertCount(4, $queries, 'a short window over a sparse scope falls back plain');
-        self::assertStringNotContainsString('JOIN_PREFIX', $queries[3], 'the fallback is deliberately unhinted');
+        self::assertCount(3, $queries, 'a short windowed page must fall back to a third, plain query');
+        self::assertStringNotContainsString('JOIN_PREFIX', $queries[2], 'the fallback is deliberately unhinted');
 
         self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
-    }
-
-    public function testASparseTagNextToTheReadersOwnBusyFeedFallsBackToThePlainUnhintedQuery(): void
-    {
-        [$feed, $tag] = $this->taggedFeedAndSubscription();
-        $this->entryIn($this->feed, 'own-1', '2026-07-10T00:00:00Z');
-        $this->entryIn($this->feed, 'own-2', '2026-07-09T00:00:00Z');
-        $this->entryIn($this->feed, 'own-3', '2026-07-08T00:00:00Z');
-        $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
-        $this->entryIn($feed, 't2', '2026-07-04T00:00:00Z');
-        $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 2);
-
-        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
-
-        self::assertCount(4, $recorded['queries']);
-        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'only the tag is the scope');
-        self::assertSame(['t1', 't2'], $this->guids($recorded['rows']));
     }
 
     public function testScopeWithFewerRowsThanTheLimitReturnsAShortPageWithoutLossOrDuplication(): void
@@ -1226,15 +1282,14 @@ final class EntryListTest extends DbTestCase
         $query = new EntryQuery($userId, tagId: $tag->getId(), cursor: $cursor, limit: 2);
 
         $recorded = $this->recordedList($repository, $query);
-        self::assertCount(4, $recorded['queries'], 'the second page must independently fall back');
-        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
+        self::assertCount(3, $recorded['queries'], 'the second page must independently fall back');
         self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
     }
 
-    public function testUnreadViewOnADenseTagWhoseNewestEntriesAreAllReadFallsBackToTheHintedWalk(): void
+    public function testUnreadViewOnADenseTagWhoseNewestEntriesAreAllReadFallsBack(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
         $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
@@ -1250,11 +1305,11 @@ final class EntryListTest extends DbTestCase
 
         $recorded = $this->recordedList($repository, $query);
         self::assertCount(
-            4,
+            3,
             $recorded['queries'],
             'the windowed rows the pivot admits are all read, so it must fall back',
         );
-        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'a narrowed tag falls back plain');
 
         $rows = $recorded['rows'];
         self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(

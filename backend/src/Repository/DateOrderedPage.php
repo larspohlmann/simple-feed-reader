@@ -11,10 +11,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * Runs a fan-in page: unhinted for a single scope or a state-driven view; a chronological fan-in is probed and walked
- * hinted inside the window. A short window falls back by scope size: a sparse scope runs unhinted, since the hint would
- * walk the whole entry table, while a scope beyond the window keeps the hinted walk, since unhinted it sorts the whole
- * scope (#1099, #2126).
+ * Runs a fan-in page; a chronological fan-in is walked hinted inside a window. A short window falls back unhinted,
+ * except an all/unread scope beyond the window, which an unhinted plan would sort whole (#1099, #2126).
  */
 final readonly class DateOrderedPage
 {
@@ -51,15 +49,15 @@ final readonly class DateOrderedPage
             return $windowed;
         }
 
-        return $this->fallbackRows($queries);
+        return $this->fallbackRows($query, $queries);
     }
 
     /**
      * @return list<array<array-key, mixed>>
      */
-    private function fallbackRows(DateOrderedQueries $queries): array
+    private function fallbackRows(EntryQuery $query, DateOrderedQueries $queries): array
     {
-        if ($this->scopeOutgrowsTheWindow($queries->scopeProbe)) {
+        if (!$query->isNarrowed() && $this->scopeOutgrowsTheWindow($queries->scopeProbe)) {
             return $this->hintedResult(($queries->page)());
         }
 
@@ -71,9 +69,13 @@ final readonly class DateOrderedPage
      */
     private function scopeOutgrowsTheWindow(\Closure $scopeProbe): bool
     {
-        $inScope = $scopeProbe()->setMaxResults($this->windowSize + 1)->getQuery()->getScalarResult();
+        $beyondTheWindow = $scopeProbe()
+            ->setFirstResult($this->windowSize)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
 
-        return \count($inScope) > $this->windowSize;
+        return $beyondTheWindow !== null;
     }
 
     /**
