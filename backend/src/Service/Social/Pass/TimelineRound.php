@@ -83,16 +83,17 @@ final class TimelineRound
     public function settle(int|string $feedId, FetchOutcomeModel $outcome): SettlementModel
     {
         $socialFeed = $this->socialFeedOf($feedId);
+        $account = $socialFeed->getSocialAccount();
         if ($outcome->isWithheld()) {
             return $this->ticketOf($feedId, $socialFeed);
         }
 
         try {
-            return $this->settleAnswer($feedId, $socialFeed, $outcome);
+            return $this->settleAnswer($feedId, $socialFeed, $account, $outcome);
         } catch (SocialSessionStaleException $stale) {
             return $this->settleStale($feedId, $socialFeed, $stale);
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
-            return SettlementModel::outcome($this->accounts->settleFailure($socialFeed->getSocialAccount(), $failure));
+            return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
         }
     }
 
@@ -108,14 +109,14 @@ final class TimelineRound
     private function settleAnswer(
         int|string $feedId,
         SocialFeed $socialFeed,
+        SocialAccount $account,
         FetchOutcomeModel $outcome,
     ): SettlementModel {
-        $account = $socialFeed->getSocialAccount();
         $source = $this->sources->of($account);
         $read = $this->reads[$feedId] ?? throw new \LogicException('A feed is settled before it was asked.');
         $read->accept($source->accepted($socialFeed, $outcome));
         if (!$read->isComplete()) {
-            return SettlementModel::request($this->slots->ticketFor($account, $read->current()));
+            return $this->requestOf($feedId, $account, $read);
         }
 
         unset($this->reads[$feedId]);
@@ -179,11 +180,17 @@ final class TimelineRound
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
             return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
         }
+        $this->reads[$feedId] = $read;
+
+        return $this->requestOf($feedId, $account, $read);
+    }
+
+    /** @return SettlementModel<TimelineOutcomeModelInterface> */
+    private function requestOf(int|string $feedId, SocialAccount $account, TimelineRead $read): SettlementModel
+    {
         if ($this->accounts->isRenewed($account)) {
             $this->onRenewedSession[$feedId] = true;
         }
-
-        $this->reads[$feedId] = $read;
 
         return SettlementModel::request($this->slots->ticketFor($account, $read->current()));
     }
