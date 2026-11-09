@@ -19,6 +19,7 @@ import { TagsStore } from '../../reader/state/tags.store';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
+import { BulkSubscriptionActions } from '../../reader/feeds/manage/bulk-subscription-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -79,10 +80,6 @@ describe('OrganiseSectionComponent', () => {
   let fixture: ComponentFixture<OrganiseSectionComponent>;
 
   const manage = {
-    bulkAddTag: jest.fn(() => of(undefined)),
-    bulkRemoveTag: jest.fn(() => of(undefined)),
-    bulkSetFlags: jest.fn(() => of(undefined)),
-    bulkUnsubscribe: jest.fn(() => of(true)),
     addFeed: jest.fn(() => of(undefined)),
     editSubscription: jest.fn(),
     setIncludeInAllItems: jest.fn(),
@@ -103,17 +100,29 @@ describe('OrganiseSectionComponent', () => {
     moveTag: jest.fn(),
   };
 
+  const bulkActions = {
+    bulkAddTag: jest.fn(() => of(undefined)),
+    bulkRemoveTag: jest.fn(() => of(undefined)),
+    bulkSetFlags: jest.fn(() => of(undefined)),
+    bulkUnsubscribe: jest.fn(() => of(true)),
+  };
+
   const resetActionSpies = (): void => {
-    for (const spy of [...Object.values(manage), ...Object.values(tagActions)]) spy.mockReset();
+    const spies = [
+      ...Object.values(manage),
+      ...Object.values(tagActions),
+      ...Object.values(bulkActions),
+    ];
+    for (const spy of spies) spy.mockReset();
   };
 
   async function renderWithMocks(subscriptions: SubscriptionDto[] = SUBS, tags: TagDto[] = [TECH]) {
     localStorage.clear();
     resetActionSpies();
-    manage.bulkAddTag.mockReturnValue(of(undefined));
-    manage.bulkRemoveTag.mockReturnValue(of(undefined));
-    manage.bulkSetFlags.mockReturnValue(of(undefined));
-    manage.bulkUnsubscribe.mockReturnValue(of(true));
+    bulkActions.bulkAddTag.mockReturnValue(of(undefined));
+    bulkActions.bulkRemoveTag.mockReturnValue(of(undefined));
+    bulkActions.bulkSetFlags.mockReturnValue(of(undefined));
+    bulkActions.bulkUnsubscribe.mockReturnValue(of(true));
     manage.addFeed.mockReturnValue(of(undefined));
     manage.retryFeed.mockReturnValue(of(false));
 
@@ -127,6 +136,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: TagActions, useValue: tagActions },
+          { provide: BulkSubscriptionActions, useValue: bulkActions },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
@@ -141,7 +151,7 @@ describe('OrganiseSectionComponent', () => {
     fixture.detectChanges();
     const component = fixture.componentInstance;
 
-    return { component, manage, tagActions, store: component.store };
+    return { component, manage, tagActions, bulkActions, store: component.store };
   }
 
   async function render(): Promise<OrganiseStore> {
@@ -269,9 +279,9 @@ describe('OrganiseSectionComponent', () => {
   });
 
   it('clears the selection after an unsubscribe but keeps it after a tag write', async () => {
-    const { component, manage } = await renderWithMocks();
-    manage.bulkAddTag.mockReturnValue(of(undefined));
-    manage.bulkUnsubscribe.mockReturnValue(of(true));
+    const { component, bulkActions } = await renderWithMocks();
+    bulkActions.bulkAddTag.mockReturnValue(of(undefined));
+    bulkActions.bulkUnsubscribe.mockReturnValue(of(true));
     component.store.toggleFeed(10);
 
     component.applyTag(TECH, 'add');
@@ -282,8 +292,10 @@ describe('OrganiseSectionComponent', () => {
   });
 
   it('keeps the selection when a bulk write fails, and shows the error', async () => {
-    const { component, manage } = await renderWithMocks();
-    manage.bulkAddTag.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 422 })));
+    const { component, bulkActions } = await renderWithMocks();
+    bulkActions.bulkAddTag.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 422 })),
+    );
     component.store.toggleFeed(10);
 
     component.applyTag(TECH, 'add');
@@ -326,29 +338,29 @@ describe('OrganiseSectionComponent', () => {
   // reach every SELECTED feed, including one the current filter hides. Acting
   // on filteredSubscriptions()/visibleIds() instead would silently drop it.
   it('applies a bulk tag to every selected feed, including one the filter is hiding', async () => {
-    const { component, manage } = await renderWithMocks();
+    const { component, bulkActions } = await renderWithMocks();
     component.store.toggleFeed(10);
     component.store.toggleFeed(11);
     component.store.titleFilter.set('taz'); // hides 11 from view, not from selection
 
     component.applyTag(TECH, 'add');
 
-    expect(manage.bulkAddTag).toHaveBeenCalledWith([10, 11], TECH);
+    expect(bulkActions.bulkAddTag).toHaveBeenCalledWith([10, 11], TECH);
   });
 
   it('sets flags on every selected feed, including one the filter is hiding', async () => {
-    const { component, manage } = await renderWithMocks();
+    const { component, bulkActions } = await renderWithMocks();
     component.store.toggleFeed(10);
     component.store.toggleFeed(11);
     component.store.titleFilter.set('taz');
 
     component.setFlags({ includeInAllItems: false });
 
-    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10, 11], { includeInAllItems: false });
+    expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10, 11], { includeInAllItems: false });
   });
 
   it('offers six visibility commands, the saved-search ones setting their own flag', async () => {
-    const { component, manage } = await renderWithMocks();
+    const { component, bulkActions } = await renderWithMocks();
     component.store.toggleFeed(10);
     fixture.detectChanges();
     const root = fixture.debugElement;
@@ -366,11 +378,11 @@ describe('OrganiseSectionComponent', () => {
     ]);
 
     items[5].nativeElement.click();
-    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: false });
+    expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: false });
     root.query(By.css('[data-test="visibility"]')).nativeElement.click();
     fixture.detectChanges();
     root.queryAll(By.css('.pop [role="menuitem"]'))[4].nativeElement.click();
-    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: true });
+    expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: true });
   });
 
   // The tree view's tag headers reorder tags themselves via the up/down arrows
@@ -399,6 +411,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: TagActions, useValue: tagActions },
+          { provide: BulkSubscriptionActions, useValue: bulkActions },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
@@ -447,6 +460,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: TagActions, useValue: tagActions },
+          { provide: BulkSubscriptionActions, useValue: bulkActions },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },

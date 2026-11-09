@@ -36,6 +36,7 @@ import {
 } from './health/health-error-dialog.component';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
+import { BulkSubscriptionActions } from '../../reader/feeds/manage/bulk-subscription-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { TagHierarchy } from '../../reader/state/tag-hierarchy';
@@ -67,8 +68,8 @@ interface VisibilityMenuItem {
  * multi-select and one bulk bar.
  *
  * The store is provided here, not in root: a selection must not survive leaving
- * the page. Every write goes through ManageActions — this component injects no
- * ReaderApi.
+ * the page. Every write goes through ManageActions, TagActions or
+ * BulkSubscriptionActions — this component injects no ReaderApi.
  */
 @Component({
   selector: 'app-organise-section',
@@ -98,6 +99,7 @@ export class OrganiseSectionComponent implements OnInit {
   readonly store = inject(OrganiseStore);
   protected readonly manage = inject(ManageActions);
   protected readonly tagActions = inject(TagActions);
+  private readonly bulkActions = inject(BulkSubscriptionActions);
   protected readonly subs = inject(SubscriptionsStore);
   protected readonly tags = inject(TagsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
@@ -183,12 +185,14 @@ export class OrganiseSectionComponent implements OnInit {
   applyTag(tag: TagDto, mode: 'add' | 'remove'): void {
     const ids = [...this.store.selectedIds()];
     const write$ =
-      mode === 'add' ? this.manage.bulkAddTag(ids, tag) : this.manage.bulkRemoveTag(ids, tag);
+      mode === 'add'
+        ? this.bulkActions.bulkAddTag(ids, tag)
+        : this.bulkActions.bulkRemoveTag(ids, tag);
     this.runBulk(write$);
   }
 
   setFlags(flags: SubscriptionFlags): void {
-    this.runBulk(this.manage.bulkSetFlags([...this.store.selectedIds()], flags));
+    this.runBulk(this.bulkActions.bulkSetFlags([...this.store.selectedIds()], flags));
   }
 
   /** One visibility menu command was chosen: set its flag, then close the menu. */
@@ -202,7 +206,7 @@ export class OrganiseSectionComponent implements OnInit {
     const selected = this.store.selectedSubscriptions();
     this.store.busy.set(true);
     this.error.set(null);
-    this.manage.bulkUnsubscribe(selected).subscribe({
+    this.bulkActions.bulkUnsubscribe(selected).subscribe({
       next: (removed) => {
         this.store.busy.set(false);
         if (removed) this.store.clearSelection();

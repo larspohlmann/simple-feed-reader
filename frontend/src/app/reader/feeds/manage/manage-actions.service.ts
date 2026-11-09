@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
@@ -9,15 +9,9 @@ import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
 import { RefreshService } from '../../state/refresh.service';
 import { EntriesStore } from '../../state/entries.store';
-import {
-  MoveFeedToTag,
-  RefreshReport,
-  SubscriptionDto,
-  SubscriptionTagDto,
-  TagDto,
-} from '../../models';
-import { reloadAfter } from './reload-after';
-import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
+import { MoveFeedToTag, RefreshReport, SubscriptionDto, SubscriptionTagDto } from '../../models';
+import { reloadAfter, reloadAfterFlagWrite } from './reload-after';
+import { SubscriptionFlags } from '../../subscription-bulk';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import {
@@ -26,15 +20,14 @@ import {
   UNSUBSCRIBE_REQUESTED,
 } from './edit-subscription-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
-import { pluralKey } from '../../../core/i18n/plural-key';
 import { isSearchFeed } from '../../state/social-sections';
-import { bulkUnsubscribeConfirm, unsubscribeConfirm } from './unsubscribe-messages';
+import { unsubscribeConfirm } from './unsubscribe-messages';
 
-/** The single place a management dialog is opened and its side effects applied.
+/** The single place one feed's management dialog is opened and its side effects applied.
  *  Both the settings sections and the sidebar (via the shell) call these, so an
  *  action behaves identically wherever it is triggered. Dialogs perform their own
  *  API write and close with the result; this service refreshes the affected
- *  stores on a truthy close. */
+ *  stores on a truthy close. Tags have TagActions, many feeds at once BulkSubscriptionActions. */
 @Injectable({ providedIn: 'root' })
 export class ManageActions {
   private readonly dialog = inject(Dialog);
@@ -65,10 +58,6 @@ export class ManageActions {
     });
   }
 
-  /** Fire a drag-and-drop write, then re-sync the affected store whether it
-   *  succeeds OR fails: a rejected write (e.g. a concurrent change) is
-   *  corrected from the server. */
-
   /** Move a feed between the sidebar's lists at the dropped position, the way a
    *  drag reads: out of `fromTagId`, into `toTagId` at `position` (a null tag
    *  id is the untagged "Feeds" list; a null position appends). A move within
@@ -84,13 +73,13 @@ export class ManageActions {
     this.reloadSubsAfter(this.api.moveFeedToTag(sub.id, move));
   }
 
-  /** The moved feed's optimistic shape: the source tag dropped, the target tag
-   *  added at the drop position; dropped on Feeds, its untagged position is set
-   *  only once it has no tags left. Sibling positions are left to the reload. */
   private reloadSubsAfter(write$: Observable<unknown>): void {
     reloadAfter(write$, () => this.subs.reloadQuietly());
   }
 
+  /** The moved feed's optimistic shape: the source tag dropped, the target tag
+   *  added at the drop position; dropped on Feeds, its untagged position is set
+   *  only once it has no tags left. Sibling positions are left to the reload. */
   private afterMove(
     sub: SubscriptionDto,
     { fromTagId, toTagId, position }: MoveFeedToTag,
@@ -143,14 +132,8 @@ export class ManageActions {
         tagIds: sub.tags.map((tag) => tag.id),
         ...flags,
       }),
-      () => this.reloadFeedsAfter(flags),
+      () => reloadAfterFlagWrite(flags, this.subs, this.savedSearches),
     );
-  }
-
-  /** The saved-search flag moves saved-search badges and counts, which only a reload re-learns. */
-  private reloadFeedsAfter(flags: SubscriptionFlags): void {
-    this.subs.reloadQuietly();
-    if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
   /** Persist a new order for the untagged "Feeds" list. Optimistic: update
@@ -190,62 +173,6 @@ export class ManageActions {
     this.confirm.confirmThen(unsubscribeConfirm(this.i18n, sub), () => {
       this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.reloadQuietly() });
     });
-  }
-
-  /** Add one tag to many feeds. Not optimistic: a bulk tag change moves feeds
-   *  between lists under the server's position rules, and re-deriving those
-   *  here would be the second copy SubscriptionTagSync exists to prevent. */
-  bulkAddTag(subscriptionIds: number[], tag: TagDto): Observable<void> {
-    return this.bulkPatch(
-      { subscriptionIds, addTagIds: [tag.id] },
-      this.i18n.translate(pluralKey('manage.bulk.tagAdded', subscriptionIds.length), {
-        count: subscriptionIds.length,
-        name: tag.name,
-      }),
-    );
-  }
-
-  /** Remove one tag from many feeds. */
-  bulkRemoveTag(subscriptionIds: number[], tag: TagDto): Observable<void> {
-    return this.bulkPatch(
-      { subscriptionIds, removeTagIds: [tag.id] },
-      this.i18n.translate(pluralKey('manage.bulk.tagRemoved', subscriptionIds.length), {
-        count: subscriptionIds.length,
-        name: tag.name,
-      }),
-    );
-  }
-
-  /** Set one or both inclusion flags across many feeds. */
-  bulkSetFlags(subscriptionIds: number[], flags: SubscriptionFlags): Observable<void> {
-    return this.bulkPatch(
-      { subscriptionIds, ...flags },
-      this.i18n.translate(pluralKey('manage.bulk.flagsSet', subscriptionIds.length), {
-        count: subscriptionIds.length,
-      }),
-    );
-  }
-
-  /** Confirm, then unsubscribe from many feeds. Emits false when the user
-   *  dismissed the confirmation, so the caller can leave the selection alone. */
-  bulkUnsubscribe(subscriptions: SubscriptionDto[]): Observable<boolean> {
-    return this.confirm.ask(bulkUnsubscribeConfirm(this.i18n, subscriptions)).pipe(
-      switchMap((confirmed) => {
-        if (!confirmed) return of(false);
-        return this.api.bulkUnsubscribe(subscriptions.map((subscription) => subscription.id)).pipe(
-          tap((result) => {
-            this.subs.reloadQuietly();
-            this.toast.show({
-              message: this.i18n.translate(pluralKey('manage.bulk.unsubscribed', result.removed), {
-                count: result.removed,
-              }),
-              durationMs: CONFIRMATION_DURATION_MS,
-            });
-          }),
-          map(() => true),
-        );
-      }),
-    );
   }
 
   /** Open the add-feed dialog. The reader shell opens the same dialog and then
@@ -292,16 +219,6 @@ export class ManageActions {
   private requeried(sub: SubscriptionDto): void {
     this.entries.reload();
     this.refresh.run(undefined, { kind: 'feed', feedId: sub.feedId });
-  }
-
-  private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
-    return this.api.bulkUpdateSubscriptions(body).pipe(
-      tap(() => {
-        this.reloadFeedsAfter(body);
-        this.toast.show({ message: confirmation, durationMs: CONFIRMATION_DURATION_MS });
-      }),
-      map(() => undefined),
-    );
   }
 }
 

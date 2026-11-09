@@ -193,7 +193,7 @@ video (`reader/media/hls-streams.ts`) and **`highlight.js`** for code blocks
 **OPML** import/export, the account backup, the **Organise** page and the
 **admin** screens are not part of this shell; they live under `/settings` (see
 "Settings and admin" below). The shell's own management is the sidebar's
-manage menus, which open the same dialogs through `ManageActions`.
+manage menus, which open the same dialogs through `ManageActions` and `TagActions`.
 
 ## Settings and admin
 
@@ -216,10 +216,12 @@ and the hub both draw from.
   carries a hover/tap "⋮" menu (Edit / Delete, Edit feed / Unsubscribe) that
   opens the same dialogs settings uses, so an action taken from the sidebar
   and one taken from Settings behave identically.
-- **`ManageActions`** (`src/app/reader/feeds/manage/manage-actions.service.ts`) is
-  the one place a management dialog is opened and its result applied — both
-  the settings sections and the sidebar call it, so a dialog's own API write
-  and the store refresh afterward happen exactly once, in exactly one place.
+- **`ManageActions`**, **`TagActions`** and **`BulkSubscriptionActions`**
+  (`src/app/reader/feeds/manage/`) are the one place a management dialog is
+  opened and its result applied, for one feed, for tags, and for a selection
+  of feeds. Both the settings sections and the sidebar call them, so a
+  dialog's own API write and the store refresh afterward happen exactly once,
+  in exactly one place.
 - **Users** (`src/app/admin/users/admin-users.component.ts`) — the user-approval
   queue: filter by status, then approve / reject / suspend. Every admin route
   is gated by `adminGuard`, a UX-only check (it fetches the current user if not

@@ -3,7 +3,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
-import { ReplaySubject, of } from 'rxjs';
+import { of } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api';
 import { ManageActions } from './manage-actions.service';
 import { UNSUBSCRIBE_REQUESTED } from './edit-subscription-dialog.component';
@@ -28,8 +28,6 @@ const sub: SubscriptionDto = makeSubscription({
   createdAt: 'x',
 });
 const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
-const TAG = tag;
-const SUBSCRIPTION = sub;
 
 describe('ManageActions', () => {
   let service: ManageActions;
@@ -308,237 +306,16 @@ describe('ManageActions', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  describe('bulk actions', () => {
-    const subscriptions = (count: number): SubscriptionDto[] =>
-      Array.from({ length: count }, (_, index) => ({
-        ...SUBSCRIPTION,
-        id: index + 1,
-        title: `Feed ${index + 1}`,
-      }));
+  it('addFeed: opens the add-feed dialog and reloads on a successful subscribe', () => {
+    closed = sub;
+    const spy = jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+      .mockImplementation(() => undefined);
 
-    // setup() gives each test its own TestBed, so the outer suite's `ctrl.verify()`
-    // checks the wrong, detached controller here. This local `http` verifies the
-    // controller setup() actually injected, catching e.g. a doubly-subscribed Observable.
-    let http: HttpTestingController;
-    afterEach(() => http.verify());
+    service.addFeed().subscribe();
 
-    // Own TestBed per call: the dialog mock here must return a replayable
-    // `closed` (so a test can resolve it before the code under test
-    // subscribes), which the outer suite's `of(closed)` cannot do.
-    function setup(options: { confirmAnswer?: boolean } = {}) {
-      TestBed.resetTestingModule();
-      const closed = new ReplaySubject<unknown>(1);
-      const dialogOpen = jest.fn<
-        { closed: ReplaySubject<unknown> },
-        [unknown, { data: { title: string; message: string; requireText?: string } }]
-      >(() => ({ closed }));
-      TestBed.configureTestingModule({
-        imports: [provideTranslocoTesting()],
-        providers: [
-          provideHttpClient(),
-          provideHttpClientTesting(),
-          { provide: API_BASE_URL, useValue: BASE },
-          { provide: Dialog, useValue: { open: dialogOpen } },
-          // ManageActions and ToastService share the `Dialog` token; the stub above's
-          // bare { closed } object lacks the `overlayRef` ToastService.show() reads, so
-          // a real call inside bulkPatch()/bulkUnsubscribe() would throw against it.
-          { provide: ToastService, useValue: { show: jest.fn() } },
-        ],
-      });
-      const actions = TestBed.inject(ManageActions);
-      http = TestBed.inject(HttpTestingController);
-      const subLoad = jest
-        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
-        .mockImplementation(() => undefined);
-      const savedSearchesLoad = jest
-        .spyOn(TestBed.inject(SavedSearchesStore), 'load')
-        .mockImplementation(() => undefined);
-
-      if (options.confirmAnswer !== undefined) closed.next(options.confirmAnswer);
-
-      return { actions, http, dialogOpen, subLoad, savedSearchesLoad, closed };
-    }
-
-    it('posts one bulk patch when a tag is added to several feeds', () => {
-      const { actions, http } = setup();
-      let emitted = false;
-
-      actions.bulkAddTag([1, 2, 3], TAG).subscribe(() => (emitted = true));
-
-      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk`);
-      expect(testRequest.request.method).toBe('PATCH');
-      expect(testRequest.request.body).toEqual({ subscriptionIds: [1, 2, 3], addTagIds: [TAG.id] });
-      testRequest.flush({ subscriptions: [] });
-
-      expect(emitted).toBe(true);
-    });
-
-    it('posts removeTagIds when a tag is removed', () => {
-      const { actions, http } = setup();
-      let emitted = false;
-
-      actions.bulkRemoveTag([4], TAG).subscribe(() => (emitted = true));
-
-      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk`);
-      expect(testRequest.request.body).toEqual({
-        subscriptionIds: [4],
-        removeTagIds: [TAG.id],
-      });
-      testRequest.flush({ subscriptions: [] });
-
-      expect(emitted).toBe(true);
-    });
-
-    it('sends only the flag that was named', () => {
-      const { actions, http } = setup();
-      let emitted = false;
-
-      actions.bulkSetFlags([7], { includeInAllItems: false }).subscribe(() => (emitted = true));
-
-      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk`);
-      expect(testRequest.request.body).toEqual({
-        subscriptionIds: [7],
-        includeInAllItems: false,
-      });
-      testRequest.flush({ subscriptions: [] });
-
-      expect(emitted).toBe(true);
-    });
-
-    it('opens the add-feed dialog and reloads on a successful subscribe', () => {
-      const { actions, dialogOpen, subLoad, closed } = setup();
-      closed.next(SUBSCRIPTION);
-
-      actions.addFeed().subscribe();
-
-      expect(dialogOpen).toHaveBeenCalled();
-      expect(subLoad).toHaveBeenCalled();
-    });
-
-    it('reloads the subscriptions store after a successful bulk patch', () => {
-      const { actions, http, subLoad, savedSearchesLoad } = setup();
-
-      actions.bulkAddTag([1], TAG).subscribe();
-      http.expectOne(`${BASE}/api/subscriptions/bulk`).flush({ subscriptions: [] });
-
-      expect(subLoad).toHaveBeenCalled();
-      expect(savedSearchesLoad).not.toHaveBeenCalled();
-    });
-
-    it('reloads saved searches after a bulk patch of the saved-search flag only', () => {
-      const { actions, http, savedSearchesLoad } = setup();
-
-      actions.bulkSetFlags([1], { includeInForYou: false }).subscribe();
-      http.expectOne(`${BASE}/api/subscriptions/bulk`).flush({ subscriptions: [] });
-      expect(savedSearchesLoad).not.toHaveBeenCalled();
-
-      actions.bulkSetFlags([1], { includeInSavedSearches: false }).subscribe();
-      http.expectOne(`${BASE}/api/subscriptions/bulk`).flush({ subscriptions: [] });
-      expect(savedSearchesLoad).toHaveBeenCalledTimes(1);
-    });
-
-    it('asks the user to type the count from five feeds up', () => {
-      const { actions, dialogOpen } = setup();
-
-      actions.bulkUnsubscribe(subscriptions(5)).subscribe();
-
-      expect(dialogOpen.mock.calls[0][1].data.requireText).toBe('5');
-    });
-
-    describe('where saved posts go', () => {
-      const bluesky = makeSubscription({
-        id: 21,
-        title: 'Bob',
-        social: { network: 'bluesky', accountId: null, kind: 'profile' },
-      });
-      const confirmMessage = (leaving: SubscriptionDto[]): string => {
-        const { actions, dialogOpen } = setup();
-        actions.bulkUnsubscribe(leaving).subscribe();
-        return dialogOpen.mock.calls[0][1].data.message;
-      };
-
-      it('names the one Saved feed that all leaving feeds share', () => {
-        expect(confirmMessage(subscriptions(2))).toContain('move to Saved from feeds');
-      });
-
-      it('says "their Saved feeds" when the destinations differ', () => {
-        expect(confirmMessage([subscriptions(1)[0], bluesky])).toContain(
-          'move to their Saved feeds',
-        );
-      });
-
-      it('warns about a saved feed leaving with the others', () => {
-        const savedFeed = makeSubscription({
-          id: 22,
-          title: 'Saved from feeds',
-          sourceFormat: 'saved',
-        });
-
-        expect(confirmMessage([bluesky, savedFeed])).toContain(
-          'The saved posts in Saved from feeds are deleted for good.',
-        );
-      });
-
-      it('says the posts move to a new Saved feed when their destination leaves too', () => {
-        const savedFeed = makeSubscription({
-          id: 22,
-          title: 'Saved from feeds',
-          sourceFormat: 'saved',
-        });
-
-        expect(confirmMessage([subscriptions(1)[0], savedFeed])).toContain(
-          'move to a new Saved from feeds.',
-        );
-      });
-    });
-
-    it('does not ask for typed text at four feeds', () => {
-      const { actions, dialogOpen } = setup();
-
-      actions.bulkUnsubscribe(subscriptions(4)).subscribe();
-
-      expect(dialogOpen.mock.calls[0][1].data.requireText).toBeUndefined();
-    });
-
-    it('singularises the confirmation title at a selection of one', () => {
-      const { actions, dialogOpen } = setup();
-
-      actions.bulkUnsubscribe(subscriptions(1)).subscribe();
-
-      expect(dialogOpen.mock.calls[0][1].data.title).toBe('Unsubscribe from 1 feed?');
-    });
-
-    it('names at most five titles and counts the rest', () => {
-      const { actions, dialogOpen } = setup();
-
-      actions.bulkUnsubscribe(subscriptions(7)).subscribe();
-
-      const message: string = dialogOpen.mock.calls[0][1].data.message;
-      expect(message).toContain('Feed 1');
-      expect(message).toContain('Feed 5');
-      expect(message).not.toContain('Feed 6');
-    });
-
-    it('writes nothing when the confirmation is dismissed', () => {
-      const { actions, http } = setup({ confirmAnswer: false });
-      let outcome: boolean | undefined;
-
-      actions.bulkUnsubscribe(subscriptions(2)).subscribe((ok) => (outcome = ok));
-
-      expect(outcome).toBe(false);
-      http.expectNone(`${BASE}/api/subscriptions/bulk-unsubscribe`);
-    });
-
-    it('unsubscribes and reloads after a confirmed bulk unsubscribe', () => {
-      const { actions, http, subLoad } = setup({ confirmAnswer: true });
-
-      actions.bulkUnsubscribe(subscriptions(2)).subscribe();
-      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk-unsubscribe`);
-      expect(testRequest.request.body).toEqual({ subscriptionIds: [1, 2] });
-      testRequest.flush({ removed: 2 });
-
-      expect(subLoad).toHaveBeenCalled();
-    });
+    expect(open).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalled();
   });
 
   describe('retryFeed', () => {
@@ -575,9 +352,8 @@ describe('ManageActions', () => {
     let http: HttpTestingController;
     afterEach(() => http.verify());
 
-    // Own TestBed, same reason as the bulk-action setup(): ManageActions and
-    // ToastService share the Dialog token, so a real ToastService.show() call
-    // here needs the stub replaced rather than left to the outer `open` mock.
+    // Own TestBed: ManageActions and ToastService share the Dialog token, so a real
+    // ToastService.show() call here needs the stub replaced rather than left to the outer `open` mock.
     function setup() {
       TestBed.resetTestingModule();
       const toast = { show: jest.fn() };
