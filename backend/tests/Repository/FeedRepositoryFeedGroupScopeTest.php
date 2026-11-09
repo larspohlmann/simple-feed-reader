@@ -12,6 +12,7 @@ use App\Enum\FeedGroup;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
+use App\Repository\RefreshTarget;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\SeedsUsers;
@@ -101,9 +102,9 @@ final class FeedRepositoryFeedGroupScopeTest extends DbTestCase
     {
         return new DueFeedCriteria(
             new \DateTimeImmutable(self::NOW),
+            RefreshTarget::feedGroup($group),
             $owner->requireId(),
             force: true,
-            feedGroup: $group,
         );
     }
 

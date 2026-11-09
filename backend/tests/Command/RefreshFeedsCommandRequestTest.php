@@ -43,7 +43,7 @@ final class RefreshFeedsCommandRequestTest extends TestCase
     {
         $request = $this->requestFor(['--budget' => '45', '--feed' => '7']);
 
-        self::assertSame(7, $request->feedId);
+        self::assertSame(7, $request->target->feedId);
         self::assertNull($request->userId);
     }
 
@@ -52,7 +52,7 @@ final class RefreshFeedsCommandRequestTest extends TestCase
         $request = $this->requestFor(['--budget' => '45', '--user' => '3']);
 
         self::assertSame(3, $request->userId);
-        self::assertNull($request->feedId);
+        self::assertNull($request->target->feedId);
     }
 
     public function testAMalformedFeedIdIsRefusedInsteadOfRefreshingEveryDueFeed(): void

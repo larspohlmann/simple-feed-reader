@@ -6,6 +6,7 @@ namespace App\Service\Refresh\Model;
 
 use App\Enum\FeedGroup;
 use App\Repository\NetworkScope;
+use App\Repository\RefreshTarget;
 
 final readonly class RefreshRequestModel
 {
@@ -13,64 +14,58 @@ final readonly class RefreshRequestModel
 
     private function __construct(
         public ?int $userId,
-        public ?int $feedId,
-        public ?int $tagId,
+        public RefreshTarget $target,
         public bool $force,
         public int $budgetSeconds,
         public bool $prune,
         public int $batchLimit = self::DEFAULT_BATCH_LIMIT,
-        public ?NetworkScope $networkScope = null,
-        public ?FeedGroup $feedGroup = null,
     ) {
     }
 
     public static function allDue(int $budgetSeconds): self
     {
-        return new self(null, null, null, false, $budgetSeconds, true);
+        return new self(null, RefreshTarget::everyFeed(), false, $budgetSeconds, true);
     }
 
     public static function forUser(int $userId, int $budgetSeconds): self
     {
-        return new self($userId, null, null, true, $budgetSeconds, false);
+        return new self($userId, RefreshTarget::everyFeed(), true, $budgetSeconds, false);
     }
 
     public static function forUserTag(int $userId, int $tagId, int $budgetSeconds): self
     {
-        return new self($userId, null, $tagId, true, $budgetSeconds, false);
+        return new self($userId, RefreshTarget::tag($tagId), true, $budgetSeconds, false);
     }
 
     public static function forUserNetwork(int $userId, NetworkScope $networkScope, int $budgetSeconds): self
     {
-        return new self($userId, null, null, true, $budgetSeconds, false, networkScope: $networkScope);
+        return new self($userId, RefreshTarget::network($networkScope), true, $budgetSeconds, false);
     }
 
     public static function forUserFeedGroup(int $userId, FeedGroup $feedGroup, int $budgetSeconds): self
     {
-        return new self($userId, null, null, true, $budgetSeconds, false, feedGroup: $feedGroup);
+        return new self($userId, RefreshTarget::feedGroup($feedGroup), true, $budgetSeconds, false);
     }
 
     public static function forFeed(int $feedId, int $budgetSeconds): self
     {
-        return new self(null, $feedId, null, true, $budgetSeconds, false);
+        return new self(null, RefreshTarget::feed($feedId), true, $budgetSeconds, false);
     }
 
     public static function forUserFeed(int $userId, int $feedId, int $budgetSeconds): self
     {
-        return new self($userId, $feedId, null, true, $budgetSeconds, false);
+        return new self($userId, RefreshTarget::feed($feedId), true, $budgetSeconds, false);
     }
 
     public function withoutPruning(): self
     {
         return new self(
             $this->userId,
-            $this->feedId,
-            $this->tagId,
+            $this->target,
             $this->force,
             $this->budgetSeconds,
             false,
             $this->batchLimit,
-            $this->networkScope,
-            $this->feedGroup,
         );
     }
 
@@ -78,14 +73,11 @@ final readonly class RefreshRequestModel
     {
         return new self(
             $this->userId,
-            $this->feedId,
-            $this->tagId,
+            $this->target,
             true,
             $this->budgetSeconds,
             $this->prune,
             $this->batchLimit,
-            $this->networkScope,
-            $this->feedGroup,
         );
     }
 
@@ -93,14 +85,11 @@ final readonly class RefreshRequestModel
     {
         return new self(
             $this->userId,
-            $this->feedId,
-            $this->tagId,
+            $this->target,
             $this->force,
             $this->budgetSeconds,
             $this->prune,
             $batchLimit,
-            $this->networkScope,
-            $this->feedGroup,
         );
     }
 }

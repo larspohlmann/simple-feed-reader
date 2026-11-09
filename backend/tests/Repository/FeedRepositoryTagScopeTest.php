@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
+use App\Repository\RefreshTarget;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -47,9 +48,10 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         $ownerId = $owner->requireId();
         $tagId = $tag->requireId();
 
-        $due = $repository->findDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true), 50);
+        $tagScope = new DueFeedCriteria($now, RefreshTarget::tag($tagId), $ownerId, force: true);
+        $due = $repository->findDue($tagScope, 50);
         self::assertSame([$tagged->getId()], array_map(static fn (Feed $feed): ?int => $feed->getId(), $due));
-        self::assertSame(1, $repository->countDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true)));
+        self::assertSame(1, $repository->countDue($tagScope));
     }
 
     public function testTagScopeExcludesAnotherUsersFeedWithTheSameTagName(): void
@@ -85,12 +87,12 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         // The owner scoping their own tag id must not reach the stranger's feed,
         // even though the tag shares a name.
         $due = $repository->findDue(
-            new DueFeedCriteria($now, $owner->requireId(), tagId: $ownerTag->requireId(), force: true),
+            new DueFeedCriteria($now, RefreshTarget::tag($ownerTag->requireId()), $owner->requireId(), force: true),
             50,
         );
         self::assertCount(0, $due);
         self::assertSame(0, $repository->countDue(
-            new DueFeedCriteria($now, $owner->requireId(), tagId: $ownerTag->requireId(), force: true),
+            new DueFeedCriteria($now, RefreshTarget::tag($ownerTag->requireId()), $owner->requireId(), force: true),
         ));
     }
 
@@ -113,14 +115,14 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
         $ownerId = $owner->requireId();
 
-        $parentScope = new DueFeedCriteria($now, $ownerId, tagId: $reading->requireId(), force: true);
+        $parentScope = new DueFeedCriteria($now, RefreshTarget::tag($reading->requireId()), $ownerId, force: true);
         self::assertEqualsCanonicalizing(
             [$parentFeed->getId(), $childFeed->getId()],
             array_map(static fn (Feed $feed): ?int => $feed->getId(), $repository->findDue($parentScope, 50)),
         );
         self::assertSame(2, $repository->countDue($parentScope));
 
-        $childScope = new DueFeedCriteria($now, $ownerId, tagId: $longReads->requireId(), force: true);
+        $childScope = new DueFeedCriteria($now, RefreshTarget::tag($longReads->requireId()), $ownerId, force: true);
         self::assertSame(
             [$childFeed->getId()],
             array_map(static fn (Feed $feed): ?int => $feed->getId(), $repository->findDue($childScope, 50)),
@@ -158,8 +160,8 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         self::assertInstanceOf(FeedRepository::class, $repository);
         $scope = new DueFeedCriteria(
             new \DateTimeImmutable('2026-06-01T00:00:00Z'),
+            RefreshTarget::tag($reading->requireId()),
             $owner->requireId(),
-            tagId: $reading->requireId(),
             force: true,
         );
 

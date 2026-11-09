@@ -11,6 +11,7 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
+use App\Repository\RefreshTarget;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
@@ -37,15 +38,16 @@ final class DueSocialFeedsTest extends DbTestCase
         $this->entityManager->flush();
         $now = new \DateTimeImmutable(self::NOW);
 
-        $due = $this->feeds()->findDue(new DueFeedCriteria($now), 10);
+        $due = $this->feeds()->findDue(new DueFeedCriteria($now, RefreshTarget::everyFeed()), 10);
 
         $expected = [$reachable->requireId(), $rss->requireId()];
         sort($expected);
         $dueIds = array_map(static fn (Feed $feed): int => $feed->requireId(), $due);
         sort($dueIds);
         self::assertSame($expected, $dueIds);
-        self::assertSame(2, $this->feeds()->countDue(new DueFeedCriteria($now)));
-        self::assertSame([], $this->feeds()->findDue(new DueFeedCriteria($now, feedId: $paused->requireId()), 10));
+        self::assertSame(2, $this->feeds()->countDue(new DueFeedCriteria($now, RefreshTarget::everyFeed())));
+        $pausedOnly = new DueFeedCriteria($now, RefreshTarget::feed($paused->requireId()));
+        self::assertSame([], $this->feeds()->findDue($pausedOnly, 10));
     }
 
     public function testASavedFeedIsNeverDueNotEvenWhenAskedForByItsId(): void
@@ -58,11 +60,12 @@ final class DueSocialFeedsTest extends DbTestCase
 
         $dueIds = array_map(
             static fn (Feed $feed): int => $feed->requireId(),
-            $this->feeds()->findDue(new DueFeedCriteria($now, force: true), 50),
+            $this->feeds()->findDue(new DueFeedCriteria($now, RefreshTarget::everyFeed(), force: true), 50),
         );
 
         self::assertNotContains($saved->requireId(), $dueIds);
-        self::assertSame([], $this->feeds()->findDue(new DueFeedCriteria($now, feedId: $saved->requireId()), 10));
+        $savedOnly = new DueFeedCriteria($now, RefreshTarget::feed($saved->requireId()));
+        self::assertSame([], $this->feeds()->findDue($savedOnly, 10));
     }
 
     private function privateFeed(SocialAccount $account, string $url, string $sourceFormat): Feed

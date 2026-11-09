@@ -88,16 +88,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
             ? $now->modify(sprintf('-%d minutes', self::COOLDOWN_MINUTES))
             : null;
 
-        return new DueFeedCriteria(
-            $now,
-            $request->userId,
-            $request->feedId,
-            $request->tagId,
-            $request->force,
-            $cooldownCutoff,
-            networkScope: $request->networkScope,
-            feedGroup: $request->feedGroup,
-        );
+        return new DueFeedCriteria($now, $request->target, $request->userId, $request->force, $cooldownCutoff);
     }
 
     private function resolveFaviconsAndReport(

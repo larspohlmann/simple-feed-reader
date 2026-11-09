@@ -234,10 +234,10 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
     private function restrictToSchedule(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
-        if ($criteria->feedId !== null) {
+        if ($criteria->target->feedId !== null) {
             // Manual per-feed retry: exactly this feed, "gone" included, schedule
             // ignored — but the ownership scope still applies.
-            $qb->andWhere('f.id = :feedId')->setParameter('feedId', $criteria->feedId);
+            $qb->andWhere('f.id = :feedId')->setParameter('feedId', $criteria->target->feedId);
 
             return;
         }
@@ -282,7 +282,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             ))->setParameter('userId', $criteria->userId);
         }
 
-        if ($criteria->tagId === null) {
+        if ($criteria->target->tagId === null) {
             return;
         }
 
@@ -290,21 +290,21 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             'EXISTS (SELECT ts.id FROM %s ts WHERE ts.feed = f AND ts.user = :userId AND %s)',
             Subscription::class,
             TagScopeDql::predicate('ts'),
-        ))->setParameter('tagId', $criteria->tagId);
+        ))->setParameter('tagId', $criteria->target->tagId);
     }
 
     private function restrictToNetwork(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
-        if ($criteria->networkScope === null) {
+        if ($criteria->target->networkScope === null) {
             return;
         }
 
-        NetworkScopeDql::restrict($qb, 'f', $criteria->networkScope);
+        NetworkScopeDql::restrict($qb, 'f', $criteria->target->networkScope);
     }
 
     private function restrictToNeverFetched(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
-        if (!$criteria->neverFetched) {
+        if (!$criteria->target->neverFetched) {
             return;
         }
 
@@ -313,7 +313,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
     private function restrictToFeedGroup(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
-        if ($criteria->feedGroup === null) {
+        if ($criteria->target->feedGroup === null) {
             return;
         }
 
@@ -322,7 +322,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             ->from(Subscription::class, 'gs')
             ->andWhere('gs.feed = f')
             ->andWhere('gs.user = :userId');
-        FeedGroupDql::restrict($subscriptions, 'gs', 'f', $criteria->feedGroup);
+        FeedGroupDql::restrict($subscriptions, 'gs', 'f', $criteria->target->feedGroup);
 
         $qb->andWhere(sprintf('EXISTS (%s)', $subscriptions->getDQL()))->setParameter('userId', $criteria->userId);
     }

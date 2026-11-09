@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
+use App\Repository\RefreshTarget;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -35,19 +36,19 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
 
         // Owner CAN reach the feed by id.
         $ownerResult = $repository->findDue(
-            new DueFeedCriteria($now, $owner->requireId(), $feed->requireId(), force: true),
+            new DueFeedCriteria($now, RefreshTarget::feed($feed->requireId()), $owner->requireId(), force: true),
             50,
         );
         self::assertCount(1, $ownerResult);
 
         // Stranger CANNOT reach it by id — the subscription EXISTS clause must still apply.
         $strangerResult = $repository->findDue(
-            new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
+            new DueFeedCriteria($now, RefreshTarget::feed($feed->requireId()), $stranger->requireId(), force: true),
             50,
         );
         self::assertCount(0, $strangerResult);
         self::assertSame(0, $repository->countDue(
-            new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
+            new DueFeedCriteria($now, RefreshTarget::feed($feed->requireId()), $stranger->requireId(), force: true),
         ));
     }
 
@@ -75,14 +76,14 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
         // reach a dead feed by id. This guards against a refactor hoisting the
         // `status != gone` clause out of the else-branch.
         $ownerResult = $repository->findDue(
-            new DueFeedCriteria($now, $owner->requireId(), $feed->requireId(), force: true),
+            new DueFeedCriteria($now, RefreshTarget::feed($feed->requireId()), $owner->requireId(), force: true),
             50,
         );
         self::assertCount(1, $ownerResult);
 
         // The subscription scope still applies to the gone-feed retry path.
         $strangerResult = $repository->findDue(
-            new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
+            new DueFeedCriteria($now, RefreshTarget::feed($feed->requireId()), $stranger->requireId(), force: true),
             50,
         );
         self::assertCount(0, $strangerResult);

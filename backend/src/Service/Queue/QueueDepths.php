@@ -12,6 +12,7 @@ use App\Repository\FeedRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
+use App\Repository\RefreshTarget;
 use App\Repository\ShareEnrichmentBacklogRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Queue\Model\QueueBacklogModel;
@@ -52,7 +53,9 @@ final readonly class QueueDepths
             QueueName::ShareEnrichmentLinkCards => $this->shareEnrichments->backlogOf(ShareEnrichmentKind::LinkCards),
             QueueName::ShareEnrichmentSelfThread => $this->shareEnrichments->backlogOf(ShareEnrichmentKind::SelfThread),
             QueueName::Transcripts => $this->transcripts->pendingBacklog(),
-            QueueName::DueFeeds => $this->feeds->dueBacklog(new DueFeedCriteria($this->clock->now())),
+            QueueName::DueFeeds => $this->feeds->dueBacklog(
+                new DueFeedCriteria($this->clock->now(), RefreshTarget::everyFeed()),
+            ),
         };
     }
 }

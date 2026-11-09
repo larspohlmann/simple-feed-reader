@@ -13,6 +13,7 @@ use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Repository\NetworkScope;
+use App\Repository\RefreshTarget;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\SeedsUsers;
@@ -146,9 +147,9 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
     {
         return new DueFeedCriteria(
             new \DateTimeImmutable(self::NOW),
+            RefreshTarget::network($networkScope),
             $owner->requireId(),
             force: true,
-            networkScope: $networkScope,
         );
     }
 

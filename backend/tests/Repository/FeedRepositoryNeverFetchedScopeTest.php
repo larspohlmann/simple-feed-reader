@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
+use App\Repository\RefreshTarget;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\SeedsUsers;
@@ -60,9 +61,9 @@ final class FeedRepositoryNeverFetchedScopeTest extends DbTestCase
     {
         return new DueFeedCriteria(
             new \DateTimeImmutable(self::NOW),
+            RefreshTarget::neverFetchedFeeds(),
             $owner->requireId(),
             force: true,
-            neverFetched: true,
         );
     }
 
