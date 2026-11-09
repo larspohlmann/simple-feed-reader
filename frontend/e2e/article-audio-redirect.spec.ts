@@ -70,10 +70,10 @@ function origin(server: Server): string {
 }
 
 /** Serve one article whose reader body carries the publisher's player. */
-async function stubArticle(page: Page, audioSrc: string): Promise<void> {
+async function stubArticle(page: Page, audioSource: string): Promise<void> {
   const body =
     '<p>For people who prefer to listen or are visually impaired or are multitasking.</p>' +
-    `<p><audio src="${audioSrc}" preload="none" controls>Audio playback is not supported.</audio></p>` +
+    `<p><audio src="${audioSource}" preload="none" controls>Audio playback is not supported.</audio></p>` +
     '<p>Thank you for subscribing.</p>';
   await page.route(
     (url) => /^\/api\/entries\/\d+\/reader$/.test(url.pathname),
@@ -116,8 +116,11 @@ test('the reader plays an audio source that redirects to a signed octet-stream l
       const created: HTMLAudioElement[] = [];
       (window as unknown as { __createdAudio: HTMLAudioElement[] }).__createdAudio = created;
       const NativeAudio = window.Audio;
-      window.Audio = function (this: unknown, ...args: ConstructorParameters<typeof Audio>) {
-        const element = new NativeAudio(...args);
+      window.Audio = function (
+        this: unknown,
+        ...constructorArguments: ConstructorParameters<typeof Audio>
+      ) {
+        const element = new NativeAudio(...constructorArguments);
         created.push(element);
         return element;
       } as unknown as typeof Audio;
