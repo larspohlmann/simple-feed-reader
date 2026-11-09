@@ -6,40 +6,22 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 
-/**
- * One row of the entry list: the shared Entry plus the caller-specific view of
- * it. `isHidden` already has the subscription watermark folded in, so the
- * client never re-derives it.
- */
+/** One row of the entry list: the shared Entry plus the caller's subscription to it and marks on it. */
 final readonly class EntryListRow
 {
-    public int $subscriptionId;
-    public string $subscriptionTitle;
-    public bool $isViewed;
-    public ?\DateTimeImmutable $viewedAt;
-    public ?\DateTimeImmutable $sharedAt;
-
     public function __construct(
         public Entry $entry,
-        EntryListRowSubscription $subscription,
-        public bool $isHidden,
-        public bool $isFavorite,
-        public bool $isKept,
-        EntryListRowViewState $viewState,
+        public EntryListRowSubscription $subscription,
+        public EntryListRowMarks $marks,
         /**
-         * The subscription's watermark, already folded into isHidden; carried so EntryStateResolver can record when
-         * it hid the entry.
+         * The subscription's watermark, already folded into marks->isHidden; carried so EntryStateResolver can record
+         * when it hid the entry.
          */
         public ?\DateTimeImmutable $markedReadUntil,
         /** @var list<self> */
         public array $duplicates = [],
         public EntryListRowEnrichment $enrichment = new EntryListRowEnrichment(),
     ) {
-        $this->subscriptionId = $subscription->id;
-        $this->subscriptionTitle = $subscription->title;
-        $this->isViewed = $viewState->isViewed;
-        $this->viewedAt = $viewState->viewedAt;
-        $this->sharedAt = $viewState->sharedAt;
     }
 
     /**
@@ -73,11 +55,8 @@ final readonly class EntryListRow
     {
         return new self(
             $this->entry,
-            new EntryListRowSubscription($this->subscriptionId, $this->subscriptionTitle),
-            $this->isHidden,
-            $this->isFavorite,
-            $this->isKept,
-            new EntryListRowViewState($this->isViewed, $this->viewedAt, $this->sharedAt),
+            $this->subscription,
+            $this->marks,
             $this->markedReadUntil,
             $duplicates,
             $enrichment,

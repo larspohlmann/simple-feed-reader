@@ -29,9 +29,9 @@ use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Repository\LinkCardRepository;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
@@ -593,10 +593,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'S'),
-            false,
-            false,
-            false,
-            new EntryListRowViewState(false, null, null),
+            new EntryListRowMarks(),
             null,
             $duplicates,
         );

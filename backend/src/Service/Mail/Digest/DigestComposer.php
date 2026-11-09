@@ -68,7 +68,7 @@ final readonly class DigestComposer
 
         return new DigestEntryModel(
             $entry->getTitle(),
-            $row->subscriptionTitle,
+            $row->subscription->title,
             $this->shortDescription($row),
             $this->links->entryUrl($entry->requireId()),
             $entry->getPublishedAt(),

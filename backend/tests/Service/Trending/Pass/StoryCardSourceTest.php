@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Trending\Pass;
 
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Service\Trending\Model\RankedStoryModel;
 use App\Service\Trending\Pass\StoryCardSource;
 use App\Tests\DbTestCase;
@@ -22,10 +22,7 @@ final class StoryCardSourceTest extends DbTestCase
         $row = new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'Alpha'),
-            false,
-            false,
-            false,
-            new EntryListRowViewState(false, null, null),
+            new EntryListRowMarks(),
             null,
         );
         $source = new StoryCardSource(

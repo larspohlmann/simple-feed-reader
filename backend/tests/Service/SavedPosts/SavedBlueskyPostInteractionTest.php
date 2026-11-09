@@ -12,9 +12,9 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Model\SocialCountsModel;
@@ -103,10 +103,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
         $row = new EntryListRow(
             $this->savedPost,
             new EntryListRowSubscription(1, 'Saved from Bluesky'),
-            false,
-            false,
-            false,
-            new EntryListRowViewState(false, null, null),
+            new EntryListRowMarks(),
             null,
         );
 

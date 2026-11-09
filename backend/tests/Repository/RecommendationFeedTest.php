@@ -204,27 +204,27 @@ final class RecommendationFeedTest extends DbTestCase
 
         // The entry's effectiveDate (2026-07-01) falls under the watermark
         // (2026-08-07), so with no explicit EntryState it reads as read.
-        self::assertTrue($byGuid['old']->row->isHidden);
+        self::assertTrue($byGuid['old']->row->marks->isHidden);
         self::assertSame(
             $watermark->getTimestamp(),
             $byGuid['old']->row->markedReadUntil?->getTimestamp(),
         );
         self::assertSame('reason old', $byGuid['old']->reason);
-        self::assertFalse($byGuid['old']->row->isFavorite);
-        self::assertFalse($byGuid['old']->row->isKept);
-        self::assertFalse($byGuid['old']->row->isViewed);
+        self::assertFalse($byGuid['old']->row->marks->isFavorite);
+        self::assertFalse($byGuid['old']->row->marks->isKept);
+        self::assertFalse($byGuid['old']->row->marks->isViewed());
 
-        self::assertTrue($byGuid['fav']->row->isFavorite);
-        self::assertFalse($byGuid['fav']->row->isKept);
+        self::assertTrue($byGuid['fav']->row->marks->isFavorite);
+        self::assertFalse($byGuid['fav']->row->marks->isKept);
 
-        self::assertTrue($byGuid['kept']->row->isKept);
-        self::assertFalse($byGuid['kept']->row->isFavorite);
+        self::assertTrue($byGuid['kept']->row->marks->isKept);
+        self::assertFalse($byGuid['kept']->row->marks->isFavorite);
 
-        self::assertTrue($byGuid['viewed']->row->isViewed);
-        self::assertFalse($byGuid['old']->row->isViewed);
+        self::assertTrue($byGuid['viewed']->row->marks->isViewed());
+        self::assertFalse($byGuid['old']->row->marks->isViewed());
 
-        self::assertSame($this->subscription->getId(), $byGuid['old']->row->subscriptionId);
-        self::assertSame('Example', $byGuid['old']->row->subscriptionTitle);
+        self::assertSame($this->subscription->getId(), $byGuid['old']->row->subscription->id);
+        self::assertSame('Example', $byGuid['old']->row->subscription->title);
     }
 
     public function testUnreadOnlyDropsEveryPickTheReaderHasAlreadyRead(): void
@@ -348,7 +348,7 @@ final class RecommendationFeedTest extends DbTestCase
 
         $rows = $this->repository()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         self::assertCount(1, $rows);
-        self::assertSame('My Custom Title', $rows[0]->row->subscriptionTitle);
+        self::assertSame('My Custom Title', $rows[0]->row->subscription->title);
     }
 
     public function testSubscriptionTitleFallsBackToFeedUrlWhenNothingElseIsSet(): void
@@ -378,7 +378,7 @@ final class RecommendationFeedTest extends DbTestCase
 
         $rows = $this->repository()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         self::assertCount(1, $rows);
-        self::assertSame('https://untitled.example.com/feed.xml', $rows[0]->row->subscriptionTitle);
+        self::assertSame('https://untitled.example.com/feed.xml', $rows[0]->row->subscription->title);
     }
 
     public function testLimitIsClampedToAtLeastOne(): void

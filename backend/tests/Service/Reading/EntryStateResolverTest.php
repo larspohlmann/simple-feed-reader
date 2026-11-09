@@ -11,8 +11,8 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Repository\EntryStateRepository;
 use App\Service\Reading\EntryStateResolver;
 use App\Tests\DbTestCase;
@@ -87,10 +87,7 @@ final class EntryStateResolverTest extends DbTestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription($this->subscription->requireId(), 'Resolver Feed'),
-            $isHidden,
-            false,
-            false,
-            new EntryListRowViewState(false, null, null),
+            new EntryListRowMarks(isHidden: $isHidden),
             $markedReadUntil,
         );
     }

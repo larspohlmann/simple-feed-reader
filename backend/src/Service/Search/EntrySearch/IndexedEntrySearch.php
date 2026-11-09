@@ -57,7 +57,7 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
 
     /**
      * The unread rows of a hydrated page — read state is already folded into
-     * EntryListRow::$isHidden by the projection. The read rows still counted
+     * EntryListRowMarks::$isHidden by the projection. The read rows still counted
      * toward the engine's page, so the caller resumes past them (continuationRow).
      *
      * @param list<EntryListRow> $candidates
@@ -68,7 +68,7 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
     {
         return array_values(array_filter(
             $candidates,
-            static fn (EntryListRow $row): bool => !$row->isHidden,
+            static fn (EntryListRow $row): bool => !$row->marks->isHidden,
         ));
     }
 }

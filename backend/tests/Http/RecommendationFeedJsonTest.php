@@ -7,8 +7,8 @@ namespace App\Tests\Http;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Repository\RecommendationFeedRow;
 use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
 use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
@@ -109,10 +109,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $listRow = new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(1, 'Seeded'),
-            isHidden: false,
-            isFavorite: false,
-            isKept: false,
-            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null, sharedAt: null),
+            marks: new EntryListRowMarks(),
             markedReadUntil: null,
         );
 

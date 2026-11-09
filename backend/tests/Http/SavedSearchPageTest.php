@@ -9,8 +9,8 @@ use App\Entity\Feed;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnrichment;
+use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\SavedSearchEntriesResultModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\JsonMappers;
@@ -66,10 +66,7 @@ final class SavedSearchPageTest extends TestCase
         return new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(1, 'Example'),
-            isHidden: false,
-            isFavorite: false,
-            isKept: false,
-            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null, sharedAt: null),
+            marks: new EntryListRowMarks(),
             markedReadUntil: null,
             enrichment: $enrichment,
         );

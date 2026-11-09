@@ -23,11 +23,10 @@ final readonly class EntryListRowHydrator
         return new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(self::toInt($row['subscriptionId']), $this->rowTitle($row)),
-            isHidden: $this->rowIsHidden($row, $entry),
-            isFavorite: (bool) ($row['esFavorite'] ?? false),
-            isKept: (bool) ($row['esKept'] ?? false),
-            viewState: new EntryListRowViewState(
-                isViewed: (bool) ($row['esViewed'] ?? false),
+            marks: new EntryListRowMarks(
+                isHidden: $this->rowIsHidden($row, $entry),
+                isFavorite: (bool) ($row['esFavorite'] ?? false),
+                isKept: (bool) ($row['esKept'] ?? false),
                 viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable ? $row['esViewedAt'] : null,
                 sharedAt: $row['eshSharedAt'] instanceof \DateTimeImmutable ? $row['eshSharedAt'] : null,
             ),

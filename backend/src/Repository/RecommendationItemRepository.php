@@ -66,7 +66,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isHidden AS esHidden')
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
-            ->addSelect('es.isViewed AS esViewed')
+            ->addSelect('es.viewedAt AS esViewedAt')
             ->addSelect('esh.sharedAt AS eshSharedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->addSelect('r.completedAt AS runCompletedAt');
@@ -192,18 +192,15 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         $listRow = new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(self::toInt($row['subscriptionId']), $this->rowTitle($row)),
-            isHidden: EffectiveReadState::isHidden(
-                $esHidden === null ? null : (bool) $esHidden,
-                $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
-                $entry->getEffectiveDate(),
-            ),
-            isFavorite: (bool) ($row['esFavorite'] ?? false),
-            isKept: (bool) ($row['esKept'] ?? false),
-            // The for-you feed ranks by score, never by view time, so its rows
-            // carry no viewedAt — nothing reads it on this path.
-            viewState: new EntryListRowViewState(
-                isViewed: (bool) ($row['esViewed'] ?? false),
-                viewedAt: null,
+            marks: new EntryListRowMarks(
+                isHidden: EffectiveReadState::isHidden(
+                    $esHidden === null ? null : (bool) $esHidden,
+                    $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
+                    $entry->getEffectiveDate(),
+                ),
+                isFavorite: (bool) ($row['esFavorite'] ?? false),
+                isKept: (bool) ($row['esKept'] ?? false),
+                viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable ? $row['esViewedAt'] : null,
                 sharedAt: $row['eshSharedAt'] instanceof \DateTimeImmutable ? $row['eshSharedAt'] : null,
             ),
             markedReadUntil: $markedReadUntil instanceof \DateTimeImmutable ? $markedReadUntil : null,

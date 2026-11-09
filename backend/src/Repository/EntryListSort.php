@@ -52,10 +52,10 @@ enum EntryListSort
     {
         return match ($this) {
             self::PublishedDate => $row->entry->getEffectiveDate(),
-            self::ViewedAt => $row->viewedAt ?? throw new \LogicException(
+            self::ViewedAt => $row->marks->viewedAt ?? throw new \LogicException(
                 'A viewed entry list row must carry a viewedAt instant.',
             ),
-            self::SharedAt => $row->sharedAt ?? throw new \LogicException(
+            self::SharedAt => $row->marks->sharedAt ?? throw new \LogicException(
                 'A shared entry list row must carry a sharedAt instant.',
             ),
         };
