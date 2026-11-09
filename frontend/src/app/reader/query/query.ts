@@ -12,17 +12,14 @@ import {
   isSocialNetworkName,
 } from '../../core/social-network';
 
-/** A list that takes the unread switch and the newest/oldest order. */
-interface FilteredList {
-  unread: boolean;
+/** A list that takes the newest/oldest order. */
+interface OrderedList {
   /** Absent means newest first. */
   order?: ListOrder;
 }
 
-/** A list of entry states: already a filter, so it takes only the order. */
-interface StateList {
-  order?: ListOrder;
-}
+/** A list that takes the unread switch and the newest/oldest order. */
+type FilteredList = OrderedList & { unread: boolean };
 
 /** What each kind of list carries beside its kind. */
 interface SelectionFields {
@@ -31,11 +28,11 @@ interface SelectionFields {
   subscription: FilteredList & { id: number };
   network: FilteredList & { network: SocialNetworkName; feedKind?: NetworkFeedKind };
   group: FilteredList & { group: FeedGroupName };
-  favorites: StateList;
-  kept: StateList;
-  shared: StateList;
-  viewed: StateList;
-  'for-you': { unread: boolean };
+  favorites: OrderedList;
+  kept: OrderedList;
+  shared: OrderedList;
+  viewed: OrderedList;
+  'for-you': Pick<FilteredList, 'unread'>;
   trending: { window: TrendingWindow };
   'saved-searches': FilteredList;
   'saved-search': FilteredList & { id: number };
