@@ -9,10 +9,12 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChildren,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AuthService } from '../core/auth/auth.service';
 import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
@@ -55,6 +57,7 @@ export class DiscoverComponent implements OnDestroy {
   private readonly tags = inject(TagsStore);
   private readonly skip = inject(OnboardingSkip);
   private readonly catalog = inject(CatalogStore);
+  private readonly auth = inject(AuthService);
 
   readonly selection = inject(CatalogSelection);
   readonly active = inject(ActiveCategory);
@@ -100,6 +103,12 @@ export class DiscoverComponent implements OnDestroy {
    *  an invalidate. */
   private readonly syncSelection = effect(() => {
     this.selection.setCategories(this.catalog.categories());
+  });
+
+  private readonly shareAvailability = effect(() => {
+    if (!this.catalog.resolved() || this.catalog.error() !== null) return;
+    const hasEntries = this.catalog.hasEntries();
+    untracked(() => this.auth.markCatalogHasEntries(hasEntries));
   });
 
   /** Re-wires the scroll-spy whenever rendered sections change. The catalog

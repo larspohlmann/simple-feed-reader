@@ -6,6 +6,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../core/api';
+import { AuthService } from '../../core/auth/auth.service';
 import { AdminCatalogComponent } from './admin-catalog.component';
 import { CategoryFormDialogComponent } from './category-form-dialog.component';
 import { FeedFormDialogComponent } from './feed-form-dialog.component';
@@ -68,6 +69,52 @@ describe('AdminCatalogComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  describe('the catalog answer it hands the reader', () => {
+    const IMPORT_COUNTS = {
+      categoriesCreated: 1,
+      categoriesUpdated: 0,
+      categoriesRemoved: 0,
+      feedsCreated: 1,
+      feedsUpdated: 0,
+      feedsRemoved: 0,
+      lockedSkipped: 0,
+    };
+
+    it('reports entries once an import fills an empty catalog', () => {
+      const fixture = mountLoaded({ categories: [], feeds: [] });
+      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
+
+      fixture.componentInstance.importBundled();
+      ctrl.expectOne('https://api.test/api/admin/catalog/import/bundled').flush(IMPORT_COUNTS);
+      ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
+      fixture.detectChanges();
+
+      expect(mark).toHaveBeenLastCalledWith(true);
+    });
+
+    it('reports no entries once the last feed is deleted', () => {
+      const fixture = mountLoaded();
+      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
+
+      fixture.componentInstance.deleteFeed(fixture.componentInstance.feeds()[0]);
+      ctrl.expectOne('https://api.test/api/admin/catalog/feeds/10').flush({});
+      fixture.detectChanges();
+
+      expect(mark).toHaveBeenLastCalledWith(false);
+    });
+
+    it('does not count a feed whose category is disabled', () => {
+      const fixture = mountLoaded();
+      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
+
+      fixture.componentInstance.openCategoryDialog(fixture.componentInstance.categories()[0]);
+      dialogClosed.next({ ...PAYLOAD.categories[0], enabled: false });
+      fixture.detectChanges();
+
+      expect(mark).toHaveBeenLastCalledWith(false);
+    });
+  });
 
   beforeEach(() => {
     dialogClosed = new Subject<unknown>();

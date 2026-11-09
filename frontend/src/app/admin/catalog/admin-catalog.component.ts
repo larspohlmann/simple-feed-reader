@@ -1,5 +1,16 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { AuthService } from '../../core/auth/auth.service';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { finalize } from 'rxjs';
@@ -44,6 +55,7 @@ export class AdminCatalogComponent implements OnInit {
   private readonly dialog = inject(Dialog);
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
+  private readonly auth = inject(AuthService);
 
   readonly categories = signal<AdminCatalogCategoryDto[]>([]);
   readonly feeds = signal<AdminCatalogFeedDto[]>([]);
@@ -63,6 +75,23 @@ export class AdminCatalogComponent implements OnInit {
   readonly hasFeeds = computed(() => this.feeds().length > 0);
   readonly loaded = computed(() => !this.loading() && this.error() === null);
   readonly importBusy = computed(() => this.importing() || this.refreshingCatalog());
+
+  private readonly fetched = signal(false);
+
+  private readonly offersFeeds = computed(() => {
+    const enabledCategories = new Set(
+      this.categories()
+        .filter((category) => category.enabled)
+        .map((category) => category.id),
+    );
+    return this.feeds().some((feed) => feed.enabled && enabledCategories.has(feed.categoryId));
+  });
+
+  private readonly shareAvailability = effect(() => {
+    if (!this.fetched()) return;
+    const offersFeeds = this.offersFeeds();
+    untracked(() => this.auth.markCatalogHasEntries(offersFeeds));
+  });
 
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
@@ -90,6 +119,7 @@ export class AdminCatalogComponent implements OnInit {
         next: (result) => {
           this.categories.set(result.categories);
           this.feeds.set(result.feeds);
+          this.fetched.set(true);
         },
         error: (failure: HttpErrorResponse) => this.error.set(parseProblem(failure)),
       });
