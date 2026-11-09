@@ -152,19 +152,190 @@ git add backend/src/Repository/DueFeedCriteria.php backend/src/Repository/FeedRe
 git commit -m "feat(#2106): let the due-feed query narrow to never-fetched feeds"
 ```
 
-### Task 2: `POST /api/refresh?neverFetched=1`
+### Task 2: Fold the refresh scopes into one `RefreshTarget`
+
+Task 1 took `DueFeedCriteria::__construct` to 10 parameters (PHPMD `ExcessiveParameterList`), and Task 3 would do the same to `RefreshRequestModel`. The design the metric points at: both classes carry `feedId`, `tagId`, `networkScope`, `feedGroup` (and now `neverFetched`) as separate nullable fields, yet every factory sets at most one and nothing combines them. They are one value — what a refresh covers. This task is a pure refactor: no behaviour changes, every existing test keeps asserting the same thing through the new shape.
+
+**Files:**
+- Create: `backend/src/Repository/RefreshTarget.php` (beside `NetworkScope`; persistence must not import a service)
+- Create: `backend/tests/Repository/RefreshTargetTest.php`
+- Modify: `backend/src/Repository/DueFeedCriteria.php`, `backend/src/Repository/FeedRepository.php`
+- Modify: `backend/src/Service/Refresh/Model/RefreshRequestModel.php`, `backend/src/Service/Refresh/RefreshRunner/RefreshRunner.php`, `backend/src/Service/Refresh/RefreshRunStore.php`, `backend/src/Service/Queue/QueueDepths.php`
+- Modify (tests): every `new DueFeedCriteria(` in `backend/tests/Repository/*` (`DueSocialFeedsTest`, `FeedRepositoryNeverFetchedScopeTest`, `FeedRepositoryTagScopeTest`, `FeedRepositoryUserFeedScopeTest`, `FeedRepositoryTest`, `FeedRepositoryNetworkScopeTest`, `FeedRepositoryFeedGroupScopeTest`), and every `$request->feedId|tagId|networkScope|feedGroup` read in `tests/Command/RefreshFeedsCommandRequestTest.php`, `tests/Service/Refresh/UserRefreshScopeTest.php`, `tests/Service/Refresh/Model/RefreshRequestModelTest.php` (find them with `grep -rn "new DueFeedCriteria\|request->\(feedId\|tagId\|networkScope\|feedGroup\)" tests`).
+
+**Interfaces:**
+- Consumes: Task 1's `restrictToNeverFetched` and its test.
+- Produces:
+  - `App\Repository\RefreshTarget` — `final readonly`, private constructor, public readonly `?int $feedId`, `?int $tagId`, `?NetworkScope $networkScope`, `?FeedGroup $feedGroup`, `bool $neverFetched`; factories `everyFeed()`, `feed(int $feedId)`, `tag(int $tagId)`, `network(NetworkScope $networkScope)`, `feedGroup(FeedGroup $feedGroup)`, `neverFetchedFeeds()`; `runKey(): string`.
+  - `DueFeedCriteria::__construct(\DateTimeImmutable $now, RefreshTarget $target, ?int $userId = null, bool $force = false, ?\DateTimeImmutable $cooldownCutoff = null, array $excludedFeedIds = [])` — the five scope fields are gone.
+  - `RefreshRequestModel` fields: `?int $userId`, `RefreshTarget $target`, `bool $force`, `int $budgetSeconds`, `bool $prune`, `int $batchLimit` — the four scope fields are gone; every existing public factory keeps its signature.
+
+- [ ] **Step 1: Write the failing test** — `backend/tests/Repository/RefreshTargetTest.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Repository;
+
+use App\Enum\FeedGroup;
+use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
+use App\Repository\RefreshTarget;
+use PHPUnit\Framework\TestCase;
+
+final class RefreshTargetTest extends TestCase
+{
+    public function testEveryFeedNarrowsNothing(): void
+    {
+        $target = RefreshTarget::everyFeed();
+
+        self::assertNull($target->feedId);
+        self::assertNull($target->tagId);
+        self::assertNull($target->networkScope);
+        self::assertNull($target->feedGroup);
+        self::assertFalse($target->neverFetched);
+        self::assertSame('all', $target->runKey());
+    }
+
+    public function testEachTargetNamesItsOwnRun(): void
+    {
+        self::assertSame('feed-7', RefreshTarget::feed(7)->runKey());
+        self::assertSame('tag-7', RefreshTarget::tag(7)->runKey());
+        self::assertSame('group-tags', RefreshTarget::feedGroup(FeedGroup::Tags)->runKey());
+        self::assertSame('never-fetched', RefreshTarget::neverFetchedFeeds()->runKey());
+        $networkScope = NetworkScope::whole(SocialNetwork::Mastodon);
+        self::assertSame(
+            'set-network-' . $networkScope->toRunKey(),
+            RefreshTarget::network($networkScope)->runKey(),
+        );
+    }
+
+    public function testAFactorySetsOnlyItsOwnField(): void
+    {
+        $target = RefreshTarget::tag(3);
+
+        self::assertSame(3, $target->tagId);
+        self::assertNull($target->feedId);
+        self::assertTrue(RefreshTarget::neverFetchedFeeds()->neverFetched);
+        self::assertNull(RefreshTarget::neverFetchedFeeds()->tagId);
+    }
+}
+```
+
+The run keys are the exact strings `RefreshRunStore::scopeOf` produces today (read it before writing `runKey()`); cached runs keyed by them must keep resolving.
+
+- [ ] **Step 2: Run it to see it fail** — `php bin/phpunit tests/Repository/RefreshTargetTest.php`; expected: class `RefreshTarget` not found.
+
+- [ ] **Step 3: Create `RefreshTarget`**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repository;
+
+use App\Enum\FeedGroup;
+
+final readonly class RefreshTarget
+{
+    private function __construct(
+        public ?int $feedId = null,
+        public ?int $tagId = null,
+        public ?NetworkScope $networkScope = null,
+        public ?FeedGroup $feedGroup = null,
+        public bool $neverFetched = false,
+    ) {
+    }
+
+    public static function everyFeed(): self
+    {
+        return new self();
+    }
+
+    public static function feed(int $feedId): self
+    {
+        return new self(feedId: $feedId);
+    }
+
+    public static function tag(int $tagId): self
+    {
+        return new self(tagId: $tagId);
+    }
+
+    public static function network(NetworkScope $networkScope): self
+    {
+        return new self(networkScope: $networkScope);
+    }
+
+    public static function feedGroup(FeedGroup $feedGroup): self
+    {
+        return new self(feedGroup: $feedGroup);
+    }
+
+    public static function neverFetchedFeeds(): self
+    {
+        return new self(neverFetched: true);
+    }
+
+    public function runKey(): string
+    {
+        return match (true) {
+            null !== $this->feedId => 'feed-' . $this->feedId,
+            null !== $this->tagId => 'tag-' . $this->tagId,
+            null !== $this->networkScope => 'set-network-' . $this->networkScope->toRunKey(),
+            null !== $this->feedGroup => 'group-' . $this->feedGroup->value,
+            $this->neverFetched => 'never-fetched',
+            default => 'all',
+        };
+    }
+}
+```
+
+Run the test: PASS.
+
+- [ ] **Step 4: Switch `DueFeedCriteria` and `FeedRepository` to the target**
+
+`DueFeedCriteria` becomes `(\DateTimeImmutable $now, RefreshTarget $target, ?int $userId = null, bool $force = false, ?\DateTimeImmutable $cooldownCutoff = null, array $excludedFeedIds = [])`; `excluding()` passes `$this->target` through. Update its class docblock: "`$feedId` picks one feed" becomes "a feed target picks one feed".
+
+In `FeedRepository`, every `$criteria->feedId|tagId|networkScope|feedGroup|neverFetched` becomes `$criteria->target->…`. Where a narrowed value is passed on (e.g. `NetworkScopeDql::restrict(..., $criteria->networkScope)`), read it into a local first if PHPStan cannot see the null-guard through the property chain.
+
+`QueueDepths`: `new DueFeedCriteria($this->clock->now(), RefreshTarget::everyFeed())`.
+
+Update every test construction: `new DueFeedCriteria($now, $userId, force: true, feedGroup: $group)` becomes `new DueFeedCriteria($now, RefreshTarget::feedGroup($group), $userId, force: true)`; a construction with no scope field gets `RefreshTarget::everyFeed()`.
+
+- [ ] **Step 5: Switch `RefreshRequestModel` to the target**
+
+Private constructor `(?int $userId, RefreshTarget $target, bool $force, int $budgetSeconds, bool $prune, int $batchLimit = self::DEFAULT_BATCH_LIMIT)`. Factories keep their public signatures and build the target: `allDue` and `forUser` → `RefreshTarget::everyFeed()`, `forUserTag` → `tag($tagId)`, `forUserNetwork` → `network(...)`, `forUserFeedGroup` → `feedGroup(...)`, `forFeed` and `forUserFeed` → `feed($feedId)`. `withoutPruning()`, `ignoringSchedule()`, `limitedTo()` pass `$this->target` through.
+
+`RefreshRunner::dueCriteria`: `new DueFeedCriteria($now, $request->target, $request->userId, $request->force, $cooldownCutoff)`.
+
+`RefreshRunStore`: delete `scopeOf()`; `keyFor()` uses `$request->target->runKey()`.
+
+Test reads `$request->feedId` etc. become `$request->target->feedId` etc.
+
+- [ ] **Step 6: Verify** — `php bin/phpunit tests/Repository tests/Service/Refresh tests/Service/Queue tests/Command tests/Controller/Api/RefreshControllerTest.php`, then `composer cs`, PHPStan on the touched files, and PHPMD on every touched `src` file: `DueFeedCriteria` and `RefreshRequestModel` must now be clean. `grep -rn "scopeOf" src tests` returns nothing.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add backend/src backend/tests
+git commit -m "refactor(#2106): fold the refresh scopes into one RefreshTarget"
+```
+
+### Task 3: `POST /api/refresh?neverFetched=1`
 
 **Files:**
 - Modify: `backend/src/Service/Refresh/Model/RefreshRequestModel.php`
-- Modify: `backend/src/Service/Refresh/RefreshRunner/RefreshRunner.php` (`dueCriteria`)
-- Modify: `backend/src/Service/Refresh/RefreshRunStore.php` (`scopeOf`)
 - Modify: `backend/src/Service/Refresh/UserRefreshScope.php`
 - Modify: `backend/src/Controller/Api/RefreshController.php`
 - Test: `backend/tests/Service/Refresh/UserRefreshScopeTest.php`, `backend/tests/Service/Refresh/RefreshRunStoreTest.php`, `backend/tests/Controller/Api/RefreshControllerTest.php`
 
 **Interfaces:**
-- Consumes: `DueFeedCriteria(..., neverFetched: bool)` from Task 1.
-- Produces: `RefreshRequestModel::forUserNeverFetched(int $userId, int $budgetSeconds): self` and `public bool $neverFetched` on the model; `UserRefreshScope::requestForNeverFetched(int $userId): RefreshRequestModel`; run key suffix `never-fetched`; query parameter `neverFetched` (boolean, `1`).
+- Consumes: `RefreshTarget::neverFetchedFeeds()` and the `RefreshRequestModel` shape from Task 2 (`$request->target`).
+- Produces: `RefreshRequestModel::forUserNeverFetched(int $userId, int $budgetSeconds): self`; `UserRefreshScope::requestForNeverFetched(int $userId): RefreshRequestModel`; query parameter `neverFetched` (boolean, `1`).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -176,11 +347,7 @@ git commit -m "feat(#2106): let the due-feed query narrow to never-fetched feeds
         $request = $this->scope()->requestForNeverFetched($this->user->requireId());
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertTrue($request->neverFetched);
-        self::assertNull($request->feedGroup);
-        self::assertNull($request->networkScope);
-        self::assertNull($request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(RefreshTarget::neverFetchedFeeds(), $request->target);
         self::assertTrue($request->force);
         self::assertSame(25, $request->budgetSeconds);
     }
@@ -238,24 +405,16 @@ Expected: undefined method `requestForNeverFetched` / `forUserNeverFetched`; the
 
 - [ ] **Step 3: Implement**
 
-`RefreshRequestModel`: add `public bool $neverFetched = false,` as the last private-constructor parameter; pass `$this->neverFetched` through `withoutPruning()`, `ignoringSchedule()` and `limitedTo()`; add
+`RefreshRequestModel`: add, next to `forUserFeedGroup`,
 
 ```php
     public static function forUserNeverFetched(int $userId, int $budgetSeconds): self
     {
-        return new self($userId, null, null, true, $budgetSeconds, false, neverFetched: true);
+        return new self($userId, RefreshTarget::neverFetchedFeeds(), true, $budgetSeconds, false);
     }
 ```
 
-`RefreshRunner::dueCriteria`: add `neverFetched: $request->neverFetched,` to the `DueFeedCriteria` call.
-
-`RefreshRunStore::scopeOf`: before the final `return 'all';`
-
-```php
-        if ($request->neverFetched) {
-            return 'never-fetched';
-        }
-```
+`RefreshRunner` and `RefreshRunStore` need no change: Task 2 already threads `$request->target` to the criteria and keys runs by `runKey()` (`never-fetched`).
 
 `UserRefreshScope`:
 
@@ -281,7 +440,7 @@ git add backend/src backend/tests
 git commit -m "feat(#2106): add a never-fetched scope to the refresh endpoint"
 ```
 
-### Task 3: Imports refresh only never-fetched feeds
+### Task 4: Imports refresh only never-fetched feeds
 
 **Files:**
 - Modify: `frontend/src/app/reader/query/query.ts` (`RefreshScope`)
@@ -291,7 +450,7 @@ git commit -m "feat(#2106): add a never-fetched scope to the refresh endpoint"
 - Test: `frontend/src/app/reader/reader-api.spec.ts`, `frontend/src/app/reader/feeds/social-picker/social-import-dialog.component.spec.ts`, `frontend/src/app/settings/import/opml-section.component.spec.ts`
 
 **Interfaces:**
-- Consumes: query parameter `neverFetched=1` from Task 2.
+- Consumes: query parameter `neverFetched=1` from Task 3.
 - Produces: `RefreshScope.neverFetched?: true`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -353,7 +512,7 @@ git add frontend/src
 git commit -m "fix(#2106): refresh only never-fetched feeds after a social or OPML import"
 ```
 
-### Task 4: Gates
+### Task 5: Gates
 
 - [ ] `composer check`, `composer md` (touched files clean), `php bin/phpunit` and `docker compose exec php composer test:parallel` in parallel.
 - [ ] `composer infection:diff`.
