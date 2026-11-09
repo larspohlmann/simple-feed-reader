@@ -15,16 +15,13 @@ final class SearchQueryAlternatives
 {
     public const int MAX_ALTERNATIVES = 8;
 
-    /** @var list<array{string, string}> */
-    private readonly array $tokens;
-
     private int $position = 0;
 
     private int $groupDepth = 0;
 
-    public function __construct(string $query)
+    /** @param list<array{string, string}> $tokens kind and text */
+    public function __construct(private readonly array $tokens)
     {
-        $this->tokens = SearchQueryTokens::of($query);
     }
 
     /**

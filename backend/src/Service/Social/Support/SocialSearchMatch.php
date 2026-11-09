@@ -13,7 +13,7 @@ final class SocialSearchMatch
     /** @return \Closure(SearchedPostModel): bool whether a post satisfies the query, a phrase never spanning two texts */
     public static function matcher(string $query): \Closure
     {
-        return (new SearchQueryParser($query))->expression()->matches(...);
+        return (new SearchQueryParser(SearchQueryTokens::of($query)))->expression()->matches(...);
     }
 
     private function __construct()

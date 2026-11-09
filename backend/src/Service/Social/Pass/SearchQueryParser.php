@@ -23,16 +23,13 @@ final class SearchQueryParser
     // `from:me` names the searching account, which the reader cannot tell from an author called "me".
     private const string AUTHOR_FILTER_PATTERN = '/^from:@?(?!me$)(?<author>[^@].*)$/iu';
 
-    /** @var list<array{string, string}> kind and text */
-    private readonly array $tokens;
-
     private int $position = 0;
 
     private int $groupDepth = 0;
 
-    public function __construct(string $query)
+    /** @param list<array{string, string}> $tokens kind and text */
+    public function __construct(private readonly array $tokens)
     {
-        $this->tokens = SearchQueryTokens::of($query);
     }
 
     public function expression(): SearchExpressionModelInterface

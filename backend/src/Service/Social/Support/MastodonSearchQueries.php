@@ -17,7 +17,7 @@ final class MastodonSearchQueries
      */
     public static function of(string $query): array
     {
-        return (new SearchQueryAlternatives($query))->queries();
+        return (new SearchQueryAlternatives(SearchQueryTokens::of($query)))->queries();
     }
 
     /** @throws SearchQueryTooBroadException */
@@ -29,7 +29,7 @@ final class MastodonSearchQueries
     public static function fits(string $query): bool
     {
         try {
-            self::requireFits($query);
+            self::of($query);
         } catch (SearchQueryTooBroadException) {
             return false;
         }

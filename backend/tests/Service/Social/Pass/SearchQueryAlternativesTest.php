@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Pass;
 
 use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Pass\SearchQueryAlternatives;
+use App\Service\Social\Support\SearchQueryTokens;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -41,14 +42,14 @@ final class SearchQueryAlternativesTest extends TestCase
     #[DataProvider('queries')]
     public function testAQueryIsSpelledOutAsTheQueriesItIsTheAlternativesOf(string $query, array $alternatives): void
     {
-        self::assertSame($alternatives, (new SearchQueryAlternatives($query))->queries());
+        self::assertSame($alternatives, (new SearchQueryAlternatives(SearchQueryTokens::of($query)))->queries());
     }
 
     public function testAsManyAlternativesAsTheCapAreSpelledOut(): void
     {
         self::assertCount(
             SearchQueryAlternatives::MAX_ALTERNATIVES,
-            (new SearchQueryAlternatives('(a || b) (c || d) (e || f)'))->queries(),
+            (new SearchQueryAlternatives(SearchQueryTokens::of('(a || b) (c || d) (e || f)')))->queries(),
         );
     }
 
@@ -57,6 +58,6 @@ final class SearchQueryAlternativesTest extends TestCase
         $this->expectException(SearchQueryTooBroadException::class);
         $this->expectExceptionMessage('more than 8');
 
-        (new SearchQueryAlternatives('(a || b || c) (d || e || f)'))->queries();
+        (new SearchQueryAlternatives(SearchQueryTokens::of('(a || b || c) (d || e || f)')))->queries();
     }
 }
