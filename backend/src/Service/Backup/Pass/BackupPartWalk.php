@@ -10,11 +10,12 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
-use App\Service\Backup\BackupLines;
+use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryShareLine;
 use App\Service\Backup\Dto\EntryStateLine;
+use App\Service\Backup\Dto\FooterLine;
 use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\EntryCompanionsModel;
@@ -41,7 +42,6 @@ final class BackupPartWalk
         private readonly EntryShareRepository $entryShares,
         private readonly LinkCardRepository $linkCards,
         private readonly SavedEntryOriginRepository $savedOrigins,
-        private readonly BackupLines $lines,
         private readonly BackupProvenanceModel $provenance,
         private readonly int $userId,
     ) {
@@ -137,12 +137,12 @@ final class BackupPartWalk
     private function closePart(): BackupPartModel
     {
         ++$this->partsWritten;
-        $header = $this->lines->entryPartHeader($this->provenance, $this->partsWritten);
-        $footer = $this->lines->footerLine([
+        $header = BackupHeader::entryPart($this->provenance, $this->partsWritten)->toBackupLine();
+        $footer = FooterLine::of([
             BackupSchema::KIND_ENTRY => $this->buffer->entryCount(),
             BackupSchema::KIND_ENTRY_STATE => $this->buffer->entryStateCount(),
             BackupSchema::KIND_ENTRY_SHARE => $this->buffer->entryShareCount(),
-        ]);
+        ])->toBackupLine();
 
         return BackupPartModel::entries($this->partsWritten, $this->buffer->drain($header, $footer));
     }

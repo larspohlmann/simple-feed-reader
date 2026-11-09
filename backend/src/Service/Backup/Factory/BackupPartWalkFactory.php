@@ -9,7 +9,6 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
-use App\Service\Backup\BackupLines;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Pass\BackupPartWalk;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,7 +22,6 @@ final readonly class BackupPartWalkFactory
         private EntryShareRepository $entryShares,
         private LinkCardRepository $linkCards,
         private SavedEntryOriginRepository $savedOrigins,
-        private BackupLines $lines,
     ) {
     }
 
@@ -36,7 +34,6 @@ final readonly class BackupPartWalkFactory
             $this->entryShares,
             $this->linkCards,
             $this->savedOrigins,
-            $this->lines,
             $provenance,
             $userId,
         );

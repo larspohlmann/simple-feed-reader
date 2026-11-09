@@ -34,4 +34,10 @@ final readonly class BackupTotals
         /** @var array<string, mixed> $totals */
         return new self(LineField::int($totals, 'entries'), LineField::int($totals, 'entryStates'));
     }
+
+    /** @return array{entries: int, entryStates: int} */
+    public function toHeaderFields(): array
+    {
+        return ['entries' => $this->entries, 'entryStates' => $this->entryStates];
+    }
 }

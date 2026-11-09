@@ -15,7 +15,9 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
 use App\Service\Backup\Dto\AccountLine;
+use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\FeedLine;
+use App\Service\Backup\Dto\FooterLine;
 use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
@@ -43,7 +45,6 @@ final readonly class AccountBackupExporter
         private SavedSearchNetworkInclusionRepository $includedNetworks,
         private ForYouNetworkExclusionRepository $forYouExcludedNetworks,
         private SubscriptionRepository $subscriptions,
-        private BackupLines $lines,
         private BackupPartWalkFactory $walkFactory,
         private ClockInterface $clock,
     ) {
@@ -116,9 +117,9 @@ final readonly class AccountBackupExporter
         BackupProvenanceModel $provenance,
         BackupPartWalk $walk,
     ): BackupPartModel {
-        $header = $this->lines->foundationHeader($provenance, $walk->partsWritten() + 1, $walk->totals());
+        $header = BackupHeader::foundation($provenance, $walk->partsWritten() + 1, $walk->totals())->toBackupLine();
 
-        return $snapshot->part($header, $this->lines->footerLine($snapshot->counts()));
+        return $snapshot->part($header, FooterLine::of($snapshot->counts())->toBackupLine());
     }
 
     /**

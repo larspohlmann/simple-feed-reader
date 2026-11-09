@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 
 /**
  * The backup file's closing line: a count per line kind, so the reader can
@@ -12,6 +14,16 @@ use App\Service\Backup\Exception\InvalidBackupException;
  */
 final readonly class FooterLine
 {
+    private const array NO_COUNTS = [
+        BackupSchema::KIND_TAG => 0,
+        BackupSchema::KIND_SAVED_SEARCH => 0,
+        BackupSchema::KIND_FEED => 0,
+        BackupSchema::KIND_SUBSCRIPTION => 0,
+        BackupSchema::KIND_ENTRY => 0,
+        BackupSchema::KIND_ENTRY_STATE => 0,
+        BackupSchema::KIND_ENTRY_SHARE => 0,
+    ];
+
     /**
      * @param array<string, int> $counts kind => count over tag/feed/subscription/entry/entryState/entryShare
      */
@@ -31,6 +43,19 @@ final readonly class FooterLine
         }
 
         return new self(counts: self::intCounts($counts));
+    }
+
+    /**
+     * @param array<string, int> $counts keyed by BackupSchema::KIND_*; an absent kind counts zero
+     */
+    public static function of(array $counts): self
+    {
+        return new self(counts: array_replace(self::NO_COUNTS, $counts));
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode(['kind' => BackupSchema::KIND_FOOTER, 'counts' => $this->counts]);
     }
 
     /**
