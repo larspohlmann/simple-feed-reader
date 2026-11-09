@@ -8,6 +8,7 @@ use App\Enum\EntryView;
 use App\Enum\FeedGroup;
 use App\Enum\ListOrder;
 use App\Enum\SocialNetwork;
+use App\Pagination\EntryCursor;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\NetworkScope;
@@ -103,5 +104,18 @@ final class EntryQueryTest extends TestCase
         $all = (new EntryQuery(1))->ordering();
         self::assertSame(EntryListSort::PublishedDate, $all->sort);
         self::assertSame(ListOrder::NewestFirst, $all->order);
+    }
+
+    public function testTheAllViewKeepsTheScopeAndThePage(): void
+    {
+        $cursor = new EntryCursor(new \DateTimeImmutable('2026-07-01T00:00:00Z'), 9);
+        $network = NetworkScope::whole(SocialNetwork::Bluesky);
+        $order = ListOrder::OldestFirst;
+        $unread = new EntryQuery(1, EntryView::Unread, 5, 3, $cursor, 20, $order, $network, FeedGroup::Tags);
+
+        self::assertEquals(
+            new EntryQuery(1, EntryView::All, 5, 3, $cursor, 20, $order, $network, FeedGroup::Tags),
+            $unread->inAllView(),
+        );
     }
 }

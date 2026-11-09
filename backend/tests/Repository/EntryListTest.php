@@ -959,9 +959,9 @@ final class EntryListTest extends DbTestCase
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
-        self::assertCount(3, $recorded['queries'], 'a short windowed page must fall back to a third, plain query');
+        self::assertCount(4, $recorded['queries'], 'a short window over a sparse scope falls back plain');
         self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][1], 'the windowed attempt is hinted');
-        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the fallback is unhinted');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'the fallback is unhinted');
         self::assertSame(['own-1', 'own-2'], $this->guids($recorded['rows']));
     }
 
@@ -973,9 +973,27 @@ final class EntryListTest extends DbTestCase
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
-        self::assertCount(3, $recorded['queries'], 'an empty windowed page must fall back to a third, plain query');
-        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the fallback is unhinted');
+        self::assertCount(4, $recorded['queries'], 'an empty window over an empty scope falls back plain');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'the fallback is unhinted');
         self::assertSame([], $recorded['rows']);
+    }
+
+    public function testACaughtUpReaderWithAScopeBeyondTheWindowFallsBackToTheHintedWalk(): void
+    {
+        foreach (range(10, 13) as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, sprintf('2026-07-%02dT00:00:00Z', $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $this->entryIn($this->feed, 'unread', '2026-07-02T00:00:00Z');
+        $this->entityManager->flush();
+        $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(4, $recorded['queries'], 'a short window probes the scope first');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the scope probe is never hinted');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
+        self::assertSame(['unread'], $this->guids($recorded['rows']));
     }
 
     public function testFewerThanWindowSizeRowsBeyondCursorRunsASingleHintedQuery(): void
@@ -1035,8 +1053,8 @@ final class EntryListTest extends DbTestCase
 
         $recorded = $this->recordedList($repository, $query);
         $queries = $recorded['queries'];
-        self::assertCount(3, $queries, 'a short windowed page must fall back to a third, plain query');
-        self::assertStringNotContainsString('JOIN_PREFIX', $queries[2], 'the fallback is deliberately unhinted');
+        self::assertCount(4, $queries, 'a short window over a sparse scope falls back plain');
+        self::assertStringNotContainsString('JOIN_PREFIX', $queries[3], 'the fallback is deliberately unhinted');
 
         self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
@@ -1190,14 +1208,15 @@ final class EntryListTest extends DbTestCase
         $query = new EntryQuery($userId, tagId: $tag->getId(), cursor: $cursor, limit: 2);
 
         $recorded = $this->recordedList($repository, $query);
-        self::assertCount(3, $recorded['queries'], 'the second page must independently fall back');
+        self::assertCount(4, $recorded['queries'], 'the second page must independently fall back');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
         self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
     }
 
-    public function testUnreadViewOnADenseTagWhoseNewestEntriesAreAllReadFallsBack(): void
+    public function testUnreadViewOnADenseTagWhoseNewestEntriesAreAllReadFallsBackToTheHintedWalk(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
         $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
@@ -1213,10 +1232,11 @@ final class EntryListTest extends DbTestCase
 
         $recorded = $this->recordedList($repository, $query);
         self::assertCount(
-            3,
+            4,
             $recorded['queries'],
             'the windowed rows the pivot admits are all read, so it must fall back',
         );
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
 
         $rows = $recorded['rows'];
         self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(

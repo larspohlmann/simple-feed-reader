@@ -48,12 +48,7 @@ final class EntryListRepository extends ServiceEntityRepository
         }
 
         $ordering = $query->ordering();
-        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query, $groupSubscriptionIds): void {
-            $this->scope->applyList($qb, $aliases, $query);
-            if ($groupSubscriptionIds !== null) {
-                $this->scope->inSubscriptions($qb, $aliases, $groupSubscriptionIds);
-            }
-        };
+        $applyScope = $this->listScope($query, $groupSubscriptionIds);
 
         $pageQuery = function () use ($query, $ordering, $applyScope): QueryBuilder {
             $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
@@ -73,10 +68,50 @@ final class EntryListRepository extends ServiceEntityRepository
             return $qb;
         };
 
-        $rows = $this->dateOrderedPage->rows($query, $pageQuery, $windowProbe);
+        $rows = $this->dateOrderedPage->rows(
+            $query,
+            new DateOrderedQueries(
+                $pageQuery,
+                $windowProbe,
+                $this->scopeProbe($query->userId, $this->listScope($query->inAllView(), $groupSubscriptionIds)),
+            ),
+        );
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
         return $this->attachDuplicates($survivors, $applyScope, $query->userId);
+    }
+
+    /**
+     * @param non-empty-list<int>|null $groupSubscriptionIds
+     *
+     * @return \Closure(QueryBuilder, EntryAliases): void
+     */
+    private function listScope(EntryQuery $query, ?array $groupSubscriptionIds): \Closure
+    {
+        return function (QueryBuilder $qb, EntryAliases $aliases) use ($query, $groupSubscriptionIds): void {
+            $this->scope->applyList($qb, $aliases, $query);
+            if ($groupSubscriptionIds !== null) {
+                $this->scope->inSubscriptions($qb, $aliases, $groupSubscriptionIds);
+            }
+        };
+    }
+
+    /**
+     * @param \Closure(QueryBuilder, EntryAliases): void $applyScope
+     *
+     * @return \Closure(): QueryBuilder
+     */
+    private function scopeProbe(int $userId, \Closure $applyScope): \Closure
+    {
+        return function () use ($userId, $applyScope): QueryBuilder {
+            $qb = $this->createQueryBuilder('e')
+                ->select('e.id')
+                ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+                ->setParameter('user', $userId);
+            $applyScope($qb, EntryAliases::primary());
+
+            return $qb;
+        };
     }
 
     /**

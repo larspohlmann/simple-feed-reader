@@ -11,9 +11,10 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * Runs a fan-in page: unhinted for a single scope or a state-driven view; a chronological fan-in is probed, walked
- * hinted inside the window, and falls back unhinted when the window is short, since a sparse scope would otherwise
- * walk the whole entry table (#1099, #2126).
+ * Runs a fan-in page: unhinted for a single scope or a state-driven view; a chronological fan-in is probed and walked
+ * hinted inside the window. A short window falls back by scope size: a sparse scope runs unhinted, since the hint would
+ * walk the whole entry table, while a scope beyond the window keeps the hinted walk, since unhinted it sorts the whole
+ * scope (#1099, #2126).
  */
 final readonly class DateOrderedPage
 {
@@ -24,48 +25,64 @@ final readonly class DateOrderedPage
     }
 
     /**
-     * @param callable(): QueryBuilder $pageQuery   a fresh, complete page query; called up to twice
-     * @param callable(): QueryBuilder $windowProbe a fresh Entry-only effectiveDate query in the page's order, cursored
-     *
      * @return list<array<array-key, mixed>>
      */
-    public function rows(EntryQuery $query, callable $pageQuery, callable $windowProbe): array
+    public function rows(EntryQuery $query, DateOrderedQueries $queries): array
     {
         if (!$query->isDateOrderedFanIn()) {
-            return $this->plainResult($pageQuery());
+            return $this->plainResult(($queries->page)());
         }
 
-        return $this->windowedRows($query, $pageQuery, $windowProbe);
+        return $this->windowedRows($query, $queries);
     }
 
     /**
-     * @param callable(): QueryBuilder $pageQuery
-     * @param callable(): QueryBuilder $windowProbe
-     *
      * @return list<array<array-key, mixed>>
      */
-    private function windowedRows(EntryQuery $query, callable $pageQuery, callable $windowProbe): array
+    private function windowedRows(EntryQuery $query, DateOrderedQueries $queries): array
     {
-        $windowEdge = $this->windowEdge($windowProbe);
+        $windowEdge = $this->windowEdge($queries->windowProbe);
         if ($windowEdge === null) {
-            return $this->hintedResult($pageQuery());
+            return $this->hintedResult(($queries->page)());
         }
 
-        $windowed = $this->hintedResult($this->windowed($pageQuery(), $windowEdge, $query->order));
+        $windowed = $this->hintedResult($this->windowed(($queries->page)(), $windowEdge, $query->order));
         if (\count($windowed) === $query->limit) {
             return $windowed;
         }
 
-        return $this->plainResult($pageQuery());
+        return $this->fallbackRows($queries);
+    }
+
+    /**
+     * @return list<array<array-key, mixed>>
+     */
+    private function fallbackRows(DateOrderedQueries $queries): array
+    {
+        if ($this->scopeOutgrowsTheWindow($queries->scopeProbe)) {
+            return $this->hintedResult(($queries->page)());
+        }
+
+        return $this->plainResult(($queries->page)());
+    }
+
+    /**
+     * @param \Closure(): QueryBuilder $scopeProbe
+     */
+    private function scopeOutgrowsTheWindow(\Closure $scopeProbe): bool
+    {
+        $inScope = $scopeProbe()->setMaxResults($this->windowSize + 1)->getQuery()->getScalarResult();
+
+        return \count($inScope) > $this->windowSize;
     }
 
     /**
      * The K-th effectiveDate beyond the cursor in the page's own order, or
      * null when fewer than K rows lie beyond it.
      *
-     * @param callable(): QueryBuilder $windowProbe
+     * @param \Closure(): QueryBuilder $windowProbe
      */
-    private function windowEdge(callable $windowProbe): ?\DateTimeImmutable
+    private function windowEdge(\Closure $windowProbe): ?\DateTimeImmutable
     {
         /** @var array{effectiveDate: \DateTimeImmutable}|null $pivot */
         $pivot = $windowProbe()
