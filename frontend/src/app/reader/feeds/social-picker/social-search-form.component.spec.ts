@@ -298,19 +298,22 @@ describe('SocialSearchFormComponent', () => {
     );
   });
 
-  it('shows the combined Bluesky example on a line of its own, apart from the rules', () => {
-    const fixture = mount('bluesky');
-    const syntax = byTestId(fixture, 'social-search-syntax') as HTMLElement;
+  it.each<SocialNetworkName>(['bluesky', 'mastodon'])(
+    'shows the combined example on a line of its own, apart from the rules on %s',
+    (network) => {
+      const fixture = mount(network);
+      const syntax = byTestId(fixture, 'social-search-syntax') as HTMLElement;
 
-    expect(syntax.querySelector('.rules')?.textContent).not.toContain('rssreader');
-    const combined = byTestId(fixture, 'social-search-combined') as HTMLElement;
-    expect(combined.textContent).toContain('All of it combined:');
-    expect(combined.querySelector('code')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      '("rss reader" || "feed reader" || rssreader) -gazette',
-    );
-    const terms = Array.from(combined.querySelectorAll('.term'), (term) => term.textContent);
-    expect(terms).toContain('-gazette');
-  });
+      expect(syntax.querySelector('.rules')?.textContent).not.toContain('rssreader');
+      const combined = byTestId(fixture, 'social-search-combined') as HTMLElement;
+      expect(combined.textContent).toContain('All of it combined:');
+      expect(combined.querySelector('code')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        '("rss reader" || "feed reader" || rssreader) -gazette',
+      );
+      const terms = Array.from(combined.querySelectorAll('.term'), (term) => term.textContent);
+      expect(terms).toContain('-gazette');
+    },
+  );
 
   it.each<SocialNetworkName>(['bluesky', 'mastodon'])(
     'lists leaving out an account on %s',
@@ -322,13 +325,22 @@ describe('SocialSearchFormComponent', () => {
     },
   );
 
-  it('lists the either-or operator for Bluesky only', () => {
-    const bluesky = mount('bluesky');
-    expect(byTestId(bluesky, 'social-search-syntax')?.textContent).toContain('||');
+  it.each<SocialNetworkName>(['bluesky', 'mastodon'])(
+    'lists the either-or operator and grouping on %s',
+    (network) => {
+      const rules = byTestId(mount(network), 'social-search-syntax')?.querySelector('.rules');
 
-    const mastodon = mount('mastodon');
-    const syntax = byTestId(mastodon, 'social-search-syntax')?.textContent ?? '';
-    expect(syntax).not.toContain('||');
-    expect(syntax).toContain('full-text search');
+      expect(rules?.textContent).toContain('rss || atom');
+      expect(rules?.textContent).toContain('( … )');
+    },
+  );
+
+  it('tells a Mastodon search that each alternative is searched on its own, and how many at most', () => {
+    const mastodon = byTestId(mount('mastodon'), 'social-search-syntax')?.textContent ?? '';
+    expect(mastodon).toContain('full-text search');
+    expect(mastodon).toContain('at most 8');
+
+    const bluesky = byTestId(mount('bluesky'), 'social-search-syntax')?.textContent ?? '';
+    expect(bluesky).not.toContain('at most 8');
   });
 });

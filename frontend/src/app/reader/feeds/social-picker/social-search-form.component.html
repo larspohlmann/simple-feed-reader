@@ -21,28 +21,27 @@
   [label]="'settings.social.search.syntax' | transloco"
 >
   <dl class="rules">
-    @for (rule of syntax().rules; track rule.key) {
+    @for (rule of syntaxRules(); track rule.key) {
       <dt>
         <code>{{ rule.operator }}</code>
       </dt>
       <dd>{{ rule.key | transloco }}</dd>
     }
   </dl>
-  @if (syntax().combined; as combined) {
-    <p class="combined" data-testid="social-search-combined">
-      {{ 'settings.social.search.syntaxCombined' | transloco }}
-      <code>
-        @for (term of combined.split(' '); track $index; let last = $last) {
-          <span class="term">{{ term }}</span>
-          @if (!last) {
-            {{ ' ' }}
-          }
+  <p class="combined" data-testid="social-search-combined">
+    {{ 'settings.social.search.syntaxCombined' | transloco }}
+    <code>
+      @for (term of combinedExample.split(' '); track $index; let last = $last) {
+        <span class="term">{{ term }}</span>
+        @if (!last) {
+          {{ ' ' }}
         }
-      </code>
-    </p>
-  }
+      }
+    </code>
+  </p>
   @if (network() === 'mastodon') {
     <p class="note">{{ 'settings.social.search.syntaxMastodonNote' | transloco }}</p>
+    <p class="note">{{ 'settings.social.search.syntaxMastodonAlternatives' | transloco }}</p>
   }
 </app-disclosure>
 

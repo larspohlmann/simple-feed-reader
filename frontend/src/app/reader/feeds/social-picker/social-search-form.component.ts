@@ -41,36 +41,27 @@ interface SyntaxRule {
 
 const EXAMPLE_QUERY = '"rss reader" -gazette';
 
-interface SearchSyntax {
-  readonly rules: readonly SyntaxRule[];
-  readonly combined: string | null;
-}
+const COMBINED_EXAMPLE = '("rss reader" || "feed reader" || rssreader) -gazette';
 
+const PHRASE: SyntaxRule = { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' };
+const EITHER: SyntaxRule = { operator: 'rss || atom', key: 'settings.social.search.syntaxEither' };
+const EXCLUDE: SyntaxRule = { operator: '-gazette', key: 'settings.social.search.syntaxExclude' };
 const EXCLUDE_AUTHOR: SyntaxRule = {
   operator: '-from:handle',
   key: 'settings.social.search.syntaxExcludeAuthor',
 };
+const GROUP: SyntaxRule = { operator: '( … )', key: 'settings.social.search.syntaxGroup' };
 
-const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, SearchSyntax>> = {
-  bluesky: {
-    rules: [
-      { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' },
-      { operator: 'rss || atom', key: 'settings.social.search.syntaxEither' },
-      { operator: '-gazette', key: 'settings.social.search.syntaxExclude' },
-      EXCLUDE_AUTHOR,
-      { operator: '( … )', key: 'settings.social.search.syntaxGroup' },
-    ],
-    combined: '("rss reader" || "feed reader" || rssreader) -gazette',
-  },
-  mastodon: {
-    rules: [
-      { operator: 'rss reader', key: 'settings.social.search.syntaxAllWords' },
-      { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' },
-      { operator: '-gazette', key: 'settings.social.search.syntaxExclude' },
-      EXCLUDE_AUTHOR,
-    ],
-    combined: null,
-  },
+const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, readonly SyntaxRule[]>> = {
+  bluesky: [PHRASE, EITHER, EXCLUDE, EXCLUDE_AUTHOR, GROUP],
+  mastodon: [
+    { operator: 'rss reader', key: 'settings.social.search.syntaxAllWords' },
+    PHRASE,
+    EITHER,
+    EXCLUDE,
+    EXCLUDE_AUTHOR,
+    GROUP,
+  ],
 };
 
 /** A search query with its syntax help and a preview of what it finds; the host projects its own action beside Preview. */
@@ -107,7 +98,8 @@ export class SocialSearchFormComponent {
 
   readonly normalizedQuery = computed(() => this.query().trim().replace(/\s+/g, ' '));
   protected readonly exampleQuery = EXAMPLE_QUERY;
-  protected readonly syntax = computed(() => SEARCH_SYNTAX[this.network()]);
+  protected readonly combinedExample = COMBINED_EXAMPLE;
+  protected readonly syntaxRules = computed(() => SEARCH_SYNTAX[this.network()]);
   protected readonly canPreview = computed(
     () => this.normalizedQuery() !== '' && !this.previewing(),
   );

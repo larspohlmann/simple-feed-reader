@@ -425,6 +425,7 @@
         "syntaxCombined": "Alles zusammen:",
         "syntaxAllWords": "jedes Wort muss vorkommen",
         "syntaxMastodonNote": "Setzt die Volltextsuche deiner Instanz voraus; gefunden werden nur Beiträge von Leuten, die die Suche erlauben.",
+        "syntaxMastodonAlternatives": "Mastodon kennt kein ||: jede Alternative wird einzeln gesucht, höchstens 8 pro Suche.",
         "preview": "Vorschau",
         "subscribe": "Abonnieren",
         "loading": "Suche nach neuen Beiträgen…",
