@@ -66,7 +66,7 @@ final readonly class EntryStateUpdater
     private function applyShared(User $user, EntryListRow $row, EntryStateChangeModel $change): ?\DateTimeImmutable
     {
         if (null === $change->isShared) {
-            return $row->sharedAt;
+            return $row->marks->sharedAt;
         }
         if (!$change->isShared) {
             $this->shares->remove($user, $row->entry);
@@ -74,7 +74,7 @@ final readonly class EntryStateUpdater
             return null;
         }
 
-        return $this->shares->record($user, $row->entry) ?? $row->sharedAt;
+        return $this->shares->record($user, $row->entry) ?? $row->marks->sharedAt;
     }
 
     private function mirror(User $user, EntryListRow $row, EntryStateChangeModel $change): void

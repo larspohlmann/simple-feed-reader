@@ -6,10 +6,6 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 
-/**
- * One DQL result row of the shared entry-list projection, turned into an
- * EntryListRow. A pure array-to-value-object mapping; needs nothing injected.
- */
 final readonly class EntryListRowHydrator
 {
     /**
@@ -20,20 +16,27 @@ final readonly class EntryListRowHydrator
         /** @var Entry $entry */
         $entry = $row[0];
 
+        return $this->hydrateEntry($entry, $row);
+    }
+
+    /**
+     * @param array<array-key, mixed> $row a mixed DQL result whose scalars follow the shared entry-list projection
+     */
+    public function hydrateEntry(Entry $entry, array $row): EntryListRow
+    {
+        $markedReadUntil = $row['markedReadUntil'] instanceof \DateTimeImmutable ? $row['markedReadUntil'] : null;
+
         return new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(self::toInt($row['subscriptionId']), $this->rowTitle($row)),
-            isHidden: $this->rowIsHidden($row, $entry),
-            isFavorite: (bool) ($row['esFavorite'] ?? false),
-            isKept: (bool) ($row['esKept'] ?? false),
-            viewState: new EntryListRowViewState(
-                isViewed: (bool) ($row['esViewed'] ?? false),
+            marks: new EntryListRowMarks(
+                isHidden: $this->rowIsHidden($row, $entry, $markedReadUntil),
+                isFavorite: (bool) ($row['esFavorite'] ?? false),
+                isKept: (bool) ($row['esKept'] ?? false),
                 viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable ? $row['esViewedAt'] : null,
                 sharedAt: $row['eshSharedAt'] instanceof \DateTimeImmutable ? $row['eshSharedAt'] : null,
             ),
-            markedReadUntil: $row['markedReadUntil'] instanceof \DateTimeImmutable
-                ? $row['markedReadUntil']
-                : null,
+            markedReadUntil: $markedReadUntil,
         );
     }
 
@@ -45,14 +48,13 @@ final readonly class EntryListRowHydrator
     /**
      * @param array<array-key, mixed> $row
      */
-    private function rowIsHidden(array $row, Entry $entry): bool
+    private function rowIsHidden(array $row, Entry $entry, ?\DateTimeImmutable $markedReadUntil): bool
     {
         $esHidden = $row['esHidden'];
-        $markedReadUntil = $row['markedReadUntil'];
 
         return EffectiveReadState::isHidden(
             $esHidden === null ? null : (bool) $esHidden,
-            $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
+            $markedReadUntil,
             $entry->getEffectiveDate(),
         );
     }

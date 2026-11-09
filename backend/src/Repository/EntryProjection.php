@@ -74,7 +74,6 @@ final readonly class EntryProjection
             ->addSelect('es.isHidden AS esHidden')
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
-            ->addSelect('es.isViewed AS esViewed')
             ->addSelect('es.viewedAt AS esViewedAt')
             ->addSelect('esh.sharedAt AS eshSharedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')

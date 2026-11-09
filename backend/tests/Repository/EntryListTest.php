@@ -319,9 +319,9 @@ final class EntryListTest extends DbTestCase
 
         self::assertCount(2, $rows);
         self::assertSame('Title b', $rows[0]->entry->getTitle());
-        self::assertSame($this->subscription->getId(), $rows[0]->subscriptionId);
-        self::assertSame('Example', $rows[0]->subscriptionTitle);
-        self::assertFalse($rows[0]->isHidden);
+        self::assertSame($this->subscription->getId(), $rows[0]->subscription->id);
+        self::assertSame('Example', $rows[0]->subscription->title);
+        self::assertFalse($rows[0]->marks->isHidden);
     }
 
     public function testSortsByEffectiveDateNotByFetchInstant(): void
@@ -390,8 +390,8 @@ final class EntryListTest extends DbTestCase
         foreach ($all as $row) {
             $byGuid[$row->entry->getGuid()] = $row;
         }
-        self::assertTrue($byGuid['old']->isHidden);   // under the watermark
-        self::assertFalse($byGuid['new']->isHidden);  // above it
+        self::assertTrue($byGuid['old']->marks->isHidden);   // under the watermark
+        self::assertFalse($byGuid['new']->marks->isHidden);  // above it
 
         $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertCount(1, $unread);
@@ -410,7 +410,7 @@ final class EntryListTest extends DbTestCase
 
         $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertCount(1, $unread);
-        self::assertFalse($unread[0]->isHidden);
+        self::assertFalse($unread[0]->marks->isHidden);
     }
 
     public function testFavoritesAndKeptViews(): void
@@ -433,11 +433,24 @@ final class EntryListTest extends DbTestCase
         ));
         self::assertCount(1, $favorites);
         self::assertSame('fav', $favorites[0]->entry->getGuid());
-        self::assertTrue($favorites[0]->isFavorite);
+        self::assertTrue($favorites[0]->marks->isFavorite);
 
         $kepts = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Kept));
         self::assertCount(1, $kepts);
         self::assertSame('kept', $kepts[0]->entry->getGuid());
+        self::assertTrue($kepts[0]->marks->isKept);
+        self::assertFalse($kepts[0]->marks->isFavorite);
+    }
+
+    public function testAnEntryWithoutAStateRowCarriesNoMarks(): void
+    {
+        $this->entry('plain', '2026-07-07T00:00:00Z');
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
+
+        self::assertCount(1, $rows);
+        self::assertFalse($rows[0]->marks->isFavorite);
+        self::assertFalse($rows[0]->marks->isKept);
     }
 
     public function testViewedViewOrdersByViewTimeNotPublishDate(): void
@@ -464,7 +477,7 @@ final class EntryListTest extends DbTestCase
             static fn ($row) => $row->entry->getGuid(),
             $rows,
         ));
-        self::assertEquals(new \DateTimeImmutable('2026-08-05T09:00:00Z'), $rows[0]->viewedAt);
+        self::assertEquals(new \DateTimeImmutable('2026-08-05T09:00:00Z'), $rows[0]->marks->viewedAt);
     }
 
     public function testViewedViewKeysetPaginatesByViewTime(): void
@@ -489,7 +502,7 @@ final class EntryListTest extends DbTestCase
         // The cursor carries the last row's viewedAt — the instant the viewed
         // view keyset compares against, not the entry's effectiveDate.
         $cursor = new EntryCursor(
-            $page1[0]->viewedAt ?? throw new \LogicException('A viewed row must carry a viewedAt.'),
+            $page1[0]->marks->viewedAt ?? throw new \LogicException('A viewed row must carry a viewedAt.'),
             $page1[0]->entry->requireId(),
         );
         $page2 = $this->repository()->listForUser(
@@ -687,7 +700,7 @@ final class EntryListTest extends DbTestCase
         $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
         $byGuid = [];
         foreach ($rows as $row) {
-            $byGuid[$row->entry->getGuid()] = $row->isViewed;
+            $byGuid[$row->entry->getGuid()] = $row->marks->isViewed();
         }
         self::assertTrue($byGuid['viewed']);
         self::assertFalse($byGuid['untouched']);
@@ -765,8 +778,8 @@ final class EntryListTest extends DbTestCase
         $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
         self::assertCount(1, $rows);
         self::assertSame('shared', $rows[0]->entry->getGuid());
-        self::assertFalse($rows[0]->isHidden, 'must not inherit the stranger\'s read flag');
-        self::assertFalse($rows[0]->isFavorite, 'must not inherit the stranger\'s favorite flag');
+        self::assertFalse($rows[0]->marks->isHidden, 'must not inherit the stranger\'s read flag');
+        self::assertFalse($rows[0]->marks->isFavorite, 'must not inherit the stranger\'s favorite flag');
     }
 
     public function testASurvivorNeverListsItselfAndAnInScopeHiddenCopyAppearsAsADuplicate(): void
@@ -1132,8 +1145,8 @@ final class EntryListTest extends DbTestCase
             static fn ($row) => $row->entry->getGuid(),
             $rows,
         ));
-        self::assertFalse($rows[0]->isHidden);
-        self::assertFalse($rows[1]->isHidden);
+        self::assertFalse($rows[0]->marks->isHidden);
+        self::assertFalse($rows[1]->marks->isHidden);
     }
 
     public function testGetRowForUserReturnsTheRowOfASubscribedEntry(): void

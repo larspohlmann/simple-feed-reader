@@ -92,16 +92,16 @@ final readonly class EntryJson
             'categories' => $row->enrichment->categories,
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
-            'subscriptionId' => $row->subscriptionId,
-            'source' => $row->subscriptionTitle,
+            'subscriptionId' => $row->subscription->id,
+            'source' => $row->subscription->title,
             'poster' => self::posterOf($row),
             // The feed is fetch-joined in the row query, so this adds no N+1.
             'faviconUrl' => $row->enrichment->origin->faviconUrl ?? $entry->getFeed()->getFaviconUrl(),
-            'isHidden' => $row->isHidden,
-            'isFavorite' => $row->isFavorite,
-            'isKept' => $row->isKept,
-            'isShared' => $row->sharedAt !== null,
-            'isViewed' => $row->isViewed,
+            'isHidden' => $row->marks->isHidden,
+            'isFavorite' => $row->marks->isFavorite,
+            'isKept' => $row->marks->isKept,
+            'isShared' => $row->marks->isShared(),
+            'isViewed' => $row->marks->isViewed(),
             'shortPlayerUrl' => $shortPlayerUrl,
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
@@ -195,7 +195,7 @@ final readonly class EntryJson
         }
         if (null !== $feed->getNetwork()) {
             return [
-                'name' => $row->subscriptionTitle,
+                'name' => $row->subscription->title,
                 'url' => AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
                 'imageUrl' => $entry->getAuthorAvatarUrl() ?? $feed->getImageUrl(),
             ];

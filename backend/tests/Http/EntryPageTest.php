@@ -10,8 +10,8 @@ use App\Entity\Feed;
 use App\Http\EntryPage;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Tests\Support\AssignsEntityIds;
@@ -246,10 +246,13 @@ final class EntryPageTest extends TestCase
         return new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(1, 'Example'),
-            isHidden: false,
-            isFavorite: false,
-            isKept: false,
-            viewState: new EntryListRowViewState(isViewed: $viewedAt !== null, viewedAt: $viewedAt, sharedAt: null),
+            marks: new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                viewedAt: $viewedAt,
+                sharedAt: null,
+            ),
             markedReadUntil: null,
         );
     }
