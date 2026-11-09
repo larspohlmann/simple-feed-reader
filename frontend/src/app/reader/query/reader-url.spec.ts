@@ -1,7 +1,8 @@
 import { DefaultUrlSerializer, PRIMARY_OUTLET, convertToParamMap } from '@angular/router';
 import { EntryQuery } from '../models';
 import { readerMatcher, selectionFromRoute } from './reader-matcher';
-import { ViewContext, queryFromSelection } from './query';
+import { ViewContext } from './query';
+import { queryFromSelection } from './entry-query';
 
 const ON: ViewContext = { trending: true, trendingWindow: 'day' };
 const OFF: ViewContext = { trending: false, trendingWindow: 'day' };

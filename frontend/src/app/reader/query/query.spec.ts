@@ -7,9 +7,7 @@ import {
   listSelectionFrom,
   hasUnreadFilter,
   isSingleStreamView,
-  markReadTarget,
   offersMarkAboveRead,
-  queryFromSelection,
   sameSelection,
   selectionFromParams,
   selectionQueryParams,
@@ -19,6 +17,8 @@ import {
   type Selection,
   type ViewContext,
 } from './query';
+import { queryFromSelection } from './entry-query';
+import { markReadTarget } from './mark-read-target';
 import {
   isPhraseTerm,
   isSearchableTerm,
@@ -337,119 +337,6 @@ describe('selectionQueryParams', () => {
       q: 'angular',
       window: null,
     });
-  });
-});
-
-describe('queryFromSelection', () => {
-  it('maps all/tag/subscription through the unread toggle', () => {
-    expect(queryFromSelection({ kind: 'all', id: null, unread: true })).toEqual({ view: 'unread' });
-    expect(queryFromSelection({ kind: 'all', id: null, unread: false })).toEqual({ view: 'all' });
-    expect(queryFromSelection({ kind: 'tag', id: 3, unread: true })).toEqual({
-      view: 'unread',
-      tag: 3,
-    });
-    expect(queryFromSelection({ kind: 'subscription', id: 7, unread: false })).toEqual({
-      view: 'all',
-      subscription: 7,
-    });
-  });
-  it("maps a network's view through the unread toggle", () => {
-    expect(
-      queryFromSelection({ kind: 'network', id: null, unread: true, network: 'bluesky' }),
-    ).toEqual({ view: 'unread', network: 'bluesky' });
-  });
-  it('maps curated views directly', () => {
-    expect(queryFromSelection({ kind: 'favorites', id: null, unread: false })).toEqual({
-      view: 'favorites',
-    });
-    expect(queryFromSelection({ kind: 'kept', id: null, unread: false })).toEqual({ view: 'kept' });
-    expect(queryFromSelection({ kind: 'shared', id: null, unread: false })).toEqual({
-      view: 'shared',
-    });
-    expect(queryFromSelection({ kind: 'for-you', id: null, unread: false })).toEqual({
-      view: 'for-you',
-    });
-  });
-  // For you is the one list whose unread filter cannot be a view: the ranked
-  // feed IS the view, so the filter rides beside it (#710).
-  it('asks the ranked feed for unread picks with a flag, not a view', () => {
-    expect(queryFromSelection({ kind: 'for-you', id: null, unread: true })).toEqual({
-      view: 'for-you',
-      unread: true,
-    });
-  });
-  it('maps a search selection to view=all with q', () => {
-    expect(
-      queryFromSelection({ kind: 'search', id: null, unread: false, term: 'angular' }),
-    ).toEqual({ view: 'all', q: 'angular' });
-  });
-  it('passes a trailing space through unchanged — the server reads it as whole-word match', () => {
-    expect(queryFromSelection({ kind: 'search', id: null, unread: false, term: 'punk ' })).toEqual({
-      view: 'all',
-      q: 'punk ',
-    });
-  });
-  it('routes a single saved-search selection to its id', () => {
-    expect(queryFromSelection({ kind: 'saved-search', id: 42, unread: false })).toEqual({
-      view: 'all',
-      savedSearchId: 42,
-    });
-  });
-  it('carries unread on a single saved-search selection', () => {
-    expect(queryFromSelection({ kind: 'saved-search', id: 42, unread: true })).toEqual({
-      view: 'all',
-      savedSearchId: 42,
-      unread: true,
-    });
-  });
-});
-
-describe('markReadTarget', () => {
-  it('maps selection to a mark-read scope (feed=subscription id)', () => {
-    expect(markReadTarget({ kind: 'all', id: null, unread: true })).toEqual({ scope: 'all' });
-    expect(markReadTarget({ kind: 'tag', id: 3, unread: true })).toEqual({ scope: 'tag', id: 3 });
-    expect(markReadTarget({ kind: 'subscription', id: 7, unread: true })).toEqual({
-      scope: 'feed',
-      id: 7,
-    });
-    expect(markReadTarget({ kind: 'favorites', id: null, unread: false })).toBeNull();
-  });
-
-  // For you marks its picks read through its own endpoint — no scope, no id:
-  // the list is the reader's own ranked feed (#710).
-  it('maps the for-you selection to its own scope', () => {
-    expect(markReadTarget({ kind: 'for-you', id: null, unread: false })).toEqual({
-      scope: 'for-you',
-    });
-  });
-
-  it('maps a search selection to a search scope, term verbatim', () => {
-    expect(markReadTarget({ kind: 'search', id: null, unread: false, term: 'climate' })).toEqual({
-      scope: 'search',
-      term: 'climate',
-    });
-    // The trailing space is the whole-word-match signal and must reach the backend.
-    expect(markReadTarget({ kind: 'search', id: null, unread: false, term: 'climate ' })).toEqual({
-      scope: 'search',
-      term: 'climate ',
-    });
-    expect(markReadTarget({ kind: 'search', id: null, unread: false, term: '' })).toBeNull();
-  });
-  it('marks a network read by its name', () => {
-    expect(
-      markReadTarget({ kind: 'network', id: null, unread: false, network: 'mastodon' }),
-    ).toEqual({
-      scope: 'network',
-      network: 'mastodon',
-    });
-    expect(markReadTarget({ kind: 'network', id: null, unread: false })).toBeNull();
-  });
-  it('marks a single saved search read by its id', () => {
-    expect(markReadTarget({ kind: 'saved-search', id: 42, unread: false })).toEqual({
-      scope: 'saved-search',
-      id: 42,
-    });
-    expect(markReadTarget({ kind: 'saved-search', id: null, unread: false })).toBeNull();
   });
 });
 

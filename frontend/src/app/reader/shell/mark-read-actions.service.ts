@@ -7,7 +7,8 @@ import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { MarkReadTarget, markReadTarget, queryFromSelection } from '../query/query';
+import { MarkReadTarget, markReadTarget } from '../query/mark-read-target';
+import { queryFromSelection } from '../query/entry-query';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()

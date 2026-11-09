@@ -9,7 +9,8 @@ import { PAGE_SIZE } from './list/paging';
 import { refreshParams } from './refresh-params';
 import { refreshScopeParams } from './refresh-scope-params';
 import { SignedUrl } from './query/link-param';
-import { RefreshScope, ScopedMarkReadTarget } from './query/query';
+import { RefreshScope } from './query/query';
+import { ScopedMarkReadTarget } from './query/mark-read-target';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import { CommentsResponse } from './entry-comment';
 import {

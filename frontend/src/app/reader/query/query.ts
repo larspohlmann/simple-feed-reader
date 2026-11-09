@@ -1,5 +1,5 @@
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
-import { EntryQuery, ListOrder, MarkReadScope } from '../models';
+import { ListOrder } from '../models';
 import { TrendingWindow } from '../trending/trending.models';
 import { FeedGroupName, isFeedGroupName } from '../../core/feed-group';
 import { entryIdFromParam } from './slug';
@@ -44,6 +44,8 @@ export interface Selection {
   /** Only Trending carries one, read from the URL's `window` (#2017, D40). */
   window?: TrendingWindow;
 }
+
+export type SelectionKind = Selection['kind'];
 
 /** Which feeds a refresh covers: all the user's due feeds, one feed, a tag's
  *  feeds, a network's feeds, a sidebar section's feeds, or the never-fetched ones. */
@@ -313,103 +315,6 @@ export function networkKey(selection: Selection): string {
  *  resulting selection even though the URL still carries it (#542). */
 export function listSelectionFrom(params: Params, context: ViewContext): Selection {
   return selectionFromParams(convertToParamMap({ ...params, q: null }), context).selection;
-}
-
-export function queryFromSelection(selection: Selection): EntryQuery {
-  const query = viewQuery(selection);
-  return listOrderOf(selection) === 'oldest' ? { ...query, order: 'oldest' } : query;
-}
-
-function viewQuery(selection: Selection): EntryQuery {
-  return VIEW_QUERY[selection.kind](selection);
-}
-
-type SelectionKind = Selection['kind'];
-
-const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = {
-  favorites: () => ({ view: 'favorites' }),
-  kept: () => ({ view: 'kept' }),
-  shared: () => ({ view: 'shared' }),
-  viewed: () => ({ view: 'viewed' }),
-  // The one list whose unread filter is not a view of its own: the ranked
-  // feed IS the view, so the filter travels beside it (#710).
-  'for-you': (selection) => withUnread({ view: 'for-you' }, selection.unread),
-  trending: (selection) => ({ view: 'trending', window: selection.window }),
-  tag: (selection) => ({ view: listView(selection), tag: selection.id ?? undefined }),
-  network: (selection) => ({
-    view: listView(selection),
-    network: selection.network,
-    feedKind: selection.feedKind,
-  }),
-  group: (selection) => ({ view: listView(selection), group: selection.group }),
-  subscription: (selection) => ({
-    view: listView(selection),
-    subscription: selection.id ?? undefined,
-  }),
-  all: (selection) => ({ view: listView(selection) }),
-  'saved-searches': (selection) => withUnread({ view: 'saved-searches' }, selection.unread),
-  // A single saved search reads the membership table by id, not a live
-  // query, so it carries the id and takes the unread refinement like any list.
-  'saved-search': (selection) =>
-    withUnread({ view: 'all', savedSearchId: selection.id ?? undefined }, selection.unread),
-  search: (selection) => withUnread({ view: 'all', q: selection.term }, selection.unread),
-};
-
-function withUnread(query: EntryQuery, unread: boolean): EntryQuery {
-  return unread ? { ...query, unread: true } : query;
-}
-
-function listView(selection: Selection): EntryQuery['view'] {
-  return selection.unread ? 'unread' : 'all';
-}
-
-/** What "Mark all read" applies to for a selection, or null where the action
- *  doesn't apply. A discriminated union, not a bag with optional fields: id and
- *  term never coexist, and a bag would make every consumer re-assert the case. */
-export type MarkReadTarget =
-  | { scope: Extract<MarkReadScope, 'all'> }
-  | { scope: Extract<MarkReadScope, 'feed' | 'tag'>; id: number }
-  | {
-      scope: Extract<MarkReadScope, 'network'>;
-      network: SocialNetworkName;
-      feedKind?: NetworkFeedKind;
-    }
-  | { scope: Extract<MarkReadScope, 'group'>; group: FeedGroupName }
-  | { scope: 'search'; term: string }
-  | { scope: 'for-you' }
-  | { scope: 'saved-searches' }
-  | { scope: 'saved-search'; id: number };
-
-/** The targets the mark-read endpoint itself takes, sent as its body. */
-export type ScopedMarkReadTarget = Extract<MarkReadTarget, { scope: MarkReadScope }>;
-
-export function markReadTarget(selection: Selection): MarkReadTarget | null {
-  return MARK_READ_TARGET[selection.kind]?.(selection) ?? null;
-}
-
-const MARK_READ_TARGET: Partial<
-  Record<SelectionKind, (selection: Selection) => MarkReadTarget | null>
-> = {
-  all: () => ({ scope: 'all' }),
-  tag: idScoped('tag'),
-  network: (selection) =>
-    selection.network
-      ? { scope: 'network', network: selection.network, feedKind: selection.feedKind }
-      : null,
-  group: (selection) => (selection.group ? { scope: 'group', group: selection.group } : null),
-  subscription: idScoped('feed'),
-  search: (selection) => (selection.term ? { scope: 'search', term: selection.term } : null),
-  // No id and no term: the list is the reader's own ranked feed, so the
-  // endpoint needs nothing beyond who is asking (#710).
-  'for-you': () => ({ scope: 'for-you' }),
-  'saved-searches': () => ({ scope: 'saved-searches' }),
-  'saved-search': idScoped('saved-search'),
-};
-
-function idScoped(
-  scope: Extract<MarkReadTarget, { id: number }>['scope'],
-): (selection: Selection) => MarkReadTarget | null {
-  return (selection) => (selection.id != null ? { scope, id: selection.id } : null);
 }
 
 function posInt(value: string | null): number | null {

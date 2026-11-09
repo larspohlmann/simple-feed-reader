@@ -411,7 +411,7 @@ export interface EntryQuery {
 
 /** The scopes `POST /api/entries/mark-read` accepts. A search is deliberately NOT one of them: it has its own
  *  endpoint, and widening this union would let `markRead` type-check a search against a request the backend
- *  rejects. See `MarkReadTarget` in query.ts. */
+ *  rejects. See `MarkReadTarget` in query/mark-read-target.ts. */
 export type MarkReadScope = 'all' | 'feed' | 'tag' | 'network' | 'group';
 
 export interface EntryStatePatch {

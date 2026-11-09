@@ -10,7 +10,7 @@ import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ForYouNetworksStore } from '../state/for-you-networks.store';
 import { ListPreferences } from '../list/list-preferences.service';
-import { queryFromSelection } from '../query/query';
+import { queryFromSelection } from '../query/entry-query';
 
 /** The single owner of list reloads (#502). Injected for its effects. */
 @Injectable()
