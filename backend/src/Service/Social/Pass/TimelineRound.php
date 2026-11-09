@@ -20,10 +20,8 @@ use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\TimelineSources;
 
 /**
- * One refresh's private-feed reads: a ticket per feed, and a follow-up per further request a feed reads with, a gate
- * that keeps a held account's tickets off the wire, and each answer settled into an outcome or a follow-up. A stale
- * session is renewed once per account in the refresh; a feed settled without a request waits in `unasked` until
- * drained.
+ * One refresh's private-feed reads: a ticket per feed and a follow-up per further request, gated per held account,
+ * each answer settled into an outcome or a follow-up; a stale session is renewed once per account.
  */
 final class TimelineRound
 {
@@ -93,8 +91,17 @@ final class TimelineRound
         } catch (SocialSessionStaleException $stale) {
             return $this->settleStale($feedId, $socialFeed, $stale);
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
-            return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
+            return $this->failed($feedId, $account, $failure);
         }
+    }
+
+    /** @return \Generator<int|string, TimelineOutcomeModelInterface> */
+    public function drainUnasked(): \Generator
+    {
+        $unasked = $this->unasked;
+        $this->unasked = [];
+
+        yield from $unasked;
     }
 
     /**
@@ -126,15 +133,6 @@ final class TimelineRound
         return SettlementModel::outcome(new FetchedTimelineModel($page));
     }
 
-    /** @return \Generator<int|string, TimelineOutcomeModelInterface> */
-    public function drainUnasked(): \Generator
-    {
-        $unasked = $this->unasked;
-        $this->unasked = [];
-
-        yield from $unasked;
-    }
-
     /**
      * A stale answer on the renewed session is a refusal; one on the dropped session renews it once and asks again.
      *
@@ -147,14 +145,26 @@ final class TimelineRound
     ): SettlementModel {
         $account = $socialFeed->getSocialAccount();
         if (isset($this->onRenewedSession[$feedId])) {
-            return SettlementModel::outcome($this->accounts->settleFailure(
+            return $this->failed(
+                $feedId,
                 $account,
                 new SocialCredentialsRejectedException($stale->getMessage(), previous: $stale),
-            ));
+            );
         }
         $this->renewOnce($account);
 
         return $this->ticketOf($feedId, $socialFeed);
+    }
+
+    /** @return SettlementModel<TimelineOutcomeModelInterface> */
+    private function failed(
+        int|string $feedId,
+        SocialAccount $account,
+        SocialCredentialsRejectedException|SocialNetworkUnreachableException $failure,
+    ): SettlementModel {
+        unset($this->reads[$feedId]);
+
+        return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
     }
 
     private function renewOnce(SocialAccount $account): void
