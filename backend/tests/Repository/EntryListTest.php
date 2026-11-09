@@ -438,6 +438,19 @@ final class EntryListTest extends DbTestCase
         $kepts = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Kept));
         self::assertCount(1, $kepts);
         self::assertSame('kept', $kepts[0]->entry->getGuid());
+        self::assertTrue($kepts[0]->marks->isKept);
+        self::assertFalse($kepts[0]->marks->isFavorite);
+    }
+
+    public function testAnEntryWithoutAStateRowCarriesNoMarks(): void
+    {
+        $this->entry('plain', '2026-07-07T00:00:00Z');
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
+
+        self::assertCount(1, $rows);
+        self::assertFalse($rows[0]->marks->isFavorite);
+        self::assertFalse($rows[0]->marks->isKept);
     }
 
     public function testViewedViewOrdersByViewTimeNotPublishDate(): void

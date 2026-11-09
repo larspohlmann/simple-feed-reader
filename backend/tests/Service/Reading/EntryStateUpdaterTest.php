@@ -157,6 +157,23 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertNull($this->sharedAtOf($user, $sibling));
     }
 
+    public function testSharingWhileSharesAreNotRecordedKeepsTheEarlierShare(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $this->updater()->apply(
+            $user,
+            $this->rows()->getRowForUser($user->requireId(), $target->requireId()),
+            $this->change(isShared: true),
+        );
+        $user->getPreferences()->setRememberingShares(false);
+        $sharedRow = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $updated = $this->updater()->apply($user, $sharedRow, $this->change(isShared: true));
+
+        self::assertEquals($this->sharedAtOf($user, $target), $updated->sharedAt);
+        self::assertNotNull($updated->sharedAt);
+    }
+
     public function testUnfavouritingAndUnkeepingClearBothFlags(): void
     {
         [$user, $target] = $this->seedGroup();
