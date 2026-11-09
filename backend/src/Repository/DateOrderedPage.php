@@ -11,9 +11,9 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * Runs a fan-in page: unhinted for a single scope, hinted for the dense all/unread
- * views, and for a possibly-sparse tag or network scope probed, windowed, with an unhinted
- * fallback when the window is short (#1099).
+ * Runs a fan-in page: unhinted for a single scope or a state-driven view; a chronological fan-in is probed, walked
+ * hinted inside the window, and falls back unhinted when the window is short, since a sparse scope would otherwise
+ * walk the whole entry table (#1099, #2126).
  */
 final readonly class DateOrderedPage
 {
@@ -34,11 +34,8 @@ final readonly class DateOrderedPage
         if (!$query->isDateOrderedFanIn()) {
             return $this->plainResult($pageQuery());
         }
-        if (!$query->isNarrowedFanIn()) {
-            return $this->hintedResult($pageQuery());
-        }
 
-        return $this->narrowedRows($query, $pageQuery, $windowProbe);
+        return $this->windowedRows($query, $pageQuery, $windowProbe);
     }
 
     /**
@@ -47,7 +44,7 @@ final readonly class DateOrderedPage
      *
      * @return list<array<array-key, mixed>>
      */
-    private function narrowedRows(EntryQuery $query, callable $pageQuery, callable $windowProbe): array
+    private function windowedRows(EntryQuery $query, callable $pageQuery, callable $windowProbe): array
     {
         $windowEdge = $this->windowEdge($windowProbe);
         if ($windowEdge === null) {

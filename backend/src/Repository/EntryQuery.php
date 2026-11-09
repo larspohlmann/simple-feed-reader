@@ -71,15 +71,6 @@ final readonly class EntryQuery
         return $this->view->isChronological();
     }
 
-    /**
-     * A fan-in list narrowed to one tag, a network or a feed group — the shape that can be sparse enough
-     * to make the join-order hint a loss rather than a win (#1099).
-     */
-    public function isNarrowedFanIn(): bool
-    {
-        return $this->isDateOrderedFanIn() && $this->isNarrowed();
-    }
-
     private function isNarrowed(): bool
     {
         return $this->tagId !== null || $this->networkScope !== null || $this->feedGroup !== null;

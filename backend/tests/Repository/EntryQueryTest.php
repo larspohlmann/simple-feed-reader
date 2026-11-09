@@ -67,14 +67,11 @@ final class EntryQueryTest extends TestCase
         self::assertTrue((new EntryQuery(1, EntryView::Unread, tagId: 3))->isDateOrderedFanIn());
     }
 
-    public function testATagOrANetworkNarrowsTheFanIn(): void
+    public function testANetworkScopedChronologicalViewStillFansIn(): void
     {
-        self::assertTrue((new EntryQuery(1, EntryView::All, tagId: 3))->isNarrowedFanIn());
         $query = new EntryQuery(1, EntryView::Unread, networkScope: NetworkScope::whole(SocialNetwork::Bluesky));
 
         self::assertTrue($query->isDateOrderedFanIn());
-        self::assertTrue($query->isNarrowedFanIn());
-        self::assertFalse((new EntryQuery(1, EntryView::All))->isNarrowedFanIn());
     }
 
     public function testASingleSubscriptionScopeNeverFansIn(): void

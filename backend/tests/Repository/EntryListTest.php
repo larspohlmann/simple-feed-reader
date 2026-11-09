@@ -31,6 +31,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\Persistence\ManagerRegistry;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class EntryListTest extends DbTestCase
 {
@@ -107,7 +108,7 @@ final class EntryListTest extends DbTestCase
     }
 
     /**
-     * A repository wired with a small window, so the tag-scoped probe/window branch can be forced through a handful
+     * A repository wired with a small window, so the fan-in probe/window branch can be forced through a handful
      * of fixture rows instead of DateOrderedPage::DEFAULT_WINDOW_SIZE.
      */
     private function repositoryWithWindow(int $windowSize): EntryListRepository
@@ -202,6 +203,29 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->flush();
 
         return $feed;
+    }
+
+    private function anotherReadersBusyFeed(): void
+    {
+        $reader = new User('busy-reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $feed = new Feed('https://busy.example.com/feed.xml');
+        $this->entityManager->persist($reader);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($reader, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
+
+        foreach (range(10, 14) as $day) {
+            $this->entryIn($feed, 'busy-' . $day, sprintf('2026-07-%02dT00:00:00Z', $day));
+        }
+    }
+
+    private function newcomer(): User
+    {
+        $newcomer = new User('newcomer@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($newcomer);
+        $this->entityManager->flush();
+
+        return $newcomer;
     }
 
     /**
@@ -887,7 +911,16 @@ final class EntryListTest extends DbTestCase
         return $state;
     }
 
-    public function testAllItemsScopeIssuesNoProbe(): void
+    /**
+     * @return iterable<string, array{EntryView}>
+     */
+    public static function chronologicalViews(): iterable
+    {
+        yield 'all' => [EntryView::All];
+        yield 'unread' => [EntryView::Unread];
+    }
+
+    public function testAnAllViewBelowTheWindowSizeRunsTheProbeThenOneHintedPage(): void
     {
         $this->entry('a', '2026-07-05T00:00:00Z');
 
@@ -896,8 +929,53 @@ final class EntryListTest extends DbTestCase
             new EntryQuery($this->user->requireId(), EntryView::All),
         )['queries'];
 
-        self::assertCount(1, $queries, 'a dense fan-in view must run the page query alone, no probe');
-        self::assertStringContainsString('JOIN_PREFIX', $queries[0]);
+        self::assertCount(2, $queries, 'a null probe must run exactly one hinted page query');
+        self::assertStringNotContainsString('JOIN_PREFIX', $queries[0], 'the probe itself is never hinted');
+        self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
+    }
+
+    #[DataProvider('chronologicalViews')]
+    public function testADenseReaderStaysHintedInsideTheWindow(EntryView $view): void
+    {
+        $this->entryIn($this->feed, 'own-1', '2026-07-10T00:00:00Z');
+        $this->entryIn($this->feed, 'own-2', '2026-07-09T00:00:00Z');
+        $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
+        $query = new EntryQuery($this->user->requireId(), $view, limit: 2);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][1]);
+        self::assertSame(['own-1', 'own-2'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('chronologicalViews')]
+    public function testASparseReaderNextToABusyFeedFallsBackToThePlainUnhintedQuery(EntryView $view): void
+    {
+        $this->anotherReadersBusyFeed();
+        $this->entryIn($this->feed, 'own-1', '2026-07-05T00:00:00Z');
+        $this->entryIn($this->feed, 'own-2', '2026-07-04T00:00:00Z');
+        $query = new EntryQuery($this->user->requireId(), $view, limit: 2);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(3, $recorded['queries'], 'a short windowed page must fall back to a third, plain query');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][1], 'the windowed attempt is hinted');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the fallback is unhinted');
+        self::assertSame(['own-1', 'own-2'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('chronologicalViews')]
+    public function testAReaderWithoutSubscriptionsGetsTheUnhintedPlanNextToABusyFeed(EntryView $view): void
+    {
+        $this->anotherReadersBusyFeed();
+        $query = new EntryQuery($this->newcomer()->requireId(), $view, limit: 2);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(3, $recorded['queries'], 'an empty windowed page must fall back to a third, plain query');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the fallback is unhinted');
+        self::assertSame([], $recorded['rows']);
     }
 
     public function testFewerThanWindowSizeRowsBeyondCursorRunsASingleHintedQuery(): void
