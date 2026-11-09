@@ -1014,13 +1014,13 @@ wait_for_php_ready() {
   return 1
 }
 
-# Fill the onboarding catalog of a NEW instance, and fetch the icons that go
-# with it. The installer calls this, and nothing else does: from the first
-# start onwards the catalog belongs to the admin, so an update must never
-# re-apply the shipped document over what they have made of it (#272).
+# Fill the onboarding catalog of a NEW instance. The installer calls this, and
+# nothing else does: from the first start onwards the catalog belongs to the
+# admin, so an update must never re-apply the shipped document over what they
+# have made of it (#272).
 #
-# Neither step is worth failing an install that is already up and serving --
-# both are recoverable from the admin area with one click -- so a failure here
+# The import is not worth failing an install that is already up and serving --
+# it is recoverable from the admin area with one click -- so a failure here
 # warns and returns.
 seed_catalog() {
   # --if-empty guards the case this script cannot see: an install pointed at a
@@ -1029,13 +1029,6 @@ seed_catalog() {
     prod_compose exec -T -u www-data php bin/console app:catalog:import --if-empty; then
     warn 'The bundled catalog was not imported. Import it in the admin area under Catalog.'
     return 0
-  fi
-  # Minutes: one request per catalog feed, and the shipped document holds over
-  # a hundred. The icons are cached in the database, so this is paid once and
-  # survives every later update.
-  if ! run_step 'Fetching the catalog favicons (this takes a few minutes)' \
-    prod_compose exec -T -u www-data php bin/console app:catalog:warm-favicons; then
-    warn 'Some catalog favicons are missing. The admin area can fetch them again later.'
   fi
 }
 
