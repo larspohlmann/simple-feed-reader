@@ -7,15 +7,15 @@ namespace App\Service\Refresh;
 use App\Enum\FeedGroup;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
+use App\Repository\SubscriptionRepository;
+use App\Repository\TagRepository;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
 use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
 use App\Service\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
 use App\Service\Refresh\Model\RefreshTarget\TagTargetModel;
-use App\Repository\SubscriptionRepository;
-use App\Repository\TagRepository;
-use App\Service\Refresh\Model\RefreshRequestModel;
 
 /** A foreign or unknown feed or tag is a 404, not a 403, so the refresh endpoint never confirms that it exists. */
 final readonly class UserRefreshScope

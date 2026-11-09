@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;

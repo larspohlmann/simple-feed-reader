@@ -12,12 +12,12 @@ use App\Repository\FeedRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Repository\ShareEnrichmentBacklogRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Queue\Model\QueueBacklogModel;
 use App\Service\Queue\Model\QueueDepthModel;
 use App\Service\Queue\Model\QueueName;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 
 final readonly class QueueDepths
 {

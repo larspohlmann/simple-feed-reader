@@ -298,6 +298,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             $target instanceof NetworkTargetModel => $this->restrictToNetwork($qb, $target),
             $target instanceof FeedGroupTargetModel => $this->restrictToFeedGroup($qb, $target, $criteria),
             $target instanceof NeverFetchedTargetModel => $this->restrictToNeverFetched($qb),
+            default => throw new \LogicException(sprintf('No due-feed restriction for %s.', $target::class)),
         };
     }
 
