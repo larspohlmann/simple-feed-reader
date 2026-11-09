@@ -76,7 +76,10 @@ const MIXED_SOURCE_RUN: EntryDto[] = [
   entry(12, { subscriptionId: 3, source: 'c', publishedAt: MIXED_SOURCE_RUN_AT }),
 ];
 
-function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
+function mount(
+  over: Record<string, unknown> & { selection?: Selection } = {},
+  providers: Provider[] = [],
+) {
   memory.save.mockClear();
   memory.read.mockClear().mockReturnValue(0);
   TestBed.resetTestingModule();
@@ -109,6 +112,10 @@ function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
   for (const [key, value] of Object.entries(inputs)) fixture.componentRef.setInput(key, value);
   fixture.detectChanges();
   return fixture;
+}
+
+function select(fixture: ComponentFixture<EntryListComponent>, selection: Selection): void {
+  fixture.componentRef.setInput('selection', selection);
 }
 
 const overlay = (fixture: ComponentFixture<EntryListComponent>) =>
@@ -242,7 +249,7 @@ describe('EntryListComponent', () => {
       entry(1, { recommendationReason: 'because you read src', recommendationScore: 910 }),
       entry(2, { recommendationReason: 'similar to your favorites' }),
     ];
-    const forYou = { kind: 'for-you', unread: false };
+    const forYou: Selection = { kind: 'for-you', unread: false };
 
     it('shows the reason on each for-you entry in the list layout', () => {
       const element = mount({ entries: recommended, selection: forYou, layout: 'list' })
@@ -273,7 +280,7 @@ describe('EntryListComponent', () => {
   });
 
   describe('run-boundary dividers (#348)', () => {
-    const forYou = { kind: 'for-you', unread: false };
+    const forYou: Selection = { kind: 'for-you', unread: false };
     // Run 9 is the newest (its id is what the header names); run 7 is older.
     const NEWEST = '2026-08-09T10:00:00+00:00';
     const OLDER = '2026-08-07T09:05:00+00:00';
@@ -710,7 +717,7 @@ describe('EntryListComponent', () => {
       loading: true,
       entries: [entry(1), entry(2)],
       layout: 'list',
-      selection: { kind: 'search', unread: false, term: 'punk' },
+      selection: { kind: 'search', unread: false, term: 'punk' } satisfies Selection,
     };
 
     it('leaves the retained rows undimmed and clickable', () => {
@@ -751,7 +758,7 @@ describe('EntryListComponent', () => {
   });
 
   describe('a per-selection command on the wire (#1718)', () => {
-    const search = { kind: 'search', unread: false, term: 'punk' };
+    const search: Selection = { kind: 'search', unread: false, term: 'punk' };
 
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
@@ -984,7 +991,7 @@ describe('EntryListComponent', () => {
     const emptyAll = {
       loading: false,
       entries: [],
-      selection: { kind: 'all', unread: true },
+      selection: { kind: 'all', unread: true } satisfies Selection,
     };
 
     it('offers the catalog to an account with only a few subscriptions', () => {
@@ -1580,7 +1587,7 @@ describe('EntryListComponent', () => {
     const fixture = mount();
     fixture.componentInstance.collapsed.set(true);
     fixture.detectChanges();
-    fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+    select(fixture, { kind: 'tag', id: 3, unread: true });
     fixture.detectChanges();
     expect(fixture.componentInstance.collapsed()).toBe(false);
   });
@@ -1712,7 +1719,7 @@ describe('EntryListComponent', () => {
       const rows = fakeScroller(fixture, 900);
       memory.read.mockReturnValue(0);
 
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      select(fixture, { kind: 'tag', id: 4, unread: true });
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
 
@@ -1722,7 +1729,7 @@ describe('EntryListComponent', () => {
     it('does not write the outgoing list’s scroll into the incoming view’s key', () => {
       const fixture = mount();
       completeLoad(fixture);
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      select(fixture, { kind: 'tag', id: 4, unread: true });
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
       memory.save.mockClear();
@@ -1869,7 +1876,7 @@ describe('EntryListComponent', () => {
         (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
       ).not.toBeNull();
 
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      select(fixture, { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
       expect(fixture.componentInstance.scrolling.showToTop()).toBe(false);
     });
@@ -2155,7 +2162,7 @@ describe('EntryListComponent', () => {
     it('resets hasAboveFold when the selection changes', () => {
       const fixture = mount();
       fixture.componentInstance.scrolling.hasAboveFold.set(true);
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      select(fixture, { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
       expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
@@ -2367,7 +2374,7 @@ describe('EntryListComponent', () => {
       await frames();
       // A view switch keeps the outgoing rows on screen until the new page lands
       // (#254). Neither list has a remembered offset, so no scroll event fires.
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 7, unread: true });
+      select(fixture, { kind: 'tag', id: 7, unread: true });
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
       await frames();
@@ -2410,7 +2417,7 @@ describe('EntryListComponent', () => {
       const fixture = mount({ entries: loaded });
       await frames();
       blankOpacities(fixture);
-      fixture.componentRef.setInput('selection', { kind: 'favorites' });
+      select(fixture, { kind: 'favorites' });
       fixture.detectChanges();
       await frames();
       expect(rowOpacities(fixture)).not.toContain('');
@@ -2635,7 +2642,7 @@ describe('EntryListComponent', () => {
       fixture.componentInstance.hideAboveMarked([1]);
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(1);
 
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      select(fixture, { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
 
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(0);
@@ -2733,7 +2740,7 @@ describe('EntryListComponent', () => {
       hasMore: true,
       titleCount: { value: 30, counts: 'items' },
     };
-    const search = { kind: 'search', unread: false, term: 'punk' };
+    const search: Selection = { kind: 'search', unread: false, term: 'punk' };
 
     it('fills by the estimated length of a paged list', () => {
       const fixture = mount(pagedList);
@@ -2861,7 +2868,7 @@ describe('EntryListComponent', () => {
   });
 
   describe('the Trending list (#2017)', () => {
-    const trending = (window: 'day' | 'week' = 'day') => ({
+    const trending = (window: 'day' | 'week' = 'day'): Selection => ({
       kind: 'trending',
       window,
     });

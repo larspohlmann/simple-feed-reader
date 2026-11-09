@@ -129,7 +129,7 @@ function inputDefaults() {
     sharedCount: 0,
     trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
     groupUnread: { tags: 0, feeds: 0 },
-    selection: { kind: 'all', unread: true } as Selection,
+    selection: { kind: 'all', unread: true } satisfies Selection,
     loading: false,
     searchLoading: false,
     organising: false,

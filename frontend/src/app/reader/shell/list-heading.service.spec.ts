@@ -148,7 +148,7 @@ describe("ListHeading for a network's combined view", () => {
 
   function networkHeading(
     unread: boolean,
-    selected: Partial<SelectionOf<'network'>> = {},
+    selected: Partial<Pick<SelectionOf<'network'>, 'network' | 'feedKind'>> = {},
   ): ListHeading {
     const selection: Selection = {
       kind: 'network',
