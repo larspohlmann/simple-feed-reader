@@ -143,6 +143,38 @@ final class TimelineRoundTest extends TestCase
         self::assertTrue($round->admits(self::LIST));
     }
 
+    public function testAMastodonSearchAsksForItsAlternativesOneAfterAnotherAndSettlesOnTheMergedPage(): void
+    {
+        $search = self::rssOrAtomSearch();
+        $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
+
+        $tickets = iterator_to_array($round->ticketFor(self::SEARCH));
+        self::assertSame(self::SEARCH_URL . 'rss', $tickets[self::SEARCH]->request->url);
+
+        $followUp = $round->settle(self::SEARCH, self::mastodonSearchAnswer('111', 'rss'));
+        self::assertSame(self::SEARCH_URL . 'atom', $followUp->requestTicket()->request->url);
+
+        $fetched = $round->settle(self::SEARCH, self::mastodonSearchAnswer('112', 'atom'))->settledOutcome();
+        self::assertInstanceOf(FetchedTimelineModel::class, $fetched);
+        self::assertCount(2, $fetched->page->parsed->entries);
+        self::assertSame('112', $search->getNewestSeenId());
+    }
+
+    public function testARefusedFirstAlternativeSettlesTheSearchWithoutAskingTheNext(): void
+    {
+        $search = self::rssOrAtomSearch();
+        $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
+        iterator_to_array($round->ticketFor(self::SEARCH));
+
+        $refused = $round->settle(
+            self::SEARCH,
+            FetchOutcomeModel::answered(new ApiResponseModel(Response::HTTP_UNAUTHORIZED, '{}')),
+        );
+
+        self::assertFalse($refused->isRequest());
+        self::assertInstanceOf(FailedTimelineModel::class, $refused->settledOutcome());
+    }
+
     private function round(): TimelineRound
     {
         return SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([
@@ -181,38 +213,6 @@ final class TimelineRoundTest extends TestCase
         $sources = SocialApiWiring::timelineSources(new MockHttpClient(), new ArrayAdapter());
 
         return new TimelineRound($sources, new TimelineSlotsModel(3, 4), []);
-    }
-
-    public function testAMastodonSearchAsksForItsAlternativesOneAfterAnotherAndSettlesOnTheMergedPage(): void
-    {
-        $search = self::rssOrAtomSearch();
-        $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
-
-        $tickets = iterator_to_array($round->ticketFor(self::SEARCH));
-        self::assertSame(self::SEARCH_URL . 'rss', $tickets[self::SEARCH]->request->url);
-
-        $followUp = $round->settle(self::SEARCH, self::mastodonSearchAnswer('111', 'rss'));
-        self::assertSame(self::SEARCH_URL . 'atom', $followUp->requestTicket()->request->url);
-
-        $fetched = $round->settle(self::SEARCH, self::mastodonSearchAnswer('112', 'atom'))->settledOutcome();
-        self::assertInstanceOf(FetchedTimelineModel::class, $fetched);
-        self::assertCount(2, $fetched->page->parsed->entries);
-        self::assertSame('112', $search->getNewestSeenId());
-    }
-
-    public function testARefusedFirstAlternativeSettlesTheSearchWithoutAskingTheNext(): void
-    {
-        $search = self::rssOrAtomSearch();
-        $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
-        iterator_to_array($round->ticketFor(self::SEARCH));
-
-        $refused = $round->settle(
-            self::SEARCH,
-            FetchOutcomeModel::answered(new ApiResponseModel(Response::HTTP_UNAUTHORIZED, '{}')),
-        );
-
-        self::assertFalse($refused->isRequest());
-        self::assertInstanceOf(FailedTimelineModel::class, $refused->settledOutcome());
     }
 
     private static function rssOrAtomSearch(): SocialFeed
