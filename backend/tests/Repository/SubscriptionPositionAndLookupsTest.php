@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SubscriptionSet;
 use App\Repository\SubscriptionRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
@@ -64,11 +65,6 @@ final class SubscriptionPositionAndLookupsTest extends DbTestCase
         self::assertSame(5, $this->subscriptions->nextPositionForUser($user->requireId()));
     }
 
-    /**
-     * findForUserWithTags() must return every one of the user's subscriptions,
-     * not just the first — a single-row assertion cannot tell "returns
-     * everything" apart from "returns at most one".
-     */
     public function testFindForUserWithTagsReturnsEveryOwnedSubscription(): void
     {
         $user = $this->user('find-with-tags-many@example.com');
@@ -77,7 +73,7 @@ final class SubscriptionPositionAndLookupsTest extends DbTestCase
         $second = $this->subscribe($user, $this->feed('https://b.example/feed.xml'));
         $this->entityManager->flush();
 
-        $rows = $this->subscriptions->findForUserWithTags($user->requireId());
+        $rows = $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::All);
 
         self::assertSame(
             [$first->requireId(), $second->requireId()],

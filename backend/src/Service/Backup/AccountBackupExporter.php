@@ -6,6 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SubscriptionSet;
 use App\Repository\ForYouNetworkExclusionRepository;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SavedSearchRepository;
@@ -68,7 +69,9 @@ final readonly class AccountBackupExporter
 
     private function foundationSnapshot(int $userId): FoundationSnapshotModel
     {
-        $subscriptions = ExportedFeed::withoutRepeats($this->subscriptions->findBackedUpForUserWithTags($userId));
+        $subscriptions = ExportedFeed::withoutRepeats(
+            $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::Backup),
+        );
         $feedsById = self::feedsById($subscriptions);
 
         return new FoundationSnapshotModel(

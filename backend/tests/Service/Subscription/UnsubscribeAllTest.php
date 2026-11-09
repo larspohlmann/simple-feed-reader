@@ -7,6 +7,7 @@ namespace App\Tests\Service\Subscription;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SubscriptionSet;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
@@ -71,7 +72,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $repository = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $repository);
         self::assertSame($keptId, $repository->getOneForUser($user->requireId(), $keptId)->requireId());
-        self::assertCount(1, $repository->findForUserWithTags($user->requireId()));
+        self::assertCount(1, $repository->findForUserWithTags($user->requireId(), SubscriptionSet::All));
     }
 
     public function testReclaimsAFeedNobodySubscribesToAnyMore(): void

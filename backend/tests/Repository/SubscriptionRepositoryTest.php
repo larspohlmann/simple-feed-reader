@@ -60,6 +60,41 @@ final class SubscriptionRepositoryTest extends DbTestCase
         );
     }
 
+    public function testFindFeedUrlsForUserReadsTheOwnersFeedsInCreationOrder(): void
+    {
+        $owner = $this->userFactory()->create('feed-urls-owner@example.com');
+        $later = $this->subscriptionToFeed($owner, 'https://example.com/later.xml', '2026-07-02T00:00:00Z');
+        $titled = $this->subscriptionToFeed($owner, 'https://example.com/titled.xml');
+        $titled->getFeed()->setTitle('Feed title');
+        $titled->getFeed()->setImageUrl('https://cdn.test/titled.png');
+        $titled->setCustomTitle('My title');
+        $this->subscriptionToFeed(
+            $this->userFactory()->create('feed-urls-other@example.com'),
+            'https://example.com/foreign.xml',
+        );
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [
+                [
+                    'id' => $titled->requireId(),
+                    'customTitle' => 'My title',
+                    'feedUrl' => 'https://example.com/titled.xml',
+                    'feedTitle' => 'Feed title',
+                    'feedImageUrl' => 'https://cdn.test/titled.png',
+                ],
+                [
+                    'id' => $later->requireId(),
+                    'customTitle' => null,
+                    'feedUrl' => 'https://example.com/later.xml',
+                    'feedTitle' => null,
+                    'feedImageUrl' => null,
+                ],
+            ],
+            $this->repository()->findFeedSummariesForUser($owner->requireId()),
+        );
+    }
+
     private function scopeRepository(): SubscriptionScopeRepository
     {
         $repository = self::getContainer()->get(SubscriptionScopeRepository::class);
@@ -89,11 +124,14 @@ final class SubscriptionRepositoryTest extends DbTestCase
         return $this->subscriptionToFeed($owner, 'https://example.com/owned-lookup.xml');
     }
 
-    private function subscriptionToFeed(User $owner, string $feedUrl): Subscription
-    {
+    private function subscriptionToFeed(
+        User $owner,
+        string $feedUrl,
+        string $createdAt = '2026-07-01T00:00:00Z',
+    ): Subscription {
         $feed = new Feed($feedUrl);
         $this->entityManager->persist($feed);
-        $subscription = new Subscription($owner, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $subscription = new Subscription($owner, $feed, new \DateTimeImmutable($createdAt));
         $this->entityManager->persist($subscription);
         $this->entityManager->flush();
 

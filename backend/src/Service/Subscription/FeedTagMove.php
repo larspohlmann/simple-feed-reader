@@ -7,6 +7,7 @@ namespace App\Service\Subscription;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
+use App\Enum\SubscriptionSet;
 use App\Exception\InvalidSelectionException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
@@ -112,11 +113,11 @@ final readonly class FeedTagMove
      */
     private function untaggedFeedsExcept(int $userId, int $subscriptionId): array
     {
-        $untagged = array_values(array_filter(
-            $this->subscriptions->findForUserWithTags($userId),
+        $untagged = array_filter(
+            $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::All),
             static fn (Subscription $feed): bool => $feed->getTags()->isEmpty()
                 && $feed->requireId() !== $subscriptionId,
-        ));
+        );
         usort(
             $untagged,
             static fn (Subscription $left, Subscription $right): int

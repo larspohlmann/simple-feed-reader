@@ -8,7 +8,7 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionDisplayTitle;
-use App\Repository\SubscriptionFeedUrls;
+use App\Repository\SubscriptionRepository;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\CollectionCandidateModel;
@@ -29,7 +29,7 @@ final readonly class ImportCandidates
 {
     public function __construct(
         private SocialCandidatesInterface $networkCandidates,
-        private SubscriptionFeedUrls $subscriptionFeedUrls,
+        private SubscriptionRepository $subscriptions,
         private FollowMatcher $followMatcher,
         private SocialFeedRepository $socialFeeds,
         private ActingAccountGuard $guard,
@@ -139,7 +139,7 @@ final readonly class ImportCandidates
     private function profileFeedsOf(SocialAccount $account): array
     {
         $profileFeeds = [];
-        foreach ($this->subscriptionFeedUrls->forUser($account->getUser()->requireId()) as $subscription) {
+        foreach ($this->subscriptions->findFeedSummariesForUser($account->getUser()->requireId()) as $subscription) {
             $identity = ProfileIdentity::of($account->getNetwork(), $subscription['feedUrl']);
             if (null === $identity) {
                 continue;

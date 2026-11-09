@@ -18,6 +18,7 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Enum\SubscriptionSet;
 use App\Exception\ValidationException;
 use App\Repository\FeedRepository;
 use App\Repository\ForYouNetworkExclusionRepository;
@@ -326,7 +327,7 @@ final class AccountRestorerTest extends DbTestCase
         $repository = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $repository);
 
-        return $repository->findForUserWithTags($userId);
+        return $repository->findForUserWithTags($userId, SubscriptionSet::All);
     }
 
     /** @return array<string, array<string, mixed>> */
