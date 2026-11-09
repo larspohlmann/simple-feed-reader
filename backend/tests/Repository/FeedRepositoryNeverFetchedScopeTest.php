@@ -7,7 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\DueFeedCriteria;
-use App\Repository\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueriesDueFeeds;

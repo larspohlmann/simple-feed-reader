@@ -11,9 +11,14 @@ use App\Enum\FeedStatus;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Repository\Model\RefreshTarget\FeedTargetModel;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Queue\Model\QueueBacklogModel;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\TagTargetModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -219,7 +224,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         $this->restrictToFetchable($qb);
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
-        $criteria->target->restrict($qb, 'f', $criteria->userId);
+        $this->restrictToTarget($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
         $this->restrictToConnectedAccounts($qb);
 
@@ -236,6 +241,8 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         if ($criteria->target instanceof FeedTargetModel) {
             // Manual per-feed retry: exactly this feed, "gone" included, schedule
             // ignored — but the ownership scope still applies.
+            $qb->andWhere('f.id = :feedId')->setParameter('feedId', $criteria->target->feedId);
+
             return;
         }
 
@@ -280,6 +287,52 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             'EXISTS (SELECT s.id FROM %s s WHERE s.feed = f AND s.user = :userId)',
             Subscription::class,
         ))->setParameter('userId', $criteria->userId);
+    }
+
+    private function restrictToTarget(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        $target = $criteria->target;
+        match (true) {
+            $target instanceof EveryFeedTargetModel, $target instanceof FeedTargetModel => null,
+            $target instanceof TagTargetModel => $this->restrictToTag($qb, $target),
+            $target instanceof NetworkTargetModel => $this->restrictToNetwork($qb, $target),
+            $target instanceof FeedGroupTargetModel => $this->restrictToFeedGroup($qb, $target, $criteria),
+            $target instanceof NeverFetchedTargetModel => $this->restrictToNeverFetched($qb),
+        };
+    }
+
+    private function restrictToTag(QueryBuilder $qb, TagTargetModel $target): void
+    {
+        $qb->andWhere(sprintf(
+            'EXISTS (SELECT ts.id FROM %s ts WHERE ts.feed = f AND ts.user = :userId AND %s)',
+            Subscription::class,
+            TagScopeDql::predicate('ts'),
+        ))->setParameter('tagId', $target->tagId);
+    }
+
+    private function restrictToNetwork(QueryBuilder $qb, NetworkTargetModel $target): void
+    {
+        NetworkScopeDql::restrict($qb, 'f', $target->networkScope);
+    }
+
+    private function restrictToNeverFetched(QueryBuilder $qb): void
+    {
+        $qb->andWhere('f.fetchSchedule.lastFetchedAt IS NULL');
+    }
+
+    private function restrictToFeedGroup(
+        QueryBuilder $qb,
+        FeedGroupTargetModel $target,
+        DueFeedCriteria $criteria,
+    ): void {
+        $subscriptions = $this->getEntityManager()->createQueryBuilder()
+            ->select('gs.id')
+            ->from(Subscription::class, 'gs')
+            ->andWhere('gs.feed = f')
+            ->andWhere('gs.user = :userId');
+        FeedGroupDql::restrict($subscriptions, 'gs', 'f', $target->feedGroup);
+
+        $qb->andWhere(sprintf('EXISTS (%s)', $subscriptions->getDQL()))->setParameter('userId', $criteria->userId);
     }
 
     private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void

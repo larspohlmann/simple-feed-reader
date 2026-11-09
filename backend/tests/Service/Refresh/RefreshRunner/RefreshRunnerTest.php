@@ -10,7 +10,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\FeedStatus;
-use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;

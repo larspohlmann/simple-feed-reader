@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
-use App\Repository\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

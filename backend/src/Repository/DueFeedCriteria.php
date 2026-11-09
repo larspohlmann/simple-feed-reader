@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Repository\Model\RefreshTarget\RefreshTargetModelInterface;
+use App\Service\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
 
 /**
  * Which feeds one query counts as due. A feed target picks one feed, "gone" included; $force skips the schedule but

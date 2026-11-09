@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
-use App\Repository\Model\RefreshTarget\RefreshTargetModelInterface;
+use App\Service\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
 
 trait QueriesDueFeeds
 {

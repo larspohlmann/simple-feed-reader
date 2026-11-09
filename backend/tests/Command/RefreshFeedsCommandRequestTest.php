@@ -6,8 +6,8 @@ namespace App\Tests\Command;
 
 use App\Command\Exception\MalformedOptionException;
 use App\Command\RefreshFeedsCommand;
-use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Repository\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Service\Refresh\Model\RefreshReportModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Tests\Service\Refresh\FakeRefreshRunner;

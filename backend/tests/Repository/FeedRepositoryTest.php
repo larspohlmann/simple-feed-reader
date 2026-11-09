@@ -11,9 +11,9 @@ use App\Enum\SocialNetwork;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Repository\NetworkScope;
-use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Repository\Model\RefreshTarget\FeedTargetModel;
-use App\Repository\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
 use App\Tests\DbTestCase;
 
 final class FeedRepositoryTest extends DbTestCase

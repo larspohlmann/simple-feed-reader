@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\Model;
 
-use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Repository\Model\RefreshTarget\FeedTargetModel;
-use App\Repository\Model\RefreshTarget\RefreshTargetModelInterface;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
 
 final readonly class RefreshRequestModel
 {

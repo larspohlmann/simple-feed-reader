@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Repository\Model\RefreshTarget;
+namespace App\Tests\Service\Refresh\Model\RefreshTarget;
 
 use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
-use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Repository\Model\RefreshTarget\FeedGroupTargetModel;
-use App\Repository\Model\RefreshTarget\FeedTargetModel;
-use App\Repository\Model\RefreshTarget\NetworkTargetModel;
-use App\Repository\Model\RefreshTarget\NeverFetchedTargetModel;
-use App\Repository\Model\RefreshTarget\RefreshTargetModelInterface;
-use App\Repository\Model\RefreshTarget\TagTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
+use App\Service\Refresh\Model\RefreshTarget\TagTargetModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
