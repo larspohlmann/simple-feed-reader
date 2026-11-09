@@ -7,6 +7,7 @@ namespace App\Service\Refresh;
 use App\Enum\FeedGroup;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
+use App\Repository\RefreshTarget;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Refresh\Model\RefreshRequestModel;
@@ -32,25 +33,25 @@ final readonly class UserRefreshScope
         if (null !== $tagId) {
             $tag = $this->tags->getOneForUser($userId, $tagId);
 
-            return RefreshRequestModel::forUserTag($userId, $tag->requireId(), self::BUDGET_SECONDS);
+            return RefreshRequestModel::forUser($userId, RefreshTarget::tag($tag->requireId()), self::BUDGET_SECONDS);
         }
 
-        return RefreshRequestModel::forUser($userId, self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, RefreshTarget::everyFeed(), self::BUDGET_SECONDS);
     }
 
     public function requestForNetwork(int $userId, NetworkScope $networkScope): RefreshRequestModel
     {
-        return RefreshRequestModel::forUserNetwork($userId, $networkScope, self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, RefreshTarget::network($networkScope), self::BUDGET_SECONDS);
     }
 
     public function requestForFeedGroup(int $userId, FeedGroup $feedGroup): RefreshRequestModel
     {
-        return RefreshRequestModel::forUserFeedGroup($userId, $feedGroup, self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, RefreshTarget::feedGroup($feedGroup), self::BUDGET_SECONDS);
     }
 
     public function requestForNeverFetched(int $userId): RefreshRequestModel
     {
-        return RefreshRequestModel::forUserNeverFetched($userId, self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, RefreshTarget::neverFetchedFeeds(), self::BUDGET_SECONDS);
     }
 
     private function forFeed(int $userId, int $feedId): RefreshRequestModel
@@ -59,6 +60,6 @@ final readonly class UserRefreshScope
             throw new RecordNotFoundException('No such subscription.');
         }
 
-        return RefreshRequestModel::forUserFeed($userId, $feedId, self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, RefreshTarget::feed($feedId), self::BUDGET_SECONDS);
     }
 }

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Refresh;
 use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
+use App\Repository\RefreshTarget;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\Model\RefreshRunProgressModel;
 use App\Service\Refresh\RefreshRunStore;
@@ -28,7 +29,7 @@ final class RefreshRunStoreTest extends TestCase
 
     public function testAnUnknownRunOpensAtZero(): void
     {
-        $progress = $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET));
+        $progress = $this->store->open(RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET));
 
         self::assertSame(0, $progress->done);
         self::assertSame(0, $progress->total);
@@ -36,7 +37,7 @@ final class RefreshRunStoreTest extends TestCase
 
     public function testASavedRunIsHandedBackToTheNextSlice(): void
     {
-        $request = RefreshRequestModel::forUser(1, self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
         $this->store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
 
         $resumed = $this->store->open($request);
@@ -49,11 +50,15 @@ final class RefreshRunStoreTest extends TestCase
     public function testRunsAreKeptApartByUser(): void
     {
         $this->store->save(
-            RefreshRequestModel::forUser(1, self::BUDGET),
+            RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET),
             RefreshRunProgressModel::start()->advancedBy(20, 180),
         );
 
-        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(2, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            2,
+            RefreshTarget::everyFeed(),
+            self::BUDGET,
+        ))->done);
     }
 
     /**
@@ -64,12 +69,20 @@ final class RefreshRunStoreTest extends TestCase
     {
         $userId = 1;
         $this->store->save(
-            RefreshRequestModel::forUser($userId, self::BUDGET),
+            RefreshRequestModel::forUser($userId, RefreshTarget::everyFeed(), self::BUDGET),
             RefreshRunProgressModel::start()->advancedBy(20, 180),
         );
 
-        self::assertSame(0, $this->store->open(RefreshRequestModel::forUserFeed($userId, 7, self::BUDGET))->done);
-        self::assertSame(0, $this->store->open(RefreshRequestModel::forUserTag($userId, 7, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            $userId,
+            RefreshTarget::feed(7),
+            self::BUDGET,
+        ))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            $userId,
+            RefreshTarget::tag(7),
+            self::BUDGET,
+        ))->done);
     }
 
     /** A feed scope and a tag scope with the same id are still two runs. */
@@ -77,11 +90,15 @@ final class RefreshRunStoreTest extends TestCase
     {
         $userId = 1;
         $this->store->save(
-            RefreshRequestModel::forUserFeed($userId, 7, self::BUDGET),
+            RefreshRequestModel::forUser($userId, RefreshTarget::feed(7), self::BUDGET),
             RefreshRunProgressModel::start()->advancedBy(1, 0),
         );
 
-        self::assertSame(0, $this->store->open(RefreshRequestModel::forUserTag($userId, 7, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            $userId,
+            RefreshTarget::tag(7),
+            self::BUDGET,
+        ))->done);
     }
 
     public function testNetworkRunsAreKeptApartFromEachOtherAndFromTheSweep(): void
@@ -91,40 +108,56 @@ final class RefreshRunStoreTest extends TestCase
 
         $mastodon = $this->networkRequest(SocialNetwork::Mastodon);
         self::assertSame(0, $this->store->open($mastodon)->done);
-        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            1,
+            RefreshTarget::everyFeed(),
+            self::BUDGET,
+        ))->done);
         self::assertSame(1, $this->store->open($bluesky)->done);
     }
 
     public function testFeedGroupRunsAreKeptApartFromEachOtherAndFromTheSweep(): void
     {
-        $tags = RefreshRequestModel::forUserFeedGroup(1, FeedGroup::Tags, self::BUDGET);
+        $tags = RefreshRequestModel::forUser(1, RefreshTarget::feedGroup(FeedGroup::Tags), self::BUDGET);
         $this->store->save($tags, RefreshRunProgressModel::start()->advancedBy(1, 2));
 
         self::assertSame(
             0,
-            $this->store->open(RefreshRequestModel::forUserFeedGroup(1, FeedGroup::Feeds, self::BUDGET))->done,
+            $this->store->open(RefreshRequestModel::forUser(
+                1,
+                RefreshTarget::feedGroup(FeedGroup::Feeds),
+                self::BUDGET,
+            ))->done,
         );
-        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            1,
+            RefreshTarget::everyFeed(),
+            self::BUDGET,
+        ))->done);
         self::assertSame(1, $this->store->open($tags)->done);
     }
 
     public function testANeverFetchedRunIsKeptApartFromTheSweep(): void
     {
-        $neverFetched = RefreshRequestModel::forUserNeverFetched(1, self::BUDGET);
+        $neverFetched = RefreshRequestModel::forUser(1, RefreshTarget::neverFetchedFeeds(), self::BUDGET);
         $this->store->save($neverFetched, RefreshRunProgressModel::start()->advancedBy(1, 2));
 
-        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            1,
+            RefreshTarget::everyFeed(),
+            self::BUDGET,
+        ))->done);
         self::assertSame(1, $this->store->open($neverFetched)->done);
     }
 
     private function networkRequest(SocialNetwork $network): RefreshRequestModel
     {
-        return RefreshRequestModel::forUserNetwork(1, NetworkScope::whole($network), self::BUDGET);
+        return RefreshRequestModel::forUser(1, RefreshTarget::network(NetworkScope::whole($network)), self::BUDGET);
     }
 
     public function testAForgottenRunStartsOverNextTime(): void
     {
-        $request = RefreshRequestModel::forUser(1, self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
         $this->store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
 
         $this->store->forget($request);
@@ -188,7 +221,11 @@ final class RefreshRunStoreTest extends TestCase
         $cache->method('getItem')->willReturn($item);
 
         $store = new RefreshRunStore($cache);
-        $store->save(RefreshRequestModel::forUser(1, self::BUDGET), RefreshRunProgressModel::start());
+        $store->save(RefreshRequestModel::forUser(
+            1,
+            RefreshTarget::everyFeed(),
+            self::BUDGET,
+        ), RefreshRunProgressModel::start());
     }
 
     /**
@@ -198,25 +235,37 @@ final class RefreshRunStoreTest extends TestCase
      */
     public function testTheCacheKeyEncodesTheUserAndTheRequestsScope(): void
     {
-        self::assertSame(['refresh_run_3.all'], $this->rawKeyFor(RefreshRequestModel::forUser(3, self::BUDGET)));
+        self::assertSame(['refresh_run_3.all'], $this->rawKeyFor(RefreshRequestModel::forUser(
+            3,
+            RefreshTarget::everyFeed(),
+            self::BUDGET,
+        )));
         self::assertSame(
             ['refresh_run_3.feed-7'],
-            $this->rawKeyFor(RefreshRequestModel::forUserFeed(3, 7, self::BUDGET)),
+            $this->rawKeyFor(RefreshRequestModel::forUser(3, RefreshTarget::feed(7), self::BUDGET)),
         );
         self::assertSame(
             ['refresh_run_3.tag-9'],
-            $this->rawKeyFor(RefreshRequestModel::forUserTag(3, 9, self::BUDGET)),
+            $this->rawKeyFor(RefreshRequestModel::forUser(3, RefreshTarget::tag(9), self::BUDGET)),
         );
         self::assertSame(
             ['refresh_run_3.set-network-bluesky'],
             $this->rawKeyFor(
-                RefreshRequestModel::forUserNetwork(3, NetworkScope::whole(SocialNetwork::Bluesky), self::BUDGET),
+                RefreshRequestModel::forUser(
+                    3,
+                    RefreshTarget::network(NetworkScope::whole(SocialNetwork::Bluesky)),
+                    self::BUDGET,
+                ),
             ),
         );
         self::assertSame(
             ['refresh_run_3.set-network-bluesky-profile'],
             $this->rawKeyFor(
-                RefreshRequestModel::forUserNetwork(3, NetworkScope::profiles(SocialNetwork::Bluesky), self::BUDGET),
+                RefreshRequestModel::forUser(
+                    3,
+                    RefreshTarget::network(NetworkScope::profiles(SocialNetwork::Bluesky)),
+                    self::BUDGET,
+                ),
             ),
         );
     }
@@ -230,7 +279,7 @@ final class RefreshRunStoreTest extends TestCase
     {
         $cache = new ArrayAdapter();
         $store = new RefreshRunStore($cache);
-        $request = RefreshRequestModel::forUser(1, self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
         $store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
 
         foreach (array_keys($cache->getValues()) as $key) {

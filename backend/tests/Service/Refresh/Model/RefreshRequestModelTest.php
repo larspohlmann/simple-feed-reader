@@ -6,6 +6,7 @@ namespace App\Tests\Service\Refresh\Model;
 
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
+use App\Repository\RefreshTarget;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
 
@@ -23,6 +24,28 @@ final class RefreshRequestModelTest extends TestCase
         self::assertFalse($request->force);
     }
 
+    public function testAUserRequestForcesTheRefreshWithoutPruning(): void
+    {
+        $request = RefreshRequestModel::forUser(7, RefreshTarget::neverFetchedFeeds(), 30);
+
+        self::assertSame(7, $request->userId);
+        self::assertEquals(RefreshTarget::neverFetchedFeeds(), $request->target);
+        self::assertTrue($request->force);
+        self::assertFalse($request->prune);
+        self::assertSame(30, $request->budgetSeconds);
+    }
+
+    public function testAFeedRequestHasNoUserAndForcesTheRefreshWithoutPruning(): void
+    {
+        $request = RefreshRequestModel::forFeed(11, 30);
+
+        self::assertNull($request->userId);
+        self::assertEquals(RefreshTarget::feed(11), $request->target);
+        self::assertTrue($request->force);
+        self::assertFalse($request->prune);
+        self::assertSame(30, $request->budgetSeconds);
+    }
+
     public function testWithoutPruningTurnsOnlyThePruningOff(): void
     {
         $request = RefreshRequestModel::allDue(45)->withoutPruning();
@@ -34,11 +57,10 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testWithoutPruningKeepsTheScope(): void
     {
-        $request = RefreshRequestModel::forUserTag(7, 13, 30)->withoutPruning();
+        $request = RefreshRequestModel::forUser(7, RefreshTarget::tag(13), 30)->withoutPruning();
 
         self::assertSame(7, $request->userId);
-        self::assertSame(13, $request->target->tagId);
-        self::assertNull($request->target->feedId);
+        self::assertEquals(RefreshTarget::tag(13), $request->target);
         self::assertTrue($request->force);
         self::assertSame(30, $request->budgetSeconds);
     }
@@ -54,11 +76,10 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testIgnoringScheduleKeepsTheScope(): void
     {
-        $request = RefreshRequestModel::forUserFeed(7, 11, 30)->ignoringSchedule();
+        $request = RefreshRequestModel::forUser(7, RefreshTarget::feed(11), 30)->ignoringSchedule();
 
         self::assertSame(7, $request->userId);
-        self::assertSame(11, $request->target->feedId);
-        self::assertNull($request->target->tagId);
+        self::assertEquals(RefreshTarget::feed(11), $request->target);
         self::assertFalse($request->prune);
         self::assertSame(30, $request->budgetSeconds);
     }
@@ -67,18 +88,17 @@ final class RefreshRequestModelTest extends TestCase
     {
         self::assertSame(
             RefreshRequestModel::DEFAULT_BATCH_LIMIT,
-            RefreshRequestModel::forUser(7, 30)->batchLimit,
+            RefreshRequestModel::forUser(7, RefreshTarget::everyFeed(), 30)->batchLimit,
         );
     }
 
     public function testLimitedToChangesOnlyTheBatchLimit(): void
     {
-        $request = RefreshRequestModel::forUserTag(7, 13, 30)->limitedTo(5);
+        $request = RefreshRequestModel::forUser(7, RefreshTarget::tag(13), 30)->limitedTo(5);
 
         self::assertSame(5, $request->batchLimit);
         self::assertSame(7, $request->userId);
-        self::assertSame(13, $request->target->tagId);
-        self::assertNull($request->target->feedId);
+        self::assertEquals(RefreshTarget::tag(13), $request->target);
         self::assertTrue($request->force);
         self::assertFalse($request->prune);
         self::assertSame(30, $request->budgetSeconds);
@@ -94,12 +114,14 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testANetworkRequestRefreshesThatNetworksFeedsOfTheUserIgnoringTheSchedule(): void
     {
-        $request = RefreshRequestModel::forUserNetwork(7, NetworkScope::whole(SocialNetwork::Bluesky), 30);
+        $request = RefreshRequestModel::forUser(
+            7,
+            RefreshTarget::network(NetworkScope::whole(SocialNetwork::Bluesky)),
+            30,
+        );
 
         self::assertSame(7, $request->userId);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->target->networkScope);
-        self::assertNull($request->target->feedId);
-        self::assertNull($request->target->tagId);
+        self::assertEquals(RefreshTarget::network(NetworkScope::whole(SocialNetwork::Bluesky)), $request->target);
         self::assertTrue($request->force);
         self::assertFalse($request->prune);
     }
@@ -107,7 +129,7 @@ final class RefreshRequestModelTest extends TestCase
     public function testDerivedRequestsKeepTheNetwork(): void
     {
         $network = NetworkScope::whole(SocialNetwork::Bluesky);
-        $request = RefreshRequestModel::forUserNetwork(7, $network, 30);
+        $request = RefreshRequestModel::forUser(7, RefreshTarget::network($network), 30);
 
         self::assertEquals($network, $request->withoutPruning()->target->networkScope);
         self::assertEquals($network, $request->ignoringSchedule()->target->networkScope);
