@@ -14,6 +14,7 @@ use App\Repository\NetworkScope;
 use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
 use App\Tests\DbTestCase;
 
 final class FeedRepositoryTest extends DbTestCase
@@ -66,6 +67,20 @@ final class FeedRepositoryTest extends DbTestCase
     private function dueEveryFeed(): DueFeedCriteria
     {
         return new DueFeedCriteria($this->now, new EveryFeedTargetModel());
+    }
+
+    public function testAnUnknownRefreshTargetIsRefusedRatherThanSweepingEveryFeed(): void
+    {
+        $unknownTarget = new class () implements RefreshTargetModelInterface {
+            public function runKey(): string
+            {
+                return 'unknown';
+            }
+        };
+
+        $this->expectException(\LogicException::class);
+
+        $this->feeds->findDue(new DueFeedCriteria($this->now, $unknownTarget), 50);
     }
 
     public function testFindsDueFeedsOrderedNeverFetchedFirst(): void
