@@ -275,7 +275,7 @@ describe('SocialImportDialogComponent', () => {
       removed: 0,
     };
     post.flush(result);
-    expect(refreshStub.run).toHaveBeenCalled();
+    expect(refreshStub.run).toHaveBeenCalledWith(expect.any(Function), { neverFetched: true });
     expect(close).toHaveBeenCalledWith(result);
   });
 
@@ -494,7 +494,7 @@ describe('SocialImportDialogComponent', () => {
     post.flush({ imported: 2, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
 
     expect(subscriptionsStub.load).toHaveBeenCalled();
-    expect(refreshStub.run).toHaveBeenCalled();
+    expect(refreshStub.run).toHaveBeenCalledWith(expect.any(Function), { neverFetched: true });
   });
 
   it('warns when the follow list was cut at the cap', () => {
@@ -574,7 +574,7 @@ describe('SocialImportDialogComponent', () => {
     });
     expect(subscriptionsStub.load).toHaveBeenCalled();
     expect(tagsStub.load).toHaveBeenCalled();
-    expect(refreshStub.run).toHaveBeenCalled();
+    expect(refreshStub.run).toHaveBeenCalledWith(expect.any(Function), { neverFetched: true });
     expect(close).toHaveBeenCalledWith(result);
   });
 

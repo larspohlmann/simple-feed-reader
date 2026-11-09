@@ -68,9 +68,9 @@ describe('OpmlSectionComponent', () => {
     testRequest.flush({ imported: 3, alreadySubscribed: 1, invalid: 0, skippedOverLimit: 0 });
     expect(component.result()?.imported).toBe(3);
     expect(load).toHaveBeenCalled();
-    // Imported feeds are due but empty until fetched, so a refresh is kicked off.
-    const refresh = ctrl.expectOne('https://api.test/api/refresh');
+    const refresh = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(refresh.request.method).toBe('POST');
+    expect(refresh.request.params.get('neverFetched')).toBe('1');
     refresh.flush(refreshReport({ progress: { done: 3, total: 3 }, fetched: 3 }));
   });
 
@@ -81,7 +81,7 @@ describe('OpmlSectionComponent', () => {
     ctrl
       .expectOne('https://api.test/api/opml/import')
       .flush({ imported: 0, alreadySubscribed: 2, invalid: 0, skippedOverLimit: 0 });
-    ctrl.expectNone('https://api.test/api/refresh');
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/refresh');
   });
 
   it('does not import an empty body', () => {

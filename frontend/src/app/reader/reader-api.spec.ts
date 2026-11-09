@@ -426,6 +426,13 @@ describe('ReaderApi', () => {
     testRequest.flush(refreshReport());
   });
 
+  it('scopes refresh to never-fetched feeds when asked', () => {
+    api.refresh({ neverFetched: true }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('neverFetched')).toBe('1');
+    testRequest.flush(refreshReport());
+  });
+
   it('scopes refresh to a single feed when given a feedId', () => {
     api.refresh({ feedId: 42 }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');

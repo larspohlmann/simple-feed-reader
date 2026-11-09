@@ -54,6 +54,7 @@ export interface RefreshScope {
   network?: SocialNetworkName;
   feedKind?: NetworkFeedKind;
   group?: FeedGroupName;
+  neverFetched?: true;
 }
 
 /** Whether two selections name the same list. Selections are rebuilt from the
