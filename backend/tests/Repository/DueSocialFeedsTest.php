@@ -10,15 +10,17 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
-use App\Repository\FeedRepository;
 use App\Repository\RefreshTarget;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueriesDueFeeds;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class DueSocialFeedsTest extends DbTestCase
 {
+    use QueriesDueFeeds;
+
     private const string NOW = '2026-10-12 12:00:00';
 
     public function testAFeedWhoseAccountNeedsReconnectingIsNeverDue(): void
@@ -76,13 +78,5 @@ final class DueSocialFeedsTest extends DbTestCase
         $this->entityManager->persist(new SocialFeed($account, $feed, SocialFeedKind::Home, ''));
 
         return $feed;
-    }
-
-    private function feeds(): FeedRepository
-    {
-        /** @var FeedRepository $feeds */
-        $feeds = $this->entityManager->getRepository(Feed::class);
-
-        return $feeds;
     }
 }
