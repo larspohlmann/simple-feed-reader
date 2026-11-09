@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
-import { Selection, listOrderOf, networkKey } from '../query/query';
+import { Selection, identityKey, isUnreadOnly, listOrderOf } from '../query/query';
 
 /**
- * Storage key for a selection's scroll offset. Distinguishes feed / tag / view,
+ * Storage key for a selection's scroll offset. Distinguishes the kind and its identity,
  * unread-vs-all, and the list order so every list remembers its own place independently.
  */
 export function scrollKey(selection: Selection): string {
-  return `feed-reader:list-scroll:${selection.kind}:${selection.id ?? ''}:${selection.unread ? 'u' : 'a'}:${selection.term ?? ''}:${networkKey(selection)}:${selection.group ?? ''}:${listOrderOf(selection)}`;
+  return `feed-reader:list-scroll:${selection.kind}:${identityKey(selection)}:${isUnreadOnly(selection) ? 'u' : 'a'}:${listOrderOf(selection)}`;
 }
 
 /** Storage key for an open article's own scroll offset. */

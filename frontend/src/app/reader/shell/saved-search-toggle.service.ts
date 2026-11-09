@@ -35,7 +35,7 @@ export class SavedSearchToggle {
   private readonly searchedTermAndMode = computed(() => {
     const selection = this.selection();
     if (selection.kind !== 'search') return null;
-    const raw = selection.term ?? '';
+    const raw = selection.term;
 
     // A phrase (wrapping quotes) overrides whole-word (a trailing space) when a
     // query carries both, exactly as the server decides it (#702), so the

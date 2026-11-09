@@ -114,15 +114,15 @@ describe('MarkReadActions recounting after a mark-read', () => {
   });
 
   it.each<Selection>([
-    { kind: 'all', id: null, unread: true },
+    { kind: 'all', unread: true },
     { kind: 'tag', id: 5, unread: true },
     { kind: 'subscription', id: 1, unread: true },
-    { kind: 'network', id: null, unread: true, network: 'bluesky' },
-    { kind: 'network', id: null, unread: true, network: 'bluesky', feedKind: 'profile' },
-    { kind: 'group', id: null, unread: true, group: 'tags' },
-    { kind: 'search', id: null, unread: true, term: 'news' },
-    { kind: 'for-you', id: null, unread: true },
-    { kind: 'saved-searches', id: null, unread: true },
+    { kind: 'network', unread: true, network: 'bluesky' },
+    { kind: 'network', unread: true, network: 'bluesky', feedKind: 'profile' },
+    { kind: 'group', unread: true, group: 'tags' },
+    { kind: 'search', unread: true, term: 'news' },
+    { kind: 'for-you', unread: true },
+    { kind: 'saved-searches', unread: true },
     { kind: 'saved-search', id: 7, unread: true },
   ])('leaves the badges to the server recount after marking $kind read', (selection) => {
     markSelectionRead(selection);
@@ -134,7 +134,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
 
   it('marks a feed group read through the mark-read endpoint', () => {
     const markRead = jest.spyOn(TestBed.inject(ReaderApi), 'markRead');
-    currentSelection.set({ kind: 'group', id: null, unread: true, group: 'tags' });
+    currentSelection.set({ kind: 'group', unread: true, group: 'tags' });
 
     actions.confirmMarkAllRead();
 
@@ -145,7 +145,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
   });
 
   it('recounts from the server after marking the entries above read', () => {
-    currentSelection.set({ kind: 'all', id: null, unread: false });
+    currentSelection.set({ kind: 'all', unread: false });
 
     actions.confirmMarkAboveRead([1, 2], jest.fn());
 

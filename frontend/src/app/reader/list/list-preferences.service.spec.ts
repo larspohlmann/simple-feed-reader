@@ -35,13 +35,13 @@ describe('ListPreferences', () => {
 
   it('leaves the Trending window to the URL (#2017, D40)', () => {
     TestBed.inject(TrendingWindowService).set('week');
-    const trending = { kind: 'trending', id: null, unread: false, window: 'day' } as const;
+    const trending = { kind: 'trending', window: 'day' } as const;
 
     expect(TestBed.inject(ListPreferences).appliedTo(trending)).toEqual(trending);
   });
 
   describe('a direct search (#1922)', () => {
-    const search = { kind: 'search', id: null, unread: false, term: 'angular' } as const;
+    const search = { kind: 'search', unread: false, term: 'angular' } as const;
 
     it("opens on all posts, whatever the account's filter says", () => {
       TestBed.inject(UnreadFilterService).set(true);
@@ -56,9 +56,7 @@ describe('ListPreferences', () => {
 
       expect(isUnreadOnly(preferences.appliedTo(search))).toBe(true);
       expect(TestBed.inject(UnreadFilterService).unreadOnly()).toBe(false);
-      expect(isUnreadOnly(preferences.appliedTo({ kind: 'all', id: null, unread: false }))).toBe(
-        false,
-      );
+      expect(isUnreadOnly(preferences.appliedTo({ kind: 'all', unread: false }))).toBe(false);
     });
 
     it('forgets the flip once the search ends', () => {

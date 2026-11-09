@@ -10,7 +10,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { RefreshScope, Selection, selectionQueryParams } from '../query/query';
+import { RefreshScope, selectionQueryParams } from '../query/query';
 import { queryFromSelection } from '../query/entry-query';
 import { SubscriptionDto } from '../models';
 import {
@@ -59,10 +59,11 @@ export class RefreshActions {
       case 'all':
         return { kind: 'all' };
       case 'tag':
-        return selection.id != null ? { kind: 'tag', tagId: selection.id } : null;
+        return { kind: 'tag', tagId: selection.id };
       case 'network':
+        return { kind: 'network', network: selection.network, feedKind: selection.feedKind };
       case 'group':
-        return this.sectionScope(selection);
+        return { kind: 'group', group: selection.group };
       case 'subscription': {
         const feedId = this.heading.selectedSubscription()?.feedId;
         return feedId != null ? { kind: 'feed', feedId } : null;
@@ -70,12 +71,6 @@ export class RefreshActions {
       default:
         return null;
     }
-  }
-
-  private sectionScope(selection: Selection): RefreshScope | null {
-    if (selection.network)
-      return { kind: 'network', network: selection.network, feedKind: selection.feedKind };
-    return selection.group ? { kind: 'group', group: selection.group } : null;
   }
 
   /** The list-scoped refresh (header button + mobile pull): sweep only the feeds

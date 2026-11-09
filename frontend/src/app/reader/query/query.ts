@@ -12,40 +12,56 @@ import {
   isSocialNetworkName,
 } from '../../core/social-network';
 
-export interface Selection {
-  kind:
-    | 'all'
-    | 'tag'
-    | 'network'
-    | 'group'
-    | 'subscription'
-    | 'favorites'
-    | 'kept'
-    | 'shared'
-    | 'viewed'
-    | 'for-you'
-    | 'trending'
-    | 'saved-searches'
-    | 'saved-search'
-    | 'search';
-  id: number | null;
+/** A list that takes the unread switch and the newest/oldest order. */
+interface FilteredList {
   unread: boolean;
-  /** Only a search carries one. Part of the list's identity, so it belongs to
-   *  the selection rather than to a service beside it. */
-  term?: string;
-  /** Only a network's combined view carries one. */
-  network?: SocialNetworkName;
-  /** Only a network's Feeds row carries one. */
-  feedKind?: NetworkFeedKind;
-  /** Only a feed group's combined view carries one. */
-  group?: FeedGroupName;
-  /** Absent means newest first; only a list `hasListOrder` accepts ever carries one. */
+  /** Absent means newest first. */
   order?: ListOrder;
-  /** Only Trending carries one, read from the URL's `window` (#2017, D40). */
-  window?: TrendingWindow;
 }
 
-export type SelectionKind = Selection['kind'];
+/** A list of entry states: already a filter, so it takes only the order. */
+interface StateList {
+  order?: ListOrder;
+}
+
+/** What each kind of list carries beside its kind. */
+interface SelectionFields {
+  all: FilteredList;
+  tag: FilteredList & { id: number };
+  subscription: FilteredList & { id: number };
+  network: FilteredList & { network: SocialNetworkName; feedKind?: NetworkFeedKind };
+  group: FilteredList & { group: FeedGroupName };
+  favorites: StateList;
+  kept: StateList;
+  shared: StateList;
+  viewed: StateList;
+  'for-you': { unread: boolean };
+  trending: { window: TrendingWindow };
+  'saved-searches': FilteredList;
+  'saved-search': FilteredList & { id: number };
+  search: FilteredList & { term: string };
+}
+
+export type SelectionKind = keyof SelectionFields;
+export type SelectionOf<K extends SelectionKind> = { kind: K } & SelectionFields[K];
+export type Selection = { [K in SelectionKind]: SelectionOf<K> }[SelectionKind];
+export type FilteredSelection = Extract<Selection, { unread: boolean }>;
+type OrderedSelection = Exclude<Selection, { kind: 'for-you' | 'trending' }>;
+
+/** One arm per kind, each handed the selection already narrowed to that kind. */
+export type BySelectionKind<R> = { [K in SelectionKind]: (selection: SelectionOf<K>) => R };
+
+export function bySelectionKind<R>(table: BySelectionKind<R>, selection: Selection): R {
+  return armFor(table, selection.kind)(selection);
+}
+
+// The selection's own kind picked the arm, so it fits; TypeScript cannot correlate the two (TS #30581).
+function armFor<K extends SelectionKind, R>(
+  table: BySelectionKind<R>,
+  kind: K,
+): (selection: SelectionOf<K>) => R {
+  return table[kind];
+}
 
 /** Which feeds a refresh covers: all the user's due feeds, one feed, a tag's
  *  feeds, a network's feeds, a sidebar section's feeds, or the never-fetched ones. */
@@ -62,16 +78,34 @@ export type RefreshScope =
 export function sameSelection(left: Selection, right: Selection): boolean {
   return (
     left.kind === right.kind &&
-    left.id === right.id &&
-    left.unread === right.unread &&
-    left.term === right.term &&
-    left.network === right.network &&
-    left.feedKind === right.feedKind &&
-    left.group === right.group &&
-    left.window === right.window &&
+    identityKey(left) === identityKey(right) &&
+    isUnreadOnly(left) === isUnreadOnly(right) &&
     listOrderOf(left) === listOrderOf(right)
   );
 }
+
+/** What tells two lists of one kind apart: the id, term, network, group or window the kind carries. */
+export function identityKey(selection: Selection): string {
+  return bySelectionKind(IDENTITY_KEY, selection);
+}
+
+const IDENTITY_KEY: BySelectionKind<string> = {
+  all: () => '',
+  tag: (selection) => String(selection.id),
+  subscription: (selection) => String(selection.id),
+  network: (selection) =>
+    selection.feedKind ? `${selection.network}:${selection.feedKind}` : selection.network,
+  group: (selection) => selection.group,
+  favorites: () => '',
+  kept: () => '',
+  shared: () => '',
+  viewed: () => '',
+  'for-you': () => '',
+  trending: (selection) => selection.window,
+  'saved-searches': () => '',
+  'saved-search': (selection) => String(selection.id),
+  search: (selection) => selection.term,
+};
 
 export function isDirectSearch(selection: Selection): boolean {
   return selection.kind === 'search';
@@ -89,15 +123,9 @@ export function visibleSearchTerm(term: string): string {
 }
 
 /** Whether the list offers the "All posts / only unread" switch. Favorites,
- *  kept and viewed are already filters on entry state, so they do not. */
-export function hasUnreadFilter(selection: Selection): boolean {
-  return (
-    canScopedRefresh(selection) ||
-    selection.kind === 'for-you' ||
-    selection.kind === 'saved-searches' ||
-    selection.kind === 'saved-search' ||
-    selection.kind === 'search'
-  );
+ *  kept, shared, viewed and Trending carry no unread flag: they do not. */
+export function hasUnreadFilter(selection: Selection): selection is FilteredSelection {
+  return 'unread' in selection;
 }
 
 export function withUnreadPreference(selection: Selection, unreadOnly: boolean): Selection {
@@ -111,22 +139,22 @@ export function isUnreadOnly(selection: Selection): boolean {
 
 /** The search on screen, trailing whole-word space included; empty outside a search. */
 export function searchTermOf(selection: Selection): string {
-  return selection.kind === 'search' ? (selection.term ?? '') : '';
+  return selection.kind === 'search' ? selection.term : '';
 }
 
 /** The window Trending shows, or null on every other list. */
 export function trendingWindowOf(selection: Selection): TrendingWindow | null {
-  return selection.kind === 'trending' ? (selection.window ?? null) : null;
+  return selection.kind === 'trending' ? selection.window : null;
 }
 
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
  *  and Trending lists have no date order to reverse. */
-export function hasListOrder(selection: Selection): boolean {
+export function hasListOrder(selection: Selection): selection is OrderedSelection {
   return selection.kind !== 'for-you' && selection.kind !== 'trending';
 }
 
 export function listOrderOf(selection: Selection): ListOrder {
-  return selection.order ?? 'newest';
+  return hasListOrder(selection) ? (selection.order ?? 'newest') : 'newest';
 }
 
 /** Applies an order to a selection parsed from the URL, which never carries one. */
@@ -144,9 +172,8 @@ export function offersMarkAboveRead(selection: Selection): boolean {
 export function listOrderKey(selection: Selection): string | null {
   if (!hasListOrder(selection)) return null;
   if (selection.kind === 'search') return 'search';
-  if (selection.network) return `network:${networkKey(selection)}`;
-  if (selection.group) return `group:${selection.group}`;
-  return selection.id === null ? selection.kind : `${selection.kind}:${selection.id}`;
+  const identity = identityKey(selection);
+  return identity === '' ? selection.kind : `${selection.kind}:${identity}`;
 }
 
 /** Whether the current selection supports a scoped refresh — the cross-feed
@@ -257,29 +284,31 @@ export function selectionFromParams(paramMap: ParamMap, context: ViewContext): P
   if (isSearchableTerm(term)) {
     // A `?q=` search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
-    const selection: Selection = { kind: 'search', id: null, unread: false, term };
+    const selection: Selection = { kind: 'search', unread: false, term };
     return { selection, entryId, urlCorrection: null };
   }
 
   return { ...viewFromParams(paramMap, context), entryId };
 }
 
-/** The views that name no feed and carry nothing beyond their name. */
-const NAMED_VIEWS = ['favorites', 'kept', 'shared', 'viewed', 'for-you', 'saved-searches'] as const;
+/** The views of entry states: no feed, no unread switch. */
+const STATE_VIEWS = ['favorites', 'kept', 'shared', 'viewed'] as const;
 
-type NamedView = (typeof NAMED_VIEWS)[number];
+/** The views that name no feed but take the unread switch. */
+const FILTERED_VIEWS = ['for-you', 'saved-searches'] as const;
 
-function isNamedView(view: string | null): view is NamedView {
-  return (NAMED_VIEWS as readonly (string | null)[]).includes(view);
+function isViewIn<View extends string>(views: readonly View[], view: string | null): view is View {
+  return (views as readonly (string | null)[]).includes(view);
 }
 
 function viewFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
   const view = selectionParam(paramMap, 'view');
   if (view === 'trending') return trendingFromParams(paramMap, context);
-  const selection: Selection = isNamedView(view)
-    ? { kind: view, id: null, unread: false }
-    : feedScopedSelection(paramMap);
-  return { selection, urlCorrection: null };
+  if (isViewIn(STATE_VIEWS, view)) return { selection: { kind: view }, urlCorrection: null };
+  if (isViewIn(FILTERED_VIEWS, view)) {
+    return { selection: { kind: view, unread: false }, urlCorrection: null };
+  }
+  return { selection: feedScopedSelection(paramMap), urlCorrection: null };
 }
 
 /** Switched off, Trending opens All items, as an unknown view does, and leaves the URL. A URL naming no window
@@ -294,7 +323,7 @@ function trendingFromParams(paramMap: ParamMap, context: ViewContext): ParsedVie
   const named = selectionParam(paramMap, 'window');
   const window = isTrendingWindow(named) ? named : context.trendingWindow;
   return {
-    selection: { kind: 'trending', id: null, unread: false, window },
+    selection: { kind: 'trending', window },
     urlCorrection: named === window ? null : { window },
   };
 }
@@ -309,19 +338,13 @@ function feedScopedSelection(paramMap: ParamMap): Selection {
   if (isSocialNetworkName(network))
     return networkSelection(network, selectionParam(paramMap, 'feedKind'));
   const group = selectionParam(paramMap, 'group');
-  if (isFeedGroupName(group)) return { kind: 'group', id: null, unread: false, group };
-  return { kind: 'all', id: null, unread: false };
+  if (isFeedGroupName(group)) return { kind: 'group', unread: false, group };
+  return { kind: 'all', unread: false };
 }
 
 function networkSelection(network: SocialNetworkName, feedKind: string | null): Selection {
-  const selection: Selection = { kind: 'network', id: null, unread: false, network };
+  const selection: SelectionOf<'network'> = { kind: 'network', unread: false, network };
   return isNetworkFeedKind(feedKind) ? { ...selection, feedKind } : selection;
-}
-
-/** A network list's part of a list key: its network, narrowed by its feed kind; empty for any other list. */
-export function networkKey(selection: Selection): string {
-  if (!selection.network) return '';
-  return selection.feedKind ? `${selection.network}:${selection.feedKind}` : selection.network;
 }
 
 /** The list a URL names with any search set aside: the list a search is layered

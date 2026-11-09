@@ -3260,7 +3260,7 @@ describe('ReaderShellComponent', () => {
     // constructor call nothing listens and the offset survives the click (#286).
     it('drops the offset of a list the user clicks', () => {
       // A bare `/` parses to the all-items list with the default (all) filter.
-      const allItems: Selection = { kind: 'all', id: null, unread: false };
+      const allItems: Selection = { kind: 'all', unread: false };
       bootWith([SUBSCRIPTION_FIXTURE]);
       const memory = TestBed.inject(ListScrollMemory);
       const events = TestBed.inject(Router).events as Subject<RouterEvent>;

@@ -1,7 +1,7 @@
 import { MarkReadScope } from '../models';
 import { FeedGroupName } from '../../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
-import { Selection, SelectionKind } from './query';
+import { BySelectionKind, Selection, bySelectionKind } from './query';
 
 /** What "Mark all read" applies to for a selection, or null where the action
  *  doesn't apply. A discriminated union, not a bag with optional fields: id and
@@ -24,30 +24,28 @@ export type MarkReadTarget =
 export type ScopedMarkReadTarget = Extract<MarkReadTarget, { scope: MarkReadScope }>;
 
 export function markReadTarget(selection: Selection): MarkReadTarget | null {
-  return MARK_READ_TARGET[selection.kind]?.(selection) ?? null;
+  return bySelectionKind(MARK_READ_TARGET, selection);
 }
 
-const MARK_READ_TARGET: Partial<
-  Record<SelectionKind, (selection: Selection) => MarkReadTarget | null>
-> = {
+const MARK_READ_TARGET: BySelectionKind<MarkReadTarget | null> = {
   all: () => ({ scope: 'all' }),
-  tag: idScoped('tag'),
-  network: (selection) =>
-    selection.network
-      ? { scope: 'network', network: selection.network, feedKind: selection.feedKind }
-      : null,
-  group: (selection) => (selection.group ? { scope: 'group', group: selection.group } : null),
-  subscription: idScoped('feed'),
-  search: (selection) => (selection.term ? { scope: 'search', term: selection.term } : null),
+  tag: (selection) => ({ scope: 'tag', id: selection.id }),
+  subscription: (selection) => ({ scope: 'feed', id: selection.id }),
+  network: (selection) => ({
+    scope: 'network',
+    network: selection.network,
+    feedKind: selection.feedKind,
+  }),
+  group: (selection) => ({ scope: 'group', group: selection.group }),
+  search: (selection) => ({ scope: 'search', term: selection.term }),
   // No id and no term: the list is the reader's own ranked feed, so the
   // endpoint needs nothing beyond who is asking (#710).
   'for-you': () => ({ scope: 'for-you' }),
   'saved-searches': () => ({ scope: 'saved-searches' }),
-  'saved-search': idScoped('saved-search'),
+  'saved-search': (selection) => ({ scope: 'saved-search', id: selection.id }),
+  favorites: () => null,
+  kept: () => null,
+  shared: () => null,
+  viewed: () => null,
+  trending: () => null,
 };
-
-function idScoped(
-  scope: Extract<MarkReadTarget, { id: number }>['scope'],
-): (selection: Selection) => MarkReadTarget | null {
-  return (selection) => (selection.id != null ? { scope, id: selection.id } : null);
-}

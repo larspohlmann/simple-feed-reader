@@ -129,7 +129,7 @@ function inputDefaults() {
     sharedCount: 0,
     trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
     groupUnread: { tags: 0, feeds: 0 },
-    selection: { kind: 'all', id: null, unread: true } as Selection,
+    selection: { kind: 'all', unread: true } as Selection,
     loading: false,
     searchLoading: false,
     organising: false,
@@ -251,7 +251,7 @@ describe('SidebarComponent', () => {
     it('is marked active on the shared selection', () => {
       const element = mount({
         sharedCount: 2,
-        selection: { kind: 'shared', id: null, unread: false },
+        selection: { kind: 'shared' },
       }).nativeElement as HTMLElement;
       const shared = [...element.querySelectorAll('.nav')].find((nav) =>
         nav.querySelector('.name')?.textContent?.includes('Shared'),
@@ -300,7 +300,7 @@ describe('SidebarComponent', () => {
 
     it('links to the Trending view and is marked active on it', () => {
       const element = mount({
-        selection: { kind: 'trending', id: null, unread: false, window: 'day' },
+        selection: { kind: 'trending', window: 'day' },
       }).nativeElement as HTMLElement;
 
       expect(trendingNav(element).getAttribute('href')).toContain('view=trending');
@@ -1440,7 +1440,7 @@ describe('SidebarComponent', () => {
             includeInDigest: false,
           },
         ],
-        selection: { kind: 'saved-searches', id: null, unread: false },
+        selection: { kind: 'saved-searches', unread: false },
       });
 
       expect(fixture.nativeElement.querySelector('.savedsearch-head')!.classList).toContain(
@@ -2070,7 +2070,7 @@ describe('SidebarComponent', () => {
     });
 
     it("marks only the open group's head row current", () => {
-      const selection: Selection = { kind: 'group', id: null, unread: true, group: 'feeds' };
+      const selection: Selection = { kind: 'group', unread: true, group: 'feeds' };
       const element = mount({ tagTree: [tagNodeFixture], untagged: [sub(1, 2)], selection })
         .nativeElement as HTMLElement;
       expect(element.querySelector('.feeds-head.current')).not.toBeNull();
@@ -2170,7 +2170,7 @@ describe('for-you row', () => {
     fixture.componentRef.setInput('untagged', []);
     fixture.componentRef.setInput('totalUnread', 0);
     fixture.componentRef.setInput('forYouUnread', forYouUnread);
-    fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    fixture.componentRef.setInput('selection', { kind: 'all', unread: true });
     fixture.componentRef.setInput('loading', false);
     fixture.componentRef.setInput('organising', false);
     fixture.detectChanges();
@@ -2260,7 +2260,7 @@ describe('organise mode', () => {
     fixture.componentRef.setInput('tagTree', []);
     fixture.componentRef.setInput('untagged', []);
     fixture.componentRef.setInput('totalUnread', 0);
-    fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    fixture.componentRef.setInput('selection', { kind: 'all', unread: true });
     fixture.componentRef.setInput('loading', false);
     fixture.componentRef.setInput('organising', false);
     fixture.detectChanges();
@@ -2436,7 +2436,7 @@ describe('organise mode', () => {
     });
 
     it('keeps the section heads neutral while organising, even for the open group', () => {
-      const selection: Selection = { kind: 'group', id: null, unread: true, group: 'tags' };
+      const selection: Selection = { kind: 'group', unread: true, group: 'tags' };
       const element = mount({ coarse: true, organising: true, tagTree: tree, selection })
         .nativeElement as HTMLElement;
 
@@ -2590,7 +2590,7 @@ describe('organise mode', () => {
     fixture.componentRef.setInput('tagTree', tree);
     fixture.componentRef.setInput('untagged', []);
     fixture.componentRef.setInput('totalUnread', 0);
-    fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    fixture.componentRef.setInput('selection', { kind: 'all', unread: true });
     fixture.componentRef.setInput('loading', false);
     fixture.componentRef.setInput('organising', true);
     fixture.detectChanges();
@@ -2629,7 +2629,7 @@ describe('organise mode', () => {
       fixture.componentRef.setInput('tagTree', tree);
       fixture.componentRef.setInput('untagged', []);
       fixture.componentRef.setInput('totalUnread', 0);
-      fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+      fixture.componentRef.setInput('selection', { kind: 'all', unread: true });
       fixture.componentRef.setInput('loading', false);
       fixture.componentRef.setInput('organising', organising);
       fixture.detectChanges();

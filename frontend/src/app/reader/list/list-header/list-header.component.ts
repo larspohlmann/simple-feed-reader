@@ -135,10 +135,13 @@ export class ListHeaderComponent {
    *  `punk ` otherwise render identical titles for very different results (#408). */
   protected readonly showWholeWordBadge = computed(() => {
     const selection = this.selection();
-    const term = selection.term ?? '';
     // A phrase overrides whole-word when both signals are present (#702), so a
     // phrase query shows only the phrase pill, never both.
-    return selection.kind === 'search' && isWholeWordTerm(term) && !isPhraseTerm(term);
+    return (
+      selection.kind === 'search' &&
+      isWholeWordTerm(selection.term) &&
+      !isPhraseTerm(selection.term)
+    );
   });
 
   /** Whether the selection is a phrase search (quoted query). The pill is the
@@ -146,7 +149,7 @@ export class ListHeaderComponent {
    *  mirrors the whole-word badge (#702). */
   protected readonly showPhraseBadge = computed(() => {
     const selection = this.selection();
-    return selection.kind === 'search' && isPhraseTerm(selection.term ?? '');
+    return selection.kind === 'search' && isPhraseTerm(selection.term);
   });
 
   /** The heading's leading icon for a fixed view, or null for a tag or a
