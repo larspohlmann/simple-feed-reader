@@ -35,6 +35,7 @@ import {
   HealthErrorData,
 } from './health/health-error-dialog.component';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
+import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { TagHierarchy } from '../../reader/state/tag-hierarchy';
@@ -96,6 +97,7 @@ interface VisibilityMenuItem {
 export class OrganiseSectionComponent implements OnInit {
   readonly store = inject(OrganiseStore);
   protected readonly manage = inject(ManageActions);
+  protected readonly tagActions = inject(TagActions);
   protected readonly subs = inject(SubscriptionsStore);
   protected readonly tags = inject(TagsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
@@ -276,7 +278,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected endTagDrag(): void {
     const ended = this.tagSession.end();
     if (ended === null) return;
-    this.manage.moveTag(ended.tag, ended.drop);
+    this.tagActions.moveTag(ended.tag, ended.drop);
   }
 
   private siblingIds(tag: TagDto): number[] {
@@ -292,6 +294,6 @@ export class OrganiseSectionComponent implements OnInit {
   /** Under a filter `store.groups()` is a subset of the full tag order, so no position derived from it is written. */
   private persistTagOrder(ids: number[]): void {
     if (this.store.filterActive()) return;
-    this.manage.reorderTags(ids);
+    this.tagActions.reorderTags(ids);
   }
 }

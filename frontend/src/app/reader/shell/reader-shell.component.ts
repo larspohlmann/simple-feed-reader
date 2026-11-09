@@ -57,6 +57,7 @@ import { LinkReaderComponent } from '../article/link-reader/link-reader.componen
 import { LinkArticleSource } from '../article/link-reader/link-article-source.service';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { ManageActions } from '../feeds/manage/manage-actions.service';
+import { TagActions } from '../feeds/manage/tag-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
@@ -133,6 +134,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly zone = inject(NgZone);
 
   readonly manage = inject(ManageActions);
+  readonly tagActions = inject(TagActions);
   readonly subs = inject(SubscriptionsStore);
   readonly tags = inject(TagsStore);
   readonly entries = inject(EntriesStore);

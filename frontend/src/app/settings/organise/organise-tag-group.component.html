@@ -79,7 +79,7 @@
             type="button"
             appIconButton
             [attr.aria-label]="'reader.editTag' | transloco"
-            (click)="manage.editTag(tag)"
+            (click)="tagActions.editTag(tag)"
           >
             <app-icon name="edit" size="sm" />
           </button>
@@ -88,7 +88,7 @@
             appIconButton
             class="danger"
             [attr.aria-label]="'reader.deleteTag' | transloco"
-            (click)="manage.deleteTag(tag)"
+            (click)="tagActions.deleteTag(tag)"
           >
             <app-icon name="delete" size="sm" />
           </button>

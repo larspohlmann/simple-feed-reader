@@ -16,11 +16,8 @@ import {
   SubscriptionTagDto,
   TagDto,
 } from '../../models';
-import { TagDrop } from '../../tag-drop';
-import { TagPlacement } from './tag-placement.service';
 import { reloadAfter } from './reload-after';
 import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
-import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import {
@@ -28,7 +25,6 @@ import {
   EditSubscriptionResult,
   UNSUBSCRIBE_REQUESTED,
 } from './edit-subscription-dialog.component';
-import { TagFormData, TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { isSearchFeed } from '../../state/social-sections';
@@ -47,7 +43,6 @@ export class ManageActions {
   private readonly subs = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly tags = inject(TagsStore);
-  private readonly tagPlacement = inject(TagPlacement);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
   private readonly refresh = inject(RefreshService);
@@ -158,14 +153,6 @@ export class ManageActions {
     if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
-  reorderTags(tagIds: readonly number[]): void {
-    this.tagPlacement.reorder(tagIds);
-  }
-
-  moveTag(tag: TagDto, drop: TagDrop): void {
-    this.tagPlacement.move(tag, drop);
-  }
-
   /** Persist a new order for the untagged "Feeds" list. Optimistic: update
    *  positions immediately, reconcile on response. */
   reorderUntagged(subscriptionIds: number[]): void {
@@ -202,47 +189,6 @@ export class ManageActions {
   unsubscribe(sub: SubscriptionDto): void {
     this.confirm.confirmThen(unsubscribeConfirm(this.i18n, sub), () => {
       this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.reloadQuietly() });
-    });
-  }
-
-  createTag(parentId: number | null = null): void {
-    const data: TagFormData = { kind: 'create', parentId };
-    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
-      data,
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((tag) => {
-      if (tag) this.tags.load();
-    });
-  }
-
-  editTag(tag: TagDto): void {
-    const data: TagFormData = { kind: 'edit', tag };
-    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
-      data,
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((updated) => {
-      if (!updated) return;
-      this.tags.load();
-      this.subs.reloadQuietly(); // embedded tag colour/name on feeds changed too
-    });
-  }
-
-  deleteTag(tag: TagDto): void {
-    const data: ConfirmData = {
-      title: this.i18n.translate('manage.deleteTagTitle'),
-      message: this.i18n.translate('manage.deleteTagMessage', { name: tag.name }),
-      confirmLabel: this.i18n.translate('manage.deleteConfirm'),
-      danger: true,
-    };
-    this.confirm.confirmThen(data, () => {
-      this.api.deleteTag(tag.id).subscribe({
-        next: () => {
-          this.tags.load();
-          this.subs.reloadQuietly();
-        },
-      });
     });
   }
 

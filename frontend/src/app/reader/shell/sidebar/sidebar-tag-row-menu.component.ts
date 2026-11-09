@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LayoutService } from '../../layout.service';
-import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { TagDto } from '../../models';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -17,7 +17,7 @@ export class SidebarTagRowMenuComponent {
   readonly tag = input.required<TagDto>();
 
   protected readonly screen = inject(LayoutService);
-  protected readonly manage = inject(ManageActions);
+  protected readonly tagActions = inject(TagActions);
   protected readonly rows = inject(SidebarRowActions);
   protected readonly roomBelow = computed(() => this.rows.canCreateTagUnder(this.tag()));
 }

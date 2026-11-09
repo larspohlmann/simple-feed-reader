@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { LayoutService } from '../../layout.service';
-import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
@@ -17,6 +17,6 @@ export class SidebarTagsHeadMenuComponent {
   readonly organising = input.required<boolean>();
 
   protected readonly screen = inject(LayoutService);
-  protected readonly manage = inject(ManageActions);
+  protected readonly tagActions = inject(TagActions);
   protected readonly rows = inject(SidebarRowActions);
 }

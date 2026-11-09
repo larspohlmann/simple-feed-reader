@@ -28,25 +28,31 @@ import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SHARING_EVERYTHING } from '../../../core/preferences/sharing';
 
 const manageActions = {
-  createTag: jest.fn(),
-  editTag: jest.fn(),
-  deleteTag: jest.fn(),
   editSubscription: jest.fn(),
   unsubscribe: jest.fn(),
   setIncludeInAllItems: jest.fn(),
   setIncludeInForYou: jest.fn(),
   setIncludeInSavedSearches: jest.fn(),
   moveFeedToTag: jest.fn(),
-  reorderTags: jest.fn(),
-  moveTag: jest.fn(),
   reorderUntagged: jest.fn(),
   reorderTagFeeds: jest.fn(),
 };
 
-beforeEach(() => Object.values(manageActions).forEach((spy) => spy.mockReset()));
+const tagActions = {
+  createTag: jest.fn(),
+  editTag: jest.fn(),
+  deleteTag: jest.fn(),
+  reorderTags: jest.fn(),
+  moveTag: jest.fn(),
+};
+
+beforeEach(() =>
+  [...Object.values(manageActions), ...Object.values(tagActions)].forEach((spy) => spy.mockReset()),
+);
 
 const account = (trialEndsAt: string | null): CurrentUser => ({
   id: 1,
@@ -171,6 +177,7 @@ function mount(
     imports: [SidebarComponent, provideTranslocoTesting()],
     providers: [
       { provide: ManageActions, useValue: manageActions },
+      { provide: TagActions, useValue: tagActions },
       provideRouter([{ path: '**', children: [] }]),
       provideHttpClient(),
       provideHttpClientTesting(),
@@ -401,8 +408,8 @@ describe('SidebarComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     const editTag = jest.fn();
     const deleteTag = jest.fn();
-    manageActions.editTag.mockImplementation(editTag);
-    manageActions.deleteTag.mockImplementation(deleteTag);
+    tagActions.editTag.mockImplementation(editTag);
+    tagActions.deleteTag.mockImplementation(deleteTag);
 
     (element.querySelector('.tag .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -462,7 +469,7 @@ describe('SidebarComponent', () => {
       items.find((item) => item.textContent?.trim() === 'Create tag here')!.click();
       fixture.detectChanges();
 
-      expect(manageActions.createTag).toHaveBeenCalledWith(20);
+      expect(tagActions.createTag).toHaveBeenCalledWith(20);
       expect(element.querySelector('.tag .pop')).toBeNull();
     });
   });
@@ -480,7 +487,7 @@ describe('SidebarComponent', () => {
     items[0].click();
     fixture.detectChanges();
 
-    expect(manageActions.createTag).toHaveBeenCalledWith();
+    expect(tagActions.createTag).toHaveBeenCalledWith();
     expect(element.querySelector('.tags-head .pop')).toBeNull();
   });
 
@@ -1147,7 +1154,7 @@ describe('SidebarComponent', () => {
 
       fixture.componentInstance.endTagDrag();
 
-      expect(manageActions.moveTag).toHaveBeenCalledWith(second, {
+      expect(tagActions.moveTag).toHaveBeenCalledWith(second, {
         parentId: 1,
         order: [2],
         mark: { kind: 'nest', tagId: 1 },
@@ -1172,7 +1179,7 @@ describe('SidebarComponent', () => {
       const fixture = mountTree([node(first), node(second, [node(nested)])], [2]);
       dragTo(fixture, nested, 2);
       fixture.componentInstance.endTagDrag();
-      expect(manageActions.moveTag).toHaveBeenCalledWith(
+      expect(tagActions.moveTag).toHaveBeenCalledWith(
         nested,
         expect.objectContaining({ parentId: null, order: [21, 1, 2] }),
       );
@@ -1184,7 +1191,7 @@ describe('SidebarComponent', () => {
       const fixture = mountTree([node(parent, [node(nested)]), node(other), node(dragged)], [1]);
       dragTo(fixture, dragged, 38);
       fixture.componentInstance.endTagDrag();
-      expect(manageActions.moveTag).toHaveBeenCalledWith(
+      expect(tagActions.moveTag).toHaveBeenCalledWith(
         dragged,
         expect.objectContaining({ parentId: 1, order: [2, 11] }),
       );
@@ -1195,7 +1202,7 @@ describe('SidebarComponent', () => {
       const fixture = mountTree([node(first), node(second)]);
       dragTo(fixture, first, 2);
       fixture.componentInstance.endTagDrag();
-      expect(manageActions.moveTag).not.toHaveBeenCalled();
+      expect(tagActions.moveTag).not.toHaveBeenCalled();
     });
 
     it('keeps tag drags out of the header drop lists', () => {
@@ -2143,6 +2150,7 @@ describe('for-you row', () => {
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
         { provide: ManageActions, useValue: manageActions },
+        { provide: TagActions, useValue: tagActions },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -2218,7 +2226,7 @@ describe('organise mode', () => {
     expect(TestBed.inject(ActionSheet).open).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Tags' }),
     );
-    expect(manageActions.createTag).toHaveBeenCalledWith();
+    expect(tagActions.createTag).toHaveBeenCalledWith();
   });
 
   it('badges a hidden feed while organising too', () => {
@@ -2239,6 +2247,7 @@ describe('organise mode', () => {
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
         { provide: ManageActions, useValue: manageActions },
+        { provide: TagActions, useValue: tagActions },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -2439,7 +2448,7 @@ describe('organise mode', () => {
   it('the tag dots open the action sheet and route the choice', () => {
     const fixture = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'delete' });
     const deleted = jest.fn();
-    manageActions.deleteTag.mockImplementation(deleted);
+    tagActions.deleteTag.mockImplementation(deleted);
     fixture.nativeElement.querySelector('.tag .dots').click();
     const sheet = TestBed.inject(ActionSheet);
     expect(sheet.open).toHaveBeenCalledWith({
@@ -2523,8 +2532,8 @@ describe('organise mode', () => {
     const fixture = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'edit' });
     const edited = jest.fn();
     const deleted = jest.fn();
-    manageActions.editTag.mockImplementation(edited);
-    manageActions.deleteTag.mockImplementation(deleted);
+    tagActions.editTag.mockImplementation(edited);
+    tagActions.deleteTag.mockImplementation(deleted);
     fixture.nativeElement.querySelector('.tag .dots').click();
     expect(edited).toHaveBeenCalledWith(tag);
     expect(deleted).not.toHaveBeenCalled();
@@ -2554,8 +2563,8 @@ describe('organise mode', () => {
       sheetChoice: undefined,
     });
     const emitted = jest.fn();
-    manageActions.editTag.mockImplementation(emitted);
-    manageActions.deleteTag.mockImplementation(emitted);
+    tagActions.editTag.mockImplementation(emitted);
+    tagActions.deleteTag.mockImplementation(emitted);
     fixture.nativeElement.querySelector('.tag .dots').click();
     expect(TestBed.inject(ActionSheet).open).toHaveBeenCalled();
     expect(emitted).not.toHaveBeenCalled();
@@ -2567,6 +2576,7 @@ describe('organise mode', () => {
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
         { provide: ManageActions, useValue: manageActions },
+        { provide: TagActions, useValue: tagActions },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -2602,6 +2612,7 @@ describe('organise mode', () => {
         imports: [SidebarComponent, provideTranslocoTesting()],
         providers: [
           { provide: ManageActions, useValue: manageActions },
+          { provide: TagActions, useValue: tagActions },
           provideRouter([]),
           provideHttpClient(),
           provideHttpClientTesting(),

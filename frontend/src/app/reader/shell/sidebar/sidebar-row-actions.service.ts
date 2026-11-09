@@ -8,6 +8,7 @@ import {
 } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SubscriptionDto, TagDto } from '../../models';
 import {
@@ -40,6 +41,7 @@ interface NetworkSurfaceSwitch {
 @Injectable()
 export class SidebarRowActions {
   private readonly manage = inject(ManageActions);
+  private readonly tagActions = inject(TagActions);
   private readonly sheet = inject(ActionSheet);
   private readonly transloco = inject(TranslocoService);
   private readonly picker = inject(SocialFeedsPicker);
@@ -116,11 +118,11 @@ export class SidebarRowActions {
       // choice must not emit into destroyed outputs.
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        if (choice === 'edit') this.manage.editTag(tag);
-        if (choice === 'createHere') this.manage.createTag(tag.id);
+        if (choice === 'edit') this.tagActions.editTag(tag);
+        if (choice === 'createHere') this.tagActions.createTag(tag.id);
         if (choice === 'moveUp') this.moveTag(tag, -1);
         if (choice === 'moveDown') this.moveTag(tag, 1);
-        if (choice === 'delete') this.manage.deleteTag(tag);
+        if (choice === 'delete') this.tagActions.deleteTag(tag);
       });
   }
 
@@ -133,7 +135,7 @@ export class SidebarRowActions {
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        if (choice === 'new') this.manage.createTag();
+        if (choice === 'new') this.tagActions.createTag();
       });
   }
 
@@ -151,7 +153,7 @@ export class SidebarRowActions {
     const to = from + step;
     if (from < 0 || to < 0 || to >= siblingIds.length) return;
     moveItemInArray(siblingIds, from, to);
-    this.manage.reorderTags(siblingIds);
+    this.tagActions.reorderTags(siblingIds);
   }
 
   /** ⋯ on a feed row (coarse): sheet with the subscription's actions. */

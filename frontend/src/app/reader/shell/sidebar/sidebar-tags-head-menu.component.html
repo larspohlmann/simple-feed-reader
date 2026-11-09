@@ -12,7 +12,7 @@
 } @else if (!screen.isCoarse()) {
   <app-sidebar-row-menu menuKey="tags-head" [label]="label">
     <ng-template>
-      <button role="menuitem" (click)="manage.createTag(); rows.closeMenu()">
+      <button role="menuitem" (click)="tagActions.createTag(); rows.closeMenu()">
         {{ 'reader.newTag' | transloco }}
       </button>
     </ng-template>

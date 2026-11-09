@@ -7,6 +7,7 @@ import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { socialFeedGroup, SocialSection } from '../../state/social-sections';
@@ -25,6 +26,7 @@ describe('SidebarRowActions', () => {
         SidebarRowActions,
         { provide: ActionSheet, useValue: { open } },
         { provide: ManageActions, useValue: {} },
+        { provide: TagActions, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: ForYouNetworksStore, useValue: {} },
         { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
@@ -81,6 +83,7 @@ describe('SidebarRowActions', () => {
           SidebarRowActions,
           { provide: ActionSheet, useValue: { open: sheetOpen } },
           { provide: ManageActions, useValue: {} },
+          { provide: TagActions, useValue: {} },
           { provide: SocialFeedsPicker, useValue: { open: pickerOpen } },
           {
             provide: SavedSearchesStore,
@@ -244,7 +247,8 @@ describe('SidebarRowActions', () => {
         providers: [
           SidebarRowActions,
           { provide: ActionSheet, useValue: { open: sheetOpen } },
-          { provide: ManageActions, useValue: { reorderTags, editTag, deleteTag, createTag } },
+          { provide: ManageActions, useValue: {} },
+          { provide: TagActions, useValue: { reorderTags, editTag, deleteTag, createTag } },
           { provide: SavedSearchesStore, useValue: {} },
           { provide: ForYouNetworksStore, useValue: {} },
           { provide: TagsStore, useValue: tagsStoreStub(tags) },

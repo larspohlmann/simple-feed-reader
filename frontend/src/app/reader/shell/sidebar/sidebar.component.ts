@@ -53,6 +53,7 @@ import { RefreshService } from '../../state/refresh.service';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { sameIds } from '../../../core/same-ids';
@@ -115,6 +116,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
 export class SidebarComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly manage = inject(ManageActions);
+  private readonly tagActions = inject(TagActions);
   protected readonly rows = inject(SidebarRowActions);
   protected readonly tagSession = inject(TagDragSession);
   private readonly tagList = viewChild<ElementRef<HTMLElement>>('tagList');
@@ -311,7 +313,7 @@ export class SidebarComponent {
   endTagDrag(): void {
     const ended = this.tagSession.end();
     if (ended === null) return;
-    this.manage.moveTag(ended.tag, ended.drop);
+    this.tagActions.moveTag(ended.tag, ended.drop);
     const parentId = ended.drop.parentId;
     if (parentId !== null) this.expanded.update((open) => new Set(open).add(parentId));
   }
