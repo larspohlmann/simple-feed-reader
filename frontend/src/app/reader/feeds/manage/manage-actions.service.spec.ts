@@ -96,7 +96,7 @@ describe('ManageActions', () => {
 
     closed = { ...search, social: { ...search.social, query: 'atom' } };
     service.editSubscription(search);
-    expect(run).toHaveBeenCalledWith(undefined, { feedId: 90 });
+    expect(run).toHaveBeenCalledWith(undefined, { kind: 'feed', feedId: 90 });
   });
 
   it('reloads the entry list at once after a new query, even while another refresh runs', () => {

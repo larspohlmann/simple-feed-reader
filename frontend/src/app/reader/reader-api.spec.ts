@@ -405,7 +405,7 @@ describe('ReaderApi', () => {
   });
 
   it("scopes refresh to a network's profile feeds when given a feed kind", () => {
-    api.refresh({ network: 'mastodon', feedKind: 'profile' }).subscribe();
+    api.refresh({ kind: 'network', network: 'mastodon', feedKind: 'profile' }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.get('network')).toBe('mastodon');
     expect(testRequest.request.params.get('feedKind')).toBe('profile');
@@ -413,28 +413,28 @@ describe('ReaderApi', () => {
   });
 
   it("scopes refresh to a network's feeds when given a network", () => {
-    api.refresh({ network: 'mastodon' }).subscribe();
+    api.refresh({ kind: 'network', network: 'mastodon' }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.get('network')).toBe('mastodon');
     testRequest.flush(refreshReport());
   });
 
   it("scopes refresh to a sidebar section's feeds when given a group", () => {
-    api.refresh({ group: 'feeds' }).subscribe();
+    api.refresh({ kind: 'group', group: 'feeds' }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.get('group')).toBe('feeds');
     testRequest.flush(refreshReport());
   });
 
   it('scopes refresh to never-fetched feeds when asked', () => {
-    api.refresh({ neverFetched: true }).subscribe();
+    api.refresh({ kind: 'neverFetched' }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.get('neverFetched')).toBe('1');
     testRequest.flush(refreshReport());
   });
 
   it('scopes refresh to a single feed when given a feedId', () => {
-    api.refresh({ feedId: 42 }).subscribe();
+    api.refresh({ kind: 'feed', feedId: 42 }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.params.get('feedId')).toBe('42');
@@ -443,7 +443,7 @@ describe('ReaderApi', () => {
   });
 
   it('scopes refresh to a tag when given a tagId', () => {
-    api.refresh({ tagId: 3 }).subscribe();
+    api.refresh({ kind: 'tag', tagId: 3 }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.params.get('tag')).toBe('3');

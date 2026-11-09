@@ -56,15 +56,15 @@ export class RefreshActions {
   private refreshScope(selection = this.selection()): RefreshScope | null {
     switch (selection.kind) {
       case 'all':
-        return {};
+        return { kind: 'all' };
       case 'tag':
-        return selection.id != null ? { tagId: selection.id } : null;
+        return selection.id != null ? { kind: 'tag', tagId: selection.id } : null;
       case 'network':
       case 'group':
         return this.sectionScope(selection);
       case 'subscription': {
         const feedId = this.heading.selectedSubscription()?.feedId;
-        return feedId != null ? { feedId } : null;
+        return feedId != null ? { kind: 'feed', feedId } : null;
       }
       default:
         return null;
@@ -72,8 +72,9 @@ export class RefreshActions {
   }
 
   private sectionScope(selection: Selection): RefreshScope | null {
-    if (selection.network) return { network: selection.network, feedKind: selection.feedKind };
-    return selection.group ? { group: selection.group } : null;
+    if (selection.network)
+      return { kind: 'network', network: selection.network, feedKind: selection.feedKind };
+    return selection.group ? { kind: 'group', group: selection.group } : null;
   }
 
   /** The list-scoped refresh (header button + mobile pull): sweep only the feeds
@@ -148,7 +149,7 @@ export class RefreshActions {
       }
       // The single reload authority (#502) reloads the list once the feed's
       // first fetch finishes, so this path does not.
-      this.refreshSvc.run(undefined, { feedId: sub.feedId });
+      this.refreshSvc.run(undefined, { kind: 'feed', feedId: sub.feedId });
     });
   }
 }

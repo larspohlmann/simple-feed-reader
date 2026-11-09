@@ -174,7 +174,7 @@ describe('RefreshService', () => {
   });
 
   it('scopes every request to the given feed id across the poll loop', () => {
-    service.run(undefined, { feedId: 42 });
+    service.run(undefined, { kind: 'feed', feedId: 42 });
     const first = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(first.request.params.get('feedId')).toBe('42');
     first.flush(report({ status: 'partial', remaining: 1 }));
@@ -186,7 +186,7 @@ describe('RefreshService', () => {
   });
 
   it('scopes every request to the given tag id across the poll loop', () => {
-    service.run(undefined, { tagId: 3 });
+    service.run(undefined, { kind: 'tag', tagId: 3 });
     const first = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(first.request.params.get('tag')).toBe('3');
     expect(first.request.params.get('feedId')).toBeNull();

@@ -181,10 +181,8 @@ export class ReaderApi {
     });
   }
 
-  /** Omit the scope (or pass an empty one) to refresh all the caller's due
-   *  feeds; scope by feedId for a single feed (e.g. a just-added one) or by
-   *  tagId for every feed carrying that tag, by network for that network's feeds, or by
-   *  group for a sidebar section's feeds, or to the caller's never-fetched feeds
+  /** Omit the scope to refresh all the caller's due feeds; a scope narrows it to
+   *  one feed, a tag, a network, a sidebar section, or the never-fetched feeds
    *  (a just-imported batch). */
   refresh(scope?: RefreshScope): Observable<RefreshReport> {
     return this.http.post<RefreshReport>(

@@ -62,7 +62,7 @@ export class OpmlSectionComponent {
         this.result.set(importResult);
         this.subs.load();
         if (importResult.imported > 0) {
-          this.refresh.run(() => this.subs.load(), { neverFetched: true });
+          this.refresh.run(() => this.subs.load(), { kind: 'neverFetched' });
         }
       },
       error: (error: HttpErrorResponse) => {

@@ -324,7 +324,7 @@ export class ManageActions {
    *  out in place. Emits `true` while the feed is STILL unhealthy — the caller
    *  shows the error — and `false` on recovery, which a toast confirms here. */
   retryFeed(sub: SubscriptionDto): Observable<boolean> {
-    return this.api.refresh({ feedId: sub.feedId }).pipe(
+    return this.api.refresh({ kind: 'feed', feedId: sub.feedId }).pipe(
       tap(() => this.subs.reloadQuietly()),
       map((report: RefreshReport) => {
         if (!isFeedRecovered(report)) return true;
@@ -345,7 +345,7 @@ export class ManageActions {
   /** The list drops the removed posts now; the refresh's finish reloads it with what the new query finds. */
   private requeried(sub: SubscriptionDto): void {
     this.entries.reload();
-    this.refresh.run(undefined, { feedId: sub.feedId });
+    this.refresh.run(undefined, { kind: 'feed', feedId: sub.feedId });
   }
 
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {

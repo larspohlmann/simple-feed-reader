@@ -4,14 +4,21 @@ export function refreshParams(refresh: boolean): Record<string, string> {
   return refresh ? { refresh: '1' } : {};
 }
 
-export function refreshScopeParams(scope: RefreshScope = {}): Record<string, string> {
-  if (scope.feedId != null) return { feedId: String(scope.feedId) };
-  if (scope.tagId != null) return { tag: String(scope.tagId) };
-  if (scope.network != null) return networkParams(scope.network, scope);
-  if (scope.group != null) return { group: scope.group };
-  return scope.neverFetched ? { neverFetched: '1' } : {};
-}
-
-function networkParams(network: string, scope: RefreshScope): Record<string, string> {
-  return scope.feedKind != null ? { network, feedKind: scope.feedKind } : { network };
+export function refreshScopeParams(scope: RefreshScope = { kind: 'all' }): Record<string, string> {
+  switch (scope.kind) {
+    case 'all':
+      return {};
+    case 'feed':
+      return { feedId: String(scope.feedId) };
+    case 'tag':
+      return { tag: String(scope.tagId) };
+    case 'network':
+      return scope.feedKind != null
+        ? { network: scope.network, feedKind: scope.feedKind }
+        : { network: scope.network };
+    case 'group':
+      return { group: scope.group };
+    case 'neverFetched':
+      return { neverFetched: '1' };
+  }
 }
