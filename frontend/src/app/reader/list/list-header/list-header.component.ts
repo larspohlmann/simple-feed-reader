@@ -30,10 +30,8 @@ import { isPhraseTerm, isWholeWordTerm } from '../../query/search-term';
 import { relativeTime, relativeTimeUntil } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 
-/** The heading icon for each list, matching its sidebar row's glyph so the list a
- *  reader lands in reads as the row they clicked (#411); null where the heading
- *  already leads with a tag glyph, favicon or network logo. */
-const FIXED_VIEW_ICON: Record<SelectionKind, string | null> = {
+/** Each list's heading icon; null means the heading leads with its own glyph, favicon or logo. */
+const LIST_ICON: Record<SelectionKind, string | null> = {
   all: 'inbox',
   tag: null,
   subscription: null,
@@ -152,9 +150,8 @@ export class ListHeaderComponent {
     return selection.kind === 'search' && isPhraseTerm(selection.term);
   });
 
-  /** The heading's leading icon for a fixed view, or null for a tag or a
-   *  subscription (their glyph and favicon already lead the heading) (#411). */
-  protected readonly titleIcon = computed(() => FIXED_VIEW_ICON[this.selection().kind]);
+  /** The leading icon; null means the heading leads with its own glyph, favicon or logo. */
+  protected readonly titleIcon = computed(() => LIST_ICON[this.selection().kind]);
 
   /** A localised "last refreshed 5 min ago" label for a single-feed selection
    *  or the for-you list, or null when it doesn't apply (neither, or never
