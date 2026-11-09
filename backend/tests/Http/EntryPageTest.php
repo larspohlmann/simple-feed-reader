@@ -246,7 +246,13 @@ final class EntryPageTest extends TestCase
         return new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(1, 'Example'),
-            marks: new EntryListRowMarks(viewedAt: $viewedAt),
+            marks: new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                viewedAt: $viewedAt,
+                sharedAt: null,
+            ),
             markedReadUntil: null,
         );
     }

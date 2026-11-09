@@ -109,7 +109,13 @@ final class RecommendationFeedJsonTest extends TestCase
         $listRow = new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(1, 'Seeded'),
-            marks: new EntryListRowMarks(),
+            marks: new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             markedReadUntil: null,
         );
 

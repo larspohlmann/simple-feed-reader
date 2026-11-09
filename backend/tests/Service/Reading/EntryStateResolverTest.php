@@ -87,7 +87,13 @@ final class EntryStateResolverTest extends DbTestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription($this->subscription->requireId(), 'Resolver Feed'),
-            new EntryListRowMarks(isHidden: $isHidden),
+            new EntryListRowMarks(
+                isHidden: $isHidden,
+                isFavorite: false,
+                isKept: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             $markedReadUntil,
         );
     }

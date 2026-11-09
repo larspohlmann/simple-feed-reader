@@ -126,7 +126,13 @@ final class SearchPageTest extends TestCase
         return new EntryListRow(
             entry: $entry,
             subscription: new EntryListRowSubscription(1, 'Example'),
-            marks: new EntryListRowMarks(),
+            marks: new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             markedReadUntil: null,
         );
     }

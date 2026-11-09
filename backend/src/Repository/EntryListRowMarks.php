@@ -8,11 +8,11 @@ namespace App\Repository;
 final readonly class EntryListRowMarks
 {
     public function __construct(
-        public bool $isHidden = false,
-        public bool $isFavorite = false,
-        public bool $isKept = false,
-        public ?\DateTimeImmutable $viewedAt = null,
-        public ?\DateTimeImmutable $sharedAt = null,
+        public bool $isHidden,
+        public bool $isFavorite,
+        public bool $isKept,
+        public ?\DateTimeImmutable $viewedAt,
+        public ?\DateTimeImmutable $sharedAt,
     ) {
     }
 

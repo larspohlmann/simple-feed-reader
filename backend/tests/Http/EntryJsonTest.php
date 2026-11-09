@@ -448,7 +448,7 @@ final class EntryJsonTest extends TestCase
         $row = new EntryListRow(
             $this->entryTitled('Enriched'),
             new EntryListRowSubscription(1, 'Source'),
-            new EntryListRowMarks(),
+            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
             null,
             enrichment: new EntryListRowEnrichment(
                 ['Politics'],
@@ -802,7 +802,7 @@ final class EntryJsonTest extends TestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'Source'),
-            new EntryListRowMarks(),
+            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
             null,
             enrichment: $enrichment,
         );
