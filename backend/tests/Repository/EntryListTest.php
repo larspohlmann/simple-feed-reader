@@ -992,6 +992,7 @@ final class EntryListTest extends DbTestCase
 
         self::assertCount(4, $recorded['queries'], 'a short window probes the scope first');
         self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the scope probe is never hinted');
+        self::assertStringContainsString('LIMIT 3', $recorded['queries'][2], 'the probe stops one past the window');
         self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
         self::assertSame(['unread'], $this->guids($recorded['rows']));
     }
@@ -1060,6 +1061,23 @@ final class EntryListTest extends DbTestCase
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
+    }
+
+    public function testASparseTagNextToTheReadersOwnBusyFeedFallsBackToThePlainUnhintedQuery(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $this->entryIn($this->feed, 'own-1', '2026-07-10T00:00:00Z');
+        $this->entryIn($this->feed, 'own-2', '2026-07-09T00:00:00Z');
+        $this->entryIn($this->feed, 'own-3', '2026-07-08T00:00:00Z');
+        $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
+        $this->entryIn($feed, 't2', '2026-07-04T00:00:00Z');
+        $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 2);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(4, $recorded['queries']);
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'only the tag is the scope');
+        self::assertSame(['t1', 't2'], $this->guids($recorded['rows']));
     }
 
     public function testScopeWithFewerRowsThanTheLimitReturnsAShortPageWithoutLossOrDuplication(): void
