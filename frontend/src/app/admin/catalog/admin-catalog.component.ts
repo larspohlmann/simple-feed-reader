@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { AuthService } from '../../core/auth/auth.service';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { finalize } from 'rxjs';
@@ -44,6 +45,7 @@ export class AdminCatalogComponent implements OnInit {
   private readonly dialog = inject(Dialog);
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
+  private readonly auth = inject(AuthService);
 
   readonly categories = signal<AdminCatalogCategoryDto[]>([]);
   readonly feeds = signal<AdminCatalogFeedDto[]>([]);
@@ -157,6 +159,7 @@ export class AdminCatalogComponent implements OnInit {
       next: () => {
         this.categories.update((list) => list.filter((entry) => entry.id !== category.id));
         this.feeds.update((list) => list.filter((feed) => feed.categoryId !== category.id));
+        this.refreshAccount();
       },
       error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
@@ -175,7 +178,10 @@ export class AdminCatalogComponent implements OnInit {
   deleteFeed(feed: AdminCatalogFeedDto): void {
     this.actionError.set(null);
     this.api.deleteFeed(feed.id).subscribe({
-      next: () => this.feeds.update((list) => list.filter((entry) => entry.id !== feed.id)),
+      next: () => {
+        this.feeds.update((list) => list.filter((entry) => entry.id !== feed.id));
+        this.refreshAccount();
+      },
       error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
   }
@@ -235,6 +241,11 @@ export class AdminCatalogComponent implements OnInit {
     this.importing.set(false);
     this.refreshingCatalog.set(true);
     this.fetchCatalog();
+    this.refreshAccount();
+  }
+
+  private refreshAccount(): void {
+    this.auth.loadMe().subscribe({ error: () => undefined });
   }
 
   // Drop the consumed document so a second click cannot resend a stale upload,
@@ -252,6 +263,7 @@ export class AdminCatalogComponent implements OnInit {
         ? list.map((entry) => (entry.id === category.id ? category : entry))
         : [...list, category];
     });
+    this.refreshAccount();
   }
 
   private upsertFeed(feed: AdminCatalogFeedDto): void {
@@ -259,6 +271,7 @@ export class AdminCatalogComponent implements OnInit {
       const known = list.some((entry) => entry.id === feed.id);
       return known ? list.map((entry) => (entry.id === feed.id ? feed : entry)) : [...list, feed];
     });
+    this.refreshAccount();
   }
 
   private swap<T>(list: T[], from: number, to: number): T[] | null {

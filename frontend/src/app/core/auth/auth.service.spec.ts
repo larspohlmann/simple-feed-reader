@@ -74,6 +74,7 @@ describe('AuthService', () => {
       },
       ai: { ready: false, model: null, capabilities: null },
       mail: { enabled: true },
+      catalog: { hasEntries: true },
       emailVerified: true,
     };
   }
@@ -110,6 +111,7 @@ describe('AuthService', () => {
       },
       ai: { ready: true, model: 'gpt-4o', capabilities: null },
       mail: { enabled: true },
+      catalog: { hasEntries: true },
       emailVerified: true,
     });
 

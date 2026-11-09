@@ -6,6 +6,14 @@ import type { ReadingLayout } from '../../src/app/reader/reading-layout.service'
 export const ADMIN_EMAIL = process.env['E2E_ADMIN_EMAIL'] ?? 'e2e-admin@example.com';
 export const ADMIN_PASSWORD = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e-admin-password-123';
 
+export const STUB_PROFILE = {
+  id: 1,
+  email: '',
+  roles: [] as string[],
+  preferences: {},
+  catalog: { hasEntries: false },
+};
+
 /**
  * Put a token where the route guard looks, without a round trip.
  *
@@ -24,9 +32,7 @@ export async function stubAuthToken(page: Page): Promise<void> {
       json: { needsSetup: false, mailEnabled: true, passkeySignInAvailable: false },
     });
   });
-  await page.route(/\/api\/me(?:[?#]|$)/, (route) =>
-    route.fulfill({ json: { id: 1, email: '', roles: [], preferences: {} } }),
-  );
+  await page.route(/\/api\/me(?:[?#]|$)/, (route) => route.fulfill({ json: STUB_PROFILE }));
   await page.route('**/api/for-you/excluded-networks', (route) =>
     route.fulfill({ json: { excludedNetworks: [] } }),
   );

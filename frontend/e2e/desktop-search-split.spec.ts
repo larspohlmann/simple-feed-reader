@@ -77,26 +77,15 @@ async function stubReaderData(page: Page): Promise<void> {
   await stubGet(page, '/api/subscriptions', SUBSCRIPTIONS);
   await stubGet(page, '/api/tags', { tags: [] });
   await stubGet(page, '/api/saved-searches', { savedSearches: [] });
-  await stubGet(page, '/api/catalog', {
-    categories: [
-      {
-        id: 607,
-        key: 'fixture',
-        name: 'Fixture',
-        icon: 'rss_feed',
-        color: '#3b82f6',
-        feeds: [
-          {
-            id: 607,
-            title: 'Desktop search fixture',
-            description: null,
-            siteUrl: null,
-            subscribed: true,
-          },
-        ],
-      },
-    ],
-  });
+  await page.route(
+    (url) => url.pathname === '/api/me',
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const response = await route.fetch();
+      const profile = await response.json();
+      await route.fulfill({ response, json: { ...profile, catalog: { hasEntries: true } } });
+    },
+  );
   await stubGet(page, '/api/recommendations/runs/current', {
     status: 'none',
     batchesTotal: null,

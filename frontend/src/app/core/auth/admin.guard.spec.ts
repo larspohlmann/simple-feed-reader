@@ -32,6 +32,7 @@ const admin: CurrentUser = {
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
+  catalog: { hasEntries: true },
   emailVerified: true,
 };
 const plain: CurrentUser = { ...admin, roles: ['ROLE_USER'] };

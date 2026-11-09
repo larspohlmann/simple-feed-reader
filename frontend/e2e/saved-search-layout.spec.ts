@@ -1,6 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { aSubscription } from '../src/testing/subscription-testing';
-import { presetLocalStorage, stubAuthToken } from './support/auth';
+import { presetLocalStorage, STUB_PROFILE, stubAuthToken } from './support/auth';
 import {
   entryDetailJson,
   entryWire,
@@ -38,7 +38,7 @@ async function stubReader(page: Page): Promise<void> {
       return json({ needsSetup: false, mailEnabled: false, passkeySignInAvailable: false });
     }
     if (path.endsWith('/me'))
-      return json({ email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
+      return json({ ...STUB_PROFILE, email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
     if (path.endsWith('/subscriptions')) {
       return json(
         subscriptionsJson([aSubscription({ feedId: 10, title: 'Fixture feed' })], {

@@ -42,6 +42,7 @@ export interface CurrentUser {
   preferences: UserPreferences;
   ai: AiAvailability;
   mail: { enabled: boolean };
+  catalog: { hasEntries: boolean };
   emailVerified: boolean;
 }
 

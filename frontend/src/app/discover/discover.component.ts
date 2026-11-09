@@ -96,8 +96,7 @@ export class DiscoverComponent implements OnDestroy {
       : 'discover.summaryManyCategories';
   });
 
-  /** Selection state follows whatever the store holds, including a reload after
-   *  an invalidate. */
+  /** Selection state follows whatever the store holds, including each reload. */
   private readonly syncSelection = effect(() => {
     this.selection.setCategories(this.catalog.categories());
   });
@@ -179,8 +178,6 @@ export class DiscoverComponent implements OnDestroy {
       next: () => {
         this.subs.load();
         this.tags.load();
-        // Every picked feed is now `subscribed`, so the cached catalog is stale.
-        this.catalog.invalidate();
         this.submitting.set(false);
         void this.router.navigate(['/']);
       },

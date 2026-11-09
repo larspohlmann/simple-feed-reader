@@ -66,6 +66,21 @@ final class CatalogFeedRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /** Matches what the picker can show: an enabled feed in an enabled category. */
+    public function hasPickableFeed(): bool
+    {
+        $pickable = $this->getEntityManager()->getConnection()->fetchOne(
+            'SELECT EXISTS (SELECT 1 FROM catalog_feed feed'
+            . ' INNER JOIN catalog_category category ON category.id = feed.category_id'
+            . ' WHERE feed.enabled = :enabled AND category.enabled = :enabled)',
+            ['enabled' => true],
+        );
+
+        \assert(is_numeric($pickable));
+
+        return (bool) $pickable;
+    }
+
     public function nextPositionInCategory(int $categoryId): int
     {
         return $this->nextPosition->in(

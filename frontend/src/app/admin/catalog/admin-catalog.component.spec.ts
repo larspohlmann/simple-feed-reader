@@ -6,6 +6,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../core/api';
+import { AuthService } from '../../core/auth/auth.service';
 import { AdminCatalogComponent } from './admin-catalog.component';
 import { CategoryFormDialogComponent } from './category-form-dialog.component';
 import { FeedFormDialogComponent } from './feed-form-dialog.component';
@@ -69,12 +70,50 @@ describe('AdminCatalogComponent', () => {
     return fixture;
   }
 
+  describe('the catalog answer it hands the reader', () => {
+    const IMPORT_COUNTS = {
+      categoriesCreated: 1,
+      categoriesUpdated: 0,
+      categoriesRemoved: 0,
+      feedsCreated: 1,
+      feedsUpdated: 0,
+      feedsRemoved: 0,
+      lockedSkipped: 0,
+    };
+
+    it('re-reads the account after a successful import', () => {
+      const fixture = mountLoaded({ categories: [], feeds: [] });
+      const auth = TestBed.inject(AuthService);
+
+      fixture.componentInstance.importBundled();
+      ctrl.expectOne('https://api.test/api/admin/catalog/import/bundled').flush(IMPORT_COUNTS);
+      ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
+      ctrl.expectOne('https://api.test/api/me').flush({ id: 1, catalog: { hasEntries: true } });
+
+      expect(auth.user()?.catalog.hasEntries).toBe(true);
+    });
+
+    it('does not re-read the account after a failed import', () => {
+      const fixture = mountLoaded({ categories: [], feeds: [] });
+
+      fixture.componentInstance.importBundled();
+      ctrl
+        .expectOne('https://api.test/api/admin/catalog/import/bundled')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+      ctrl.expectNone('https://api.test/api/me');
+    });
+  });
+
   beforeEach(() => {
     dialogClosed = new Subject<unknown>();
     dialogOpen.mockClear();
   });
 
-  afterEach(() => ctrl.verify());
+  afterEach(() => {
+    ctrl.match('https://api.test/api/me').forEach((request) => request.flush({}));
+    ctrl.verify();
+  });
 
   it('lists categories and their feeds', () => {
     const fixture = mountLoaded();

@@ -58,6 +58,7 @@ function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
     },
     ai: { ready: false, model: null, capabilities: null },
     mail: { enabled: true },
+    catalog: { hasEntries: true },
     emailVerified: true,
     ...overrides,
   };

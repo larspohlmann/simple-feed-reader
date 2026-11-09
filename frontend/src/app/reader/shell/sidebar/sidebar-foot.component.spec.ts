@@ -38,6 +38,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
+  catalog: { hasEntries: true },
   emailVerified: true,
 });
 

@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { CatalogStore } from '../feeds/catalog/catalog.store';
+import { CatalogAvailability } from '../feeds/catalog/catalog-availability';
 import { OnboardingSkip } from '../feeds/catalog/onboarding-skip';
 import { RefreshService } from '../state/refresh.service';
 
@@ -11,16 +11,12 @@ export class ReaderOnboarding {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly subscriptions = inject(SubscriptionsStore);
-  private readonly catalog = inject(CatalogStore);
+  private readonly catalog = inject(CatalogAvailability);
   private readonly skip = inject(OnboardingSkip);
   private readonly refresh = inject(RefreshService);
 
-  private readonly catalogOffered = computed(
-    () => this.catalog.resolved() && this.catalog.hasEntries(),
-  );
-
   readonly showCatalogEmptyWarning = computed(
-    () => this.auth.isAdmin() && this.catalog.resolved() && !this.catalog.hasEntries(),
+    () => this.auth.isAdmin() && this.catalog.knownEmpty(),
   );
 
   private readonly awaitingFirstFetch = computed(
@@ -53,18 +49,12 @@ export class ReaderOnboarding {
     if (this.awaitingFirstFetch() || this.sweeping()) return true;
     if (!this.emptySubscriptionsNeedingOnboarding()) return false;
     if (!this.catalog.resolved()) return true;
-    return this.catalogOffered();
+    return this.catalog.hasEntries();
   });
 
   constructor() {
     effect(() => {
-      if (this.auth.isAdmin()) untracked(() => this.catalog.load());
-    });
-
-    effect(() => {
-      if (!this.emptySubscriptionsNeedingOnboarding()) return;
-      untracked(() => this.catalog.load());
-      if (!this.catalogOffered()) return;
+      if (!this.emptySubscriptionsNeedingOnboarding() || !this.catalog.hasEntries()) return;
       void this.router.navigate(['/discover'], { replaceUrl: true });
     });
 
