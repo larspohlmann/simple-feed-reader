@@ -36,25 +36,24 @@ final readonly class DateOrderedPage
             return $this->plainResult(($queries->page)());
         }
 
-        return $this->windowedRows($query, $queries);
+        return $this->hintedWindow($query, $queries, $this->windowSize) ?? $this->fallbackRows($query, $queries);
     }
 
     /**
-     * @return list<array<array-key, mixed>>
+     * The hinted page inside a window of $windowSize rows, or null when that window holds less than a page.
+     *
+     * @return list<array<array-key, mixed>>|null
      */
-    private function windowedRows(EntryQuery $query, DateOrderedQueries $queries): array
+    private function hintedWindow(EntryQuery $query, DateOrderedQueries $queries, int $windowSize): ?array
     {
-        $windowEdge = $this->windowEdge($queries->windowProbe, $this->windowSize);
+        $windowEdge = $this->windowEdge($queries->windowProbe, $windowSize);
         if ($windowEdge === null) {
             return $this->hintedResult(($queries->page)());
         }
 
         $windowed = $this->hintedResult($this->windowed(($queries->page)(), $windowEdge, $query->order));
-        if (\count($windowed) === $query->limit) {
-            return $windowed;
-        }
 
-        return $this->fallbackRows($query, $queries);
+        return \count($windowed) === $query->limit ? $windowed : null;
     }
 
     /**
@@ -69,25 +68,7 @@ final readonly class DateOrderedPage
             return $this->hintedResult(($queries->page)());
         }
 
-        return $this->wideWindowedRows($query, $queries);
-    }
-
-    /**
-     * @return list<array<array-key, mixed>>
-     */
-    private function wideWindowedRows(EntryQuery $query, DateOrderedQueries $queries): array
-    {
-        $wideEdge = $this->windowEdge($queries->windowProbe, $this->wideWindowSize);
-        if ($wideEdge === null) {
-            return $this->hintedResult(($queries->page)());
-        }
-
-        $windowed = $this->hintedResult($this->windowed(($queries->page)(), $wideEdge, $query->order));
-        if (\count($windowed) === $query->limit) {
-            return $windowed;
-        }
-
-        return $this->plainResult(($queries->page)());
+        return $this->hintedWindow($query, $queries, $this->wideWindowSize) ?? $this->plainResult(($queries->page)());
     }
 
     /**
