@@ -16,6 +16,7 @@ import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { OrganiseGroup, OrganiseStore } from './organise.store';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
+import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto } from '../../reader/models';
@@ -63,6 +64,7 @@ export class OrganiseTagGroupComponent {
 
   protected readonly store = inject(OrganiseStore);
   protected readonly manage = inject(ManageActions);
+  protected readonly tagActions = inject(TagActions);
   protected readonly screen = inject(LayoutService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);

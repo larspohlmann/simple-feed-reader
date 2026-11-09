@@ -13,6 +13,7 @@ import { OrganiseGroup, OrganiseStore } from './organise.store';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
+import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -83,13 +84,15 @@ const THIRD_GROUP: OrganiseGroup = {
 describe('OrganiseTagGroupComponent', () => {
   let fixture: ComponentFixture<OrganiseTagGroupComponent>;
 
+  const tagActions = {
+    editTag: jest.fn(),
+    deleteTag: jest.fn(),
+  };
+
   const manage = {
     reorderTagFeeds: jest.fn(),
     reorderUntagged: jest.fn(),
-    reorderTags: jest.fn(),
     moveFeedToTag: jest.fn(),
-    editTag: jest.fn(),
-    deleteTag: jest.fn(),
     editSubscription: jest.fn(),
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
@@ -102,7 +105,7 @@ describe('OrganiseTagGroupComponent', () => {
     options: { expanded?: boolean; selected?: number[]; coarse?: boolean } = {},
   ) {
     localStorage.clear();
-    for (const spy of Object.values(manage)) spy.mockReset();
+    for (const spy of [...Object.values(manage), ...Object.values(tagActions)]) spy.mockReset();
 
     await TestBed.resetTestingModule()
       .configureTestingModule({
@@ -114,6 +117,7 @@ describe('OrganiseTagGroupComponent', () => {
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           OrganiseStore,
           { provide: ManageActions, useValue: manage },
+          { provide: TagActions, useValue: tagActions },
           { provide: LayoutService, useValue: { isCoarse: signal(options.coarse ?? false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
           {

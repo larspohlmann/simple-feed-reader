@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ForYouNetworksStore } from '../../state/for-you-networks.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
@@ -31,6 +32,7 @@ function openMenuFor(target: TagDto): HTMLElement {
       { provide: ForYouNetworksStore, useValue: {} },
       { provide: LayoutService, useValue: { isCoarse: signal(false) } },
       { provide: ManageActions, useValue: {} },
+      { provide: TagActions, useValue: {} },
       {
         provide: TagsStore,
         useValue: tagsStoreStub(signal([tagOf(1, null), tagOf(2, 1), tagOf(3, 2)])),

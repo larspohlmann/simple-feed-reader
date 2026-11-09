@@ -51,6 +51,7 @@ import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
 import { ReadingLayout } from '../reading-layout.service';
 import { ManageActions } from '../feeds/manage/manage-actions.service';
+import { TagActions } from '../feeds/manage/tag-actions.service';
 import { TagsStore } from '../state/tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from '../state/recommendations.service';
@@ -1902,7 +1903,7 @@ describe('ReaderShellComponent', () => {
 
   it('offers the same edit action for the selected tag', () => {
     const fixture = boot();
-    const edit = jest.spyOn(TestBed.inject(ManageActions), 'editTag');
+    const edit = jest.spyOn(TestBed.inject(TagActions), 'editTag');
     // The header's glyph and its edit action both read the tag out of the
     // tree, so the tag has to exist there for either to appear.
     TestBed.inject(TagsStore).tags.set([

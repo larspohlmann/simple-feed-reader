@@ -1,26 +1,17 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
 import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
 import { RefreshService } from '../../state/refresh.service';
 import { EntriesStore } from '../../state/entries.store';
-import {
-  MoveFeedToTag,
-  RefreshReport,
-  SubscriptionDto,
-  SubscriptionTagDto,
-  TagDto,
-} from '../../models';
-import { TagDrop } from '../../tag-drop';
-import { TagPlacement } from './tag-placement.service';
+import { MoveFeedToTag, RefreshReport, SubscriptionDto, SubscriptionTagDto } from '../../models';
 import { reloadAfter } from './reload-after';
-import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
-import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { SubscriptionReload } from './subscription-reload.service';
+import { SubscriptionFlags } from '../../subscription-bulk';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import {
@@ -28,85 +19,78 @@ import {
   EditSubscriptionResult,
   UNSUBSCRIBE_REQUESTED,
 } from './edit-subscription-dialog.component';
-import { TagFormData, TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
-import { pluralKey } from '../../../core/i18n/plural-key';
 import { isSearchFeed } from '../../state/social-sections';
-import { bulkUnsubscribeConfirm, unsubscribeConfirm } from './unsubscribe-messages';
+import { unsubscribeConfirm } from './unsubscribe-messages';
 
-/** The single place a management dialog is opened and its side effects applied.
+/** The single place one feed's management dialog is opened and its side effects applied.
  *  Both the settings sections and the sidebar (via the shell) call these, so an
  *  action behaves identically wherever it is triggered. Dialogs perform their own
  *  API write and close with the result; this service refreshes the affected
- *  stores on a truthy close. */
+ *  stores on a truthy close. Tags have TagActions, many feeds at once BulkSubscriptionActions. */
 @Injectable({ providedIn: 'root' })
 export class ManageActions {
   private readonly dialog = inject(Dialog);
   private readonly confirm = inject(ConfirmService);
   private readonly api = inject(ReaderApi);
-  private readonly subs = inject(SubscriptionsStore);
-  private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly subscriptionReload = inject(SubscriptionReload);
   private readonly tags = inject(TagsStore);
-  private readonly tagPlacement = inject(TagPlacement);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
   private readonly refresh = inject(RefreshService);
   private readonly entries = inject(EntriesStore);
 
-  editSubscription(sub: SubscriptionDto): void {
+  editSubscription(subscription: SubscriptionDto): void {
     const ref = this.dialog.open<EditSubscriptionResult>(EditSubscriptionDialogComponent, {
-      data: sub,
+      data: subscription,
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((updated) => {
       if (updated === UNSUBSCRIBE_REQUESTED) {
-        this.unsubscribe(sub);
+        this.unsubscribe(subscription);
         return;
       }
       if (!updated) return;
-      this.subs.reloadQuietly();
-      if (updated.includeInSavedSearches !== sub.includeInSavedSearches) this.savedSearches.load();
-      if (searchQueryOf(updated) !== searchQueryOf(sub)) this.requeried(sub);
+      this.subscriptionReload.afterWrite(savedSearchFlagChange(subscription, updated));
+      if (searchQueryOf(updated) !== searchQueryOf(subscription)) this.requeried(subscription);
     });
   }
-
-  /** Fire a drag-and-drop write, then re-sync the affected store whether it
-   *  succeeds OR fails: a rejected write (e.g. a concurrent change) is
-   *  corrected from the server. */
 
   /** Move a feed between the sidebar's lists at the dropped position, the way a
    *  drag reads: out of `fromTagId`, into `toTagId` at `position` (a null tag
    *  id is the untagged "Feeds" list; a null position appends). A move within
    *  one list is a reorder, not this. Optimistic: reflect the new membership
    *  at once, then let the reload reconcile the exact order the server chose. */
-  moveFeedToTag(sub: SubscriptionDto, move: MoveFeedToTag): void {
+  moveFeedToTag(subscription: SubscriptionDto, move: MoveFeedToTag): void {
     if (move.fromTagId === move.toTagId) return;
-    this.subs.storedSubscriptions.update((current) =>
-      current.map((subscription) =>
-        subscription.id === sub.id ? this.afterMove(subscription, move) : subscription,
+    this.subscriptions.storedSubscriptions.update((current) =>
+      current.map((stored) =>
+        stored.id === subscription.id ? this.afterMove(stored, move) : stored,
       ),
     );
-    this.reloadSubsAfter(this.api.moveFeedToTag(sub.id, move));
+    this.reloadSubscriptionsAfter(this.api.moveFeedToTag(subscription.id, move));
+  }
+
+  private reloadSubscriptionsAfter(write$: Observable<unknown>): void {
+    reloadAfter(write$, () => this.subscriptions.reloadQuietly());
   }
 
   /** The moved feed's optimistic shape: the source tag dropped, the target tag
    *  added at the drop position; dropped on Feeds, its untagged position is set
    *  only once it has no tags left. Sibling positions are left to the reload. */
-  private reloadSubsAfter(write$: Observable<unknown>): void {
-    reloadAfter(write$, () => this.subs.reloadQuietly());
-  }
-
   private afterMove(
-    sub: SubscriptionDto,
+    subscription: SubscriptionDto,
     { fromTagId, toTagId, position }: MoveFeedToTag,
   ): SubscriptionDto {
-    const kept = sub.tags.filter((tag) => tag.id !== fromTagId && tag.id !== toTagId);
+    const kept = subscription.tags.filter((tag) => tag.id !== fromTagId && tag.id !== toTagId);
     if (toTagId === null) {
-      const untaggedPosition = kept.length === 0 ? (position ?? sub.position) : sub.position;
-      return { ...sub, tags: kept, position: untaggedPosition };
+      const untaggedPosition =
+        kept.length === 0 ? (position ?? subscription.position) : subscription.position;
+      return { ...subscription, tags: kept, position: untaggedPosition };
     }
-    const target = sub.tags.find((tag) => tag.id === toTagId) ?? this.tagShape(toTagId);
-    return { ...sub, tags: [...kept, { ...target, position: position ?? kept.length }] };
+    const target = subscription.tags.find((tag) => tag.id === toTagId) ?? this.tagShape(toTagId);
+    return { ...subscription, tags: [...kept, { ...target, position: position ?? kept.length }] };
   }
 
   private tagShape(tagId: number): SubscriptionTagDto {
@@ -123,66 +107,52 @@ export class ManageActions {
 
   /** Flip whether this feed contributes to the "All items" list. Optimistic:
    *  update the sidebar immediately, reconcile with the server. */
-  setIncludeInAllItems(sub: SubscriptionDto, value: boolean): void {
-    this.patchFlags(sub, { includeInAllItems: value });
+  setIncludeInAllItems(subscription: SubscriptionDto, value: boolean): void {
+    this.patchFlags(subscription, { includeInAllItems: value });
   }
 
   /** Flip whether this feed contributes to "For you". Optimistic: update the
    *  sidebar immediately, reconcile with the server. */
-  setIncludeInForYou(sub: SubscriptionDto, value: boolean): void {
-    this.patchFlags(sub, { includeInForYou: value });
+  setIncludeInForYou(subscription: SubscriptionDto, value: boolean): void {
+    this.patchFlags(subscription, { includeInForYou: value });
   }
 
   /** Flip whether this feed's entries count in saved searches. Optimistic like the others. */
-  setIncludeInSavedSearches(sub: SubscriptionDto, value: boolean): void {
-    this.patchFlags(sub, { includeInSavedSearches: value });
+  setIncludeInSavedSearches(subscription: SubscriptionDto, value: boolean): void {
+    this.patchFlags(subscription, { includeInSavedSearches: value });
   }
 
   /** The backend PATCH clears customTitle/tagIds when they are omitted, so
    *  every flag toggle resends them; an omitted flag stays as it is. */
-  private patchFlags(sub: SubscriptionDto, flags: SubscriptionFlags): void {
-    this.subs.patchLocal(sub.id, flags);
+  private patchFlags(subscription: SubscriptionDto, flags: SubscriptionFlags): void {
+    this.subscriptions.patchLocal(subscription.id, flags);
     reloadAfter(
-      this.api.updateSubscription(sub.id, {
-        customTitle: sub.customTitle,
-        tagIds: sub.tags.map((tag) => tag.id),
+      this.api.updateSubscription(subscription.id, {
+        customTitle: subscription.customTitle,
+        tagIds: subscription.tags.map((tag) => tag.id),
         ...flags,
       }),
-      () => this.reloadFeedsAfter(flags),
+      () => this.subscriptionReload.afterWrite(flags),
     );
-  }
-
-  /** The saved-search flag moves saved-search badges and counts, which only a reload re-learns. */
-  private reloadFeedsAfter(flags: SubscriptionFlags): void {
-    this.subs.reloadQuietly();
-    if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
-  }
-
-  reorderTags(tagIds: readonly number[]): void {
-    this.tagPlacement.reorder(tagIds);
-  }
-
-  moveTag(tag: TagDto, drop: TagDrop): void {
-    this.tagPlacement.move(tag, drop);
   }
 
   /** Persist a new order for the untagged "Feeds" list. Optimistic: update
    *  positions immediately, reconcile on response. */
   reorderUntagged(subscriptionIds: number[]): void {
-    this.subs.storedSubscriptions.update((current) =>
+    this.subscriptions.storedSubscriptions.update((current) =>
       current.map((subscription) => {
         const index = subscriptionIds.indexOf(subscription.id);
         if (index >= 0) return { ...subscription, position: index };
         return subscription;
       }),
     );
-    this.reloadSubsAfter(this.api.reorderSubscriptions(subscriptionIds));
+    this.reloadSubscriptionsAfter(this.api.reorderSubscriptions(subscriptionIds));
   }
 
   /** Persist a new order for the feeds within one tag. Optimistic: update
    *  per-tag positions immediately, reconcile on response. */
   reorderTagFeeds(tagId: number, subscriptionIds: number[]): void {
-    this.subs.storedSubscriptions.update((current) =>
+    this.subscriptions.storedSubscriptions.update((current) =>
       current.map((subscription) => {
         const tagEntry = subscription.tags.find((tag) => tag.id === tagId);
         if (!tagEntry) return subscription;
@@ -196,110 +166,15 @@ export class ManageActions {
         };
       }),
     );
-    this.reloadSubsAfter(this.api.setTagFeedOrder(tagId, subscriptionIds));
+    this.reloadSubscriptionsAfter(this.api.setTagFeedOrder(tagId, subscriptionIds));
   }
 
-  unsubscribe(sub: SubscriptionDto): void {
-    this.confirm.confirmThen(unsubscribeConfirm(this.i18n, sub), () => {
-      this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.reloadQuietly() });
+  unsubscribe(subscription: SubscriptionDto): void {
+    this.confirm.confirmThen(unsubscribeConfirm(this.i18n, subscription), () => {
+      this.api
+        .deleteSubscription(subscription.id)
+        .subscribe({ next: () => this.subscriptions.reloadQuietly() });
     });
-  }
-
-  createTag(parentId: number | null = null): void {
-    const data: TagFormData = { kind: 'create', parentId };
-    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
-      data,
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((tag) => {
-      if (tag) this.tags.load();
-    });
-  }
-
-  editTag(tag: TagDto): void {
-    const data: TagFormData = { kind: 'edit', tag };
-    const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
-      data,
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((updated) => {
-      if (!updated) return;
-      this.tags.load();
-      this.subs.reloadQuietly(); // embedded tag colour/name on feeds changed too
-    });
-  }
-
-  deleteTag(tag: TagDto): void {
-    const data: ConfirmData = {
-      title: this.i18n.translate('manage.deleteTagTitle'),
-      message: this.i18n.translate('manage.deleteTagMessage', { name: tag.name }),
-      confirmLabel: this.i18n.translate('manage.deleteConfirm'),
-      danger: true,
-    };
-    this.confirm.confirmThen(data, () => {
-      this.api.deleteTag(tag.id).subscribe({
-        next: () => {
-          this.tags.load();
-          this.subs.reloadQuietly();
-        },
-      });
-    });
-  }
-
-  /** Add one tag to many feeds. Not optimistic: a bulk tag change moves feeds
-   *  between lists under the server's position rules, and re-deriving those
-   *  here would be the second copy SubscriptionTagSync exists to prevent. */
-  bulkAddTag(subscriptionIds: number[], tag: TagDto): Observable<void> {
-    return this.bulkPatch(
-      { subscriptionIds, addTagIds: [tag.id] },
-      this.i18n.translate(pluralKey('manage.bulk.tagAdded', subscriptionIds.length), {
-        count: subscriptionIds.length,
-        name: tag.name,
-      }),
-    );
-  }
-
-  /** Remove one tag from many feeds. */
-  bulkRemoveTag(subscriptionIds: number[], tag: TagDto): Observable<void> {
-    return this.bulkPatch(
-      { subscriptionIds, removeTagIds: [tag.id] },
-      this.i18n.translate(pluralKey('manage.bulk.tagRemoved', subscriptionIds.length), {
-        count: subscriptionIds.length,
-        name: tag.name,
-      }),
-    );
-  }
-
-  /** Set one or both inclusion flags across many feeds. */
-  bulkSetFlags(subscriptionIds: number[], flags: SubscriptionFlags): Observable<void> {
-    return this.bulkPatch(
-      { subscriptionIds, ...flags },
-      this.i18n.translate(pluralKey('manage.bulk.flagsSet', subscriptionIds.length), {
-        count: subscriptionIds.length,
-      }),
-    );
-  }
-
-  /** Confirm, then unsubscribe from many feeds. Emits false when the user
-   *  dismissed the confirmation, so the caller can leave the selection alone. */
-  bulkUnsubscribe(subscriptions: SubscriptionDto[]): Observable<boolean> {
-    return this.confirm.ask(bulkUnsubscribeConfirm(this.i18n, subscriptions)).pipe(
-      switchMap((confirmed) => {
-        if (!confirmed) return of(false);
-        return this.api.bulkUnsubscribe(subscriptions.map((subscription) => subscription.id)).pipe(
-          tap((result) => {
-            this.subs.reloadQuietly();
-            this.toast.show({
-              message: this.i18n.translate(pluralKey('manage.bulk.unsubscribed', result.removed), {
-                count: result.removed,
-              }),
-              durationMs: CONFIRMATION_DURATION_MS,
-            });
-          }),
-          map(() => true),
-        );
-      }),
-    );
   }
 
   /** Open the add-feed dialog. The reader shell opens the same dialog and then
@@ -313,7 +188,7 @@ export class ManageActions {
 
     return ref.closed.pipe(
       tap((subscription) => {
-        if (subscription) this.subs.reloadQuietly();
+        if (subscription) this.subscriptions.reloadQuietly();
       }),
     );
   }
@@ -323,14 +198,14 @@ export class ManageActions {
    *  quietly reloads the list (no loading skeleton) so a recovered feed drops
    *  out in place. Emits `true` while the feed is STILL unhealthy — the caller
    *  shows the error — and `false` on recovery, which a toast confirms here. */
-  retryFeed(sub: SubscriptionDto): Observable<boolean> {
-    return this.api.refresh({ kind: 'feed', feedId: sub.feedId }).pipe(
-      tap(() => this.subs.reloadQuietly()),
+  retryFeed(subscription: SubscriptionDto): Observable<boolean> {
+    return this.api.refresh({ kind: 'feed', feedId: subscription.feedId }).pipe(
+      tap(() => this.subscriptions.reloadQuietly()),
       map((report: RefreshReport) => {
         if (!isFeedRecovered(report)) return true;
         this.toast.show({
           message: this.i18n.translate('settings.health.retry.recovered', {
-            title: sub.title,
+            title: subscription.title,
           }),
           durationMs: CONFIRMATION_DURATION_MS,
         });
@@ -343,22 +218,20 @@ export class ManageActions {
   }
 
   /** The list drops the removed posts now; the refresh's finish reloads it with what the new query finds. */
-  private requeried(sub: SubscriptionDto): void {
+  private requeried(subscription: SubscriptionDto): void {
     this.entries.reload();
-    this.refresh.run(undefined, { kind: 'feed', feedId: sub.feedId });
-  }
-
-  private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
-    return this.api.bulkUpdateSubscriptions(body).pipe(
-      tap(() => {
-        this.reloadFeedsAfter(body);
-        this.toast.show({ message: confirmation, durationMs: CONFIRMATION_DURATION_MS });
-      }),
-      map(() => undefined),
-    );
+    this.refresh.run(undefined, { kind: 'feed', feedId: subscription.feedId });
   }
 }
 
 function searchQueryOf(subscription: SubscriptionDto): string | null {
   return isSearchFeed(subscription) ? subscription.social.query : null;
+}
+
+function savedSearchFlagChange(
+  before: SubscriptionDto,
+  after: SubscriptionDto,
+): Pick<SubscriptionFlags, 'includeInSavedSearches'> {
+  if (after.includeInSavedSearches === before.includeInSavedSearches) return {};
+  return { includeInSavedSearches: after.includeInSavedSearches };
 }

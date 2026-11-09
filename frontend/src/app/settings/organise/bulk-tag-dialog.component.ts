@@ -18,7 +18,7 @@ export interface BulkTagDialogData {
 /** Choose one tag to add to, or remove from, the current selection.
  *
  *  Nothing is written here: the dialog closes with the chosen tag and the
- *  caller performs the bulk write through ManageActions -- a wrong click is
+ *  caller performs the bulk write through BulkSubscriptionActions -- a wrong click is
  *  free until Apply. */
 @Component({
   selector: 'app-bulk-tag-dialog',

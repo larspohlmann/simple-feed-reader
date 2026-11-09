@@ -18,6 +18,8 @@ import { unhealthyFeeds } from '../../reader/feeds/feed-health';
 import { TagsStore } from '../../reader/state/tags.store';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
+import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
+import { BulkSubscriptionActions } from '../../reader/feeds/manage/bulk-subscription-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -78,14 +80,7 @@ describe('OrganiseSectionComponent', () => {
   let fixture: ComponentFixture<OrganiseSectionComponent>;
 
   const manage = {
-    bulkAddTag: jest.fn(() => of(undefined)),
-    bulkRemoveTag: jest.fn(() => of(undefined)),
-    bulkSetFlags: jest.fn(() => of(undefined)),
-    bulkUnsubscribe: jest.fn(() => of(true)),
     addFeed: jest.fn(() => of(undefined)),
-    createTag: jest.fn(),
-    editTag: jest.fn(),
-    deleteTag: jest.fn(),
     editSubscription: jest.fn(),
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
@@ -93,19 +88,41 @@ describe('OrganiseSectionComponent', () => {
     unsubscribe: jest.fn(),
     retryFeed: jest.fn(),
     moveFeedToTag: jest.fn(),
-    reorderTags: jest.fn(),
-    moveTag: jest.fn(),
     reorderTagFeeds: jest.fn(),
     reorderUntagged: jest.fn(),
   };
 
+  const tagActions = {
+    createTag: jest.fn(),
+    editTag: jest.fn(),
+    deleteTag: jest.fn(),
+    reorderTags: jest.fn(),
+    moveTag: jest.fn(),
+  };
+
+  const bulkActions = {
+    bulkAddTag: jest.fn(() => of(undefined)),
+    bulkRemoveTag: jest.fn(() => of(undefined)),
+    bulkSetFlags: jest.fn(() => of(undefined)),
+    bulkUnsubscribe: jest.fn(() => of(true)),
+  };
+
+  const resetActionSpies = (): void => {
+    const spies = [
+      ...Object.values(manage),
+      ...Object.values(tagActions),
+      ...Object.values(bulkActions),
+    ];
+    for (const spy of spies) spy.mockReset();
+  };
+
   async function renderWithMocks(subscriptions: SubscriptionDto[] = SUBS, tags: TagDto[] = [TECH]) {
     localStorage.clear();
-    for (const spy of Object.values(manage)) spy.mockReset();
-    manage.bulkAddTag.mockReturnValue(of(undefined));
-    manage.bulkRemoveTag.mockReturnValue(of(undefined));
-    manage.bulkSetFlags.mockReturnValue(of(undefined));
-    manage.bulkUnsubscribe.mockReturnValue(of(true));
+    resetActionSpies();
+    bulkActions.bulkAddTag.mockReturnValue(of(undefined));
+    bulkActions.bulkRemoveTag.mockReturnValue(of(undefined));
+    bulkActions.bulkSetFlags.mockReturnValue(of(undefined));
+    bulkActions.bulkUnsubscribe.mockReturnValue(of(true));
     manage.addFeed.mockReturnValue(of(undefined));
     manage.retryFeed.mockReturnValue(of(false));
 
@@ -118,6 +135,8 @@ describe('OrganiseSectionComponent', () => {
           provideHttpClientTesting(),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
+          { provide: TagActions, useValue: tagActions },
+          { provide: BulkSubscriptionActions, useValue: bulkActions },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
@@ -132,7 +151,7 @@ describe('OrganiseSectionComponent', () => {
     fixture.detectChanges();
     const component = fixture.componentInstance;
 
-    return { component, manage, store: component.store };
+    return { component, manage, tagActions, bulkActions, store: component.store };
   }
 
   async function render(): Promise<OrganiseStore> {
@@ -260,9 +279,9 @@ describe('OrganiseSectionComponent', () => {
   });
 
   it('clears the selection after an unsubscribe but keeps it after a tag write', async () => {
-    const { component, manage } = await renderWithMocks();
-    manage.bulkAddTag.mockReturnValue(of(undefined));
-    manage.bulkUnsubscribe.mockReturnValue(of(true));
+    const { component, bulkActions } = await renderWithMocks();
+    bulkActions.bulkAddTag.mockReturnValue(of(undefined));
+    bulkActions.bulkUnsubscribe.mockReturnValue(of(true));
     component.store.toggleFeed(10);
 
     component.applyTag(TECH, 'add');
@@ -273,8 +292,10 @@ describe('OrganiseSectionComponent', () => {
   });
 
   it('keeps the selection when a bulk write fails, and shows the error', async () => {
-    const { component, manage } = await renderWithMocks();
-    manage.bulkAddTag.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 422 })));
+    const { component, bulkActions } = await renderWithMocks();
+    bulkActions.bulkAddTag.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 422 })),
+    );
     component.store.toggleFeed(10);
 
     component.applyTag(TECH, 'add');
@@ -317,29 +338,29 @@ describe('OrganiseSectionComponent', () => {
   // reach every SELECTED feed, including one the current filter hides. Acting
   // on filteredSubscriptions()/visibleIds() instead would silently drop it.
   it('applies a bulk tag to every selected feed, including one the filter is hiding', async () => {
-    const { component, manage } = await renderWithMocks();
+    const { component, bulkActions } = await renderWithMocks();
     component.store.toggleFeed(10);
     component.store.toggleFeed(11);
     component.store.titleFilter.set('taz'); // hides 11 from view, not from selection
 
     component.applyTag(TECH, 'add');
 
-    expect(manage.bulkAddTag).toHaveBeenCalledWith([10, 11], TECH);
+    expect(bulkActions.bulkAddTag).toHaveBeenCalledWith([10, 11], TECH);
   });
 
   it('sets flags on every selected feed, including one the filter is hiding', async () => {
-    const { component, manage } = await renderWithMocks();
+    const { component, bulkActions } = await renderWithMocks();
     component.store.toggleFeed(10);
     component.store.toggleFeed(11);
     component.store.titleFilter.set('taz');
 
     component.setFlags({ includeInAllItems: false });
 
-    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10, 11], { includeInAllItems: false });
+    expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10, 11], { includeInAllItems: false });
   });
 
   it('offers six visibility commands, the saved-search ones setting their own flag', async () => {
-    const { component, manage } = await renderWithMocks();
+    const { component, bulkActions } = await renderWithMocks();
     component.store.toggleFeed(10);
     fixture.detectChanges();
     const root = fixture.debugElement;
@@ -357,16 +378,16 @@ describe('OrganiseSectionComponent', () => {
     ]);
 
     items[5].nativeElement.click();
-    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: false });
+    expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: false });
     root.query(By.css('[data-test="visibility"]')).nativeElement.click();
     fixture.detectChanges();
     root.queryAll(By.css('.pop [role="menuitem"]'))[4].nativeElement.click();
-    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: true });
+    expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: true });
   });
 
   // The tree view's tag headers reorder tags themselves via the up/down arrows
   // on OrganiseTagGroupComponent (moveTagUp/moveTagDown), which this component
-  // turns into a full reordered id list for ManageActions.reorderTags.
+  // turns into a full reordered id list for TagActions.reorderTags.
   it('swaps two adjacent tag ids when a header arrow moves a tag down', async () => {
     const NEWS: TagDto = {
       id: 3,
@@ -377,7 +398,7 @@ describe('OrganiseSectionComponent', () => {
       parentId: null,
     };
     localStorage.clear();
-    for (const spy of Object.values(manage)) spy.mockReset();
+    resetActionSpies();
     manage.addFeed.mockReturnValue(of(undefined));
 
     await TestBed.resetTestingModule()
@@ -389,6 +410,8 @@ describe('OrganiseSectionComponent', () => {
           provideHttpClientTesting(),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
+          { provide: TagActions, useValue: tagActions },
+          { provide: BulkSubscriptionActions, useValue: bulkActions },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
@@ -407,7 +430,7 @@ describe('OrganiseSectionComponent', () => {
     // TECH (id 2) is first, NEWS (id 3) second: move TECH down past NEWS.
     (groups[0].componentInstance as OrganiseTagGroupComponent).moveTagDown.emit();
 
-    expect(manage.reorderTags).toHaveBeenCalledWith([3, 2]);
+    expect(tagActions.reorderTags).toHaveBeenCalledWith([3, 2]);
   });
 
   // canMoveTagUp/Down indexes the FILTERED groups() while stepTag() swaps
@@ -424,7 +447,7 @@ describe('OrganiseSectionComponent', () => {
     };
     const subscriptionsWithNews = [...SUBS.slice(0, 1), feed(11, 'heise', [NEWS.id]), SUBS[2]];
     localStorage.clear();
-    for (const spy of Object.values(manage)) spy.mockReset();
+    resetActionSpies();
     manage.addFeed.mockReturnValue(of(undefined));
 
     await TestBed.resetTestingModule()
@@ -436,6 +459,8 @@ describe('OrganiseSectionComponent', () => {
           provideHttpClientTesting(),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
+          { provide: TagActions, useValue: tagActions },
+          { provide: BulkSubscriptionActions, useValue: bulkActions },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
@@ -464,7 +489,7 @@ describe('OrganiseSectionComponent', () => {
 
     (groups[0].componentInstance as OrganiseTagGroupComponent).moveTagDown.emit();
 
-    expect(manage.reorderTags).not.toHaveBeenCalled();
+    expect(tagActions.reorderTags).not.toHaveBeenCalled();
   });
 
   describe('unhealthy-feeds group', () => {
@@ -678,12 +703,12 @@ describe('OrganiseSectionComponent', () => {
       }
 
       it('nests under the visually last root instead of reading it as the list end', async () => {
-        const { manage } = await renderReordered();
+        const { tagActions } = await renderReordered();
 
         dragFrom(TECH, 320);
         panelOf(TECH).triggerEventHandler('tagDragEnded');
 
-        expect(manage.moveTag).toHaveBeenCalledWith(expect.objectContaining({ id: TECH.id }), {
+        expect(tagActions.moveTag).toHaveBeenCalledWith(expect.objectContaining({ id: TECH.id }), {
           parentId: WORLD.id,
           order: [TECH.id],
           mark: { kind: 'nest', tagId: WORLD.id },
@@ -691,12 +716,12 @@ describe('OrganiseSectionComponent', () => {
       });
 
       it('opens the gap below the visually last root', async () => {
-        const { manage } = await renderReordered();
+        const { tagActions } = await renderReordered();
 
         dragFrom(TECH, 395);
         panelOf(TECH).triggerEventHandler('tagDragEnded');
 
-        expect(manage.moveTag).toHaveBeenCalledWith(expect.objectContaining({ id: TECH.id }), {
+        expect(tagActions.moveTag).toHaveBeenCalledWith(expect.objectContaining({ id: TECH.id }), {
           parentId: null,
           order: [ART.id, WORLD.id, TECH.id],
           mark: { kind: 'after', tagId: WORLD.id },
@@ -734,13 +759,13 @@ describe('OrganiseSectionComponent', () => {
     });
 
     it('moves the tag on drop through moveTag and clears the cue', async () => {
-      const { manage } = await renderTags();
+      const { tagActions } = await renderTags();
       drag(2, 120);
 
       panels()[2].triggerEventHandler('tagDragEnded');
       fixture.detectChanges();
 
-      expect(manage.moveTag).toHaveBeenCalledWith(ART, {
+      expect(tagActions.moveTag).toHaveBeenCalledWith(ART, {
         parentId: TECH.id,
         order: [ART.id],
         mark: { kind: 'nest', tagId: TECH.id },
@@ -749,12 +774,12 @@ describe('OrganiseSectionComponent', () => {
     });
 
     it('writes nothing when the tag is dropped where it was', async () => {
-      const { manage } = await renderTags();
+      const { tagActions } = await renderTags();
       drag(1, 202);
 
       panels()[1].triggerEventHandler('tagDragEnded');
 
-      expect(manage.moveTag).not.toHaveBeenCalled();
+      expect(tagActions.moveTag).not.toHaveBeenCalled();
     });
 
     describe('child tags (#1736)', () => {
@@ -789,7 +814,7 @@ describe('OrganiseSectionComponent', () => {
         panels()[index].componentInstance as OrganiseTagGroupComponent;
 
       it('moves a child only among its siblings with the arrows', async () => {
-        const { manage } = await renderTree();
+        const { tagActions } = await renderTree();
 
         expect(groupAt(1).canMoveTagUp()).toBe(false);
         expect(groupAt(1).canMoveTagDown()).toBe(true);
@@ -797,24 +822,24 @@ describe('OrganiseSectionComponent', () => {
 
         groupAt(1).moveTagDown.emit();
 
-        expect(manage.reorderTags).toHaveBeenCalledWith([ESSAYS.id, LONG_READS.id]);
+        expect(tagActions.reorderTags).toHaveBeenCalledWith([ESSAYS.id, LONG_READS.id]);
       });
 
       it('moves a root past the next root, skipping the children between them', async () => {
-        const { manage } = await renderTree();
+        const { tagActions } = await renderTree();
 
         groupAt(0).moveTagDown.emit();
 
-        expect(manage.reorderTags).toHaveBeenCalledWith([TECH.id, READING.id]);
+        expect(tagActions.reorderTags).toHaveBeenCalledWith([TECH.id, READING.id]);
       });
 
       it("un-nests a child dropped on a top-level header's top edge", async () => {
-        const { manage } = await renderTree();
+        const { tagActions } = await renderTree();
         drag(2, TREE_TOP + 302);
 
         panels()[2].triggerEventHandler('tagDragEnded');
 
-        expect(manage.moveTag).toHaveBeenCalledWith(ESSAYS, {
+        expect(tagActions.moveTag).toHaveBeenCalledWith(ESSAYS, {
           parentId: null,
           order: [READING.id, ESSAYS.id, TECH.id],
           mark: { kind: 'before', tagId: TECH.id },
@@ -822,13 +847,13 @@ describe('OrganiseSectionComponent', () => {
       });
 
       it("moves a child to another root dropped on that root's middle", async () => {
-        const { manage } = await renderTree();
+        const { tagActions } = await renderTree();
         drag(1, TREE_TOP + 320);
         expect(nestMarks()).toEqual(['-', '-', '-', 'nest', '-']);
 
         panels()[1].triggerEventHandler('tagDragEnded');
 
-        expect(manage.moveTag).toHaveBeenCalledWith(LONG_READS, {
+        expect(tagActions.moveTag).toHaveBeenCalledWith(LONG_READS, {
           parentId: TECH.id,
           order: [LONG_READS.id],
           mark: { kind: 'nest', tagId: TECH.id },

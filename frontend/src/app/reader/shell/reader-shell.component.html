@@ -234,7 +234,7 @@
      Start; a run shows Stop and, if the pill was closed, "show progress" (#398, #325). -->
 <!-- The list header's leading slot: an edit affordance for whatever the list
      is scoped to, sparing a trip through the sidebar's overflow menu (behind
-     the drawer on phone). Same `ManageActions` as the sidebar calls; empty otherwise. -->
+     the drawer on phone). The same actions the sidebar calls; empty otherwise. -->
 <ng-template #listEditAction>
   @if (heading.selectedSubscription(); as sub) {
     <button
@@ -257,7 +257,7 @@
       type="button"
       [attr.aria-label]="'reader.editTag' | transloco"
       [attr.title]="'reader.editTag' | transloco"
-      (click)="manage.editTag(tag)"
+      (click)="tagActions.editTag(tag)"
     >
       <app-icon name="edit" size="sm" />
       <span class="txt">{{ 'reader.editTag' | transloco }}</span>
