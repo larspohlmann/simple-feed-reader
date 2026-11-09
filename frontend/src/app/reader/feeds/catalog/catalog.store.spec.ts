@@ -79,12 +79,25 @@ describe('CatalogStore', () => {
     expect(store.hasEntries()).toBe(false);
   });
 
-  it('fetches once however many callers ask', () => {
+  it('fetches afresh on every load, so a visit never shows an earlier answer', () => {
     store.load();
+    http.expectOne('https://api.test/api/catalog').flush(SUBSCRIBED);
+    expect(store.categories()[0].feeds[0].subscribed).toBe(true);
+
+    store.load();
+    expect(store.resolved()).toBe(false);
+    http.expectOne('https://api.test/api/catalog').flush(WITH_FEEDS);
+    expect(store.categories()[0].feeds[0].subscribed).toBe(false);
+  });
+
+  it('abandons a request still in flight when loading again', () => {
+    store.load();
+    const first = http.expectOne('https://api.test/api/catalog');
+
     store.load();
 
+    expect(first.cancelled).toBe(true);
     http.expectOne('https://api.test/api/catalog').flush(WITH_FEEDS);
-    // A second expectOne would throw if the store had issued another request.
   });
 
   it('resolves as empty when the request fails, so nothing redirects into a broken picker', () => {
@@ -99,8 +112,7 @@ describe('CatalogStore', () => {
   });
 
   // #263: `subscribed` is per-user and this store outlives a logout (nothing
-  // reloads the page), so the resolved() guard would otherwise serve the next
-  // signed-in user the previous user's subscription state.
+  // reloads the page), so the previous user's catalog must not linger.
   describe('when the signed-in identity changes', () => {
     it('drops the cached catalog', () => {
       store.load();
@@ -137,8 +149,7 @@ describe('CatalogStore', () => {
       tokens.clear();
       TestBed.tick();
 
-      // Cancelled, so its response can never resolve the store — and the guard
-      // is off, so the next user's load() issues a request of their own.
+      // Cancelled, so its response can never resolve the store.
       expect(stale.cancelled).toBe(true);
       expect(store.loading()).toBe(false);
       expect(store.resolved()).toBe(false);

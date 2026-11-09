@@ -5,7 +5,6 @@ import { provideRouter, Router } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth/auth.service';
-import { CatalogStore } from '../reader/feeds/catalog/catalog.store';
 import { CatalogCategoryDto } from '../reader/feeds/catalog/catalog.models';
 import { DiscoverComponent } from './discover.component';
 
@@ -107,13 +106,10 @@ describe('DiscoverComponent', () => {
 
   afterEach(() => http.verify());
 
-  /** The catalog store is app-wide, so a test needing a different catalog has to
-   *  reset it and mount its own component — the same path the scroll-spy test
-   *  below uses to reach the genuine first-visit state. */
+  /** Every visit fetches afresh, so a test needing a different catalog mounts its own component. */
   const mountWith = (catalog: {
     categories: CatalogCategoryDto[];
   }): ComponentFixture<DiscoverComponent> => {
-    TestBed.inject(CatalogStore).invalidate();
     const local = TestBed.createComponent(DiscoverComponent);
     local.detectChanges();
     http.expectOne('https://api.test/api/catalog').flush(catalog);
@@ -148,7 +144,6 @@ describe('DiscoverComponent', () => {
 
     it('reports nothing when the catalog fails to load', () => {
       const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
-      TestBed.inject(CatalogStore).invalidate();
       const local = TestBed.createComponent(DiscoverComponent);
       local.detectChanges();
       http
@@ -298,10 +293,8 @@ describe('DiscoverComponent', () => {
     } as unknown as typeof IntersectionObserver;
 
     try {
-      // Force the genuine first-visit path: an UNRESOLVED store, so sections
-      // are empty at mount and only fill after the catalog GET resolves --
+      // Sections are empty at mount and only fill after the catalog GET resolves --
       // wiring only in ngAfterViewInit would miss that later fill.
-      TestBed.inject(CatalogStore).invalidate();
       const local = TestBed.createComponent(DiscoverComponent);
       local.detectChanges();
       expect(observed).toHaveLength(0);

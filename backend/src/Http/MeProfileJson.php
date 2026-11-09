@@ -9,7 +9,7 @@ use App\Repository\CatalogFeedRepository;
 use App\Service\Mail\MailCapability;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-/** MeJson::profile plus what /api/me needs a service for: whether mail is on, the timezone, the active AI connection, whether the catalog offers a feed. */
+/** MeJson::profile plus the parts that need a service: mail, timezone, active AI, catalog availability. */
 final readonly class MeProfileJson
 {
     public function __construct(

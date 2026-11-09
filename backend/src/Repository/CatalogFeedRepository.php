@@ -7,7 +7,6 @@ namespace App\Repository;
 use App\Entity\CatalogFeed;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\ParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -67,7 +66,7 @@ final class CatalogFeedRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    /** Whether the picker would offer at least one feed: an enabled feed in an enabled category. */
+    /** Matches what the picker can show: an enabled feed in an enabled category. */
     public function hasPickableFeed(): bool
     {
         $pickable = $this->getEntityManager()->getConnection()->fetchOne(
@@ -75,7 +74,6 @@ final class CatalogFeedRepository extends ServiceEntityRepository
             . ' INNER JOIN catalog_category category ON category.id = feed.category_id'
             . ' WHERE feed.enabled = :enabled AND category.enabled = :enabled)',
             ['enabled' => true],
-            ['enabled' => ParameterType::BOOLEAN],
         );
 
         \assert(is_numeric($pickable));

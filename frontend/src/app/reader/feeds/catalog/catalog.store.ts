@@ -6,7 +6,7 @@ import { onIdentityChange } from '../../../core/auth/session-identity';
 import { CatalogApi } from './catalog-api';
 import { CatalogCategoryDto } from './catalog.models';
 
-/** The catalog the picker renders, fetched once per session; the reader reads `CatalogAvailability` instead (#2138). */
+/** The catalog the picker renders, fetched on every /discover visit; the reader reads `CatalogAvailability`. */
 @Injectable({ providedIn: 'root' })
 export class CatalogStore {
   private readonly api = inject(CatalogApi);
@@ -25,18 +25,19 @@ export class CatalogStore {
     this.categories().some((category) => category.feeds.length > 0),
   );
 
-  /** Held so that invalidate() can cancel it: a response issued for the
+  /** Held so that a new load or an identity change can cancel it: a response issued for the
    *  previous user must never land in the next user's store. */
   private inFlight: Subscription | null = null;
 
   constructor() {
     // Every feed carries a per-user `subscribed` flag, so a change of identity
-    // does not make this cache stale — it makes it wrong (#263).
-    onIdentityChange(() => this.invalidate());
+    // makes the held catalog wrong, not just stale (#263).
+    onIdentityChange(() => this.clear());
   }
 
+  /** Always fetches, so a visit never shows an earlier answer. */
   load(): void {
-    if (this.loading() || this.resolved()) return;
+    this.clear();
     this.loading.set(true);
     this.error.set(null);
     this.inFlight = this.api.load().subscribe({
@@ -56,16 +57,7 @@ export class CatalogStore {
     });
   }
 
-  /** Fetches again even when already resolved, so a visit never shows a cached answer. */
-  reload(): void {
-    this.invalidate();
-    this.load();
-  }
-
-  /** Forget the cached catalog so the next load() refetches — used after a
-   *  successful subscribe, since every picked feed is now `subscribed`, and
-   *  whenever the signed-in identity changes. */
-  invalidate(): void {
+  private clear(): void {
     this.inFlight?.unsubscribe();
     this.inFlight = null;
     this.loading.set(false);
