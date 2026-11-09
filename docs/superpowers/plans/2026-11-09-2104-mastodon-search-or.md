@@ -22,7 +22,7 @@
 
 - CLAUDE.md applies in full: Clean Code names, `final readonly` by default, no comments unless a future reader would get the code wrong, PHPMD-clean touched files, PHPStan max, PSR-12, `declare(strict_types=1)`.
 - Commit messages: `type(#2104): …`, no attribution lines.
-- No frontend change: the search form already shows a problem's `detail` (`social-search-form.component.ts:142`).
+- The 422 needs no frontend error handling: the search form already shows a problem's `detail` (`social-search-form.component.ts:142`). The dialog's search syntax help does change (Task 4).
 - Bluesky behaviour is unchanged: Bluesky understands `||` and keeps one request.
 
 ---
@@ -1060,7 +1060,144 @@ git commit -m "feat(#2104): preview a Mastodon search per alternative; refuse on
 
 ---
 
-### Task 4: Gates, live check, PR
+### Task 4: The search syntax help shows `||` and grouping for Mastodon
+
+The dialog's "Search syntax" disclosure (`social-search-form`) lists `||`, `( … )` and the combined example for Bluesky only, and the spec pins that Mastodon shows no `||`. Mastodon now runs the same syntax, so both networks list it; Mastodon keeps its "every word must appear" row and its full-text note, and gains a line on the per-alternative searches and their cap.
+
+**Files:**
+- Modify: `frontend/src/app/reader/feeds/social-picker/social-search-form.component.ts:37-75`
+- Modify: `frontend/src/app/reader/feeds/social-picker/social-search-form.component.html:31-46`
+- Modify: `frontend/public/i18n/en.json`, `frontend/public/i18n/de.json` (`settings.social.search`)
+- Test: `frontend/src/app/reader/feeds/social-picker/social-search-form.component.spec.ts`
+
+**Interfaces:**
+- Consumes: the cap `SearchQueryAlternatives::MAX_ALTERNATIVES = 8` (Task 1), stated in the copy.
+
+- [ ] **Step 1: Write the failing spec**
+
+Replace the test `'lists the either-or operator for Bluesky only'` with:
+
+```ts
+  it.each<SocialNetworkName>(['bluesky', 'mastodon'])(
+    'lists the either-or operator and grouping on %s',
+    (network) => {
+      const rules = byTestId(mount(network), 'social-search-syntax')?.querySelector('.rules');
+
+      expect(rules?.textContent).toContain('rss || atom');
+      expect(rules?.textContent).toContain('( … )');
+    },
+  );
+
+  it('tells a Mastodon search that each alternative is searched on its own, and how many at most', () => {
+    const mastodon = byTestId(mount('mastodon'), 'social-search-syntax')?.textContent ?? '';
+    expect(mastodon).toContain('full-text search');
+    expect(mastodon).toContain('at most 8');
+
+    const bluesky = byTestId(mount('bluesky'), 'social-search-syntax')?.textContent ?? '';
+    expect(bluesky).not.toContain('at most 8');
+  });
+```
+
+and rename `'shows the combined Bluesky example on a line of its own, apart from the rules'` to an `it.each<SocialNetworkName>(['bluesky', 'mastodon'])('shows the combined example on a line of its own, apart from the rules on %s', (network) => { const fixture = mount(network); … })` with the body unchanged.
+
+- [ ] **Step 2: Run the spec to verify it fails**
+
+Run: `docker compose exec -T frontend npx jest src/app/reader/feeds/social-picker/social-search-form.component.spec.ts`
+Expected: FAIL — Mastodon lists no `||`, shows no combined example, no "at most 8".
+
+- [ ] **Step 3: Implement**
+
+`social-search-form.component.ts` — both networks carry the example now, so it leaves the per-network record:
+
+```ts
+interface SyntaxRule {
+  readonly operator: string;
+  readonly key: string;
+}
+
+const EXAMPLE_QUERY = '"rss reader" -gazette';
+
+const COMBINED_EXAMPLE = '("rss reader" || "feed reader" || rssreader) -gazette';
+
+const PHRASE: SyntaxRule = { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' };
+const EITHER: SyntaxRule = { operator: 'rss || atom', key: 'settings.social.search.syntaxEither' };
+const EXCLUDE: SyntaxRule = { operator: '-gazette', key: 'settings.social.search.syntaxExclude' };
+const EXCLUDE_AUTHOR: SyntaxRule = {
+  operator: '-from:handle',
+  key: 'settings.social.search.syntaxExcludeAuthor',
+};
+const GROUP: SyntaxRule = { operator: '( … )', key: 'settings.social.search.syntaxGroup' };
+
+const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, readonly SyntaxRule[]>> = {
+  bluesky: [PHRASE, EITHER, EXCLUDE, EXCLUDE_AUTHOR, GROUP],
+  mastodon: [
+    { operator: 'rss reader', key: 'settings.social.search.syntaxAllWords' },
+    PHRASE,
+    EITHER,
+    EXCLUDE,
+    EXCLUDE_AUTHOR,
+    GROUP,
+  ],
+};
+```
+
+The component's `syntax` computed now returns the rule list (`SEARCH_SYNTAX[this.network()]`) — rename it `syntaxRules`, and expose `protected readonly combinedExample = COMBINED_EXAMPLE;`. Delete the `SearchSyntax` interface.
+
+`social-search-form.component.html` — the disclosure body becomes:
+
+```html
+  <dl class="rules">
+    @for (rule of syntaxRules(); track rule.key) {
+      <dt>
+        <code>{{ rule.operator }}</code>
+      </dt>
+      <dd>{{ rule.key | transloco }}</dd>
+    }
+  </dl>
+  <p class="combined" data-testid="social-search-combined">
+    {{ 'settings.social.search.syntaxCombined' | transloco }}
+    <code>
+      @for (term of combinedExample.split(' '); track $index; let last = $last) {
+        <span class="term">{{ term }}</span>
+        @if (!last) {
+          {{ ' ' }}
+        }
+      }
+    </code>
+  </p>
+  @if (network() === 'mastodon') {
+    <p class="note">{{ 'settings.social.search.syntaxMastodonNote' | transloco }}</p>
+    <p class="note">{{ 'settings.social.search.syntaxMastodonAlternatives' | transloco }}</p>
+  }
+```
+
+`en.json`, after `syntaxMastodonNote`:
+
+```json
+        "syntaxMastodonAlternatives": "Mastodon has no ||: each alternative is searched on its own, at most 8 per query.",
+```
+
+`de.json`, after `syntaxMastodonNote`:
+
+```json
+        "syntaxMastodonAlternatives": "Mastodon kennt kein ||: jede Alternative wird einzeln gesucht, höchstens 8 pro Suche.",
+```
+
+- [ ] **Step 4: Run the spec and the gate**
+
+Run: `docker compose exec -T frontend npx jest src/app/reader/feeds/social-picker` then `cd frontend && npm run check`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/app/reader/feeds/social-picker frontend/public/i18n/en.json frontend/public/i18n/de.json
+git commit -m "feat(#2104): the search syntax help lists || and grouping for Mastodon too"
+```
+
+---
+
+### Task 5: Gates, live check, PR
 
 - [ ] **Step 1: Gates (parallel)** — `cd backend && composer check`, `composer md` (every touched `src` file clean), `php bin/phpunit`, `docker compose exec php composer test:parallel`, `composer infection:diff`, PhpStorm `lint_files` on changed PHP.
 - [ ] **Step 2: /simplify** over the branch diff; commit what it finds.
@@ -1068,5 +1205,5 @@ git commit -m "feat(#2104): preview a Mastodon search per alternative; refuse on
   - `("rss reader" || "feed reader" || rssreader || feedreader)` → count > 0 (was 0)
   - `(sternschanze || schanzenviertel || sternbrücke) -"fc st. pauli" -from:hamburgnews.bsky.social -from:hotfitlena.bsky.social` → count > 0 (was 0)
   - `(a || b || c) (d || e || f)` → 422 `social_search_too_broad`
-  Scan today's `backend/var/log/dev-*.log` for new warnings.
+  Scan today's `backend/var/log/dev-*.log` for new warnings. On http://localhost:4200, open the search dialog for the Mastodon account and expand "Search syntax": it lists `rss || atom` and `( … )`, shows the combined example, and both Mastodon notes.
 - [ ] **Step 4: PR** into `develop`, body `Closes #2104`, listing the decisions table above and the known limitations: a negated group is not sent to Mastodon (the reader still enforces it when its terms are fully checked); a withheld or stale follow-up restarts the feed's read from its first alternative; the preview limiter counts one preview however many alternatives it asks.
