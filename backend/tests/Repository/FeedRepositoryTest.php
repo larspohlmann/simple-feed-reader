@@ -11,7 +11,9 @@ use App\Enum\SocialNetwork;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Repository\NetworkScope;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Repository\Model\RefreshTarget\FeedTargetModel;
+use App\Repository\Model\RefreshTarget\NetworkTargetModel;
 use App\Tests\DbTestCase;
 
 final class FeedRepositoryTest extends DbTestCase
@@ -63,7 +65,7 @@ final class FeedRepositoryTest extends DbTestCase
 
     private function dueEveryFeed(): DueFeedCriteria
     {
-        return new DueFeedCriteria($this->now, RefreshTarget::everyFeed());
+        return new DueFeedCriteria($this->now, new EveryFeedTargetModel());
     }
 
     public function testFindsDueFeedsOrderedNeverFetchedFirst(): void
@@ -107,7 +109,7 @@ final class FeedRepositoryTest extends DbTestCase
     {
         $original = new DueFeedCriteria(
             $this->now,
-            RefreshTarget::network(NetworkScope::whole(SocialNetwork::Mastodon)),
+            new NetworkTargetModel(NetworkScope::whole(SocialNetwork::Mastodon)),
             userId: 7,
             force: true,
             cooldownCutoff: $this->now->modify('-5 minutes'),
@@ -159,7 +161,7 @@ final class FeedRepositoryTest extends DbTestCase
         $due = $this->feeds->findDue(
             new DueFeedCriteria(
                 $this->now,
-                RefreshTarget::everyFeed(),
+                new EveryFeedTargetModel(),
                 force: true,
                 cooldownCutoff: $this->now->modify('-5 minutes'),
             ),
@@ -180,7 +182,7 @@ final class FeedRepositoryTest extends DbTestCase
         $due = $this->feeds->findDue(
             new DueFeedCriteria(
                 $this->now,
-                RefreshTarget::everyFeed(),
+                new EveryFeedTargetModel(),
                 force: true,
                 cooldownCutoff: $this->now->modify('-5 minutes'),
             ),
@@ -192,7 +194,7 @@ final class FeedRepositoryTest extends DbTestCase
             1,
             $this->feeds->countDue(new DueFeedCriteria(
                 $this->now,
-                RefreshTarget::everyFeed(),
+                new EveryFeedTargetModel(),
                 force: true,
                 cooldownCutoff: $this->now->modify('-5 minutes'),
             )),
@@ -205,7 +207,7 @@ final class FeedRepositoryTest extends DbTestCase
         $active = $this->feed('https://ok.example.com/feed', null);
         $this->entityManager->flush();
 
-        $due = $this->feeds->findDue(new DueFeedCriteria($this->now, RefreshTarget::everyFeed(), force: true), 10);
+        $due = $this->feeds->findDue(new DueFeedCriteria($this->now, new EveryFeedTargetModel(), force: true), 10);
 
         self::assertSame([$active->getId()], $this->ids($due));
     }
@@ -221,7 +223,7 @@ final class FeedRepositoryTest extends DbTestCase
         $justFetched->recordSuccessfulFetch($this->now->modify('-1 minute'), 60);
         $this->entityManager->flush();
 
-        $due = $this->feeds->findDue(new DueFeedCriteria($this->now, RefreshTarget::everyFeed(), force: true), 10);
+        $due = $this->feeds->findDue(new DueFeedCriteria($this->now, new EveryFeedTargetModel(), force: true), 10);
 
         self::assertSame([$justFetched->getId()], $this->ids($due));
     }
@@ -238,7 +240,7 @@ final class FeedRepositoryTest extends DbTestCase
         $this->entityManager->persist(new Subscription($other, $theirs, $this->now));
         $this->entityManager->flush();
 
-        $usersFeeds = new DueFeedCriteria($this->now, RefreshTarget::everyFeed(), userId: $user->getId());
+        $usersFeeds = new DueFeedCriteria($this->now, new EveryFeedTargetModel(), userId: $user->getId());
         $due = $this->feeds->findDue($usersFeeds, 10);
 
         self::assertSame([$mine->getId()], $this->ids($due));
@@ -253,7 +255,7 @@ final class FeedRepositoryTest extends DbTestCase
         $this->feed('https://ok.example.com/feed', null);
         $this->entityManager->flush();
 
-        $goneFeed = new DueFeedCriteria($this->now, RefreshTarget::feed($gone->requireId()), force: true);
+        $goneFeed = new DueFeedCriteria($this->now, new FeedTargetModel($gone->requireId()), force: true);
         $due = $this->feeds->findDue($goneFeed, 10);
 
         self::assertSame([$gone->getId()], $this->ids($due));

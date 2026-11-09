@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Refresh\Model\RefreshReportModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunStore;
@@ -33,7 +33,7 @@ final class TrackedRefreshRunnerTest extends TestCase
             RefreshReportModel::finished(50, 20, 0, 0, 0, 30, 180, 0),
         );
 
-        $tracked = $runner->run(RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET));
+        $tracked = $runner->run(RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), self::BUDGET));
 
         self::assertSame('partial', $tracked->report->status);
         self::assertSame(20, $tracked->progress->done);
@@ -42,7 +42,7 @@ final class TrackedRefreshRunnerTest extends TestCase
 
     public function testProgressCarriesAcrossSlicesAndOnlyEverMovesForward(): void
     {
-        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), self::BUDGET);
         $runner = $this->trackedRunner(
             RefreshReportModel::finished(50, 20, 0, 0, 0, 30, 180, 0),
             RefreshReportModel::finished(50, 45, 5, 0, 0, 0, 130, 0),
@@ -65,7 +65,7 @@ final class TrackedRefreshRunnerTest extends TestCase
             RefreshReportModel::finished(8, 2, 3, 2, 1, 0, 0, 0),
         );
 
-        $tracked = $runner->run(RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET));
+        $tracked = $runner->run(RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), self::BUDGET));
 
         self::assertSame(8, $tracked->progress->done);
         self::assertSame(8, $tracked->progress->total);
@@ -78,7 +78,7 @@ final class TrackedRefreshRunnerTest extends TestCase
      */
     public function testABusyAnswerLeavesTheRunExactlyWhereItWas(): void
     {
-        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), self::BUDGET);
         $runner = $this->trackedRunner(
             RefreshReportModel::finished(50, 20, 0, 0, 0, 30, 180, 0),
             RefreshReportModel::busy(),
@@ -95,7 +95,7 @@ final class TrackedRefreshRunnerTest extends TestCase
     /** A finished run must not be resumed by the next press of Refresh. */
     public function testAFinishedRunIsForgotten(): void
     {
-        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), self::BUDGET);
         $runner = $this->trackedRunner(
             RefreshReportModel::finished(4, 4, 0, 0, 0, 0, 0, 0),
             RefreshReportModel::finished(2, 2, 0, 0, 0, 0, 0, 0),
@@ -114,7 +114,7 @@ final class TrackedRefreshRunnerTest extends TestCase
      */
     public function testCompletingARunClearsTheDenominatorASavedEarlierSliceLeftBehind(): void
     {
-        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), self::BUDGET);
         $runner = $this->trackedRunner(
             RefreshReportModel::finished(50, 20, 0, 0, 0, 30, 180, 0),
             RefreshReportModel::finished(50, 20, 0, 0, 0, 0, 0, 0),
@@ -135,7 +135,7 @@ final class TrackedRefreshRunnerTest extends TestCase
      */
     public function testAnAbortedRunIsForgotten(): void
     {
-        $request = RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), self::BUDGET);
+        $request = RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), self::BUDGET);
         $runner = $this->trackedRunner(
             RefreshReportModel::aborted(50, 3, 0, 0, 0, 47),
             RefreshReportModel::finished(2, 2, 0, 0, 0, 0, 0, 0),

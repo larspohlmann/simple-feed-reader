@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\Model;
 
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Repository\Model\RefreshTarget\FeedTargetModel;
+use App\Repository\Model\RefreshTarget\RefreshTargetModelInterface;
 
 final readonly class RefreshRequestModel
 {
@@ -12,7 +14,7 @@ final readonly class RefreshRequestModel
 
     private function __construct(
         public ?int $userId,
-        public RefreshTarget $target,
+        public RefreshTargetModelInterface $target,
         public bool $force,
         public int $budgetSeconds,
         public bool $prune,
@@ -22,17 +24,17 @@ final readonly class RefreshRequestModel
 
     public static function allDue(int $budgetSeconds): self
     {
-        return new self(null, RefreshTarget::everyFeed(), false, $budgetSeconds, true);
+        return new self(null, new EveryFeedTargetModel(), false, $budgetSeconds, true);
     }
 
-    public static function forUser(int $userId, RefreshTarget $target, int $budgetSeconds): self
+    public static function forUser(int $userId, RefreshTargetModelInterface $target, int $budgetSeconds): self
     {
         return new self($userId, $target, true, $budgetSeconds, false);
     }
 
     public static function forFeed(int $feedId, int $budgetSeconds): self
     {
-        return new self(null, RefreshTarget::feed($feedId), true, $budgetSeconds, false);
+        return new self(null, new FeedTargetModel($feedId), true, $budgetSeconds, false);
     }
 
     public function withoutPruning(): self

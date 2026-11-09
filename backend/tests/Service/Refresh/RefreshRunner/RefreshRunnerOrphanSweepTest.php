@@ -7,7 +7,7 @@ namespace App\Tests\Service\Refresh\RefreshRunner;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
@@ -87,7 +87,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
 
         $this->runner()->run(RefreshRequestModel::forUser(
             userId: 1,
-            target: RefreshTarget::everyFeed(),
+            target: new EveryFeedTargetModel(),
             budgetSeconds: 30,
         ));
 

@@ -7,7 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\DueFeedCriteria;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\NeverFetchedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueriesDueFeeds;
@@ -66,6 +66,6 @@ final class FeedRepositoryNeverFetchedScopeTest extends DbTestCase
 
     private function criteria(User $owner): DueFeedCriteria
     {
-        return $this->dueCriteriaFor($owner, RefreshTarget::neverFetchedFeeds(), new \DateTimeImmutable(self::NOW));
+        return $this->dueCriteriaFor($owner, new NeverFetchedTargetModel(), new \DateTimeImmutable(self::NOW));
     }
 }

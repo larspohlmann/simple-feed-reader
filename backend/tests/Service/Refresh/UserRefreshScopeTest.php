@@ -12,7 +12,12 @@ use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Repository\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Repository\Model\RefreshTarget\FeedTargetModel;
+use App\Repository\Model\RefreshTarget\NetworkTargetModel;
+use App\Repository\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Repository\Model\RefreshTarget\TagTargetModel;
 use App\Service\Refresh\UserRefreshScope;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -41,7 +46,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestFor($this->user->requireId(), null, null);
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(RefreshTarget::everyFeed(), $request->target);
+        self::assertEquals(new EveryFeedTargetModel(), $request->target);
         self::assertSame(25, $request->budgetSeconds);
     }
 
@@ -50,7 +55,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestFor($this->user->requireId(), $this->feed->requireId(), null);
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(RefreshTarget::feed($this->feed->requireId()), $request->target);
+        self::assertEquals(new FeedTargetModel($this->feed->requireId()), $request->target);
         self::assertSame(25, $request->budgetSeconds);
     }
 
@@ -73,7 +78,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestFor($this->user->requireId(), null, $tag->requireId());
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(RefreshTarget::tag($tag->requireId()), $request->target);
+        self::assertEquals(new TagTargetModel($tag->requireId()), $request->target);
         self::assertSame(25, $request->budgetSeconds);
     }
 
@@ -93,7 +98,7 @@ final class UserRefreshScopeTest extends DbTestCase
 
         $request = $this->scope()->requestFor($this->user->requireId(), $this->feed->requireId(), $tag->requireId());
 
-        self::assertEquals(RefreshTarget::feed($this->feed->requireId()), $request->target);
+        self::assertEquals(new FeedTargetModel($this->feed->requireId()), $request->target);
     }
 
     public function testANetworkRefreshIsAForcedRunOverThatNetworksFeeds(): void
@@ -104,7 +109,7 @@ final class UserRefreshScopeTest extends DbTestCase
         );
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(RefreshTarget::network(NetworkScope::whole(SocialNetwork::Bluesky)), $request->target);
+        self::assertEquals(new NetworkTargetModel(NetworkScope::whole(SocialNetwork::Bluesky)), $request->target);
         self::assertTrue($request->force);
         self::assertSame(25, $request->budgetSeconds);
     }
@@ -114,7 +119,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestForFeedGroup($this->user->requireId(), FeedGroup::Feeds);
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(RefreshTarget::feedGroup(FeedGroup::Feeds), $request->target);
+        self::assertEquals(new FeedGroupTargetModel(FeedGroup::Feeds), $request->target);
         self::assertTrue($request->force);
         self::assertSame(25, $request->budgetSeconds);
     }
@@ -124,7 +129,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestForNeverFetched($this->user->requireId());
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(RefreshTarget::neverFetchedFeeds(), $request->target);
+        self::assertEquals(new NeverFetchedTargetModel(), $request->target);
         self::assertTrue($request->force);
         self::assertSame(25, $request->budgetSeconds);
     }

@@ -12,7 +12,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
 use App\Repository\NetworkScope;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\NetworkTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueriesDueFeeds;
@@ -146,7 +146,7 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
 
     private function criteria(User $owner, NetworkScope $networkScope): DueFeedCriteria
     {
-        return $this->dueCriteriaFor($owner, RefreshTarget::network($networkScope), new \DateTimeImmutable(self::NOW));
+        return $this->dueCriteriaFor($owner, new NetworkTargetModel($networkScope), new \DateTimeImmutable(self::NOW));
     }
 
     private function fixtures(): NetworkFeedSubscriptions

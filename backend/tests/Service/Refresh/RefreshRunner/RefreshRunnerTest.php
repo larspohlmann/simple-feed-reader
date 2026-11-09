@@ -10,7 +10,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\FeedStatus;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -832,7 +832,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $userId = $user->getId();
         self::assertNotNull($userId);
-        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, RefreshTarget::everyFeed(), 60));
+        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), 60));
 
         self::assertSame([$mine->getUrl()], $this->fetcher->fetchedUrls());
         self::assertSame(1, $report->total);
@@ -894,7 +894,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $userId = $this->subscriber->getId();
         self::assertNotNull($userId);
-        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, RefreshTarget::everyFeed(), 60));
+        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), 60));
 
         self::assertSame(1, $report->throttled);
         self::assertSame(0, $report->remaining, 'a feed this run handled is not remaining');
@@ -988,7 +988,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $userId = $user->getId();
         self::assertNotNull($userId);
-        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, RefreshTarget::everyFeed(), 60));
+        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), 60));
 
         self::assertSame(0, $report->pruned);
         self::assertCount(21, $this->entityManager->getRepository(Entry::class)->findAll());
@@ -1247,7 +1247,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $report = $this->runner()->run(RefreshRequestModel::forUser(
             $this->subscriber->requireId(),
-            RefreshTarget::everyFeed(),
+            new EveryFeedTargetModel(),
             60,
         ));
 

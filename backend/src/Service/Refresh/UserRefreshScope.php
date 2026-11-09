@@ -7,7 +7,12 @@ namespace App\Service\Refresh;
 use App\Enum\FeedGroup;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Repository\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Repository\Model\RefreshTarget\FeedTargetModel;
+use App\Repository\Model\RefreshTarget\NetworkTargetModel;
+use App\Repository\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Repository\Model\RefreshTarget\TagTargetModel;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Refresh\Model\RefreshRequestModel;
@@ -33,25 +38,25 @@ final readonly class UserRefreshScope
         if (null !== $tagId) {
             $tag = $this->tags->getOneForUser($userId, $tagId);
 
-            return RefreshRequestModel::forUser($userId, RefreshTarget::tag($tag->requireId()), self::BUDGET_SECONDS);
+            return RefreshRequestModel::forUser($userId, new TagTargetModel($tag->requireId()), self::BUDGET_SECONDS);
         }
 
-        return RefreshRequestModel::forUser($userId, RefreshTarget::everyFeed(), self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), self::BUDGET_SECONDS);
     }
 
     public function requestForNetwork(int $userId, NetworkScope $networkScope): RefreshRequestModel
     {
-        return RefreshRequestModel::forUser($userId, RefreshTarget::network($networkScope), self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, new NetworkTargetModel($networkScope), self::BUDGET_SECONDS);
     }
 
     public function requestForFeedGroup(int $userId, FeedGroup $feedGroup): RefreshRequestModel
     {
-        return RefreshRequestModel::forUser($userId, RefreshTarget::feedGroup($feedGroup), self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, new FeedGroupTargetModel($feedGroup), self::BUDGET_SECONDS);
     }
 
     public function requestForNeverFetched(int $userId): RefreshRequestModel
     {
-        return RefreshRequestModel::forUser($userId, RefreshTarget::neverFetchedFeeds(), self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, new NeverFetchedTargetModel(), self::BUDGET_SECONDS);
     }
 
     private function forFeed(int $userId, int $feedId): RefreshRequestModel
@@ -60,6 +65,6 @@ final readonly class UserRefreshScope
             throw new RecordNotFoundException('No such subscription.');
         }
 
-        return RefreshRequestModel::forUser($userId, RefreshTarget::feed($feedId), self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, new FeedTargetModel($feedId), self::BUDGET_SECONDS);
     }
 }

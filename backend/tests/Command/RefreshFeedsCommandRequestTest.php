@@ -6,6 +6,8 @@ namespace App\Tests\Command;
 
 use App\Command\Exception\MalformedOptionException;
 use App\Command\RefreshFeedsCommand;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Repository\Model\RefreshTarget\FeedTargetModel;
 use App\Service\Refresh\Model\RefreshReportModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Tests\Service\Refresh\FakeRefreshRunner;
@@ -43,7 +45,7 @@ final class RefreshFeedsCommandRequestTest extends TestCase
     {
         $request = $this->requestFor(['--budget' => '45', '--feed' => '7']);
 
-        self::assertSame(7, $request->target->feedId);
+        self::assertEquals(new FeedTargetModel(7), $request->target);
         self::assertNull($request->userId);
     }
 
@@ -52,7 +54,7 @@ final class RefreshFeedsCommandRequestTest extends TestCase
         $request = $this->requestFor(['--budget' => '45', '--user' => '3']);
 
         self::assertSame(3, $request->userId);
-        self::assertNull($request->target->feedId);
+        self::assertEquals(new EveryFeedTargetModel(), $request->target);
     }
 
     public function testAMalformedFeedIdIsRefusedInsteadOfRefreshingEveryDueFeed(): void

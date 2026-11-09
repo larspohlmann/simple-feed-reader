@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Enum\FeedGroup;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\FeedGroupTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueriesDueFeeds;
@@ -101,6 +101,6 @@ final class FeedRepositoryFeedGroupScopeTest extends DbTestCase
 
     private function criteria(User $owner, FeedGroup $group): DueFeedCriteria
     {
-        return $this->dueCriteriaFor($owner, RefreshTarget::feedGroup($group), new \DateTimeImmutable(self::NOW));
+        return $this->dueCriteriaFor($owner, new FeedGroupTargetModel($group), new \DateTimeImmutable(self::NOW));
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -64,7 +64,7 @@ final class RefreshFeedsCommand extends Command
 
         $request = match (true) {
             $feedId !== null => RefreshRequestModel::forFeed($feedId, $budget),
-            $userId !== null => RefreshRequestModel::forUser($userId, RefreshTarget::everyFeed(), $budget),
+            $userId !== null => RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), $budget),
             default => $this->allDueRequest($input, $budget),
         };
 

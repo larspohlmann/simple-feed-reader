@@ -10,7 +10,8 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Repository\Model\RefreshTarget\FeedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueriesDueFeeds;
 use App\Tests\Support\SocialAccounts;
@@ -40,15 +41,15 @@ final class DueSocialFeedsTest extends DbTestCase
         $this->entityManager->flush();
         $now = new \DateTimeImmutable(self::NOW);
 
-        $due = $this->feeds()->findDue(new DueFeedCriteria($now, RefreshTarget::everyFeed()), 10);
+        $due = $this->feeds()->findDue(new DueFeedCriteria($now, new EveryFeedTargetModel()), 10);
 
         $expected = [$reachable->requireId(), $rss->requireId()];
         sort($expected);
         $dueIds = array_map(static fn (Feed $feed): int => $feed->requireId(), $due);
         sort($dueIds);
         self::assertSame($expected, $dueIds);
-        self::assertSame(2, $this->feeds()->countDue(new DueFeedCriteria($now, RefreshTarget::everyFeed())));
-        $pausedOnly = new DueFeedCriteria($now, RefreshTarget::feed($paused->requireId()));
+        self::assertSame(2, $this->feeds()->countDue(new DueFeedCriteria($now, new EveryFeedTargetModel())));
+        $pausedOnly = new DueFeedCriteria($now, new FeedTargetModel($paused->requireId()));
         self::assertSame([], $this->feeds()->findDue($pausedOnly, 10));
     }
 
@@ -62,11 +63,11 @@ final class DueSocialFeedsTest extends DbTestCase
 
         $dueIds = array_map(
             static fn (Feed $feed): int => $feed->requireId(),
-            $this->feeds()->findDue(new DueFeedCriteria($now, RefreshTarget::everyFeed(), force: true), 50),
+            $this->feeds()->findDue(new DueFeedCriteria($now, new EveryFeedTargetModel(), force: true), 50),
         );
 
         self::assertNotContains($saved->requireId(), $dueIds);
-        $savedOnly = new DueFeedCriteria($now, RefreshTarget::feed($saved->requireId()));
+        $savedOnly = new DueFeedCriteria($now, new FeedTargetModel($saved->requireId()));
         self::assertSame([], $this->feeds()->findDue($savedOnly, 10));
     }
 

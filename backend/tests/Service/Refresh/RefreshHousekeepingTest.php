@@ -7,7 +7,7 @@ namespace App\Tests\Service\Refresh;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Repository\OrphanedFeedRepository;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Service\Feed\OrphanedFeedReclaimer;
@@ -54,7 +54,7 @@ final class RefreshHousekeepingTest extends DbTestCase
     {
         $orphanId = $this->orphanedFeed();
 
-        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequestModel::forUser(1, RefreshTarget::everyFeed(), 30));
+        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequestModel::forUser(1, new EveryFeedTargetModel(), 30));
 
         $this->entityManager->clear();
         self::assertNotNull($this->entityManager->getRepository(Feed::class)->find($orphanId));
@@ -96,7 +96,7 @@ final class RefreshHousekeepingTest extends DbTestCase
 
         $this->housekeeping()->recordSubscriptionHistory(RefreshRequestModel::forUser(
             1,
-            RefreshTarget::everyFeed(),
+            new EveryFeedTargetModel(),
             30,
         ));
 

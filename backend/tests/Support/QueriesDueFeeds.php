@@ -8,12 +8,15 @@ use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
-use App\Repository\RefreshTarget;
+use App\Repository\Model\RefreshTarget\RefreshTargetModelInterface;
 
 trait QueriesDueFeeds
 {
-    private function dueCriteriaFor(User $owner, RefreshTarget $target, \DateTimeImmutable $now): DueFeedCriteria
-    {
+    private function dueCriteriaFor(
+        User $owner,
+        RefreshTargetModelInterface $target,
+        \DateTimeImmutable $now,
+    ): DueFeedCriteria {
         return new DueFeedCriteria($now, $target, $owner->requireId(), force: true);
     }
 
