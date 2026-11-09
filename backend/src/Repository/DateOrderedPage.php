@@ -12,14 +12,19 @@ use Doctrine\ORM\QueryBuilder;
 
 /**
  * Runs a fan-in page; a chronological fan-in is walked hinted inside a window. A short window falls back unhinted,
- * except an all/unread scope beyond the window, which an unhinted plan would sort whole (#1099, #2126).
+ * except an all/unread scope beyond the window, which first tries a wider window or, too big to sort, the full walk.
  */
 final readonly class DateOrderedPage
 {
     public const int DEFAULT_WINDOW_SIZE = 2000;
+    public const int DEFAULT_WIDE_WINDOW_SIZE = 20000;
+    public const int DEFAULT_PLAIN_SCOPE_LIMIT = 20000;
 
-    public function __construct(private int $windowSize = self::DEFAULT_WINDOW_SIZE)
-    {
+    public function __construct(
+        private int $windowSize = self::DEFAULT_WINDOW_SIZE,
+        private int $wideWindowSize = self::DEFAULT_WIDE_WINDOW_SIZE,
+        private int $plainScopeLimit = self::DEFAULT_PLAIN_SCOPE_LIMIT,
+    ) {
     }
 
     /**
@@ -39,7 +44,7 @@ final readonly class DateOrderedPage
      */
     private function windowedRows(EntryQuery $query, DateOrderedQueries $queries): array
     {
-        $windowEdge = $this->windowEdge($queries->windowProbe);
+        $windowEdge = $this->windowEdge($queries->windowProbe, $this->windowSize);
         if ($windowEdge === null) {
             return $this->hintedResult(($queries->page)());
         }
@@ -57,8 +62,29 @@ final readonly class DateOrderedPage
      */
     private function fallbackRows(EntryQuery $query, DateOrderedQueries $queries): array
     {
-        if (!$query->isNarrowed() && $this->scopeOutgrowsTheWindow($queries->scopeProbe)) {
+        if ($query->isNarrowed() || !$this->scopeReaches($queries->scopeProbe, $this->windowSize)) {
+            return $this->plainResult(($queries->page)());
+        }
+        if ($this->scopeReaches($queries->scopeProbe, $this->plainScopeLimit)) {
             return $this->hintedResult(($queries->page)());
+        }
+
+        return $this->wideWindowedRows($query, $queries);
+    }
+
+    /**
+     * @return list<array<array-key, mixed>>
+     */
+    private function wideWindowedRows(EntryQuery $query, DateOrderedQueries $queries): array
+    {
+        $wideEdge = $this->windowEdge($queries->windowProbe, $this->wideWindowSize);
+        if ($wideEdge === null) {
+            return $this->hintedResult(($queries->page)());
+        }
+
+        $windowed = $this->hintedResult($this->windowed(($queries->page)(), $wideEdge, $query->order));
+        if (\count($windowed) === $query->limit) {
+            return $windowed;
         }
 
         return $this->plainResult(($queries->page)());
@@ -67,28 +93,27 @@ final readonly class DateOrderedPage
     /**
      * @param \Closure(): QueryBuilder $scopeProbe
      */
-    private function scopeOutgrowsTheWindow(\Closure $scopeProbe): bool
+    private function scopeReaches(\Closure $scopeProbe, int $entryCount): bool
     {
-        $beyondTheWindow = $scopeProbe()
-            ->setFirstResult($this->windowSize)
+        $beyondTheCount = $scopeProbe()
+            ->setFirstResult($entryCount)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $beyondTheWindow !== null;
+        return $beyondTheCount !== null;
     }
 
     /**
-     * The K-th effectiveDate beyond the cursor in the page's own order, or
-     * null when fewer than K rows lie beyond it.
+     * The effectiveDate $windowSize rows beyond the cursor in the page's own order, or null when fewer lie beyond it.
      *
      * @param \Closure(): QueryBuilder $windowProbe
      */
-    private function windowEdge(\Closure $windowProbe): ?\DateTimeImmutable
+    private function windowEdge(\Closure $windowProbe, int $windowSize): ?\DateTimeImmutable
     {
         /** @var array{effectiveDate: \DateTimeImmutable}|null $pivot */
         $pivot = $windowProbe()
-            ->setFirstResult($this->windowSize)
+            ->setFirstResult($windowSize)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
