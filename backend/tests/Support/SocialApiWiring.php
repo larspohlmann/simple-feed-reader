@@ -43,7 +43,7 @@ final class SocialApiWiring
     private const string OTHER_MASTODON_HOST = 'other.example';
     private const string ORIGIN_MASTODON_HOST = 'mastodon.social';
     private const string PUBLIC_ADDRESS = '93.184.216.34';
-    private const int BLUESKY_ACCOUNT_ID = 3;
+    private const int ACCOUNT_ID = 3;
 
     private function __construct()
     {
@@ -98,7 +98,15 @@ final class SocialApiWiring
     public static function blueskyAccount(): SocialAccount
     {
         $account = SocialAccounts::bluesky();
-        self::assignId($account, self::BLUESKY_ACCOUNT_ID);
+        self::assignId($account, self::ACCOUNT_ID);
+
+        return $account;
+    }
+
+    public static function mastodonAccount(): SocialAccount
+    {
+        $account = SocialAccounts::mastodon();
+        self::assignId($account, self::ACCOUNT_ID);
 
         return $account;
     }

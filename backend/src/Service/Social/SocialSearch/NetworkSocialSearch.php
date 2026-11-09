@@ -15,9 +15,8 @@ use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Model\SocialServerSlotModel;
 use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Pass\SearchQueryAlternatives;
+use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\Support\BlueskySearchPage;
 use App\Service\Social\Support\MastodonSearchPage;
 use App\Service\Social\Support\MastodonSearchQueries;
@@ -32,6 +31,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
         private ConcurrentRequestEngine $engine,
         private AnswerSettlerInterface $settler,
         private ActingAccountGuard $guard,
+        private TimelineSlotsModel $slots,
     ) {
     }
 
@@ -56,9 +56,9 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
     private function mastodonAnswers(SocialAccount $account, string $query): array
     {
         $tickets = array_map(
-            fn (string $alternative): RequestTicketModel => RequestTicketModel::api(
+            fn (string $alternative): RequestTicketModel => $this->slots->ticketFor(
+                $account,
                 $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($alternative, null)),
-                [new SocialServerSlotModel(SearchQueryAlternatives::MAX_ALTERNATIVES)],
             ),
             MastodonSearchQueries::of($query),
         );

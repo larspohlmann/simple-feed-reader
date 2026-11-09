@@ -11,6 +11,7 @@ use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\SocialSearch\NetworkSocialSearch;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -107,7 +108,7 @@ final class NetworkSocialSearchTest extends TestCase
     {
         $http = new RoutedHttpClient([self::MASTODON_SEARCH => self::json(['statuses' => [self::mastodonStatus()]])]);
 
-        $page = $this->search($http->client())->newest(SocialAccounts::mastodon(), 'rss reader');
+        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), 'rss reader');
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame([self::MASTODON_SEARCH], $http->requestLines());
@@ -117,7 +118,7 @@ final class NetworkSocialSearchTest extends TestCase
     public function testARefusedMastodonTokenMarksTheAccountForReconnecting(): void
     {
         $http = new RoutedHttpClient([self::MASTODON_SEARCH => self::json([], Response::HTTP_UNAUTHORIZED)]);
-        $account = SocialAccounts::mastodon();
+        $account = SocialApiWiring::mastodonAccount();
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->once())->method('flush');
         $this->entityManager = $entityManager;
@@ -142,7 +143,7 @@ final class NetworkSocialSearchTest extends TestCase
             ]]),
         ]);
 
-        $page = $this->search($http->client())->newest(SocialAccounts::mastodon(), '(rss || atom)');
+        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(rss || atom)');
 
         self::assertCount(2, $page->parsed->entries);
         self::assertSame([$rss, $atom], $http->requestLines());
@@ -160,7 +161,7 @@ final class NetworkSocialSearchTest extends TestCase
             ]]),
         ]);
 
-        $page = $this->search($http->client())->newest(SocialAccounts::mastodon(), '(rss || atom)');
+        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(rss || atom)');
 
         self::assertSame(
             [
@@ -178,7 +179,7 @@ final class NetworkSocialSearchTest extends TestCase
         $http = new RoutedHttpClient([]);
 
         try {
-            $this->search($http->client())->newest(SocialAccounts::mastodon(), '(a || b || c) (d || e || f)');
+            $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(a || b || c) (d || e || f)');
             self::fail('Nine alternatives are more than Mastodon is asked for.');
         } catch (SearchQueryTooBroadException) {
             self::assertSame([], $http->requestLines());
@@ -193,6 +194,7 @@ final class NetworkSocialSearchTest extends TestCase
             SocialApiWiring::requestEngine($http),
             new PassThroughSettler(),
             new ActingAccountGuard($this->entityManager),
+            new TimelineSlotsModel(2, 4),
         );
     }
 
