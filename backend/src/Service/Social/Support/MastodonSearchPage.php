@@ -45,7 +45,7 @@ final class MastodonSearchPage
         $statusesById = [];
         foreach ($accepted as $answer) {
             $statuses = JsonNodeModel::of($answer->json())->listAt('statuses')
-                ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without search results.');
+                ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no search results.');
             foreach ($statuses as $status) {
                 $statusesById[$status->string('id') ?? ''] ??= $status;
             }
