@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { finalize } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -74,22 +75,24 @@ export class AdminCatalogComponent implements OnInit {
     this.fetchCatalog();
   }
 
-  private fetchCatalog(afterLoad?: () => void, afterError?: () => void): void {
+  private fetchCatalog(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.catalog().subscribe({
-      next: (result) => {
-        this.categories.set(result.categories);
-        this.feeds.set(result.feeds);
-        this.loading.set(false);
-        afterLoad?.();
-      },
-      error: (failure: HttpErrorResponse) => {
-        this.error.set(parseProblem(failure));
-        this.loading.set(false);
-        afterError?.();
-      },
-    });
+    this.api
+      .catalog()
+      .pipe(
+        finalize(() => {
+          this.loading.set(false);
+          this.refreshingCatalog.set(false);
+        }),
+      )
+      .subscribe({
+        next: (result) => {
+          this.categories.set(result.categories);
+          this.feeds.set(result.feeds);
+        },
+        error: (failure: HttpErrorResponse) => this.error.set(parseProblem(failure)),
+      });
   }
 
   private loadBundled(): void {
@@ -231,10 +234,7 @@ export class AdminCatalogComponent implements OnInit {
     this.clearPendingDocument();
     this.importing.set(false);
     this.refreshingCatalog.set(true);
-    this.fetchCatalog(
-      () => this.refreshingCatalog.set(false),
-      () => this.refreshingCatalog.set(false),
-    );
+    this.fetchCatalog();
   }
 
   // Drop the consumed document so a second click cannot resend a stale upload,
