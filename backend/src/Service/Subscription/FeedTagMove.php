@@ -113,11 +113,11 @@ final readonly class FeedTagMove
      */
     private function untaggedFeedsExcept(int $userId, int $subscriptionId): array
     {
-        $untagged = array_values(array_filter(
+        $untagged = array_filter(
             $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::All),
             static fn (Subscription $feed): bool => $feed->getTags()->isEmpty()
                 && $feed->requireId() !== $subscriptionId,
-        ));
+        );
         usort(
             $untagged,
             static fn (Subscription $left, Subscription $right): int

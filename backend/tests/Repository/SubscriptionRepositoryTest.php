@@ -91,7 +91,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
                     'feedImageUrl' => null,
                 ],
             ],
-            $this->repository()->findFeedUrlsForUser($owner->requireId()),
+            $this->repository()->findFeedSummariesForUser($owner->requireId()),
         );
     }
 

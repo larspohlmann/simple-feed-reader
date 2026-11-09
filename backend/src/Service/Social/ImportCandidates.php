@@ -139,7 +139,7 @@ final readonly class ImportCandidates
     private function profileFeedsOf(SocialAccount $account): array
     {
         $profileFeeds = [];
-        foreach ($this->subscriptions->findFeedUrlsForUser($account->getUser()->requireId()) as $subscription) {
+        foreach ($this->subscriptions->findFeedSummariesForUser($account->getUser()->requireId()) as $subscription) {
             $identity = ProfileIdentity::of($account->getNetwork(), $subscription['feedUrl']);
             if (null === $identity) {
                 continue;

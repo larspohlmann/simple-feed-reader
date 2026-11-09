@@ -8,6 +8,7 @@ use App\Entity\Subscription;
 use App\Enum\SubscriptionSet;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -35,14 +36,14 @@ final class SubscriptionRepository extends ServiceEntityRepository
     /** @return list<Subscription> feed and tags eager-loaded, in creation order */
     public function findForUserWithTags(int $userId, SubscriptionSet $set): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->leftJoin('s.feed', 'f')->addSelect('f')
-            ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
-            ->leftJoin('st.tag', 't')->addSelect('t')
+        $qb = $this->withFeedAndTags()
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->orderBy('s.createdAt', 'ASC')
             ->addOrderBy('s.id', 'ASC');
-        PublicOrAuthorFeedDql::restrict($qb, 'f', $set->excludedFormats());
+        $excludedFormats = $set->excludedFormats();
+        if ([] !== $excludedFormats) {
+            PublicOrAuthorFeedDql::restrict($qb, 'f', $excludedFormats);
+        }
         /** @var list<Subscription> $rows */
         $rows = $qb->getQuery()->getResult();
 
@@ -63,7 +64,7 @@ final class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /** @return list<array{id: int, customTitle: ?string, feedUrl: string, feedTitle: ?string, feedImageUrl: ?string}> creation order */
-    public function findFeedUrlsForUser(int $userId): array
+    public function findFeedSummariesForUser(int $userId): array
     {
         /** @var list<array{id: int, customTitle: ?string, feedUrl: string, feedTitle: ?string, feedImageUrl: ?string}> $rows */
         $rows = $this->createQueryBuilder('s')
@@ -130,10 +131,7 @@ final class SubscriptionRepository extends ServiceEntityRepository
         }
 
         /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->leftJoin('s.feed', 'f')->addSelect('f')
-            ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
-            ->leftJoin('st.tag', 't')->addSelect('t')
+        $rows = $this->withFeedAndTags()
             ->andWhere('s.id IN (:ids)')->setParameter('ids', $subscriptionIds)
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
@@ -152,15 +150,20 @@ final class SubscriptionRepository extends ServiceEntityRepository
     public function getOneForUser(int $userId, int $subscriptionId): Subscription
     {
         /** @var Subscription|null $row */
-        $row = $this->createQueryBuilder('s')
-            ->leftJoin('s.feed', 'f')->addSelect('f')
-            ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
-            ->leftJoin('st.tag', 't')->addSelect('t')
+        $row = $this->withFeedAndTags()
             ->andWhere('s.id = :id')->setParameter('id', $subscriptionId)
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getOneOrNullResult();
 
         return $row ?? throw new RecordNotFoundException('No such subscription.');
+    }
+
+    private function withFeedAndTags(): QueryBuilder
+    {
+        return $this->createQueryBuilder('s')
+            ->leftJoin('s.feed', 'f')->addSelect('f')
+            ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
+            ->leftJoin('st.tag', 't')->addSelect('t');
     }
 }

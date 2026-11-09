@@ -15,10 +15,6 @@ final class PublicOrAuthorFeedDql
     /** @param list<string> $excludedFormats */
     public static function restrict(QueryBuilder $qb, string $feedAlias, array $excludedFormats): void
     {
-        if ([] === $excludedFormats) {
-            return;
-        }
-
         $qb->andWhere(\sprintf(
             '(%1$s.sourceFormat NOT IN (:excludedFormats) OR (%1$s.sourceFormat IN (:personFeedFormats)'
             . ' AND EXISTS (SELECT %1$sPerson.id FROM %2$s %1$sPerson'
