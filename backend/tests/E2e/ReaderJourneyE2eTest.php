@@ -32,6 +32,9 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     /** Every reason FeedDiscoveryResultModel can name, and the dialog can word. */
     private const array SCRAPE_FAILURE_REASONS = ['blocked', 'throttled', 'unreachable', 'not_scrapable'];
 
+    /** An OPML export leaves scraped feeds out, so the journey's export half needs a real feed. */
+    private const string SCRAPED_FORMAT = 'scraped';
+
     /** One admin login for the whole class — the JWT is cached here. */
     private static ?string $adminJwt = null;
 
@@ -163,6 +166,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         $notes = [];
 
         foreach ($candidates as [$label, $candidateUrl, $candidateFormat]) {
+            if (self::SCRAPED_FORMAT === $candidateFormat) {
+                $notes[] = $label . ' scraped, not exportable';
+                continue;
+            }
+
             // Clean slate so the admin holds exactly the one feed under test.
             $this->deleteAllSubscriptions($token);
 
