@@ -12,23 +12,48 @@ use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Text\Support\PlainText;
 
 /**
- * A search answer as entries: every status but a reply whose author and own text, or the status it quotes, match the
- * query.
+ * A search's answers, one per alternative, as entries: every status but a reply whose author and own text, or the
+ * status it quotes, match the query.
  */
 final class MastodonSearchPage
 {
-    /** @throws SocialNetworkUnreachableException */
-    public static function of(ApiResponseModel $accepted, string $query): TimelinePageModel
+    /**
+     * @param list<ApiResponseModel> $accepted one answer per alternative of the query
+     *
+     * @throws SocialNetworkUnreachableException
+     */
+    public static function of(array $accepted, string $query): TimelinePageModel
     {
-        $statuses = JsonNodeModel::of($accepted->json())->listAt('statuses')
-            ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without search results.');
         $matches = SocialSearchMatch::matcher($query);
 
         return MastodonTimelinePage::of(array_values(array_filter(
-            $statuses,
+            self::distinctStatusesOf($accepted),
             static fn (JsonNodeModel $status): bool => null === $status->string('in_reply_to_id')
                 && $matches(self::searchedPostOf(MastodonTimelinePage::originalOf($status))),
         )));
+    }
+
+    /**
+     * @param list<ApiResponseModel> $accepted
+     *
+     * @return list<JsonNodeModel> each status once, however many alternatives found it
+     *
+     * @throws SocialNetworkUnreachableException
+     */
+    private static function distinctStatusesOf(array $accepted): array
+    {
+        $statusesById = [];
+        foreach ($accepted as $answer) {
+            $statuses = JsonNodeModel::of($answer->json())->listAt('statuses');
+            if (null === $statuses) {
+                throw new SocialNetworkUnreachableException('The Mastodon instance answered without search results.');
+            }
+            foreach ($statuses as $status) {
+                $statusesById[$status->string('id') ?? ''] ??= $status;
+            }
+        }
+
+        return array_values($statusesById);
     }
 
     private static function searchedPostOf(JsonNodeModel $post): SearchedPostModel

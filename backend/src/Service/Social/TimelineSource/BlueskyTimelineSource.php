@@ -9,7 +9,6 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\BlueskyApiClient;
@@ -36,27 +35,32 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         return SocialNetwork::Bluesky->value;
     }
 
-    public function request(SocialFeed $socialFeed): ApiRequestModel
+    public function requests(SocialFeed $socialFeed): array
     {
-        return $this->sessions->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed));
+        return [$this->sessions->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed))];
     }
 
-    public function pageOf(SocialFeed $socialFeed, FetchOutcomeModel $outcome): TimelinePageModel
+    public function accepted(SocialFeed $socialFeed, FetchOutcomeModel $outcome): ApiResponseModel
     {
         $answer = BlueskyApiClient::answerOf($outcome);
         if (BlueskySessions::isStaleSession($answer)) {
             throw new SocialSessionStaleException(BlueskySessions::SESSION_REFUSED);
         }
 
-        $accepted = BlueskySessions::accepted($answer);
+        return BlueskySessions::accepted($answer);
+    }
+
+    public function pageOf(SocialFeed $socialFeed, array $accepted): TimelinePageModel
+    {
+        $answer = $accepted[0] ?? throw new \LogicException('A Bluesky timeline is read with one request.');
 
         return SocialFeedKind::Search === $socialFeed->getKind()
             ? BlueskySearchPage::of(
-                $accepted,
+                $answer,
                 $socialFeed->getSocialAccount()->getIdentity(),
                 $socialFeed->getRemoteId(),
             )
-            : self::timelinePageOf($socialFeed, $accepted);
+            : self::timelinePageOf($socialFeed, $answer);
     }
 
     public function dropSession(SocialAccount $account): void

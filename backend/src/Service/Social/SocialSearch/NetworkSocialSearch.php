@@ -38,11 +38,11 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                 $account->getIdentity(),
                 $query,
             ),
-            SocialNetwork::Mastodon => MastodonSearchPage::of(MastodonApiClient::accepted(
+            SocialNetwork::Mastodon => MastodonSearchPage::of([MastodonApiClient::accepted(
                 $this->mastodonClient->send(
                     $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($query, null)),
                 ),
-            ), $query),
+            )], $query),
         };
     }
 }
