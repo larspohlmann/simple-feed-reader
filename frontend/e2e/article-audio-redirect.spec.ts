@@ -12,6 +12,9 @@ import { silentWav } from './support/audio';
  * play through that redirect with no hint about the content type — the signed
  * landing expires, so the body can only ever carry the redirecting URL.
  *
+ * Since #2084 the body player is replaced by the Listen row, which plays the
+ * redirecting source on a detached `Audio`; the spec records those instances.
+ *
  * Both hops come from a throwaway HTTP server on the loopback interface: a
  * `page.route()` can answer the first hop, but Chromium follows a redirect
  * inside the network stack and Playwright never sees the second request, so a
@@ -67,10 +70,10 @@ function origin(server: Server): string {
 }
 
 /** Serve one article whose reader body carries the publisher's player. */
-async function stubArticle(page: Page, audioSrc: string): Promise<void> {
+async function stubArticle(page: Page, audioSource: string): Promise<void> {
   const body =
     '<p>For people who prefer to listen or are visually impaired or are multitasking.</p>' +
-    `<p><audio src="${audioSrc}" preload="none" controls>Audio playback is not supported.</audio></p>` +
+    `<p><audio src="${audioSource}" preload="none" controls>Audio playback is not supported.</audio></p>` +
     '<p>Thank you for subscribing.</p>';
   await page.route(
     (url) => /^\/api\/entries\/\d+\/reader$/.test(url.pathname),
@@ -109,6 +112,20 @@ test('the reader plays an audio source that redirects to a signed octet-stream l
 }) => {
   const { server, origin: audio } = await audioOrigin();
   try {
+    await page.addInitScript(() => {
+      const created: HTMLAudioElement[] = [];
+      (window as unknown as { __createdAudio: HTMLAudioElement[] }).__createdAudio = created;
+      const NativeAudio = window.Audio;
+      window.Audio = function (
+        this: unknown,
+        ...constructorArguments: ConstructorParameters<typeof Audio>
+      ) {
+        const element = new NativeAudio(...constructorArguments);
+        created.push(element);
+        return element;
+      } as unknown as typeof Audio;
+      window.Audio.prototype = NativeAudio.prototype;
+    });
     await stubArticle(page, `${audio}${SOURCE_PATH}`);
     const signedIn = await signInWithLayout(page, 'list');
     test.skip(
@@ -117,28 +134,34 @@ test('the reader plays an audio source that redirects to a signed octet-stream l
     );
 
     await page.getByText(ENTRY.title, { exact: false }).first().click();
-    const player = page.locator('app-reader-view .content audio');
-    await expect(player).toBeVisible();
-    await expect(player).toHaveAttribute('controls', '');
+    const bodyPlayer = page.locator('app-reader-view .content audio');
+    await expect(bodyPlayer).toBeHidden();
+    const listen = page
+      .locator('app-reader-view .content')
+      .getByRole('button', { name: 'Listen', exact: true });
+    await expect(listen).toBeVisible();
+    await listen.click();
 
-    const playback = await player.evaluate(async (element: HTMLAudioElement) => {
-      element.muted = true;
-      await element.play();
-      await new Promise<void>((resolve, reject) => {
-        const deadline = Date.now() + 5000;
-        const tick = () => {
-          if (element.error) reject(new Error(element.error.message));
-          else if (element.currentTime > 0) resolve();
-          else if (Date.now() > deadline) reject(new Error('playback never advanced'));
-          else setTimeout(tick, 50);
-        };
-        tick();
-      });
-      return { readyState: element.readyState, duration: element.duration };
-    });
-
-    expect(playback.readyState).toBeGreaterThanOrEqual(2);
-    expect(playback.duration).toBeGreaterThan(0);
+    const redirectingSource = `${audio}${SOURCE_PATH}`;
+    await expect
+      .poll(
+        () =>
+          page.evaluate((source) => {
+            const created = (window as unknown as { __createdAudio: HTMLAudioElement[] })
+              .__createdAudio;
+            const element = created.find((candidate) => candidate.src === source);
+            if (!element) return 'no Audio created for the redirecting source';
+            if (element.error) return `error: ${element.error.message}`;
+            const advanced = element.currentTime > 0;
+            const ready = element.readyState >= 2;
+            const measured = Number.isFinite(element.duration) && element.duration > 0;
+            return advanced && ready && measured
+              ? 'playing'
+              : `advanced=${advanced} readyState=${element.readyState} duration=${element.duration}`;
+          }, redirectingSource),
+        { timeout: 10000 },
+      )
+      .toBe('playing');
   } finally {
     server.close();
   }
