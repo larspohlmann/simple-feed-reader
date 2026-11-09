@@ -144,6 +144,21 @@ Both A and B meet the issue's done-criteria. A is simpler but regresses the comm
 - It catches gap readers whose unread lie within 20k rows, the S = 3k–20k rows above.
 - It costs about 160 ms on the caught-up path.
 
+## As shipped
+
+Dev DB (120.5k entries), warm `EXPLAIN ANALYZE`, median of 3–8 runs after one discarded, summed over every statement a path issues. Run on the branch code (354840919); the dev data moved between the two runs, so only same-statement deltas are exact.
+
+| case | #2126 (Task 1, ms) | #2131 (Task 4, ms) |
+|---|---|---|
+| dense all / unread (user 2) | 1.3 / 1.2 | 2.2 / 2.0 (identical statements; the page statement itself measures 1.7 ms today against 0.8 ms then) |
+| caught-up dense (user 2, 83.8k) | 2,510 | 1,790 (the walk now fills 50 rows after new entries; added probes cost ≈ 4.5 ms) |
+| caught-up 73.8k (user 88) | 2,482 | 2,468 (added probes ≈ 5 ms, inside the walk's ±100 ms noise) |
+| caught-up 15.9k (user 144) | 2,197 | 720 |
+| caught-up 12.4k (user 61) | 2,437 | 647 |
+| gap reader (user 61 / 144, unread 3k rows past the top) | 67 / 47 | 71 / 56 |
+| sparse, 0 subscriptions | ≈ 9.5 | ≈ 9.8 |
+| known slower case: user 61, 50th unread ≈ 20k rows deep | ≈ 203 | ≈ 637 |
+
 ## File structure
 
 | File | Change |
