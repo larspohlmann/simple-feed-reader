@@ -15,7 +15,10 @@
   height: 100%;
 }
 
+/* Positioned so its overflow clips the footer's absolute `.sr-only` outputs: unclipped, they
+   stretch the page past the shell and drag the sticky sidebar up on a short list (#2119). */
 .sidebar-body {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
