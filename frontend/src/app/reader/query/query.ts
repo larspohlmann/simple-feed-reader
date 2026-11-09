@@ -45,16 +45,15 @@ export interface Selection {
   window?: TrendingWindow;
 }
 
-/** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
- *  one feed; tagId = every feed carrying that tag; network = that network's feeds;
- *  group = that sidebar section's feeds. */
-export interface RefreshScope {
-  feedId?: number;
-  tagId?: number;
-  network?: SocialNetworkName;
-  feedKind?: NetworkFeedKind;
-  group?: FeedGroupName;
-}
+/** Which feeds a refresh covers: all the user's due feeds, one feed, a tag's
+ *  feeds, a network's feeds, a sidebar section's feeds, or the never-fetched ones. */
+export type RefreshScope =
+  | { kind: 'all' }
+  | { kind: 'feed'; feedId: number }
+  | { kind: 'tag'; tagId: number }
+  | { kind: 'network'; network: SocialNetworkName; feedKind?: NetworkFeedKind }
+  | { kind: 'group'; group: FeedGroupName }
+  | { kind: 'neverFetched' };
 
 /** Whether two selections name the same list. Selections are rebuilt from the
  *  route on every navigation, so they are never reference-equal. */

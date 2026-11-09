@@ -12,6 +12,12 @@ use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\TagTargetModel;
 use App\Service\Refresh\UserRefreshScope;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -40,8 +46,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestFor($this->user->requireId(), null, null);
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertNull($request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new EveryFeedTargetModel(), $request->target);
         self::assertSame(25, $request->budgetSeconds);
     }
 
@@ -50,8 +55,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestFor($this->user->requireId(), $this->feed->requireId(), null);
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertSame($this->feed->requireId(), $request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new FeedTargetModel($this->feed->requireId()), $request->target);
         self::assertSame(25, $request->budgetSeconds);
     }
 
@@ -74,8 +78,7 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestFor($this->user->requireId(), null, $tag->requireId());
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertNull($request->feedId);
-        self::assertSame($tag->requireId(), $request->tagId);
+        self::assertEquals(new TagTargetModel($tag->requireId()), $request->target);
         self::assertSame(25, $request->budgetSeconds);
     }
 
@@ -95,8 +98,7 @@ final class UserRefreshScopeTest extends DbTestCase
 
         $request = $this->scope()->requestFor($this->user->requireId(), $this->feed->requireId(), $tag->requireId());
 
-        self::assertSame($this->feed->requireId(), $request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new FeedTargetModel($this->feed->requireId()), $request->target);
     }
 
     public function testANetworkRefreshIsAForcedRunOverThatNetworksFeeds(): void
@@ -107,9 +109,7 @@ final class UserRefreshScopeTest extends DbTestCase
         );
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->networkScope);
-        self::assertNull($request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new NetworkTargetModel(NetworkScope::whole(SocialNetwork::Bluesky)), $request->target);
         self::assertTrue($request->force);
         self::assertSame(25, $request->budgetSeconds);
     }
@@ -119,10 +119,17 @@ final class UserRefreshScopeTest extends DbTestCase
         $request = $this->scope()->requestForFeedGroup($this->user->requireId(), FeedGroup::Feeds);
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertSame(FeedGroup::Feeds, $request->feedGroup);
-        self::assertNull($request->networkScope);
-        self::assertNull($request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new FeedGroupTargetModel(FeedGroup::Feeds), $request->target);
+        self::assertTrue($request->force);
+        self::assertSame(25, $request->budgetSeconds);
+    }
+
+    public function testANeverFetchedRefreshIsAForcedRunOverTheUsersUnfetchedFeeds(): void
+    {
+        $request = $this->scope()->requestForNeverFetched($this->user->requireId());
+
+        self::assertSame($this->user->requireId(), $request->userId);
+        self::assertEquals(new NeverFetchedTargetModel(), $request->target);
         self::assertTrue($request->force);
         self::assertSame(25, $request->budgetSeconds);
     }

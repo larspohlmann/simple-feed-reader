@@ -67,27 +67,6 @@ final readonly class RefreshRunStore
             );
         }
 
-        return self::KEY_PREFIX . $request->userId . '.' . $this->scopeOf($request);
-    }
-
-    private function scopeOf(RefreshRequestModel $request): string
-    {
-        if (null !== $request->feedId) {
-            return 'feed-' . $request->feedId;
-        }
-
-        if (null !== $request->tagId) {
-            return 'tag-' . $request->tagId;
-        }
-
-        if (null !== $request->networkScope) {
-            return 'set-network-' . $request->networkScope->toRunKey();
-        }
-
-        if (null !== $request->feedGroup) {
-            return 'group-' . $request->feedGroup->value;
-        }
-
-        return 'all';
+        return self::KEY_PREFIX . $request->userId . '.' . $request->target->runKey();
     }
 }

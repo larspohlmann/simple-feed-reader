@@ -61,11 +61,8 @@ export class OpmlSectionComponent {
         this.importing.set(false);
         this.result.set(importResult);
         this.subs.load();
-        // Freshly imported feeds are due but empty until a fetch runs. Kick a
-        // refresh now so they populate without waiting for a manual one; reload
-        // the list as it progresses so unread counts fill in.
         if (importResult.imported > 0) {
-          this.refresh.run(() => this.subs.load());
+          this.refresh.run(() => this.subs.load(), { kind: 'neverFetched' });
         }
       },
       error: (error: HttpErrorResponse) => {

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Enum\FeedGroup;
+use App\Service\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
 
 /**
- * Which feeds one query counts as due. $feedId picks one feed, "gone" included; $force skips the schedule but not
- * $cooldownCutoff. $excludedFeedIds keeps a sweep finite: a throttled feed stamps no fetch time, so deriving
+ * Which feeds one query counts as due. A feed target picks one feed, "gone" included; $force skips the schedule but
+ * not $cooldownCutoff. $excludedFeedIds keeps a sweep finite: a throttled feed stamps no fetch time, so deriving
  * "handled" from that time spun the client's poll loop (#302).
  */
 final readonly class DueFeedCriteria
@@ -18,14 +18,11 @@ final readonly class DueFeedCriteria
      */
     public function __construct(
         public \DateTimeImmutable $now,
+        public RefreshTargetModelInterface $target,
         public ?int $userId = null,
-        public ?int $feedId = null,
-        public ?int $tagId = null,
         public bool $force = false,
         public ?\DateTimeImmutable $cooldownCutoff = null,
         public array $excludedFeedIds = [],
-        public ?NetworkScope $networkScope = null,
-        public ?FeedGroup $feedGroup = null,
     ) {
     }
 
@@ -36,14 +33,11 @@ final readonly class DueFeedCriteria
     {
         return new self(
             $this->now,
+            $this->target,
             $this->userId,
-            $this->feedId,
-            $this->tagId,
             $this->force,
             $this->cooldownCutoff,
             $feedIds,
-            $this->networkScope,
-            $this->feedGroup,
         );
     }
 }

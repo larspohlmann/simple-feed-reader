@@ -103,7 +103,7 @@ export class SocialImportDialogComponent {
     this.subscriptions.load();
     this.tags.load();
     if (result.imported > 0) {
-      this.refresh.run(() => this.subscriptions.load());
+      this.refresh.run(() => this.subscriptions.load(), { kind: 'neverFetched' });
     }
     this.dialogRef.close(result);
   }

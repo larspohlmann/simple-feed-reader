@@ -235,8 +235,6 @@ export class BackupSectionComponent {
     this.releaseArchive();
     this.result.set({ loaded });
     this.subs.load();
-    // Restored feeds arrive with a virgin schedule and are empty until a
-    // fetch runs -- same reasoning as the OPML import's post-import refresh.
-    this.refresh.run(() => this.subs.load());
+    this.refresh.run(() => this.subs.load(), { kind: 'neverFetched' });
   }
 }

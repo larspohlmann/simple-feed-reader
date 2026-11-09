@@ -6,6 +6,11 @@ namespace App\Tests\Service\Refresh\Model;
 
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\TagTargetModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
 
@@ -16,11 +21,32 @@ final class RefreshRequestModelTest extends TestCase
         $request = RefreshRequestModel::allDue(45);
 
         self::assertNull($request->userId);
-        self::assertNull($request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new EveryFeedTargetModel(), $request->target);
         self::assertSame(45, $request->budgetSeconds);
         self::assertTrue($request->prune);
         self::assertFalse($request->force);
+    }
+
+    public function testAUserRequestForcesTheRefreshWithoutPruning(): void
+    {
+        $request = RefreshRequestModel::forUser(7, new NeverFetchedTargetModel(), 30);
+
+        self::assertSame(7, $request->userId);
+        self::assertEquals(new NeverFetchedTargetModel(), $request->target);
+        self::assertTrue($request->force);
+        self::assertFalse($request->prune);
+        self::assertSame(30, $request->budgetSeconds);
+    }
+
+    public function testAFeedRequestHasNoUserAndForcesTheRefreshWithoutPruning(): void
+    {
+        $request = RefreshRequestModel::forFeed(11, 30);
+
+        self::assertNull($request->userId);
+        self::assertEquals(new FeedTargetModel(11), $request->target);
+        self::assertTrue($request->force);
+        self::assertFalse($request->prune);
+        self::assertSame(30, $request->budgetSeconds);
     }
 
     public function testWithoutPruningTurnsOnlyThePruningOff(): void
@@ -34,11 +60,10 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testWithoutPruningKeepsTheScope(): void
     {
-        $request = RefreshRequestModel::forUserTag(7, 13, 30)->withoutPruning();
+        $request = RefreshRequestModel::forUser(7, new TagTargetModel(13), 30)->withoutPruning();
 
         self::assertSame(7, $request->userId);
-        self::assertSame(13, $request->tagId);
-        self::assertNull($request->feedId);
+        self::assertEquals(new TagTargetModel(13), $request->target);
         self::assertTrue($request->force);
         self::assertSame(30, $request->budgetSeconds);
     }
@@ -54,11 +79,10 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testIgnoringScheduleKeepsTheScope(): void
     {
-        $request = RefreshRequestModel::forUserFeed(7, 11, 30)->ignoringSchedule();
+        $request = RefreshRequestModel::forUser(7, new FeedTargetModel(11), 30)->ignoringSchedule();
 
         self::assertSame(7, $request->userId);
-        self::assertSame(11, $request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new FeedTargetModel(11), $request->target);
         self::assertFalse($request->prune);
         self::assertSame(30, $request->budgetSeconds);
     }
@@ -67,18 +91,17 @@ final class RefreshRequestModelTest extends TestCase
     {
         self::assertSame(
             RefreshRequestModel::DEFAULT_BATCH_LIMIT,
-            RefreshRequestModel::forUser(7, 30)->batchLimit,
+            RefreshRequestModel::forUser(7, new EveryFeedTargetModel(), 30)->batchLimit,
         );
     }
 
     public function testLimitedToChangesOnlyTheBatchLimit(): void
     {
-        $request = RefreshRequestModel::forUserTag(7, 13, 30)->limitedTo(5);
+        $request = RefreshRequestModel::forUser(7, new TagTargetModel(13), 30)->limitedTo(5);
 
         self::assertSame(5, $request->batchLimit);
         self::assertSame(7, $request->userId);
-        self::assertSame(13, $request->tagId);
-        self::assertNull($request->feedId);
+        self::assertEquals(new TagTargetModel(13), $request->target);
         self::assertTrue($request->force);
         self::assertFalse($request->prune);
         self::assertSame(30, $request->budgetSeconds);
@@ -94,22 +117,25 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testANetworkRequestRefreshesThatNetworksFeedsOfTheUserIgnoringTheSchedule(): void
     {
-        $request = RefreshRequestModel::forUserNetwork(7, NetworkScope::whole(SocialNetwork::Bluesky), 30);
+        $request = RefreshRequestModel::forUser(
+            7,
+            new NetworkTargetModel(NetworkScope::whole(SocialNetwork::Bluesky)),
+            30,
+        );
 
         self::assertSame(7, $request->userId);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->networkScope);
-        self::assertNull($request->feedId);
-        self::assertNull($request->tagId);
+        self::assertEquals(new NetworkTargetModel(NetworkScope::whole(SocialNetwork::Bluesky)), $request->target);
         self::assertTrue($request->force);
         self::assertFalse($request->prune);
     }
 
     public function testDerivedRequestsKeepTheNetwork(): void
     {
-        $request = RefreshRequestModel::forUserNetwork(7, NetworkScope::whole(SocialNetwork::Bluesky), 30);
+        $network = NetworkScope::whole(SocialNetwork::Bluesky);
+        $request = RefreshRequestModel::forUser(7, new NetworkTargetModel($network), 30);
 
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->withoutPruning()->networkScope);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->ignoringSchedule()->networkScope);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->limitedTo(5)->networkScope);
+        self::assertEquals(new NetworkTargetModel($network), $request->withoutPruning()->target);
+        self::assertEquals(new NetworkTargetModel($network), $request->ignoringSchedule()->target);
+        self::assertEquals(new NetworkTargetModel($network), $request->limitedTo(5)->target);
     }
 }

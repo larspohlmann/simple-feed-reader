@@ -11,16 +11,18 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
-use App\Repository\FeedRepository;
 use App\Repository\NetworkScope;
+use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
+use App\Tests\Support\QueriesDueFeeds;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 
 final class FeedRepositoryNetworkScopeTest extends DbTestCase
 {
+    use QueriesDueFeeds;
     use SeedsUsers;
 
     private const string NOW = '2026-06-01T00:00:00Z';
@@ -144,34 +146,11 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
 
     private function criteria(User $owner, NetworkScope $networkScope): DueFeedCriteria
     {
-        return new DueFeedCriteria(
-            new \DateTimeImmutable(self::NOW),
-            $owner->requireId(),
-            force: true,
-            networkScope: $networkScope,
-        );
-    }
-
-    /**
-     * @param list<Feed> $feeds
-     *
-     * @return list<int>
-     */
-    private function idsOf(array $feeds): array
-    {
-        return array_map(static fn (Feed $feed): int => $feed->requireId(), $feeds);
+        return $this->dueCriteriaFor($owner, new NetworkTargetModel($networkScope), new \DateTimeImmutable(self::NOW));
     }
 
     private function fixtures(): NetworkFeedSubscriptions
     {
         return new NetworkFeedSubscriptions($this->entityManager);
-    }
-
-    private function feeds(): FeedRepository
-    {
-        $repository = $this->entityManager->getRepository(Feed::class);
-        self::assertInstanceOf(FeedRepository::class, $repository);
-
-        return $repository;
     }
 }

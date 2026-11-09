@@ -53,9 +53,8 @@ export class RefreshService {
     return Math.min(1, Math.max(0, done / total));
   });
 
-  /** Pass a scope to sweep just one feed (feedId) or one tag's feeds (tagId);
-   *  omit it to sweep all the caller's due feeds. The scope holds across the
-   *  whole poll loop. */
+  /** Pass a scope to narrow the sweep; omit it to sweep all the caller's due
+   *  feeds. The scope holds across the whole poll loop. */
   run(onDone?: () => void, scope?: RefreshScope): void {
     if (this.running()) return;
     this.running.set(true);

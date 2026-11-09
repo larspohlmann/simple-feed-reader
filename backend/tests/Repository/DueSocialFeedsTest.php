@@ -10,14 +10,18 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
-use App\Repository\FeedRepository;
+use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueriesDueFeeds;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class DueSocialFeedsTest extends DbTestCase
 {
+    use QueriesDueFeeds;
+
     private const string NOW = '2026-10-12 12:00:00';
 
     public function testAFeedWhoseAccountNeedsReconnectingIsNeverDue(): void
@@ -37,15 +41,16 @@ final class DueSocialFeedsTest extends DbTestCase
         $this->entityManager->flush();
         $now = new \DateTimeImmutable(self::NOW);
 
-        $due = $this->feeds()->findDue(new DueFeedCriteria($now), 10);
+        $due = $this->feeds()->findDue(new DueFeedCriteria($now, new EveryFeedTargetModel()), 10);
 
         $expected = [$reachable->requireId(), $rss->requireId()];
         sort($expected);
         $dueIds = array_map(static fn (Feed $feed): int => $feed->requireId(), $due);
         sort($dueIds);
         self::assertSame($expected, $dueIds);
-        self::assertSame(2, $this->feeds()->countDue(new DueFeedCriteria($now)));
-        self::assertSame([], $this->feeds()->findDue(new DueFeedCriteria($now, feedId: $paused->requireId()), 10));
+        self::assertSame(2, $this->feeds()->countDue(new DueFeedCriteria($now, new EveryFeedTargetModel())));
+        $pausedOnly = new DueFeedCriteria($now, new FeedTargetModel($paused->requireId()));
+        self::assertSame([], $this->feeds()->findDue($pausedOnly, 10));
     }
 
     public function testASavedFeedIsNeverDueNotEvenWhenAskedForByItsId(): void
@@ -58,11 +63,12 @@ final class DueSocialFeedsTest extends DbTestCase
 
         $dueIds = array_map(
             static fn (Feed $feed): int => $feed->requireId(),
-            $this->feeds()->findDue(new DueFeedCriteria($now, force: true), 50),
+            $this->feeds()->findDue(new DueFeedCriteria($now, new EveryFeedTargetModel(), force: true), 50),
         );
 
         self::assertNotContains($saved->requireId(), $dueIds);
-        self::assertSame([], $this->feeds()->findDue(new DueFeedCriteria($now, feedId: $saved->requireId()), 10));
+        $savedOnly = new DueFeedCriteria($now, new FeedTargetModel($saved->requireId()));
+        self::assertSame([], $this->feeds()->findDue($savedOnly, 10));
     }
 
     private function privateFeed(SocialAccount $account, string $url, string $sourceFormat): Feed
@@ -73,13 +79,5 @@ final class DueSocialFeedsTest extends DbTestCase
         $this->entityManager->persist(new SocialFeed($account, $feed, SocialFeedKind::Home, ''));
 
         return $feed;
-    }
-
-    private function feeds(): FeedRepository
-    {
-        /** @var FeedRepository $feeds */
-        $feeds = $this->entityManager->getRepository(Feed::class);
-
-        return $feeds;
     }
 }

@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
 import { refreshParams } from './refresh-params';
+import { refreshScopeParams } from './refresh-scope-params';
 import { SignedUrl } from './query/link-param';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
@@ -181,19 +182,15 @@ export class ReaderApi {
     });
   }
 
-  /** Omit the scope (or pass an empty one) to refresh all the caller's due
-   *  feeds; scope by feedId for a single feed (e.g. a just-added one) or by
-   *  tagId for every feed carrying that tag, by network for that network's feeds, or by
-   *  group for a sidebar section's feeds. */
+  /** Omit the scope to refresh all the caller's due feeds; a scope narrows it to
+   *  one feed, a tag, a network, a sidebar section, or the never-fetched feeds
+   *  (a just-imported batch). */
   refresh(scope?: RefreshScope): Observable<RefreshReport> {
-    let params = new HttpParams();
-    if (scope?.feedId != null) params = params.set('feedId', scope.feedId);
-    else if (scope?.tagId != null) params = params.set('tag', scope.tagId);
-    else if (scope?.network != null) {
-      params = params.set('network', scope.network);
-      if (scope.feedKind != null) params = params.set('feedKind', scope.feedKind);
-    } else if (scope?.group != null) params = params.set('group', scope.group);
-    return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {}, { params });
+    return this.http.post<RefreshReport>(
+      `${this.base}/api/refresh`,
+      {},
+      { params: refreshScopeParams(scope) },
+    );
   }
 
   updateSubscription(
