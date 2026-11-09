@@ -99,20 +99,20 @@ final readonly class BackupHeader
 
     public static function foundation(BackupProvenanceModel $provenance, int $parts, BackupTotals $totals): self
     {
-        return new self(
-            schemaVersion: BackupSchema::VERSION,
-            createdAt: $provenance->createdAt,
-            sourceUrl: $provenance->sourceUrl,
-            sourceEmail: $provenance->sourceEmail,
-            backupId: $provenance->backupId,
-            part: 0,
-            parts: $parts,
-            totals: $totals,
-        );
+        return self::stamped($provenance, 0, $parts, $totals);
     }
 
     public static function entryPart(BackupProvenanceModel $provenance, int $part): self
     {
+        return self::stamped($provenance, $part, null, null);
+    }
+
+    private static function stamped(
+        BackupProvenanceModel $provenance,
+        int $part,
+        ?int $parts,
+        ?BackupTotals $totals,
+    ): self {
         return new self(
             schemaVersion: BackupSchema::VERSION,
             createdAt: $provenance->createdAt,
@@ -120,8 +120,8 @@ final readonly class BackupHeader
             sourceEmail: $provenance->sourceEmail,
             backupId: $provenance->backupId,
             part: $part,
-            parts: null,
-            totals: null,
+            parts: $parts,
+            totals: $totals,
         );
     }
 
@@ -136,7 +136,7 @@ final readonly class BackupHeader
             'backupId' => $this->backupId,
             'part' => $this->part,
             'parts' => $this->parts,
-            'totals' => $this->totals?->toHeaderFields(),
+            'totals' => $this->totals?->toBackupFields(),
         ]);
     }
 }

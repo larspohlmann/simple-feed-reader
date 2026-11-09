@@ -45,9 +45,7 @@ final readonly class FooterLine
         return new self(counts: self::intCounts($counts));
     }
 
-    /**
-     * @param array<string, int> $counts keyed by BackupSchema::KIND_*; an absent kind counts zero
-     */
+    /** @param array<string, int> $counts an absent kind counts zero */
     public static function of(array $counts): self
     {
         return new self(counts: array_replace(self::NO_COUNTS, $counts));

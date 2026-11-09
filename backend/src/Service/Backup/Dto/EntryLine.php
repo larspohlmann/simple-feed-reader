@@ -179,7 +179,9 @@ final readonly class EntryLine
             'chapters' => $this->chapters,
             'chaptersUrl' => $this->chaptersUrl,
             'linkCards' => array_map(static fn (LinkCardContent $card): array => $card->toStored(), $this->linkCards),
-            'origin' => self::originFields($this->origin),
+            'origin' => $this->origin === null
+                ? null
+                : ['title' => $this->origin->title, 'faviconUrl' => $this->origin->faviconUrl],
             'publishedAt' => BackupLineFormat::dateOrNull($this->publishedAt),
             'createdAt' => BackupLineFormat::date($this->createdAt),
             'effectiveDate' => BackupLineFormat::date($this->effectiveDate),
@@ -205,12 +207,6 @@ final readonly class EntryLine
             'nestedQuote' => $nested === null ? null : ['url' => $nested->url, 'handle' => $nested->handle],
             'linkCard' => $quote->linkCard?->toStored(),
         ];
-    }
-
-    /** @return array{title: ?string, faviconUrl: ?string}|null */
-    private static function originFields(?EntryOrigin $origin): ?array
-    {
-        return null === $origin ? null : ['title' => $origin->title, 'faviconUrl' => $origin->faviconUrl];
     }
 
     private static function shareKindOf(?string $shareKind, ?QuotedPostContent $quote): ?string

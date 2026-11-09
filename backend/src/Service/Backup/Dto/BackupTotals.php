@@ -36,7 +36,7 @@ final readonly class BackupTotals
     }
 
     /** @return array{entries: int, entryStates: int} */
-    public function toHeaderFields(): array
+    public function toBackupFields(): array
     {
         return ['entries' => $this->entries, 'entryStates' => $this->entryStates];
     }

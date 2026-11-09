@@ -6,10 +6,10 @@ namespace App\Tests\Service\Backup\Dto;
 
 use App\Entity\EntryChapters;
 use App\Entity\EntryMedium;
+use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Entity\EntryOrigin;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\EntryCompanionsModel;
