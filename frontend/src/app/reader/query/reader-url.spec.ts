@@ -43,6 +43,7 @@ describe('the reader URLs (#2107 pin)', () => {
     ['/?unread=1', list('all', { view: 'all' })],
     ['/?entry=42', list('all', { view: 'all' }, 42)],
     ['/?entry=514-some-title', list('all', { view: 'all' }, 514)],
+    ['/?entry=abc', list('all', { view: 'all' })],
     ['/?subscription=7&entry=42', list('subscription', { view: 'all', subscription: 7 }, 42)],
     ['/?subscription=0', list('all', { view: 'all' })],
     ['/?subscription=abc', list('all', { view: 'all' })],
@@ -63,6 +64,7 @@ describe('the reader URLs (#2107 pin)', () => {
     ],
     ['/?network=mastodon&feedKind=home', list('network', { view: 'all', network: 'mastodon' })],
     ['/?network=myspace', list('all', { view: 'all' })],
+    ['/?feedKind=profile', list('all', { view: 'all' })],
     ['/?network=mastodon&group=tags', list('network', { view: 'all', network: 'mastodon' })],
     ['/?group=tags', list('group', { view: 'all', group: 'tags' })],
     ['/?group=feeds', list('group', { view: 'all', group: 'feeds' })],
@@ -79,6 +81,10 @@ describe('the reader URLs (#2107 pin)', () => {
     ['/?view=kept&window=week', list('kept', { view: 'kept' })],
     ['/?view=trending&window=week', list('trending', { view: 'trending', window: 'week' })],
     ['/?view=trending&window=day', list('trending', { view: 'trending', window: 'day' })],
+    [
+      '/?view=trending&window=week&entry=42',
+      list('trending', { view: 'trending', window: 'week' }, 42),
+    ],
     [
       '/?view=trending',
       {
@@ -99,6 +105,8 @@ describe('the reader URLs (#2107 pin)', () => {
     ['/?q=angular&tag=3', list('search', { view: 'all', q: 'angular' })],
     ['/?view=saved-searches&q=climate', list('search', { view: 'all', q: 'climate' })],
     ['/?view=trending&q=climate', list('search', { view: 'all', q: 'climate' })],
+    ['/?q=%22punk%20rock%22', list('search', { view: 'all', q: '"punk rock"' })],
+    ['/?q=abc', list('search', { view: 'all', q: 'abc' })],
     ['/?q=an', list('all', { view: 'all' })],
     ['/?q=ab%20', list('all', { view: 'all' })],
     ['/?q=', list('all', { view: 'all' })],
@@ -107,6 +115,8 @@ describe('the reader URLs (#2107 pin)', () => {
     ['/searches/saved/42', list('saved-search', { view: 'all', savedSearchId: 42 })],
     ['/searches/saved/42-climate', list('saved-search', { view: 'all', savedSearchId: 42 })],
     ['/searches/saved/climate', list('saved-searches', { view: 'saved-searches' })],
+    ['/searches/saved/0', list('saved-searches', { view: 'saved-searches' })],
+    ['/searches/saved/0-x', list('saved-searches', { view: 'saved-searches' })],
     ['/searches/saved/42x', list('saved-searches', { view: 'saved-searches' })],
     [
       '/searches/saved/42-climate?entry=99',
