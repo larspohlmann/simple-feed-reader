@@ -12,6 +12,7 @@ use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
+use App\Repository\RefreshTarget;
 use App\Service\Refresh\UserRefreshScope;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -123,6 +124,16 @@ final class UserRefreshScopeTest extends DbTestCase
         self::assertNull($request->target->networkScope);
         self::assertNull($request->target->feedId);
         self::assertNull($request->target->tagId);
+        self::assertTrue($request->force);
+        self::assertSame(25, $request->budgetSeconds);
+    }
+
+    public function testANeverFetchedRefreshIsAForcedRunOverTheUsersUnfetchedFeeds(): void
+    {
+        $request = $this->scope()->requestForNeverFetched($this->user->requireId());
+
+        self::assertSame($this->user->requireId(), $request->userId);
+        self::assertEquals(RefreshTarget::neverFetchedFeeds(), $request->target);
         self::assertTrue($request->force);
         self::assertSame(25, $request->budgetSeconds);
     }

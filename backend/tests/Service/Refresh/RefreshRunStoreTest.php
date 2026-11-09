@@ -108,6 +108,15 @@ final class RefreshRunStoreTest extends TestCase
         self::assertSame(1, $this->store->open($tags)->done);
     }
 
+    public function testANeverFetchedRunIsKeptApartFromTheSweep(): void
+    {
+        $neverFetched = RefreshRequestModel::forUserNeverFetched(1, self::BUDGET);
+        $this->store->save($neverFetched, RefreshRunProgressModel::start()->advancedBy(1, 2));
+
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET))->done);
+        self::assertSame(1, $this->store->open($neverFetched)->done);
+    }
+
     private function networkRequest(SocialNetwork $network): RefreshRequestModel
     {
         return RefreshRequestModel::forUserNetwork(1, NetworkScope::whole($network), self::BUDGET);

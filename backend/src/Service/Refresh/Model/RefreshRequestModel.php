@@ -47,6 +47,11 @@ final readonly class RefreshRequestModel
         return new self($userId, RefreshTarget::feedGroup($feedGroup), true, $budgetSeconds, false);
     }
 
+    public static function forUserNeverFetched(int $userId, int $budgetSeconds): self
+    {
+        return new self($userId, RefreshTarget::neverFetchedFeeds(), true, $budgetSeconds, false);
+    }
+
     public static function forFeed(int $feedId, int $budgetSeconds): self
     {
         return new self(null, RefreshTarget::feed($feedId), true, $budgetSeconds, false);

@@ -48,6 +48,11 @@ final readonly class UserRefreshScope
         return RefreshRequestModel::forUserFeedGroup($userId, $feedGroup, self::BUDGET_SECONDS);
     }
 
+    public function requestForNeverFetched(int $userId): RefreshRequestModel
+    {
+        return RefreshRequestModel::forUserNeverFetched($userId, self::BUDGET_SECONDS);
+    }
+
     private function forFeed(int $userId, int $feedId): RefreshRequestModel
     {
         if (!$this->subscriptions->existsForUserAndFeed($userId, $feedId)) {

@@ -18,9 +18,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * One budgeted refresh slice over the caller's feeds, narrowed by `?feedId=`, `?tag=`, `?group=` or `?network=` with
- * an optional `?feedKind=`. The client loops on `status` (busy: wait and retry; partial: call again; completed: done;
- * aborted: stop) until `remaining` is 0.
+ * One budgeted refresh slice over the caller's feeds, narrowed by `?feedId=`, `?tag=`, `?group=`, `?network=` or
+ * `?neverFetched=1` with an optional `?feedKind=`. The client loops on `status` (busy: wait and retry; partial: call
+ * again; completed: done; aborted: stop) until `remaining` is 0.
  */
 final readonly class RefreshController
 {
@@ -40,6 +40,7 @@ final readonly class RefreshController
         #[MapQueryParameter] ?string $network = null,
         #[MapQueryParameter] ?string $feedKind = null,
         #[MapQueryParameter] ?string $group = null,
+        #[MapQueryParameter] bool $neverFetched = false,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->refreshLimiter, $user);
 
@@ -48,6 +49,7 @@ final readonly class RefreshController
         $request = match (true) {
             null !== $networkScope => $this->scope->requestForNetwork($user->requireId(), $networkScope),
             null !== $feedGroup => $this->scope->requestForFeedGroup($user->requireId(), $feedGroup),
+            $neverFetched => $this->scope->requestForNeverFetched($user->requireId()),
             default => $this->scope->requestFor($user->requireId(), $feedId, $tag),
         };
 
