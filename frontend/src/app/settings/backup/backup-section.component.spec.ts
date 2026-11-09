@@ -322,7 +322,7 @@ describe('BackupSectionComponent', () => {
     expect(component.typed()).toBe('');
     expect(component.preview()).toBeNull();
     expect(load).toHaveBeenCalled();
-    expect(refreshRun).toHaveBeenCalled();
+    expect(refreshRun).toHaveBeenCalledWith(expect.any(Function), { kind: 'neverFetched' });
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('2');
   });

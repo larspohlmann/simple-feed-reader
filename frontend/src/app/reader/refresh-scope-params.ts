@@ -1,7 +1,8 @@
 import { RefreshScope } from './query/query';
 
-export function refreshScopeParams(scope: RefreshScope = { kind: 'all' }): Record<string, string> {
-  switch (scope.kind) {
+export function refreshScopeParams(scope?: RefreshScope): Record<string, string> {
+  switch (scope?.kind) {
+    case undefined:
     case 'all':
       return {};
     case 'feed':
