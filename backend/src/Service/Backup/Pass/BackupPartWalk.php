@@ -12,11 +12,12 @@ use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
 use App\Service\Backup\BackupLines;
 use App\Service\Backup\Dto\BackupTotals;
+use App\Service\Backup\Dto\EntryShareLine;
+use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupSchema;
-use App\Service\Backup\Support\EntryMarkLines;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -104,14 +105,14 @@ final class BackupPartWalk
             $state = $statesByEntryId[$entry->requireId()] ?? null;
             $sharedAt = $sharedAtByEntryId[$entry->requireId()] ?? null;
             if (null !== $sharedAt) {
-                $this->buffer->addShare(EntryMarkLines::share($entry, $sharedAt, $feedUrl));
+                $this->buffer->addShare(EntryShareLine::of($entry, $sharedAt, $feedUrl)->toBackupLine());
             }
             yield from $this->bufferLines(
                 $this->lines->entryLine($entry, $feedUrl, new EntryCompanionsModel(
                     $cardsByEntryId[$entry->requireId()] ?? [],
                     $originsByEntryId[$entry->requireId()] ?? null,
                 )),
-                null !== $state ? EntryMarkLines::state($state, $feedUrl) : null,
+                null !== $state ? EntryStateLine::of($state, $feedUrl)->toBackupLine() : null,
             );
         }
     }
