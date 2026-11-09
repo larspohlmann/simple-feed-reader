@@ -11,6 +11,7 @@ use App\Service\Social\Model\SearchExpression\NotSearchModel;
 use App\Service\Social\Model\SearchExpression\SearchExpressionModelInterface;
 use App\Service\Social\Model\SearchExpression\SearchTermModel;
 use App\Service\Social\Model\SearchExpression\UncheckedSearchModel;
+use App\Service\Social\Support\SearchQueryTokens;
 
 /**
  * One query read as `||` over runs of ANDed terms, `-` and `( )`; the network has validated it already, so odd input
@@ -18,14 +19,6 @@ use App\Service\Social\Model\SearchExpression\UncheckedSearchModel;
  */
 final class SearchQueryParser
 {
-    private const string OR = 'or';
-    private const string OPEN = 'open';
-    private const string CLOSE = 'close';
-    private const string PHRASE = 'phrase';
-    private const string NOT = 'not';
-    private const string WORD = 'word';
-    private const string TOKEN_PATTERN = '/(?<or>\|\|)|(?<open>\()|(?<close>\))|"(?<phrase>[^"]*)"?'
-        . '|(?<not>-)(?=[^\s|)])|(?<word>[^\s()"|]+)|\S/u';
     private const string NETWORK_FILTER_PATTERN = '/^\p{L}+:./u';
     // `from:me` names the searching account, which the reader cannot tell from an author called "me".
     private const string AUTHOR_FILTER_PATTERN = '/^from:@?(?!me$)(?<author>[^@].*)$/iu';
@@ -39,8 +32,7 @@ final class SearchQueryParser
 
     public function __construct(string $query)
     {
-        preg_match_all(self::TOKEN_PATTERN, $query, $matches, \PREG_SET_ORDER | \PREG_UNMATCHED_AS_NULL);
-        $this->tokens = self::tokensOf($matches);
+        $this->tokens = SearchQueryTokens::of($query);
     }
 
     public function expression(): SearchExpressionModelInterface
@@ -51,7 +43,7 @@ final class SearchQueryParser
     private function alternatives(): ?SearchExpressionModelInterface
     {
         $alternatives = [$this->conjunction()];
-        while ($this->accepts(self::OR)) {
+        while ($this->accepts(SearchQueryTokens::OR)) {
             $alternatives[] = $this->conjunction();
         }
 
@@ -62,7 +54,7 @@ final class SearchQueryParser
     {
         $factors = [];
         while (null !== $kind = $this->tokens[$this->position][0] ?? null) {
-            if (self::OR === $kind || (self::CLOSE === $kind && $this->groupDepth > 0)) {
+            if (SearchQueryTokens::OR === $kind || (SearchQueryTokens::CLOSE === $kind && $this->groupDepth > 0)) {
                 break;
             }
             $factors[] = $this->factor();
@@ -76,10 +68,10 @@ final class SearchQueryParser
         [$kind, $text] = $this->tokens[$this->position++] ?? ['', ''];
 
         return match ($kind) {
-            self::NOT => self::negated($this->factor()),
-            self::OPEN => $this->group(),
-            self::PHRASE => self::termOf($text),
-            self::WORD => self::wordOf($text),
+            SearchQueryTokens::NOT => self::negated($this->factor()),
+            SearchQueryTokens::OPEN => $this->group(),
+            SearchQueryTokens::PHRASE => self::termOf($text),
+            SearchQueryTokens::WORD => self::wordOf($text),
             default => null,
         };
     }
@@ -88,7 +80,7 @@ final class SearchQueryParser
     {
         ++$this->groupDepth;
         $alternatives = $this->alternatives();
-        $this->accepts(self::CLOSE);
+        $this->accepts(SearchQueryTokens::CLOSE);
         --$this->groupDepth;
 
         return $alternatives;
@@ -102,26 +94,6 @@ final class SearchQueryParser
         ++$this->position;
 
         return true;
-    }
-
-    /**
-     * @param list<array<int|string, string|null>> $matches
-     *
-     * @return list<array{string, string}>
-     */
-    private static function tokensOf(array $matches): array
-    {
-        $tokens = [];
-        foreach ($matches as $match) {
-            foreach ([self::OR, self::OPEN, self::CLOSE, self::PHRASE, self::NOT, self::WORD] as $kind) {
-                if (null !== ($match[$kind] ?? null)) {
-                    $tokens[] = [$kind, $match[$kind]];
-                    break;
-                }
-            }
-        }
-
-        return $tokens;
     }
 
     private static function wordOf(string $text): ?SearchExpressionModelInterface
