@@ -9,8 +9,6 @@ import { stubAuthToken } from './support/auth';
 // `white-space: nowrap`, so the flex algorithm was free to squeeze it until the
 // number itself broke.
 
-const BLANK_ICON = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
 /** Long enough to truncate in the 220px rail, which is what starts the squeeze. */
 const LONG_NAME = 'Psychedelics & Consciousness';
 
@@ -26,7 +24,6 @@ const CATALOG = {
         id: 100 + feed,
         title: `Feed ${feed}`,
         description: 'A stubbed catalog feed',
-        faviconUrl: BLANK_ICON,
         subscribed: false,
       })),
     },

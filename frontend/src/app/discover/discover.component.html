@@ -82,14 +82,6 @@
                   [disabled]="selection.isLocked(feed.id)"
                   (click)="selection.toggle(feed.id)"
                 >
-                  <img
-                    class="fav"
-                    [src]="feed.faviconUrl"
-                    alt=""
-                    width="20"
-                    height="20"
-                    loading="lazy"
-                  />
                   <span class="text">
                     <span class="title">{{ feed.title }}</span>
                     @if (selection.isLocked(feed.id)) {

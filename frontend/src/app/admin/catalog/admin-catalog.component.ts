@@ -20,7 +20,6 @@ import {
   AdminCatalogFeedDto,
   BundledCatalogInfo,
   CatalogImportCounts,
-  CatalogWarmReport,
   ImportMode,
 } from '../admin.models';
 
@@ -60,16 +59,9 @@ export class AdminCatalogComponent implements OnInit {
   readonly importing = signal(false);
   readonly refreshingCatalog = signal(false);
 
-  readonly warming = signal(false);
-  readonly warmRemaining = signal<number | null>(null);
-  readonly warmReport = signal<CatalogWarmReport | null>(null);
-  readonly warmError = signal<Problem | null>(null);
-
   readonly hasFeeds = computed(() => this.feeds().length > 0);
   readonly loaded = computed(() => !this.loading() && this.error() === null);
-  readonly importBusy = computed(
-    () => this.importing() || this.refreshingCatalog() || this.warming(),
-  );
+  readonly importBusy = computed(() => this.importing() || this.refreshingCatalog());
 
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
@@ -201,14 +193,6 @@ export class AdminCatalogComponent implements OnInit {
     });
   }
 
-  refreshFavicon(feed: AdminCatalogFeedDto): void {
-    this.actionError.set(null);
-    this.api.refreshFavicon(feed.id).subscribe({
-      next: (result) => this.upsertFeed(result.feed),
-      error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
-    });
-  }
-
   setMode(event: Event): void {
     this.importMode.set((event.target as HTMLSelectElement).value as ImportMode);
   }
@@ -242,20 +226,13 @@ export class AdminCatalogComponent implements OnInit {
     });
   }
 
-  // A fresh import leaves the lists stale and (when it added or changed feeds)
-  // with no icons, so we refetch and then warm — that warm loop is the only
-  // thing that makes favicons appear on a new deployment.
   private handleImportSuccess(counts: CatalogImportCounts): void {
     this.importCounts.set(counts);
     this.clearPendingDocument();
-    const broughtNewFeeds = counts.feedsCreated + counts.feedsUpdated > 0;
     this.importing.set(false);
     this.refreshingCatalog.set(true);
     this.fetchCatalog(
-      () => {
-        this.refreshingCatalog.set(false);
-        if (broughtNewFeeds) this.warm();
-      },
+      () => this.refreshingCatalog.set(false),
       () => this.refreshingCatalog.set(false),
     );
   }
@@ -266,33 +243,6 @@ export class AdminCatalogComponent implements OnInit {
     this.pendingDocument.set(null);
     const input = this.fileInput()?.nativeElement;
     if (input) input.value = '';
-  }
-
-  warm(): void {
-    this.warming.set(true);
-    this.warmReport.set(null);
-    this.warmError.set(null);
-    this.warmRemaining.set(null);
-    this.warmNextSlice();
-  }
-
-  private warmNextSlice(): void {
-    this.api.warmFavicons().subscribe({
-      next: (report) => {
-        this.warmRemaining.set(report.remaining);
-        const madeNoProgress = report.warmed === 0 && report.failed === 0;
-        if (report.remaining === 0 || madeNoProgress) {
-          this.warmReport.set(report);
-          this.warming.set(false);
-          return;
-        }
-        this.warmNextSlice();
-      },
-      error: (failure: HttpErrorResponse) => {
-        this.warmError.set(parseProblem(failure));
-        this.warming.set(false);
-      },
-    });
   }
 
   private upsertCategory(category: AdminCatalogCategoryDto): void {

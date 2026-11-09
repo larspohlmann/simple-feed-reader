@@ -11,7 +11,6 @@ import {
   AdminUserStatus,
   BundledCatalogInfo,
   CatalogImportCounts,
-  CatalogWarmReport,
   ImportMode,
   QueueDepthDto,
   SelfUpdateStatusDto,
@@ -102,7 +101,7 @@ export class AdminApi {
 
   saveFeed(
     id: number | null,
-    body: Omit<AdminCatalogFeedDto, 'id' | 'position' | 'faviconFetchedAt' | 'faviconFailedAt'>,
+    body: Omit<AdminCatalogFeedDto, 'id' | 'position'>,
   ): Observable<{ feed: AdminCatalogFeedDto }> {
     const url = `${this.base}/api/admin/catalog/feeds${id === null ? '' : `/${id}`}`;
     return id === null
@@ -116,13 +115,6 @@ export class AdminApi {
 
   reorderFeeds(ids: number[]): Observable<void> {
     return this.http.patch<void>(`${this.base}/api/admin/catalog/feeds/reorder`, { ids });
-  }
-
-  refreshFavicon(id: number): Observable<{ feed: AdminCatalogFeedDto }> {
-    return this.http.post<{ feed: AdminCatalogFeedDto }>(
-      `${this.base}/api/admin/catalog/feeds/${id}/favicon`,
-      {},
-    );
   }
 
   importCatalog(mode: ImportMode, document: string): Observable<CatalogImportCounts> {
@@ -140,10 +132,6 @@ export class AdminApi {
     return this.http.post<CatalogImportCounts>(`${this.base}/api/admin/catalog/import/bundled`, {
       mode,
     });
-  }
-
-  warmFavicons(): Observable<CatalogWarmReport> {
-    return this.http.post<CatalogWarmReport>(`${this.base}/api/admin/catalog/favicons/warm`, {});
   }
 
   updateStatus(): Observable<SelfUpdateStatusDto> {

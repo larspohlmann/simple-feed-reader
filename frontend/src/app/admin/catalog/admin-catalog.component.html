@@ -96,39 +96,6 @@
           <span>{{ 'admin.refreshingCatalog' | transloco }}</span>
         </div>
       }
-
-      <div class="warm">
-        <app-button [disabled]="importBusy()" (click)="warm()">
-          {{ 'admin.warmIcons' | transloco }}
-        </app-button>
-        @if (warming()) {
-          <div
-            class="progress-panel"
-            role="progressbar"
-            aria-live="polite"
-            [attr.aria-label]="'admin.warmingIconsLabel' | transloco"
-            [attr.aria-valuetext]="
-              warmRemaining() === null
-                ? ('admin.warmingIconsStarting' | transloco)
-                : ('admin.warmingIcons' | transloco: { remaining: warmRemaining() })
-            "
-          >
-            <progress aria-hidden="true"></progress>
-            @if (warmRemaining() === null) {
-              <span>{{ 'admin.warmingIconsStarting' | transloco }}</span>
-            } @else {
-              <span>{{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}</span>
-            }
-          </div>
-        } @else if (warmReport(); as report) {
-          <span class="progress">
-            {{ 'admin.warmDone' | transloco: { warmed: report.warmed, failed: report.failed } }}
-          </span>
-        }
-      </div>
-      @if (warmError()) {
-        <app-error-banner [message]="warmError()!.detail || warmError()!.title" />
-      }
     </section>
 
     <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
@@ -244,14 +211,6 @@
                       [attr.aria-label]="'admin.moveDown' | transloco"
                     >
                       <app-icon name="keyboard_arrow_down" size="md" />
-                    </button>
-                    <button
-                      class="icon-act"
-                      data-testid="refresh-favicon"
-                      (click)="refreshFavicon(feed)"
-                      [attr.aria-label]="'admin.refreshFavicon' | transloco"
-                    >
-                      <app-icon name="refresh" size="md" />
                     </button>
                     <app-button
                       size="sm"

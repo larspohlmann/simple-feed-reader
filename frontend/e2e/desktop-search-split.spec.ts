@@ -91,7 +91,6 @@ async function stubReaderData(page: Page): Promise<void> {
             title: 'Desktop search fixture',
             description: null,
             siteUrl: null,
-            faviconUrl: '',
             subscribed: true,
           },
         ],

@@ -9,8 +9,8 @@ function category(overrides: Partial<CatalogCategoryDto> = {}): CatalogCategoryD
     icon: 'memory',
     color: '#3b82f6',
     feeds: [
-      { id: 10, title: 'A', description: null, siteUrl: null, faviconUrl: '/a', subscribed: false },
-      { id: 11, title: 'B', description: null, siteUrl: null, faviconUrl: '/b', subscribed: false },
+      { id: 10, title: 'A', description: null, siteUrl: null, subscribed: false },
+      { id: 11, title: 'B', description: null, siteUrl: null, subscribed: false },
     ],
     ...overrides,
   };
@@ -39,7 +39,6 @@ describe('CatalogSelection', () => {
           title: 'A',
           description: null,
           siteUrl: null,
-          faviconUrl: '/a',
           subscribed: true,
         },
       ],
@@ -65,7 +64,6 @@ describe('CatalogSelection', () => {
           title: 'A',
           description: null,
           siteUrl: null,
-          faviconUrl: '/a',
           subscribed: false,
         },
         {
@@ -73,7 +71,6 @@ describe('CatalogSelection', () => {
           title: 'B',
           description: null,
           siteUrl: null,
-          faviconUrl: '/b',
           subscribed: true,
         },
       ],
@@ -104,7 +101,6 @@ describe('CatalogSelection', () => {
             title: 'Q',
             description: null,
             siteUrl: null,
-            faviconUrl: '/q',
             subscribed: false,
           },
         ],

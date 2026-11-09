@@ -19,7 +19,6 @@ const WITH_FEEDS = {
           title: 'The Verge',
           description: null,
           siteUrl: null,
-          faviconUrl: '/f/10',
           subscribed: false,
         },
       ],
