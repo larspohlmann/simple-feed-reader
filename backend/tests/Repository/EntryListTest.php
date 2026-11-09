@@ -107,11 +107,16 @@ final class EntryListTest extends DbTestCase
         return $repository;
     }
 
-    /**
-     * A repository wired with a small window, so the fan-in probe/window branch can be forced through a handful
-     * of fixture rows instead of DateOrderedPage::DEFAULT_WINDOW_SIZE.
-     */
     private function repositoryWithWindow(int $windowSize): EntryListRepository
+    {
+        return $this->repositoryWith(new DateOrderedPage($windowSize));
+    }
+
+    /**
+     * A repository wired with the given windows, so the fan-in probe/window branches can be forced through a handful
+     * of fixture rows instead of the production sizes.
+     */
+    private function repositoryWith(DateOrderedPage $dateOrderedPage): EntryListRepository
     {
         $container = self::getContainer();
         /** @var ManagerRegistry $registry */
@@ -135,7 +140,7 @@ final class EntryListTest extends DbTestCase
             $termsPredicateBuilder,
             $scope,
             $collapse,
-            new DateOrderedPage($windowSize),
+            $dateOrderedPage,
             $projection,
             $subscriptionScopes,
         );
@@ -1004,7 +1009,7 @@ final class EntryListTest extends DbTestCase
     }
 
     #[DataProvider('bothOrders')]
-    public function testACaughtUpReaderWithAScopeBeyondTheWindowFallsBackToTheHintedWalk(ListOrder $order): void
+    public function testACaughtUpReaderWithAScopeBeyondThePlainScopeLimitKeepsTheHintedWalk(ListOrder $order): void
     {
         foreach (range(10, 13) as $day) {
             $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
@@ -1014,12 +1019,132 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->flush();
         $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2, order: $order);
 
-        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+        $recorded = $this->recordedList($this->repositoryWith(new DateOrderedPage(2, 5, 4)), $query);
 
-        self::assertCount(4, $recorded['queries'], 'a short window probes the scope first');
-        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the scope probe is never hinted');
-        self::assertStringContainsString('LIMIT 1 OFFSET 2', $recorded['queries'][2], 'the probe reads one row');
-        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
+        self::assertCount(5, $recorded['queries'], 'a scope beyond the plain limit skips the wide window');
+        self::assertStringContainsString('LIMIT 1 OFFSET 2', $recorded['queries'][2], 'the scope probe at the window');
+        self::assertStringContainsString('LIMIT 1 OFFSET 4', $recorded['queries'][3], 'the scope probe at the limit');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'the scope probe is never hinted');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][4], 'a big scope stays hinted');
+        self::assertSame(['unread'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testACaughtUpReaderWithinThePlainScopeLimitTriesTheWideWindowThenFallsBackPlain(
+        ListOrder $order,
+    ): void {
+        foreach (range(11, 13) as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $filler = $this->fillerFeed();
+        foreach (range(8, 10) as $day) {
+            $this->entryIn($filler, 'filler-' . $day, $this->dayToward($order, $day));
+        }
+        $this->entryIn($this->feed, 'unread', $this->dayToward($order, 2));
+        $this->entityManager->flush();
+        $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWith(new DateOrderedPage(2, 5, 4)), $query);
+
+        self::assertCount(7, $recorded['queries'], 'a short wide window falls back to a seventh, plain query');
+        self::assertStringContainsString('LIMIT 1 OFFSET 5', $recorded['queries'][4], 'the wide window probe');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][5], 'the wide window is hinted');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][6], 'the fallback is unhinted');
+        self::assertSame(['unread'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testAllViewWithinThePlainScopeLimitTriesTheWideWindowThenFallsBackPlain(ListOrder $order): void
+    {
+        foreach (range(6, 8) as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $filler = $this->fillerFeed();
+        foreach (range(9, 13) as $day) {
+            $this->entryIn($filler, 'filler-' . $day, $this->dayToward($order, $day));
+        }
+        $this->entityManager->flush();
+        $query = new EntryQuery($this->user->requireId(), EntryView::All, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWith(new DateOrderedPage(2, 5, 4)), $query);
+
+        self::assertCount(7, $recorded['queries'], 'the All scope counts read entries, so the wide window is tried');
+        self::assertStringContainsString('LIMIT 1 OFFSET 5', $recorded['queries'][4], 'the wide window probe');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][5], 'the wide window is hinted');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][6], 'the fallback is unhinted');
+        self::assertSame(['read-8', 'read-7'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testACursoredUnreadPageCountsTheWideWindowFromTheCursor(ListOrder $order): void
+    {
+        $head = $this->entryIn($this->feed, 'head', $this->dayToward($order, 20));
+        foreach ([13, 12] as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $filler = $this->fillerFeed();
+        foreach (range(9, 11) as $day) {
+            $this->entryIn($filler, 'filler-' . $day, $this->dayToward($order, $day));
+        }
+        $this->entryIn($this->feed, 'unread', $this->dayToward($order, 2));
+        $this->entityManager->flush();
+        $query = new EntryQuery(
+            $this->user->requireId(),
+            EntryView::Unread,
+            cursor: new EntryCursor($head->getEffectiveDate(), $head->requireId()),
+            limit: 2,
+            order: $order,
+        );
+
+        $recorded = $this->recordedList($this->repositoryWith(new DateOrderedPage(2, 5, 4)), $query);
+
+        self::assertCount(7, $recorded['queries'], 'a short wide window falls back to a seventh, plain query');
+        self::assertStringContainsString('LIMIT 1 OFFSET 5', $recorded['queries'][4], 'the wide window probe');
+        self::assertStringContainsString('effective_date = ?', $recorded['queries'][4], 'it starts at the cursor');
+        self::assertSame(['unread'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testUnreadEntriesJustPastTheWindowComeFromTheHintedWideWindow(ListOrder $order): void
+    {
+        foreach ([13, 12] as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $filler = $this->fillerFeed();
+        foreach ([11, 10] as $day) {
+            $this->entryIn($filler, 'filler-' . $day, $this->dayToward($order, $day));
+        }
+        $this->entryIn($this->feed, 'unread-9', $this->dayToward($order, 9));
+        $this->entryIn($this->feed, 'unread-8', $this->dayToward($order, 8));
+        $this->entityManager->flush();
+        $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWith(new DateOrderedPage(2, 5, 4)), $query);
+
+        self::assertCount(6, $recorded['queries'], 'a full wide window never falls back');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][5], 'the wide window is hinted');
+        self::assertSame(['unread-9', 'unread-8'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testAWideWindowBeyondTheTableWalksTheRestHinted(ListOrder $order): void
+    {
+        foreach (range(11, 13) as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $this->entryIn($this->feed, 'unread', $this->dayToward($order, 2));
+        $this->entityManager->flush();
+        $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWith(new DateOrderedPage(2, 10, 4)), $query);
+
+        self::assertCount(6, $recorded['queries'], 'no wide edge means one hinted walk over the few rows left');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][5]);
         self::assertSame(['unread'], $this->guids($recorded['rows']));
     }
 

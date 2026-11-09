@@ -10,7 +10,7 @@ use Doctrine\ORM\QueryBuilder;
 final readonly class DateOrderedQueries
 {
     /**
-     * @param \Closure(): QueryBuilder $page        the complete page query; called up to twice
+     * @param \Closure(): QueryBuilder $page        the complete page query; called once per attempt
      * @param \Closure(): QueryBuilder $windowProbe an Entry-only effectiveDate query in the page's order, cursored
      * @param \Closure(): QueryBuilder $scopeProbe  in-scope entry ids, read state ignored, duplicates counted
      */
