@@ -31,6 +31,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\Persistence\ManagerRegistry;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class EntryListTest extends DbTestCase
 {
@@ -107,7 +108,7 @@ final class EntryListTest extends DbTestCase
     }
 
     /**
-     * A repository wired with a small window, so the tag-scoped probe/window branch can be forced through a handful
+     * A repository wired with a small window, so the fan-in probe/window branch can be forced through a handful
      * of fixture rows instead of DateOrderedPage::DEFAULT_WINDOW_SIZE.
      */
     private function repositoryWithWindow(int $windowSize): EntryListRepository
@@ -202,6 +203,37 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->flush();
 
         return $feed;
+    }
+
+    private function anotherReadersBusyFeed(ListOrder $order): void
+    {
+        $reader = new User('busy-reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $feed = new Feed('https://busy.example.com/feed.xml');
+        $this->entityManager->persist($reader);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($reader, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
+
+        foreach (range(10, 14) as $day) {
+            $this->entryIn($feed, 'busy-' . $day, $this->dayToward($order, $day));
+        }
+    }
+
+    /** A July date on the 31st-minus-day for oldest-first, so a fixture leads the page in either order. */
+    private function dayToward(ListOrder $order, int $day): string
+    {
+        $dayOfMonth = $order === ListOrder::NewestFirst ? $day : 31 - $day;
+
+        return sprintf('2026-07-%02dT00:00:00Z', $dayOfMonth);
+    }
+
+    private function newcomer(): User
+    {
+        $newcomer = new User('newcomer@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($newcomer);
+        $this->entityManager->flush();
+
+        return $newcomer;
     }
 
     /**
@@ -887,7 +919,29 @@ final class EntryListTest extends DbTestCase
         return $state;
     }
 
-    public function testAllItemsScopeIssuesNoProbe(): void
+    /**
+     * @return iterable<string, array{EntryView, ListOrder}>
+     */
+    public static function chronologicalViewsInBothOrders(): iterable
+    {
+        foreach ([EntryView::All, EntryView::Unread] as $view) {
+            foreach (ListOrder::cases() as $order) {
+                yield $view->value . ', ' . $order->value => [$view, $order];
+            }
+        }
+    }
+
+    /**
+     * @return iterable<string, array{ListOrder}>
+     */
+    public static function bothOrders(): iterable
+    {
+        foreach (ListOrder::cases() as $order) {
+            yield $order->value => [$order];
+        }
+    }
+
+    public function testAnAllViewBelowTheWindowSizeRunsTheProbeThenOneHintedPage(): void
     {
         $this->entry('a', '2026-07-05T00:00:00Z');
 
@@ -896,8 +950,124 @@ final class EntryListTest extends DbTestCase
             new EntryQuery($this->user->requireId(), EntryView::All),
         )['queries'];
 
-        self::assertCount(1, $queries, 'a dense fan-in view must run the page query alone, no probe');
-        self::assertStringContainsString('JOIN_PREFIX', $queries[0]);
+        self::assertCount(2, $queries, 'a null probe must run exactly one hinted page query');
+        self::assertStringNotContainsString('JOIN_PREFIX', $queries[0], 'the probe itself is never hinted');
+        self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
+    }
+
+    #[DataProvider('chronologicalViewsInBothOrders')]
+    public function testADenseReaderStaysHintedInsideTheWindow(EntryView $view, ListOrder $order): void
+    {
+        $this->entryIn($this->feed, 'own-1', $this->dayToward($order, 10));
+        $this->entryIn($this->feed, 'own-2', $this->dayToward($order, 9));
+        $this->entryIn($this->fillerFeed(), 'filler', $this->dayToward($order, 8));
+        $query = new EntryQuery($this->user->requireId(), $view, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][1]);
+        self::assertSame(['own-1', 'own-2'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('chronologicalViewsInBothOrders')]
+    public function testASparseReaderNextToABusyFeedFallsBackToThePlainUnhintedQuery(
+        EntryView $view,
+        ListOrder $order,
+    ): void {
+        $this->anotherReadersBusyFeed($order);
+        $this->entryIn($this->feed, 'own-1', $this->dayToward($order, 5));
+        $this->entryIn($this->feed, 'own-2', $this->dayToward($order, 4));
+        $query = new EntryQuery($this->user->requireId(), $view, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(4, $recorded['queries'], 'a short window over a sparse scope falls back plain');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][1], 'the windowed attempt is hinted');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'the fallback is unhinted');
+        self::assertSame(['own-1', 'own-2'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('chronologicalViewsInBothOrders')]
+    public function testAReaderWithoutSubscriptionsGetsTheUnhintedPlanNextToABusyFeed(
+        EntryView $view,
+        ListOrder $order,
+    ): void {
+        $this->anotherReadersBusyFeed($order);
+        $query = new EntryQuery($this->newcomer()->requireId(), $view, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(4, $recorded['queries'], 'an empty window over an empty scope falls back plain');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'the fallback is unhinted');
+        self::assertSame([], $recorded['rows']);
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testACaughtUpReaderWithAScopeBeyondTheWindowFallsBackToTheHintedWalk(ListOrder $order): void
+    {
+        foreach (range(10, 13) as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $this->entryIn($this->feed, 'unread', $this->dayToward($order, 2));
+        $this->entityManager->flush();
+        $query = new EntryQuery($this->user->requireId(), EntryView::Unread, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(4, $recorded['queries'], 'a short window probes the scope first');
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'the scope probe is never hinted');
+        self::assertStringContainsString('LIMIT 1 OFFSET 2', $recorded['queries'][2], 'the probe reads one row');
+        self::assertStringContainsString('JOIN_PREFIX', $recorded['queries'][3], 'a big scope stays hinted');
+        self::assertSame(['unread'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testAFeedExcludedFromAllItemsDoesNotCountTowardTheScope(ListOrder $order): void
+    {
+        [$excludedFeed, $excluded] = $this->secondSubscription('https://excluded.example.com/feed.xml');
+        $excluded->setIncludeInAllItems(false);
+        $this->entityManager->flush();
+        foreach (range(10, 14) as $day) {
+            $this->entryIn($excludedFeed, 'excluded-' . $day, $this->dayToward($order, $day));
+        }
+        $this->entryIn($this->feed, 'own-1', $this->dayToward($order, 5));
+        $query = new EntryQuery($this->user->requireId(), EntryView::All, limit: 2, order: $order);
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(4, $recorded['queries']);
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][3], 'only the All scope is counted');
+        self::assertSame(['own-1'], $this->guids($recorded['rows']));
+    }
+
+    #[DataProvider('bothOrders')]
+    public function testADenseFeedGroupWithAShortWindowFallsBackPlainWithoutAScopeProbe(ListOrder $order): void
+    {
+        foreach (range(10, 13) as $day) {
+            $read = $this->entryIn($this->feed, 'read-' . $day, $this->dayToward($order, $day));
+            $this->entityManager->persist($this->hidden($read));
+        }
+        $this->entryIn($this->feed, 'unread', $this->dayToward($order, 2));
+        $this->entityManager->flush();
+        $query = new EntryQuery(
+            $this->user->requireId(),
+            EntryView::Unread,
+            limit: 2,
+            order: $order,
+            feedGroup: FeedGroup::Feeds,
+        );
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        $listQueries = array_values(array_filter(
+            $recorded['queries'],
+            static fn (string $sql): bool => str_contains($sql, 'FROM entry'),
+        ));
+        self::assertCount(3, $listQueries, 'a narrowed scope falls back without probing its size');
+        self::assertStringNotContainsString('JOIN_PREFIX', $listQueries[2], 'a narrowed scope falls back plain');
+        self::assertSame(['unread'], $this->guids($recorded['rows']));
     }
 
     public function testFewerThanWindowSizeRowsBeyondCursorRunsASingleHintedQuery(): void
@@ -1139,6 +1309,7 @@ final class EntryListTest extends DbTestCase
             $recorded['queries'],
             'the windowed rows the pivot admits are all read, so it must fall back',
         );
+        self::assertStringNotContainsString('JOIN_PREFIX', $recorded['queries'][2], 'a narrowed tag falls back plain');
 
         $rows = $recorded['rows'];
         self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(

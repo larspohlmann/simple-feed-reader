@@ -8,6 +8,7 @@ use App\Enum\EntryView;
 use App\Enum\FeedGroup;
 use App\Enum\ListOrder;
 use App\Enum\SocialNetwork;
+use App\Pagination\EntryCursor;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\NetworkScope;
@@ -67,14 +68,11 @@ final class EntryQueryTest extends TestCase
         self::assertTrue((new EntryQuery(1, EntryView::Unread, tagId: 3))->isDateOrderedFanIn());
     }
 
-    public function testATagOrANetworkNarrowsTheFanIn(): void
+    public function testANetworkScopedChronologicalViewStillFansIn(): void
     {
-        self::assertTrue((new EntryQuery(1, EntryView::All, tagId: 3))->isNarrowedFanIn());
         $query = new EntryQuery(1, EntryView::Unread, networkScope: NetworkScope::whole(SocialNetwork::Bluesky));
 
         self::assertTrue($query->isDateOrderedFanIn());
-        self::assertTrue($query->isNarrowedFanIn());
-        self::assertFalse((new EntryQuery(1, EntryView::All))->isNarrowedFanIn());
     }
 
     public function testASingleSubscriptionScopeNeverFansIn(): void
@@ -106,5 +104,37 @@ final class EntryQueryTest extends TestCase
         $all = (new EntryQuery(1))->ordering();
         self::assertSame(EntryListSort::PublishedDate, $all->sort);
         self::assertSame(ListOrder::NewestFirst, $all->order);
+    }
+
+    public function testTheAllViewKeepsEveryOtherConstructorField(): void
+    {
+        $unread = new EntryQuery(
+            1,
+            EntryView::Unread,
+            5,
+            3,
+            new EntryCursor(new \DateTimeImmutable('2026-07-01T00:00:00Z'), 9),
+            20,
+            ListOrder::OldestFirst,
+            NetworkScope::whole(SocialNetwork::Bluesky),
+            FeedGroup::Tags,
+        );
+
+        $allView = $unread->inAllView();
+
+        self::assertSame(EntryView::All, $allView->view);
+        $constructor = new \ReflectionMethod(EntryQuery::class, '__construct');
+        foreach ($constructor->getParameters() as $parameter) {
+            $name = $parameter->getName();
+            if ($name === 'view') {
+                continue;
+            }
+            $field = new \ReflectionProperty(EntryQuery::class, $name);
+            if ($parameter->isDefaultValueAvailable()) {
+                $default = $parameter->getDefaultValue();
+                self::assertNotSame($default, $field->getValue($unread), 'the fixture sets ' . $name);
+            }
+            self::assertSame($field->getValue($unread), $field->getValue($allView), $name);
+        }
     }
 }
