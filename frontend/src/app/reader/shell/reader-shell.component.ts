@@ -43,7 +43,7 @@ import { VersionService } from '../../core/version.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
-import { isDirectSearch, searchTermOf, trendingWindowOf } from '../query/query';
+import { searchTermOf, trendingWindowOf } from '../query/query';
 import { entryChangeParams } from '../query/link-param';
 import { ListOrderService } from '../list/list-order.service';
 import { ListPreferences } from '../list/list-preferences.service';
@@ -193,7 +193,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   readonly searchPane = computed(
-    () => this.screen.isWide() && isDirectSearch(this.selection()) && this.layout.mode() === 'list',
+    () =>
+      this.screen.isWide() && this.selection().kind === 'search' && this.layout.mode() === 'list',
   );
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
   /** An article or link card filling the whole main area (not the split pane). */

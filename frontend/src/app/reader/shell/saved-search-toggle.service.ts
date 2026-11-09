@@ -4,7 +4,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { isDirectSearch, visibleSearchTerm } from '../query/query';
+import { visibleSearchTerm } from '../query/query';
 import { isPhraseTerm, isWholeWordTerm } from '../query/search-term';
 import { SavedSearchDto } from '../models';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -27,7 +27,7 @@ export class SavedSearchToggle {
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip
    *  the gate the way #1118 dropped this one. */
-  readonly canToggle = computed(() => isDirectSearch(this.selection()) || this.viewing());
+  readonly canToggle = computed(() => this.selection().kind === 'search' || this.viewing());
 
   /** The current search decoded into the pair a saved search stores: the
    *  visible term and the whole-word flag. Null outside a search — the one

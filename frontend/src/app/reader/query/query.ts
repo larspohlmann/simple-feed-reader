@@ -104,10 +104,6 @@ const IDENTITY_KEY: BySelectionKind<string> = {
   search: (selection) => selection.term,
 };
 
-export function isDirectSearch(selection: Selection): boolean {
-  return selection.kind === 'search';
-}
-
 /** `Selection.term` with the trailing whole-word-match space stripped for
  *  display. The space must reach the server (`EntryQuery.q`) and stay in
  *  `Selection.term` (part of identity, see `sameSelection`) — this is only
