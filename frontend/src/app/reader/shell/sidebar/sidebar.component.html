@@ -16,7 +16,7 @@
     <div class="search-card">
       <app-search-field
         class="inset"
-        [term]="selection().term ?? ''"
+        [term]="searchTerm()"
         [populateTerm]="selection().kind !== 'saved-search'"
         [loading]="searchLoading()"
         (search)="search.emit($event)"
@@ -249,7 +249,7 @@
             [glyphColor]="node.tag.color"
             [glyphSize]="depth > 0 ? 'dense' : 'md'"
             [count]="node.unreadCount"
-            [active]="selection().kind === 'tag' && selection().id === node.tag.id"
+            [active]="activeTagId() === node.tag.id"
             [expanded]="open"
             [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
             (toggled)="toggle(node.tag.id)"

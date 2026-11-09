@@ -104,6 +104,21 @@ export function withUnreadPreference(selection: Selection, unreadOnly: boolean):
   return hasUnreadFilter(selection) ? { ...selection, unread: unreadOnly } : selection;
 }
 
+/** Whether the list shows only unread posts; never true for a list without the switch. */
+export function isUnreadOnly(selection: Selection): boolean {
+  return hasUnreadFilter(selection) && selection.unread;
+}
+
+/** The search on screen, trailing whole-word space included; empty outside a search. */
+export function searchTermOf(selection: Selection): string {
+  return selection.kind === 'search' ? (selection.term ?? '') : '';
+}
+
+/** The window Trending shows, or null on every other list. */
+export function trendingWindowOf(selection: Selection): TrendingWindow | null {
+  return selection.kind === 'trending' ? (selection.window ?? null) : null;
+}
+
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
  *  and Trending lists have no date order to reverse. */
 export function hasListOrder(selection: Selection): boolean {

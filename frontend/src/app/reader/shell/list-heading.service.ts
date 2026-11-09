@@ -6,7 +6,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
-import { Selection, visibleSearchTerm } from '../query/query';
+import { Selection, searchTermOf, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
 import { isUnrenamedHome } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
@@ -235,7 +235,7 @@ export class ListHeading {
   });
 
   private readonly searchTerm = computed(() =>
-    visibleSearchTerm(this.routeState.selection().term ?? ''),
+    visibleSearchTerm(searchTermOf(this.routeState.selection())),
   );
 
   /** A post matching two searches counts twice, so the heading matches the sidebar row. */

@@ -43,7 +43,7 @@ import { SidebarViewsComponent } from './sidebar-views.component';
 import { TagNode, tagNodesById } from '../../state/subscription-derivations';
 import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
-import { Selection, selectionQueryParams } from '../../query/query';
+import { Selection, searchTermOf, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { TrendingUnopened } from '../../trending/trending.models';
@@ -154,7 +154,15 @@ export class SidebarComponent {
    *  restoring plain nav-row height/padding when absent (#636). */
   protected readonly showDigestToggles = computed(() => this.mailEnabled() && this.digestEnabled());
   readonly selection = input.required<Selection>();
-  protected readonly activeGroup = computed(() => this.selection().group ?? null);
+  protected readonly activeGroup = computed(() => {
+    const selection = this.selection();
+    return selection.kind === 'group' ? selection.group : null;
+  });
+  protected readonly searchTerm = computed(() => searchTermOf(this.selection()));
+  protected readonly activeTagId = computed(() => {
+    const selection = this.selection();
+    return selection.kind === 'tag' ? selection.id : null;
+  });
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
    *  the subscriptions store's own loading flag; conflating the two would show
@@ -234,9 +242,9 @@ export class SidebarComponent {
   /** The active tag's id followed by its ancestors' ids; empty while the list is not a tag's. */
   private readonly activeTagPath = computed(
     () => {
-      const selection = this.selection();
-      if (selection.kind !== 'tag' || selection.id === null) return [];
-      return [selection.id, ...this.tagsStore.hierarchy().ancestorIdsOf(selection.id)];
+      const tagId = this.activeTagId();
+      if (tagId === null) return [];
+      return [tagId, ...this.tagsStore.hierarchy().ancestorIdsOf(tagId)];
     },
     { equal: sameIds },
   );

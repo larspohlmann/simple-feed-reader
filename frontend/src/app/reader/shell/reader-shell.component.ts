@@ -43,7 +43,7 @@ import { VersionService } from '../../core/version.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
-import { isDirectSearch } from '../query/query';
+import { isDirectSearch, searchTermOf, trendingWindowOf } from '../query/query';
 import { entryChangeParams } from '../query/link-param';
 import { ListOrderService } from '../list/list-order.service';
 import { ListPreferences } from '../list/list-preferences.service';
@@ -207,8 +207,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   );
   readonly activeTagId = computed(() => {
     const selection = this.selection();
-    return selection.kind === 'tag' ? (selection.id ?? null) : null;
+    return selection.kind === 'tag' ? selection.id : null;
   });
+  readonly searchTerm = computed(() => searchTermOf(this.selection()));
+  readonly trendingWindow = computed(() => trendingWindowOf(this.selection()));
   readonly allItemsActive = computed(() => this.selection().kind === 'all');
 
   readonly headerHeight = signal(0);

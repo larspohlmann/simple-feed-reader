@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { AuthService } from '../../core/auth/auth.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
+import { isUnreadOnly } from '../query/query';
 import { UnreadFilterService } from './unread-filter.service';
 import { TrendingWindowService } from '../trending/trending-window.service';
 
@@ -45,7 +46,7 @@ describe('ListPreferences', () => {
     it("opens on all posts, whatever the account's filter says", () => {
       TestBed.inject(UnreadFilterService).set(true);
 
-      expect(TestBed.inject(ListPreferences).appliedTo(search).unread).toBe(false);
+      expect(isUnreadOnly(TestBed.inject(ListPreferences).appliedTo(search))).toBe(false);
     });
 
     it("keeps a flip to the search and away from the account's filter", () => {
@@ -53,9 +54,11 @@ describe('ListPreferences', () => {
 
       preferences.setUnreadOnly(search, true);
 
-      expect(preferences.appliedTo(search).unread).toBe(true);
+      expect(isUnreadOnly(preferences.appliedTo(search))).toBe(true);
       expect(TestBed.inject(UnreadFilterService).unreadOnly()).toBe(false);
-      expect(preferences.appliedTo({ kind: 'all', id: null, unread: false }).unread).toBe(false);
+      expect(isUnreadOnly(preferences.appliedTo({ kind: 'all', id: null, unread: false }))).toBe(
+        false,
+      );
     });
 
     it('forgets the flip once the search ends', () => {
@@ -64,7 +67,7 @@ describe('ListPreferences', () => {
 
       preferences.endSearch();
 
-      expect(preferences.appliedTo(search).unread).toBe(false);
+      expect(isUnreadOnly(preferences.appliedTo(search))).toBe(false);
     });
 
     it('reports a flip inside a search as a preference change, and its end as none', () => {

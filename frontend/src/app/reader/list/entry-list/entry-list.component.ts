@@ -28,7 +28,7 @@ import { ListHeaderComponent, TitleCount } from '../list-header/list-header.comp
 import { ListEmptyStateComponent } from '../list-empty-state/list-empty-state.component';
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
-import { Selection, canScopedRefresh, offersMarkAboveRead } from '../../query/query';
+import { Selection, canScopedRefresh, offersMarkAboveRead, searchTermOf } from '../../query/query';
 import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
@@ -186,7 +186,7 @@ export class EntryListComponent implements OnDestroy {
    *  none (the no-engine LIKE fallback). Empty outside a search either way. */
   readonly searchTerms = computed(() => {
     const matched = this.matchedWords();
-    return matched.length > 0 ? matched : searchWords(this.selection().term ?? '');
+    return matched.length > 0 ? matched : searchWords(searchTermOf(this.selection()));
   });
 
   /** Search rows dim their excerpt a shade — the marked term stays the row's

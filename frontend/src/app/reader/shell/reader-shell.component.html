@@ -4,7 +4,7 @@
   [activeTagId]="activeTagId()"
   [allItemsActive]="allItemsActive()"
   [searchLoading]="heading.searching()"
-  [searchTerm]="selection().term ?? ''"
+  [searchTerm]="searchTerm()"
   [populateSearchTerm]="!savedSearch.viewing()"
   [drawerOpen]="sidebarOpen()"
   [class.hidden]="headerHidden()"
@@ -316,7 +316,7 @@
 </ng-template>
 
 <ng-template #headerActions>
-  @if (selection().window; as window) {
+  @if (trendingWindow(); as window) {
     <app-trending-window-switch [window]="window" />
   }
   @if (savedSearch.canToggle()) {

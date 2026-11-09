@@ -18,21 +18,27 @@ import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.
 import { ListOrder, TagDto } from '../../models';
 import {
   Selection,
+  SelectionKind,
   canScopedRefresh,
   hasListOrder,
   hasUnreadFilter,
   isSingleStreamView,
+  isUnreadOnly,
   listOrderOf,
 } from '../../query/query';
 import { isPhraseTerm, isWholeWordTerm } from '../../query/search-term';
 import { relativeTime, relativeTimeUntil } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 
-/** The heading icon for each fixed view, matching its sidebar row's glyph so the
- *  list a reader lands in reads as the row they clicked (#411). Tag and
- *  subscription are absent — their heading already carries a glyph/favicon. */
-const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
+/** The heading icon for each list, matching its sidebar row's glyph so the list a
+ *  reader lands in reads as the row they clicked (#411); null where the heading
+ *  already leads with a tag glyph, favicon or network logo. */
+const FIXED_VIEW_ICON: Record<SelectionKind, string | null> = {
   all: 'inbox',
+  tag: null,
+  subscription: null,
+  network: null,
+  group: null,
   favorites: 'star',
   kept: 'bookmark',
   shared: 'share',
@@ -40,6 +46,7 @@ const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
   'for-you': 'auto_awesome',
   trending: 'trending_up',
   'saved-searches': 'saved_search',
+  'saved-search': null,
   search: 'search',
 };
 
@@ -106,6 +113,13 @@ export class ListHeaderComponent {
    *  question when it builds the list query. */
   readonly hasUnreadFilter = computed(() => hasUnreadFilter(this.selection()));
 
+  protected readonly unreadOnly = computed(() => isUnreadOnly(this.selection()));
+
+  protected readonly titleNetwork = computed(() => {
+    const selection = this.selection();
+    return selection.kind === 'network' ? selection.network : null;
+  });
+
   protected readonly hasListOrder = computed(() => hasListOrder(this.selection()));
   protected readonly oldestFirst = computed(() => listOrderOf(this.selection()) === 'oldest');
 
@@ -137,7 +151,7 @@ export class ListHeaderComponent {
 
   /** The heading's leading icon for a fixed view, or null for a tag or a
    *  subscription (their glyph and favicon already lead the heading) (#411). */
-  protected readonly titleIcon = computed(() => FIXED_VIEW_ICON[this.selection().kind] ?? null);
+  protected readonly titleIcon = computed(() => FIXED_VIEW_ICON[this.selection().kind]);
 
   /** A localised "last refreshed 5 min ago" label for a single-feed selection
    *  or the for-you list, or null when it doesn't apply (neither, or never

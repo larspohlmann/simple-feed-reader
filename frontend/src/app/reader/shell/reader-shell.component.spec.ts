@@ -43,7 +43,7 @@ import { SubscriptionRows } from '../state/subscription-rows';
 import { EntriesStore } from '../state/entries.store';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
-import { Selection } from '../query/query';
+import { Selection, isUnreadOnly } from '../query/query';
 import { UnreadFilterService } from '../list/unread-filter.service';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from '../state/refresh.service';
@@ -4072,7 +4072,7 @@ describe('ReaderShellComponent', () => {
         (request) => request.url === 'https://api.test/api/entries/saved-searches/4',
       );
       expect(saved.request.params.get('unread')).toBe('1');
-      expect(fixture.componentInstance.selection().unread).toBe(true);
+      expect(isUnreadOnly(fixture.componentInstance.selection())).toBe(true);
     });
 
     it('selects the single saved search by the id in its slug', () => {
@@ -4225,7 +4225,7 @@ describe('ReaderShellComponent', () => {
       qp.next(convertToParamMap({ unread: '1' }));
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.selection().unread).toBe(false);
+      expect(isUnreadOnly(fixture.componentInstance.selection())).toBe(false);
       ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
     });
   });

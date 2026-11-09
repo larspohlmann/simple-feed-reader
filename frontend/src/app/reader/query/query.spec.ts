@@ -6,11 +6,14 @@ import {
   listOrderOf,
   listSelectionFrom,
   hasUnreadFilter,
+  isUnreadOnly,
   isSingleStreamView,
   offersMarkAboveRead,
   sameSelection,
   selectionFromParams,
+  searchTermOf,
   selectionQueryParams,
+  trendingWindowOf,
   visibleSearchTerm,
   withListOrder,
   withUnreadPreference,
@@ -41,10 +44,10 @@ describe('selectionFromParams', () => {
     expect(entryId).toBeNull();
   });
   it('ignores an unread parameter — the filter lives in localStorage (#1126)', () => {
-    expect(selectionFromParams(pm({ unread: '1' }), ON).selection.unread).toBe(false);
-    expect(selectionFromParams(pm({ view: 'for-you', unread: '1' }), ON).selection.unread).toBe(
-      false,
-    );
+    expect(isUnreadOnly(selectionFromParams(pm({ unread: '1' }), ON).selection)).toBe(false);
+    expect(
+      isUnreadOnly(selectionFromParams(pm({ view: 'for-you', unread: '1' }), ON).selection),
+    ).toBe(false);
   });
   it('reads a subscription selection and open entry', () => {
     const { selection, entryId } = selectionFromParams(pm({ subscription: '7', entry: '42' }), ON);
@@ -645,7 +648,7 @@ describe('the combined saved-searches view', () => {
       ON,
     );
 
-    expect(selection.unread).toBe(false);
+    expect(isUnreadOnly(selection)).toBe(false);
   });
 
   it('offers the unread switch', () => {
@@ -729,7 +732,7 @@ describe('selectionFromRoute', () => {
       convertToParamMap({ unread: '1' }),
       ON,
     );
-    expect(selection.unread).toBe(false);
+    expect(isUnreadOnly(selection)).toBe(false);
   });
 
   it('falls back to query-param selection when no saved-search segment is present', () => {
@@ -881,5 +884,25 @@ describe('the Trending view (#2017)', () => {
 
   it('never files its leads under one source', () => {
     expect(isSingleStreamView(trending)).toBe(true);
+  });
+});
+
+describe('the selection readers (#2107)', () => {
+  it('reads the unread filter only where the list offers it', () => {
+    expect(isUnreadOnly({ kind: 'tag', id: 3, unread: true })).toBe(true);
+    expect(isUnreadOnly({ kind: 'tag', id: 3, unread: false })).toBe(false);
+    expect(isUnreadOnly({ kind: 'favorites', id: null, unread: false })).toBe(false);
+  });
+
+  it('reads the search term with its whole-word space, empty outside a search', () => {
+    expect(searchTermOf({ kind: 'search', id: null, unread: false, term: 'punk ' })).toBe('punk ');
+    expect(searchTermOf({ kind: 'all', id: null, unread: false })).toBe('');
+  });
+
+  it("reads Trending's window, null on any other list", () => {
+    expect(trendingWindowOf({ kind: 'trending', id: null, unread: false, window: 'week' })).toBe(
+      'week',
+    );
+    expect(trendingWindowOf({ kind: 'all', id: null, unread: false })).toBeNull();
   });
 });
