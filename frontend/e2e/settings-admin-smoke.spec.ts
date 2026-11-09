@@ -64,16 +64,24 @@ function tagGroups(page: Page) {
     .filter({ has: page.getByRole('button', { name: 'Edit tag' }) });
 }
 
+/** A parent's group contains its children's groups, so the innermost match is
+ *  the tag's own group. */
 function tagGroupByName(page: Page, name: string) {
   return tagGroups(page)
     .filter({ has: page.locator('.head .name', { hasText: name }) })
-    .first();
+    .last();
 }
 
-async function createTag(page: Page, name: string): Promise<void> {
+/** The group's own header, where its actions live, never a nested child's. */
+function tagHead(page: Page, name: string) {
+  return tagGroupByName(page, name).locator('.head').first();
+}
+
+async function createTag(page: Page, name: string, parent?: string): Promise<void> {
   await page.getByRole('button', { name: 'New tag' }).click();
   const dialog = page.getByRole('dialog', { name: 'New tag' });
   await dialog.locator('#tag-name').fill(name);
+  if (parent) await dialog.locator('#tag-parent').selectOption({ label: parent });
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(dialog).toBeHidden();
   await expect(tagGroupByName(page, name)).toBeVisible();
@@ -82,8 +90,7 @@ async function createTag(page: Page, name: string): Promise<void> {
 /** Renames one owned tag through the shared tag dialog — the one editor for a
  *  tag now that the Tags page is gone (#714). */
 async function renameTag(page: Page, from: string, to: string): Promise<void> {
-  const group = tagGroupByName(page, from);
-  await group.getByRole('button', { name: 'Edit tag' }).click();
+  await tagHead(page, from).getByRole('button', { name: 'Edit tag' }).click();
   const dialog = page.getByRole('dialog', { name: 'Edit tag' });
   await dialog.locator('#tag-name').fill(to);
   await dialog.getByRole('button', { name: 'Save' }).click();
@@ -109,7 +116,7 @@ async function moveTagDown(page: Page, name: string): Promise<void> {
       new URL(candidate.url()).pathname.endsWith('/api/tags/reorder') &&
       candidate.ok(),
   );
-  await tagGroupByName(page, name).locator('[data-test="tag-down"]').click();
+  await tagHead(page, name).locator('[data-test="tag-down"]').click();
   await response;
 }
 
@@ -121,7 +128,7 @@ async function moveTagDown(page: Page, name: string): Promise<void> {
 async function deleteTagByName(page: Page, name: string): Promise<void> {
   const group = tagGroupByName(page, name);
   if ((await group.count()) === 0) return;
-  await group.getByRole('button', { name: 'Delete tag' }).click();
+  await tagHead(page, name).getByRole('button', { name: 'Delete tag' }).click();
   const confirmDialog = page.getByRole('alertdialog');
   const response = page.waitForResponse(
     (candidate) =>
@@ -136,6 +143,9 @@ async function deleteTagByName(page: Page, name: string): Promise<void> {
 }
 
 test('a tag can be reordered and renamed from Organise', async ({ page }) => {
+  // Thirteen UI round trips, each reloading the tag list: about 14 s alone and
+  // up to 27 s beside other workers, too close to the 30 s default (#2134).
+  test.slow();
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
@@ -145,17 +155,19 @@ test('a tag can be reordered and renamed from Organise', async ({ page }) => {
   // rather than assuming groups exist yet.
   await expect(page.locator('app-skeleton')).toHaveCount(0);
 
-  // Always create the two tags this test manipulates. Existing account tags
-  // belong to other tests or the developer; their count and order are not test
-  // data and must not decide which records this flow edits.
+  // The two tags live under a parent this test owns: a reorder must list every
+  // sibling, and parallel specs add and remove root tags on this shared admin,
+  // which would make the page's root list stale and the reorder a 4xx (#2134).
   const run = Date.now();
+  const parentName = `E2E reorder parent ${run}`;
   const firstName = `E2E reorder tag ${run}-0`;
   const secondName = `E2E reorder tag ${run}-1`;
   const renamedTo = `E2E renamed ${run}`;
 
   try {
-    await createTag(page, firstName);
-    await createTag(page, secondName);
+    await createTag(page, parentName);
+    await createTag(page, firstName, parentName);
+    await createTag(page, secondName, parentName);
 
     // Reorder through the header's own arrow, not a drag: the arrows are the
     // keyboard-reachable path and they exercise the same reorder request.
@@ -181,7 +193,7 @@ test('a tag can be reordered and renamed from Organise', async ({ page }) => {
     await expectTagBefore(page, firstName, secondName);
   } finally {
     let cleanupFailure: unknown;
-    for (const name of [firstName, secondName, renamedTo]) {
+    for (const name of [firstName, secondName, renamedTo, parentName]) {
       try {
         await deleteTagByName(page, name);
       } catch (error) {
