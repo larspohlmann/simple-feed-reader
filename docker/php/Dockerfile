@@ -21,6 +21,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY docker/php/conf.d/app.ini /usr/local/etc/php/conf.d/app.ini
 COPY docker/php/conf.d/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+COPY docker/php/fpm/pool-dev.conf /usr/local/etc/php-fpm.d/zz-pool.conf
 
 WORKDIR /app
 
@@ -36,6 +37,7 @@ RUN install-php-extensions pdo_mysql intl opcache zip gd \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY docker/php/conf.d/prod.ini /usr/local/etc/php/conf.d/app.ini
+COPY docker/php/fpm/pool-prod.conf /usr/local/etc/php-fpm.d/zz-pool.conf
 
 WORKDIR /app
 

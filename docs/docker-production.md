@@ -75,6 +75,8 @@ values only you know:
   The figures are measured on an idle, healthy stack holding a real account of
   107 feeds and 17,427 articles. S and M do not grow with the number of
   articles; L adds roughly 45 MB per 1,000 articles on top of its base.
+  Under a burst of requests the php container starts up to 10 PHP workers of
+  about 70–80 MB each, so leave about 0.7 GB of headroom above these figures.
 
   Two more keys decide how much you are asked. **Q**, **the default**, is the
   quick install: the S stack, and no other question at all, which is what the
