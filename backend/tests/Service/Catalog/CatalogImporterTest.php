@@ -83,19 +83,12 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(0, $result->feedsRemoved);
     }
 
-    public function testReimportingUpdatesInPlaceAndKeepsTheCachedFavicon(): void
+    public function testReimportingUpdatesInPlace(): void
     {
         $document = $this->document([
             ['title' => 'The Verge', 'url' => 'https://www.theverge.com/rss/index.xml'],
         ]);
         $this->importer()->import($document, CatalogImportMode::Merge);
-
-        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
-            'url' => 'https://www.theverge.com/rss/index.xml',
-        ]);
-        self::assertNotNull($feed);
-        $feed->storeFavicon('https://www.theverge.com/favicon.ico', 'PNGBYTES', 'image/png', new \DateTimeImmutable());
-        $this->entityManager->flush();
 
         $renamed = $this->document([
             ['title' => 'The Verge (renamed)', 'url' => 'https://www.theverge.com/rss/index.xml'],
@@ -111,7 +104,6 @@ final class CatalogImporterTest extends DbTestCase
         ]);
         self::assertNotNull($reloaded);
         self::assertSame('The Verge (renamed)', $reloaded->getTitle());
-        self::assertSame('PNGBYTES', $reloaded->getFaviconBytes(), 'a surviving URL keeps its icon');
     }
 
     public function testMergeLeavesRowsTheDocumentDoesNotMention(): void

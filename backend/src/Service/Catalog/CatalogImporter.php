@@ -14,7 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Applies a validated catalog document in one transaction, matching rows by natural key (category key, feed URL) so
- * a surviving feed keeps its cached favicon. Locked rows belong to the admin: never overwritten, never removed.
+ * a surviving feed is updated in place. Locked rows belong to the admin: never overwritten, never removed.
  */
 final readonly class CatalogImporter
 {

@@ -6,13 +6,10 @@ namespace App\Entity;
 
 use App\Enum\SourceFormat;
 use App\Repository\CatalogFeedRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
  * One onboarding-catalog suggestion. Its URL is a verified direct feed URL, so subscribing skips discovery.
- * The favicon bytes live on the row, backed up with the catalog and needing no writable var/ on Strato;
- * only app:catalog:warm-favicons fills them.
  */
 #[ORM\Entity(repositoryClass: CatalogFeedRepository::class)]
 #[ORM\Table(name: 'catalog_feed')]
@@ -59,21 +56,6 @@ final class CatalogFeed implements PositionedInterface
      */
     #[ORM\Column(options: ['default' => false])]
     private bool $locked = false;
-
-    #[ORM\Column(length: 750, nullable: true)]
-    private ?string $faviconSourceUrl = null;
-
-    #[ORM\Column(type: Types::BLOB, nullable: true)]
-    private mixed $faviconData = null;
-
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $faviconContentType = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $faviconFetchedAt = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $faviconFailedAt = null;
 
     public function __construct(CatalogCategory $category, string $title, string $url)
     {
@@ -175,61 +157,5 @@ final class CatalogFeed implements PositionedInterface
     public function setLocked(bool $locked): void
     {
         $this->locked = $locked;
-    }
-
-    public function getFaviconSourceUrl(): ?string
-    {
-        return $this->faviconSourceUrl;
-    }
-
-    /**
-     * Doctrine hands back a stream for a BLOB column; callers want bytes. Null
-     * means "no icon cached", which is what makes the endpoint serve a monogram.
-     */
-    public function getFaviconBytes(): ?string
-    {
-        if (null === $this->faviconData) {
-            return null;
-        }
-        if (\is_resource($this->faviconData)) {
-            rewind($this->faviconData);
-
-            return (string) stream_get_contents($this->faviconData);
-        }
-
-        return \is_string($this->faviconData) ? $this->faviconData : null;
-    }
-
-    public function getFaviconContentType(): ?string
-    {
-        return $this->faviconContentType;
-    }
-
-    public function getFaviconFetchedAt(): ?\DateTimeImmutable
-    {
-        return $this->faviconFetchedAt;
-    }
-
-    public function getFaviconFailedAt(): ?\DateTimeImmutable
-    {
-        return $this->faviconFailedAt;
-    }
-
-    public function storeFavicon(
-        string $sourceUrl,
-        string $bytes,
-        string $contentType,
-        \DateTimeImmutable $fetchedAt,
-    ): void {
-        $this->faviconSourceUrl = $sourceUrl;
-        $this->faviconData = $bytes;
-        $this->faviconContentType = $contentType;
-        $this->faviconFetchedAt = $fetchedAt;
-        $this->faviconFailedAt = null;
-    }
-
-    public function recordFaviconFailure(\DateTimeImmutable $failedAt): void
-    {
-        $this->faviconFailedAt = $failedAt;
     }
 }

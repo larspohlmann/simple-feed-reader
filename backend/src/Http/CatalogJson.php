@@ -7,11 +7,6 @@ namespace App\Http;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 
-/**
- * Serialisation for the onboarding picker. Deliberately carries no favicon
- * bytes — only the URL of the endpoint that serves them — so the payload stays
- * small enough to send all 111 rows in one response.
- */
 final class CatalogJson
 {
     /**
@@ -62,7 +57,6 @@ final class CatalogJson
             'title' => $feed->getTitle(),
             'description' => $feed->getDescription(),
             'siteUrl' => $feed->getSiteUrl(),
-            'faviconUrl' => '/api/catalog/feeds/' . $feed->getId() . '/favicon',
             'subscribed' => isset($subscribedUrls[$feed->getUrl()]),
         ];
     }

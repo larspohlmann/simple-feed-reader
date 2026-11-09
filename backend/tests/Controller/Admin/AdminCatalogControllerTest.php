@@ -6,37 +6,12 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloader;
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Fetch\FaviconResolver\FaviconResolver;
-use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class AdminCatalogControllerTest extends ApiTestCase
 {
-    /**
-     * Resolution returns a canned URL and every download fails, so the warm and refresh endpoints run their real wiring
-     * without the network. The doubles replace the concrete service ids the interfaces alias to.
-     */
-    private function stubFaviconServicesToFail(): void
-    {
-        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
-        $downloader->method('download')->willThrowException(new GuardedImageUnavailableException('offline'));
-        self::getContainer()->set(GuardedImageDownloader::class, $downloader);
-
-        $resolver = $this->createStub(FaviconResolverInterface::class);
-        $resolver->method('resolveAll')->willReturnCallback(
-            static fn (array $bases): array => array_map(
-                static fn (): string => 'https://example.com/favicon.ico',
-                $bases,
-            ),
-        );
-        self::getContainer()->set(FaviconResolver::class, $resolver);
-    }
-
     private function reloadedCategory(int $id): ?CatalogCategory
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -104,13 +79,9 @@ final class AdminCatalogControllerTest extends ApiTestCase
         self::assertNull($this->reloadedCategory($id));
     }
 
-    public function testAdminCanCreateAFeedAndRefreshItsFavicon(): void
+    public function testAdminCanCreateAFeed(): void
     {
         $client = self::createClient();
-        // Keep one container across both requests: the favicon stub set below has
-        // to survive from here to the refresh call. KernelBrowser otherwise reboots
-        // the kernel before every request and would discard it.
-        $client->disableReboot();
         $headers = $this->jsonBearerFor($this->factory()->create('admin2@example.com', roles: ['ROLE_ADMIN']));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -118,11 +89,6 @@ final class AdminCatalogControllerTest extends ApiTestCase
         $category = new CatalogCategory('science', 'Science', 'science', '#14b8a6');
         $entityManager->persist($category);
         $entityManager->flush();
-
-        // Stub BEFORE the first admin request: AdminCatalogController eagerly builds
-        // CatalogFaviconWarmer, which eagerly builds the downloader — once a request has
-        // constructed it, the test container refuses to replace it.
-        $this->stubFaviconServicesToFail();
 
         $client->request(
             'POST',
@@ -137,43 +103,11 @@ final class AdminCatalogControllerTest extends ApiTestCase
                 'enabled' => true,
             ], \JSON_THROW_ON_ERROR),
         );
+
         self::assertResponseStatusCodeSame(201);
-
-        $feed = $entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Quanta Magazine']);
-        self::assertNotNull($feed);
-
-        // The refresh action must answer even when the download fails — a dead
-        // icon is a recorded failure, not a 500. The failing stub is already in
-        // place (set above, before the warmer was constructed).
-        $client->request('POST', '/api/admin/catalog/feeds/' . $feed->getId() . '/favicon', server: $headers);
-        self::assertResponseIsSuccessful();
-    }
-
-    public function testWarmingReportsASliceAndWhatIsLeft(): void
-    {
-        $client = self::createClient();
-        $headers = $this->jsonBearerFor($this->factory()->create('warm@example.com', roles: ['ROLE_ADMIN']));
-
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
-        $feed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
-        $entityManager->persist($category);
-        $entityManager->persist($feed);
-        $entityManager->flush();
-
-        // The favicon services are stubbed: this asserts the endpoint's contract,
-        // not that the internet is reachable from CI.
-        $this->stubFaviconServicesToFail();
-
-        $client->request('POST', '/api/admin/catalog/favicons/warm', server: $headers);
-
-        self::assertResponseIsSuccessful();
-        $body = $this->payload($client);
-
-        self::assertSame(0, $body['warmed']);
-        self::assertSame(1, $body['failed']);
-        self::assertArrayHasKey('remaining', $body);
+        self::assertNotNull(
+            $entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Quanta Magazine']),
+        );
     }
 
     public function testReorderingRewritesPositions(): void

@@ -6,8 +6,7 @@ namespace App\Service\Catalog\Model;
 
 /**
  * The two import modes differ in exactly one respect: what happens to rows the
- * document does not mention. Both upsert what it does mention, and both keep the
- * cached favicon of any feed whose URL survives.
+ * document does not mention. Both upsert what it does mention.
  */
 enum CatalogImportMode: string
 {

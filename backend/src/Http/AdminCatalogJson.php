@@ -8,13 +8,8 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Service\Catalog\Model\BundledCatalogSummaryModel;
 use App\Service\Catalog\Model\CatalogImportResultModel;
-use App\Service\Catalog\Model\CatalogWarmReportModel;
 
-/**
- * The admin view of the catalog: every row, enabled or not, plus the favicon
- * bookkeeping an admin needs to see to know whether an icon is missing because
- * it has not been warmed or because it keeps failing.
- */
+/** The admin view of the catalog: every row, enabled or not. */
 final class AdminCatalogJson
 {
     /**
@@ -50,8 +45,6 @@ final class AdminCatalogJson
             'position' => $feed->getPosition(),
             'enabled' => $feed->isEnabled(),
             'locked' => $feed->isLocked(),
-            'faviconFetchedAt' => $feed->getFaviconFetchedAt()?->format(\DATE_ATOM),
-            'faviconFailedAt' => $feed->getFaviconFailedAt()?->format(\DATE_ATOM),
         ];
     }
 
@@ -82,16 +75,6 @@ final class AdminCatalogJson
         return [
             'categories' => array_map(self::category(...), $categories),
             'feeds' => array_map(self::feed(...), $feeds),
-        ];
-    }
-
-    /** @return array{warmed: int, failed: int, remaining: int} */
-    public static function warmReport(CatalogWarmReportModel $report): array
-    {
-        return [
-            'warmed' => $report->warmed,
-            'failed' => $report->failed,
-            'remaining' => $report->remaining,
         ];
     }
 
