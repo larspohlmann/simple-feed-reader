@@ -7,12 +7,15 @@ namespace App\Service\Social;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\SocialFeedKind;
+use App\Enum\SocialNetwork;
 use App\Repository\RetentionRepository;
 use App\Repository\SocialFeedRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Search\EntryIndexer;
 use App\Service\Social\Exception\NotASearchFeedException;
+use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Support\MastodonSearchQueries;
 use App\Service\Social\Support\PrivateFeedSite;
 use App\Service\Social\Support\SocialFeedUrl;
 use App\Service\Social\Support\SocialSearchMatch;
@@ -35,6 +38,7 @@ final readonly class SearchFeedEditor
     /**
      * @throws NotASearchFeedException
      * @throws AlreadySubscribedException when the account already searches for the query
+     * @throws SearchQueryTooBroadException when Mastodon cannot search the query
      */
     public function requery(Subscription $subscription, string $query): void
     {
@@ -44,6 +48,7 @@ final readonly class SearchFeedEditor
             return;
         }
         $this->refuseAnotherSearchFor($socialFeed, $search);
+        self::refuseTooBroadFor($socialFeed, $search);
         $nonMatchingIds = $this->nonMatchingIds($socialFeed, $search);
 
         $removedIds = $this->entityManager->wrapInTransaction(
@@ -73,6 +78,14 @@ final readonly class SearchFeedEditor
         $existing = $this->socialFeeds->findOneFor($socialFeed->getSocialAccount(), $search->kind, $search->remoteId);
         if (null !== $existing && $existing !== $socialFeed) {
             throw new AlreadySubscribedException('This account already searches for that query.');
+        }
+    }
+
+    /** @throws SearchQueryTooBroadException */
+    private static function refuseTooBroadFor(SocialFeed $socialFeed, PrivateFeedModel $search): void
+    {
+        if (SocialNetwork::Mastodon === $socialFeed->getSocialAccount()->getNetwork()) {
+            MastodonSearchQueries::requireFits($search->remoteId);
         }
     }
 

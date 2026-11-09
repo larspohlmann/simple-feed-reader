@@ -6,6 +6,7 @@ namespace App\Service\Social\SocialSearch;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\MastodonAccountApi;
@@ -13,6 +14,7 @@ use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskySearchPage;
 use App\Service\Social\Support\MastodonSearchPage;
+use App\Service\Social\Support\MastodonSearchQueries;
 use App\Service\Social\Support\SocialSearchPaths;
 
 final readonly class NetworkSocialSearch implements SocialSearchInterface
@@ -38,11 +40,12 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                 $account->getIdentity(),
                 $query,
             ),
-            SocialNetwork::Mastodon => MastodonSearchPage::of([MastodonApiClient::accepted(
-                $this->mastodonClient->send(
-                    $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($query, null)),
-                ),
-            )], $query),
+            SocialNetwork::Mastodon => MastodonSearchPage::of(array_map(
+                fn (string $alternative): ApiResponseModel => MastodonApiClient::accepted($this->mastodonClient->send(
+                    $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($alternative, null)),
+                )),
+                MastodonSearchQueries::of($query),
+            ), $query),
         };
     }
 }

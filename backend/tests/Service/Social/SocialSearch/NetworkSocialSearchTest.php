@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\SocialSearch;
 use App\Enum\SocialAccountStatus;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\ActingAccountGuard;
+use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\SocialSearch\NetworkSocialSearch;
@@ -128,6 +129,36 @@ final class NetworkSocialSearchTest extends TestCase
         }
     }
 
+    public function testAMastodonPreviewAsksOncePerAlternativeAndMergesTheAnswers(): void
+    {
+        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
+        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
+        $http = new RoutedHttpClient([
+            $rss => self::json(['statuses' => [self::mastodonStatus('1')]]),
+            $atom => self::json(['statuses' => [
+                self::mastodonStatus('1'),
+                self::mastodonStatus('2', '<p>atom feeds</p>'),
+            ]]),
+        ]);
+
+        $page = $this->search($http->client())->newest(SocialAccounts::mastodon(), '(rss || atom)');
+
+        self::assertCount(2, $page->parsed->entries);
+        self::assertSame([$rss, $atom], $http->requestLines());
+    }
+
+    public function testAMastodonPreviewTooBroadIsRefusedBeforeAnyRequest(): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->search($http->client())->newest(SocialAccounts::mastodon(), '(a || b || c) (d || e || f)');
+            self::fail('Nine alternatives are more than Mastodon is asked for.');
+        } catch (SearchQueryTooBroadException) {
+            self::assertSame([], $http->requestLines());
+        }
+    }
+
     private function search(HttpClientInterface $http): NetworkSocialSearch
     {
         return new NetworkSocialSearch(
@@ -155,14 +186,14 @@ final class NetworkSocialSearchTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function mastodonStatus(): array
+    private static function mastodonStatus(string $id = '1', string $content = '<p>Which RSS reader?</p>'): array
     {
         return [
-            'id' => '1',
-            'uri' => 'https://mastodon.example/users/bob/statuses/1',
-            'url' => 'https://mastodon.example/@bob/1',
+            'id' => $id,
+            'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
+            'url' => 'https://mastodon.example/@bob/' . $id,
             'created_at' => '2026-10-12T10:00:00Z',
-            'content' => '<p>Which RSS reader?</p>',
+            'content' => $content,
             'in_reply_to_id' => null,
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
         ];

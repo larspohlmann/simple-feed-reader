@@ -28,7 +28,8 @@ final class PrivateFeedRules
                 && self::isMastodonTagName($privateFeed->remoteId),
             SocialFeedKind::Trending => SocialNetwork::Mastodon === $network,
             SocialFeedKind::Search => '' !== $privateFeed->remoteId
-                && mb_strlen($privateFeed->remoteId) <= SocialSearchQuery::MAX_LENGTH,
+                && mb_strlen($privateFeed->remoteId) <= SocialSearchQuery::MAX_LENGTH
+                && (SocialNetwork::Bluesky === $network || MastodonSearchQueries::fits($privateFeed->remoteId)),
         };
     }
 
