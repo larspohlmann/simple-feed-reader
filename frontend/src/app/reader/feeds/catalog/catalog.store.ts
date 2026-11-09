@@ -6,14 +6,7 @@ import { onIdentityChange } from '../../../core/auth/session-identity';
 import { CatalogApi } from './catalog-api';
 import { CatalogCategoryDto } from './catalog.models';
 
-/**
- * The catalog, fetched once per session and shared.
- *
- * Two consumers with different needs: the reader shell asks only "is there
- * anything to show?" before it decides whether to send a new user to the picker,
- * and the picker itself renders the whole thing. One store means the shell's
- * check does not cost an extra round trip when the redirect does happen.
- */
+/** The catalog the picker renders, fetched once per session; the reader reads `CatalogAvailability` instead (#2138). */
 @Injectable({ providedIn: 'root' })
 export class CatalogStore {
   private readonly api = inject(CatalogApi);

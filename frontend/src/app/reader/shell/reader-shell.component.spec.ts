@@ -85,7 +85,12 @@ describe('ReaderShellComponent', () => {
   // the only place a boot sees the flag unanswered; isPasskeySupported() is
   // false by default in jsdom regardless (stubbed in only in that describe block).
   const auth = {
-    user: signal({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
+    user: signal({
+      id: 1,
+      email: 'a@b.c',
+      catalog: { hasEntries: false },
+      preferences: { passkeyOfferAnswered: true },
+    }),
     accountLoadFailed: signal(false),
     loadMe: () => of({}),
     logout: jest.fn(),
@@ -164,7 +169,12 @@ describe('ReaderShellComponent', () => {
     // Reset the #624 offer state too: a test below sets passkeyOfferAnswered
     // to false and calls the two marking methods, and neither must leak into
     // an unrelated test later in this file.
-    auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+    auth.user.set({
+      id: 1,
+      email: 'a@b.c',
+      catalog: { hasEntries: false },
+      preferences: { passkeyOfferAnswered: true },
+    });
     auth.accountLoadFailed.set(false);
     auth.answerPasskeyOffer.mockClear();
     auth.markPasskeyOfferAnswered.mockClear();
@@ -481,27 +491,9 @@ describe('ReaderShellComponent', () => {
     return fixture;
   }
 
-  const CATALOG_WITH_FEEDS = {
-    categories: [
-      {
-        id: 1,
-        key: 'technology',
-        name: 'Technology',
-        icon: 'memory',
-        color: '#3b82f6',
-        feeds: [
-          {
-            id: 10,
-            title: 'The Verge',
-            description: null,
-            siteUrl: null,
-            faviconUrl: '/f/10',
-            subscribed: false,
-          },
-        ],
-      },
-    ],
-  };
+  function catalogOffers(hasEntries: boolean): void {
+    auth.user.set({ ...auth.user(), catalog: { hasEntries } });
+  }
 
   it('renders header + sidebar and loads the initial list', () => {
     const element = boot().nativeElement as HTMLElement;
@@ -2882,6 +2874,7 @@ describe('ReaderShellComponent', () => {
 
   describe('onboarding redirect and first sweep', () => {
     it('waits for the current user subscriptions before offering the catalog', async () => {
+      catalogOffers(true);
       const tokens = TestBed.inject(TokenStore);
       tokens.set('user-a.jwt');
       const subscriptions = TestBed.inject(SubscriptionsStore);
@@ -2947,35 +2940,22 @@ describe('ReaderShellComponent', () => {
     });
 
     it('redirects a user with no subscriptions to the picker, replacing the URL', async () => {
+      catalogOffers(true);
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const fixture = bootWith([]);
       await fixture.whenStable();
-      ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
-      await fixture.whenStable();
       fixture.detectChanges();
       expect(nav).toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+      ctrl.expectNone('https://api.test/api/catalog');
     });
 
     it('does not redirect when nobody has imported a catalog yet', async () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const fixture = bootWith([]);
       await fixture.whenStable();
-      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
-      await fixture.whenStable();
       fixture.detectChanges();
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
-    });
-
-    it('does not redirect when the catalog cannot be loaded', async () => {
-      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const fixture = bootWith([]);
-      await fixture.whenStable();
-      ctrl
-        .expectOne('https://api.test/api/catalog')
-        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-      await fixture.whenStable();
-      fixture.detectChanges();
-      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+      ctrl.expectNone('https://api.test/api/catalog');
     });
 
     it('does not redirect when the subscriptions request fails (#691)', async () => {
@@ -3026,6 +3006,7 @@ describe('ReaderShellComponent', () => {
 
     it('does not redirect when the user skipped this session, and does not fetch the catalog', async () => {
       TestBed.inject(OnboardingSkip).remember();
+      catalogOffers(true);
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const fixture = bootWith([]);
       await fixture.whenStable();
@@ -3205,51 +3186,41 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('admin empty-catalog warning', () => {
-    it('warns an admin that no catalog has been imported', async () => {
+    const warning = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]');
+
+    it('warns an admin that no catalog has been imported, without fetching it', async () => {
       auth.isAdmin.mockReturnValue(true);
       const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
       ]);
       await fixture.whenStable();
-      // An admin gets the catalog fetched EVEN WITH their own subscriptions — the
-      // loadCatalogForAdmin effect, not the redirect (which returns on non-empty subs).
-      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
       fixture.detectChanges();
-      const warning = (fixture.nativeElement as HTMLElement).querySelector(
-        '[data-testid="catalog-empty-warning"]',
+      expect(warning(fixture)).not.toBeNull();
+      expect(warning(fixture)!.querySelector('a')!.getAttribute('href')).toBe(
+        '/settings/admin/catalog',
       );
-      expect(warning).not.toBeNull();
-      expect(warning!.querySelector('a')!.getAttribute('href')).toBe('/settings/admin/catalog');
+      ctrl.expectNone('https://api.test/api/catalog');
     });
 
     it('shows an admin no warning once a catalog exists', async () => {
       auth.isAdmin.mockReturnValue(true);
+      catalogOffers(true);
       const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
       ]);
       await fixture.whenStable();
-      ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
       fixture.detectChanges();
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelector(
-          '[data-testid="catalog-empty-warning"]',
-        ),
-      ).toBeNull();
+      expect(warning(fixture)).toBeNull();
+      ctrl.expectNone('https://api.test/api/catalog');
     });
 
     it('never shows the warning to a non-admin', async () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const fixture = bootWith([]);
       await fixture.whenStable();
-      // The redirect effect (empty subs, non-admin) is what fetches the catalog here.
-      ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
-      await fixture.whenStable();
       fixture.detectChanges();
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelector(
-          '[data-testid="catalog-empty-warning"]',
-        ),
-      ).toBeNull();
+      expect(warning(fixture)).toBeNull();
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
   });
@@ -4250,14 +4221,23 @@ describe('ReaderShellComponent', () => {
     });
 
     it('holds the first list load until the account is known', () => {
-      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } } as never);
+      auth.user.set({
+        email: 'a@b.c',
+        catalog: { hasEntries: false },
+        preferences: { passkeyOfferAnswered: true },
+      } as never);
       const fixture = TestBed.createComponent(ReaderShellComponent);
       fixture.detectChanges();
       expect(ctrl.match((request) => request.url === 'https://api.test/api/entries')).toHaveLength(
         0,
       );
 
-      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+      auth.user.set({
+        id: 1,
+        email: 'a@b.c',
+        catalog: { hasEntries: false },
+        preferences: { passkeyOfferAnswered: true },
+      });
       fixture.detectChanges();
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -4754,7 +4734,12 @@ describe('ReaderShellComponent', () => {
     }
 
     beforeEach(() => {
-      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: false } });
+      auth.user.set({
+        id: 1,
+        email: 'a@b.c',
+        catalog: { hasEntries: false },
+        preferences: { passkeyOfferAnswered: false },
+      });
     });
 
     afterEach(() => {
@@ -4777,7 +4762,12 @@ describe('ReaderShellComponent', () => {
 
     it('does not show the offer once the account has already answered it', () => {
       supportPasskeys();
-      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+      auth.user.set({
+        id: 1,
+        email: 'a@b.c',
+        catalog: { hasEntries: false },
+        preferences: { passkeyOfferAnswered: true },
+      });
       const open = jest
         .spyOn(TestBed.inject(Dialog), 'open')
         .mockReturnValue({ closed: new Subject() } as never);
@@ -4873,11 +4863,9 @@ describe('ReaderShellComponent', () => {
       expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
     });
 
-    it('does not show the offer while a zero-subscription account is waiting on the catalog to decide the /discover redirect', () => {
-      // Regression: the catalog request only STARTS once subscriptions resolve
-      // empty, so there is a real window on every new account where the list is
-      // empty but the catalog hasn't answered — deliberately left unflushed here.
+    it('does not show the offer to a zero-subscription account about to be redirected to /discover', () => {
       supportPasskeys();
+      catalogOffers(true);
       const open = jest
         .spyOn(TestBed.inject(Dialog), 'open')
         .mockReturnValue({ closed: new Subject() } as never);

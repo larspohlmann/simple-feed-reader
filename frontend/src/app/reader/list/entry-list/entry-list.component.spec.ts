@@ -8,7 +8,7 @@ import { EntryListComponent } from './entry-list.component';
 import { Selection } from '../../query/query';
 import { REFRESH_REVEAL } from './pull-to-refresh';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
-import { CatalogStore } from '../../feeds/catalog/catalog.store';
+import { CatalogAvailability } from '../../feeds/catalog/catalog-availability';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto, ListOrder, SubscriptionDto } from '../../models';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -44,8 +44,7 @@ import {
 } from '../../../../testing/resize-observer-testing';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
-// A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
-// (and its HttpClient chain) out of this component's unit test.
+// A stub for the two signals `catalogEmpty` reads, so the real CatalogAvailability (and AuthService) stay out of this unit test.
 const catalog = { resolved: signal(false), hasEntries: signal(false) };
 const subscriptionsStore = { resolved: signal(true), subscriptions: signal<SubscriptionDto[]>([]) };
 
@@ -89,7 +88,7 @@ function mount(
       provideRouter([]),
       provideAccountIdentity(),
       { provide: ListScrollMemory, useValue: memory },
-      { provide: CatalogStore, useValue: catalog },
+      { provide: CatalogAvailability, useValue: catalog },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
       { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
       { provide: ScrollHosts, useClass: ElementBackedScrollHosts },
@@ -993,6 +992,20 @@ describe('EntryListComponent', () => {
       entries: [],
       selection: { kind: 'all', unread: true } satisfies Selection,
     };
+
+    beforeEach(() => {
+      subscriptionsStore.resolved.set(true);
+      catalog.resolved.set(false);
+      catalog.hasEntries.set(false);
+    });
+
+    it('leaves it out once the catalog is known to offer nothing', () => {
+      subscribedTo(0);
+      catalog.resolved.set(true);
+      const element = mount(emptyAll).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.empty a')).toBeNull();
+    });
 
     it('offers the catalog to an account with only a few subscriptions', () => {
       subscribedTo(4);

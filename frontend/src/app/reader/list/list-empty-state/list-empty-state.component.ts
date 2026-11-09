@@ -2,7 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CaughtUpIllustrationComponent } from '../caught-up-illustration/caught-up-illustration.component';
-import { CatalogStore } from '../../feeds/catalog/catalog.store';
+import { CatalogAvailability } from '../../feeds/catalog/catalog-availability';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import {
   Selection,
@@ -27,7 +27,7 @@ export class ListEmptyStateComponent {
    *  distinguishes "you have none" from "yours match nothing". */
   readonly savedSearchCount = input(0);
 
-  private readonly catalog = inject(CatalogStore);
+  private readonly catalog = inject(CatalogAvailability);
   private readonly subscriptions = inject(SubscriptionsStore);
 
   /** The search term for the message — the trailing space is the server's
@@ -45,10 +45,7 @@ export class ListEmptyStateComponent {
 
   protected readonly unreadOnly = computed(() => isUnreadOnly(this.selection()));
 
-  /** True only once the catalog has been resolved AND has no entries.
-   *  Unresolved reads as not-empty, so the /discover link is never hidden on a
-   *  guess — it simply shows until the shell (which loads the catalog on the
-   *  onboarding path) proves the catalog empty. */
+  /** Unresolved reads as not-empty, so the /discover link is never hidden on a guess. */
   private readonly catalogEmpty = computed(
     () => this.catalog.resolved() && !this.catalog.hasEntries(),
   );

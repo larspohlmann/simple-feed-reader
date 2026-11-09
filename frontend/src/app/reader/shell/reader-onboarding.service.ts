@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { CatalogStore } from '../feeds/catalog/catalog.store';
+import { CatalogAvailability } from '../feeds/catalog/catalog-availability';
 import { OnboardingSkip } from '../feeds/catalog/onboarding-skip';
 import { RefreshService } from '../state/refresh.service';
 
@@ -11,7 +11,7 @@ export class ReaderOnboarding {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly subscriptions = inject(SubscriptionsStore);
-  private readonly catalog = inject(CatalogStore);
+  private readonly catalog = inject(CatalogAvailability);
   private readonly skip = inject(OnboardingSkip);
   private readonly refresh = inject(RefreshService);
 
@@ -58,13 +58,7 @@ export class ReaderOnboarding {
 
   constructor() {
     effect(() => {
-      if (this.auth.isAdmin()) untracked(() => this.catalog.load());
-    });
-
-    effect(() => {
-      if (!this.emptySubscriptionsNeedingOnboarding()) return;
-      untracked(() => this.catalog.load());
-      if (!this.catalogOffered()) return;
+      if (!this.emptySubscriptionsNeedingOnboarding() || !this.catalogOffered()) return;
       void this.router.navigate(['/discover'], { replaceUrl: true });
     });
 
