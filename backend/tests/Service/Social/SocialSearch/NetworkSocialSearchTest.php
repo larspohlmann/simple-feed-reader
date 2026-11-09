@@ -149,6 +149,24 @@ final class NetworkSocialSearchTest extends TestCase
         self::assertSame([$rss, $atom], $http->requestLines());
     }
 
+    public function testARefusedLaterAlternativeMarksTheAccountForReconnecting(): void
+    {
+        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
+        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
+        $http = new RoutedHttpClient([
+            $rss => self::json(['statuses' => [self::mastodonStatus('1')]]),
+            $atom => self::json([], Response::HTTP_UNAUTHORIZED),
+        ]);
+        $account = SocialApiWiring::mastodonAccount();
+
+        try {
+            $this->search($http->client())->newest($account, '(rss || atom)');
+            self::fail('A refused token must be a refused credential.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertSame(SocialAccountStatus::NeedsReconnect, $account->getStatus());
+        }
+    }
+
     public function testAMastodonPreviewListsTheMergedAnswersNewestFirst(): void
     {
         $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
