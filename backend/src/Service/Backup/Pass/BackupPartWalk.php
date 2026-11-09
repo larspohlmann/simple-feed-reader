@@ -12,6 +12,7 @@ use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
 use App\Service\Backup\BackupLines;
 use App\Service\Backup\Dto\BackupTotals;
+use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryShareLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Model\BackupPartModel;
@@ -108,10 +109,10 @@ final class BackupPartWalk
                 $this->buffer->addShare(EntryShareLine::of($entry, $sharedAt, $feedUrl)->toBackupLine());
             }
             yield from $this->bufferLines(
-                $this->lines->entryLine($entry, $feedUrl, new EntryCompanionsModel(
+                EntryLine::of($entry, $feedUrl, new EntryCompanionsModel(
                     $cardsByEntryId[$entry->requireId()] ?? [],
                     $originsByEntryId[$entry->requireId()] ?? null,
-                )),
+                ))->toBackupLine(),
                 null !== $state ? EntryStateLine::of($state, $feedUrl)->toBackupLine() : null,
             );
         }

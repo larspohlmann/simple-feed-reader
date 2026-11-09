@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryChapters;
+use App\Entity\EntryMedia;
 use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
+use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Entity\SavedEntryOrigin;
 use App\Enum\ShareKind;
+use App\Service\Backup\Model\EntryCompanionsModel;
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
 use App\Service\LinkCard\Support\StorableLinkCard;
@@ -105,6 +111,106 @@ final readonly class EntryLine
             chapters: $chapters,
             chaptersUrl: $chapters === [] ? self::chaptersUrlOf($line) : null,
         );
+    }
+
+    public static function of(Entry $entry, string $feedUrl, EntryCompanionsModel $companions): self
+    {
+        $discussion = $entry->getDiscussion();
+
+        return new self(
+            feedUrl: $feedUrl,
+            guid: $entry->getGuid(),
+            guidHash: $entry->getGuidHash(),
+            url: $entry->getUrl(),
+            title: $entry->getTitle(),
+            author: $entry->getAuthor(),
+            summary: $entry->getSummary(),
+            contentHtml: $entry->getContentHtml(),
+            imageUrl: $entry->getImageUrl(),
+            imageWidth: $entry->getImageWidth(),
+            imageHeight: $entry->getImageHeight(),
+            publishedAt: $entry->getPublishedAt(),
+            createdAt: $entry->getCreatedAt(),
+            effectiveDate: $entry->getEffectiveDate(),
+            media: EntryMedia::toJsonList($entry->getMedia()),
+            attachments: EntryMedia::toJsonList($entry->getAttachments()),
+            discussionUrl: $discussion->url,
+            commentsFeedUrl: $discussion->commentsFeedUrl,
+            commentsLoad: $discussion->commentsLoad?->value,
+            imageRenditions: ImageRendition::toJsonList($entry->getImage()->getRenditions()),
+            titleDerived: $entry->isTitleDerived(),
+            shareKind: $entry->getShareKind()?->value,
+            linkCards: $companions->linkCards,
+            authorUrl: $entry->getAuthorUrl(),
+            authorAvatarUrl: $entry->getAuthorAvatarUrl(),
+            quote: $entry->getQuotedPost(),
+            origin: $companions->origin,
+            chapters: EntryMedia::toJsonList($entry->getChapters()),
+            chaptersUrl: $entry->getChaptersUrl(),
+        );
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode([
+            'kind' => BackupSchema::KIND_ENTRY,
+            'feedUrl' => $this->feedUrl,
+            'guid' => $this->guid,
+            'guidHash' => $this->guidHash,
+            'url' => $this->url,
+            'discussionUrl' => $this->discussionUrl,
+            'commentsFeedUrl' => $this->commentsFeedUrl,
+            'commentsLoad' => $this->commentsLoad,
+            'title' => $this->title,
+            'titleDerived' => $this->titleDerived,
+            'shareKind' => $this->shareKind,
+            'quote' => self::quoteFields($this->quote),
+            'author' => $this->author,
+            'authorUrl' => $this->authorUrl,
+            'authorAvatarUrl' => $this->authorAvatarUrl,
+            'summary' => $this->summary,
+            'contentHtml' => $this->contentHtml,
+            'imageUrl' => $this->imageUrl,
+            'imageWidth' => $this->imageWidth,
+            'imageHeight' => $this->imageHeight,
+            'imageRenditions' => $this->imageRenditions,
+            'media' => $this->media,
+            'attachments' => $this->attachments,
+            'chapters' => $this->chapters,
+            'chaptersUrl' => $this->chaptersUrl,
+            'linkCards' => array_map(static fn (LinkCardContent $card): array => $card->toStored(), $this->linkCards),
+            'origin' => self::originFields($this->origin),
+            'publishedAt' => BackupLineFormat::dateOrNull($this->publishedAt),
+            'createdAt' => BackupLineFormat::date($this->createdAt),
+            'effectiveDate' => BackupLineFormat::date($this->effectiveDate),
+        ]);
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function quoteFields(?QuotedPostContent $quote): ?array
+    {
+        if ($quote === null) {
+            return null;
+        }
+        $nested = $quote->nestedQuote;
+
+        return [
+            'url' => $quote->url,
+            'authorName' => $quote->authorName,
+            'authorHandle' => $quote->authorHandle,
+            'authorAvatarUrl' => $quote->authorAvatarUrl,
+            'postedAt' => BackupLineFormat::dateOrNull($quote->postedAt),
+            'text' => $quote->text,
+            'media' => EntryMedia::toJsonList($quote->media),
+            'nestedQuote' => $nested === null ? null : ['url' => $nested->url, 'handle' => $nested->handle],
+            'linkCard' => $quote->linkCard?->toStored(),
+        ];
+    }
+
+    /** @return array{title: ?string, faviconUrl: ?string}|null */
+    private static function originFields(?EntryOrigin $origin): ?array
+    {
+        return null === $origin ? null : ['title' => $origin->title, 'faviconUrl' => $origin->faviconUrl];
     }
 
     private static function shareKindOf(?string $shareKind, ?QuotedPostContent $quote): ?string

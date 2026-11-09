@@ -12,6 +12,8 @@ use App\Entity\QuotedPostReference;
 use App\Entity\EntryOrigin;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\EntryCompanionsModel;
+use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -374,5 +376,73 @@ final class EntryLineTest extends TestCase
         self::assertNull($line->quote?->postedAt);
         self::assertNull($line->quote?->nestedQuote);
         self::assertSame([], $line->quote?->media);
+    }
+
+    public function testItWritesItsLineInTheBackupFormat(): void
+    {
+        $entry = BackupLineRecords::entry();
+        $entry->setPublishedAt(new \DateTimeImmutable('2026-08-01T14:00:00+02:00'));
+        $companions = new EntryCompanionsModel(
+            [new LinkCardContent('https://card.example/x', 'Card', null, null, 'card.example')],
+            new EntryOrigin('One', 'https://one.example/favicon.ico'),
+        );
+
+        self::assertSame(
+            sprintf(
+                '{"kind":"entry","feedUrl":"https://one.example/rss","guid":"guid-1","guidHash":"%s",'
+                . '"url":"https://one.example/a","discussionUrl":null,"commentsFeedUrl":null,"commentsLoad":null,'
+                . '"title":"Article","titleDerived":false,"shareKind":null,"quote":null,"author":null,'
+                . '"authorUrl":null,"authorAvatarUrl":null,"summary":null,"contentHtml":null,"imageUrl":null,'
+                . '"imageWidth":null,"imageHeight":null,"imageRenditions":[],"media":[],"attachments":[],'
+                . '"chapters":[],"chaptersUrl":null,"linkCards":[{"url":"https://card.example/x","title":"Card",'
+                . '"description":null,"imageUrl":null,"siteName":"card.example"}],'
+                . '"origin":{"title":"One","faviconUrl":"https://one.example/favicon.ico"},'
+                . '"publishedAt":"2026-08-01T12:00:00+00:00","createdAt":"2026-08-02T00:00:00+00:00",'
+                . '"effectiveDate":"2026-08-03T00:00:00+00:00"}',
+                $entry->getGuidHash(),
+            ),
+            EntryLine::of($entry, 'https://one.example/rss', $companions)->toBackupLine(),
+        );
+    }
+
+    public function testItWritesAQuotedPostsFieldsInOrder(): void
+    {
+        $entry = BackupLineRecords::entry();
+        $entry->shareQuotedPost(new QuotedPostContent(
+            'https://bsky.app/profile/q/post/3k',
+            'Q',
+            'q',
+            null,
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            'hi',
+            [],
+            new QuotedPostReference('https://bsky.app/profile/n/post/1', 'n'),
+        ));
+
+        self::assertStringContainsString(
+            '"shareKind":"quote","quote":{"url":"https://bsky.app/profile/q/post/3k","authorName":"Q",'
+            . '"authorHandle":"q","authorAvatarUrl":null,"postedAt":"2026-08-01T00:00:00+00:00","text":"hi",'
+            . '"media":[],"nestedQuote":{"url":"https://bsky.app/profile/n/post/1","handle":"n"},"linkCard":null}',
+            EntryLine::of($entry, 'https://one.example/rss', new EntryCompanionsModel())->toBackupLine(),
+        );
+    }
+
+    public function testAQuotedPostWithoutALinkCardIsWrittenWithNone(): void
+    {
+        $entry = BackupLineRecords::entry();
+        $entry->shareQuotedPost(
+            new QuotedPostContent('https://bsky.app/profile/q/post/3k', 'Q', 'q', null, null, 'hi', [], null),
+        );
+
+        $line = json_decode(
+            EntryLine::of($entry, 'https://one.example/rss', new EntryCompanionsModel())->toBackupLine(),
+            true,
+            flags: \JSON_THROW_ON_ERROR,
+        );
+
+        self::assertIsArray($line);
+        self::assertIsArray($line['quote']);
+        self::assertArrayHasKey('linkCard', $line['quote']);
+        self::assertNull($line['quote']['linkCard']);
     }
 }

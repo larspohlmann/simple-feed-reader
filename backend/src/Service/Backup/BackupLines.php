@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
-use App\Entity\Entry;
-use App\Entity\EntryMedia;
-use App\Entity\ImageRendition;
-use App\Entity\LinkCardContent;
-use App\Entity\QuotedPostContent;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupProvenanceModel;
-use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
 
@@ -47,71 +41,6 @@ final readonly class BackupLines
             'parts' => null,
             'totals' => null,
         ]);
-    }
-
-    public function entryLine(Entry $entry, string $feedUrl, EntryCompanionsModel $companions): string
-    {
-        $discussion = $entry->getDiscussion();
-
-        return BackupLineFormat::encode([
-            'kind' => BackupSchema::KIND_ENTRY,
-            'feedUrl' => $feedUrl,
-            'guid' => $entry->getGuid(),
-            'guidHash' => $entry->getGuidHash(),
-            'url' => $entry->getUrl(),
-            'discussionUrl' => $discussion->url,
-            'commentsFeedUrl' => $discussion->commentsFeedUrl,
-            'commentsLoad' => $discussion->commentsLoad?->value,
-            'title' => $entry->getTitle(),
-            'titleDerived' => $entry->isTitleDerived(),
-            'shareKind' => $entry->getShareKind()?->value,
-            'quote' => $this->quoteFields($entry->getQuotedPost()),
-            'author' => $entry->getAuthor(),
-            'authorUrl' => $entry->getAuthorUrl(),
-            'authorAvatarUrl' => $entry->getAuthorAvatarUrl(),
-            'summary' => $entry->getSummary(),
-            'contentHtml' => $entry->getContentHtml(),
-            'imageUrl' => $entry->getImageUrl(),
-            'imageWidth' => $entry->getImageWidth(),
-            'imageHeight' => $entry->getImageHeight(),
-            'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->getRenditions()),
-            'media' => EntryMedia::toJsonList($entry->getMedia()),
-            'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
-            'chapters' => EntryMedia::toJsonList($entry->getChapters()),
-            'chaptersUrl' => $entry->getChaptersUrl(),
-            'linkCards' => array_map(
-                static fn (LinkCardContent $card): array => $card->toStored(),
-                $companions->linkCards,
-            ),
-            'origin' => null === $companions->origin ? null : [
-                'title' => $companions->origin->title,
-                'faviconUrl' => $companions->origin->faviconUrl,
-            ],
-            'publishedAt' => BackupLineFormat::dateOrNull($entry->getPublishedAt()),
-            'createdAt' => BackupLineFormat::date($entry->getCreatedAt()),
-            'effectiveDate' => BackupLineFormat::date($entry->getEffectiveDate()),
-        ]);
-    }
-
-    /** @return array<string, mixed>|null */
-    private function quoteFields(?QuotedPostContent $quote): ?array
-    {
-        if ($quote === null) {
-            return null;
-        }
-        $nested = $quote->nestedQuote;
-
-        return [
-            'url' => $quote->url,
-            'authorName' => $quote->authorName,
-            'authorHandle' => $quote->authorHandle,
-            'authorAvatarUrl' => $quote->authorAvatarUrl,
-            'postedAt' => BackupLineFormat::dateOrNull($quote->postedAt),
-            'text' => $quote->text,
-            'media' => EntryMedia::toJsonList($quote->media),
-            'nestedQuote' => $nested === null ? null : ['url' => $nested->url, 'handle' => $nested->handle],
-            'linkCard' => $quote->linkCard?->toStored(),
-        ];
     }
 
     /**
