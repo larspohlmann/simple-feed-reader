@@ -142,7 +142,7 @@ export class DiscoverComponent implements OnDestroy {
 
   load(): void {
     this.error.set(null);
-    this.catalog.load();
+    this.catalog.reload();
   }
 
   ngOnDestroy(): void {

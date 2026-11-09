@@ -15,12 +15,8 @@ export class ReaderOnboarding {
   private readonly skip = inject(OnboardingSkip);
   private readonly refresh = inject(RefreshService);
 
-  private readonly catalogOffered = computed(
-    () => this.catalog.resolved() && this.catalog.hasEntries(),
-  );
-
   readonly showCatalogEmptyWarning = computed(
-    () => this.auth.isAdmin() && this.catalog.resolved() && !this.catalog.hasEntries(),
+    () => this.auth.isAdmin() && this.catalog.knownEmpty(),
   );
 
   private readonly awaitingFirstFetch = computed(
@@ -53,12 +49,12 @@ export class ReaderOnboarding {
     if (this.awaitingFirstFetch() || this.sweeping()) return true;
     if (!this.emptySubscriptionsNeedingOnboarding()) return false;
     if (!this.catalog.resolved()) return true;
-    return this.catalogOffered();
+    return this.catalog.hasEntries();
   });
 
   constructor() {
     effect(() => {
-      if (!this.emptySubscriptionsNeedingOnboarding() || !this.catalogOffered()) return;
+      if (!this.emptySubscriptionsNeedingOnboarding() || !this.catalog.hasEntries()) return;
       void this.router.navigate(['/discover'], { replaceUrl: true });
     });
 

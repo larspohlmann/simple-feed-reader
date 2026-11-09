@@ -45,7 +45,7 @@ import {
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads, so the real CatalogAvailability (and AuthService) stay out of this unit test.
-const catalog = { resolved: signal(false), hasEntries: signal(false) };
+const catalog = { knownEmpty: signal(false) };
 const subscriptionsStore = { resolved: signal(true), subscriptions: signal<SubscriptionDto[]>([]) };
 
 function subscribedTo(count: number): void {
@@ -995,16 +995,22 @@ describe('EntryListComponent', () => {
 
     beforeEach(() => {
       subscriptionsStore.resolved.set(true);
-      catalog.resolved.set(false);
-      catalog.hasEntries.set(false);
+      catalog.knownEmpty.set(false);
     });
 
     it('leaves it out once the catalog is known to offer nothing', () => {
       subscribedTo(0);
-      catalog.resolved.set(true);
+      catalog.knownEmpty.set(true);
       const element = mount(emptyAll).nativeElement as HTMLElement;
 
       expect(element.querySelector('.empty a')).toBeNull();
+    });
+
+    it('keeps it while the catalog is unknown, as after a failed account load', () => {
+      subscribedTo(2);
+      const element = mount(emptyAll).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.empty a')).not.toBeNull();
     });
 
     it('offers the catalog to an account with only a few subscriptions', () => {

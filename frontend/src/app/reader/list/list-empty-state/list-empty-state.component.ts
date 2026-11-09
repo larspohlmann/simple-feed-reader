@@ -46,9 +46,7 @@ export class ListEmptyStateComponent {
   protected readonly unreadOnly = computed(() => isUnreadOnly(this.selection()));
 
   /** Unresolved reads as not-empty, so the /discover link is never hidden on a guess. */
-  private readonly catalogEmpty = computed(
-    () => this.catalog.resolved() && !this.catalog.hasEntries(),
-  );
+  private readonly catalogEmpty = computed(() => this.catalog.knownEmpty());
 
   /** The /discover nudge is for an account still building its reading list. */
   protected readonly suggestFeeds = computed(

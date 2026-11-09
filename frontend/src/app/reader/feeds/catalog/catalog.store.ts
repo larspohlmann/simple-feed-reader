@@ -56,6 +56,12 @@ export class CatalogStore {
     });
   }
 
+  /** Fetches again even when already resolved, so a visit never shows a cached answer. */
+  reload(): void {
+    this.invalidate();
+    this.load();
+  }
+
   /** Forget the cached catalog so the next load() refetches — used after a
    *  successful subscribe, since every picked feed is now `subscribed`, and
    *  whenever the signed-in identity changes. */

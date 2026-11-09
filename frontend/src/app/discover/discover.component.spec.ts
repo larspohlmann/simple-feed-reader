@@ -132,6 +132,20 @@ describe('DiscoverComponent', () => {
       expect(mark).toHaveBeenLastCalledWith(false);
     });
 
+    it('never shares a stale cached answer ahead of the fresh one', () => {
+      mountWith({ categories: [] });
+      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
+
+      const reopened = TestBed.createComponent(DiscoverComponent);
+      reopened.detectChanges();
+      expect(mark).not.toHaveBeenCalled();
+
+      http.expectOne('https://api.test/api/catalog').flush(MULTI);
+      reopened.detectChanges();
+      expect(mark).toHaveBeenCalledTimes(1);
+      expect(mark).toHaveBeenLastCalledWith(true);
+    });
+
     it('reports nothing when the catalog fails to load', () => {
       const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
       TestBed.inject(CatalogStore).invalidate();

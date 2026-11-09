@@ -34,5 +34,16 @@ describe('CatalogAvailability', () => {
 
     expect(availability.resolved()).toBe(true);
     expect(availability.hasEntries()).toBe(false);
+    expect(availability.knownEmpty()).toBe(false);
+  });
+
+  it('is known empty only once a loaded account says so', () => {
+    expect(availability.knownEmpty()).toBe(false);
+
+    user.set({ catalog: { hasEntries: false } });
+    expect(availability.knownEmpty()).toBe(true);
+
+    user.set({ catalog: { hasEntries: true } });
+    expect(availability.knownEmpty()).toBe(false);
   });
 });

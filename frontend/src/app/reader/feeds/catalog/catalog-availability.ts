@@ -10,4 +10,10 @@ export class CatalogAvailability {
   readonly resolved = computed(() => this.auth.user() !== null || this.auth.accountLoadFailed());
 
   readonly hasEntries = computed(() => this.auth.user()?.catalog.hasEntries ?? false);
+
+  /** Only a loaded account can prove the catalog empty; an unanswered or failed load is unknown. */
+  readonly knownEmpty = computed(() => {
+    const user = this.auth.user();
+    return user !== null && !user.catalog.hasEntries;
+  });
 }
