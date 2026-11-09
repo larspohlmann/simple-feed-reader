@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\CatalogCategory;
+use App\Entity\CatalogFeed;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use Symfony\Component\HttpFoundation\Response;
@@ -128,6 +130,27 @@ final class MeControllerTest extends ApiTestCase
         $payload = $this->payload($client);
         self::assertSame(['enabled' => true], $payload['mail']);
         self::assertFalse($payload['emailVerified']);
+    }
+
+    public function testTheProfileSaysWhetherTheCatalogOffersAFeed(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'catalog-flag@example.test');
+
+        $client->request('GET', '/api/me');
+        self::assertResponseIsSuccessful();
+        self::assertSame(['hasEntries' => false], $this->payload($client)['catalog']);
+
+        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
+        $this->entityManager()->persist($category);
+        $this->entityManager()->persist(
+            new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml'),
+        );
+        $this->entityManager()->flush();
+
+        $client->request('GET', '/api/me');
+        self::assertResponseIsSuccessful();
+        self::assertSame(['hasEntries' => true], $this->payload($client)['catalog']);
     }
 
     public function testTheProfileCarriesPreferencesWithScrapingOffByDefault(): void

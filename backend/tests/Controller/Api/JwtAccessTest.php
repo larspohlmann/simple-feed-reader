@@ -175,6 +175,7 @@ final class JwtAccessTest extends ApiTestCase
         self::assertSame(
             [
                 'ai',
+                'catalog',
                 'createdAt',
                 'email',
                 'emailVerified',
