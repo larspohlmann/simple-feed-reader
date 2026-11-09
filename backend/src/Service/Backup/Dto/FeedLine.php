@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\PrivateFeedRefusal;
 use App\Service\Backup\Support\SavedFeedRefusal;
+use App\Service\Social\Model\ExportedSubscriptionModel;
 
 /**
  * One feed the account (or another account sharing it) subscribes to.
@@ -45,5 +48,34 @@ final readonly class FeedLine
         SavedFeedRefusal::ofFeed($feedLine->url, $feedLine->sourceFormat);
 
         return $feedLine;
+    }
+
+    public static function of(ExportedSubscriptionModel $exported): self
+    {
+        $feed = $exported->subscription->getFeed();
+
+        return new self(
+            url: $exported->feedUrl,
+            siteUrl: $feed->getSiteUrl(),
+            title: $feed->getTitle(),
+            description: $feed->getDescription(),
+            faviconUrl: $feed->getFaviconUrl(),
+            imageUrl: $feed->getImageUrl(),
+            sourceFormat: $exported->feedSourceFormat,
+        );
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode([
+            'kind' => BackupSchema::KIND_FEED,
+            'url' => $this->url,
+            'siteUrl' => $this->siteUrl,
+            'title' => $this->title,
+            'description' => $this->description,
+            'faviconUrl' => $this->faviconUrl,
+            'imageUrl' => $this->imageUrl,
+            'sourceFormat' => $this->sourceFormat,
+        ]);
     }
 }

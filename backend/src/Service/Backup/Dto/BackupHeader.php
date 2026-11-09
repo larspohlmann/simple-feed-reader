@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\RestoreSourceModel;
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 
 /**
@@ -92,5 +95,48 @@ final readonly class BackupHeader
             parts: LineField::intOrNull($line, 'parts'),
             totals: BackupTotals::fromHeaderLine($line),
         );
+    }
+
+    public static function foundation(BackupProvenanceModel $provenance, int $parts, BackupTotals $totals): self
+    {
+        return self::stamped($provenance, 0, $parts, $totals);
+    }
+
+    public static function entryPart(BackupProvenanceModel $provenance, int $part): self
+    {
+        return self::stamped($provenance, $part, null, null);
+    }
+
+    private static function stamped(
+        BackupProvenanceModel $provenance,
+        int $part,
+        ?int $parts,
+        ?BackupTotals $totals,
+    ): self {
+        return new self(
+            schemaVersion: BackupSchema::VERSION,
+            createdAt: $provenance->createdAt,
+            sourceUrl: $provenance->sourceUrl,
+            sourceEmail: $provenance->sourceEmail,
+            backupId: $provenance->backupId,
+            part: $part,
+            parts: $parts,
+            totals: $totals,
+        );
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode([
+            'kind' => BackupSchema::KIND_HEADER,
+            'schemaVersion' => $this->schemaVersion,
+            'createdAt' => BackupLineFormat::date($this->createdAt),
+            'sourceUrl' => $this->sourceUrl,
+            'sourceEmail' => $this->sourceEmail,
+            'backupId' => $this->backupId,
+            'part' => $this->part,
+            'parts' => $this->parts,
+            'totals' => $this->totals?->toBackupFields(),
+        ]);
     }
 }

@@ -7,6 +7,8 @@ namespace App\Tests\Service\Backup\Dto;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\BackupProvenanceModel;
+use App\Service\Backup\Support\BackupSchema;
 use PHPUnit\Framework\TestCase;
 
 final class BackupHeaderTest extends TestCase
@@ -94,6 +96,42 @@ final class BackupHeaderTest extends TestCase
         self::assertSame($createdAt, $source->createdAt);
         self::assertSame('https://reader.example', $source->sourceUrl);
         self::assertSame('owner@example.test', $source->sourceEmail);
+    }
+
+    public function testAFoundationHeaderWritesItsPartsCountAndTotals(): void
+    {
+        self::assertSame(
+            sprintf(
+                '{"kind":"header","schemaVersion":%d,"createdAt":"2026-11-09T09:00:00+00:00",'
+                . '"sourceUrl":"https://reader.example","sourceEmail":"owner@example.test",'
+                . '"backupId":"backup-2110","part":0,"parts":3,"totals":{"entries":12,"entryStates":5}}',
+                BackupSchema::VERSION,
+            ),
+            BackupHeader::foundation(self::provenance(), 3, new BackupTotals(12, 5))->toBackupLine(),
+        );
+    }
+
+    public function testAnEntryPartHeaderWritesNeitherPartsNorTotals(): void
+    {
+        self::assertSame(
+            sprintf(
+                '{"kind":"header","schemaVersion":%d,"createdAt":"2026-11-09T09:00:00+00:00",'
+                . '"sourceUrl":"https://reader.example","sourceEmail":"owner@example.test",'
+                . '"backupId":"backup-2110","part":2,"parts":null,"totals":null}',
+                BackupSchema::VERSION,
+            ),
+            BackupHeader::entryPart(self::provenance(), 2)->toBackupLine(),
+        );
+    }
+
+    private static function provenance(): BackupProvenanceModel
+    {
+        return new BackupProvenanceModel(
+            backupId: 'backup-2110',
+            createdAt: new \DateTimeImmutable('2026-11-09T10:00:00+01:00'),
+            sourceUrl: 'https://reader.example',
+            sourceEmail: 'owner@example.test',
+        );
     }
 
     private static function header(int $part, ?int $parts, ?BackupTotals $totals = null): BackupHeader

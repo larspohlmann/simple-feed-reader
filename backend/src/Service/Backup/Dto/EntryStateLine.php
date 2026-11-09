@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\EntryState;
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 
 /**
@@ -40,5 +43,34 @@ final readonly class EntryStateLine
             isViewed: LineField::bool($line, 'isViewed'),
             viewedAt: LineField::dateOrNull($line, 'viewedAt'),
         );
+    }
+
+    public static function of(EntryState $state, string $feedUrl): self
+    {
+        return new self(
+            feedUrl: $feedUrl,
+            guidHash: $state->getEntry()->getGuidHash(),
+            isHidden: $state->isHidden(),
+            isFavorite: $state->isFavorite(),
+            isKept: $state->isKept(),
+            hiddenAt: $state->getHiddenAt(),
+            isViewed: $state->isViewed(),
+            viewedAt: $state->getViewedAt(),
+        );
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode([
+            'kind' => BackupSchema::KIND_ENTRY_STATE,
+            'feedUrl' => $this->feedUrl,
+            'guidHash' => $this->guidHash,
+            'isHidden' => $this->isHidden,
+            'isFavorite' => $this->isFavorite,
+            'isKept' => $this->isKept,
+            'hiddenAt' => BackupLineFormat::dateOrNull($this->hiddenAt),
+            'isViewed' => $this->isViewed,
+            'viewedAt' => BackupLineFormat::dateOrNull($this->viewedAt),
+        ]);
     }
 }

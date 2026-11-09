@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -71,5 +74,25 @@ final class FeedLineTest extends TestCase
             'imageUrl' => null,
             'sourceFormat' => $sourceFormat,
         ];
+    }
+
+    public function testItWritesTheExportedAddressAndFormatOverTheFeedsOwn(): void
+    {
+        $feed = new Feed('https://one.example/feed.xml');
+        $feed->setSiteUrl('https://one.example');
+        $feed->setTitle('One');
+        $feed->setFaviconUrl('https://one.example/favicon.ico');
+        $exported = new ExportedSubscriptionModel(
+            BackupLineRecords::subscription($feed),
+            'https://one.example/rss',
+            SourceFormat::XML,
+        );
+
+        self::assertSame(
+            '{"kind":"feed","url":"https://one.example/rss","siteUrl":"https://one.example","title":"One",'
+            . '"description":null,"faviconUrl":"https://one.example/favicon.ico","imageUrl":null,'
+            . '"sourceFormat":"xml"}',
+            FeedLine::of($exported)->toBackupLine(),
+        );
     }
 }

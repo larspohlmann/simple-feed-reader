@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\User;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
+use App\Service\Backup\Model\AccountNetworkSwitchesModel;
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
 
@@ -51,6 +55,39 @@ final readonly class AccountLine
             savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
             forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
         );
+    }
+
+    public static function of(User $user, AccountNetworkSwitchesModel $networks): self
+    {
+        $preferences = $user->getPreferences();
+
+        return new self(
+            locale: $user->getLocale(),
+            scrapeFallbackEnabled: $preferences->isScrapeFallbackEnabled(),
+            magazineStyle: $preferences->getMagazineStyle(),
+            sharingEnabled: $preferences->isSharingEnabled(),
+            hiddenShareTargets: $preferences->getHiddenShareTargets(),
+            rememberShares: $preferences->isRememberingShares(),
+            trendingEnabled: $preferences->isTrendingEnabled(),
+            savedSearchIncludedNetworks: $networks->savedSearchIncludedNetworks,
+            forYouExcludedNetworks: $networks->forYouExcludedNetworks,
+        );
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode([
+            'kind' => BackupSchema::KIND_ACCOUNT,
+            'locale' => $this->locale,
+            'scrapeFallbackEnabled' => $this->scrapeFallbackEnabled,
+            'magazineStyle' => $this->magazineStyle->value,
+            'sharingEnabled' => $this->sharingEnabled,
+            'hiddenShareTargets' => $this->hiddenShareTargets,
+            'rememberShares' => $this->rememberShares,
+            'trendingEnabled' => $this->trendingEnabled,
+            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->savedSearchIncludedNetworks),
+            'forYouExcludedNetworks' => SocialNetwork::valuesOf($this->forYouExcludedNetworks),
+        ]);
     }
 
     /**

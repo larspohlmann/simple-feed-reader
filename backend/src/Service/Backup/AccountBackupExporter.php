@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Entity\SavedSearch;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SubscriptionSet;
@@ -13,6 +14,13 @@ use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
+use App\Service\Backup\Dto\AccountLine;
+use App\Service\Backup\Dto\BackupHeader;
+use App\Service\Backup\Dto\FeedLine;
+use App\Service\Backup\Dto\FooterLine;
+use App\Service\Backup\Dto\SavedSearchLine;
+use App\Service\Backup\Dto\SubscriptionLine;
+use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Factory\BackupPartWalkFactory;
 use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Backup\Model\BackupPartModel;
@@ -37,7 +45,6 @@ final readonly class AccountBackupExporter
         private SavedSearchNetworkInclusionRepository $includedNetworks,
         private ForYouNetworkExclusionRepository $forYouExcludedNetworks,
         private SubscriptionRepository $subscriptions,
-        private BackupLines $lines,
         private BackupPartWalkFactory $walkFactory,
         private ClockInterface $clock,
     ) {
@@ -75,18 +82,33 @@ final readonly class AccountBackupExporter
         $feedsById = self::feedsById($subscriptions);
 
         return new FoundationSnapshotModel(
-            $this->lines->accountLine(
-                $this->users->getById($userId),
-                new AccountNetworkSwitchesModel(
-                    $this->includedNetworks->includedNetworksFor($userId),
-                    $this->forYouExcludedNetworks->excludedNetworksFor($userId),
-                ),
+            AccountLine::of($this->users->getById($userId), $this->networkSwitchesOf($userId))->toBackupLine(),
+            array_map(
+                static fn (Tag $tag): string => TagLine::of($tag)->toBackupLine(),
+                self::parentsFirst($this->tags->findForUser($userId)),
             ),
-            array_map($this->lines->tagLine(...), self::parentsFirst($this->tags->findForUser($userId))),
-            array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),
-            array_map($this->lines->feedLine(...), array_values($feedsById)),
-            array_map($this->lines->subscriptionLine(...), $subscriptions),
+            array_map(
+                static fn (SavedSearch $savedSearch): string => SavedSearchLine::of($savedSearch)->toBackupLine(),
+                $this->savedSearches->findForUser($userId),
+            ),
+            array_map(
+                static fn (ExportedSubscriptionModel $exported): string => FeedLine::of($exported)->toBackupLine(),
+                array_values($feedsById),
+            ),
+            array_map(
+                static fn (ExportedSubscriptionModel $exported): string => SubscriptionLine::of($exported)
+                    ->toBackupLine(),
+                $subscriptions,
+            ),
             array_map(static fn (ExportedSubscriptionModel $exported): string => $exported->feedUrl, $feedsById),
+        );
+    }
+
+    private function networkSwitchesOf(int $userId): AccountNetworkSwitchesModel
+    {
+        return new AccountNetworkSwitchesModel(
+            $this->includedNetworks->includedNetworksFor($userId),
+            $this->forYouExcludedNetworks->excludedNetworksFor($userId),
         );
     }
 
@@ -95,9 +117,9 @@ final readonly class AccountBackupExporter
         BackupProvenanceModel $provenance,
         BackupPartWalk $walk,
     ): BackupPartModel {
-        $header = $this->lines->foundationHeader($provenance, $walk->partsWritten() + 1, $walk->totals());
+        $header = BackupHeader::foundation($provenance, $walk->partsWritten() + 1, $walk->totals())->toBackupLine();
 
-        return $snapshot->part($header, $this->lines->footerLine($snapshot->counts()));
+        return $snapshot->part($header, FooterLine::of($snapshot->counts())->toBackupLine());
     }
 
     /**

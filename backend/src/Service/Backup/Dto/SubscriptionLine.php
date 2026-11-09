@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Service\Backup\Support\BackupLineFormat;
+use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
+use App\Service\Social\Model\ExportedSubscriptionModel;
 
 /**
  * One of the account's subscriptions to a feed, with its tag assignments.
@@ -44,6 +47,42 @@ final readonly class SubscriptionLine
             includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
             includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
         );
+    }
+
+    public static function of(ExportedSubscriptionModel $exported): self
+    {
+        $subscription = $exported->subscription;
+
+        return new self(
+            feedUrl: $exported->feedUrl,
+            customTitle: $subscription->getCustomTitle(),
+            position: $subscription->getPosition(),
+            markedReadUntil: $subscription->getMarkedReadUntil(),
+            createdAt: $subscription->getCreatedAt(),
+            tags: array_map(SubscriptionTagReference::of(...), $subscription->getSubscriptionTags()),
+            includeInAllItems: $subscription->isIncludeInAllItems(),
+            includeInForYou: $subscription->isIncludeInForYou(),
+            includeInSavedSearches: $subscription->isIncludeInSavedSearches(),
+        );
+    }
+
+    public function toBackupLine(): string
+    {
+        return BackupLineFormat::encode([
+            'kind' => BackupSchema::KIND_SUBSCRIPTION,
+            'feedUrl' => $this->feedUrl,
+            'customTitle' => $this->customTitle,
+            'position' => $this->position,
+            'markedReadUntil' => BackupLineFormat::dateOrNull($this->markedReadUntil),
+            'createdAt' => BackupLineFormat::date($this->createdAt),
+            'tags' => array_map(
+                static fn (SubscriptionTagReference $tag): array => $tag->toBackupFields(),
+                $this->tags,
+            ),
+            'includeInAllItems' => $this->includeInAllItems,
+            'includeInForYou' => $this->includeInForYou,
+            'includeInSavedSearches' => $this->includeInSavedSearches,
+        ]);
     }
 
     /**
