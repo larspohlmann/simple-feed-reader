@@ -12,6 +12,7 @@ import {
   SelectionOf,
   bySelectionKind,
   searchTermOf,
+  selectedSavedSearchIdOf,
   visibleSearchTerm,
 } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
@@ -37,10 +38,9 @@ export class ListHeading {
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
 
-  readonly activeSavedSearchId = computed(() => {
-    const selection = this.routeState.selection();
-    return selection.kind === 'saved-search' ? selection.id : null;
-  });
+  readonly activeSavedSearchId = computed(() =>
+    selectedSavedSearchIdOf(this.routeState.selection()),
+  );
 
   readonly activeSavedSearch = computed(() => {
     const id = this.activeSavedSearchId();

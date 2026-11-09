@@ -140,6 +140,19 @@ export function trendingWindowOf(selection: Selection): TrendingWindow | null {
   return selection.kind === 'trending' ? selection.window : null;
 }
 
+export function selectedTagIdOf(selection: Selection): number | null {
+  return selection.kind === 'tag' ? selection.id : null;
+}
+
+export function selectedGroupOf(selection: Selection): FeedGroupName | null {
+  return selection.kind === 'group' ? selection.group : null;
+}
+
+/** The saved search on screen, or null on every other list, the combined view included. */
+export function selectedSavedSearchIdOf(selection: Selection): number | null {
+  return selection.kind === 'saved-search' ? selection.id : null;
+}
+
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
  *  and Trending lists have no date order to reverse. */
 export function hasListOrder(selection: Selection): selection is OrderedSelection {

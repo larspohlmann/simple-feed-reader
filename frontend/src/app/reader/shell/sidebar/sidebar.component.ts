@@ -43,7 +43,13 @@ import { SidebarViewsComponent } from './sidebar-views.component';
 import { TagNode, tagNodesById } from '../../state/subscription-derivations';
 import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
-import { Selection, searchTermOf, selectionQueryParams } from '../../query/query';
+import {
+  Selection,
+  searchTermOf,
+  selectedGroupOf,
+  selectedTagIdOf,
+  selectionQueryParams,
+} from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { TrendingUnopened } from '../../trending/trending.models';
@@ -154,15 +160,9 @@ export class SidebarComponent {
    *  restoring plain nav-row height/padding when absent (#636). */
   protected readonly showDigestToggles = computed(() => this.mailEnabled() && this.digestEnabled());
   readonly selection = input.required<Selection>();
-  protected readonly activeGroup = computed(() => {
-    const selection = this.selection();
-    return selection.kind === 'group' ? selection.group : null;
-  });
+  protected readonly activeGroup = computed(() => selectedGroupOf(this.selection()));
   protected readonly searchTerm = computed(() => searchTermOf(this.selection()));
-  protected readonly activeTagId = computed(() => {
-    const selection = this.selection();
-    return selection.kind === 'tag' ? selection.id : null;
-  });
+  protected readonly activeTagId = computed(() => selectedTagIdOf(this.selection()));
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
    *  the subscriptions store's own loading flag; conflating the two would show

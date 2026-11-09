@@ -13,6 +13,9 @@ import {
   sameSelection,
   selectionFromParams,
   searchTermOf,
+  selectedGroupOf,
+  selectedSavedSearchIdOf,
+  selectedTagIdOf,
   selectionQueryParams,
   trendingWindowOf,
   visibleSearchTerm,
@@ -878,6 +881,22 @@ describe('the selection readers (#2107)', () => {
   it("reads Trending's window, null on any other list", () => {
     expect(trendingWindowOf({ kind: 'trending', window: 'week' })).toBe('week');
     expect(trendingWindowOf({ kind: 'all', unread: false })).toBeNull();
+  });
+
+  it("reads the tag's id, null on any other list", () => {
+    expect(selectedTagIdOf({ kind: 'tag', id: 3, unread: false })).toBe(3);
+    expect(selectedTagIdOf({ kind: 'subscription', id: 3, unread: false })).toBeNull();
+  });
+
+  it("reads the feed group's name, null on any other list", () => {
+    expect(selectedGroupOf({ kind: 'group', group: 'tags', unread: false })).toBe('tags');
+    expect(selectedGroupOf({ kind: 'all', unread: false })).toBeNull();
+  });
+
+  it("reads the saved search's id, null on the combined view and any other list", () => {
+    expect(selectedSavedSearchIdOf({ kind: 'saved-search', id: 42, unread: false })).toBe(42);
+    expect(selectedSavedSearchIdOf({ kind: 'saved-searches', unread: false })).toBeNull();
+    expect(selectedSavedSearchIdOf({ kind: 'tag', id: 42, unread: false })).toBeNull();
   });
 });
 
