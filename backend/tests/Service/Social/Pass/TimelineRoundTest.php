@@ -15,6 +15,7 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
 use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\Pass\TimelineRound;
 use App\Tests\Support\CountingArrayAdapter;
@@ -31,6 +32,8 @@ final class TimelineRoundTest extends TestCase
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const int HOME = 1;
     private const int LIST = 2;
+    private const int SEARCH = 3;
+    private const string SEARCH_URL = 'https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=';
 
     private CountingArrayAdapter $cache;
 
@@ -140,6 +143,38 @@ final class TimelineRoundTest extends TestCase
         self::assertTrue($round->admits(self::LIST));
     }
 
+    public function testAMastodonSearchAsksForItsAlternativesOneAfterAnotherAndSettlesOnTheMergedPage(): void
+    {
+        $search = self::rssOrAtomSearch();
+        $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
+
+        $tickets = iterator_to_array($round->ticketFor(self::SEARCH));
+        self::assertSame(self::SEARCH_URL . 'rss', $tickets[self::SEARCH]->request->url);
+
+        $followUp = $round->settle(self::SEARCH, self::mastodonSearchAnswer('111', 'rss'));
+        self::assertSame(self::SEARCH_URL . 'atom', $followUp->requestTicket()->request->url);
+
+        $fetched = $round->settle(self::SEARCH, self::mastodonSearchAnswer('112', 'atom'))->settledOutcome();
+        self::assertInstanceOf(FetchedTimelineModel::class, $fetched);
+        self::assertCount(2, $fetched->page->parsed->entries);
+        self::assertSame('112', $search->getNewestSeenId());
+    }
+
+    public function testARefusedFirstAlternativeSettlesTheSearchWithoutAskingTheNext(): void
+    {
+        $search = self::rssOrAtomSearch();
+        $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
+        iterator_to_array($round->ticketFor(self::SEARCH));
+
+        $refused = $round->settle(
+            self::SEARCH,
+            FetchOutcomeModel::answered(new ApiResponseModel(Response::HTTP_UNAUTHORIZED, '{}')),
+        );
+
+        self::assertFalse($refused->isRequest());
+        self::assertInstanceOf(FailedTimelineModel::class, $refused->settledOutcome());
+    }
+
     private function round(): TimelineRound
     {
         return SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([
@@ -178,5 +213,28 @@ final class TimelineRoundTest extends TestCase
         $sources = SocialApiWiring::timelineSources(new MockHttpClient(), new ArrayAdapter());
 
         return new TimelineRound($sources, new TimelineSlotsModel(3, 4), []);
+    }
+
+    private static function rssOrAtomSearch(): SocialFeed
+    {
+        return PrivateFeeds::mastodon(
+            PrivateFeeds::mastodonAccount(),
+            self::SEARCH,
+            SocialFeedKind::Search,
+            '(rss || atom)',
+        );
+    }
+
+    private static function mastodonSearchAnswer(string $id, string $word): FetchOutcomeModel
+    {
+        return FetchOutcomeModel::answered(new ApiResponseModel(Response::HTTP_OK, json_encode(['statuses' => [[
+            'id' => $id,
+            'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
+            'url' => 'https://mastodon.example/@bob/' . $id,
+            'created_at' => '2026-11-09T10:00:00Z',
+            'content' => '<p>' . $word . '</p>',
+            'in_reply_to_id' => null,
+            'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
+        ]]], \JSON_THROW_ON_ERROR)));
     }
 }

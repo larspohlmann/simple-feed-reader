@@ -425,6 +425,7 @@
         "syntaxCombined": "All of it combined:",
         "syntaxAllWords": "every word must appear",
         "syntaxMastodonNote": "Needs full-text search on your instance; only posts from people who allow search are found.",
+        "syntaxMastodonAlternatives": "Mastodon has no ||: each alternative is searched on its own, at most 8 per query.",
         "preview": "Preview",
         "subscribe": "Subscribe",
         "loading": "Searching for recent posts…",

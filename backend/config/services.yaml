@@ -235,6 +235,10 @@ services:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
 
+    App\Service\Social\SocialSearch\NetworkSocialSearch:
+        arguments:
+            $settler: '@App\Service\Fetch\AnswerSettler\PassThroughSettler'
+
     App\Service\Social\TimelineRounds:
         arguments:
             $accountConcurrency: '%social_account_concurrency%'

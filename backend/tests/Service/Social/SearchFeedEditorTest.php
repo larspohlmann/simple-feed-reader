@@ -17,6 +17,7 @@ use App\Repository\RowIds;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Exception\NotASearchFeedException;
+use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\SearchFeedEditor;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
@@ -69,6 +70,19 @@ final class SearchFeedEditorTest extends DbTestCase
         $this->entityManager->clear();
         $stored = $this->entityManager->find(SocialFeed::class, $socialFeed->requireId());
         self::assertSame('feed reader', $stored?->getRemoteId());
+    }
+
+    public function testAMastodonQueryTooBroadIsRefusedAndTheSearchStaysAsItWas(): void
+    {
+        $account = $this->stored(SocialAccounts::mastodonOf($this->user));
+        $subscription = $this->searchFor($account, 'rss reader');
+
+        try {
+            $this->editor()->requery($subscription, '(a || b || c) (d || e || f)');
+            self::fail('Mastodon cannot search nine alternatives.');
+        } catch (SearchQueryTooBroadException) {
+            self::assertSame('rss reader', $this->socialFeedOf($subscription)->getRemoteId());
+        }
     }
 
     public function testACustomTitleStays(): void

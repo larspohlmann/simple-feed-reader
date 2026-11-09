@@ -87,7 +87,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         $this->rewriteCachedEntry(['pdsUrl' => 'https://elsewhere.example.test']);
         $http = new RoutedHttpClient([]);
 
-        $request = $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Home, ''));
+        $request = $this->source($http->client())->requests($this->socialFeed(SocialFeedKind::Home, ''))[0];
 
         self::assertSame(self::TIMELINE, $request->method . ' ' . $request->url);
         self::assertSame('Bearer cached-jwt', $request->headers['Authorization'] ?? null);
@@ -99,7 +99,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
 
-        $request = $this->source($http->client())->request($this->socialFeed($kind, $uri));
+        $request = $this->source($http->client())->requests($this->socialFeed($kind, $uri))[0];
 
         self::assertSame($route, $request->method . ' ' . $request->url);
     }
@@ -110,7 +110,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Tag, 'caturday'));
+        $this->source($http->client())->requests($this->socialFeed(SocialFeedKind::Tag, 'caturday'));
     }
 
     public function testBlueskyHasNoTrendingTimeline(): void
@@ -119,7 +119,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Trending, ''));
+        $this->source($http->client())->requests($this->socialFeed(SocialFeedKind::Trending, ''));
     }
 
     public function testASearchAsksForTheLatestHundredMatches(): void
@@ -127,7 +127,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
 
         $request = $this->source($http->client())
-            ->request($this->socialFeed(SocialFeedKind::Search, '"rss reader" || feedreader'));
+            ->requests($this->socialFeed(SocialFeedKind::Search, '"rss reader" || feedreader'))[0];
 
         self::assertSame(
             'GET https://pds.example.test/xrpc/app.bsky.feed.searchPosts?q=%22rss%20reader%22%20%7C%7C%20feedreader'
@@ -138,14 +138,13 @@ final class BlueskyTimelineSourceTest extends TestCase
 
     public function testASearchAnswerMapsToItsPostsWithoutRepliesOrPostsTheQueryDoesNotMatch(): void
     {
-        $page = $this->source(new MockHttpClient())->pageOf(
-            $this->socialFeed(SocialFeedKind::Search, 'rss'),
-            self::answer(['posts' => [
-                self::searchPost('at://did:plc:amy/app.bsky.feed.post/1', null),
-                self::searchPost('at://did:plc:bob/app.bsky.feed.post/2', 'at://did:plc:amy/app.bsky.feed.post/1'),
-                self::searchPost('at://did:plc:amy/app.bsky.feed.post/3', null, 'Which Atom reader?'),
-            ]]),
-        );
+        $source = $this->source(new MockHttpClient());
+        $search = $this->socialFeed(SocialFeedKind::Search, 'rss');
+        $page = $source->pageOf($search, [$source->accepted($search, self::answer(['posts' => [
+            self::searchPost('at://did:plc:amy/app.bsky.feed.post/1', null),
+            self::searchPost('at://did:plc:bob/app.bsky.feed.post/2', 'at://did:plc:amy/app.bsky.feed.post/1'),
+            self::searchPost('at://did:plc:amy/app.bsky.feed.post/3', null, 'Which Atom reader?'),
+        ]]))]);
 
         self::assertSame(
             ['at://did:plc:amy/app.bsky.feed.post/1'],
@@ -157,7 +156,8 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
 
-        $request = $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Author, 'did:plc:bob'));
+        $author = $this->socialFeed(SocialFeedKind::Author, 'did:plc:bob');
+        $request = $this->source($http->client())->requests($author)[0];
 
         self::assertSame(
             'GET https://pds.example.test/xrpc/app.bsky.feed.getAuthorFeed?actor=did%3Aplc%3Abob'
@@ -177,10 +177,9 @@ final class BlueskyTimelineSourceTest extends TestCase
             'reply' => ['parent' => ['author' => ['did' => 'did:plc:bob', 'viewer' => []]]],
         ]]];
 
-        $page = $this->source(new MockHttpClient())->pageOf(
-            $this->socialFeed(SocialFeedKind::Author, 'did:plc:bob'),
-            self::answer($body),
-        );
+        $source = $this->source(new MockHttpClient());
+        $author = $this->socialFeed(SocialFeedKind::Author, 'did:plc:bob');
+        $page = $source->pageOf($author, [$source->accepted($author, self::answer($body))]);
 
         self::assertCount(1, $page->parsed->entries);
     }
@@ -190,8 +189,8 @@ final class BlueskyTimelineSourceTest extends TestCase
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
         $source = $this->source($http->client());
 
-        $source->request($this->socialFeed(SocialFeedKind::Home, ''));
-        $source->request($this->socialFeed(SocialFeedKind::UserList, self::LIST));
+        self::assertCount(1, $source->requests($this->socialFeed(SocialFeedKind::Home, '')));
+        self::assertCount(1, $source->requests($this->socialFeed(SocialFeedKind::UserList, self::LIST)));
 
         self::assertSame(['POST'], array_column($http->requests, 'method'));
     }
@@ -206,7 +205,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         $source = $this->source($http->client());
 
         $source->dropSession($this->account);
-        $request = $source->request($this->socialFeed(SocialFeedKind::Home, ''));
+        $request = $source->requests($this->socialFeed(SocialFeedKind::Home, ''))[0];
 
         self::assertSame('Bearer jwt-2', $request->headers['Authorization'] ?? null);
         self::assertCount(1, $http->requests);
@@ -279,7 +278,10 @@ final class BlueskyTimelineSourceTest extends TestCase
 
     private function pageOf(FetchOutcomeModel $outcome): TimelinePageModel
     {
-        return $this->source(new MockHttpClient())->pageOf($this->socialFeed(SocialFeedKind::Home, ''), $outcome);
+        $source = $this->source(new MockHttpClient());
+        $home = $this->socialFeed(SocialFeedKind::Home, '');
+
+        return $source->pageOf($home, [$source->accepted($home, $outcome)]);
     }
 
     /**

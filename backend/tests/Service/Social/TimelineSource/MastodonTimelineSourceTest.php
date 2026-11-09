@@ -9,6 +9,7 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -38,7 +39,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
     public function testARequestCarriesTheTokenToTheAccountsInstance(): void
     {
-        $request = $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::Home, ''));
+        $request = $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::Home, ''))[0];
 
         self::assertSame(self::HOME, $request->method . ' ' . $request->url);
         self::assertSame('Bearer ' . SocialAccounts::ACCESS_TOKEN, $request->headers['Authorization'] ?? null);
@@ -49,7 +50,7 @@ final class MastodonTimelineSourceTest extends TestCase
         $list = self::socialFeed(SocialFeedKind::UserList, '42');
         $list->recordNewestSeen('100');
 
-        $request = $this->source(new RoutedHttpClient([]))->request($list);
+        $request = $this->source(new RoutedHttpClient([]))->requests($list)[0];
 
         self::assertSame('https://mastodon.example/api/v1/timelines/list/42?limit=40&min_id=100', $request->url);
     }
@@ -59,7 +60,7 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::UserList, $listId));
+        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::UserList, $listId));
     }
 
     public function testATagRequestReadsTheTagTimelineAfterTheNewestSeenStatus(): void
@@ -67,7 +68,7 @@ final class MastodonTimelineSourceTest extends TestCase
         $tag = self::socialFeed(SocialFeedKind::Tag, 'caturday');
         $tag->recordNewestSeen('100');
 
-        $request = $this->source(new RoutedHttpClient([]))->request($tag);
+        $request = $this->source(new RoutedHttpClient([]))->requests($tag)[0];
 
         self::assertSame('https://mastodon.example/api/v1/timelines/tag/caturday?limit=40&min_id=100', $request->url);
         self::assertSame('Bearer ' . SocialAccounts::ACCESS_TOKEN, $request->headers['Authorization'] ?? null);
@@ -78,7 +79,7 @@ final class MastodonTimelineSourceTest extends TestCase
         $trending = self::socialFeed(SocialFeedKind::Trending, '');
         $trending->recordNewestSeen('100');
 
-        $request = $this->source(new RoutedHttpClient([]))->request($trending);
+        $request = $this->source(new RoutedHttpClient([]))->requests($trending)[0];
 
         self::assertSame('https://mastodon.example/api/v1/trends/statuses?limit=40', $request->url);
     }
@@ -86,7 +87,7 @@ final class MastodonTimelineSourceTest extends TestCase
     public function testASearchAsksForTheLatestStatusesMatching(): void
     {
         $request = $this->source(new RoutedHttpClient([]))
-            ->request(self::socialFeed(SocialFeedKind::Search, 'rss reader'));
+            ->requests(self::socialFeed(SocialFeedKind::Search, 'rss reader'))[0];
 
         self::assertSame(
             'https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss%20reader',
@@ -99,7 +100,7 @@ final class MastodonTimelineSourceTest extends TestCase
         $search = self::socialFeed(SocialFeedKind::Search, 'rss reader');
         $search->recordNewestSeen('110');
 
-        $request = $this->source(new RoutedHttpClient([]))->request($search);
+        $request = $this->source(new RoutedHttpClient([]))->requests($search)[0];
 
         self::assertSame(
             'https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss%20reader&min_id=110',
@@ -109,20 +110,78 @@ final class MastodonTimelineSourceTest extends TestCase
 
     public function testASearchAnswerMapsToItsStatusesWithoutRepliesOrStatusesTheQueryDoesNotMatch(): void
     {
-        $body = json_encode(['accounts' => [], 'hashtags' => [], 'statuses' => [
+        $body = self::searchBody(
             self::searchStatus('111', null),
             self::searchStatus('112', '100'),
             self::searchStatus('110', null, '<p>Goodbye</p>'),
-        ]], \JSON_THROW_ON_ERROR);
+        );
 
-        $page = $this->source(new RoutedHttpClient([]))
-            ->pageOf(self::socialFeed(SocialFeedKind::Search, 'hello'), self::answered($body));
+        $source = $this->source(new RoutedHttpClient([]));
+        $search = self::socialFeed(SocialFeedKind::Search, 'hello');
+        $page = $source->pageOf($search, [$source->accepted($search, self::answered($body))]);
 
         self::assertSame(['https://mastodon.example/@bob/111'], array_map(
             static fn (ParsedEntryModel $entry): ?string => $entry->url,
             $page->parsed->entries,
         ));
         self::assertSame('111', $page->newestId);
+    }
+
+    public function testASearchAsksOncePerAlternativeEachAfterTheNewestSeenStatus(): void
+    {
+        $search = self::socialFeed(SocialFeedKind::Search, '(rss || atom) -json');
+        $search->recordNewestSeen('110');
+
+        $requests = $this->source(new RoutedHttpClient([]))->requests($search);
+
+        self::assertSame([
+            'https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss%20-json&min_id=110',
+            'https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom%20-json&min_id=110',
+        ], array_map(static fn (ApiRequestModel $request): string => $request->url, $requests));
+    }
+
+    public function testASearchTooBroadForMastodonIsNeverTurnedIntoARequest(): void
+    {
+        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionMessage('more than 8');
+
+        $this->source(new RoutedHttpClient([]))
+            ->requests(self::socialFeed(SocialFeedKind::Search, '(a || b || c) (d || e || f)'));
+    }
+
+    public function testTheAnswersOfASearchsAlternativesMergeIntoOnePageHoldingEachStatusOnce(): void
+    {
+        $source = $this->source(new RoutedHttpClient([]));
+        $search = self::socialFeed(SocialFeedKind::Search, '(rss || atom)');
+        $first = self::searchBody(
+            self::searchStatus('111', null, '<p>rss</p>'),
+            self::searchStatus('110', null, '<p>atom</p>'),
+        );
+        $second = self::searchBody(
+            self::searchStatus('111', null, '<p>rss</p>'),
+            self::searchStatus('109', null, '<p>atom</p>'),
+        );
+
+        $page = $source->pageOf($search, [
+            $source->accepted($search, self::answered($first)),
+            $source->accepted($search, self::answered($second)),
+        ]);
+
+        self::assertSame(
+            [
+                'https://mastodon.example/@bob/111',
+                'https://mastodon.example/@bob/110',
+                'https://mastodon.example/@bob/109',
+            ],
+            array_map(static fn (ParsedEntryModel $entry): ?string => $entry->url, $page->parsed->entries),
+        );
+        self::assertSame('111', $page->newestId);
+    }
+
+    /** @param array<string, mixed> ...$statuses */
+    private static function searchBody(array ...$statuses): string
+    {
+        return json_encode(['accounts' => [], 'hashtags' => [], 'statuses' => $statuses], \JSON_THROW_ON_ERROR);
     }
 
     /** @return iterable<string, array{SocialFeedKind}> */
@@ -137,12 +196,12 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source(new RoutedHttpClient([]))->request(self::socialFeed($kind, 'at://did:plc:alice'));
+        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed($kind, 'at://did:plc:alice'));
     }
 
     public function testANonLatinTagIsPercentEncodedInThePath(): void
     {
-        $request = $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::Tag, '日本語'));
+        $request = $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::Tag, '日本語'))[0];
 
         self::assertSame(
             'https://mastodon.example/api/v1/timelines/tag/' . rawurlencode('日本語') . '?limit=40',
@@ -164,7 +223,7 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::Tag, $tagName));
+        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::Tag, $tagName));
     }
 
     public function testAnAnswerMapsToThePageAndNamesItsNewestStatus(): void
@@ -225,7 +284,10 @@ final class MastodonTimelineSourceTest extends TestCase
 
     private function pageOf(FetchOutcomeModel $outcome): TimelinePageModel
     {
-        return $this->source(new RoutedHttpClient([]))->pageOf(self::socialFeed(SocialFeedKind::Home, ''), $outcome);
+        $source = $this->source(new RoutedHttpClient([]));
+        $home = self::socialFeed(SocialFeedKind::Home, '');
+
+        return $source->pageOf($home, [$source->accepted($home, $outcome)]);
     }
 
     /** @param array<array<string>> $headers */

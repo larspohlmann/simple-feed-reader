@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\SocialSearch;
 
 use App\Enum\SocialAccountStatus;
+use App\Service\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\ActingAccountGuard;
+use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\SocialSearch\NetworkSocialSearch;
@@ -105,7 +107,7 @@ final class NetworkSocialSearchTest extends TestCase
     {
         $http = new RoutedHttpClient([self::MASTODON_SEARCH => self::json(['statuses' => [self::mastodonStatus()]])]);
 
-        $page = $this->search($http->client())->newest(SocialAccounts::mastodon(), 'rss reader');
+        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), 'rss reader');
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame([self::MASTODON_SEARCH], $http->requestLines());
@@ -115,7 +117,7 @@ final class NetworkSocialSearchTest extends TestCase
     public function testARefusedMastodonTokenMarksTheAccountForReconnecting(): void
     {
         $http = new RoutedHttpClient([self::MASTODON_SEARCH => self::json([], Response::HTTP_UNAUTHORIZED)]);
-        $account = SocialAccounts::mastodon();
+        $account = SocialApiWiring::mastodonAccount();
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->once())->method('flush');
         $this->entityManager = $entityManager;
@@ -128,13 +130,88 @@ final class NetworkSocialSearchTest extends TestCase
         }
     }
 
+    public function testAMastodonPreviewAsksOncePerAlternativeAndMergesTheAnswers(): void
+    {
+        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
+        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
+        $http = new RoutedHttpClient([
+            $rss => self::json(['statuses' => [self::mastodonStatus('1')]]),
+            $atom => self::json(['statuses' => [
+                self::mastodonStatus('1'),
+                self::mastodonStatus('2', '<p>atom feeds</p>'),
+            ]]),
+        ]);
+
+        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(rss || atom)');
+
+        self::assertCount(2, $page->parsed->entries);
+        self::assertSame([$rss, $atom], $http->requestLines());
+    }
+
+    public function testARefusedLaterAlternativeMarksTheAccountForReconnecting(): void
+    {
+        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
+        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
+        $http = new RoutedHttpClient([
+            $rss => self::json(['statuses' => [self::mastodonStatus('1')]]),
+            $atom => self::json([], Response::HTTP_UNAUTHORIZED),
+        ]);
+        $account = SocialApiWiring::mastodonAccount();
+
+        try {
+            $this->search($http->client())->newest($account, '(rss || atom)');
+            self::fail('A refused token must be a refused credential.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertSame(SocialAccountStatus::NeedsReconnect, $account->getStatus());
+        }
+    }
+
+    public function testAMastodonPreviewListsTheMergedAnswersNewestFirst(): void
+    {
+        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
+        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
+        $http = new RoutedHttpClient([
+            $rss => self::json(['statuses' => [self::mastodonStatus('110'), self::mastodonStatus('108')]]),
+            $atom => self::json(['statuses' => [
+                self::mastodonStatus('111', '<p>atom feeds</p>'),
+                self::mastodonStatus('109', '<p>atom feeds</p>'),
+            ]]),
+        ]);
+
+        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(rss || atom)');
+
+        self::assertSame(
+            [
+                'https://mastodon.example/@bob/111',
+                'https://mastodon.example/@bob/110',
+                'https://mastodon.example/@bob/109',
+                'https://mastodon.example/@bob/108',
+            ],
+            array_map(static fn (ParsedEntryModel $entry): ?string => $entry->url, $page->parsed->entries),
+        );
+    }
+
+    public function testAMastodonPreviewTooBroadIsRefusedBeforeAnyRequest(): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(a || b || c) (d || e || f)');
+            self::fail('Nine alternatives are more than Mastodon is asked for.');
+        } catch (SearchQueryTooBroadException) {
+            self::assertSame([], $http->requestLines());
+        }
+    }
+
     private function search(HttpClientInterface $http): NetworkSocialSearch
     {
         return new NetworkSocialSearch(
             SocialApiWiring::blueskySessions($http, $this->cache),
             SocialApiWiring::mastodonAccountApi($http),
-            SocialApiWiring::mastodonApiClient($http),
+            SocialApiWiring::requestEngine($http),
+            new PassThroughSettler(),
             new ActingAccountGuard($this->entityManager),
+            SocialApiWiring::timelineRounds($http, $this->cache),
         );
     }
 
@@ -155,14 +232,14 @@ final class NetworkSocialSearchTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function mastodonStatus(): array
+    private static function mastodonStatus(string $id = '1', string $content = '<p>Which RSS reader?</p>'): array
     {
         return [
-            'id' => '1',
-            'uri' => 'https://mastodon.example/users/bob/statuses/1',
-            'url' => 'https://mastodon.example/@bob/1',
+            'id' => $id,
+            'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
+            'url' => 'https://mastodon.example/@bob/' . $id,
             'created_at' => '2026-10-12T10:00:00Z',
-            'content' => '<p>Which RSS reader?</p>',
+            'content' => $content,
             'in_reply_to_id' => null,
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
         ];

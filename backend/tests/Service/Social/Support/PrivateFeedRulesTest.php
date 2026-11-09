@@ -37,6 +37,16 @@ final class PrivateFeedRulesTest extends TestCase
         self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Bluesky, $longestInCharacters));
     }
 
+    public function testAMastodonSearchIsAllowedOnlyWhileItSpellsOutFewEnoughAlternatives(): void
+    {
+        $tooBroad = PrivateFeedModel::search('(a || b || c) (d || e || f)');
+
+        self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Mastodon, $tooBroad));
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Bluesky, $tooBroad));
+        $fits = PrivateFeedModel::search('(a || b) (c || d)');
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Mastodon, $fits));
+    }
+
     #[DataProvider('mastodonListIds')]
     public function testAMastodonListIdIsDigitsOnly(string $listId, bool $allowed): void
     {

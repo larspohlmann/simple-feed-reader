@@ -11,6 +11,7 @@ use App\Service\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Exception\NotASearchFeedException;
+use App\Service\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
 use App\Service\Social\Exception\SocialAccountMismatchException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
@@ -58,6 +59,12 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
             $exception instanceof InvalidSocialImportFeedException => new ResolvedProblem(new ApiProblem(
                 'social_import_invalid_feed',
                 'Not importable from this account',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof SearchQueryTooBroadException => new ResolvedProblem(new ApiProblem(
+                'social_search_too_broad',
+                'Search too broad for Mastodon',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
