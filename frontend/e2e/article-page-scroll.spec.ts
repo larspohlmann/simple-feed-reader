@@ -15,7 +15,6 @@ import {
   pageScrollY,
   pageScrollHeight,
   rowTitleInView,
-  textInView,
   scrollPageTo,
   scrollPageToEnd,
   touchDrag,
@@ -319,54 +318,6 @@ test.describe('Switching between split view and full screen with an article open
     await expect(page.locator('.main.split')).toHaveCount(1);
     await expect(page.locator('.article-overlay')).toHaveCount(0);
     await expect(page.locator('section.list')).not.toHaveClass(/page-pinned/);
-  });
-
-  // Follow-up: a content-anchored restore across a layout switch.
-  test.fixme('keeps the list on the same row through full screen and back', async ({ page }) => {
-    await openReader(page, 'pane');
-    await openArticleFromList(page);
-    await expect(page.locator('.main.split')).toHaveCount(1);
-    expect(await pageScrollY(page), 'the list does not overflow — the case proves nothing').toBe(
-      LIST_OFFSET,
-    );
-    const title = await rowTitleInView(page);
-    expect(title, 'no row in the middle third — the case proves nothing').not.toBe('');
-
-    // Resized mid-test on purpose; each wait below gates on the layout actually switching.
-    await page.setViewportSize(MEDIUM);
-    await expect(page.locator('.main.split')).toHaveCount(0);
-    await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
-    await expect(page.locator('section.list')).toHaveClass(/page-pinned/);
-
-    await page.locator(`${LAYER} .corner-back`).click();
-    await expect(page.locator('.article-overlay')).toHaveCount(0);
-    await expect(page.locator('section.list')).not.toHaveClass(/page-pinned/);
-    await expect.poll(() => rowTitleInView(page)).toBe(title);
-
-    await page.setViewportSize(WIDE);
-    await expect(page.locator('.main.split')).toHaveCount(1);
-    await expect.poll(() => rowTitleInView(page)).toBe(title);
-  });
-
-  // Follow-up: a content-anchored restore across a layout switch.
-  test.fixme('keeps the article on the same paragraph into full screen', async ({ page }) => {
-    await openReader(page, 'pane');
-    await openArticleFromList(page);
-    await expect(page.locator('.main.split')).toHaveCount(1);
-    const pane = page.locator('.main.split > .reader app-reader-view .scroller');
-    await pane.evaluate(
-      (element, top) => element.scrollTo({ top, behavior: 'instant' }),
-      ARTICLE_OFFSET,
-    );
-    await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(ARTICLE_OFFSET);
-    await nextFrames(page);
-    const paragraph = await textInView(page, 'app-reader-view p');
-    expect(paragraph, 'no paragraph in the middle third — the case proves nothing').not.toBe('');
-
-    await page.setViewportSize(MEDIUM);
-    await expect(page.locator('.main.split')).toHaveCount(0);
-    await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
-    await expect.poll(() => textInView(page, 'app-reader-view p')).toBe(paragraph);
   });
 });
 
