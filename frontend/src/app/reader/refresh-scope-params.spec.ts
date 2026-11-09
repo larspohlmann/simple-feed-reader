@@ -1,4 +1,4 @@
-import { refreshScopeParams } from './refresh-params';
+import { refreshScopeParams } from './refresh-scope-params';
 
 describe('refreshScopeParams', () => {
   it.each([

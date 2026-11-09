@@ -6,7 +6,8 @@ import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
-import { refreshParams, refreshScopeParams } from './refresh-params';
+import { refreshParams } from './refresh-params';
+import { refreshScopeParams } from './refresh-scope-params';
 import { SignedUrl } from './query/link-param';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
@@ -188,9 +189,7 @@ export class ReaderApi {
     return this.http.post<RefreshReport>(
       `${this.base}/api/refresh`,
       {},
-      {
-        params: refreshScopeParams(scope),
-      },
+      { params: refreshScopeParams(scope) },
     );
   }
 
