@@ -60,7 +60,7 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::UserList, $listId))[0];
+        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::UserList, $listId));
     }
 
     public function testATagRequestReadsTheTagTimelineAfterTheNewestSeenStatus(): void
@@ -196,7 +196,7 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed($kind, 'at://did:plc:alice'))[0];
+        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed($kind, 'at://did:plc:alice'));
     }
 
     public function testANonLatinTagIsPercentEncodedInThePath(): void
@@ -223,7 +223,7 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::Tag, $tagName))[0];
+        $this->source(new RoutedHttpClient([]))->requests(self::socialFeed(SocialFeedKind::Tag, $tagName));
     }
 
     public function testAnAnswerMapsToThePageAndNamesItsNewestStatus(): void

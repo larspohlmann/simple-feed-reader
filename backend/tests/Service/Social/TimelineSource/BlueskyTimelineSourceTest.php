@@ -110,7 +110,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http->client())->requests($this->socialFeed(SocialFeedKind::Tag, 'caturday'))[0];
+        $this->source($http->client())->requests($this->socialFeed(SocialFeedKind::Tag, 'caturday'));
     }
 
     public function testBlueskyHasNoTrendingTimeline(): void
@@ -119,7 +119,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http->client())->requests($this->socialFeed(SocialFeedKind::Trending, ''))[0];
+        $this->source($http->client())->requests($this->socialFeed(SocialFeedKind::Trending, ''));
     }
 
     public function testASearchAsksForTheLatestHundredMatches(): void
@@ -189,8 +189,8 @@ final class BlueskyTimelineSourceTest extends TestCase
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
         $source = $this->source($http->client());
 
-        $source->requests($this->socialFeed(SocialFeedKind::Home, ''))[0];
-        $source->requests($this->socialFeed(SocialFeedKind::UserList, self::LIST))[0];
+        self::assertCount(1, $source->requests($this->socialFeed(SocialFeedKind::Home, '')));
+        self::assertCount(1, $source->requests($this->socialFeed(SocialFeedKind::UserList, self::LIST)));
 
         self::assertSame(['POST'], array_column($http->requests, 'method'));
     }
