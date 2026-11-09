@@ -9,6 +9,7 @@ import { BulkSubscriptionActions } from './bulk-subscription-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SubscriptionDto, TagDto } from '../../models';
+import { makeTag } from '../../testing/tag.factory';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { ToastService } from '../../../shared/toast/toast.service';
 
@@ -21,7 +22,7 @@ const SUBSCRIPTION: SubscriptionDto = makeSubscription({
   feedUrl: 'u',
   createdAt: 'x',
 });
-const TAG: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const TAG: TagDto = makeTag(3, 'Tech', { position: 0 });
 
 describe('BulkSubscriptionActions', () => {
   const subscriptions = (count: number): SubscriptionDto[] =>
@@ -31,11 +32,8 @@ describe('BulkSubscriptionActions', () => {
       title: `Feed ${index + 1}`,
     }));
 
-  let http: HttpTestingController;
-  afterEach(() => http.verify());
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  // The dialog mock returns a replayable `closed`, so a test can answer the
-  // confirmation before the code under test subscribes.
   function setup(options: { confirmAnswer?: boolean } = {}) {
     const closed = new ReplaySubject<unknown>(1);
     const dialogOpen = jest.fn<
@@ -49,15 +47,13 @@ describe('BulkSubscriptionActions', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: BASE },
         { provide: Dialog, useValue: { open: dialogOpen } },
-        // ConfirmService and ToastService share the `Dialog` token; the stub above's
-        // bare { closed } object lacks the `overlayRef` ToastService.show() reads, so
-        // a real call inside bulkPatch()/bulkUnsubscribe() would throw against it.
+        // The Dialog stub lacks the `overlayRef` ToastService.show() reads.
         { provide: ToastService, useValue: { show: jest.fn() } },
       ],
     });
     const actions = TestBed.inject(BulkSubscriptionActions);
-    http = TestBed.inject(HttpTestingController);
-    const subLoad = jest
+    const http = TestBed.inject(HttpTestingController);
+    const reloadSubscriptions = jest
       .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
       .mockImplementation(() => undefined);
     const savedSearchesLoad = jest
@@ -66,7 +62,7 @@ describe('BulkSubscriptionActions', () => {
 
     if (options.confirmAnswer !== undefined) closed.next(options.confirmAnswer);
 
-    return { actions, http, dialogOpen, subLoad, savedSearchesLoad };
+    return { actions, http, dialogOpen, reloadSubscriptions, savedSearchesLoad };
   }
 
   it('posts one bulk patch when a tag is added to several feeds', () => {
@@ -116,12 +112,12 @@ describe('BulkSubscriptionActions', () => {
   });
 
   it('reloads the subscriptions store after a successful bulk patch', () => {
-    const { actions, http, subLoad, savedSearchesLoad } = setup();
+    const { actions, http, reloadSubscriptions, savedSearchesLoad } = setup();
 
     actions.bulkAddTag([1], TAG).subscribe();
     http.expectOne(`${BASE}/api/subscriptions/bulk`).flush({ subscriptions: [] });
 
-    expect(subLoad).toHaveBeenCalled();
+    expect(reloadSubscriptions).toHaveBeenCalled();
     expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
@@ -228,13 +224,13 @@ describe('BulkSubscriptionActions', () => {
   });
 
   it('unsubscribes and reloads after a confirmed bulk unsubscribe', () => {
-    const { actions, http, subLoad } = setup({ confirmAnswer: true });
+    const { actions, http, reloadSubscriptions } = setup({ confirmAnswer: true });
 
     actions.bulkUnsubscribe(subscriptions(2)).subscribe();
     const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk-unsubscribe`);
     expect(testRequest.request.body).toEqual({ subscriptionIds: [1, 2] });
     testRequest.flush({ removed: 2 });
 
-    expect(subLoad).toHaveBeenCalled();
+    expect(reloadSubscriptions).toHaveBeenCalled();
   });
 });

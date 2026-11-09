@@ -3,9 +3,8 @@ import { Observable, map, of, switchMap, tap } from 'rxjs';
 import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SubscriptionDto, TagDto } from '../../models';
-import { reloadAfterFlagWrite } from './reload-after';
+import { SubscriptionReload } from './subscription-reload.service';
 import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
@@ -17,8 +16,8 @@ import { bulkUnsubscribeConfirm } from './unsubscribe-messages';
 export class BulkSubscriptionActions {
   private readonly confirm = inject(ConfirmService);
   private readonly api = inject(ReaderApi);
-  private readonly subs = inject(SubscriptionsStore);
-  private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly subscriptionReload = inject(SubscriptionReload);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
 
@@ -64,7 +63,7 @@ export class BulkSubscriptionActions {
         if (!confirmed) return of(false);
         return this.api.bulkUnsubscribe(subscriptions.map((subscription) => subscription.id)).pipe(
           tap((result) => {
-            this.subs.reloadQuietly();
+            this.subscriptions.reloadQuietly();
             this.toast.show({
               message: this.i18n.translate(pluralKey('manage.bulk.unsubscribed', result.removed), {
                 count: result.removed,
@@ -81,7 +80,7 @@ export class BulkSubscriptionActions {
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
     return this.api.bulkUpdateSubscriptions(body).pipe(
       tap(() => {
-        reloadAfterFlagWrite(body, this.subs, this.savedSearches);
+        this.subscriptionReload.afterWrite(body);
         this.toast.show({ message: confirmation, durationMs: CONFIRMATION_DURATION_MS });
       }),
       map(() => undefined),

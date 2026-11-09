@@ -10,12 +10,13 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import { TagDrop } from '../../tag-drop';
 import { TagDto } from '../../models';
+import { makeTag } from '../../testing/tag.factory';
 
-const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const tag: TagDto = makeTag(3, 'Tech', { position: 0 });
 
 describe('TagActions', () => {
   let service: TagActions;
-  let ctrl: HttpTestingController;
+  let http: HttpTestingController;
   let closed: unknown;
   const open = jest.fn(() => ({ closed: of(closed) }));
 
@@ -30,10 +31,10 @@ describe('TagActions', () => {
       ],
     });
     service = TestBed.inject(TagActions);
-    ctrl = TestBed.inject(HttpTestingController);
+    http = TestBed.inject(HttpTestingController);
     open.mockClear();
   });
-  afterEach(() => ctrl.verify());
+  afterEach(() => http.verify());
 
   it('deleteTag: on confirm, DELETEs then reloads tags + subs', () => {
     closed = true;
@@ -44,7 +45,7 @@ describe('TagActions', () => {
       .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
       .mockImplementation(() => undefined);
     service.deleteTag(tag);
-    ctrl.expectOne('https://api.test/api/tags/3').flush(null);
+    http.expectOne('https://api.test/api/tags/3').flush(null);
     expect(tagSpy).toHaveBeenCalled();
     expect(subSpy).toHaveBeenCalled();
   });
@@ -52,7 +53,7 @@ describe('TagActions', () => {
   it('reorderTags: PATCHes /api/tags/reorder then reloads tags', () => {
     const spy = jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
     service.reorderTags([3, 1, 2]);
-    const testRequest = ctrl.expectOne('https://api.test/api/tags/reorder');
+    const testRequest = http.expectOne('https://api.test/api/tags/reorder');
     expect(testRequest.request.method).toBe('PATCH');
     expect(testRequest.request.body).toEqual({ tagIds: [3, 1, 2] });
     testRequest.flush({ tags: [] });
@@ -62,30 +63,9 @@ describe('TagActions', () => {
   it('reorderTags: repositions only the listed siblings and keeps every other tag', () => {
     jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
     const tags = TestBed.inject(TagsStore);
-    const reading: TagDto = {
-      id: 1,
-      name: 'Reading',
-      color: null,
-      icon: null,
-      position: 0,
-      parentId: null,
-    };
-    const longReads: TagDto = {
-      id: 2,
-      name: 'Long reads',
-      color: null,
-      icon: null,
-      position: 0,
-      parentId: 1,
-    };
-    const tech: TagDto = {
-      id: 4,
-      name: 'Tech',
-      color: null,
-      icon: null,
-      position: 1,
-      parentId: null,
-    };
+    const reading = makeTag(1, 'Reading', { position: 0 });
+    const longReads = makeTag(2, 'Long reads', { position: 0, parentId: 1 });
+    const tech = makeTag(4, 'Tech', { position: 1 });
     tags.tags.set([reading, longReads, tech]);
 
     service.reorderTags([4, 1]);
@@ -95,19 +75,12 @@ describe('TagActions', () => {
       [4, 0],
       [1, 1],
     ]);
-    ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
+    http.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
   });
 
   describe('moveTag', () => {
-    const tagA: TagDto = { id: 1, name: 'A', color: null, icon: null, position: 0, parentId: null };
-    const tagB: TagDto = {
-      id: 2,
-      name: 'B',
-      color: '#fff',
-      icon: 'x',
-      position: 1,
-      parentId: null,
-    };
+    const tagA = makeTag(1, 'A', { position: 0 });
+    const tagB = makeTag(2, 'B', { color: '#fff', icon: 'x', position: 1 });
     let tagsStore: TagsStore;
     let tagsLoad: jest.SpyInstance;
     let subscriptionsLoad: jest.SpyInstance;
@@ -134,20 +107,20 @@ describe('TagActions', () => {
         [2, 0],
         [1, 1],
       ]);
-      const reorder = ctrl.expectOne('https://api.test/api/tags/reorder');
+      const reorder = http.expectOne('https://api.test/api/tags/reorder');
       expect(reorder.request.body).toEqual({ tagIds: [2, 1] });
       reorder.flush({ tags: [] });
-      ctrl.expectNone('https://api.test/api/tags/2');
+      http.expectNone('https://api.test/api/tags/2');
     });
 
     it('re-parents, then writes the new sibling order, then reloads tags and feeds', () => {
       service.moveTag(tagB, dropUnder(1, [2]));
 
-      const reparent = ctrl.expectOne('https://api.test/api/tags/2');
+      const reparent = http.expectOne('https://api.test/api/tags/2');
       expect(reparent.request.body).toEqual({ name: 'B', color: '#fff', icon: 'x', parentId: 1 });
-      ctrl.expectNone('https://api.test/api/tags/reorder');
+      http.expectNone('https://api.test/api/tags/reorder');
       reparent.flush({ tag: tagB });
-      const reorder = ctrl.expectOne('https://api.test/api/tags/reorder');
+      const reorder = http.expectOne('https://api.test/api/tags/reorder');
       expect(reorder.request.body).toEqual({ tagIds: [2] });
       reorder.flush({ tags: [] });
       expect(tagsLoad).toHaveBeenCalled();
@@ -160,17 +133,17 @@ describe('TagActions', () => {
       expect(tagsStore.tags().find((tag) => tag.id === 2)).toEqual(
         expect.objectContaining({ parentId: 1, position: 0 }),
       );
-      ctrl.expectOne('https://api.test/api/tags/2').flush({ tag: tagB });
-      ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
+      http.expectOne('https://api.test/api/tags/2').flush({ tag: tagB });
+      http.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
     });
 
     it('skips the reorder and still reloads when the re-parent is refused', () => {
       service.moveTag(tagB, dropUnder(1, [2]));
 
-      ctrl
+      http
         .expectOne('https://api.test/api/tags/2')
         .flush(null, { status: 422, statusText: 'Unprocessable' });
-      ctrl.expectNone('https://api.test/api/tags/reorder');
+      http.expectNone('https://api.test/api/tags/reorder');
       expect(tagsLoad).toHaveBeenCalled();
       expect(subscriptionsLoad).toHaveBeenCalled();
     });

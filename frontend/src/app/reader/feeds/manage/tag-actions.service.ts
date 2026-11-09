@@ -11,14 +11,13 @@ import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.compo
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { TagFormData, TagFormDialogComponent } from './tag-form-dialog.component';
 
-/** Creates, edits, deletes and places tags for the sidebar and the Organise page alike. The tag
- *  dialog performs its own API write; a truthy close reloads the affected stores. */
+/** Creates, edits, deletes and places tags for the sidebar and the Organise page alike. */
 @Injectable({ providedIn: 'root' })
 export class TagActions {
   private readonly dialog = inject(Dialog);
   private readonly confirm = inject(ConfirmService);
   private readonly api = inject(ReaderApi);
-  private readonly subs = inject(SubscriptionsStore);
+  private readonly subscriptions = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
   private readonly tagPlacement = inject(TagPlacement);
   private readonly i18n = inject(TranslocoService);
@@ -42,8 +41,7 @@ export class TagActions {
     });
     ref.closed.subscribe((updated) => {
       if (!updated) return;
-      this.tags.load();
-      this.subs.reloadQuietly(); // embedded tag colour/name on feeds changed too
+      this.reloadAfterTagChange();
     });
   }
 
@@ -56,10 +54,7 @@ export class TagActions {
     };
     this.confirm.confirmThen(data, () => {
       this.api.deleteTag(tag.id).subscribe({
-        next: () => {
-          this.tags.load();
-          this.subs.reloadQuietly();
-        },
+        next: () => this.reloadAfterTagChange(),
       });
     });
   }
@@ -70,5 +65,10 @@ export class TagActions {
 
   moveTag(tag: TagDto, drop: TagDrop): void {
     this.tagPlacement.move(tag, drop);
+  }
+
+  private reloadAfterTagChange(): void {
+    this.tags.load();
+    this.subscriptions.reloadQuietly();
   }
 }
