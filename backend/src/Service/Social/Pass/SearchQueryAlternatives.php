@@ -134,11 +134,13 @@ final class SearchQueryAlternatives
      */
     private static function capped(array $alternatives): array
     {
-        return \count($alternatives) > self::MAX_ALTERNATIVES
-            ? throw new SearchQueryTooBroadException(sprintf(
+        if (\count($alternatives) > self::MAX_ALTERNATIVES) {
+            throw new SearchQueryTooBroadException(sprintf(
                 'Mastodon searches each alternative on its own; this query spells out more than %d.',
                 self::MAX_ALTERNATIVES,
-            ))
-            : $alternatives;
+            ));
+        }
+
+        return $alternatives;
     }
 }
