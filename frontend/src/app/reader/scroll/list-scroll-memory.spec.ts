@@ -1,53 +1,54 @@
 import { convertToParamMap } from '@angular/router';
 import { ListScrollMemory, scrollKey } from './list-scroll-memory';
-import { Selection, selectionFromParams } from '../query/query';
+import { Selection, selectionFromParams, withListOrder } from '../query/query';
 
-const sel = (over: Partial<Selection> = {}): Selection => ({
-  kind: 'all',
-  id: null,
-  unread: true,
-  ...over,
-});
+const ALL_UNREAD: Selection = { kind: 'all', unread: true };
+const tag = (id: number): Selection => ({ kind: 'tag', id, unread: true });
 
 describe('scrollKey', () => {
   it('is distinct per kind, id and unread flag', () => {
     const keys = new Set([
-      scrollKey(sel()),
-      scrollKey(sel({ unread: false })),
-      scrollKey(sel({ kind: 'tag', id: 3 })),
-      scrollKey(sel({ kind: 'tag', id: 4 })),
-      scrollKey(sel({ kind: 'subscription', id: 3 })),
+      scrollKey(ALL_UNREAD),
+      scrollKey({ kind: 'all', unread: false }),
+      scrollKey(tag(3)),
+      scrollKey(tag(4)),
+      scrollKey({ kind: 'subscription', id: 3, unread: true }),
     ]);
     expect(keys.size).toBe(5);
   });
 
   it('is stable for the same selection', () => {
-    expect(scrollKey(sel({ kind: 'tag', id: 3 }))).toBe(scrollKey(sel({ kind: 'tag', id: 3 })));
+    expect(scrollKey(tag(3))).toBe(scrollKey(tag(3)));
   });
 
   it('is distinct per search term', () => {
-    const angular = scrollKey(sel({ kind: 'search', term: 'angular' }));
-    const react = scrollKey(sel({ kind: 'search', term: 'react' }));
+    const angular = scrollKey({ kind: 'search', unread: true, term: 'angular' });
+    const react = scrollKey({ kind: 'search', unread: true, term: 'react' });
     expect(angular).not.toBe(react);
   });
 
   it('is distinct per list order', () => {
-    const tag = sel({ kind: 'tag', id: 3 });
-    expect(scrollKey(tag)).not.toBe(scrollKey({ ...tag, order: 'oldest' }));
+    expect(scrollKey(tag(3))).not.toBe(scrollKey(withListOrder(tag(3), 'oldest')));
   });
 
   it('is distinct per network and per network feed kind', () => {
     const keys = new Set([
-      scrollKey(sel({ kind: 'network', network: 'bluesky' })),
-      scrollKey(sel({ kind: 'network', network: 'bluesky', feedKind: 'profile' })),
-      scrollKey(sel({ kind: 'network', network: 'mastodon' })),
+      scrollKey({ kind: 'network', unread: true, network: 'bluesky' }),
+      scrollKey({ kind: 'network', unread: true, network: 'bluesky', feedKind: 'profile' }),
+      scrollKey({ kind: 'network', unread: true, network: 'mastodon' }),
     ]);
     expect(keys.size).toBe(3);
   });
 
   it('keeps the two feed groups apart', () => {
-    expect(scrollKey(sel({ kind: 'group', group: 'tags' }))).not.toBe(
-      scrollKey(sel({ kind: 'group', group: 'feeds' })),
+    expect(scrollKey({ kind: 'group', unread: true, group: 'tags' })).not.toBe(
+      scrollKey({ kind: 'group', unread: true, group: 'feeds' }),
+    );
+  });
+
+  it("keeps Trending's two windows apart", () => {
+    expect(scrollKey({ kind: 'trending', window: 'day' })).not.toBe(
+      scrollKey({ kind: 'trending', window: 'week' }),
     );
   });
 });
@@ -61,18 +62,18 @@ describe('ListScrollMemory', () => {
   });
 
   it('round-trips an offset per selection and survives a fresh instance (a page reload)', () => {
-    mem.save(sel(), 640);
+    mem.save(ALL_UNREAD, 640);
     // A brand-new instance stands in for the app rebooting after an iOS/Brave
     // resume-reload — sessionStorage persists across it, an in-memory Map would not.
-    expect(new ListScrollMemory().read(sel())).toBe(640);
+    expect(new ListScrollMemory().read(ALL_UNREAD)).toBe(640);
   });
 
   it('reads 0 for a selection it has never seen', () => {
-    expect(mem.read(sel({ kind: 'tag', id: 9 }))).toBe(0);
+    expect(mem.read(tag(9))).toBe(0);
   });
 
   it('keeps saved-search and direct-search positions separate through a reload', () => {
-    const saved = sel({ kind: 'saved-search', id: 7, unread: false });
+    const saved: Selection = { kind: 'saved-search', id: 7, unread: false };
     const direct = selectionFromParams(convertToParamMap({ q: 'climate' }), {
       trending: true,
       trendingWindow: 'day',
@@ -86,29 +87,29 @@ describe('ListScrollMemory', () => {
   });
 
   it("does not leak one selection's offset to another", () => {
-    mem.save(sel({ kind: 'tag', id: 3 }), 500);
-    expect(mem.read(sel({ kind: 'tag', id: 4 }))).toBe(0);
+    mem.save(tag(3), 500);
+    expect(mem.read(tag(4))).toBe(0);
   });
 
   it('rounds and clamps on save; treats garbage and non-positive values as 0', () => {
-    mem.save(sel(), 12.7);
-    expect(mem.read(sel())).toBe(13);
+    mem.save(ALL_UNREAD, 12.7);
+    expect(mem.read(ALL_UNREAD)).toBe(13);
 
-    mem.save(sel({ kind: 'tag', id: 1 }), -5);
-    expect(mem.read(sel({ kind: 'tag', id: 1 }))).toBe(0);
+    mem.save(tag(1), -5);
+    expect(mem.read(tag(1))).toBe(0);
 
-    sessionStorage.setItem(scrollKey(sel({ kind: 'tag', id: 2 })), 'nope');
-    expect(mem.read(sel({ kind: 'tag', id: 2 }))).toBe(0);
+    sessionStorage.setItem(scrollKey(tag(2)), 'nope');
+    expect(mem.read(tag(2))).toBe(0);
   });
 
   it('forgets one list without touching another', () => {
-    mem.save(sel({ kind: 'tag', id: 3 }), 500);
-    mem.save(sel({ kind: 'tag', id: 4 }), 700);
+    mem.save(tag(3), 500);
+    mem.save(tag(4), 700);
 
-    mem.forget(sel({ kind: 'tag', id: 3 }));
+    mem.forget(tag(3));
 
-    expect(mem.read(sel({ kind: 'tag', id: 3 }))).toBe(0);
-    expect(mem.read(sel({ kind: 'tag', id: 4 }))).toBe(700);
+    expect(mem.read(tag(3))).toBe(0);
+    expect(mem.read(tag(4))).toBe(700);
   });
 
   it('round-trips an article scroll offset per page key, surviving a fresh instance', () => {
@@ -118,9 +119,10 @@ describe('ListScrollMemory', () => {
   });
 
   it('keeps article and list offsets in separate keys', () => {
-    mem.save(sel({ kind: 'subscription', id: 5 }), 300);
+    const subscription: Selection = { kind: 'subscription', id: 5, unread: true };
+    mem.save(subscription, 300);
     mem.saveArticle('entry:5', 900);
-    expect(mem.read(sel({ kind: 'subscription', id: 5 }))).toBe(300);
+    expect(mem.read(subscription)).toBe(300);
     expect(mem.readArticle('entry:5')).toBe(900);
   });
 
@@ -134,9 +136,9 @@ describe('ListScrollMemory', () => {
     const removeItem = jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
       throw new Error('blocked');
     });
-    expect(() => mem.save(sel(), 100)).not.toThrow();
-    expect(mem.read(sel())).toBe(0);
-    expect(() => mem.forget(sel())).not.toThrow();
+    expect(() => mem.save(ALL_UNREAD, 100)).not.toThrow();
+    expect(mem.read(ALL_UNREAD)).toBe(0);
+    expect(() => mem.forget(ALL_UNREAD)).not.toThrow();
     setItem.mockRestore();
     getItem.mockRestore();
     removeItem.mockRestore();

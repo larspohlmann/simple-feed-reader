@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
+import { Selection } from '../../query/query';
 import { REFRESH_REVEAL } from './pull-to-refresh';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 import { CatalogStore } from '../../feeds/catalog/catalog.store';
@@ -75,7 +76,10 @@ const MIXED_SOURCE_RUN: EntryDto[] = [
   entry(12, { subscriptionId: 3, source: 'c', publishedAt: MIXED_SOURCE_RUN_AT }),
 ];
 
-function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
+function mount(
+  over: Record<string, unknown> & { selection?: Selection } = {},
+  providers: Provider[] = [],
+) {
   memory.save.mockClear();
   memory.read.mockClear().mockReturnValue(0);
   TestBed.resetTestingModule();
@@ -101,13 +105,17 @@ function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
     error: null,
     hasMore: false,
     canMarkAllRead: true,
-    selection: { kind: 'all', id: null, unread: true },
+    selection: { kind: 'all', unread: true },
     openEntryId: null,
     ...over,
   };
   for (const [key, value] of Object.entries(inputs)) fixture.componentRef.setInput(key, value);
   fixture.detectChanges();
   return fixture;
+}
+
+function select(fixture: ComponentFixture<EntryListComponent>, selection: Selection): void {
+  fixture.componentRef.setInput('selection', selection);
 }
 
 const overlay = (fixture: ComponentFixture<EntryListComponent>) =>
@@ -241,7 +249,7 @@ describe('EntryListComponent', () => {
       entry(1, { recommendationReason: 'because you read src', recommendationScore: 910 }),
       entry(2, { recommendationReason: 'similar to your favorites' }),
     ];
-    const forYou = { kind: 'for-you', id: null, unread: false };
+    const forYou: Selection = { kind: 'for-you', unread: false };
 
     it('shows the reason on each for-you entry in the list layout', () => {
       const element = mount({ entries: recommended, selection: forYou, layout: 'list' })
@@ -265,14 +273,14 @@ describe('EntryListComponent', () => {
     it('stays inert on a non-for-you view', () => {
       const element = mount({
         entries: [entry(1), entry(2)],
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.reason')).toBeNull();
     });
   });
 
   describe('run-boundary dividers (#348)', () => {
-    const forYou = { kind: 'for-you', id: null, unread: false };
+    const forYou: Selection = { kind: 'for-you', unread: false };
     // Run 9 is the newest (its id is what the header names); run 7 is older.
     const NEWEST = '2026-08-09T10:00:00+00:00';
     const OLDER = '2026-08-07T09:05:00+00:00';
@@ -313,7 +321,7 @@ describe('EntryListComponent', () => {
     it('shows no divider on a non-for-you view', () => {
       const element = mount({
         entries: [entry(1), entry(2)],
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
         layout: 'list',
       }).nativeElement as HTMLElement;
 
@@ -387,7 +395,7 @@ describe('EntryListComponent', () => {
   describe('the split search title (#581 follow-up)', () => {
     it('renders the muted prefix, the prominent term, and the count pill for a search selection', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: '2',
@@ -412,7 +420,7 @@ describe('EntryListComponent', () => {
 
     it('places a mobile-only line break after the search title prefix', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: '2',
@@ -424,7 +432,7 @@ describe('EntryListComponent', () => {
 
     it('renders a trailing + on the count pill when another page is still out there', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: '50+',
@@ -435,7 +443,7 @@ describe('EntryListComponent', () => {
 
     it('renders no count pill while the search is still loading', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: null,
@@ -496,7 +504,7 @@ describe('EntryListComponent', () => {
 
     it('names an item count where the list counts items rather than unread', () => {
       const element = mount({
-        selection: { kind: 'kept', id: null, unread: false },
+        selection: { kind: 'kept' },
         titleCount: { value: 3, counts: 'items' },
       }).nativeElement as HTMLElement;
 
@@ -505,7 +513,7 @@ describe('EntryListComponent', () => {
 
     it('leaves a search the result count it already carries, and adds no second one', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: '2',
@@ -553,19 +561,18 @@ describe('EntryListComponent', () => {
   // Each fixed view's heading carries the very icon its sidebar row shows, so
   // the list a reader lands in reads as the row they clicked (#411).
   describe('the fixed-view heading icon (#411)', () => {
-    const iconByKind: readonly (readonly [string, string])[] = [
-      ['all', 'inbox'],
-      ['favorites', 'star'],
-      ['kept', 'bookmark'],
-      ['viewed', 'history'],
-      ['for-you', 'auto_awesome'],
-      ['search', 'search'],
+    const iconBySelection: readonly (readonly [Selection, string])[] = [
+      [{ kind: 'all', unread: true }, 'inbox'],
+      [{ kind: 'favorites' }, 'star'],
+      [{ kind: 'kept' }, 'bookmark'],
+      [{ kind: 'viewed' }, 'history'],
+      [{ kind: 'for-you', unread: true }, 'auto_awesome'],
+      [{ kind: 'search', unread: true, term: 'daft' }, 'search'],
     ];
 
-    for (const [kind, iconName] of iconByKind) {
-      it(`shows the ${kind} heading with the ${iconName} icon`, () => {
-        const element = mount({ selection: { kind, id: null, unread: true, term: 'daft' } })
-          .nativeElement as HTMLElement;
+    for (const [selection, iconName] of iconBySelection) {
+      it(`shows the ${selection.kind} heading with the ${iconName} icon`, () => {
+        const element = mount({ selection }).nativeElement as HTMLElement;
         // A direct child of the h2, so it is never confused with the icon a tag
         // glyph nests, nor with the header's tool buttons further down.
         const icon = element.querySelector<HTMLElement>('.list-header h2 > app-icon');
@@ -710,7 +717,7 @@ describe('EntryListComponent', () => {
       loading: true,
       entries: [entry(1), entry(2)],
       layout: 'list',
-      selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+      selection: { kind: 'search', unread: false, term: 'punk' } satisfies Selection,
     };
 
     it('leaves the retained rows undimmed and clickable', () => {
@@ -751,7 +758,7 @@ describe('EntryListComponent', () => {
   });
 
   describe('a per-selection command on the wire (#1718)', () => {
-    const search = { kind: 'search', id: null, unread: false, term: 'punk' };
+    const search: Selection = { kind: 'search', unread: false, term: 'punk' };
 
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
@@ -804,7 +811,7 @@ describe('EntryListComponent', () => {
     const element = mount({
       loading: false,
       entries: [],
-      selection: { kind: 'search', id: null, unread: false, term: 'angular' },
+      selection: { kind: 'search', unread: false, term: 'angular' },
     }).nativeElement as HTMLElement;
     const empty = element.querySelector('.empty')!;
     expect(empty.textContent).toContain('Nothing matches "angular".');
@@ -817,7 +824,7 @@ describe('EntryListComponent', () => {
       const element = mount({
         loading: false,
         entries: [],
-        selection: { kind: 'saved-searches', id: null, unread: false },
+        selection: { kind: 'saved-searches', unread: false },
         savedSearchCount: 0,
       }).nativeElement as HTMLElement;
 
@@ -828,7 +835,7 @@ describe('EntryListComponent', () => {
       const element = mount({
         loading: false,
         entries: [],
-        selection: { kind: 'saved-searches', id: null, unread: false },
+        selection: { kind: 'saved-searches', unread: false },
         savedSearchCount: 2,
       }).nativeElement as HTMLElement;
 
@@ -842,7 +849,7 @@ describe('EntryListComponent', () => {
       'not a word of its own)',
     () => {
       const fixture = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+        selection: { kind: 'search', unread: false, term: 'punk ' },
       });
       expect(fixture.componentInstance.searchTerms()).toEqual(['punk']);
     },
@@ -854,7 +861,7 @@ describe('EntryListComponent', () => {
   describe('searchTerms prefers matchedWords (#432)', () => {
     it('marks the words the engine matched when the page carries them', () => {
       const fixture = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'recieve' },
+        selection: { kind: 'search', unread: false, term: 'recieve' },
         matchedWords: ['receive'],
       });
       expect(fixture.componentInstance.searchTerms()).toEqual(['receive']);
@@ -865,7 +872,7 @@ describe('EntryListComponent', () => {
         "exactly as before this feature, which is the database LIKE fallback's normal answer",
       () => {
         const fixture = mount({
-          selection: { kind: 'search', id: null, unread: false, term: 'punk rock' },
+          selection: { kind: 'search', unread: false, term: 'punk rock' },
           matchedWords: [],
         });
         expect(fixture.componentInstance.searchTerms()).toEqual(['punk', 'rock']);
@@ -874,7 +881,7 @@ describe('EntryListComponent', () => {
 
     it('defaults to the selection terms when matchedWords is not bound at all', () => {
       const fixture = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
       });
       expect(fixture.componentInstance.searchTerms()).toEqual(['punk']);
     });
@@ -883,7 +890,7 @@ describe('EntryListComponent', () => {
   describe('whole-word search badge (#408 follow-up)', () => {
     it('renders the badge for a whole-word (trailing-space) search selection', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+        selection: { kind: 'search', unread: false, term: 'punk ' },
       }).nativeElement as HTMLElement;
       const badge = element.querySelector('.whole-word-badge');
       expect(badge).not.toBeNull();
@@ -892,14 +899,14 @@ describe('EntryListComponent', () => {
 
     it('does not render the badge for a substring search selection', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.whole-word-badge')).toBeNull();
     });
 
     it('does not render the badge for a non-search selection', () => {
       const element = mount({
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.whole-word-badge')).toBeNull();
     });
@@ -909,7 +916,7 @@ describe('EntryListComponent', () => {
     // the heading's own accessible name via a visually-hidden phrase.
     it('announces the mode as part of the heading, not only via focus', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+        selection: { kind: 'search', unread: false, term: 'punk ' },
       }).nativeElement as HTMLElement;
       const heading = element.querySelector('.list-header h2')!;
       expect(heading.querySelector('.sr-only')!.textContent).toContain('Whole words');
@@ -917,14 +924,14 @@ describe('EntryListComponent', () => {
 
     it('marks the visible badge aria-hidden so it is not announced a second time', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+        selection: { kind: 'search', unread: false, term: 'punk ' },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.whole-word-badge')!.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('puts no whole-word phrase in the heading for a substring search', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        selection: { kind: 'search', unread: false, term: 'punk' },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.list-header h2 .sr-only')).toBeNull();
     });
@@ -933,7 +940,7 @@ describe('EntryListComponent', () => {
   describe('phrase search badge (#702)', () => {
     it('renders the phrase badge for a quoted search selection', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: '"climate change"' },
+        selection: { kind: 'search', unread: false, term: '"climate change"' },
       }).nativeElement as HTMLElement;
       const badge = element.querySelector('.phrase-badge');
       expect(badge).not.toBeNull();
@@ -944,14 +951,14 @@ describe('EntryListComponent', () => {
 
     it('renders no phrase badge for an unquoted search', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: 'climate change' },
+        selection: { kind: 'search', unread: false, term: 'climate change' },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.phrase-badge')).toBeNull();
     });
 
     it('shows only the phrase badge when a phrase also carries a trailing space', () => {
       const element = mount({
-        selection: { kind: 'search', id: null, unread: false, term: '"climate change" ' },
+        selection: { kind: 'search', unread: false, term: '"climate change" ' },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.phrase-badge')).not.toBeNull();
       expect(element.querySelector('.whole-word-badge')).toBeNull();
@@ -962,7 +969,7 @@ describe('EntryListComponent', () => {
     const element = mount({
       loading: false,
       entries: [],
-      selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
+      selection: { kind: 'search', unread: false, term: 'punk ' },
     }).nativeElement as HTMLElement;
     const empty = element.querySelector('.empty')!;
     expect(empty.textContent).toContain('Nothing matches "punk".');
@@ -973,7 +980,7 @@ describe('EntryListComponent', () => {
     const element = mount({
       loading: false,
       entries: [],
-      selection: { kind: 'all', id: null, unread: false },
+      selection: { kind: 'all', unread: false },
     }).nativeElement as HTMLElement;
     const empty = element.querySelector('.empty')!;
     expect(empty.textContent).toContain('Nothing here yet.');
@@ -984,7 +991,7 @@ describe('EntryListComponent', () => {
     const emptyAll = {
       loading: false,
       entries: [],
-      selection: { kind: 'all', id: null, unread: true },
+      selection: { kind: 'all', unread: true } satisfies Selection,
     };
 
     it('offers the catalog to an account with only a few subscriptions', () => {
@@ -1015,7 +1022,7 @@ describe('EntryListComponent', () => {
       const element = mount({
         loading: false,
         entries: [],
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       const empty = element.querySelector('.empty')!;
 
@@ -1027,7 +1034,7 @@ describe('EntryListComponent', () => {
       const element = mount({
         loading: false,
         entries: [],
-        selection: { kind: 'all', id: null, unread: false },
+        selection: { kind: 'all', unread: false },
       }).nativeElement as HTMLElement;
 
       expect(element.querySelector('app-caught-up-illustration')).toBeNull();
@@ -1037,7 +1044,7 @@ describe('EntryListComponent', () => {
       const element = mount({
         loading: false,
         entries: [],
-        selection: { kind: 'search', id: null, unread: true, term: 'angular' },
+        selection: { kind: 'search', unread: true, term: 'angular' },
       }).nativeElement as HTMLElement;
 
       expect(element.querySelector('app-caught-up-illustration')).toBeNull();
@@ -1152,7 +1159,7 @@ describe('EntryListComponent', () => {
 
   describe('unread filter switch', () => {
     it('fills the circle and marks the switch on while filtered to unread', () => {
-      const element = mount({ selection: { kind: 'all', id: null, unread: true } })
+      const element = mount({ selection: { kind: 'all', unread: true } })
         .nativeElement as HTMLElement;
       const sw = element.querySelector('.unread-switch')!;
       expect(sw.getAttribute('aria-checked')).toBe('true');
@@ -1163,7 +1170,7 @@ describe('EntryListComponent', () => {
     });
 
     it('empties the circle and marks the switch off while showing all', () => {
-      const element = mount({ selection: { kind: 'all', id: null, unread: false } })
+      const element = mount({ selection: { kind: 'all', unread: false } })
         .nativeElement as HTMLElement;
       const sw = element.querySelector('.unread-switch')!;
       expect(sw.getAttribute('aria-checked')).toBe('false');
@@ -1174,14 +1181,20 @@ describe('EntryListComponent', () => {
     });
 
     it('shows the switch for every browsable list and a search, not the state views', () => {
-      for (const kind of ['all', 'tag', 'subscription', 'for-you', 'search'] as const) {
-        const element = mount({ selection: { kind, id: null, unread: true, term: 'x' } })
-          .nativeElement as HTMLElement;
+      const browsable: readonly Selection[] = [
+        { kind: 'all', unread: true },
+        { kind: 'tag', id: 1, unread: true },
+        { kind: 'subscription', id: 1, unread: true },
+        { kind: 'for-you', unread: true },
+        { kind: 'search', unread: true, term: 'x' },
+      ];
+      for (const selection of browsable) {
+        const element = mount({ selection }).nativeElement as HTMLElement;
         expect(element.querySelector('.unread-switch')).not.toBeNull();
       }
       for (const kind of ['favorites', 'kept', 'viewed'] as const) {
         const element = mount({
-          selection: { kind, id: null, unread: false },
+          selection: { kind },
           canMarkAllRead: false,
         }).nativeElement as HTMLElement;
         expect(element.querySelector('.unread-switch')).toBeNull();
@@ -1198,7 +1211,7 @@ describe('EntryListComponent', () => {
 
     it('asks for the opposite state when clicked', () => {
       for (const unread of [true, false]) {
-        const fixture = mount({ selection: { kind: 'all', id: null, unread } });
+        const fixture = mount({ selection: { kind: 'all', unread } });
         const asked: boolean[] = [];
         fixture.componentInstance.unreadOnlyChange.subscribe((value) => asked.push(value));
 
@@ -1241,20 +1254,30 @@ describe('EntryListComponent', () => {
     });
 
     it('offers the toggle on every list but for you', () => {
-      const kinds = ['all', 'tag', 'subscription', 'favorites', 'kept', 'viewed'] as const;
-      for (const kind of [...kinds, 'saved-searches', 'saved-search', 'search'] as const) {
+      const ordered: readonly Selection[] = [
+        { kind: 'all', unread: false },
+        { kind: 'tag', id: 1, unread: false },
+        { kind: 'subscription', id: 1, unread: false },
+        { kind: 'favorites' },
+        { kind: 'kept' },
+        { kind: 'viewed' },
+        { kind: 'saved-searches', unread: false },
+        { kind: 'saved-search', id: 1, unread: false },
+        { kind: 'search', unread: false, term: 'x' },
+      ];
+      for (const selection of ordered) {
         const fixture = mount({
-          selection: { kind, id: 1, unread: false, term: 'x' },
+          selection,
           canMarkAllRead: false,
         });
         expect(toggle(fixture)).not.toBeNull();
       }
-      const forYou = mount({ selection: { kind: 'for-you', id: null, unread: false } });
+      const forYou = mount({ selection: { kind: 'for-you', unread: false } });
       expect(toggle(forYou)).toBeNull();
     });
 
     it('sits directly before the unread switch', () => {
-      const fixture = mount({ selection: { kind: 'all', id: null, unread: false } });
+      const fixture = mount({ selection: { kind: 'all', unread: false } });
       expect(toggle(fixture).nextElementSibling?.classList.contains('unread-switch')).toBe(true);
     });
   });
@@ -1277,7 +1300,7 @@ describe('EntryListComponent', () => {
   it('hides the scoped refresh button in the cross-feed saved views', () => {
     for (const kind of ['favorites', 'kept'] as const) {
       const element = mount({
-        selection: { kind, id: null, unread: false },
+        selection: { kind },
         canMarkAllRead: false,
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.refresh')).toBeNull();
@@ -1286,7 +1309,7 @@ describe('EntryListComponent', () => {
 
   it('renders no saved-search button of its own — it is a shell headerActions command', () => {
     const element = mount({
-      selection: { kind: 'search', id: null, unread: false, term: 'climate' },
+      selection: { kind: 'search', unread: false, term: 'climate' },
     }).nativeElement as HTMLElement;
     expect(element.querySelector('button.save-search')).toBeNull();
   });
@@ -1343,7 +1366,7 @@ describe('EntryListComponent', () => {
     });
 
     it('ignores the gesture in the cross-feed saved views', () => {
-      const fixture = mount({ selection: { kind: 'favorites', id: null, unread: false } });
+      const fixture = mount({ selection: { kind: 'favorites' } });
       let hits = 0;
       fixture.componentInstance.refresh.subscribe(() => hits++);
       pullBy(fixture, 140);
@@ -1376,7 +1399,7 @@ describe('EntryListComponent', () => {
 
   it('shows a last-refreshed hint for the for-you list', () => {
     const element = mount({
-      selection: { kind: 'for-you', id: null, unread: false },
+      selection: { kind: 'for-you', unread: false },
       lastRefreshed: '2026-08-08T09:00:00Z',
     }).nativeElement as HTMLElement;
     expect(element.querySelector('.last-refreshed')).not.toBeNull();
@@ -1386,7 +1409,7 @@ describe('EntryListComponent', () => {
     expect(
       (
         mount({
-          selection: { kind: 'all', id: null, unread: true },
+          selection: { kind: 'all', unread: true },
           lastRefreshed: '2026-07-25T08:00:00Z',
         }).nativeElement as HTMLElement
       ).querySelector('.last-refreshed'),
@@ -1412,7 +1435,7 @@ describe('EntryListComponent', () => {
     expect(
       (
         mount({
-          selection: { kind: 'for-you', id: null, unread: false },
+          selection: { kind: 'for-you', unread: false },
           lastRefreshed: '2026-08-08T09:00:00Z',
           nextRefresh: null,
         }).nativeElement as HTMLElement
@@ -1503,7 +1526,7 @@ describe('EntryListComponent', () => {
     it('renders magazine blocks for a search selection under the magazine layout', () => {
       const element = mount({
         layout: 'magazine',
-        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+        selection: { kind: 'search', unread: false, term: 'fox' },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.rows.magazine')).not.toBeNull();
       expect(element.querySelectorAll('app-entry-row').length).toBe(0);
@@ -1512,7 +1535,7 @@ describe('EntryListComponent', () => {
     it('renders rows for a search selection under the list layout', () => {
       const element = mount({
         layout: 'list',
-        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+        selection: { kind: 'search', unread: false, term: 'fox' },
       }).nativeElement as HTMLElement;
       expect(element.querySelectorAll('app-entry-row').length).toBe(2);
       expect(element.querySelector('.rows.magazine')).toBeNull();
@@ -1521,7 +1544,7 @@ describe('EntryListComponent', () => {
     it('still renders magazine blocks for a non-search selection under the magazine layout', () => {
       const element = mount({
         layout: 'magazine',
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.rows.magazine')).not.toBeNull();
     });
@@ -1531,7 +1554,7 @@ describe('EntryListComponent', () => {
     it('announces the loaded count for a search selection', () => {
       const element = mount({
         entries: [entry(1), entry(2), entry(3)],
-        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+        selection: { kind: 'search', unread: false, term: 'fox' },
       }).nativeElement as HTMLElement;
       const region = element.querySelector('[aria-live="polite"]');
       expect(region).not.toBeNull();
@@ -1540,7 +1563,7 @@ describe('EntryListComponent', () => {
 
     it('renders no live region for a non-search selection', () => {
       const element = mount({
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('[aria-live="polite"]')).toBeNull();
     });
@@ -1564,7 +1587,7 @@ describe('EntryListComponent', () => {
     const fixture = mount();
     fixture.componentInstance.collapsed.set(true);
     fixture.detectChanges();
-    fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+    select(fixture, { kind: 'tag', id: 3, unread: true });
     fixture.detectChanges();
     expect(fixture.componentInstance.collapsed()).toBe(false);
   });
@@ -1572,7 +1595,7 @@ describe('EntryListComponent', () => {
   it('remembers the scroll offset per selection as the list is scrolled', () => {
     const fixture = mount();
     fixture.componentInstance.scrolling.onScroll(480);
-    expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
+    expect(memory.save).toHaveBeenCalledWith({ kind: 'all', unread: true }, 480);
   });
 
   // #501: driven through the real element, not the handler — the wiring is the fix.
@@ -1623,7 +1646,7 @@ describe('EntryListComponent', () => {
     fixture.componentRef.setInput('entries', [entry(1), entry(2)]);
     fixture.detectChanges();
 
-    expect(memory.read).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true });
+    expect(memory.read).toHaveBeenCalledWith({ kind: 'all', unread: true });
     expect(apply).toHaveBeenCalledWith(expect.anything(), 420);
   });
 
@@ -1696,7 +1719,7 @@ describe('EntryListComponent', () => {
       const rows = fakeScroller(fixture, 900);
       memory.read.mockReturnValue(0);
 
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      select(fixture, { kind: 'tag', id: 4, unread: true });
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
 
@@ -1706,7 +1729,7 @@ describe('EntryListComponent', () => {
     it('does not write the outgoing list’s scroll into the incoming view’s key', () => {
       const fixture = mount();
       completeLoad(fixture);
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      select(fixture, { kind: 'tag', id: 4, unread: true });
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
       memory.save.mockClear();
@@ -1728,7 +1751,7 @@ describe('EntryListComponent', () => {
 
       fixture.componentInstance.scrolling.onScroll(480);
 
-      expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
+      expect(memory.save).toHaveBeenCalledWith({ kind: 'all', unread: true }, 480);
     });
   });
 
@@ -1799,7 +1822,7 @@ describe('EntryListComponent', () => {
 
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
       expect(fixture.componentInstance.collapsed()).toBe(false);
-      expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 0);
+      expect(memory.save).toHaveBeenCalledWith({ kind: 'all', unread: true }, 0);
     });
 
     it('clicking the button scrolls to the top', () => {
@@ -1853,7 +1876,7 @@ describe('EntryListComponent', () => {
         (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
       ).not.toBeNull();
 
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      select(fixture, { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
       expect(fixture.componentInstance.scrolling.showToTop()).toBe(false);
     });
@@ -2055,7 +2078,7 @@ describe('EntryListComponent', () => {
     it('marks the folded tail of a group whose whole preview sits above the fold', () => {
       const fixture = mount({
         entries: MIXED_SOURCE_RUN,
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
         layout: 'magazine',
       });
       const group = fixture.componentInstance.content
@@ -2079,7 +2102,7 @@ describe('EntryListComponent', () => {
     it('keeps the folded tail of a group while one of its preview rows straddles the fold', () => {
       const fixture = mount({
         entries: MIXED_SOURCE_RUN,
-        selection: { kind: 'all', id: null, unread: true },
+        selection: { kind: 'all', unread: true },
         layout: 'magazine',
       });
       const group = fixture.componentInstance.content
@@ -2139,7 +2162,7 @@ describe('EntryListComponent', () => {
     it('resets hasAboveFold when the selection changes', () => {
       const fixture = mount();
       fixture.componentInstance.scrolling.hasAboveFold.set(true);
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      select(fixture, { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
       expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
@@ -2269,7 +2292,7 @@ describe('EntryListComponent', () => {
     it('collapses a same-source run in an aggregated view', () => {
       const fixture = mount({
         entries: run,
-        selection: { kind: 'all', id: null, unread: false },
+        selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
       expect(
@@ -2280,7 +2303,7 @@ describe('EntryListComponent', () => {
     it('never collapses the run of a home timeline, which carries many people', () => {
       const fixture = mount({
         entries: run,
-        selection: { kind: 'all', id: null, unread: false },
+        selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
       TestBed.inject(SubscriptionRows).stored.set([
@@ -2294,7 +2317,7 @@ describe('EntryListComponent', () => {
     it('never collapses the for-you list', () => {
       const fixture = mount({
         entries: run,
-        selection: { kind: 'for-you', id: null, unread: false },
+        selection: { kind: 'for-you', unread: false },
         layout: 'magazine',
       });
       expect(
@@ -2351,7 +2374,7 @@ describe('EntryListComponent', () => {
       await frames();
       // A view switch keeps the outgoing rows on screen until the new page lands
       // (#254). Neither list has a remembered offset, so no scroll event fires.
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 7, unread: true });
+      select(fixture, { kind: 'tag', id: 7, unread: true });
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
       await frames();
@@ -2394,7 +2417,7 @@ describe('EntryListComponent', () => {
       const fixture = mount({ entries: loaded });
       await frames();
       blankOpacities(fixture);
-      fixture.componentRef.setInput('selection', { kind: 'favorites', id: null, unread: false });
+      select(fixture, { kind: 'favorites' });
       fixture.detectChanges();
       await frames();
       expect(rowOpacities(fixture)).not.toContain('');
@@ -2516,7 +2539,7 @@ describe('EntryListComponent', () => {
     it('shrinks a group block to its remaining entries instead of dropping it', () => {
       const fixture = mount({
         entries: MIXED_SOURCE_RUN,
-        selection: { kind: 'all', id: null, unread: false },
+        selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
       const groupBefore = fixture.componentInstance.content
@@ -2538,7 +2561,7 @@ describe('EntryListComponent', () => {
     it('drops a group block entirely once every one of its entries is hidden', () => {
       const fixture = mount({
         entries: MIXED_SOURCE_RUN,
-        selection: { kind: 'all', id: null, unread: false },
+        selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
       const groupBefore = fixture.componentInstance.content
@@ -2583,7 +2606,7 @@ describe('EntryListComponent', () => {
           entry(1, { runId: 9, runGeneratedAt: '2026-08-09T10:00:00+00:00' }),
           entry(2, { runId: 7, runGeneratedAt: '2026-08-07T09:05:00+00:00' }),
         ],
-        selection: { kind: 'for-you', id: null, unread: true },
+        selection: { kind: 'for-you', unread: true },
         newestRunId: 9,
         layout: 'magazine',
       });
@@ -2619,7 +2642,7 @@ describe('EntryListComponent', () => {
       fixture.componentInstance.hideAboveMarked([1]);
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(1);
 
-      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      select(fixture, { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
 
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(0);
@@ -2717,7 +2740,7 @@ describe('EntryListComponent', () => {
       hasMore: true,
       titleCount: { value: 30, counts: 'items' },
     };
-    const search = { kind: 'search', id: null, unread: false, term: 'punk' };
+    const search: Selection = { kind: 'search', unread: false, term: 'punk' };
 
     it('fills by the estimated length of a paged list', () => {
       const fixture = mount(pagedList);
@@ -2845,10 +2868,8 @@ describe('EntryListComponent', () => {
   });
 
   describe('the Trending list (#2017)', () => {
-    const trending = (window: 'day' | 'week' = 'day') => ({
+    const trending = (window: 'day' | 'week' = 'day'): Selection => ({
       kind: 'trending',
-      id: null,
-      unread: false,
       window,
     });
 

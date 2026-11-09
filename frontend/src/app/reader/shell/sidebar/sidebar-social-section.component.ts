@@ -63,14 +63,17 @@ export class SidebarSocialSectionComponent {
       feeds: section.groups[kind],
     })).filter((group) => group.feeds.subscriptions.length > 0);
   });
-  private readonly onThisNetwork = computed(() => {
+  private readonly selectionOnThisNetwork = computed(() => {
     const selection = this.selection();
-    return selection.kind === 'network' && selection.network === this.section().network;
+    return selection.kind === 'network' && selection.network === this.section().network
+      ? selection
+      : null;
   });
-  protected readonly active = computed(() => this.onThisNetwork() && !this.selection().feedKind);
-  protected readonly activeFeedKind = computed(() =>
-    this.onThisNetwork() ? this.selection().feedKind : undefined,
-  );
+  protected readonly active = computed(() => {
+    const onThisNetwork = this.selectionOnThisNetwork();
+    return onThisNetwork !== null && !onThisNetwork.feedKind;
+  });
+  protected readonly activeFeedKind = computed(() => this.selectionOnThisNetwork()?.feedKind);
   protected readonly selectionQueryParams = selectionQueryParams;
 
   private readonly networkExcludedSurfaces = computed<ExclusionSurface[]>(() =>

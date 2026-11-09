@@ -6,7 +6,7 @@ import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
-import { isDirectSearch, sameSelection } from '../query/query';
+import { sameSelection, trendingWindowOf } from '../query/query';
 import { AccountViewContext } from '../query/account-view-context';
 import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
@@ -41,7 +41,7 @@ export class ReaderRouteState {
   readonly selection = computed(() => this.listPreferences.appliedTo(this.parsed().selection), {
     equal: sameSelection,
   });
-  private readonly inSearch = computed(() => isDirectSearch(this.parsed().selection));
+  private readonly inSearch = computed(() => this.parsed().selection.kind === 'search');
   readonly entryId = computed(() => this.parsed().entryId);
   readonly linkTarget = computed(() => signedUrlFromParam(this.queryParameters().get('link')), {
     equal: sameSignedUrl,
@@ -87,8 +87,8 @@ export class ReaderRouteState {
     });
     // A bare link opened the stored window, so only a window the URL names changes what is stored.
     effect(() => {
-      const window = this.selection().window;
-      if (window === undefined) return;
+      const window = trendingWindowOf(this.selection());
+      if (window === null) return;
       untracked(() => this.trendingWindow.set(window));
     });
   }

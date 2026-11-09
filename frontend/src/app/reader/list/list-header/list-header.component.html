@@ -23,7 +23,7 @@
           [size]="collapsed() ? 16 : 20"
         />
       }
-      @if (selection().network; as network) {
+      @if (titleNetwork(); as network) {
         <app-network-logo [network]="network" />
       }
       @if (titleIcon(); as icon) {
@@ -150,20 +150,20 @@
       class="unread-switch"
       type="button"
       role="switch"
-      [attr.aria-checked]="selection().unread"
+      [attr.aria-checked]="unreadOnly()"
       [attr.aria-label]="'reader.unread' | transloco"
       [attr.title]="'reader.unread' | transloco"
-      (click)="unreadOnlyChange.emit(!selection().unread)"
+      (click)="unreadOnlyChange.emit(!unreadOnly())"
     >
       <!-- One `circle` glyph for both positions, its FILL axis carrying the state
            (#602): solid while filtered to unread, hollow (FILL 0, the font
            default) while showing all — one glyph keeps the diameter identical. -->
-      <app-icon name="circle" size="sm" [fill]="selection().unread" />
+      <app-icon name="circle" size="sm" [fill]="unreadOnly()" />
       <!-- Wide header only; narrow drops it and lets the circle carry the state,
            like the action buttons beside it. aria-hidden so it never fights the
            switch's own constant accessible name and on/off state. -->
       <span class="txt" aria-hidden="true">{{
-        (selection().unread ? 'reader.unread' : 'reader.all') | transloco
+        (unreadOnly() ? 'reader.unread' : 'reader.all') | transloco
       }}</span>
     </button>
   }

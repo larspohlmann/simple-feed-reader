@@ -4,7 +4,13 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { CaughtUpIllustrationComponent } from '../caught-up-illustration/caught-up-illustration.component';
 import { CatalogStore } from '../../feeds/catalog/catalog.store';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { Selection, visibleSearchTerm } from '../../query/query';
+import {
+  Selection,
+  isUnreadOnly,
+  searchTermOf,
+  trendingWindowOf,
+  visibleSearchTerm,
+} from '../../query/query';
 
 const FEW_SUBSCRIPTIONS = 5;
 
@@ -28,12 +34,16 @@ export class ListEmptyStateComponent {
    *  whole-word-match signal, not part of what the user typed, so it must not
    *  appear in text a human reads (#408 follow-up). */
   protected readonly displayedSearchTerm = computed(() =>
-    visibleSearchTerm(this.selection().term ?? ''),
+    visibleSearchTerm(searchTermOf(this.selection())),
   );
 
   protected readonly trendingRule = computed(() =>
-    this.selection().window === 'week' ? 'reader.trendingEmptyWeek' : 'reader.trendingEmptyDay',
+    trendingWindowOf(this.selection()) === 'week'
+      ? 'reader.trendingEmptyWeek'
+      : 'reader.trendingEmptyDay',
   );
+
+  protected readonly unreadOnly = computed(() => isUnreadOnly(this.selection()));
 
   /** True only once the catalog has been resolved AND has no entries.
    *  Unresolved reads as not-empty, so the /discover link is never hidden on a

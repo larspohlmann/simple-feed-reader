@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../models';
-import { Selection } from '../query/query';
+import { Selection, SelectionOf } from '../query/query';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
@@ -146,10 +146,12 @@ describe("ListHeading for a network's combined view", () => {
     ]),
   };
 
-  function networkHeading(unread: boolean, selected: Partial<Selection> = {}): ListHeading {
+  function networkHeading(
+    unread: boolean,
+    selected: Partial<Pick<SelectionOf<'network'>, 'network' | 'feedKind'>> = {},
+  ): ListHeading {
     const selection: Selection = {
       kind: 'network',
-      id: null,
       unread,
       network: 'bluesky',
       ...selected,
@@ -224,7 +226,7 @@ describe("ListHeading for a feed group's combined view", () => {
 
   function groupHeading(unread: boolean, group: 'tags' | 'feeds'): ListHeading {
     return headingWith(
-      { kind: 'group', id: null, unread, group },
+      { kind: 'group', unread, group },
       {
         subscriptions: signal(subscriptions),
         feedGroupCounts: signal({
@@ -295,8 +297,7 @@ describe('ListHeading for a child tag (#1736)', () => {
 });
 
 describe('ListHeading for the Shared list (#2007)', () => {
-  const sharedHeading = () =>
-    headingWith({ kind: 'shared', id: null, unread: false }, { sharedCount: signal(3) });
+  const sharedHeading = () => headingWith({ kind: 'shared' }, { sharedCount: signal(3) });
 
   it('is titled Shared', () => {
     expect(sharedHeading().title()).toBe('Shared');
@@ -315,7 +316,7 @@ describe('ListHeading for the Trending list (#2017)', () => {
         ListHeading,
         {
           provide: ReaderRouteState,
-          useValue: { selection: signal<Selection>({ kind: 'trending', id: null, unread: false }) },
+          useValue: { selection: signal<Selection>({ kind: 'trending', window: 'day' }) },
         },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },

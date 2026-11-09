@@ -6,10 +6,10 @@
   } @else if (selection().kind === 'trending') {
     {{ trendingRule() | transloco }}
   } @else {
-    @if (selection().unread) {
+    @if (unreadOnly()) {
       <app-caught-up-illustration />
     }
-    {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
+    {{ (unreadOnly() ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
     @if (suggestFeeds()) {
       <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
     }

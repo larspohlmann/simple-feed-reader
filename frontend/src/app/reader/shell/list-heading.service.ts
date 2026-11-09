@@ -6,7 +6,15 @@ import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
-import { Selection, visibleSearchTerm } from '../query/query';
+import {
+  BySelectionKind,
+  FilteredSelection,
+  SelectionOf,
+  bySelectionKind,
+  searchTermOf,
+  selectedSavedSearchIdOf,
+  visibleSearchTerm,
+} from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
 import { isUnrenamedHome } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
@@ -30,10 +38,9 @@ export class ListHeading {
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
 
-  readonly activeSavedSearchId = computed(() => {
-    const selection = this.routeState.selection();
-    return selection.kind === 'saved-search' ? selection.id : null;
-  });
+  readonly activeSavedSearchId = computed(() =>
+    selectedSavedSearchIdOf(this.routeState.selection()),
+  );
 
   readonly activeSavedSearch = computed(() => {
     const id = this.activeSavedSearchId();
@@ -43,7 +50,7 @@ export class ListHeading {
 
   private readonly selectedTagNode = computed(() => {
     const selection = this.routeState.selection();
-    if (selection.kind !== 'tag' || selection.id === null) return null;
+    if (selection.kind !== 'tag') return null;
     return this.subscriptions.tagNodeById().get(selection.id) ?? null;
   });
 
@@ -77,18 +84,6 @@ export class ListHeading {
     return subscription?.title ?? null;
   });
 
-  private readonly selectedNetworkSection = computed<SocialSection | null>(() => {
-    const network = this.routeState.selection().network;
-    return network ? this.sectionOf(network) : null;
-  });
-
-  private readonly selectedNetworkCounts = computed(() => {
-    const section = this.selectedNetworkSection();
-    if (section === null) return { unreadCount: 0, entryCount: 0 };
-    const feedKind = this.routeState.selection().feedKind;
-    return feedKind ? section.groups[feedKind] : section;
-  });
-
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
 
   /** A search request in flight, not merely any list loading. */
@@ -108,7 +103,7 @@ export class ListHeading {
   );
 
   /** Keyed by every kind: a new selection kind must fail to compile here. */
-  private readonly titleByKind: Record<Selection['kind'], () => string> = {
+  private readonly titleByKind: BySelectionKind<string> = {
     favorites: () => this.i18n.translate('reader.favorites'),
     kept: () => this.i18n.translate('reader.kept'),
     shared: () => this.i18n.translate('reader.shared'),
@@ -120,11 +115,8 @@ export class ListHeading {
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
-    network: () => this.networkTitle(this.routeState.selection()),
-    group: () => {
-      const group = this.routeState.selection().group;
-      return group ? this.i18n.translate(GROUP_TITLE_KEY[group]) : '';
-    },
+    network: (selection) => this.networkTitle(selection),
+    group: (selection) => this.i18n.translate(GROUP_TITLE_KEY[selection.group]),
     search: () => `${this.searchTitlePrefix()} ${this.searchTitleBody()}`,
     subscription: () => {
       const subscription = this.selectedSubscription();
@@ -134,7 +126,7 @@ export class ListHeading {
     },
   };
 
-  private networkTitle(selection: Selection): string {
+  private networkTitle(selection: SelectionOf<'network'>): string {
     const network = this.i18n.translate(`settings.social.${selection.network}`);
     return selection.feedKind
       ? `${network} · ${this.i18n.translate(NETWORK_FEED_KIND_DESCRIPTORS[selection.feedKind].labelKey)}`
@@ -161,7 +153,15 @@ export class ListHeading {
     );
   }
 
-  private readonly countByKind: Record<Selection['kind'], (selection: Selection) => TitleCount> = {
+  private networkCounts(
+    selection: SelectionOf<'network'>,
+  ): Pick<SocialSection, 'unreadCount' | 'entryCount'> {
+    const section = this.sectionOf(selection.network);
+    if (section === null) return { unreadCount: 0, entryCount: 0 };
+    return selection.feedKind ? section.groups[selection.feedKind] : section;
+  }
+
+  private readonly countByKind: BySelectionKind<TitleCount> = {
     all: (selection) =>
       bySwitch(selection, this.subscriptions.totalUnread(), this.subscriptions.totalEntries()),
     tag: (selection) => {
@@ -169,12 +169,12 @@ export class ListHeading {
       return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);
     },
     network: (selection) => {
-      const counts = this.selectedNetworkCounts();
+      const counts = this.networkCounts(selection);
       return bySwitch(selection, counts.unreadCount, counts.entryCount);
     },
     group: (selection) => {
-      const counts = selection.group ? this.subscriptions.feedGroupCounts()[selection.group] : null;
-      return bySwitch(selection, counts?.unreadCount ?? 0, counts?.entryCount ?? 0);
+      const counts = this.subscriptions.feedGroupCounts()[selection.group];
+      return bySwitch(selection, counts.unreadCount, counts.entryCount);
     },
     subscription: (selection) => {
       const subscription = this.selectedSubscription();
@@ -199,13 +199,12 @@ export class ListHeading {
   readonly title = computed(() => {
     // translate() is one-shot: reading the language re-runs this on a switch.
     this.language.lang();
-    return this.titleByKind[this.routeState.selection().kind]();
+    return bySelectionKind(this.titleByKind, this.routeState.selection());
   });
 
-  readonly titleCount = computed<TitleCount>(() => {
-    const selection = this.routeState.selection();
-    return this.countByKind[selection.kind](selection);
-  });
+  readonly titleCount = computed<TitleCount>(() =>
+    bySelectionKind(this.countByKind, this.routeState.selection()),
+  );
 
   readonly searchTitlePrefix = computed(() => {
     this.language.lang();
@@ -235,7 +234,7 @@ export class ListHeading {
   });
 
   private readonly searchTerm = computed(() =>
-    visibleSearchTerm(this.routeState.selection().term ?? ''),
+    visibleSearchTerm(searchTermOf(this.routeState.selection())),
   );
 
   /** A post matching two searches counts twice, so the heading matches the sidebar row. */
@@ -262,6 +261,6 @@ function items(value: number): TitleCount {
 }
 
 /** The unread count under "Only unread", every post under "All posts". */
-function bySwitch(selection: Selection, unreadCount: number, allCount: number): TitleCount {
+function bySwitch(selection: FilteredSelection, unreadCount: number, allCount: number): TitleCount {
   return selection.unread ? unread(unreadCount) : items(allCount);
 }

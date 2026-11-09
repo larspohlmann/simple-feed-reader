@@ -11,11 +11,11 @@ import { Selection } from '../query/query';
 import { UnreadFilterService } from '../list/unread-filter.service';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
 
-const ALL: Selection = { kind: 'all', id: null, unread: false };
+const ALL: Selection = { kind: 'all', unread: false };
 const TAG: Selection = { kind: 'tag', id: 5, unread: false };
 const UNREAD_ALL: Selection = { ...ALL, unread: true };
 const UNREAD_TAG: Selection = { ...TAG, unread: true };
-const SEARCH: Selection = { kind: 'search', id: null, unread: false, term: 'angular' };
+const SEARCH: Selection = { kind: 'search', unread: false, term: 'angular' };
 
 /** A plain list: what is shown is the list itself. */
 const at = (list: Selection): ReaderPlace => ({ list, shown: list });

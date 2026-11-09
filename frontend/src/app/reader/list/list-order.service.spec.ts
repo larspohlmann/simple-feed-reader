@@ -43,14 +43,12 @@ describe('ListOrderService', () => {
   });
 
   it('shares one order across every direct search term', () => {
-    service().set({ kind: 'search', id: null, unread: false, term: 'angular' }, 'oldest');
-    expect(service().orderFor({ kind: 'search', id: null, unread: false, term: 'react' })).toBe(
-      'oldest',
-    );
+    service().set({ kind: 'search', unread: false, term: 'angular' }, 'oldest');
+    expect(service().orderFor({ kind: 'search', unread: false, term: 'react' })).toBe('oldest');
   });
 
   it('never stores an order for for you', () => {
-    service().set({ kind: 'for-you', id: null, unread: false }, 'oldest');
+    service().set({ kind: 'for-you', unread: false }, 'oldest');
     expect(localStorage.length).toBe(0);
   });
 

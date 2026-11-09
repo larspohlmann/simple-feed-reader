@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AccountIdentity } from '../../core/auth/account-identity';
 import { ListOrderService } from './list-order.service';
-import { Selection, isDirectSearch, withListOrder, withUnreadPreference } from '../query/query';
+import { Selection, withListOrder, withUnreadPreference } from '../query/query';
 import { UnreadFilterService } from './unread-filter.service';
 
 /** The list a URL names, as this account reads it: neither the unread filter nor the order
@@ -38,7 +38,7 @@ export class ListPreferences {
   }
 
   setUnreadOnly(selection: Selection, unreadOnly: boolean): void {
-    if (!isDirectSearch(selection)) {
+    if (selection.kind !== 'search') {
       this.unreadFilter.set(unreadOnly);
       return;
     }
@@ -51,6 +51,6 @@ export class ListPreferences {
   }
 
   private unreadOnlyFor(selection: Selection): boolean {
-    return isDirectSearch(selection) ? this.searchUnreadOnly() : this.unreadFilter.unreadOnly();
+    return selection.kind === 'search' ? this.searchUnreadOnly() : this.unreadFilter.unreadOnly();
   }
 }

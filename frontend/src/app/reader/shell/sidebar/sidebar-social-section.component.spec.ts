@@ -59,7 +59,7 @@ const ONE_ACCOUNT: SocialSection = {
 const expandProfiles = (network: SocialSection['network']): void =>
   localStorage.setItem(`sfr.${network}.profiles.collapsed`, 'false');
 
-const ALL: Selection = { kind: 'all', id: null, unread: true };
+const ALL: Selection = { kind: 'all', unread: true };
 
 const LONE_ACCOUNT_ACTIONS: ActionSheetAction[] = [
   { id: '3', label: 'Manage feeds…', disabled: false },
@@ -355,7 +355,6 @@ describe('SidebarSocialSectionComponent', () => {
   it('marks the row, not the network title, active while the profile list is open', () => {
     const profiles: Selection = {
       kind: 'network',
-      id: null,
       unread: true,
       network: 'bluesky',
       feedKind: 'profile',
@@ -420,7 +419,6 @@ describe('SidebarSocialSectionComponent', () => {
   it("links the Searches row to the network's combined search list and marks it active there", () => {
     const searches: Selection = {
       kind: 'network',
-      id: null,
       unread: true,
       network: 'bluesky',
       feedKind: 'search',
@@ -553,7 +551,7 @@ describe('SidebarSocialSectionComponent', () => {
   });
 
   it("marks the head row current while the network's view is open", () => {
-    const bluesky: Selection = { kind: 'network', id: null, unread: true, network: 'bluesky' };
+    const bluesky: Selection = { kind: 'network', unread: true, network: 'bluesky' };
     const mastodon: Selection = { ...bluesky, network: 'mastodon' };
 
     expect(
@@ -563,7 +561,7 @@ describe('SidebarSocialSectionComponent', () => {
   });
 
   it('keeps the head neutral while organising, even with its view open', () => {
-    const bluesky: Selection = { kind: 'network', id: null, unread: true, network: 'bluesky' };
+    const bluesky: Selection = { kind: 'network', unread: true, network: 'bluesky' };
     const fixture = mount(ONE_ACCOUNT, bluesky);
     fixture.componentRef.setInput('organising', true);
     fixture.detectChanges();

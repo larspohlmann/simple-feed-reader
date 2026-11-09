@@ -7,7 +7,9 @@ import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { MarkReadTarget, markReadTarget, queryFromSelection } from '../query/query';
+import { MarkReadTarget, markReadTarget } from '../query/mark-read-target';
+import { queryFromSelection } from '../query/entry-query';
+import { isUnreadOnly } from '../query/query';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()
@@ -45,7 +47,7 @@ export class MarkReadActions {
 
   /** Never a re-fetch: a reload lets the magazine planner lift newer posts above the boundary. */
   private markAboveReadNow(ids: number[], hideInUnreadList: () => void): void {
-    const hideLocally = this.routeState.selection().unread
+    const hideLocally = isUnreadOnly(this.routeState.selection())
       ? hideInUnreadList
       : () => this.entries.markHiddenLocally(ids);
     this.entries.withMutatingCue(this.api.markEntriesRead(ids)).subscribe({

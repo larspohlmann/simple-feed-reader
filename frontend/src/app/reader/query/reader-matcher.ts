@@ -33,11 +33,7 @@ export function selectionFromRoute(
   // A slug with no leading id (hand-edited URL) has no single search to open,
   // so fall back to the combined view rather than fetching the plain list.
   if (savedSearch === 'all' || id === null) {
-    return {
-      selection: { kind: 'saved-searches', id: null, unread: false },
-      entryId,
-      urlCorrection: null,
-    };
+    return { selection: { kind: 'saved-searches', unread: false }, entryId, urlCorrection: null };
   }
   return { selection: { kind: 'saved-search', id, unread: false }, entryId, urlCorrection: null };
 }
