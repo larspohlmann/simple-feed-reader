@@ -42,6 +42,7 @@ export interface CurrentUser {
   preferences: UserPreferences;
   ai: AiAvailability;
   mail: { enabled: boolean };
+  catalog: { hasEntries: boolean };
   emailVerified: boolean;
 }
 
@@ -166,5 +167,12 @@ export class AuthService {
     const user = this.user();
     if (!user) return;
     this.user.set({ ...user, preferences: { ...user.preferences, passkeyOfferAnswered: true } });
+  }
+
+  /** Adopts the answer of a view that loaded the catalog itself, fresher than the one `/api/me` gave. */
+  markCatalogHasEntries(hasEntries: boolean): void {
+    const user = this.user();
+    if (!user || user.catalog.hasEntries === hasEntries) return;
+    this.user.set({ ...user, catalog: { hasEntries } });
   }
 }

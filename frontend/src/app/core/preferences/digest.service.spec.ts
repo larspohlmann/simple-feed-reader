@@ -40,6 +40,7 @@ const user = (digest: DigestConfig, timezone = 'UTC'): CurrentUser => ({
   },
   ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
+  catalog: { hasEntries: true },
   emailVerified: true,
 });
 

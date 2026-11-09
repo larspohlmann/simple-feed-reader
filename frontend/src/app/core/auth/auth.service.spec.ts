@@ -74,6 +74,7 @@ describe('AuthService', () => {
       },
       ai: { ready: false, model: null, capabilities: null },
       mail: { enabled: true },
+      catalog: { hasEntries: true },
       emailVerified: true,
     };
   }
@@ -110,6 +111,7 @@ describe('AuthService', () => {
       },
       ai: { ready: true, model: 'gpt-4o', capabilities: null },
       mail: { enabled: true },
+      catalog: { hasEntries: true },
       emailVerified: true,
     });
 
@@ -278,6 +280,21 @@ describe('AuthService', () => {
 
     expect(service.user()?.preferences.passkeyOfferAnswered).toBe(true);
     ctrl.expectNone('https://api.test/api/me/passkey-offer/answer');
+  });
+
+  it('markCatalogHasEntries adopts a fresher catalog answer without any request', () => {
+    service.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
+
+    service.markCatalogHasEntries(false);
+
+    expect(service.user()?.catalog.hasEntries).toBe(false);
+  });
+
+  it('markCatalogHasEntries leaves a signed-out session alone', () => {
+    service.markCatalogHasEntries(true);
+
+    expect(service.user()).toBeNull();
   });
 
   // Driven through the real logout() rather than through TokenStore, because
