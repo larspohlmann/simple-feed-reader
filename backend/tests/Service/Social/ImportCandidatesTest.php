@@ -9,7 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
-use App\Repository\SubscriptionFeedUrls;
+use App\Repository\SubscriptionRepository;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\ActingAccountGuard;
@@ -75,8 +75,8 @@ final class ImportCandidatesTest extends DbTestCase
 
     private function importCandidates(SocialCandidatesInterface $network): ImportCandidates
     {
-        $subscriptionFeedUrls = self::getContainer()->get(SubscriptionFeedUrls::class);
-        self::assertInstanceOf(SubscriptionFeedUrls::class, $subscriptionFeedUrls);
+        $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
+        self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
         $guard = new UrlGuard(new StaticDnsResolver([]), new IpValidator());
         $resolver = new BlueskyIdentityResolver(
             new BlueskyApiClient(FetchWiring::guardedApiClient((new RoutedHttpClient([]))->client(), $guard)),
@@ -84,7 +84,7 @@ final class ImportCandidatesTest extends DbTestCase
 
         return new ImportCandidates(
             $network,
-            $subscriptionFeedUrls,
+            $subscriptions,
             new FollowMatcher($resolver),
             SocialFeeds::repository($this->entityManager),
             new ActingAccountGuard($this->entityManager),

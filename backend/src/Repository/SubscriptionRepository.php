@@ -62,6 +62,22 @@ final class SubscriptionRepository extends ServiceEntityRepository
         return $subscription;
     }
 
+    /** @return list<array{id: int, customTitle: ?string, feedUrl: string, feedTitle: ?string, feedImageUrl: ?string}> creation order */
+    public function findFeedUrlsForUser(int $userId): array
+    {
+        /** @var list<array{id: int, customTitle: ?string, feedUrl: string, feedTitle: ?string, feedImageUrl: ?string}> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->select('s.id', 's.customTitle', 'f.url AS feedUrl', 'f.title AS feedTitle', 'f.imageUrl AS feedImageUrl')
+            ->join('s.feed', 'f')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->orderBy('s.createdAt', 'ASC')
+            ->addOrderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
+    }
+
     /** The count the cap holds against: a saved feed is never a subscription the user chose (#1666). */
     public function countForUser(int $userId): int
     {
