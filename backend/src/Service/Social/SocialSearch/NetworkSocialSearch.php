@@ -67,7 +67,6 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
         foreach ($this->engine->sendAll($tickets, $this->settler) as $position => $outcome) {
             $answers[$position] = MastodonApiClient::accepted(MastodonApiClient::answerOf($outcome));
         }
-        ksort($answers);
 
         return array_values($answers);
     }

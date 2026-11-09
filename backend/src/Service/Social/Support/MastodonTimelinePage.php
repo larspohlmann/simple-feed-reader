@@ -233,9 +233,14 @@ final class MastodonTimelinePage
     }
 
     /** Ids are digit strings that may outgrow an int: compare by length, then digit by digit. */
+    public static function compareIds(string $id, string $other): int
+    {
+        return \strlen($id) <=> \strlen($other) ?: strcmp($id, $other);
+    }
+
     private static function isHigherId(string $id, string $than): bool
     {
-        return (\strlen($id) <=> \strlen($than) ?: strcmp($id, $than)) > 0;
+        return self::compareIds($id, $than) > 0;
     }
 
     private function __construct()

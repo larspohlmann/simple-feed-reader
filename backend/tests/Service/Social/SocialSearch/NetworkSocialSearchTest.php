@@ -148,6 +148,31 @@ final class NetworkSocialSearchTest extends TestCase
         self::assertSame([$rss, $atom], $http->requestLines());
     }
 
+    public function testAMastodonPreviewListsTheMergedAnswersNewestFirst(): void
+    {
+        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
+        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
+        $http = new RoutedHttpClient([
+            $rss => self::json(['statuses' => [self::mastodonStatus('110'), self::mastodonStatus('108')]]),
+            $atom => self::json(['statuses' => [
+                self::mastodonStatus('111', '<p>atom feeds</p>'),
+                self::mastodonStatus('109', '<p>atom feeds</p>'),
+            ]]),
+        ]);
+
+        $page = $this->search($http->client())->newest(SocialAccounts::mastodon(), '(rss || atom)');
+
+        self::assertSame(
+            [
+                'https://mastodon.example/@bob/111',
+                'https://mastodon.example/@bob/110',
+                'https://mastodon.example/@bob/109',
+                'https://mastodon.example/@bob/108',
+            ],
+            array_map(static fn (ParsedEntryModel $entry): ?string => $entry->url, $page->parsed->entries),
+        );
+    }
+
     public function testAMastodonPreviewTooBroadIsRefusedBeforeAnyRequest(): void
     {
         $http = new RoutedHttpClient([]);

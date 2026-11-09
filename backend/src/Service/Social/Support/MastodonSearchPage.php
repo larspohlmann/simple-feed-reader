@@ -36,7 +36,7 @@ final class MastodonSearchPage
     /**
      * @param list<ApiResponseModel> $accepted
      *
-     * @return list<JsonNodeModel> each status once, however many alternatives found it
+     * @return list<JsonNodeModel> each status once, however many alternatives found it, newest first
      *
      * @throws SocialNetworkUnreachableException
      */
@@ -51,7 +51,13 @@ final class MastodonSearchPage
             }
         }
 
-        return array_values($statusesById);
+        $statuses = array_values($statusesById);
+        usort($statuses, static fn (JsonNodeModel $left, JsonNodeModel $right): int => MastodonTimelinePage::compareIds(
+            $right->string('id') ?? '',
+            $left->string('id') ?? '',
+        ));
+
+        return $statuses;
     }
 
     private static function searchedPostOf(JsonNodeModel $post): SearchedPostModel
