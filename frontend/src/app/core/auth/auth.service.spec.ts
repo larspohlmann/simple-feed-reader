@@ -282,21 +282,6 @@ describe('AuthService', () => {
     ctrl.expectNone('https://api.test/api/me/passkey-offer/answer');
   });
 
-  it('markCatalogHasEntries adopts a fresher catalog answer without any request', () => {
-    service.loadMe().subscribe();
-    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
-
-    service.markCatalogHasEntries(false);
-
-    expect(service.user()?.catalog.hasEntries).toBe(false);
-  });
-
-  it('markCatalogHasEntries leaves a signed-out session alone', () => {
-    service.markCatalogHasEntries(true);
-
-    expect(service.user()).toBeNull();
-  });
-
   // Driven through the real logout() rather than through TokenStore, because
   // the wiring under test IS "logout clears the token, and the token is what
   // voids per-user caches" (#263).

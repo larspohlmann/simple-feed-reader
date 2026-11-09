@@ -4,7 +4,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, Router } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
-import { AuthService } from '../core/auth/auth.service';
 import { CatalogCategoryDto } from '../reader/feeds/catalog/catalog.models';
 import { DiscoverComponent } from './discover.component';
 
@@ -116,44 +115,6 @@ describe('DiscoverComponent', () => {
     local.detectChanges();
     return local;
   };
-
-  describe('the catalog answer it hands the reader', () => {
-    it('reports what it loaded', () => {
-      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
-
-      mountWith(MULTI);
-      expect(mark).toHaveBeenLastCalledWith(true);
-
-      mountWith({ categories: [] });
-      expect(mark).toHaveBeenLastCalledWith(false);
-    });
-
-    it('never shares a stale cached answer ahead of the fresh one', () => {
-      mountWith({ categories: [] });
-      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
-
-      const reopened = TestBed.createComponent(DiscoverComponent);
-      reopened.detectChanges();
-      expect(mark).not.toHaveBeenCalled();
-
-      http.expectOne('https://api.test/api/catalog').flush(MULTI);
-      reopened.detectChanges();
-      expect(mark).toHaveBeenCalledTimes(1);
-      expect(mark).toHaveBeenLastCalledWith(true);
-    });
-
-    it('reports nothing when the catalog fails to load', () => {
-      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
-      const local = TestBed.createComponent(DiscoverComponent);
-      local.detectChanges();
-      http
-        .expectOne('https://api.test/api/catalog')
-        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-      local.detectChanges();
-
-      expect(mark).not.toHaveBeenCalled();
-    });
-  });
 
   const pick = (target: ComponentFixture<DiscoverComponent>, ...cardIndexes: number[]): string => {
     const cards: HTMLButtonElement[] = Array.from(

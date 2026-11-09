@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { stubAuthToken } from './support/auth';
+import { STUB_PROFILE, stubAuthToken } from './support/auth';
 import { aSubscription } from '../src/testing/subscription-testing';
 import { entryWire, subscriptionsJson } from './support/reader';
 
@@ -64,11 +64,7 @@ async function stubReader(page: Page): Promise<void> {
     // empty body throws inside a computed and stops the render mid-pass, which
     // leaves the heading on its fallback name.
     if (path.endsWith('/api/me')) {
-      return json({
-        email: 'fixture@example.invalid',
-        roles: ['ROLE_USER'],
-        catalog: { hasEntries: false },
-      });
+      return json({ ...STUB_PROFILE, email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
     }
     if (path.endsWith('/api/tags')) return json({ tags: [] });
     if (path.endsWith('/api/saved-searches')) return json({ savedSearches: [] });

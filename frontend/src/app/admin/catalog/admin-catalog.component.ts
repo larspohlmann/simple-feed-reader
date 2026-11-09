@@ -1,15 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  Component,
-  ElementRef,
-  OnInit,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-  viewChild,
-} from '@angular/core';
+import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -76,23 +66,6 @@ export class AdminCatalogComponent implements OnInit {
   readonly loaded = computed(() => !this.loading() && this.error() === null);
   readonly importBusy = computed(() => this.importing() || this.refreshingCatalog());
 
-  private readonly fetched = signal(false);
-
-  private readonly offersFeeds = computed(() => {
-    const enabledCategories = new Set(
-      this.categories()
-        .filter((category) => category.enabled)
-        .map((category) => category.id),
-    );
-    return this.feeds().some((feed) => feed.enabled && enabledCategories.has(feed.categoryId));
-  });
-
-  private readonly shareAvailability = effect(() => {
-    if (!this.fetched()) return;
-    const offersFeeds = this.offersFeeds();
-    untracked(() => this.auth.markCatalogHasEntries(offersFeeds));
-  });
-
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   ngOnInit(): void {
@@ -119,7 +92,6 @@ export class AdminCatalogComponent implements OnInit {
         next: (result) => {
           this.categories.set(result.categories);
           this.feeds.set(result.feeds);
-          this.fetched.set(true);
         },
         error: (failure: HttpErrorResponse) => this.error.set(parseProblem(failure)),
       });
@@ -187,6 +159,7 @@ export class AdminCatalogComponent implements OnInit {
       next: () => {
         this.categories.update((list) => list.filter((entry) => entry.id !== category.id));
         this.feeds.update((list) => list.filter((feed) => feed.categoryId !== category.id));
+        this.refreshAccount();
       },
       error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
@@ -205,7 +178,10 @@ export class AdminCatalogComponent implements OnInit {
   deleteFeed(feed: AdminCatalogFeedDto): void {
     this.actionError.set(null);
     this.api.deleteFeed(feed.id).subscribe({
-      next: () => this.feeds.update((list) => list.filter((entry) => entry.id !== feed.id)),
+      next: () => {
+        this.feeds.update((list) => list.filter((entry) => entry.id !== feed.id));
+        this.refreshAccount();
+      },
       error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
   }
@@ -265,6 +241,11 @@ export class AdminCatalogComponent implements OnInit {
     this.importing.set(false);
     this.refreshingCatalog.set(true);
     this.fetchCatalog();
+    this.refreshAccount();
+  }
+
+  private refreshAccount(): void {
+    this.auth.loadMe().subscribe({ error: () => undefined });
   }
 
   // Drop the consumed document so a second click cannot resend a stale upload,
@@ -282,6 +263,7 @@ export class AdminCatalogComponent implements OnInit {
         ? list.map((entry) => (entry.id === category.id ? category : entry))
         : [...list, category];
     });
+    this.refreshAccount();
   }
 
   private upsertFeed(feed: AdminCatalogFeedDto): void {
@@ -289,6 +271,7 @@ export class AdminCatalogComponent implements OnInit {
       const known = list.some((entry) => entry.id === feed.id);
       return known ? list.map((entry) => (entry.id === feed.id ? feed : entry)) : [...list, feed];
     });
+    this.refreshAccount();
   }
 
   private swap<T>(list: T[], from: number, to: number): T[] | null {

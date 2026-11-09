@@ -81,38 +81,27 @@ describe('AdminCatalogComponent', () => {
       lockedSkipped: 0,
     };
 
-    it('reports entries once an import fills an empty catalog', () => {
+    it('re-reads the account after a successful import', () => {
       const fixture = mountLoaded({ categories: [], feeds: [] });
-      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
+      const auth = TestBed.inject(AuthService);
 
       fixture.componentInstance.importBundled();
       ctrl.expectOne('https://api.test/api/admin/catalog/import/bundled').flush(IMPORT_COUNTS);
       ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
-      fixture.detectChanges();
+      ctrl.expectOne('https://api.test/api/me').flush({ id: 1, catalog: { hasEntries: true } });
 
-      expect(mark).toHaveBeenLastCalledWith(true);
+      expect(auth.user()?.catalog.hasEntries).toBe(true);
     });
 
-    it('reports no entries once the last feed is deleted', () => {
-      const fixture = mountLoaded();
-      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
+    it('does not re-read the account after a failed import', () => {
+      const fixture = mountLoaded({ categories: [], feeds: [] });
 
-      fixture.componentInstance.deleteFeed(fixture.componentInstance.feeds()[0]);
-      ctrl.expectOne('https://api.test/api/admin/catalog/feeds/10').flush({});
-      fixture.detectChanges();
+      fixture.componentInstance.importBundled();
+      ctrl
+        .expectOne('https://api.test/api/admin/catalog/import/bundled')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
 
-      expect(mark).toHaveBeenLastCalledWith(false);
-    });
-
-    it('does not count a feed whose category is disabled', () => {
-      const fixture = mountLoaded();
-      const mark = jest.spyOn(TestBed.inject(AuthService), 'markCatalogHasEntries');
-
-      fixture.componentInstance.openCategoryDialog(fixture.componentInstance.categories()[0]);
-      dialogClosed.next({ ...PAYLOAD.categories[0], enabled: false });
-      fixture.detectChanges();
-
-      expect(mark).toHaveBeenLastCalledWith(false);
+      ctrl.expectNone('https://api.test/api/me');
     });
   });
 
@@ -121,7 +110,10 @@ describe('AdminCatalogComponent', () => {
     dialogOpen.mockClear();
   });
 
-  afterEach(() => ctrl.verify());
+  afterEach(() => {
+    ctrl.match('https://api.test/api/me').forEach((request) => request.flush({}));
+    ctrl.verify();
+  });
 
   it('lists categories and their feeds', () => {
     const fixture = mountLoaded();
