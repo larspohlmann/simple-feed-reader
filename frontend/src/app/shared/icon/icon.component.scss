@@ -20,6 +20,10 @@ span {
   width: 1em;
   height: 1em;
   line-height: 1;
+
+  /* Until the icon font loads, the ligature name renders in a fallback font far
+     wider than 1em and covers neighbouring buttons, swallowing their taps (#2129). */
+  overflow: hidden;
   user-select: none;
   font-variation-settings: 'opsz' 20;
 }
