@@ -7,6 +7,7 @@ namespace App\Service\Opml;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
+use App\Enum\SubscriptionSet;
 use App\Repository\SubscriptionRepository;
 use App\Service\Opml\Pass\OpmlTagTree;
 use App\Service\Social\Model\ExportedSubscriptionModel;
@@ -30,7 +31,7 @@ final readonly class OpmlExporter
     public function export(User $user): string
     {
         $subscriptions = ExportedFeed::withoutRepeats(
-            $this->subscriptions->findExportableForUserWithTags($user->requireId()),
+            $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::OpmlExport),
         );
 
         $document = new \DOMDocument('1.0', 'UTF-8');

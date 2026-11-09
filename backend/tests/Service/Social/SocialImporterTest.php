@@ -15,6 +15,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Enum\SubscriptionSet;
 use App\Exception\InvalidSelectionException;
 use App\Repository\EntryStateRepository;
 use App\Repository\KnownSocialCollectionRepository;
@@ -94,7 +95,7 @@ final class SocialImporterTest extends DbTestCase
         $this->entityManager->clear();
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
-        foreach ($subscriptions->findForUserWithTags($this->user->requireId()) as $subscription) {
+        foreach ($subscriptions->findForUserWithTags($this->user->requireId(), SubscriptionSet::All) as $subscription) {
             if ($subscription->getFeed()->getUrl() === $url) {
                 return array_values(array_map(
                     static fn (Tag $tag): string => $tag->getName(),

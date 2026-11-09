@@ -12,6 +12,7 @@ use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SubscriptionSet;
 use App\Enum\TrendingWindow;
 use App\Http\SubscribeOutcomeJson;
 use App\Http\SubscriptionCountsJson;
@@ -54,7 +55,7 @@ final readonly class SubscriptionController
         $window = TrendingWindow::fromRequestValue($trendingWindow, 'trendingWindow');
 
         return new JsonResponse(SubscriptionJson::list(
-            $this->subscriptions->findForUserWithTags($user->requireId()),
+            $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::All),
             $this->tallies->forUser($user, $window),
             $this->socialAccounts->findAllForUser($user),
         ));

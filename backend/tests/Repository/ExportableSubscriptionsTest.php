@@ -10,6 +10,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
+use App\Enum\SubscriptionSet;
 use App\Repository\SubscriptionRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
@@ -25,8 +26,8 @@ final class ExportableSubscriptionsTest extends DbTestCase
         $private = $this->subscribed($user, 'social:mastodon:1:home', SourceFormat::MASTODON_API);
         $this->entityManager->flush();
 
-        self::assertSame([$rss], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
-        self::assertSame([$rss, $private], $this->subscriptions()->findForUserWithTags($user->requireId()));
+        self::assertSame([$rss], $this->setOf($user, SubscriptionSet::OpmlExport));
+        self::assertSame([$rss, $private], $this->setOf($user, SubscriptionSet::All));
     }
 
     public function testAnAuthorFeedIsExportableAndEveryOtherPrivateFeedIsNot(): void
@@ -45,8 +46,8 @@ final class ExportableSubscriptionsTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        self::assertSame([$author], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
-        self::assertSame([$author], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
+        self::assertSame([$author], $this->setOf($user, SubscriptionSet::OpmlExport));
+        self::assertSame([$author], $this->setOf($user, SubscriptionSet::Backup));
     }
 
     public function testAnOpmlLeavesTheSavedFeedsOutAndABackupKeepsThem(): void
@@ -59,8 +60,8 @@ final class ExportableSubscriptionsTest extends DbTestCase
         $saved = $this->subscribed($user, sprintf('saved:%d:bluesky', $user->requireId()), SourceFormat::SAVED);
         $this->entityManager->flush();
 
-        self::assertSame([$rss], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
-        self::assertSame([$rss, $saved], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
+        self::assertSame([$rss], $this->setOf($user, SubscriptionSet::OpmlExport));
+        self::assertSame([$rss, $saved], $this->setOf($user, SubscriptionSet::Backup));
     }
 
     public function testAnOpmlLeavesTheScrapedFeedsOutAndABackupKeepsThem(): void
@@ -72,8 +73,8 @@ final class ExportableSubscriptionsTest extends DbTestCase
         $scraped = $this->subscribed($user, 'https://example.com/news', SourceFormat::SCRAPED);
         $this->entityManager->flush();
 
-        self::assertSame([$rss], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
-        self::assertSame([$rss, $scraped], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
+        self::assertSame([$rss], $this->setOf($user, SubscriptionSet::OpmlExport));
+        self::assertSame([$rss, $scraped], $this->setOf($user, SubscriptionSet::Backup));
     }
 
     public function testTheCapCountsNoSavedFeed(): void
@@ -108,6 +109,12 @@ final class ExportableSubscriptionsTest extends DbTestCase
         $this->entityManager->persist($subscription);
 
         return $subscription;
+    }
+
+    /** @return list<Subscription> */
+    private function setOf(User $user, SubscriptionSet $set): array
+    {
+        return $this->subscriptions()->findForUserWithTags($user->requireId(), $set);
     }
 
     private function subscriptions(): SubscriptionRepository

@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\AdminUserDetail;
 use App\Entity\User;
+use App\Enum\SubscriptionSet;
 use App\Enum\UserStatus;
 use App\Exception\ValidationException;
 use App\Http\AdminUserJson;
@@ -70,7 +71,9 @@ final readonly class AdminUserController
         $userId = $user->requireId();
 
         // Loaded once and passed to every mapper: the subscription x tag join is this endpoint's heaviest query.
-        $subscriptions = AdminUserJson::positionOrdered($this->subscriptions->findForUserWithTags($userId));
+        $subscriptions = AdminUserJson::positionOrdered(
+            $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::All),
+        );
         $tags = $this->tags->findForUser($userId);
         $footprint = $this->statistics->forUser($user, $subscriptions, $tags);
         $identities = $this->identities->providersByUserId([$user])[$userId] ?? [];
