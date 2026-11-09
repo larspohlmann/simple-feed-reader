@@ -10,6 +10,18 @@
 
 **Spec:** GitHub issue #2126 (`gh issue view 2126`). History: e5ba3d8e1 (#1040, the hint), a0b4011ba (#1098, keyed hint), 976a0760e (#1099, probe-then-fallback for tags), #1143 (oldest-first window, `ListOrder::atOrBefore()`).
 
+## As shipped
+
+The plan's window-everything design shipped with one amendment for the caught-up dense reader:
+
+- When the windowed page comes back short, an **unnarrowed** all/unread list runs a **scope probe**. The probe takes one entry id at offset K from the reader's All scope, joined through the subscription. It has no hint, no duplicate collapse and no read state.
+  - If an entry exists at offset K, the list keeps today's hinted walk.
+  - If none exists, the list runs the plain page.
+- **Narrowed scopes (tag, network, feed group) are unchanged** from #1099: a short window always falls back plain.
+- `DateOrderedPage::rows()` takes a `DateOrderedQueries` parameter object (page, window probe, scope probe) instead of three loose callables.
+- `EntryQuery::inAllView()` gives the probe the same scope with the view dropped.
+- Every all/unread page now runs one extra statement, the window probe, measured at +0.4–0.5 ms. The scope probe runs only when the window comes back short.
+
 ## Global Constraints
 
 - Commit format `fix(#2126): …`; no Claude attribution, no `Co-Authored-By`, no session links.
