@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Service\Crypto\InstanceSecretCipher;
+use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
@@ -123,6 +124,13 @@ final class SocialApiWiring
             self::timelineRounds($http, $cache, $accountConcurrency),
             2,
         );
+    }
+
+    public static function requestEngine(HttpClientInterface $http): ConcurrentRequestEngine
+    {
+        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST, self::RSS_HOST);
+
+        return FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8);
     }
 
     public static function timelineRounds(

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\SocialSearch;
 
 use App\Enum\SocialAccountStatus;
+use App\Service\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SearchQueryTooBroadException;
@@ -164,7 +165,8 @@ final class NetworkSocialSearchTest extends TestCase
         return new NetworkSocialSearch(
             SocialApiWiring::blueskySessions($http, $this->cache),
             SocialApiWiring::mastodonAccountApi($http),
-            SocialApiWiring::mastodonApiClient($http),
+            SocialApiWiring::requestEngine($http),
+            new PassThroughSettler(),
             new ActingAccountGuard($this->entityManager),
         );
     }
