@@ -176,11 +176,26 @@ final class ResponseBodyTest extends TestCase
         self::assertSame(self::HTML, ResponseBody::decoded($response, ResponseSizeLimit::Page));
     }
 
-    public function testBytesAfterTheEndOfTheStreamAreIgnored(): void
+    public function testSlicesAfterTheEndOfTheStreamAreNotRead(): void
     {
-        $response = self::response(gzencode(self::HTML) . 'trailing garbage', 'gzip');
+        $page = self::HTML . bin2hex(random_bytes(2_000));
+        $response = self::response(gzencode($page) . random_bytes(3_000), 'gzip');
 
-        self::assertSame(self::HTML, ResponseBody::decoded($response, ResponseSizeLimit::Page));
+        self::assertSame($page, ResponseBody::decoded($response, ResponseSizeLimit::Page));
+    }
+
+    public function testABodyOneByteOverTheLimitIsTooLargeEvenWhenASliceEndsOnTheLimit(): void
+    {
+        $limit = ResponseSizeLimit::ChapterFile;
+        $payload = random_bytes($limit->bytes() + 1);
+        // 10 header bytes, the name and its NUL, then the 5-byte stored block header: the 63rd slice ends on the limit.
+        $nameLength = 63 * 1_024 - $limit->bytes() - 5 - 10 - 1;
+        $gzip = "\x1f\x8b\x08\x08" . pack('V', 0) . "\x00\x03" . str_repeat('a', $nameLength) . "\0"
+            . gzdeflate($payload, 0) . pack('V', crc32($payload)) . pack('V', \strlen($payload));
+
+        $this->expectException(ResponseTooLargeException::class);
+
+        ResponseBody::decoded(self::response($gzip, 'gzip'), $limit);
     }
 
     public function testAnIncompressibleBodyAtExactlyTheLimitSpanningManySlicesPasses(): void
