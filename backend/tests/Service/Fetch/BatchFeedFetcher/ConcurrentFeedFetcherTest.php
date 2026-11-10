@@ -161,6 +161,28 @@ final class ConcurrentFeedFetcherTest extends TestCase
         self::assertSame('178.77.107.162,2a01:488:42:1000:b24d:6ba2:1e:a1ad', $seenResolve['www.fazemag.de']);
     }
 
+    public function testAFeedRequestIsPersistentCappedAndStillPinned(): void
+    {
+        /** @var array<string, mixed> $seen */
+        $seen = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seen): MockResponse {
+                $seen = $options;
+
+                return new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNull($outcomes[1]->failure());
+        /** @var array{curl: array<int, mixed>, use_persistent_connections: bool} $extra */
+        $extra = $seen['extra'];
+        self::assertSame(5.0, $seen['max_connect_duration']);
+        self::assertTrue($extra['use_persistent_connections']);
+        self::assertArrayHasKey(\CURLOPT_CONNECT_TO, $extra['curl']);
+    }
+
     /**
      * The both-family pin leads with IPv6, which connects and then resets at TLS, so the feed must fall over to an
      * IPv4-only pin.

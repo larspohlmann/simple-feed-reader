@@ -323,6 +323,27 @@ final class HtmlPageFetcherTest extends TestCase
         self::assertSame('93.184.216.34,2606:2800:220:1:248:1893:25c8:1946', $seenResolve['dual.example.com']);
     }
 
+    public function testTheClientRequestIsPersistentCappedAndStillPinned(): void
+    {
+        /** @var array<string, mixed> $seen */
+        $seen = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seen): MockResponse {
+                $seen = $options;
+
+                return new MockResponse('<html lang="en"><body>ok</body></html>', ['http_code' => 200]);
+            },
+        );
+
+        $fetcher->fetch('https://example.com/post');
+
+        /** @var array{curl: array<int, mixed>, use_persistent_connections: bool} $extra */
+        $extra = $seen['extra'];
+        self::assertSame(5.0, $seen['max_connect_duration']);
+        self::assertTrue($extra['use_persistent_connections']);
+        self::assertArrayHasKey(\CURLOPT_CONNECT_TO, $extra['curl']);
+    }
+
     public function testFollowsAZeroDelayMetaRefreshToTheArticle(): void
     {
         $fetcher = $this->fetcher([
