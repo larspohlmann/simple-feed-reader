@@ -30,18 +30,19 @@ final readonly class SubscriptionTallyReader
     public function forUser(User $user, TrendingWindow $trendingWindow): SubscriptionTalliesModel
     {
         $userId = $user->requireId();
+        $perSubscription = $this->unreadCounts->perSubscription($userId);
 
         return new SubscriptionTalliesModel(
-            $this->unreadCounts->perSubscription($userId),
+            $perSubscription,
             $this->entryCounts->forUser($userId),
             $this->flagCounts($userId),
             new UnreadTotalsModel(
-                $this->unreadCounts->allItems($userId),
-                $this->unreadCounts->perTag($userId),
-                $this->unreadCounts->perNetwork($userId),
-                $this->unreadCounts->perNetworkProfiles($userId),
+                $this->unreadCounts->allItems($userId, $perSubscription),
+                $this->unreadCounts->perTag($userId, $perSubscription),
+                $this->unreadCounts->perNetwork($userId, $perSubscription),
+                $this->unreadCounts->perNetworkProfiles($userId, $perSubscription),
                 $this->recommendationItems->countForYou($userId),
-                $this->unreadCounts->perFeedGroup($userId),
+                $this->unreadCounts->perFeedGroup($userId, $perSubscription),
             ),
             $this->trendingStories->unopenedFor($user, $trendingWindow),
         );
