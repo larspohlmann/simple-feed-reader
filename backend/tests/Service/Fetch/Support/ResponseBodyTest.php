@@ -187,7 +187,7 @@ final class ResponseBodyTest extends TestCase
     public function testABodyOneByteOverTheLimitIsTooLargeEvenWhenASliceEndsOnTheLimit(): void
     {
         $limit = ResponseSizeLimit::ChapterFile;
-        $payload = random_bytes($limit->bytes() + 1);
+        $payload = random_bytes(max(1, $limit->bytes() + 1));
         // 10 header bytes, the name and its NUL, then the 5-byte stored block header: the 63rd slice ends on the limit.
         $nameLength = 63 * 1_024 - $limit->bytes() - 5 - 10 - 1;
         $gzip = "\x1f\x8b\x08\x08" . pack('V', 0) . "\x00\x03" . str_repeat('a', $nameLength) . "\0"
