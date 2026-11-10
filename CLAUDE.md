@@ -19,6 +19,8 @@ php bin/phpunit      # unit/integration suite (SQLite natively); `composer test`
 composer test:parallel    # the suite over ParaTest, one TEST_TOKEN worker per CPU — what CI runs
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
 composer infection:diff   # …over the files this branch changes — what CI gates
+composer infection:coverage    # collect coverage once (the slow serial run) for…
+composer infection:diff:rerun  # …infection:diff without its initial run; recollect once src lines move
 composer e2e         # black-box e2e against the running Docker stack
 ```
 
