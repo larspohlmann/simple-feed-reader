@@ -60,8 +60,15 @@ Today this is contained: every pooled connection was approved by `UrlGuard` when
 only as long as one request's multi handle. Persistent connections extend the pool across requests and users, so the
 pin has to cover reuse.
 
-`EgressOptions::pinned()` adds `CURLOPT_CONNECT_TO` with `host:port:pinned-ip:port`, built from the same `GuardedUrl`
-values. Symfony allows the option in `extra.curl`; it is not one of the options Symfony itself sets. curl makes the
+`EgressOptions::pinned()` adds a connect-to entry. The pin is an address *list* (both families, so happy eyeballs
+can race them), and `CURLOPT_CONNECT_TO` takes one target. So the target is an alias for this exact list:
+`pin-<first 16 hex of sha256(list)>.invalid`. The pin's `resolve` maps that alias to the list, next to the existing
+entry for the host itself. The connect-to entry is `host::alias:`. Empty ports mean any port and the original port, so
+the URL's port is not needed. The request still sends the original host in `Host` and in TLS SNI and verification. A
+second spike confirmed it: single pins (.1, .2) and a list pin (.2,.1) each got their own connections, and a matching
+pin reused one.
+
+Symfony allows `CURLOPT_CONNECT_TO` in `extra.curl`; it is not one of the options Symfony itself sets. curl makes the
 connect-to target part of the connection's identity: a matching pin reuses the connection, a different one opens a new
 connection.
 
@@ -72,8 +79,6 @@ connection.
   too.
 - Proxied requests (`EgressOptions::proxied()`) carry no pin today (socks5h resolves at the proxy) and get no
   connect-to.
-- `CURLOPT_CONNECT_TO` takes a port. The guarded URL's effective port (an explicit port, or 80/443 by scheme) must be
-  the one in the URL, or curl ignores the entry.
 
 `extra` is one nested option, and today's spreads (`[...$options, ...EgressOptions::pinned()]`) replace it wholesale.
 A caller's `extra.use_persistent_connections` and the pin's `extra.curl` must both survive the merge. The merge of
@@ -115,9 +120,9 @@ IPv6 never connects now fails over to IPv4 after 5 s instead of 20 (cf. the dead
   reused a connection. It must fail without the connect-to pin, shown once in the PR.
 - The same test with two pin attempts (failover) replaces the reason for `CURLOPT_FRESH_CONNECT`.
 - **Option merge:** for each path (reader, feed, proxied, pinned), the options that reach the client hold
-  `use_persistent_connections`, the pin's `extra.curl` and `max_connect_duration`.
-- **Connect cap:** a request to a non-routable address (for example 10.255.255.1 via a test-only pin, guard bypassed)
-  fails within the cap with a transport exception.
+  `use_persistent_connections`, the pin's `extra.curl` and `max_connect_duration`. Honouring
+  `max_connect_duration` is Symfony's job; a black-holed address fails instantly or slowly depending on the network,
+  so it makes no reliable test.
 - Both test legs, `composer check`, `composer md`, e2e green. No new deprecations in the dev log.
 
 ## Verification and measurement
