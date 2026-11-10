@@ -16,6 +16,7 @@ use App\Tests\Support\GzipBomb;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class HtmlPageFetcherTest extends TestCase
@@ -233,6 +234,35 @@ final class HtmlPageFetcherTest extends TestCase
             'http_code' => 404,
             'response_headers' => ['content-encoding' => 'gzip'],
         ])]);
+
+        try {
+            $fetcher->fetch('https://example.com/missing');
+            self::fail('expected a PageFetchException');
+        } catch (PageFetchException $failure) {
+            self::assertSame('HTTP 404 Not Found', $failure->getMessage());
+        }
+    }
+
+    /** @return \Generator<int, string|\Throwable> */
+    private static function bodyCutByTheNetwork(): \Generator
+    {
+        yield '<html><body>';
+        yield new TransportException('connection reset');
+    }
+
+    public function testABodyCutByTheNetworkFailsAsAPageFetch(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse(self::bodyCutByTheNetwork(), ['http_code' => 200])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('connection reset');
+
+        $fetcher->fetch('https://example.com/post');
+    }
+
+    public function testAnErrorPageCutByTheNetworkReportsOnlyTheStatus(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse(self::bodyCutByTheNetwork(), ['http_code' => 404])]);
 
         try {
             $fetcher->fetch('https://example.com/missing');
