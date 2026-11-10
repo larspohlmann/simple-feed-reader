@@ -26,7 +26,6 @@ final class GdImageResizerTest extends TestCase
         ob_start();
         imagejpeg($image);
         $bytes = (string) ob_get_clean();
-        imagedestroy($image);
 
         return $bytes;
     }
@@ -88,7 +87,6 @@ final class GdImageResizerTest extends TestCase
         ob_start();
         imagejpeg($image, null, 100);
         $bytes = (string) ob_get_clean();
-        imagedestroy($image);
 
         return $bytes;
     }

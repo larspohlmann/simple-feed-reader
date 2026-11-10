@@ -41,7 +41,6 @@ final class CurlSmtpTransport extends AbstractTransport
         $body = $message->toString();
         $stream = fopen('php://temp', 'r+b');
         if (false === $stream) {
-            curl_close($handle);
             throw new TransportException('Unable to buffer the message for the proxied SMTP send.');
         }
         fwrite($stream, $body);
@@ -64,7 +63,6 @@ final class CurlSmtpTransport extends AbstractTransport
                 throw ProxiedSmtpSendException::fromCurlError(curl_error($handle));
             }
         } finally {
-            curl_close($handle);
             fclose($stream);
         }
     }

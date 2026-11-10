@@ -27,8 +27,6 @@ final readonly class GdImageResizer implements ImageResizerInterface
         $this->drawCentred($canvas, $source, $scale, $width, $height);
 
         $out = $this->capture(static fn (\GdImage $image): bool => imagejpeg($image, null, 72), $canvas);
-        imagedestroy($source);
-        imagedestroy($canvas);
 
         return $out;
     }
@@ -46,8 +44,6 @@ final readonly class GdImageResizer implements ImageResizerInterface
         $this->drawCentred($canvas, $source, $scale, $width, $height);
 
         $out = $this->capture(static fn (\GdImage $image): bool => imagepng($image), $canvas);
-        imagedestroy($source);
-        imagedestroy($canvas);
 
         return $out;
     }

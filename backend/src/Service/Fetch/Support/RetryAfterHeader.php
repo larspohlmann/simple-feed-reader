@@ -7,6 +7,7 @@ namespace App\Service\Fetch\Support;
 final class RetryAfterHeader
 {
     private const string DELAY = '/^\d+$/D';
+    private const string HTTP_DATE = 'D, d M Y H:i:s \G\M\T';
 
     /** Only the delay form; a value we cannot read, a date included, names no wait. */
     public static function seconds(?string $header): ?int
@@ -24,7 +25,7 @@ final class RetryAfterHeader
             return $delay;
         }
 
-        $reopensAt = \DateTimeImmutable::createFromFormat(\DATE_RFC7231, trim($header));
+        $reopensAt = \DateTimeImmutable::createFromFormat(self::HTTP_DATE, trim($header));
         if (false === $reopensAt) {
             return null;
         }
