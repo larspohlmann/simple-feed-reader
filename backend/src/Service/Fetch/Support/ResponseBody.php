@@ -36,7 +36,10 @@ final class ResponseBody
         $body = $response->getContent(false);
         $url = self::urlOf($response);
         $encoding = strtolower(trim(ResponseHeader::first($response, 'content-encoding') ?? ''));
-        if (isset(self::ZLIB_ENCODINGS[$encoding]) || self::isUndecodable($encoding)) {
+        if (self::isUndecodable($encoding)) {
+            throw new FeedUnreachableException(sprintf('%s: unsupported Content-Encoding "%s"', $url, $encoding));
+        }
+        if (isset(self::ZLIB_ENCODINGS[$encoding])) {
             try {
                 $body = self::inflatedPast($body, $encoding, $limit->bytes());
             } catch (\UnexpectedValueException $refused) {
@@ -48,12 +51,14 @@ final class ResponseBody
         return $body;
     }
 
-    /** @throws \UnexpectedValueException when the encoding is unsupported or the stream corrupt */
+    /**
+     * @param key-of<self::ZLIB_ENCODINGS> $encoding
+     *
+     * @throws \UnexpectedValueException when the stream is corrupt
+     */
     private static function inflatedPast(string $compressed, string $encoding, int $maxBytes): string
     {
-        $zlibEncoding = self::ZLIB_ENCODINGS[$encoding]
-            ?? throw new \UnexpectedValueException(sprintf('unsupported Content-Encoding "%s"', $encoding));
-        $context = inflate_init($zlibEncoding);
+        $context = inflate_init(self::ZLIB_ENCODINGS[$encoding]);
         \assert($context instanceof \InflateContext);
         set_error_handler(static function (int $severity, string $message) use ($encoding): never {
             throw new \UnexpectedValueException(sprintf('corrupt %s body: %s', $encoding, $message));

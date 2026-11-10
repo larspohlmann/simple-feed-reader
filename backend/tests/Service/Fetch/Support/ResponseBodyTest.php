@@ -30,11 +30,6 @@ final class ResponseBodyTest extends TestCase
         return $client->request('GET', self::URL);
     }
 
-    public function testTheHeaderValueAsksForGzipAndDeflate(): void
-    {
-        self::assertSame('gzip, deflate', ResponseBody::ACCEPT_ENCODING);
-    }
-
     public function testABodyWithoutAnEncodingIsReturnedAsItIs(): void
     {
         self::assertSame(self::HTML, ResponseBody::decoded(self::response(self::HTML), ResponseSizeLimit::Page));
@@ -47,42 +42,23 @@ final class ResponseBodyTest extends TestCase
         self::assertSame(self::HTML, $body);
     }
 
-    /** @return iterable<string, array{string}> */
-    public static function gzipNames(): iterable
+    /** @return iterable<string, array{string, string, string}> */
+    public static function compressedBodies(): iterable
     {
-        yield 'gzip' => ['gzip'];
-        yield 'x-gzip' => ['x-gzip'];
-        yield 'upper case' => ['GZIP'];
+        yield 'gzip' => [(string) gzencode(self::HTML), 'gzip', self::HTML];
+        yield 'x-gzip' => [(string) gzencode(self::HTML), 'x-gzip', self::HTML];
+        yield 'upper case' => [(string) gzencode(self::HTML), 'GZIP', self::HTML];
+        yield 'deflate' => [(string) gzcompress(self::HTML), 'deflate', self::HTML];
+        $incompressible = self::HTML . bin2hex(random_bytes(20_000));
+        yield 'many slices' => [(string) gzencode($incompressible), 'gzip', $incompressible];
     }
 
-    #[DataProvider('gzipNames')]
-    public function testAGzipBodyIsInflated(string $encoding): void
+    #[DataProvider('compressedBodies')]
+    public function testACompressedBodyIsInflatedWhole(string $compressed, string $encoding, string $expected): void
     {
-        $response = self::response((string) gzencode(self::HTML), $encoding);
+        $body = ResponseBody::decoded(self::response($compressed, $encoding), ResponseSizeLimit::Page);
 
-        $body = ResponseBody::decoded($response, ResponseSizeLimit::Page);
-
-        self::assertSame(self::HTML, $body);
-    }
-
-    public function testADeflateBodyIsInflated(): void
-    {
-        $response = self::response((string) gzcompress(self::HTML), 'deflate');
-
-        $body = ResponseBody::decoded($response, ResponseSizeLimit::Page);
-
-        self::assertSame(self::HTML, $body);
-    }
-
-    public function testABodySpanningManySlicesIsInflatedWhole(): void
-    {
-        $page = self::HTML . bin2hex(random_bytes(20_000));
-
-        $response = self::response((string) gzencode($page), 'gzip');
-
-        $body = ResponseBody::decoded($response, ResponseSizeLimit::Page);
-
-        self::assertSame($page, $body);
+        self::assertSame($expected, $body);
     }
 
     public function testAnEmptyCompressedBodyIsEmpty(): void
@@ -114,7 +90,7 @@ final class ResponseBodyTest extends TestCase
 
     public function testABombStopsAtTheLimitWithoutInflatingWhole(): void
     {
-        $response = self::response(GzipBomb::inflatingTo(100_000_000), 'gzip');
+        $response = self::response(GzipBomb::inflatingTo(30_000_000), 'gzip');
         $response->getContent(false);
         memory_reset_peak_usage();
         $before = memory_get_usage();

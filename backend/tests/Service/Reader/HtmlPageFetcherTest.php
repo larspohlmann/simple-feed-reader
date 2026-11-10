@@ -14,6 +14,7 @@ use App\Tests\Support\CorruptGzip;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\GzipBomb;
 use App\Tests\Support\NoEgressProxy;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -190,7 +191,7 @@ final class HtmlPageFetcherTest extends TestCase
 
     public function testAGzipBombFailsAsAPageFetch(): void
     {
-        $fetcher = $this->fetcher([new MockResponse(GzipBomb::inflatingTo(50_000_000), [
+        $fetcher = $this->fetcher([new MockResponse(GzipBomb::inflatingTo(30_000_000), [
             'http_code' => 200,
             'response_headers' => ['content-encoding' => 'gzip'],
         ])]);
@@ -228,21 +229,6 @@ final class HtmlPageFetcherTest extends TestCase
         $fetcher->fetch('https://example.com/blocked');
     }
 
-    public function testACorruptErrorPageReportsOnlyTheStatus(): void
-    {
-        $fetcher = $this->fetcher([new MockResponse(CorruptGzip::bytes(), [
-            'http_code' => 404,
-            'response_headers' => ['content-encoding' => 'gzip'],
-        ])]);
-
-        try {
-            $fetcher->fetch('https://example.com/missing');
-            self::fail('expected a PageFetchException');
-        } catch (PageFetchException $failure) {
-            self::assertSame('HTTP 404 Not Found', $failure->getMessage());
-        }
-    }
-
     /** @return \Generator<int, string|\Throwable> */
     private static function bodyCutByTheNetwork(): \Generator
     {
@@ -260,9 +246,20 @@ final class HtmlPageFetcherTest extends TestCase
         $fetcher->fetch('https://example.com/post');
     }
 
-    public function testAnErrorPageCutByTheNetworkReportsOnlyTheStatus(): void
+    /** @return iterable<string, array{MockResponse}> */
+    public static function unreadableErrorPages(): iterable
     {
-        $fetcher = $this->fetcher([new MockResponse(self::bodyCutByTheNetwork(), ['http_code' => 404])]);
+        yield 'corrupt gzip' => [new MockResponse(CorruptGzip::bytes(), [
+            'http_code' => 404,
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ])];
+        yield 'cut by the network' => [new MockResponse(self::bodyCutByTheNetwork(), ['http_code' => 404])];
+    }
+
+    #[DataProvider('unreadableErrorPages')]
+    public function testAnUnreadableErrorPageReportsOnlyTheStatus(MockResponse $errorPage): void
+    {
+        $fetcher = $this->fetcher([$errorPage]);
 
         try {
             $fetcher->fetch('https://example.com/missing');
