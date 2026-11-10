@@ -11,6 +11,7 @@ use Uri\WhatWg\Url;
 /**
  * Resolves a reference against the URL it was found in — a Location header
  * against the URL that produced it, a page's own links against the page.
+ * An absolute http(s) reference comes back verbatim, so stored URLs keep their identity.
  */
 final class UrlResolver
 {
