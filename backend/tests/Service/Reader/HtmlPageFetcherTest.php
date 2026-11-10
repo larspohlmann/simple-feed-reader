@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
@@ -198,6 +199,17 @@ final class HtmlPageFetcherTest extends TestCase
 
         $this->expectException(PageFetchException::class);
         $this->expectExceptionMessage('larger than the 3 MB limit');
+
+        $fetcher->fetch('https://example.com/post');
+    }
+
+    public function testAPageOverTheLimitOnTheWireFailsAsAPageFetch(): void
+    {
+        $oversized = str_repeat('a', ResponseSizeLimit::Page->bytes() + 1);
+        $fetcher = $this->fetcher([new MockResponse($oversized, ['http_code' => 200])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('the response is larger than the 3 MB limit');
 
         $fetcher->fetch('https://example.com/post');
     }

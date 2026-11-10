@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Fetch\Exception\FetchException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Pass\RedirectBudget;
@@ -63,10 +64,7 @@ final readonly class HtmlPageFetcher
             'max_duration' => self::TIMEOUT_SECONDS * 2,
             'headers' => ['Accept-Encoding' => ResponseBody::ACCEPT_ENCODING],
             'on_progress' => static function (int $downloaded): void {
-                $limit = ResponseSizeLimit::Page->bytes();
-                if ($downloaded > $limit) {
-                    throw new PageFetchException(sprintf('response exceeds %d bytes', $limit));
-                }
+                ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Page, $downloaded);
             },
         ];
     }
