@@ -21,6 +21,6 @@ final readonly class ParsedEntryMediaModel
             return $this;
         }
 
-        return new self($showArtwork, $this->mediaBundle);
+        return clone($this, ['image' => $showArtwork]);
     }
 }

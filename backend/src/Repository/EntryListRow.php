@@ -53,9 +53,6 @@ final readonly class EntryListRow
      */
     private function copyWith(array $duplicates, EntryListRowEnrichment $enrichment): self
     {
-        return clone($this, [
-            'duplicates' => $duplicates,
-            'enrichment' => $enrichment,
-        ]);
+        return clone($this, ['duplicates' => $duplicates, 'enrichment' => $enrichment]);
     }
 }

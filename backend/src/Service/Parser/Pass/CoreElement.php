@@ -33,7 +33,7 @@ final readonly class CoreElement
 
     public function at(\DOMElement $element): self
     {
-        return new self($element, $this->namespaceUri);
+        return clone($this, ['element' => $element]);
     }
 
     /** @phpstan-assert-if-true =\DOMElement $node */

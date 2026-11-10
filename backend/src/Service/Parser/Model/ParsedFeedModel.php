@@ -21,11 +21,7 @@ final readonly class ParsedFeedModel
     ) {
     }
 
-    /**
-     * The same feed with a different entry list, so a caller that narrows the entries keeps every other field.
-     *
-     * @param list<ParsedEntryModel> $entries
-     */
+    /** @param list<ParsedEntryModel> $entries */
     public function withEntries(array $entries): self
     {
         return clone($this, ['entries' => $entries]);
