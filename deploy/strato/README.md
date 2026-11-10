@@ -380,9 +380,9 @@ under `/opt/RZphp82`, `RZphp83`, `RZphp84` and `RZphp85`, and the ini is
 `/opt/RZphp85/etc/php.ini`. `activate-release.sh` checks the binary is there before doing
 anything and tells you this if it is not.
 
-**Upgrading the PHP version.** Switch the vhost in the Strato panel first: the running release
-keeps working on the newer version. Then deploy the release that needs it, and point
-`DRAIN_PHP_CLI_BINARY` in `shared/.env.local` at the new `/opt/RZphpNN/bin/php-cli`.
+**Upgrading the PHP version.** First switch the vhost in the Strato panel and point
+`DRAIN_PHP_CLI_BINARY` in `shared/.env.local` at the new `/opt/RZphpNN/bin/php-cli`: the
+running release keeps working on the newer version. Then deploy the release that needs it.
 
 **If Strato ever reorganises `/opt`**, find the new path with
 `ssh strato-feedreader 'ls -d /opt/RZphp*/bin/php-cli'` — and the cgi-fcgi binary still works
