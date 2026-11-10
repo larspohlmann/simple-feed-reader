@@ -119,7 +119,7 @@
         "cs": "phpcs",
         "cs:fix": "phpcbf",
         "stan": "phpstan analyse --memory-limit=512M",
-        "md": "@php vendor/bin/phpmd analyze src --format text --ruleset phpmd.xml.dist --no-progress",
+        "md": "phpmd analyze src --no-progress",
         "tramp": "phptramp",
         "tramp:update": "composer update phptramp/phptramp --no-interaction --no-progress --no-scripts",
         "check": [
