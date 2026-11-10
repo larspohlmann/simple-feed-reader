@@ -11,7 +11,8 @@ final class TaggedItemOf
     /** @param class-string $class */
     public static function index(string $class): string
     {
-        return (string) self::attributeOf($class)->index;
+        return self::attributeOf($class)->index
+            ?? throw new \LogicException(sprintf('%s has no tagged-item index', $class));
     }
 
     /** @param class-string $class */
@@ -24,7 +25,9 @@ final class TaggedItemOf
     private static function attributeOf(string $class): AsTaggedItem
     {
         $attributes = (new \ReflectionClass($class))->getAttributes(AsTaggedItem::class);
-        \assert([] !== $attributes, sprintf('%s carries no #[AsTaggedItem]', $class));
+        if ([] === $attributes) {
+            throw new \LogicException(sprintf('%s carries no #[AsTaggedItem]', $class));
+        }
 
         return $attributes[0]->newInstance();
     }

@@ -45,7 +45,7 @@ final readonly class RateLimitGuard
         // which clients read as "now".
         throw new RateLimitedException(max(
             1,
-            (int) floor($limit->getRetryAfter()->getTimestamp() - (float) $this->clock->now()->format('U.u')),
+            $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp(),
         ));
     }
 }

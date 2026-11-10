@@ -20,7 +20,7 @@ final class OAuthStateStoreTest extends TestCase
     private OAuthStateStore $store;
 
     /**
-     * `deepClone: false`, so getValues() returns the payload as written, not a cloned copy that could hide
+     * `deepClone: false`, so getValues() returns the payload as written, not a serialised blob that could hide
      * the plaintext state.
      */
     protected function setUp(): void
