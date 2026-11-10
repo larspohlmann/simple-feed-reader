@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.9.1] - 2026-11-10
+
 ### Highlights
 
 **Mastodon search with `||`.** A Mastodon search feed can combine up to eight
@@ -22,6 +24,34 @@ under load thanks to class preloading and a larger PHP pool.
 
 **Under the hood.** Refactoring made the reader and feed-management code smaller
 and clearer.
+
+## What's Changed
+* feat(#2096): announce releases with highlights on Bluesky and Mastodon by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2097
+* fix(#2100): dialogs hold the page without shrinking it, so Brave keeps its collapsed bar by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2101
+* docs(#2102): slim down the README by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2103
+* Mastodon search feeds: run || alternatives as one search each (#2104) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2105
+* perf(#2112): preload the Symfony class list in the prod PHP image by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2113
+* Refresh only never-fetched feeds after a social, OPML or backup import by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2114
+* refactor(#2109): name the subscription sets once and fold SubscriptionFeedUrls back by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2116
+* refactor(#2108): EntryListRow keeps the reader's marks as one value by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2117
+* refactor(#2110): each backup line kind builds and parses itself by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2118
+* fix(#2119): clip the sidebar footer's hidden outputs so a short list can't drag the sidebar up by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2120
+* refactor(#2111): split ManageActions into feed, tag and bulk actions by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2121
+* fix(#2123): the reader journey e2e skips scraped candidates by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2124
+* fix(#2125): the audio-redirect e2e plays through the Listen row by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2127
+* refactor(#2107): Selection becomes a discriminated union by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2122
+* fix(#2126): sparse readers skip the join hint on All/Unread by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2132
+* fix(#2129): icon glyphs no longer cover neighbouring buttons while the font loads by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2133
+* fix(#2130): the onboarding picker shows no favicons; the catalog favicon machinery goes by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2135
+* fix(#2134): the tag reorder e2e survives parallel specs on the shared admin by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2136
+* fix(#2137): a PHP-FPM pool sized for parallel load in dev and prod by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2139
+* fix(#2138): the reader learns from /api/me whether the catalog has entries, instead of downloading it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2140
+* chore(#2141): drop the test.fixme specs for the not-planned content-anchored restore by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2142
+* fix(#2131): caught-up readers with 2k–20k entries try a wide hinted window before the full walk by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2143
+* docs(#2144): v1.9.1 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2145
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.9.0...v1.9.1
 
 ## [v1.9.0] - 2026-11-08
 
