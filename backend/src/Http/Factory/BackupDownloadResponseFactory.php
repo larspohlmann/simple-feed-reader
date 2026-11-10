@@ -27,11 +27,11 @@ final readonly class BackupDownloadResponseFactory
     /** @param \Generator<int, BackupPartModel> $parts */
     public function stream(string $accountEmail, \Generator $parts): StreamedResponse
     {
-        $filename = (new BackupFilenameModel(
+        $filename = new BackupFilenameModel(
             $accountEmail,
             $this->versionReader->read()->version,
             $this->clock->now(),
-        ))->value();
+        )->value();
 
         return new StreamedResponse(
             static function () use ($parts): void {

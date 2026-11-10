@@ -57,14 +57,14 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         }
         $channel = self::core($channelElement);
 
-        return (new ParsedFeedModel(
+        return new ParsedFeedModel(
             PlainText::from($channel->text('title')),
             $channel->text('link'),
             $channel->text('description'),
             FeedImageExtractor::fromRss2Channel($channel),
             $entries,
             $channel->text('generator'),
-        ))->withShowArtwork(PodcastArtwork::of($channelElement));
+        )->withShowArtwork(PodcastArtwork::of($channelElement));
     }
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel

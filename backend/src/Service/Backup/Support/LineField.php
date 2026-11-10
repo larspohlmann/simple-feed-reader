@@ -96,7 +96,7 @@ final class LineField
         }
 
         try {
-            return (new \DateTimeImmutable($value))->setTimezone(new \DateTimeZone('UTC'));
+            return new \DateTimeImmutable($value)->setTimezone(new \DateTimeZone('UTC'));
         } catch (\DateMalformedStringException) {
             throw new InvalidBackupException(sprintf('Field "%s" is not a valid date.', $key));
         }

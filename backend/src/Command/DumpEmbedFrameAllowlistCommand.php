@@ -40,7 +40,7 @@ final class DumpEmbedFrameAllowlistCommand extends Command
         $path = self::allowlistPath($this->projectDir);
         file_put_contents($path, $this->providers->allowlistJson());
 
-        (new SymfonyStyle($input, $output))->success('Wrote the reader embed allow-list to ' . $path . '.');
+        new SymfonyStyle($input, $output)->success('Wrote the reader embed allow-list to ' . $path . '.');
 
         return Command::SUCCESS;
     }

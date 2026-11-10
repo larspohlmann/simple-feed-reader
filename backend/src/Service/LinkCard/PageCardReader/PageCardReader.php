@@ -52,7 +52,7 @@ final readonly class PageCardReader implements PageCardReaderInterface
     {
         $declared = self::declared($meta, 'og:image', 'twitter:image');
 
-        return HttpsImageUrl::orNullUpgrading((new PageUrls($finalUrl))->httpUrl($declared));
+        return HttpsImageUrl::orNullUpgrading(new PageUrls($finalUrl)->httpUrl($declared));
     }
 
     /**

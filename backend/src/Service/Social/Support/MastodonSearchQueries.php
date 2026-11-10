@@ -17,7 +17,7 @@ final class MastodonSearchQueries
      */
     public static function of(string $query): array
     {
-        return (new SearchQueryAlternatives(SearchQueryTokens::of($query)))->queries();
+        return new SearchQueryAlternatives(SearchQueryTokens::of($query))->queries();
     }
 
     /** @throws SearchQueryTooBroadException */

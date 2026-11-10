@@ -59,13 +59,13 @@ final readonly class SubstackThread
         }
         $name = $node->string('name');
 
-        return (new EntryCommentModel(
+        return new EntryCommentModel(
             self::author($node, $name),
             $this->post->commentUrl($id),
             DateParser::parse($node->string('date')),
             $html,
             null !== $name && $name === $this->entryAuthor,
-        ))->atDepth($depth);
+        )->atDepth($depth);
     }
 
     private static function author(JsonNodeModel $node, ?string $name): CommentAuthorModel
