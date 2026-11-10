@@ -37,6 +37,7 @@ final readonly class MediaCandidateModel
      * A poster-less video takes $fallbackPoster, or is dropped (null) without one: it would rot into a dead frame in
      * the TTL-less cache. Audio and embeds pass through untouched.
      */
+    #[\NoDiscard]
     public function resolvePoster(?string $fallbackPoster): ?self
     {
         if (!$this->kind->isVideo() || ($this->posterUrl !== null && $this->posterUrl !== '')) {

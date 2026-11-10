@@ -38,6 +38,7 @@ final readonly class EntryListRow
      *
      * @param array<int, EntryListRowEnrichment> $enrichmentsByEntryId
      */
+    #[\NoDiscard]
     public function enrichedFrom(array $enrichmentsByEntryId): self
     {
         return $this->copyWith(

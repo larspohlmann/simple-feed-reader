@@ -26,6 +26,7 @@ final readonly class CoreElement
         return new self($element, $namespace->value);
     }
 
+    #[\NoDiscard]
     public function in(FeedNamespace $namespace): self
     {
         return self::extension($this->element, $namespace);
