@@ -11,20 +11,24 @@ final class KeepAliveServer
     {
     }
 
-    public static function start(string $ip, int $port, string $name): ?self
+    /** @throws KeepAliveServerUnavailableException when the process cannot start or cannot bind the address */
+    public static function start(string $ip, int $port, string $name): self
     {
+        $host = str_contains($ip, ':') ? "[$ip]" : $ip;
         $process = proc_open(
-            [\PHP_BINARY, __DIR__ . '/keep-alive-server.php', $ip, (string) $port, $name],
+            [\PHP_BINARY, __DIR__ . '/keep-alive-server.php', $host, (string) $port, $name],
             [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
             $pipes,
         );
         if (!\is_resource($process)) {
-            return null;
+            throw new KeepAliveServerUnavailableException('cannot start the keep-alive server process');
         }
         if ("ready\n" !== fgets($pipes[1])) {
+            $reason = trim((string) stream_get_contents($pipes[2]));
             proc_terminate($process);
+            proc_close($process);
 
-            return null;
+            throw new KeepAliveServerUnavailableException("cannot serve on $ip:$port: $reason");
         }
 
         return new self($process);

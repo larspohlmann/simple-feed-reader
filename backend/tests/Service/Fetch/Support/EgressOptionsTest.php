@@ -116,6 +116,28 @@ final class EgressOptionsTest extends TestCase
         self::assertSame($pinned['extra']['curl'], $merged['extra']['curl']);
     }
 
+    public function testMergeLetsTheEgressConnectToReplaceTheCallersListWholesale(): void
+    {
+        $pinned = EgressOptions::pinned(new GuardedUrlModel('example.com', ['93.184.216.34']), 0);
+
+        $merged = EgressOptions::merge(['extra' => ['curl' => [\CURLOPT_CONNECT_TO => ['a', 'b']]]], $pinned);
+
+        self::assertSame($pinned['extra']['curl'][\CURLOPT_CONNECT_TO], $this->curlOf($merged)[\CURLOPT_CONNECT_TO]);
+    }
+
+    public function testMergeKeepsThePersistentFlagNextToTheProxiedIpResolve(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
+
+        $persistent = ['extra' => ['use_persistent_connections' => true]];
+
+        $merged = EgressOptions::merge($persistent, EgressOptions::proxied($proxy));
+
+        self::assertIsArray($merged['extra']);
+        self::assertTrue($merged['extra']['use_persistent_connections']);
+        self::assertSame(\CURL_IPRESOLVE_V4, $this->curlOf($merged)[\CURLOPT_IPRESOLVE]);
+    }
+
     public function testMergeWithoutAnyExtraAddsNone(): void
     {
         $merged = EgressOptions::merge(['timeout' => 1], ['proxy' => 'socks5://p:1080']);
@@ -130,6 +152,19 @@ final class EgressOptionsTest extends TestCase
         $options = EgressOptions::pinned($guarded, 1);
 
         self::assertSame('93.184.216.34', $options['resolve']['single-family.example.com']);
+    }
+
+    /**
+     * @param array<string, mixed> $merged
+     *
+     * @return array<mixed>
+     */
+    private function curlOf(array $merged): array
+    {
+        self::assertIsArray($merged['extra']);
+        self::assertIsArray($merged['extra']['curl']);
+
+        return $merged['extra']['curl'];
     }
 
     /** @param array{resolve: array<string, string>} $options */

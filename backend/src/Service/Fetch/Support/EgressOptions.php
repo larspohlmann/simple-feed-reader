@@ -45,7 +45,6 @@ final class EgressOptions
         $pins = $guarded->pinnedAddressAttempts();
         $pinnedAddresses = $pins[min($pinAttempt, \count($pins) - 1)];
         $alias = sprintf('pin-%s.invalid', substr(hash('sha256', $pinnedAddresses), 0, 16));
-
         $connectTo = sprintf('%s::%s:', self::connectToHost($guarded->host), $alias);
 
         return [
@@ -56,7 +55,8 @@ final class EgressOptions
 
     /**
      * Request options overlaid with egress options; `extra` is merged, not replaced, so a caller's
-     * `use_persistent_connections` survives the pin's `extra.curl`.
+     * `use_persistent_connections` survives the pin's `extra.curl`, and `extra.curl` is overlaid per option so an
+     * egress list such as CURLOPT_CONNECT_TO replaces the caller's wholesale.
      *
      * @param array<string, mixed> $options
      * @param array<string, mixed> $egress
@@ -66,7 +66,11 @@ final class EgressOptions
     public static function merge(array $options, array $egress): array
     {
         $merged = [...$options, ...$egress];
-        $extra = array_replace_recursive(self::extraOf($options), self::extraOf($egress));
+        $extra = array_replace(self::extraOf($options), self::extraOf($egress));
+        $curl = array_replace(self::curlOf($options), self::curlOf($egress));
+        if ([] !== $curl) {
+            $extra['curl'] = $curl;
+        }
         if ([] !== $extra) {
             $merged['extra'] = $extra;
         }
@@ -84,6 +88,18 @@ final class EgressOptions
         $extra = $options['extra'] ?? [];
 
         return \is_array($extra) ? $extra : [];
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return array<mixed>
+     */
+    private static function curlOf(array $options): array
+    {
+        $curl = self::extraOf($options)['curl'] ?? [];
+
+        return \is_array($curl) ? $curl : [];
     }
 
     private static function connectToHost(string $host): string

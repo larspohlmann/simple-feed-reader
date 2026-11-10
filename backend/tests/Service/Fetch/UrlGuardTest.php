@@ -41,6 +41,15 @@ final class UrlGuardTest extends TestCase
         self::assertSame(['93.184.216.34'], $guarded->ips);
     }
 
+    public function testAnInternationalHostIsNormalisedToTheNameCurlConnectsTo(): void
+    {
+        $guarded = $this->guard(['xn--bcher-kva.test' => ['93.184.216.34']])
+            ->assertSafe('https://Bücher.test/feed.xml');
+
+        self::assertSame('xn--bcher-kva.test', $guarded->host);
+        self::assertSame(['93.184.216.34'], $guarded->ips);
+    }
+
     public function testAllowsPublicIpLiteralWithoutDns(): void
     {
         $guarded = $this->guard()->assertSafe('http://93.184.216.34/feed');

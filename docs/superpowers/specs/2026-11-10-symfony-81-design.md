@@ -88,7 +88,9 @@ A caller's `extra.use_persistent_connections` and the pin's `extra.curl` must bo
 
 - **Scope:**
   - The reader page fetch: `HtmlPageFetcher` → `PageLanding` → `RedirectFollower` → `FailoverRequestSender`.
-  - The feed fetch: `ConcurrentRequestEngine`.
+  - The feed fetch: `ConcurrentRequestEngine`. It also serves `NetworkSocialSearch` (Mastodon and Bluesky API
+    searches), so those requests get persistent connections and the connect cap too. That is harmless: they are pinned
+    and the connection carries no auth state.
   - Image downloads, the image probe, LLM and scoring clients, Meilisearch, OAuth, the catalog checker and the proxy
     tester keep per-request connections. Their hosts are local, one-off or not latency-critical.
 - **How:** both paths pass `extra.use_persistent_connections: true` on their requests. Symfony picks the persistent
@@ -99,6 +101,8 @@ A caller's `extra.use_persistent_connections` and the pin's `extra.curl` must bo
 - **Isolation:** connections, the DNS cache and TLS sessions are shared between users of one process. None of them
   carries user state: cookies, headers and bodies are per request. With the connect-to pin, a reused connection always
   goes to an address the guard approved for the current request.
+  `CURLOPT_RESOLVE` entries land in the persistent DNS cache and live for the worker's lifetime. Every guarded request
+  sets its own pin, so a stale entry is only ever a previously guard-approved public address.
 
 ## 4. Connect cap
 
