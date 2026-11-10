@@ -11,7 +11,9 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
+use App\Tests\Support\CorruptGzip;
 use App\Tests\Support\FeedTickets;
+use App\Tests\Support\GzipBomb;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -250,6 +252,45 @@ final class FeedResponseExchangeTest extends TestCase
             $this->respond($oversized),
             $this->attempt(),
         );
+    }
+
+    public function testAGzipFeedLandsAsItsXml(): void
+    {
+        $response = $this->respond(new MockResponse((string) gzencode('<rss/>'), [
+            'http_code' => 200,
+            'response_headers' => ['content-encoding' => 'gzip', 'etag' => '"v2"'],
+        ]));
+
+        $fetched = $this->exchange()->onBody($response, $this->attempt())->responseOrThrow();
+
+        self::assertSame('<rss/>', $fetched->modifiedBody());
+        self::assertSame('"v2"', $fetched->etag);
+    }
+
+    public function testAGzipBombIsRejectedAtTheFeedLimit(): void
+    {
+        $bomb = new MockResponse(GzipBomb::inflatingTo(ResponseSizeLimit::Feed->bytes() + 1_000_000), [
+            'http_code' => 200,
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ]);
+
+        $this->expectException(ResponseTooLargeException::class);
+        $this->expectExceptionMessage('https://example.com/feed: the response is larger than the 20 MB limit');
+
+        $this->exchange()->onBody($this->respond($bomb), $this->attempt());
+    }
+
+    public function testACorruptGzipFeedIsUnreachable(): void
+    {
+        $corrupt = new MockResponse(CorruptGzip::bytes(), [
+            'http_code' => 200,
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ]);
+
+        $this->expectException(FeedUnreachableException::class);
+        $this->expectExceptionMessage('https://example.com/feed: corrupt gzip body');
+
+        $this->exchange()->onBody($this->respond($corrupt), $this->attempt());
     }
 
     public function testARedirectPastTheCapIsUnreachable(): void

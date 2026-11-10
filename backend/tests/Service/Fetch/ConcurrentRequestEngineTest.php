@@ -22,6 +22,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FeedTickets;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\FixedKeySlot;
+use App\Tests\Support\GzipBomb;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\ScriptedSettler;
 use App\Tests\Support\StaticDnsResolver;
@@ -266,7 +267,7 @@ final class ConcurrentRequestEngineTest extends TestCase
 
         self::assertNull($outcome->failure());
         $sent = $http->requests[0]['headers'];
-        self::assertContains('Accept-Encoding: identity', $sent);
+        self::assertContains('Accept-Encoding: gzip, deflate', $sent);
         self::assertContains('User-Agent: TestAgent/1.0', $sent);
         self::assertContains('Accept: application/json', $sent);
         self::assertContains('Authorization: Bearer jwt-1', $sent);
@@ -483,6 +484,24 @@ final class ConcurrentRequestEngineTest extends TestCase
     public function testAnOversizedAnswerFailsAtTheApiLimit(): void
     {
         $client = new MockHttpClient([new MockResponse(str_repeat('x', ResponseSizeLimit::Api->bytes() + 1))]);
+
+        self::assertInstanceOf(ResponseTooLargeException::class, $this->onlyAnswer($client)->failure());
+    }
+
+    public function testAGzipAnswerLandsInflated(): void
+    {
+        $client = new MockHttpClient([new MockResponse((string) gzencode('{"ok":true}'), [
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ])]);
+
+        self::assertSame('{"ok":true}', $this->onlyAnswer($client)->answerOrThrow()->body);
+    }
+
+    public function testAGzipBombFailsAtTheApiLimit(): void
+    {
+        $client = new MockHttpClient([new MockResponse(GzipBomb::inflatingTo(ResponseSizeLimit::Api->bytes() * 10), [
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ])]);
 
         self::assertInstanceOf(ResponseTooLargeException::class, $this->onlyAnswer($client)->failure());
     }
