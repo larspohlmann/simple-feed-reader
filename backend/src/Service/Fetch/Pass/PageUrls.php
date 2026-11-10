@@ -6,7 +6,6 @@ namespace App\Service\Fetch\Pass;
 
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Support\UrlResolver;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\UrlOrigin;
 
 /** The URL context of one page, bound once and asked many times. */
@@ -34,24 +33,19 @@ final readonly class PageUrls
         return UrlResolver::resolve($this->pageUrl, $reference);
     }
 
-    /**
-     * An absolute http(s) URL, or null. A non-http(s) scheme (javascript:, mailto:, data:) is refused before
-     * resolving, which would dress it up as a valid-looking https URL.
-     */
+    /** An absolute http(s) URL, or null. */
     public function httpUrl(?string $reference): ?string
     {
         $reference = trim($reference ?? '');
-        if ('' === $reference || 1 === preg_match('#^(?!https?://)[a-z][a-z0-9+.-]*:#i', $reference)) {
+        if ('' === $reference) {
             return null;
         }
 
         try {
-            $resolved = $this->resolve($reference);
+            return $this->resolve($reference);
         } catch (FeedUnreachableException) {
             return null;
         }
-
-        return AbsoluteHttpUrl::orNull($resolved);
     }
 
     public function isPageItself(string $url): bool

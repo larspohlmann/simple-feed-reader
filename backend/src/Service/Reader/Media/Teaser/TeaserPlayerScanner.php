@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Teaser;
 
-use App\Service\Fetch\Support\UrlResolver;
+use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
@@ -37,6 +37,7 @@ final readonly class TeaserPlayerScanner
     /** @return list<TeaserPlayerModel> */
     public function scan(HTMLDocument $document, string $pageUrl): array
     {
+        $pageUrls = new PageUrls($pageUrl);
         $teasers = [];
         $seen = [];
         foreach ($document->querySelectorAll('*') as $element) {
@@ -57,7 +58,7 @@ final readonly class TeaserPlayerScanner
                     $file->url,
                     $poster,
                     $caption,
-                    $this->absolute($link, $pageUrl),
+                    $pageUrls->httpUrl($link),
                 );
             }
         }
@@ -115,15 +116,6 @@ final readonly class TeaserPlayerScanner
         $text = Whitespace::collapse($element->textContent);
 
         return $text === '' ? null : $text;
-    }
-
-    /**
-     * The sanitizer drops a scheme-less link, so the headline link is resolved
-     * against the page (origin, port and all) before it reaches that barrier.
-     */
-    private function absolute(?string $href, string $pageUrl): ?string
-    {
-        return $href === null ? null : UrlResolver::resolve($pageUrl, $href);
     }
 
     /** @return list<Element> the player and its ancestors, nearest first */
