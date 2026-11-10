@@ -62,13 +62,12 @@ final readonly class CatalogUrlChecker
     private function assertServesFeed(string $url, ?ProxyConfigModel $proxy): void
     {
         try {
-            $response = $this->httpClient->request('GET', $url, [
+            $response = $this->httpClient->request('GET', $url, EgressOptions::merge([
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS,
                 // The fetcher's agent: a publisher tolerating an unknown checker must not pass for healthy.
                 'headers' => ['User-Agent' => $this->userAgent],
-                ...(null !== $proxy ? EgressOptions::proxied($proxy) : []),
-            ]);
+            ], null !== $proxy ? EgressOptions::proxied($proxy) : []));
             $status = $response->getStatusCode();
             $head = Response::HTTP_OK === $status ? mb_substr($response->getContent(), 0, 2048) : '';
         } catch (ExceptionInterface $exception) {

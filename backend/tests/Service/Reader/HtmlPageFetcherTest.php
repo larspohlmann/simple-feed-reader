@@ -320,10 +320,7 @@ final class HtmlPageFetcherTest extends TestCase
 
         $fetcher->fetch('https://dual.example.com/post');
 
-        self::assertSame(
-            ['dual.example.com' => '93.184.216.34,2606:2800:220:1:248:1893:25c8:1946'],
-            $seenResolve,
-        );
+        self::assertSame('93.184.216.34,2606:2800:220:1:248:1893:25c8:1946', $seenResolve['dual.example.com']);
     }
 
     public function testFollowsAZeroDelayMetaRefreshToTheArticle(): void

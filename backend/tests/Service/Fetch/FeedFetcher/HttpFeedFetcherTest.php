@@ -81,7 +81,8 @@ final class HttpFeedFetcherTest extends TestCase
 
         $this->fetcher($factory)->fetch('https://example.com/feed');
 
-        self::assertSame(['example.com' => '93.184.216.34'], $seenOptions['resolve'] ?? null);
+        self::assertIsArray($seenOptions['resolve'] ?? null);
+        self::assertSame('93.184.216.34', $seenOptions['resolve']['example.com'] ?? null);
         self::assertSame(0, $seenOptions['max_redirects'] ?? null);
     }
 

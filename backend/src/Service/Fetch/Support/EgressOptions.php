@@ -34,31 +34,61 @@ final class EgressOptions
     }
 
     /**
-     * @return array<string, mixed> the `resolve` pin for this family attempt plus
-     *                              the cross-family fresh-connection extra
+     * The `resolve` pin for this family attempt, plus a connect-to alias for exactly these addresses. curl pools
+     * connections by host and port, and a pooled connection ignores `resolve`; the connect-to target is part of a
+     * connection's identity, so a connection is reused only by a request with the same pin.
+     *
+     * @return array{resolve: array<string, string>, extra: array{curl: array<int, list<string>>}}
      */
     public static function pinned(GuardedUrlModel $guarded, int $pinAttempt): array
     {
         $pins = $guarded->pinnedAddressAttempts();
         $pinnedAddresses = $pins[min($pinAttempt, \count($pins) - 1)];
+        $alias = sprintf('pin-%s.invalid', substr(hash('sha256', $pinnedAddresses), 0, 16));
+
+        $connectTo = sprintf('%s::%s:', self::connectToHost($guarded->host), $alias);
 
         return [
-            'resolve' => [$guarded->host => $pinnedAddresses],
-            ...self::freshConnectionAfter($pinAttempt),
+            'resolve' => [$guarded->host => $pinnedAddresses, $alias => $pinnedAddresses],
+            'extra' => ['curl' => [\CURLOPT_CONNECT_TO => [$connectTo]]],
         ];
     }
 
     /**
-     * A failover retry gets its own connection: curl pools by host:port, so a retry pinned to a new family would
-     * otherwise reuse the old family's keep-alive connection and ignore the pin.
+     * Request options overlaid with egress options; `extra` is merged, not replaced, so a caller's
+     * `use_persistent_connections` survives the pin's `extra.curl`.
      *
-     * @return array{extra?: array{curl: array<int, bool>}}
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $egress
+     *
+     * @return array<string, mixed>
      */
-    private static function freshConnectionAfter(int $attemptIndex): array
+    public static function merge(array $options, array $egress): array
     {
-        return $attemptIndex > 0
-            ? ['extra' => ['curl' => [\CURLOPT_FRESH_CONNECT => true]]]
-            : [];
+        $merged = [...$options, ...$egress];
+        $extra = array_replace_recursive(self::extraOf($options), self::extraOf($egress));
+        if ([] !== $extra) {
+            $merged['extra'] = $extra;
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return array<mixed>
+     */
+    private static function extraOf(array $options): array
+    {
+        $extra = $options['extra'] ?? [];
+
+        return \is_array($extra) ? $extra : [];
+    }
+
+    private static function connectToHost(string $host): string
+    {
+        return str_contains($host, ':') ? '[' . $host . ']' : $host;
     }
 
     private function __construct()

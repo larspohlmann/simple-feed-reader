@@ -157,7 +157,8 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         self::assertCount(2, $seenOptions);
         self::assertArrayHasKey('proxy', $seenOptions[0]);
         self::assertArrayNotHasKey('proxy', $seenOptions[1]);
-        self::assertSame(['www.youtube.com' => '93.184.216.34'], $seenOptions[1]['resolve'] ?? null);
+        self::assertIsArray($seenOptions[1]['resolve'] ?? null);
+        self::assertSame('93.184.216.34', $seenOptions[1]['resolve']['www.youtube.com'] ?? null);
         self::assertSame([[
             'level' => LogLevel::INFO,
             'message' => 'YouTube walled the proxied player request for {videoId}; asked again directly.',

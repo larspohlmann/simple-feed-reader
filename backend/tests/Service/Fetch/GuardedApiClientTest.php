@@ -63,7 +63,8 @@ final class GuardedApiClientTest extends TestCase
         self::assertSame('https://api.example.test/x', $seenUrl);
         self::assertSame('{"a":1}', $seenOptions['body']);
         self::assertSame(0, $seenOptions['max_redirects']);
-        self::assertSame(['api.example.test' => '93.184.216.34'], $seenOptions['resolve']);
+        self::assertIsArray($seenOptions['resolve']);
+        self::assertSame('93.184.216.34', $seenOptions['resolve']['api.example.test']);
         self::assertIsArray($seenOptions['headers']);
         self::assertContains('Authorization: Bearer t', $seenOptions['headers']);
         self::assertContains('User-Agent: TestAgent/1.0', $seenOptions['headers']);
@@ -71,7 +72,7 @@ final class GuardedApiClientTest extends TestCase
         self::assertSame(['ok' => true], $response->json());
     }
 
-    public function testTheCallCarriesItsTimeoutsJsonAcceptHeaderAndNoFreshConnectionExtra(): void
+    public function testTheCallCarriesItsTimeoutsJsonAcceptHeaderAndNoFreshConnect(): void
     {
         $seenOptions = [];
         $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
@@ -86,7 +87,9 @@ final class GuardedApiClientTest extends TestCase
         self::assertSame(20.0, $seenOptions['max_duration']);
         self::assertIsArray($seenOptions['headers']);
         self::assertContains('Accept: application/json', $seenOptions['headers']);
-        self::assertArrayNotHasKey('extra', $seenOptions);
+        self::assertIsArray($seenOptions['extra']);
+        self::assertIsArray($seenOptions['extra']['curl']);
+        self::assertArrayNotHasKey(\CURLOPT_FRESH_CONNECT, $seenOptions['extra']['curl']);
         self::assertArrayNotHasKey('json', $seenOptions);
     }
 
@@ -261,7 +264,8 @@ final class GuardedApiClientTest extends TestCase
 
         self::assertSame(['ok' => true], $response->json());
         self::assertArrayNotHasKey('proxy', $seenOptions);
-        self::assertSame(['api.example.test' => '93.184.216.34'], $seenOptions['resolve'] ?? null);
+        self::assertIsArray($seenOptions['resolve'] ?? null);
+        self::assertSame('93.184.216.34', $seenOptions['resolve']['api.example.test'] ?? null);
         self::assertSame('{"a":1}', $seenOptions['body'] ?? null);
         self::assertSame(1.5, $seenOptions['timeout'] ?? null);
         self::assertSame(2.5, $seenOptions['max_duration'] ?? null);

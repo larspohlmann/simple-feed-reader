@@ -311,7 +311,8 @@ final class FailoverRequestSenderProxyTest extends TestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertCount(1, $calls);
         self::assertArrayNotHasKey('proxy', $calls[0]);
-        self::assertSame(['page.example' => '203.0.113.9'], $calls[0]['resolve'] ?? null);
+        self::assertIsArray($calls[0]['resolve'] ?? null);
+        self::assertSame('203.0.113.9', $calls[0]['resolve']['page.example'] ?? null);
         self::assertSame(3.0, $calls[0]['timeout'] ?? null);
     }
 

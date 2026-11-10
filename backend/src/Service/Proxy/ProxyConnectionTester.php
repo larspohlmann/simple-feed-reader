@@ -47,12 +47,11 @@ final readonly class ProxyConnectionTester
         }
 
         try {
-            $response = $this->httpClient->request('GET', self::EGRESS_ECHO_URL, [
+            $response = $this->httpClient->request('GET', self::EGRESS_ECHO_URL, EgressOptions::merge([
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_redirects' => 0,
                 'headers' => ['Accept' => 'text/plain', 'Accept-Encoding' => 'identity'],
-                ...EgressOptions::proxied($proxy),
-            ]);
+            ], EgressOptions::proxied($proxy)));
             $status = $response->getStatusCode();
             $body = substr($response->getContent(false), 0, self::MAX_BYTES);
         } catch (ExceptionInterface $exception) {

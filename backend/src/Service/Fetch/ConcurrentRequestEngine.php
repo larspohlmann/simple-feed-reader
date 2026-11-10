@@ -261,7 +261,7 @@ final readonly class ConcurrentRequestEngine
         $sizeLimit = $attempt->ticket->exchange->sizeLimit();
 
         try {
-            return $this->httpClient->request($request->method, $attempt->url, [
+            return $this->httpClient->request($request->method, $attempt->url, EgressOptions::merge([
                 'headers' => $this->headersOf($attempt->ticket),
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
@@ -270,8 +270,7 @@ final readonly class ConcurrentRequestEngine
                     ResponseTooLargeException::throwIfExceeded($sizeLimit, $downloaded);
                 },
                 ...(null === $request->json ? [] : ['json' => $request->json]),
-                ...$egress,
-            ]);
+            ], $egress));
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($attempt->url, $exception);
         }
