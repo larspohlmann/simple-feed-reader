@@ -58,7 +58,7 @@
         "brianium/paratest": "^7.20",
         "dama/doctrine-test-bundle": "^8.6",
         "infection/infection": "^0.34.1",
-        "phpmd/phpmd": "^2.15",
+        "phpmd/phpmd": "^3.0",
         "phpstan/phpstan": "^2.3.4",
         "phpstan/phpstan-doctrine": "^2.0.28",
         "phpstan/phpstan-symfony": "^2.1.1",
@@ -119,7 +119,7 @@
         "cs": "phpcs",
         "cs:fix": "phpcbf",
         "stan": "phpstan analyse --memory-limit=512M",
-        "md": "@php -d error_reporting=\"E_ALL & ~E_DEPRECATED\" vendor/bin/phpmd src text phpmd.xml.dist",
+        "md": "phpmd analyze src --no-progress",
         "tramp": "phptramp",
         "tramp:update": "composer update phptramp/phptramp --no-interaction --no-progress --no-scripts",
         "check": [
