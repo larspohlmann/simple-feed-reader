@@ -80,7 +80,7 @@ final class FeedWebsite
     {
         $labels = explode('.', $host);
 
-        return \count($labels) >= 2 && preg_match(self::PUBLIC_TOP_LEVEL, (string) array_last($labels)) === 1;
+        return \count($labels) >= 2 && preg_match(self::PUBLIC_TOP_LEVEL, array_last($labels)) === 1;
     }
 
     private static function isFeedDocument(string $url): bool

@@ -94,7 +94,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
 
         $parts = explode('|', $title);
 
-        return trim((string) array_last($parts));
+        return trim(array_last($parts));
     }
 
     private function stringOf(mixed $value): string

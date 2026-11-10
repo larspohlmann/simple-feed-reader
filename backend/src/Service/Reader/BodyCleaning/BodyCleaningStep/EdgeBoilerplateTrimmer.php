@@ -127,7 +127,7 @@ final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
      */
     private function edgeBounds(array $substantial): array
     {
-        $leadingEnd = $substantial[0];
+        $leadingEnd = array_first($substantial);
         $trailingStart = array_last($substantial) + 1;
 
         return [$leadingEnd, $trailingStart];

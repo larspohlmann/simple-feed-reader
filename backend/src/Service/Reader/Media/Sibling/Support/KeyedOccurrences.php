@@ -52,6 +52,7 @@ final readonly class KeyedOccurrences
     private static function lastKeyIn(string $text): string
     {
         preg_match_all(self::ANY_KEY, $text, $matches);
+
         return array_last($matches[1]) ?? '';
     }
 
