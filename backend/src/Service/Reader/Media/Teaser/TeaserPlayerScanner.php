@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Teaser;
 
+use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Support\UrlResolver;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
@@ -123,7 +124,15 @@ final readonly class TeaserPlayerScanner
      */
     private function absolute(?string $href, string $pageUrl): ?string
     {
-        return $href === null ? null : UrlResolver::resolve($pageUrl, $href);
+        if ($href === null) {
+            return null;
+        }
+
+        try {
+            return UrlResolver::resolve($pageUrl, $href);
+        } catch (FeedUnreachableException) {
+            return null;
+        }
     }
 
     /** @return list<Element> the player and its ancestors, nearest first */

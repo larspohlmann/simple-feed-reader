@@ -122,6 +122,19 @@ final class TeaserPlayerScannerTest extends TestCase
         self::assertSame('https://news.test/section/deeper/related.html', $found[0]->linkUrl);
     }
 
+    public function testDropsALinkThatResolvesToNoHttpUrl(): void
+    {
+        $html = '<body><div class="block">'
+            . '<picture><img src="https://x.test/s.jpg"></picture>'
+            . '<div data-v="https://x.test/clip.mp4"></div>'
+            . '<a href="javascript:void(0)">Headline</a>'
+            . '</div></body>';
+
+        $found = $this->scanner->scan($this->document($html), 'https://news.test/section/a-100.html');
+
+        self::assertNull($found[0]->linkUrl);
+    }
+
     /** Audio teasers count too — the pflege page is four of them. */
     public function testReadsAnAudioTeaser(): void
     {
