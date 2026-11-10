@@ -28,7 +28,7 @@ final readonly class ParsedFeedModel
      */
     public function withEntries(array $entries): self
     {
-        return new self($this->title, $this->siteUrl, $this->description, $this->imageUrl, $entries, $this->generator);
+        return clone($this, ['entries' => $entries]);
     }
 
     public function withShowArtwork(?DeclaredImageModel $showArtwork): self

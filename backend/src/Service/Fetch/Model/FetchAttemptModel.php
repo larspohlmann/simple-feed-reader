@@ -34,15 +34,14 @@ final readonly class FetchAttemptModel
 
     public function followedTo(string $url, bool $permanent): self
     {
-        return new self(
-            $this->key,
-            $this->ticket,
-            $url,
-            $this->permanentRedirect || $permanent,
-            $this->hop + 1,
+        return clone($this, [
+            'url' => $url,
+            'permanentRedirect' => $this->permanentRedirect || $permanent,
+            'hop' => $this->hop + 1,
             // A redirect lands on a fresh host, so the address pins start over.
-            proxy: $this->proxy,
-        );
+            'pinnedAddressAttempt' => 0,
+            'firstSend' => false,
+        ]);
     }
 
     /**
@@ -51,15 +50,7 @@ final readonly class FetchAttemptModel
      */
     public function overNextPinnedAddress(): self
     {
-        return new self(
-            $this->key,
-            $this->ticket,
-            $this->url,
-            $this->permanentRedirect,
-            $this->hop,
-            $this->pinnedAddressAttempt + 1,
-            $this->proxy,
-        );
+        return clone($this, ['pinnedAddressAttempt' => $this->pinnedAddressAttempt + 1, 'firstSend' => false]);
     }
 
     public function isFirstSend(): bool
@@ -74,6 +65,6 @@ final readonly class FetchAttemptModel
 
     public function withoutProxy(): self
     {
-        return new self($this->key, $this->ticket, $this->url, $this->permanentRedirect, $this->hop);
+        return clone($this, ['pinnedAddressAttempt' => 0, 'proxy' => null, 'firstSend' => false]);
     }
 }

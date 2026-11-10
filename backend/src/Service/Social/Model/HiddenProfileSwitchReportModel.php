@@ -21,9 +21,9 @@ final readonly class HiddenProfileSwitchReportModel
     public function counting(HiddenProfileMoveOutcome $outcome): self
     {
         return match ($outcome) {
-            HiddenProfileMoveOutcome::Started => new self($this->started + 1, $this->finished, $this->waiting),
-            HiddenProfileMoveOutcome::Finished => new self($this->started, $this->finished + 1, $this->waiting),
-            HiddenProfileMoveOutcome::Waiting => new self($this->started, $this->finished, $this->waiting + 1),
+            HiddenProfileMoveOutcome::Started => clone($this, ['started' => $this->started + 1]),
+            HiddenProfileMoveOutcome::Finished => clone($this, ['finished' => $this->finished + 1]),
+            HiddenProfileMoveOutcome::Waiting => clone($this, ['waiting' => $this->waiting + 1]),
             HiddenProfileMoveOutcome::Skipped => $this,
         };
     }

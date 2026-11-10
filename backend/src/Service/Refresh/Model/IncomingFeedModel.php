@@ -24,6 +24,6 @@ final readonly class IncomingFeedModel
 
     public function withParsed(ParsedFeedModel $parsed): self
     {
-        return new self($parsed, $this->knownShares, $this->threads);
+        return clone($this, ['parsed' => $parsed]);
     }
 }

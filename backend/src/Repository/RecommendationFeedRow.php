@@ -23,6 +23,6 @@ final readonly class RecommendationFeedRow
 
     public function withRow(EntryListRow $row): self
     {
-        return new self($row, $this->reason, $this->runId, $this->position, $this->score, $this->runGeneratedAt);
+        return clone($this, ['row' => $row]);
     }
 }

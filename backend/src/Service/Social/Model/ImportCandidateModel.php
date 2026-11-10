@@ -40,6 +40,6 @@ final readonly class ImportCandidateModel
 
     public function asSubscribed(): self
     {
-        return new self($this->account, ImportCandidateState::Subscribed, $this->subscriptionId);
+        return clone($this, ['state' => ImportCandidateState::Subscribed]);
     }
 }

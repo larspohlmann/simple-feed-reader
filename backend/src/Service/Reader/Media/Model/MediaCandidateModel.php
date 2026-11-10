@@ -29,16 +29,7 @@ final readonly class MediaCandidateModel
             return $this;
         }
 
-        return new self(
-            $this->kind,
-            $this->url,
-            $this->posterUrl,
-            $this->label,
-            $this->precedingText,
-            $this->narrated,
-            $mimeType,
-            $this->durationSeconds,
-        );
+        return clone($this, ['mimeType' => $mimeType]);
     }
 
     /**
@@ -53,46 +44,26 @@ final readonly class MediaCandidateModel
 
         return $fallbackPoster === null || $fallbackPoster === ''
             ? null
-            : new self(
-                $this->kind,
-                $this->url,
-                $fallbackPoster,
-                $this->label,
-                $this->precedingText,
-                $this->narrated,
-                $this->mimeType,
-                $this->durationSeconds,
-            );
+            : clone($this, ['posterUrl' => $fallbackPoster]);
     }
 
     /** The same media with the gaps a later, weaker source can fill: poster, label, the prose anchor, the narration tell, and the duration. */
     public function completedBy(self $later): self
     {
-        return new self(
-            $this->kind,
-            $this->url,
-            $this->posterUrl ?? $later->posterUrl,
-            $this->label ?? $later->label,
-            $this->precedingText ?? $later->precedingText,
-            $this->narrated || $later->narrated,
-            $this->mimeType ?? $later->mimeType,
-            $this->durationSeconds ?? $later->durationSeconds,
-        );
+        return clone($this, [
+            'posterUrl' => $this->posterUrl ?? $later->posterUrl,
+            'label' => $this->label ?? $later->label,
+            'precedingText' => $this->precedingText ?? $later->precedingText,
+            'narrated' => $this->narrated || $later->narrated,
+            'mimeType' => $this->mimeType ?? $later->mimeType,
+            'durationSeconds' => $this->durationSeconds ?? $later->durationSeconds,
+        ]);
     }
 
     /** The same media served from where its URL finally lands. */
     public function at(string $url): self
     {
-        return new self(
-            $this->kind,
-            $url,
-            $this->posterUrl,
-            $this->label,
-            $this->precedingText,
-            $this->narrated,
-            $this->mimeType,
-            $this->durationSeconds,
-        );
+        return clone($this, ['url' => $url]);
     }
 
     public function toAudioClip(): AudioClipModel

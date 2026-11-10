@@ -19,13 +19,6 @@ final readonly class CommentViewerModel
 
     public function ownedByViewer(): self
     {
-        return new self(
-            $this->isLiked,
-            $this->isReposted,
-            $this->canRepost,
-            $this->canReply,
-            $this->canQuote,
-            isOwn: true,
-        );
+        return clone($this, ['isOwn' => true]);
     }
 }

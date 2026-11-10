@@ -21,6 +21,6 @@ final readonly class CommentPostModel
 
     public function ownedByViewer(): self
     {
-        return new self($this->address, $this->counts, $this->viewer->ownedByViewer(), $this->authorIdentity);
+        return clone($this, ['viewer' => $this->viewer->ownedByViewer()]);
     }
 }

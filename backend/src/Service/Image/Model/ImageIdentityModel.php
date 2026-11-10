@@ -188,15 +188,7 @@ final readonly class ImageIdentityModel
     {
         $sizelessStem = self::withoutTrailingSize($this->stem);
 
-        return new self(
-            $this->sourcePath,
-            $sizelessStem === '' ? '' : $this->sourceFolder . '/' . $sizelessStem,
-            $this->ids,
-            $this->tokens,
-            $this->assetToken,
-            $this->pathUuid,
-            $this->sourceFolder,
-        );
+        return clone($this, ['stem' => $sizelessStem === '' ? '' : $this->sourceFolder . '/' . $sizelessStem]);
     }
 
     private static function withoutTrailingSize(string $stem): string
