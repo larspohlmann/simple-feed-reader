@@ -17,6 +17,7 @@ use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\GzipBomb;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -124,7 +125,7 @@ final class GuardedApiClientTest extends TestCase
         }
     }
 
-    public function testTheBodyIsRequestedUncompressedSoTheWireLimitBoundsIt(): void
+    public function testTheBodyIsRequestedCompressed(): void
     {
         $seenOptions = [];
         $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
@@ -136,7 +137,33 @@ final class GuardedApiClientTest extends TestCase
         $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
 
         self::assertIsArray($seenOptions['headers']);
-        self::assertContains('Accept-Encoding: identity', $seenOptions['headers']);
+        self::assertContains('Accept-Encoding: gzip, deflate', $seenOptions['headers']);
+    }
+
+    public function testAGzipAnswerIsInflated(): void
+    {
+        $http = new MockHttpClient(new MockResponse((string) gzencode('{"ok":true}'), [
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ]));
+
+        $answer = $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
+
+        self::assertSame(['ok' => true], $answer->json());
+    }
+
+    public function testAGzipBombIsRefusedAtTheBudgetsLimit(): void
+    {
+        $bomb = GzipBomb::inflatingTo(ResponseSizeLimit::ChapterFile->bytes() * 100);
+        $http = new MockHttpClient(new MockResponse($bomb, [
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ]));
+
+        $this->expectException(ResponseTooLargeException::class);
+
+        $this->client($http)->sendWithin(
+            ApiRequestModel::get('https://api.example.test/x'),
+            new ApiBudgetModel(1.5, 2.5, ResponseSizeLimit::ChapterFile),
+        );
     }
 
     public function testAConfiguredEgressProxyCarriesTheCallInsteadOfAnAddressPin(): void

@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Fetch\Exception\FetchException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Pass\RedirectBudget;
+use App\Service\Fetch\Support\ResponseBody;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageResponseModel;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -16,7 +20,6 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
  */
 final readonly class HtmlPageFetcher
 {
-    private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
 
     public function __construct(
@@ -50,12 +53,7 @@ final readonly class HtmlPageFetcher
 
     private function readableBody(LandedResponse $landed): string
     {
-        $body = self::content($landed);
-        if (\strlen($body) > self::MAX_BYTES) {
-            throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
-        }
-
-        return $this->landing->utf8($body, $landed);
+        return $this->landing->utf8(self::content($landed), $landed);
     }
 
     /** @return array<string, mixed> */
@@ -64,10 +62,9 @@ final readonly class HtmlPageFetcher
         return [
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS * 2,
+            'headers' => ['Accept-Encoding' => ResponseBody::ACCEPT_ENCODING],
             'on_progress' => static function (int $downloaded): void {
-                if ($downloaded > self::MAX_BYTES) {
-                    throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
-                }
+                ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Page, $downloaded);
             },
         ];
     }
@@ -75,8 +72,8 @@ final readonly class HtmlPageFetcher
     private static function content(LandedResponse $landed): string
     {
         try {
-            return $landed->response->getContent(false);
-        } catch (ExceptionInterface $exception) {
+            return ResponseBody::decoded($landed->response, ResponseSizeLimit::Page);
+        } catch (ExceptionInterface | FetchException $exception) {
             throw new PageFetchException($exception->getMessage(), previous: $exception);
         }
     }

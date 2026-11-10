@@ -20,6 +20,7 @@ use App\Service\Fetch\Pass\SettledAnswers;
 use App\Service\Fetch\ResponseExchange\ResponseExchangeInterface;
 use App\Service\Fetch\Support\CapacityGuard;
 use App\Service\Fetch\Support\EgressOptions;
+use App\Service\Fetch\Support\ResponseBody;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
@@ -285,10 +286,8 @@ final readonly class ConcurrentRequestEngine
     {
         $engineOwned = [
             'Accept' => $ticket->exchange->accept(),
-            // Refuse transparent compression so the size limit (counted on the
-            // wire in on_progress) also bounds the buffered body — a compressed
-            // response would otherwise decompress unbounded before the size check.
-            'Accept-Encoding' => 'identity',
+            // The exchanges inflate through ResponseBody under the same limit on_progress puts on the wire.
+            'Accept-Encoding' => ResponseBody::ACCEPT_ENCODING,
             'User-Agent' => $this->userAgent,
         ];
         $ownedNames = array_change_key_case($engineOwned);

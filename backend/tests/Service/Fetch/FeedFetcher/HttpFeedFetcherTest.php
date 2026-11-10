@@ -85,7 +85,7 @@ final class HttpFeedFetcherTest extends TestCase
         self::assertSame(0, $seenOptions['max_redirects'] ?? null);
     }
 
-    public function testDisablesTransparentCompression(): void
+    public function testRequestsACompressedBody(): void
     {
         $seenOptions = [];
         $factory = static function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
@@ -102,8 +102,7 @@ final class HttpFeedFetcherTest extends TestCase
                 $headers[] = strtolower($header);
             }
         }
-        // Without this, a gzip bomb could decompress past the size limit before the check.
-        self::assertContains('accept-encoding: identity', $headers);
+        self::assertContains('accept-encoding: gzip, deflate', $headers);
     }
 
     public function testFollowsRedirectAndReportsPermanentMove(): void

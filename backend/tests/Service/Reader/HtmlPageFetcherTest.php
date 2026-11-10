@@ -6,14 +6,19 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\MetaRefreshTarget;
+use App\Tests\Support\CorruptGzip;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\GzipBomb;
 use App\Tests\Support\NoEgressProxy;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class HtmlPageFetcherTest extends TestCase
@@ -154,7 +159,7 @@ final class HtmlPageFetcherTest extends TestCase
         self::assertSame(0, $seenOptions['max_redirects']);
     }
 
-    public function testDisablesTransparentCompression(): void
+    public function testAsksForACompressedPage(): void
     {
         /** @var list<string> $seenHeaders */
         $seenHeaders = [];
@@ -170,7 +175,110 @@ final class HtmlPageFetcherTest extends TestCase
 
         $fetcher->fetch('https://example.com/post');
 
-        self::assertContains('Accept-Encoding: identity', $seenHeaders);
+        self::assertContains('Accept-Encoding: gzip, deflate', $seenHeaders);
+        self::assertNotContains('Accept-Encoding: identity', $seenHeaders);
+    }
+
+    public function testAGzipPageLandsAsItsHtml(): void
+    {
+        $html = '<html lang="en"><body><p>compressed article</p></body></html>';
+        $fetcher = $this->fetcher([new MockResponse((string) gzencode($html), [
+            'http_code' => 200,
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ])]);
+
+        self::assertSame($html, $fetcher->fetch('https://example.com/post')->html);
+    }
+
+    public function testAGzipBombFailsAsAPageFetch(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse(GzipBomb::inflatingTo(30_000_000), [
+            'http_code' => 200,
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('larger than the 3 MB limit');
+
+        $fetcher->fetch('https://example.com/post');
+    }
+
+    public function testAPageOverTheLimitOnTheWireFailsAsAPageFetch(): void
+    {
+        $oversized = str_repeat('a', ResponseSizeLimit::Page->bytes() + 1);
+        $fetcher = $this->fetcher([new MockResponse($oversized, ['http_code' => 200])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('the response is larger than the 3 MB limit');
+
+        $fetcher->fetch('https://example.com/post');
+    }
+
+    public function testAnUnsupportedEncodingFailsAsAPageFetch(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse('brotli bytes', [
+            'http_code' => 200,
+            'response_headers' => ['content-encoding' => 'br'],
+        ])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('unsupported Content-Encoding "br"');
+
+        $fetcher->fetch('https://example.com/post');
+    }
+
+    public function testAGzipErrorPageStillExplainsItself(): void
+    {
+        $errorPage = gzencode('<html><body><h1>Access Denied</h1></body></html>');
+        $fetcher = $this->fetcher([new MockResponse((string) $errorPage, [
+            'http_code' => 403,
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('HTTP 403 Forbidden — Access Denied');
+
+        $fetcher->fetch('https://example.com/blocked');
+    }
+
+    /** @return \Generator<int, string|\Throwable> */
+    private static function bodyCutByTheNetwork(): \Generator
+    {
+        yield '<html><body>';
+        yield new TransportException('connection reset');
+    }
+
+    public function testABodyCutByTheNetworkFailsAsAPageFetch(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse(self::bodyCutByTheNetwork(), ['http_code' => 200])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('connection reset');
+
+        $fetcher->fetch('https://example.com/post');
+    }
+
+    /** @return iterable<string, array{MockResponse}> */
+    public static function unreadableErrorPages(): iterable
+    {
+        yield 'corrupt gzip' => [new MockResponse(CorruptGzip::bytes(), [
+            'http_code' => 404,
+            'response_headers' => ['content-encoding' => 'gzip'],
+        ])];
+        yield 'cut by the network' => [new MockResponse(self::bodyCutByTheNetwork(), ['http_code' => 404])];
+    }
+
+    #[DataProvider('unreadableErrorPages')]
+    public function testAnUnreadableErrorPageReportsOnlyTheStatus(MockResponse $errorPage): void
+    {
+        $fetcher = $this->fetcher([$errorPage]);
+
+        try {
+            $fetcher->fetch('https://example.com/missing');
+            self::fail('expected a PageFetchException');
+        } catch (PageFetchException $failure) {
+            self::assertSame('HTTP 404 Not Found', $failure->getMessage());
+        }
     }
 
     public function testFailsOverToIpv4WhenIpv6ConnectsButResetsBeforeHeaders(): void

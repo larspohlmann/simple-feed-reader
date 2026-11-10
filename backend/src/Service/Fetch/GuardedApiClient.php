@@ -10,6 +10,8 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ApiBudgetModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Fetch\Model\ResponseSizeLimit;
+use App\Service\Fetch\Support\ResponseBody;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -40,7 +42,7 @@ final readonly class GuardedApiClient
                 $request->url,
                 $guarded,
                 $this->optionsFor($request, $budget),
-            ));
+            ), $budget->sizeLimit);
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($request->url, $exception);
         }
@@ -62,18 +64,21 @@ final readonly class GuardedApiClient
                 $request->url,
                 $guarded,
                 $this->optionsFor($request, $budget),
-            ));
+            ), $budget->sizeLimit);
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($request->url, $exception);
         }
     }
 
-    /** @throws ExceptionInterface */
-    private static function answerFrom(ResponseInterface $response): ApiResponseModel
+    /**
+     * @throws ExceptionInterface
+     * @throws FetchException     when the decoded body is too large or undecodable
+     */
+    private static function answerFrom(ResponseInterface $response, ResponseSizeLimit $limit): ApiResponseModel
     {
         return new ApiResponseModel(
             $response->getStatusCode(),
-            $response->getContent(false),
+            ResponseBody::decoded($response, $limit),
             $response->getHeaders(false),
         );
     }
@@ -86,7 +91,7 @@ final readonly class GuardedApiClient
         return [
             'headers' => [
                 'Accept' => 'application/json',
-                'Accept-Encoding' => 'identity',
+                'Accept-Encoding' => ResponseBody::ACCEPT_ENCODING,
                 'User-Agent' => $this->userAgent,
                 ...$request->headers,
             ],

@@ -7,13 +7,12 @@ namespace App\Service\Fetch\ResponseExchange;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ExchangeStepModel;
 use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Fetch\Model\ResponseSizeLimit;
+use App\Service\Fetch\Support\ResponseBody;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\RetryAfterHeader;
 use App\Service\Fetch\Support\UrlResolver;
@@ -81,8 +80,7 @@ final readonly class FeedResponseExchange implements ResponseExchangeInterface
 
     public function onBody(ResponseInterface $response, FetchAttemptModel $attempt): FetchOutcomeModel
     {
-        $body = $response->getContent(false);
-        ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Feed, \strlen($body), $attempt->url);
+        $body = ResponseBody::decoded($response, $attempt->ticket->exchange->sizeLimit());
 
         return FetchOutcomeModel::succeeded(FetchResponseModel::fetched(
             $attempt->url,

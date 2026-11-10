@@ -67,7 +67,7 @@ final class ProxyConnectionTesterTest extends TestCase
         self::assertNotNull($result->detail);
     }
 
-    public function testRequestDisablesRedirectsAndAsksForPlainText(): void
+    public function testRequestDisablesRedirectsAndAsksForUncompressedPlainText(): void
     {
         $seenOptions = null;
         $client = new MockHttpClient(
@@ -86,6 +86,7 @@ final class ProxyConnectionTesterTest extends TestCase
         $headers = $seenOptions['headers'] ?? [];
         self::assertIsArray($headers);
         self::assertContains('Accept: text/plain', $headers);
+        self::assertContains('Accept-Encoding: identity', $headers);
     }
 
     public function testHttpStatusOutsideTheSuccessRangeIsReportedByCode(): void

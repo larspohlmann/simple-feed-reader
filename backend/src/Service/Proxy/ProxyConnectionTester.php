@@ -50,7 +50,7 @@ final readonly class ProxyConnectionTester
             $response = $this->httpClient->request('GET', self::EGRESS_ECHO_URL, [
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_redirects' => 0,
-                'headers' => ['Accept' => 'text/plain'],
+                'headers' => ['Accept' => 'text/plain', 'Accept-Encoding' => 'identity'],
                 ...EgressOptions::proxied($proxy),
             ]);
             $status = $response->getStatusCode();

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\RedirectChainException;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\Support\ContentTypeCharset;
+use App\Service\Fetch\Support\ResponseBody;
 use App\Service\Html\Support\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
@@ -44,7 +47,7 @@ final readonly class PageLanding
     public function land(string $url, array $options, RedirectBudget $budget): LandedResponse
     {
         try {
-            $landed = $this->redirects->follow($url, ['headers' => $this->headers()] + $options, $budget);
+            $landed = $this->redirects->follow($url, $this->withHeaders($options), $budget);
         } catch (RedirectChainException $exception) {
             throw new PageFetchException($exception->getMessage(), previous: $exception);
         }
@@ -70,6 +73,19 @@ final readonly class PageLanding
         }
     }
 
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return array<string, mixed>
+     */
+    private function withHeaders(array $options): array
+    {
+        $callerHeaders = $options['headers'] ?? [];
+        \assert(\is_array($callerHeaders));
+
+        return ['headers' => [...$this->headers(), ...$callerHeaders]] + $options;
+    }
+
     private function assertSuccess(LandedResponse $landed): void
     {
         if ($landed->isSuccess()) {
@@ -87,8 +103,7 @@ final readonly class PageLanding
     {
         return [
             'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            // No transparent compression: on_progress would cap the compressed bytes while curl buffers the
-            // inflated body whole, so a small gzip bomb could exhaust the worker's memory.
+            // Refused unless the caller reads through ResponseBody: on_progress caps only the wire bytes.
             'Accept-Encoding' => 'identity',
             'User-Agent' => $this->userAgent,
         ];
@@ -107,8 +122,8 @@ final readonly class PageLanding
     private function errorBodySnippet(ResponseInterface $response): ?string
     {
         try {
-            return self::visibleText($response->getContent(false));
-        } catch (ExceptionInterface) {
+            return self::visibleText(ResponseBody::decoded($response, ResponseSizeLimit::Page));
+        } catch (ExceptionInterface | FetchException) {
             return null;
         }
     }
