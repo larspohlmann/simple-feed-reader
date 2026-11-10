@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ResponseSizeLimit;
@@ -320,10 +321,24 @@ final class HtmlPageFetcherTest extends TestCase
 
         $fetcher->fetch('https://dual.example.com/post');
 
-        self::assertSame(
-            ['dual.example.com' => '93.184.216.34,2606:2800:220:1:248:1893:25c8:1946'],
-            $seenResolve,
+        self::assertSame('93.184.216.34,2606:2800:220:1:248:1893:25c8:1946', $seenResolve['dual.example.com']);
+    }
+
+    public function testTheClientRequestIsPersistentCappedAndStillPinned(): void
+    {
+        /** @var array<string, mixed> $seen */
+        $seen = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seen): MockResponse {
+                $seen = $options;
+
+                return new MockResponse('<html lang="en"><body>ok</body></html>', ['http_code' => 200]);
+            },
         );
+
+        $fetcher->fetch('https://example.com/post');
+
+        PinnedRequestOptions::assertPersistentCappedAndPinned($seen);
     }
 
     public function testFollowsAZeroDelayMetaRefreshToTheArticle(): void

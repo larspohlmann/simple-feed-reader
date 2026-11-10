@@ -20,6 +20,7 @@ use App\Service\Fetch\Pass\SettledAnswers;
 use App\Service\Fetch\ResponseExchange\ResponseExchangeInterface;
 use App\Service\Fetch\Support\CapacityGuard;
 use App\Service\Fetch\Support\EgressOptions;
+use App\Service\Fetch\Support\PersistentConnection;
 use App\Service\Fetch\Support\ResponseBody;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
@@ -261,17 +262,17 @@ final readonly class ConcurrentRequestEngine
         $sizeLimit = $attempt->ticket->exchange->sizeLimit();
 
         try {
-            return $this->httpClient->request($request->method, $attempt->url, [
+            return $this->httpClient->request($request->method, $attempt->url, EgressOptions::merge([
                 'headers' => $this->headersOf($attempt->ticket),
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
+                ...PersistentConnection::options(),
                 'on_progress' => static function (int $downloaded) use ($sizeLimit): void {
                     ResponseTooLargeException::throwIfExceeded($sizeLimit, $downloaded);
                 },
                 ...(null === $request->json ? [] : ['json' => $request->json]),
-                ...$egress,
-            ]);
+            ], $egress));
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($attempt->url, $exception);
         }

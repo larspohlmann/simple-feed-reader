@@ -9,6 +9,7 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Pass\RedirectBudget;
+use App\Service\Fetch\Support\PersistentConnection;
 use App\Service\Fetch\Support\ResponseBody;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageResponseModel;
@@ -62,6 +63,7 @@ final readonly class HtmlPageFetcher
         return [
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS * 2,
+            ...PersistentConnection::options(),
             'headers' => ['Accept-Encoding' => ResponseBody::ACCEPT_ENCODING],
             'on_progress' => static function (int $downloaded): void {
                 ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Page, $downloaded);

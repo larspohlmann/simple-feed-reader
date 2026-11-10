@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
@@ -158,10 +159,25 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://www.fazemag.de/feed/')]));
 
         self::assertNull($outcomes[1]->failure());
-        self::assertSame(
-            ['www.fazemag.de' => '178.77.107.162,2a01:488:42:1000:b24d:6ba2:1e:a1ad'],
-            $seenResolve,
+        self::assertSame('178.77.107.162,2a01:488:42:1000:b24d:6ba2:1e:a1ad', $seenResolve['www.fazemag.de']);
+    }
+
+    public function testAFeedRequestIsPersistentCappedAndStillPinned(): void
+    {
+        /** @var array<string, mixed> $seen */
+        $seen = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seen): MockResponse {
+                $seen = $options;
+
+                return new MockResponse('<rss/>', ['http_code' => 200]);
+            },
         );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNull($outcomes[1]->failure());
+        PinnedRequestOptions::assertPersistentCappedAndPinned($seen);
     }
 
     /**
@@ -249,19 +265,16 @@ final class ConcurrentFeedFetcherTest extends TestCase
         self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->modifiedBody());
     }
 
-    public function testAFailoverRetryForcesAFreshConnection(): void
+    public function testAFailoverRetryCarriesItsOwnConnectToAlias(): void
     {
-        // curl pools by host:port: the first attempt may reuse the pool, the IPv4 retry must open its own connection.
-        /** @var list<bool> $freshConnectPerAttempt */
-        $freshConnectPerAttempt = [];
+        /** @var list<string> $connectToPerAttempt */
+        $connectToPerAttempt = [];
         $ipv4 = '193.99.144.85';
         $fetcher = $this->fetcher(
-            function (string $method, string $url, array $options) use (&$freshConnectPerAttempt, $ipv4): MockResponse {
+            function (string $method, string $url, array $options) use (&$connectToPerAttempt, $ipv4): MockResponse {
                 /** @var array<string, string> $resolve */
                 $resolve = $options['resolve'];
-                $extra = $options['extra'] ?? null;
-                $curl = \is_array($extra) ? ($extra['curl'] ?? null) : null;
-                $freshConnectPerAttempt[] = \is_array($curl) && ($curl[\CURLOPT_FRESH_CONNECT] ?? null) === true;
+                $connectToPerAttempt[] = PinnedRequestOptions::connectTo($options);
 
                 return $resolve['taz.de'] === $ipv4
                     ? new MockResponse('<rss/>', ['http_code' => 200])
@@ -273,7 +286,8 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://taz.de/!p4608;rss/')]));
 
         self::assertNull($outcomes[1]->failure());
-        self::assertSame([false, true], $freshConnectPerAttempt);
+        self::assertCount(2, $connectToPerAttempt);
+        self::assertNotSame($connectToPerAttempt[0], $connectToPerAttempt[1]);
     }
 
     public function testAnOversizedBodyIsNotFailedOverToAnotherFamily(): void

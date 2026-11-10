@@ -103,7 +103,11 @@ final readonly class FailoverRequestSender
         array $options,
         ProxyConfigModel $proxy,
     ): ResponseInterface {
-        $response = $this->httpClient->request($method, $url, [...$options, ...EgressOptions::proxied($proxy)]);
+        $response = $this->httpClient->request(
+            $method,
+            $url,
+            EgressOptions::merge($options, EgressOptions::proxied($proxy)),
+        );
 
         try {
             $status = $response->getStatusCode();
@@ -142,10 +146,11 @@ final readonly class FailoverRequestSender
         $finalAttempt = \count($attempts) - 1;
 
         foreach (array_keys($attempts) as $index) {
-            $response = $this->httpClient->request($method, $url, [
-                ...$options,
-                ...EgressOptions::pinned($guarded, $index),
-            ]);
+            $response = $this->httpClient->request(
+                $method,
+                $url,
+                EgressOptions::merge($options, EgressOptions::pinned($guarded, $index)),
+            );
             $canFailOver = $index < $finalAttempt;
 
             try {

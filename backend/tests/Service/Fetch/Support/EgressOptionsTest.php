@@ -56,14 +56,92 @@ final class EgressOptionsTest extends TestCase
         self::assertArrayNotHasKey('extra', EgressOptions::proxied($proxy));
     }
 
-    public function testPinnedYieldsTheResolvePinAndTheCrossFamilyKeyButNoProxy(): void
+    public function testPinnedPinsTheHostAndItsConnectToAlias(): void
     {
         $guarded = new GuardedUrlModel('example.com', ['93.184.216.34']);
 
         $options = EgressOptions::pinned($guarded, 0);
 
-        self::assertSame(['example.com' => '93.184.216.34'], $options['resolve']);
+        self::assertCount(2, $options['resolve']);
+        self::assertSame('93.184.216.34', $options['resolve']['example.com']);
+        $alias = $this->aliasOf($options);
+        self::assertMatchesRegularExpression('/^pin-[0-9a-f]{16}\.invalid$/', $alias);
+        self::assertSame('93.184.216.34', $options['resolve'][$alias]);
+        self::assertSame(["example.com::$alias:"], $options['extra']['curl'][\CURLOPT_CONNECT_TO]);
         self::assertArrayNotHasKey('proxy', $options);
+    }
+
+    public function testPinnedGivesEachAddressSetItsOwnAlias(): void
+    {
+        $dualStack = ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34'];
+
+        $bothFamilies = $this->aliasOf(EgressOptions::pinned(new GuardedUrlModel('dual.example.com', $dualStack), 0));
+        $ipv4Only = $this->aliasOf(EgressOptions::pinned(new GuardedUrlModel('dual.example.com', $dualStack), 1));
+        $again = $this->aliasOf(EgressOptions::pinned(new GuardedUrlModel('other.example.com', $dualStack), 0));
+
+        self::assertNotSame($bothFamilies, $ipv4Only);
+        self::assertSame($bothFamilies, $again);
+    }
+
+    public function testPinnedBracketsAnIpv6LiteralHostInTheConnectTo(): void
+    {
+        $literal = '2606:2800:220:1:248:1893:25c8:1946';
+
+        $options = EgressOptions::pinned(new GuardedUrlModel($literal, [$literal]), 0);
+
+        self::assertStringStartsWith("[$literal]::pin-", $options['extra']['curl'][\CURLOPT_CONNECT_TO][0]);
+    }
+
+    public function testPinnedNeverForcesAFreshConnection(): void
+    {
+        $guarded = new GuardedUrlModel('dual.example.com', ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
+
+        foreach ([0, 1] as $attempt) {
+            $curlOptions = EgressOptions::pinned($guarded, $attempt)['extra']['curl'];
+
+            self::assertArrayNotHasKey(\CURLOPT_FRESH_CONNECT, $curlOptions);
+        }
+    }
+
+    public function testMergeKeepsTheCallersExtraNextToTheEgressExtra(): void
+    {
+        $pinned = EgressOptions::pinned(new GuardedUrlModel('example.com', ['93.184.216.34']), 0);
+
+        $merged = EgressOptions::merge(['extra' => ['use_persistent_connections' => true], 'timeout' => 1], $pinned);
+
+        self::assertSame(1, $merged['timeout']);
+        self::assertSame($pinned['resolve'], $merged['resolve']);
+        self::assertIsArray($merged['extra']);
+        self::assertTrue($merged['extra']['use_persistent_connections']);
+        self::assertSame($pinned['extra']['curl'], $merged['extra']['curl']);
+    }
+
+    public function testMergeLetsTheEgressConnectToReplaceTheCallersListWholesale(): void
+    {
+        $pinned = EgressOptions::pinned(new GuardedUrlModel('example.com', ['93.184.216.34']), 0);
+
+        $merged = EgressOptions::merge(['extra' => ['curl' => [\CURLOPT_CONNECT_TO => ['a', 'b']]]], $pinned);
+
+        self::assertSame($pinned['extra']['curl'][\CURLOPT_CONNECT_TO], $this->curlOf($merged)[\CURLOPT_CONNECT_TO]);
+    }
+
+    public function testMergeKeepsThePersistentFlagNextToTheProxiedIpResolve(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
+        $persistent = ['extra' => ['use_persistent_connections' => true]];
+
+        $merged = EgressOptions::merge($persistent, EgressOptions::proxied($proxy));
+
+        self::assertIsArray($merged['extra']);
+        self::assertTrue($merged['extra']['use_persistent_connections']);
+        self::assertSame(\CURL_IPRESOLVE_V4, $this->curlOf($merged)[\CURLOPT_IPRESOLVE]);
+    }
+
+    public function testMergeWithoutAnyExtraAddsNone(): void
+    {
+        $merged = EgressOptions::merge(['timeout' => 1], ['proxy' => 'socks5://p:1080']);
+
+        self::assertSame(['timeout' => 1, 'proxy' => 'socks5://p:1080'], $merged);
     }
 
     public function testPinnedClampsAnOutOfRangeAttemptToTheLastAvailablePin(): void
@@ -72,32 +150,31 @@ final class EgressOptionsTest extends TestCase
 
         $options = EgressOptions::pinned($guarded, 1);
 
-        self::assertSame(['single-family.example.com' => '93.184.216.34'], $options['resolve']);
+        self::assertSame('93.184.216.34', $options['resolve']['single-family.example.com']);
     }
 
-    public function testPinnedOnASecondAttemptAddsTheFreshConnectionExtra(): void
+    /**
+     * @param array<string, mixed> $merged
+     *
+     * @return array<mixed>
+     */
+    private function curlOf(array $merged): array
     {
-        $guarded = new GuardedUrlModel('dual.example.com', ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
+        self::assertIsArray($merged['extra']);
+        self::assertIsArray($merged['extra']['curl']);
 
-        $options = EgressOptions::pinned($guarded, 1);
-
-        self::assertSame(['dual.example.com' => '93.184.216.34'], $options['resolve']);
-        self::assertArrayNotHasKey('proxy', $options);
-
-        $extra = $options['extra'];
-        self::assertIsArray($extra);
-        $curlOptions = $extra['curl'];
-        self::assertIsArray($curlOptions);
-        self::assertTrue($curlOptions[\CURLOPT_FRESH_CONNECT] ?? false);
+        return $merged['extra']['curl'];
     }
 
-    public function testPinnedOnTheFirstAttemptAddsNoFreshConnectionExtra(): void
+    /** @param array{resolve: array<string, string>} $options */
+    private function aliasOf(array $options): string
     {
-        $guarded = new GuardedUrlModel('dual.example.com', ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
+        $aliases = array_values(array_filter(
+            array_keys($options['resolve']),
+            static fn (string $host): bool => str_starts_with($host, 'pin-'),
+        ));
+        self::assertCount(1, $aliases);
 
-        $options = EgressOptions::pinned($guarded, 0);
-
-        self::assertArrayHasKey('resolve', $options);
-        self::assertArrayNotHasKey('extra', $options);
+        return $aliases[0];
     }
 }

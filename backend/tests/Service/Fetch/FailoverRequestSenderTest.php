@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
@@ -110,18 +111,14 @@ final class FailoverRequestSenderTest extends TestCase
         self::assertSame(3, $client->getRequestsCount());
     }
 
-    public function testForcesAFreshConnectionOnAFailoverRetry(): void
+    public function testEachFailoverAttemptCarriesItsOwnConnectToAlias(): void
     {
-        // curl pools connections by host:port, so an IPv4 retry would reuse the dead family's keep-alive connection
-        // and get its 403 again. The first attempt reuses the pool; every retry must not.
-        /** @var list<bool> $freshConnectPerAttempt */
-        $freshConnectPerAttempt = [];
-        $capture = function (string $method, string $url, array $options) use (&$freshConnectPerAttempt): MockResponse {
+        /** @var list<string> $connectToPerAttempt */
+        $connectToPerAttempt = [];
+        $capture = function (string $method, string $url, array $options) use (&$connectToPerAttempt): MockResponse {
             /** @var array<string, string> $resolve */
             $resolve = $options['resolve'];
-            $extra = $options['extra'] ?? null;
-            $curl = \is_array($extra) ? ($extra['curl'] ?? null) : null;
-            $freshConnectPerAttempt[] = \is_array($curl) && ($curl[\CURLOPT_FRESH_CONNECT] ?? null) === true;
+            $connectToPerAttempt[] = PinnedRequestOptions::connectTo($options);
 
             return str_contains($resolve['dual.example.com'], ',')
                 ? new MockResponse('forbidden', ['http_code' => 403])
@@ -136,7 +133,8 @@ final class FailoverRequestSenderTest extends TestCase
                 [],
             );
 
-        self::assertSame([false, true], $freshConnectPerAttempt);
+        self::assertCount(2, $connectToPerAttempt);
+        self::assertNotSame($connectToPerAttempt[0], $connectToPerAttempt[1]);
     }
 
     public function testKeepsTheFinalFamilysErrorStatusWhenNoFamilyAnswers(): void

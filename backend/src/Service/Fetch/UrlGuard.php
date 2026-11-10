@@ -15,6 +15,9 @@ use App\Service\Fetch\Model\GuardedUrlModel;
  */
 final readonly class UrlGuard
 {
+    private const int IDNA_FLAGS = \IDNA_DEFAULT | \IDNA_USE_STD3_RULES | \IDNA_CHECK_BIDI | \IDNA_CHECK_CONTEXTJ
+        | \IDNA_NONTRANSITIONAL_TO_ASCII;
+
     public function __construct(
         private DnsResolverInterface $dnsResolver,
         private IpValidator $ipValidator,
@@ -47,7 +50,12 @@ final readonly class UrlGuard
             throw new SsrfBlockedException(sprintf('Scheme "%s" is not allowed', $scheme));
         }
 
-        return strtolower(trim($parts['host'], '[]'));
+        return $this->asCurlHostName(trim($parts['host'], '[]'));
+    }
+
+    private function asCurlHostName(string $host): string
+    {
+        return idn_to_ascii($host, self::IDNA_FLAGS, \INTL_IDNA_VARIANT_UTS46) ?: strtolower($host);
     }
 
     /**
