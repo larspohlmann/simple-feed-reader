@@ -87,6 +87,24 @@ screenshots; the [gallery](screenshots.md) has more.
 - Assign tags in the feed dialog, or drag a feed onto a tag.
 - Unread counts per feed and per tag.
 
+## Trending
+
+- A Trending view, right above "For you" in the sidebar, shows the stories
+  that several of the feeds you follow are covering, ranked by how many of
+  them ran it.
+- Switch between the last 24 hours and the last 7 days; the 7-day list leaves
+  out what the 24-hour list already shows, so the two don't repeat each other.
+- Articles are grouped into a story when they share a link or when their
+  headlines clearly match. No AI is involved.
+- Each story is one card: open the lead article, or expand "N sources" to see
+  every outlet that covered it. The same article in several feeds counts as one
+  source; on Bluesky and Mastodon each account counts once.
+- How many sources a story needs grows with the number of feeds you follow,
+  so a long subscription list doesn't flood the view.
+- Hide a story you don't care about. The sidebar badge counts the stories you
+  haven't opened yet.
+- Trending can be turned off per account in Settings → Preferences.
+
 ## "For you" — AI recommendations (optional)
 
 - A ranked selection of your unread articles, based on what you favorite,
