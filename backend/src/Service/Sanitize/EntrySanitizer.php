@@ -20,7 +20,7 @@ final readonly class EntrySanitizer
 
     public function __construct(private TrailingBlankRemover $blankTail)
     {
-        $config = (new HtmlSanitizerConfig())
+        $config = new HtmlSanitizerConfig()
             ->allowSafeElements()
             ->allowElement('img', ['src', 'alt', 'title', 'width', 'height', 'loading'])
             // The narration mark on <audio> and the slideshow mark on <figure> must cross this barrier; class

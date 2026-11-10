@@ -91,7 +91,7 @@ final readonly class AccountMailer implements AccountMailerInterface
         $identity = $this->mailSettings->identity();
 
         $this->mailer->send(
-            (new Email())
+            new Email()
                 ->from(new Address($identity->address, $identity->name))
                 ->to($user->getEmail())
                 ->subject($subject)
