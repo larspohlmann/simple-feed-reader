@@ -131,6 +131,8 @@
         "test:parallel": "paratest",
         "infection": "infection --threads=max",
         "infection:diff": "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations",
+        "infection:coverage": "@php -d pcov.enabled=1 bin/phpunit --order-by=random --coverage-xml var/infection-coverage/coverage-xml --log-junit var/infection-coverage/junit.xml",
+        "infection:diff:rerun": "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations --coverage=var/infection-coverage --skip-initial-tests",
         "e2e": "bin/e2e.sh"
     },
     "conflict": {

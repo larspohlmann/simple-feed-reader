@@ -110,10 +110,10 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     public function testASpentBudgetStopsBetweenChunksAndTheNextRunResumesAtTheMark(): void
     {
         $search = $this->search('climate');
-        $ids = [];
-        for ($index = 0; $index < SavedSearchMembershipSweep::CHUNK + 1; $index++) {
-            $ids[] = $this->entry('e' . $index)->requireId();
-        }
+        $ids = array_map(
+            static fn (Entry $entry): int => $entry->requireId(),
+            $this->entries(SavedSearchMembershipSweep::CHUNK + 1),
+        );
         // Every reading moves the clock 6 s: the deadline is read once, then
         // once per chunk, so a 10 s budget allows exactly one chunk.
         $clock = new TickingClock(new \DateTimeImmutable(self::NOW), 6);
@@ -135,9 +135,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     public function testEntriesScannedSumsAcrossEveryChunkInOneRun(): void
     {
         $this->search('climate');
-        for ($index = 0; $index < SavedSearchMembershipSweep::CHUNK + 1; $index++) {
-            $this->entry('e' . $index);
-        }
+        $this->entries(SavedSearchMembershipSweep::CHUNK + 1);
         $matcher = new RecordingSavedSearchMatcher();
 
         $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(1000));
@@ -319,6 +317,26 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
 
     private function entry(string $guid, string $createdAt = '2026-09-22T09:00:00'): Entry
     {
+        $entry = $this->unsavedEntry($guid, $createdAt);
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    /** @return list<Entry> */
+    private function entries(int $count): array
+    {
+        $entries = [];
+        for ($index = 0; $index < $count; $index++) {
+            $entries[] = $this->unsavedEntry('e' . $index);
+        }
+        $this->entityManager->flush();
+
+        return $entries;
+    }
+
+    private function unsavedEntry(string $guid, string $createdAt = '2026-09-22T09:00:00'): Entry
+    {
         $entry = new Entry(
             $this->feed,
             $guid,
@@ -328,7 +346,6 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
         $this->entityManager->persist($entry);
-        $this->entityManager->flush();
 
         return $entry;
     }
