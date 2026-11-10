@@ -68,9 +68,12 @@ More in the [screenshot gallery](docs/screenshots.md).
 - **Podcasts, SoundCloud, Mixcloud and YouTube** — paste a profile, show or
   channel link and subscribe; audio plays in a persistent playlist.
 - **Bluesky and Mastodon** — connect an account and its timelines, lists and
-  follows arrive as feeds.
+  follows arrive as feeds; save a search and its new matches arrive as a feed
+  too.
 - **Feed discovery** from a website's address, feed previews before you
   subscribe, OPML import and export, tags with colors and icons.
+- **Trending** — the stories several of your feeds are covering, from the last
+  24 hours or the last 7 days, ranked by how many sources ran them.
 - **"For you" (optional)** — an AI model of your choice, local or hosted, ranks
   your unread articles, with a cost overview per run.
 - **Accounts** — email and password, Google, Apple or a passkey; several users

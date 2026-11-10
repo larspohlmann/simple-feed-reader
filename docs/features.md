@@ -67,6 +67,14 @@ screenshots; the [gallery](screenshots.md) has more.
 - A Bluesky post shows what it embeds — images, video, a link card or the
   post it quotes — fetched from Bluesky's public AppView once the post
   arrives, and retried on later refreshes for three days.
+- Save a Bluesky or Mastodon search as a feed: new posts that match the query
+  appear under Searches in the sidebar. Preview what it finds before you
+  subscribe, and edit the query later in the feed dialog.
+  - The query takes exact phrases in quotes, `||` for either word, `-word` to
+    leave out posts with a word, `-from:handle` to leave out an account, and
+    parentheses to group terms.
+  - Mastodon has no `||`, so each alternative runs as its own search, at most 8
+    per query. Mastodon search needs full-text search on your instance.
 - Preview a feed before you subscribe: recent items, whether entries carry
   images, and whether the feed delivers full text or only summaries.
 - Import and export your subscriptions as OPML.
@@ -86,6 +94,14 @@ screenshots; the [gallery](screenshots.md) has more.
 - Group feeds with tags; each tag has a name, a color, and an icon.
 - Assign tags in the feed dialog, or drag a feed onto a tag.
 - Unread counts per feed and per tag.
+
+## Trending
+
+- The stories several of your feeds are covering, from the last 24 hours or
+  the last 7 days, ranked by how many sources ran them. No AI is involved.
+- Each story is one card; expand it to see every outlet that covered it.
+- Hide a story you don't care about, or turn Trending off in Settings →
+  Preferences.
 
 ## "For you" — AI recommendations (optional)
 
