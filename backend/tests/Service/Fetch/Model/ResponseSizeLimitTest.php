@@ -15,12 +15,14 @@ final class ResponseSizeLimitTest extends TestCase
         self::assertSame(20_000_000, ResponseSizeLimit::Feed->bytes());
         self::assertSame(5_000_000, ResponseSizeLimit::Download->bytes());
         self::assertSame(2_000_000, ResponseSizeLimit::Api->bytes());
+        self::assertSame(3_000_000, ResponseSizeLimit::Page->bytes());
         self::assertSame(64_000, ResponseSizeLimit::ChapterFile->bytes());
     }
 
     public function testALimitReadsInMegabytesWhenItIsWholeAndInKilobytesOtherwise(): void
     {
         self::assertSame('20 MB', ResponseSizeLimit::Feed->label());
+        self::assertSame('3 MB', ResponseSizeLimit::Page->label());
         self::assertSame('64 kB', ResponseSizeLimit::ChapterFile->label());
     }
 }

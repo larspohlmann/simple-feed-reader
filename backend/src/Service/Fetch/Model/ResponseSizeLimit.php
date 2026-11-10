@@ -12,6 +12,8 @@ enum ResponseSizeLimit: int
     /** Images and the pages fetched for their cookies. */
     case Download = 5_000;
     case Api = 2_000;
+    /** A reader page, the whole HTML read for extraction. */
+    case Page = 3_000;
     case ChapterFile = 64;
     case EmbedDescription = 512;
     case TranscriptFile = 1_000;
