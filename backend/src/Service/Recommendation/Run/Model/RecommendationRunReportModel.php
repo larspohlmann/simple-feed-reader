@@ -58,6 +58,7 @@ final readonly class RecommendationRunReportModel
     }
 
     /** A pure status read: somebody else drives the run, so this request advanced nothing. */
+    #[\NoDiscard]
     public function inBackground(): self
     {
         return clone($this, ['background' => true]);
@@ -67,6 +68,7 @@ final readonly class RecommendationRunReportModel
      * The per-user lock is held while no driver heartbeat is fresh. A busy report is background either way, so only
      * this flag tells "a worker owns this" from "this may be stuck".
      */
+    #[\NoDiscard]
     public function waitingForLock(): self
     {
         return clone($this, ['waitingForLock' => true]);

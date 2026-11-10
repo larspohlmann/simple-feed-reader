@@ -14,6 +14,7 @@ final readonly class OpmlImportResultModel
     ) {
     }
 
+    #[\NoDiscard]
     public function with(
         int $imported = 0,
         int $alreadySubscribed = 0,

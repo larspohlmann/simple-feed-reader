@@ -16,6 +16,7 @@ final readonly class DayCountModel
         return new self(0, 0);
     }
 
+    #[\NoDiscard]
     public function plus(self $other): self
     {
         return new self($this->arrived + $other->arrived, $this->read + $other->read);

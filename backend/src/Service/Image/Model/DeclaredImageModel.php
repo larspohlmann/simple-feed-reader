@@ -27,6 +27,7 @@ final readonly class DeclaredImageModel
     }
 
     /** This image, adding the renditions of each other image that shows the same picture in the same crop. */
+    #[\NoDiscard]
     public function joinedWith(self ...$others): self
     {
         $identity = ImageIdentityModel::fromUrl($this->url);

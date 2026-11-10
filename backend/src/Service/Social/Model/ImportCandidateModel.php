@@ -38,6 +38,7 @@ final readonly class ImportCandidateModel
         );
     }
 
+    #[\NoDiscard]
     public function asSubscribed(): self
     {
         return clone($this, ['state' => ImportCandidateState::Subscribed]);

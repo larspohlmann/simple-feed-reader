@@ -34,6 +34,7 @@ final readonly class RefreshRunProgressModel
      * @param int $handled   feeds this slice took to an outcome
      * @param int $remaining feeds still due run-wide once this slice finished
      */
+    #[\NoDiscard]
     public function advancedBy(int $handled, int $remaining): self
     {
         $done = $this->done + $handled;

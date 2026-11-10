@@ -38,6 +38,7 @@ final readonly class SyncStamp
         return new self($at, null, $values);
     }
 
+    #[\NoDiscard]
     public function skipped(\DateTimeImmutable $at, PrivateFeedSyncSkip $skip): self
     {
         return new self($at, $skip, $this->syncedKinds);

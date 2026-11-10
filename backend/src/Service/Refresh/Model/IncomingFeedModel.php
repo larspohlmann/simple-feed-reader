@@ -22,6 +22,7 @@ final readonly class IncomingFeedModel
         return new self($parsed, KnownSharesModel::none(), TimelineThreadsModel::none());
     }
 
+    #[\NoDiscard]
     public function withParsed(ParsedFeedModel $parsed): self
     {
         return clone($this, ['parsed' => $parsed]);

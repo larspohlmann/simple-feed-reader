@@ -21,6 +21,7 @@ final readonly class RecommendationFeedRow
     ) {
     }
 
+    #[\NoDiscard]
     public function withRow(EntryListRow $row): self
     {
         return clone($this, ['row' => $row]);

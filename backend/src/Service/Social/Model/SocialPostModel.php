@@ -55,6 +55,7 @@ final readonly class SocialPostModel
         return $this->with(canRepost: false);
     }
 
+    #[\NoDiscard]
     public function withCounts(?SocialCountsModel $counts): self
     {
         return $this->with(counts: $counts);
@@ -79,6 +80,7 @@ final readonly class SocialPostModel
         );
     }
 
+    #[\NoDiscard]
     private function with(
         ?string $existingLikeId = null,
         ?string $existingRepostId = null,

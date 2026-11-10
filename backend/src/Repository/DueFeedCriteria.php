@@ -29,6 +29,7 @@ final readonly class DueFeedCriteria
     /**
      * @param list<int> $feedIds
      */
+    #[\NoDiscard]
     public function excluding(array $feedIds): self
     {
         return clone($this, ['excludedFeedIds' => $feedIds]);

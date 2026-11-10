@@ -31,6 +31,7 @@ final readonly class CoreElement
         return self::extension($this->element, $namespace);
     }
 
+    #[\NoDiscard]
     public function at(\DOMElement $element): self
     {
         return clone($this, ['element' => $element]);

@@ -31,11 +31,13 @@ final readonly class ParsedEntryModel
         $this->discussion = $discussion ?? Discussion::none();
     }
 
+    #[\NoDiscard]
     public function withShowArtwork(?DeclaredImageModel $showArtwork): self
     {
         return $this->withMedia($this->media->withShowArtwork($showArtwork));
     }
 
+    #[\NoDiscard]
     public function asDiscussionThread(Discussion $thread): self
     {
         return new self(
@@ -54,6 +56,7 @@ final readonly class ParsedEntryModel
         );
     }
 
+    #[\NoDiscard]
     public function withPostText(Headline $headline, ?string $summary, ?string $contentHtml): self
     {
         return new self(
@@ -72,11 +75,13 @@ final readonly class ParsedEntryModel
         );
     }
 
+    #[\NoDiscard]
     public function withContentHtml(?string $contentHtml): self
     {
         return $this->withPostText($this->headline, $this->summary, $contentHtml);
     }
 
+    #[\NoDiscard]
     private function withMedia(ParsedEntryMediaModel $media): self
     {
         return $media === $this->media ? $this : new self(

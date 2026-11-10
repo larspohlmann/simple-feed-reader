@@ -22,11 +22,13 @@ final readonly class ParsedFeedModel
     }
 
     /** @param list<ParsedEntryModel> $entries */
+    #[\NoDiscard]
     public function withEntries(array $entries): self
     {
         return clone($this, ['entries' => $entries]);
     }
 
+    #[\NoDiscard]
     public function withShowArtwork(?DeclaredImageModel $showArtwork): self
     {
         return $this->withEntries(array_map(

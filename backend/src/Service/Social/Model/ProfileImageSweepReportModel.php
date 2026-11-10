@@ -17,6 +17,7 @@ final readonly class ProfileImageSweepReportModel
         return new self(0, 0);
     }
 
+    #[\NoDiscard]
     public function adding(self $other): self
     {
         return new self($this->checked + $other->checked, $this->changed + $other->changed);

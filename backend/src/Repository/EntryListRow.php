@@ -27,6 +27,7 @@ final readonly class EntryListRow
     /**
      * @param list<self> $duplicates the in-scope copies this row collapsed
      */
+    #[\NoDiscard]
     public function withDuplicates(array $duplicates): self
     {
         return $this->copyWith($duplicates, $this->enrichment);
@@ -51,6 +52,7 @@ final readonly class EntryListRow
     /**
      * @param list<self> $duplicates
      */
+    #[\NoDiscard]
     private function copyWith(array $duplicates, EntryListRowEnrichment $enrichment): self
     {
         return clone($this, ['duplicates' => $duplicates, 'enrichment' => $enrichment]);

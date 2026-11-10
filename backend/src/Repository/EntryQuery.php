@@ -71,6 +71,7 @@ final readonly class EntryQuery
         return $this->view->isChronological();
     }
 
+    #[\NoDiscard]
     public function inAllView(): self
     {
         return new self(

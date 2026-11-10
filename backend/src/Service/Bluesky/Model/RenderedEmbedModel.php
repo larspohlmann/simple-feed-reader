@@ -46,6 +46,7 @@ final readonly class RenderedEmbedModel
         return new self('', uncardedLink: $url);
     }
 
+    #[\NoDiscard]
     public function followedBy(self $next): self
     {
         return new self(

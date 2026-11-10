@@ -23,6 +23,7 @@ final readonly class MediaCandidateModel
     }
 
     /** The same media with the feed-declared MIME type the reader trusts over its own guess. */
+    #[\NoDiscard]
     public function withMimeType(?string $mimeType): self
     {
         if ($mimeType === null || $mimeType === $this->mimeType) {
@@ -48,6 +49,7 @@ final readonly class MediaCandidateModel
     }
 
     /** The same media with the gaps a later, weaker source can fill: poster, label, the prose anchor, the narration tell, and the duration. */
+    #[\NoDiscard]
     public function completedBy(self $later): self
     {
         return clone($this, [
@@ -61,6 +63,7 @@ final readonly class MediaCandidateModel
     }
 
     /** The same media served from where its URL finally lands. */
+    #[\NoDiscard]
     public function at(string $url): self
     {
         return clone($this, ['url' => $url]);
