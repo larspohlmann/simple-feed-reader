@@ -19,7 +19,7 @@ final class ResponseBody
     public const string ACCEPT_ENCODING = 'gzip, deflate';
     // Deflate expands at most about 1032:1, so one slice overshoots the limit by about 1 MB at worst.
     private const int SLICE_BYTES = 1_024;
-    private const array UNCOMPRESSED = ['', 'identity'];
+    private const array UNDECODABLE = ['br', 'zstd', 'compress', 'x-compress'];
     private const array ZLIB_ENCODINGS = [
         'gzip' => \ZLIB_ENCODING_GZIP,
         'x-gzip' => \ZLIB_ENCODING_GZIP,
@@ -36,7 +36,7 @@ final class ResponseBody
         $body = $response->getContent(false);
         $url = self::urlOf($response);
         $encoding = strtolower(trim(ResponseHeader::first($response, 'content-encoding') ?? ''));
-        if (!\in_array($encoding, self::UNCOMPRESSED, true)) {
+        if (isset(self::ZLIB_ENCODINGS[$encoding]) || self::isUndecodable($encoding)) {
             try {
                 $body = self::inflatedPast($body, $encoding, $limit->bytes());
             } catch (\UnexpectedValueException $refused) {
@@ -82,6 +82,11 @@ final class ResponseBody
         }
 
         return $inflated;
+    }
+
+    private static function isUndecodable(string $encoding): bool
+    {
+        return \in_array($encoding, self::UNDECODABLE, true) || str_contains($encoding, ',');
     }
 
     private static function urlOf(ResponseInterface $response): string

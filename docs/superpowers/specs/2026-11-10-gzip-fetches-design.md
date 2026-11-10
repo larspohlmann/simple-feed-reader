@@ -36,8 +36,8 @@ site explicit.
   - Absent, empty or `identity`: the body is returned as is.
   - `gzip` or `x-gzip`: inflated with `ZLIB_ENCODING_GZIP`; `deflate`: with `ZLIB_ENCODING_DEFLATE` (the zlib
     wrapper HTTP specifies). PHP has no auto-detecting mode for `inflate_init()`, and raw deflate is refused as corrupt.
-  - Anything else (`br`, `zstd`, stacked encodings such as `gzip, gzip`): `FeedUnreachableException`, naming the
-    encoding. We never advertise these, so a server sending one is misbehaving.
+  - `br`, `zstd`, `compress`, `x-compress` and stacked lists such as `gzip, gzip`: `FeedUnreachableException`, naming
+    the encoding. Any other label (`none`, `utf-8`, `binary`) is junk real servers send: the body passes as identity.
 - Failures:
   - A corrupt stream (`inflate_add()` fails or warns): `FeedUnreachableException`.
   - A stream that ends early without its trailer: the bytes inflated so far are returned, as browsers do.

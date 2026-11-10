@@ -76,7 +76,7 @@ final class ResponseBodyTest extends TestCase
 
     public function testABodySpanningManySlicesIsInflatedWhole(): void
     {
-        $page = str_repeat(self::HTML . bin2hex(random_bytes(64)), 2_000);
+        $page = self::HTML . bin2hex(random_bytes(20_000));
 
         $response = self::response((string) gzencode($page), 'gzip');
 
@@ -134,6 +134,8 @@ final class ResponseBodyTest extends TestCase
     {
         yield 'brotli' => ['br'];
         yield 'zstd' => ['zstd'];
+        yield 'compress' => ['compress'];
+        yield 'x-compress' => ['x-compress'];
         yield 'stacked' => ['gzip, gzip'];
     }
 
@@ -148,6 +150,46 @@ final class ResponseBodyTest extends TestCase
             self::assertStringContainsString($encoding, $refused->getMessage());
             self::assertNull($refused->statusCode);
         }
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function junkEncodingLabels(): iterable
+    {
+        yield 'none' => ['none'];
+        yield 'utf-8' => ['utf-8'];
+        yield 'upper case utf8' => ['UTF8'];
+        yield 'binary' => ['binary'];
+    }
+
+    #[DataProvider('junkEncodingLabels')]
+    public function testAJunkEncodingLabelPassesTheBodyThroughAsIdentity(string $encoding): void
+    {
+        $body = ResponseBody::decoded(self::response(self::HTML, $encoding), ResponseSizeLimit::Page);
+
+        self::assertSame(self::HTML, $body);
+    }
+
+    public function testAnEncodingNameWithSurroundingWhitespaceStillInflates(): void
+    {
+        $response = self::response((string) gzencode(self::HTML), ' gzip ');
+
+        self::assertSame(self::HTML, ResponseBody::decoded($response, ResponseSizeLimit::Page));
+    }
+
+    public function testBytesAfterTheEndOfTheStreamAreIgnored(): void
+    {
+        $response = self::response(gzencode(self::HTML) . 'trailing garbage', 'gzip');
+
+        self::assertSame(self::HTML, ResponseBody::decoded($response, ResponseSizeLimit::Page));
+    }
+
+    public function testAnIncompressibleBodyAtExactlyTheLimitSpanningManySlicesPasses(): void
+    {
+        $exact = random_bytes(max(1, ResponseSizeLimit::ChapterFile->bytes()));
+
+        $response = self::response((string) gzencode($exact), 'gzip');
+
+        self::assertSame($exact, ResponseBody::decoded($response, ResponseSizeLimit::ChapterFile));
     }
 
     public function testACorruptStreamIsUnreachable(): void
