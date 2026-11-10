@@ -52,9 +52,7 @@ final readonly class KeyedOccurrences
     private static function lastKeyIn(string $text): string
     {
         preg_match_all(self::ANY_KEY, $text, $matches);
-        $last = end($matches[1]);
-
-        return $last === false ? '' : $last;
+        return array_last($matches[1]) ?? '';
     }
 
     private static function firstKeyIn(string $text): string

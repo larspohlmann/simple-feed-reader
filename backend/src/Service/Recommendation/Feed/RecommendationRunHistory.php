@@ -77,6 +77,6 @@ final readonly class RecommendationRunHistory
 
         $kept = \array_slice($rows, 0, RecommendationRunHistoryRepository::HISTORY_LIMIT);
 
-        return [$kept, $kept[array_key_last($kept)]['id']];
+        return [$kept, array_last($kept)['id']];
     }
 }

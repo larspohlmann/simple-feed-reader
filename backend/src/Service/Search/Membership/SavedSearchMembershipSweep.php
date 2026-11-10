@@ -131,7 +131,7 @@ final readonly class SavedSearchMembershipSweep
             if (!$this->applyChunk($group, $chunk, $tally)) {
                 return false;
             }
-            $mark = $chunk[array_key_last($chunk)];
+            $mark = array_last($chunk);
         }
 
         return true;
@@ -174,7 +174,7 @@ final readonly class SavedSearchMembershipSweep
     private function store(array $group, array $chunk, array $matches): int
     {
         $now = $this->clock->now();
-        $lastId = $chunk[array_key_last($chunk)];
+        $lastId = array_last($chunk);
 
         // Insert and mark advance share one transaction: a run that dies here
         // leaves neither half-inserted rows nor a skipped chunk.

@@ -86,7 +86,7 @@ final class AccountBackupExporterTest extends DbTestCase
      */
     private static function footerOf(array $part): array
     {
-        $footer = end($part);
+        $footer = array_last($part);
 
         return \is_array($footer) ? $footer : throw new \LogicException('The part has no footer line.');
     }

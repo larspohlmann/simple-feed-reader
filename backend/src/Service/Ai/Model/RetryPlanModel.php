@@ -53,6 +53,6 @@ final readonly class RetryPlanModel
             return (float) $retryAfterSeconds;
         }
 
-        return self::BACKOFF_SECONDS[$retryIndex] ?? self::BACKOFF_SECONDS[array_key_last(self::BACKOFF_SECONDS)];
+        return self::BACKOFF_SECONDS[$retryIndex] ?? array_last(self::BACKOFF_SECONDS);
     }
 }

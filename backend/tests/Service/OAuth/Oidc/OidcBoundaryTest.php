@@ -77,7 +77,7 @@ final class OidcBoundaryTest extends TestCase
 
                 $segments = explode('\\', $candidate[1]);
 
-                if (IdTokenModel::class === $candidate[1] || 'IdTokenModel' === end($segments)) {
+                if (IdTokenModel::class === $candidate[1] || 'IdTokenModel' === array_last($segments)) {
                     return true;
                 }
 

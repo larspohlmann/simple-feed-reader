@@ -51,7 +51,7 @@ final readonly class RecommendationFeedPager
             return null;
         }
 
-        $last = $rows[array_key_last($rows)];
+        $last = array_last($rows);
 
         return RecommendationCursor::encode($last->runId, $last->position);
     }

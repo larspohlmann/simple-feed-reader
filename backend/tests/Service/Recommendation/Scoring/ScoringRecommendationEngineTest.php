@@ -310,8 +310,8 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         $this->advancer()->advance($this->owner, TickDriver::Poll);
 
         $requests = $this->systemOne()->requests();
-        $lastRequest = end($requests);
-        self::assertNotFalse($lastRequest);
+        $lastRequest = array_last($requests);
+        self::assertNotNull($lastRequest);
         self::assertSame(['profile' => self::PROFILE], $lastRequest->state);
     }
 
@@ -327,8 +327,8 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         $this->advancer()->advance($this->owner, TickDriver::Poll);
 
         $requests = $this->systemOne()->requests();
-        $lastRequest = end($requests);
-        self::assertNotFalse($lastRequest);
+        $lastRequest = array_last($requests);
+        self::assertNotNull($lastRequest);
         self::assertIsArray($lastRequest->state['favorites']);
         self::assertSame(
             array_map(static fn (Entry $entry): string => $entry->getTitle(), $favorites),
@@ -480,7 +480,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     private function lastLog(): RecommendationRunLog
     {
         $logs = $this->logs($this->latestRun());
-        $last = end($logs);
+        $last = array_last($logs);
         self::assertInstanceOf(RecommendationRunLog::class, $last);
 
         return $last;

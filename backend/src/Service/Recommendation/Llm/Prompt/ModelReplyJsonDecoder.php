@@ -53,9 +53,7 @@ final readonly class ModelReplyJsonDecoder
      */
     private function lastEmbeddedObject(string $text): ?array
     {
-        $objects = $this->completeObjectsFrom($text, 0);
-
-        return [] === $objects ? null : $objects[array_key_last($objects)];
+        return array_last($this->completeObjectsFrom($text, 0));
     }
 
     /**
