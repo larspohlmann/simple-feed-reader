@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\FeedFetcher;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
@@ -81,8 +82,7 @@ final class HttpFeedFetcherTest extends TestCase
 
         $this->fetcher($factory)->fetch('https://example.com/feed');
 
-        self::assertIsArray($seenOptions['resolve'] ?? null);
-        self::assertSame('93.184.216.34', $seenOptions['resolve']['example.com'] ?? null);
+        self::assertSame('93.184.216.34', PinnedRequestOptions::addressesOf($seenOptions, 'example.com'));
         self::assertSame(0, $seenOptions['max_redirects'] ?? null);
     }
 

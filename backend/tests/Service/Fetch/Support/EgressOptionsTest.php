@@ -128,7 +128,6 @@ final class EgressOptionsTest extends TestCase
     public function testMergeKeepsThePersistentFlagNextToTheProxiedIpResolve(): void
     {
         $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
-
         $persistent = ['extra' => ['use_persistent_connections' => true]];
 
         $merged = EgressOptions::merge($persistent, EgressOptions::proxied($proxy));

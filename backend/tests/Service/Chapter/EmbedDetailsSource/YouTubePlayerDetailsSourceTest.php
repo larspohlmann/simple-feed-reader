@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Chapter\EmbedDetailsSource;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Enum\ProxyType;
 use App\Service\Chapter\EmbedDetailsSource\YouTubePlayerDetailsSource;
 use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
@@ -157,8 +158,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         self::assertCount(2, $seenOptions);
         self::assertArrayHasKey('proxy', $seenOptions[0]);
         self::assertArrayNotHasKey('proxy', $seenOptions[1]);
-        self::assertIsArray($seenOptions[1]['resolve'] ?? null);
-        self::assertSame('93.184.216.34', $seenOptions[1]['resolve']['www.youtube.com'] ?? null);
+        self::assertSame('93.184.216.34', PinnedRequestOptions::addressesOf($seenOptions[1], 'www.youtube.com'));
         self::assertSame([[
             'level' => LogLevel::INFO,
             'message' => 'YouTube walled the proxied player request for {videoId}; asked again directly.',

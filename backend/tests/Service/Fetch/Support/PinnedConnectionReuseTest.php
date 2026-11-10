@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\Support;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Service\Fetch\Support\EgressOptions;
+use App\Service\Fetch\Support\PersistentConnection;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\KeepAliveServer;
 use App\Tests\Support\KeepAliveServerUnavailableException;
+use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\CurlHttpClient;
 
@@ -36,9 +37,7 @@ final class PinnedConnectionReuseTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach ($this->servers as $server) {
-            $server->stop();
-        }
+        $this->stopServers();
     }
 
     public function testAReusedConnectionGoesToThePinnedAddress(): void
@@ -66,7 +65,7 @@ final class PinnedConnectionReuseTest extends TestCase
     {
         $client = new CurlHttpClient();
 
-        // Happy eyeballs decides which family answers a two-address pin, so only the narrower pin is deterministic.
+        // Happy eyeballs picks the family for a two-address pin; only the narrower pin is deterministic.
         $first = $this->fetch($client, 'pin.test', ['127.0.0.1', '::1']);
         $second = $this->fetch($client, 'pin.test', ['::1']);
 
@@ -90,15 +89,12 @@ final class PinnedConnectionReuseTest extends TestCase
         for ($attempt = 0; $attempt < self::PORT_ATTEMPTS; ++$attempt) {
             $port = random_int(20000, 60000);
             try {
-                $this->servers = [
-                    KeepAliveServer::start('127.0.0.1', $port, 'server-1'),
-                    KeepAliveServer::start('::1', $port, 'server-2'),
-                ];
+                $this->servers[] = KeepAliveServer::start('127.0.0.1', $port, 'server-1');
+                $this->servers[] = KeepAliveServer::start('::1', $port, 'server-2');
 
                 return $port;
             } catch (KeepAliveServerUnavailableException $exception) {
-                $this->tearDown();
-                $this->servers = [];
+                $this->stopServers();
                 $failures[] = $exception->getMessage();
             }
         }
@@ -106,14 +102,17 @@ final class PinnedConnectionReuseTest extends TestCase
         self::fail('no free loopback port after ' . self::PORT_ATTEMPTS . ' attempts: ' . implode('; ', $failures));
     }
 
+    private function stopServers(): void
+    {
+        foreach ($this->servers as $server) {
+            $server->stop();
+        }
+        $this->servers = [];
+    }
+
     private function hostTheGuardYields(string $url): string
     {
-        $resolver = new class implements DnsResolverInterface {
-            public function resolve(string $hostname): array
-            {
-                return ['93.184.216.34'];
-            }
-        };
+        $resolver = new StaticDnsResolver(['xn--bcher-kva.test' => ['93.184.216.34']]);
 
         return (new UrlGuard($resolver, new IpValidator()))->assertSafe($url)->host;
     }
@@ -122,7 +121,7 @@ final class PinnedConnectionReuseTest extends TestCase
     private function fetch(CurlHttpClient $client, string $pinnedHost, array $ips, ?string $urlHost = null): string
     {
         $options = EgressOptions::merge(
-            ['extra' => ['use_persistent_connections' => true]],
+            PersistentConnection::options(),
             EgressOptions::pinned(new GuardedUrlModel($pinnedHost, $ips), 0),
         );
         $url = sprintf('http://%s:%d/', $urlHost ?? $pinnedHost, $this->port);

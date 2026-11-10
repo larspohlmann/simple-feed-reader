@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
@@ -176,11 +177,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertNull($outcomes[1]->failure());
-        /** @var array{curl: array<int, mixed>, use_persistent_connections: bool} $extra */
-        $extra = $seen['extra'];
-        self::assertSame(5.0, $seen['max_connect_duration']);
-        self::assertTrue($extra['use_persistent_connections']);
-        self::assertArrayHasKey(\CURLOPT_CONNECT_TO, $extra['curl']);
+        PinnedRequestOptions::assertPersistentCappedAndPinned($seen);
     }
 
     /**
@@ -270,7 +267,6 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
     public function testAFailoverRetryCarriesItsOwnConnectToAlias(): void
     {
-        // curl pools by host:port; a distinct connect-to alias per address set keeps the retry off the old connection.
         /** @var list<string> $connectToPerAttempt */
         $connectToPerAttempt = [];
         $ipv4 = '193.99.144.85';
@@ -278,9 +274,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             function (string $method, string $url, array $options) use (&$connectToPerAttempt, $ipv4): MockResponse {
                 /** @var array<string, string> $resolve */
                 $resolve = $options['resolve'];
-                /** @var array{curl: array<int, list<string>>} $extra */
-                $extra = $options['extra'];
-                $connectToPerAttempt[] = $extra['curl'][\CURLOPT_CONNECT_TO][0];
+                $connectToPerAttempt[] = PinnedRequestOptions::connectTo($options);
 
                 return $resolve['taz.de'] === $ipv4
                     ? new MockResponse('<rss/>', ['http_code' => 200])

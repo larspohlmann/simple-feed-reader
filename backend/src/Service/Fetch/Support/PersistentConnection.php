@@ -6,7 +6,7 @@ namespace App\Service\Fetch\Support;
 
 /**
  * Options for the hot fetch paths: connections, TLS sessions and DNS kept per worker process, and a connect phase
- * capped well under the read timeout so a host that never answers fails fast (#2155).
+ * capped well under the read timeout so a host that never answers fails fast.
  */
 final class PersistentConnection
 {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ResponseSizeLimit;
@@ -337,11 +338,7 @@ final class HtmlPageFetcherTest extends TestCase
 
         $fetcher->fetch('https://example.com/post');
 
-        /** @var array{curl: array<int, mixed>, use_persistent_connections: bool} $extra */
-        $extra = $seen['extra'];
-        self::assertSame(5.0, $seen['max_connect_duration']);
-        self::assertTrue($extra['use_persistent_connections']);
-        self::assertArrayHasKey(\CURLOPT_CONNECT_TO, $extra['curl']);
+        PinnedRequestOptions::assertPersistentCappedAndPinned($seen);
     }
 
     public function testFollowsAZeroDelayMetaRefreshToTheArticle(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
@@ -311,8 +312,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertCount(1, $calls);
         self::assertArrayNotHasKey('proxy', $calls[0]);
-        self::assertIsArray($calls[0]['resolve'] ?? null);
-        self::assertSame('203.0.113.9', $calls[0]['resolve']['page.example'] ?? null);
+        self::assertSame('203.0.113.9', PinnedRequestOptions::addressesOf($calls[0], 'page.example'));
         self::assertSame(3.0, $calls[0]['timeout'] ?? null);
     }
 

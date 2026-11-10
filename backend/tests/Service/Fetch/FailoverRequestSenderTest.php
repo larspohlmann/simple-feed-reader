@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
@@ -112,16 +113,12 @@ final class FailoverRequestSenderTest extends TestCase
 
     public function testEachFailoverAttemptCarriesItsOwnConnectToAlias(): void
     {
-        // curl pools by host:port and a pooled connection ignores the pin; a distinct connect-to alias per address set
-        // keeps the dead family's keep-alive connection from serving the IPv4 retry.
         /** @var list<string> $connectToPerAttempt */
         $connectToPerAttempt = [];
         $capture = function (string $method, string $url, array $options) use (&$connectToPerAttempt): MockResponse {
             /** @var array<string, string> $resolve */
             $resolve = $options['resolve'];
-            /** @var array{curl: array<int, list<string>>} $extra */
-            $extra = $options['extra'];
-            $connectToPerAttempt[] = $extra['curl'][\CURLOPT_CONNECT_TO][0];
+            $connectToPerAttempt[] = PinnedRequestOptions::connectTo($options);
 
             return str_contains($resolve['dual.example.com'], ',')
                 ? new MockResponse('forbidden', ['http_code' => 403])

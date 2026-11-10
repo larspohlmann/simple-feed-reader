@@ -34,9 +34,8 @@ final class EgressOptions
     }
 
     /**
-     * The `resolve` pin for this family attempt, plus a connect-to alias for exactly these addresses. curl pools
-     * connections by host and port, and a pooled connection ignores `resolve`; the connect-to target is part of a
-     * connection's identity, so a connection is reused only by a request with the same pin.
+     * A pooled curl connection ignores `resolve`; the per-address-set connect-to alias keeps it from being reused under
+     * a different pin.
      *
      * @return array{resolve: array<string, string>, extra: array{curl: array<int, list<string>>}}
      */
@@ -54,9 +53,7 @@ final class EgressOptions
     }
 
     /**
-     * Request options overlaid with egress options; `extra` is merged, not replaced, so a caller's
-     * `use_persistent_connections` survives the pin's `extra.curl`, and `extra.curl` is overlaid per option so an
-     * egress list such as CURLOPT_CONNECT_TO replaces the caller's wholesale.
+     * Egress options overlay the request's; `extra` merges and `extra.curl` replaces per option.
      *
      * @param array<string, mixed> $options
      * @param array<string, mixed> $egress
@@ -85,9 +82,19 @@ final class EgressOptions
      */
     private static function extraOf(array $options): array
     {
-        $extra = $options['extra'] ?? [];
+        return self::arrayAt($options, 'extra');
+    }
 
-        return \is_array($extra) ? $extra : [];
+    /**
+     * @param array<mixed> $options
+     *
+     * @return array<mixed>
+     */
+    private static function arrayAt(array $options, string $key): array
+    {
+        $value = $options[$key] ?? [];
+
+        return \is_array($value) ? $value : [];
     }
 
     /**
@@ -97,9 +104,7 @@ final class EgressOptions
      */
     private static function curlOf(array $options): array
     {
-        $curl = self::extraOf($options)['curl'] ?? [];
-
-        return \is_array($curl) ? $curl : [];
+        return self::arrayAt(self::extraOf($options), 'curl');
     }
 
     private static function connectToHost(string $host): string
