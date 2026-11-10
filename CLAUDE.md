@@ -91,7 +91,9 @@ Non-negotiables:
 - **No hidden side effects.** A method named `get…` does not mutate or persist.
 - **Immutability by default.** `final readonly class` with constructor promotion is
   the house style (the majority of `src/` already is); prefer new instances over
-  setters. `final` unless the class is designed for extension.
+  setters. A wither copies with `clone($this, ['field' => $value])` when the
+  constructor only promotes, and carries `#[\NoDiscard]` (#2150, #2151).
+  `final` unless the class is designed for extension.
 - **One role per folder** ([docs/architecture.md](docs/architecture.md) §10).
   A service module's root holds stateless `final readonly` services; domain
   data goes to `Model/` (never importing a `Dto/`), transfer shapes to `Dto/`,
