@@ -347,10 +347,9 @@ any other.
 ## Running a console command on the server
 
 **The host has two PHP binaries, and the one on `PATH` is the wrong one.** They are the same
-build and differ only in SAPI. Measured on PHP 8.4.22 (2026-07-25); since #2148 the app runs
-on `RZphp85`/`php85`, whose 8.5.12 build was rechecked the same way on 2026-11-10:
+build and differ only in SAPI:
 
-| | `php84` (on `PATH`) | `/opt/RZphp84/bin/php-cli` |
+| | `php85` (on `PATH`) | `/opt/RZphp85/bin/php-cli` |
 | --- | --- | --- |
 | SAPI | cgi-fcgi | cli |
 | `max_execution_time` | **240s** | **0 — no ceiling** |
@@ -359,7 +358,7 @@ on `RZphp85`/`php85`, whose 8.5.12 build was rechecked the same way on 2026-11-1
 | `php -r` | unavailable | works |
 | `memory_limit`, extensions, `disable_functions`, `date.timezone` | 512M, all present, none, UTC | identical |
 
-`php84` is a symlink to the cgi-fcgi binary. It is what a shell finds, which is why every
+`php85` is a symlink to the cgi-fcgi binary. It is what a shell finds, which is why every
 earlier note here was written around its quirks, but it is not the binary you want: its 240
 second execution ceiling is enough to kill a migration on a table with real data, and MySQL
 commits DDL implicitly, so being killed halfway is not recoverable by a retry.
@@ -492,12 +491,12 @@ earlier review rounds had flagged as undiagnosable:
 | `mod_deflate` | yes — probed 2026-08-03 with a throwaway directory carrying its own `AddOutputFilterByType DEFLATE`: the response came back `content-encoding: gzip` with `vary: Accept-Encoding`, 13,600 B → 108 B. `AllowOverride` therefore permits `FileInfo` too. Nothing on the host compressed before #254 because nothing asked it to. |
 | `mod_authz_core` | yes — dotfile denied with 403 |
 | Symlinked directory served over the web | **yes** — 200 through a symlink in the docroot |
-| Web-context PHP | **8.4.22**, cgi-fcgi (8.5.12 since #2148, switched in the panel) |
+| Web-context PHP | **8.5.12**, cgi-fcgi — set in the Strato panel |
 | Required extensions | all present (ctype, dom, iconv, libxml, filter, mbstring, openssl, sodium, xml, pdo_mysql, curl, intl, tokenizer, session, json) |
 | `memory_limit` / `max_execution_time` | 512M / 240s |
 | opcache / `allow_url_fopen` / `disable_functions` | on / on / none |
 | `date.timezone` | UTC — matches how the app persists datetimes |
-| Shell-context PHP | **8.4.22 cli** at `/opt/RZphp84/bin/php-cli` — same build as the vhost's, not on `PATH`; 512M, `max_execution_time` **0**, all required extensions, no `disable_functions`, UTC, exit codes propagate |
+| Shell-context PHP | **8.5.12 cli** at `/opt/RZphp85/bin/php-cli` — same build as the vhost's, not on `PATH`; 512M, `max_execution_time` **0**, all required extensions, no `disable_functions`, UTC, exit codes propagate |
 
 The decisive detail for the subpath: a request to `/_probe/d/api/health` arrived with
 `SCRIPT_NAME=/_probe/d/index.php` and `REQUEST_URI=/_probe/d/api/health` — exactly the pair

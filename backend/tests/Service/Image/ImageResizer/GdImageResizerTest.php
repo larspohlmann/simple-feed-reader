@@ -25,9 +25,7 @@ final class GdImageResizerTest extends TestCase
         imagefill($image, 0, 0, $color);
         ob_start();
         imagejpeg($image);
-        $bytes = (string) ob_get_clean();
-
-        return $bytes;
+        return (string) ob_get_clean();
     }
 
     public function testCoverJpegProducesExactTargetDimensions(): void
@@ -86,9 +84,7 @@ final class GdImageResizerTest extends TestCase
         imagefilledrectangle($image, \intdiv($width, 2), 0, $width - 1, $height - 1, $blue);
         ob_start();
         imagejpeg($image, null, 100);
-        $bytes = (string) ob_get_clean();
-
-        return $bytes;
+        return (string) ob_get_clean();
     }
 
     private function decode(string $bytes): \GdImage

@@ -37,9 +37,8 @@ SHARED="${ROOT}/shared"
 # migration on a table with real data.
 #
 # /opt/RZphp85/bin/php-cli is the same build as the vhost's, differing only in
-# SAPI. Measured on the host 2026-07-25 (then RZphp84, 8.4.22) and rechecked on
-# 8.5.12 on 2026-11-10: max_execution_time 0 (no ceiling), memory
-# limit 512M as with cgi-fcgi, every extension this app requires present, empty
+# SAPI. Measured on the host: max_execution_time 0 (no ceiling), memory limit
+# 512M as with cgi-fcgi, every extension this app requires present, empty
 # disable_functions, date.timezone UTC, ordinary argument passing, and exit
 # codes propagate. The path shape is a Strato convention rather than a one-off:
 # php-cli exists identically under /opt/RZphp82, RZphp83, RZphp84 and RZphp85.
