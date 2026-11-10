@@ -12,7 +12,6 @@ use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Support\ResponseBody;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\RetryAfterHeader;
@@ -81,7 +80,7 @@ final readonly class FeedResponseExchange implements ResponseExchangeInterface
 
     public function onBody(ResponseInterface $response, FetchAttemptModel $attempt): FetchOutcomeModel
     {
-        $body = ResponseBody::decoded($response, ResponseSizeLimit::Feed);
+        $body = ResponseBody::decoded($response, $attempt->ticket->exchange->sizeLimit());
 
         return FetchOutcomeModel::succeeded(FetchResponseModel::fetched(
             $attempt->url,

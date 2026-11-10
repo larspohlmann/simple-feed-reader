@@ -11,7 +11,6 @@ use App\Service\Fetch\Model\ExchangeStepModel;
 use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Support\ResponseBody;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -44,7 +43,7 @@ final readonly class ApiResponseExchange implements ResponseExchangeInterface
     {
         return FetchOutcomeModel::answered(new ApiResponseModel(
             $response->getStatusCode(),
-            ResponseBody::decoded($response, ResponseSizeLimit::Api),
+            ResponseBody::decoded($response, $attempt->ticket->exchange->sizeLimit()),
             $response->getHeaders(false),
         ));
     }
