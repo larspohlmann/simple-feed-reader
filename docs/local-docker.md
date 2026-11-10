@@ -26,7 +26,7 @@ Nine services, started with one command from the repository root:
 | Service | Where |
 |---|---|
 | Frontend (Angular dev server, live reload) | http://localhost:4200 |
-| API (nginx → PHP-FPM 8.4) | https://localhost:8443 (http://localhost:8080 redirects there) |
+| API (nginx → PHP-FPM 8.5) | https://localhost:8443 (http://localhost:8080 redirects there) |
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 | Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |

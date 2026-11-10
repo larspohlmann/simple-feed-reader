@@ -184,7 +184,7 @@ final readonly class PasskeyFixtures
         string $aaguid,
     ): string {
         return hash('sha256', $relyingPartyId, true)
-            . \chr($flags)
+            . pack('C', $flags)
             . pack('N', $signCount)
             . $aaguid
             . pack('n', \strlen($credentialId))
@@ -215,7 +215,7 @@ final readonly class PasskeyFixtures
     private static function authenticatorDataForAssertion(string $relyingPartyId, int $signCount, int $flags): string
     {
         return hash('sha256', $relyingPartyId, true)
-            . \chr($flags)
+            . pack('C', $flags)
             . pack('N', $signCount);
     }
 
