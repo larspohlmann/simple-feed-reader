@@ -11,16 +11,13 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyPostLiker implements PostLikerInterface
 {
     public function __construct(private BlueskyRecords $records)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function like(SocialPostModel $post): SocialLikeResultModel

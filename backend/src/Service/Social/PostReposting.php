@@ -16,7 +16,7 @@ final readonly class PostReposting
     /** @param ServiceLocator<PostReposterInterface> $reposters */
     public function __construct(
         private ActingAccountGuard $guard,
-        #[AutowireLocator('app.social_post_reposter', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_post_reposter')]
         private ServiceLocator $reposters,
     ) {
     }

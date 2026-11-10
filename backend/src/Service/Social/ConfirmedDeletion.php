@@ -20,7 +20,7 @@ final readonly class ConfirmedDeletion
     /** @param ServiceLocator<HomeServerCheckInterface> $homeServers */
     public function __construct(
         private LocalPostRemoval $localRemoval,
-        #[AutowireLocator('app.social_home_server_check', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_home_server_check')]
         private ServiceLocator $homeServers,
     ) {
     }

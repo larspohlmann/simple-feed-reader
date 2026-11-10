@@ -13,17 +13,14 @@ use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Support\MastodonStatusAddress;
 use App\Service\Social\Support\PostCounts;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Asks the status's own instance, anonymously: the counts every reader of the post sees there. */
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonOriginCountsSource implements PostCountsSourceInterface
 {
     public function __construct(private MastodonApiClient $mastodon)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function countsOf(string $address): SocialCountsModel

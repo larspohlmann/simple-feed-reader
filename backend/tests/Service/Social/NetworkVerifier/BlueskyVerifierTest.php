@@ -19,6 +19,7 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -115,7 +116,7 @@ final class BlueskyVerifierTest extends TestCase
 
     public function testTheNetworkKeyIsBluesky(): void
     {
-        self::assertSame('bluesky', BlueskyVerifier::network());
+        self::assertSame('bluesky', TaggedItemOf::index(BlueskyVerifier::class));
     }
 
     public function testAnOutageOnTheSessionCallIsUnreachable(): void

@@ -23,6 +23,7 @@ use App\Service\Parser\FeedParser;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Sanitize\EntrySanitizer;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final readonly class CommentsFeedSource implements CommentsSourceInterface
@@ -33,6 +34,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         private EntrySanitizer $sanitizer,
         private HostThrottle $hostThrottle,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('commentsLimiter')]
         private RateLimiterFactoryInterface $commentsLimiter,
     ) {
     }

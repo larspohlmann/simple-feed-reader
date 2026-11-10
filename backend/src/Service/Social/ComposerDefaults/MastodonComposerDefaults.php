@@ -15,8 +15,10 @@ use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\SocialIdentity;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Mastodon's composer names the author and the thread's starter, never less private than the post it answers. */
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonComposerDefaults implements ComposerDefaultsInterface
 {
     private const string INSTANCE = '/api/v2/instance';
@@ -27,11 +29,6 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         private MastodonAccountApi $accountApi,
         private MastodonApiClient $mastodon,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel

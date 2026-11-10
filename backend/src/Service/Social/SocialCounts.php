@@ -29,7 +29,7 @@ final readonly class SocialCounts
         private SocialCountsCache $cache,
         private SocialPostFinder $posts,
         private ConfirmedDeletion $confirmedDeletion,
-        #[AutowireLocator('app.social_post_counts_source', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_post_counts_source')]
         private ContainerInterface $publicSources,
     ) {
     }

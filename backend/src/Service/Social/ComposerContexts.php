@@ -30,7 +30,7 @@ final readonly class ComposerContexts
         private SocialAccountRepository $socialAccounts,
         private SocialPostFinder $posts,
         private SharedPageCards $pageCards,
-        #[AutowireLocator('app.social_composer_defaults', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_composer_defaults')]
         private ServiceLocator $defaults,
     ) {
     }

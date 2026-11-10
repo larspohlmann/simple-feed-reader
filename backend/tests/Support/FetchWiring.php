@@ -84,11 +84,13 @@ final class FetchWiring
             $egressProxy,
             $retryPolicy,
             new ServiceLocator([
-                FeedResponseExchange::kind() => static fn (): FeedResponseExchange => new FeedResponseExchange($clock),
-                ApiResponseExchange::kind() => static fn (): ApiResponseExchange => new ApiResponseExchange(
-                    $retryPolicy,
-                    new CrossFamilyFailover(),
-                ),
+                TaggedItemOf::index(FeedResponseExchange::class)
+                    => static fn (): FeedResponseExchange => new FeedResponseExchange($clock),
+                TaggedItemOf::index(ApiResponseExchange::class)
+                    => static fn (): ApiResponseExchange => new ApiResponseExchange(
+                        $retryPolicy,
+                        new CrossFamilyFailover(),
+                    ),
             ]),
             $concurrency,
             'TestAgent/1.0',

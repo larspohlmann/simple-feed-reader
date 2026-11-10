@@ -8,7 +8,9 @@ use App\Service\Transcript\Model\TranscriptBudgetModel;
 use App\Service\Transcript\Model\TranscriptSweepReportModel;
 use App\Service\Transcript\TranscriptSweep;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'transcripts', priority: 60)]
 final readonly class TranscriptsTickSweep implements MaintenanceSweepInterface
 {
     private const int MAX_FETCHES = 10;
@@ -17,16 +19,6 @@ final readonly class TranscriptsTickSweep implements MaintenanceSweepInterface
         private TranscriptSweep $transcriptSweep,
         private ClockInterface $clock,
     ) {
-    }
-
-    public static function name(): string
-    {
-        return 'transcripts';
-    }
-
-    public static function priority(): int
-    {
-        return 60;
     }
 
     public function run(\DateTimeImmutable $deadline): TranscriptSweepReportModel

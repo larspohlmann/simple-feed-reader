@@ -27,13 +27,13 @@ final class LoginCodeStoreTest extends TestCase
     private LoginCodeStore $store;
 
     /**
-     * `storeSerialized: false` so getValues() returns the payload as the store
+     * `deepClone: false` so getValues() returns the payload as the store
      * wrote it; otherwise the "code is absent from the value" assertion would
      * be searching a serialised blob and could pass for the wrong reason.
      */
     protected function setUp(): void
     {
-        $this->cache = new ArrayAdapter(storeSerialized: false);
+        $this->cache = new ArrayAdapter(deepClone: false);
         $this->clock = new MockClock('2026-07-21 12:00:00');
         $this->store = new LoginCodeStore($this->cache, $this->clock);
     }

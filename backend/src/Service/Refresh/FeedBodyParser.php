@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 final readonly class FeedBodyParser
 {
     public function __construct(
-        #[AutowireLocator('app.feed_body_parser', defaultIndexMethod: 'format')]
+        #[AutowireLocator('app.feed_body_parser')]
         private ContainerInterface $parsers,
     ) {
     }

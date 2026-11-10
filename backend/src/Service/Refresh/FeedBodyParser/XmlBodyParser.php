@@ -7,20 +7,17 @@ namespace App\Service\Refresh\FeedBodyParser;
 use App\Enum\SourceFormat;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\Model\ParsedFeedModel;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
  * The default every feed row refreshes through: RSS/Atom documents, read by the FeedParser cascade that discovery
  * and preview share.
  */
+#[AsTaggedItem(index: SourceFormat::XML)]
 final readonly class XmlBodyParser implements FeedBodyParserInterface
 {
     public function __construct(private FeedParser $parser)
     {
-    }
-
-    public static function format(): string
-    {
-        return SourceFormat::XML;
     }
 
     public function parse(string $body, string $feedUrl): ParsedFeedModel

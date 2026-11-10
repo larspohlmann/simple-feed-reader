@@ -13,12 +13,14 @@ use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
 use App\Service\Social\Support\BlueskyRecordUri;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Asks the author's own PDS, anonymously, for the post record: only its RecordNotFound proves the post deleted.
  * A post named by handle proves nothing, as the handle may since belong to another account.
  */
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
 {
     private const string GET_RECORD = '/xrpc/com.atproto.repo.getRecord?';
@@ -28,11 +30,6 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
         private BlueskyApiClient $bluesky,
         private BlueskyIdentityResolver $identities,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function confirmsDeleted(string $address): bool

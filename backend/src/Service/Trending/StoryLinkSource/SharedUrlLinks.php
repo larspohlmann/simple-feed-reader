@@ -6,14 +6,11 @@ namespace App\Service\Trending\StoryLinkSource;
 
 use App\Service\Trending\Model\StoryLinkModel;
 use App\Service\Trending\Pass\TrendingRun;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'shared_url')]
 final readonly class SharedUrlLinks implements StoryLinkSourceInterface
 {
-    public static function key(): string
-    {
-        return 'shared_url';
-    }
-
     public function links(TrendingRun $run): array
     {
         $links = [];

@@ -15,9 +15,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.feed_body_parser')]
 interface FeedBodyParserInterface
 {
-    /** The Feed::sourceFormat this parser owns — its key in the locator. */
-    public static function format(): string;
-
     /**
      * @param string $feedUrl the address the body came from; it anchors relative links
      *

@@ -20,7 +20,9 @@ use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Support\CuratedBlueskyList;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\AbsoluteHttpUrl;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 {
     private const int PAGE_SIZE = 100;
@@ -29,11 +31,6 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
         private BlueskyApiClient $bluesky,
         private BlueskySavedCollections $savedCollections,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function candidates(SocialAccount $account): NetworkCandidatesModel

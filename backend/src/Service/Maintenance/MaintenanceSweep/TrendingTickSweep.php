@@ -6,21 +6,13 @@ namespace App\Service\Maintenance\MaintenanceSweep;
 
 use App\Service\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Trending\TrendingRebuild;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'trending', priority: 10)]
 final readonly class TrendingTickSweep implements MaintenanceSweepInterface
 {
     public function __construct(private TrendingRebuild $trendingRebuild)
     {
-    }
-
-    public static function name(): string
-    {
-        return 'trending';
-    }
-
-    public static function priority(): int
-    {
-        return 10;
     }
 
     public function run(\DateTimeImmutable $deadline): TrendingRebuildReportModel

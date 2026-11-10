@@ -10,6 +10,7 @@ use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\WebAdminSetup;
 use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,6 +25,7 @@ final readonly class SetupController
         private UserRepository $users,
         private WebAdminSetup $setup,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('setupLimiter')]
         private RateLimiterFactoryInterface $setupLimiter,
         private RegistrationPolicy $policy,
         private PasskeySignInAvailability $passkeySignInAvailability,

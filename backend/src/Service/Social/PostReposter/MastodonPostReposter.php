@@ -10,16 +10,13 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonStatusAction;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonPostReposter implements PostReposterInterface
 {
     public function __construct(private MastodonAccountApi $mastodon)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function repost(SocialPostModel $post): void

@@ -17,6 +17,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -221,7 +222,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
 
     public function testIsTheYouTubeSource(): void
     {
-        self::assertSame('youtube', YouTubePlayerDetailsSource::provider());
+        self::assertSame('youtube', TaggedItemOf::index(YouTubePlayerDetailsSource::class));
     }
 
     /** @param array<mixed> $body */

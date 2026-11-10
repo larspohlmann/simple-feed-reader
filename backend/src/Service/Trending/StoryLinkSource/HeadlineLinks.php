@@ -8,18 +8,15 @@ use App\Service\Trending\Model\HeadlineOverlapModel;
 use App\Service\Trending\Model\NearMissModel;
 use App\Service\Trending\Model\StoryLinkModel;
 use App\Service\Trending\Pass\TrendingRun;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Two entries whose headlines overlap enough: about three ordinary stems or two rare ones (#2017). */
+#[AsTaggedItem(index: 'headline')]
 final readonly class HeadlineLinks implements StoryLinkSourceInterface
 {
     private const float MIN_SHARED_WEIGHT = 14.0;
     private const float MIN_SHARE_OF_LIGHTER = 0.4;
     private const int SECONDS_PER_HOUR = 3_600;
-
-    public static function key(): string
-    {
-        return 'headline';
-    }
 
     public function links(TrendingRun $run): array
     {

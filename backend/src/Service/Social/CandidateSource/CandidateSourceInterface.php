@@ -15,8 +15,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_candidate_source')]
 interface CandidateSourceInterface
 {
-    public static function network(): string;
-
     /**
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkUnreachableException

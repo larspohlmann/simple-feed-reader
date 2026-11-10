@@ -20,8 +20,10 @@ use App\Service\Social\StoredCredential;
 use App\Service\Social\Support\LinkHeader;
 use App\Service\Social\Support\MastodonAccount;
 use App\Service\Social\Support\MastodonFollowedTag;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonCandidateSource implements CandidateSourceInterface
 {
     private const string LISTS = '/api/v1/lists';
@@ -32,11 +34,6 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
         private MastodonApiClient $mastodon,
         private StoredCredential $storedCredential,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function candidates(SocialAccount $account): NetworkCandidatesModel

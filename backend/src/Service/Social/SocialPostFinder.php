@@ -27,7 +27,7 @@ final readonly class SocialPostFinder
     public function __construct(
         private ActingAccountChooser $accounts,
         private ActingAccountGuard $guard,
-        #[AutowireLocator('app.social_post_resolver', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_post_resolver')]
         private ContainerInterface $resolvers,
     ) {
     }

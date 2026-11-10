@@ -22,7 +22,9 @@ use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyAuthor;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\PostCounts;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyPostResolver implements PostResolverInterface
 {
     private const string GET_POSTS = '/xrpc/app.bsky.feed.getPosts?uris=';
@@ -31,11 +33,6 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         private BlueskySessions $sessions,
         private BlueskyIdentityResolver $identities,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function resolve(SocialAccount $account, string $address): SocialPostModel

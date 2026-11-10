@@ -21,18 +21,15 @@ use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskySearchPage;
 use App\Service\Social\Support\BlueskyTimelinePage;
 use App\Service\Social\Support\SocialSearchPaths;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 50;
 
     public function __construct(private BlueskySessions $sessions)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function requests(SocialFeed $socialFeed): array

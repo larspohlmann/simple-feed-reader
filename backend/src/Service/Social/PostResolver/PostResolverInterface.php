@@ -18,8 +18,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_post_resolver')]
 interface PostResolverInterface
 {
-    public static function network(): string;
-
     /**
      * @throws SocialPostNotFoundException
      * @throws SocialCredentialsRejectedException

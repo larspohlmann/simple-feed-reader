@@ -28,7 +28,7 @@ final readonly class TimelineSelfThreads
         private EntryRepository $entries,
         private ThreadPostRepository $threadPosts,
         private SelfThreadFolder $folder,
-        #[AutowireLocator('app.social_reply_thread_source', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_reply_thread_source')]
         private ContainerInterface $threads,
     ) {
     }

@@ -15,6 +15,7 @@ use App\Service\Passkey\PasskeyRemoval;
 use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,6 +37,7 @@ final readonly class PasskeyController
         private PasskeyListing $listing,
         private PasskeyRemoval $removal,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('passkeyChallengeLimiter')]
         private RateLimiterFactoryInterface $passkeyChallengeLimiter,
         private PasskeySignInAvailability $availability,
     ) {

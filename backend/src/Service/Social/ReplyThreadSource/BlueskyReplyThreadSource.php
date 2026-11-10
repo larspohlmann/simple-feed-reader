@@ -15,9 +15,11 @@ use App\Service\Social\BlueskySessions;
 use App\Service\Social\BlueskyThreadReplies;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Support\AppViewAnswer;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Response;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterface
 {
     private const string GONE = 'The post is no longer on Bluesky.';
@@ -28,11 +30,6 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
         private BlueskyThreadReplies $replies,
         #[Autowire('%social_replies_max_depth%')] private int $maxDepth,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function asAccount(SocialAccount $account, string $address): CommentsAnswerModel

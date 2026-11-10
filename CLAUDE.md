@@ -1,6 +1,6 @@
 # simple-feed-reader
 
-Multi-user RSS/Atom reader. **Symfony 7.4 LTS JSON API** in `backend/` (PHP 8.5),
+Multi-user RSS/Atom reader. **Symfony 8.1 JSON API** in `backend/` (PHP 8.5),
 **Angular 20 SPA** in `frontend/` (Node 22). MySQL in production and Docker,
 SQLite for the native test run.
 
@@ -75,8 +75,8 @@ Non-negotiables:
   in a role folder (`…FactoryInterface`, `…ModelInterface`,
   `…ExceptionInterface`). A property holding a `…Factory` or `…FactoryInterface`
   ends in `Factory` too (`$tagFactory`, never `$tags`, which elsewhere names a
-  repository); Symfony's `RateLimiterFactoryInterface $…Limiter` keeps its name, as the
-  container binds it by that name. A property holding a repository or a
+  repository); Symfony's `RateLimiterFactoryInterface $…Limiter` keeps its name and carries
+  `#[Target('…Limiter')]`, as the container binds it by that name. A property holding a repository or a
   consumer-owned repository interface is named for what it holds (`$tags`,
   `$storedSettings`), never `$repository` or `$…Repo`. No name is a single letter
   or a truncated word, closure parameters, comparator operands, caught exceptions

@@ -8,6 +8,7 @@ use App\Dto\ClientError\ClientErrorReportRequest;
 use App\Entity\User;
 use App\Service\ClientError\ClientErrorRecorder;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -20,6 +21,7 @@ final readonly class ClientErrorController
 {
     public function __construct(
         private RateLimitGuard $rateLimitGuard,
+        #[Target('clientErrorsLimiter')]
         private RateLimiterFactoryInterface $clientErrorsLimiter,
         private ClientErrorRecorder $recorder,
     ) {

@@ -26,6 +26,7 @@ use App\Tests\Support\GzipBomb;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\ScriptedSettler;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -513,9 +514,10 @@ final class ConcurrentRequestEngineTest extends TestCase
             'GET ' . self::FEED => new MockResponse('<rss/>', ['response_headers' => ['Content-Type' => 'text/xml']]),
         ]);
         $feedOnly = new ServiceLocator([
-            FeedResponseExchange::kind() => static fn (): FeedResponseExchange => new FeedResponseExchange(
-                new MockClock(),
-            ),
+            TaggedItemOf::index(FeedResponseExchange::class)
+                => static fn (): FeedResponseExchange => new FeedResponseExchange(
+                    new MockClock(),
+                ),
         ]);
         $engine = new ConcurrentRequestEngine(
             $http->client(),

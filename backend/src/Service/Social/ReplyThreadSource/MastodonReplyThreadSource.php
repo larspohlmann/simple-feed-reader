@@ -16,7 +16,9 @@ use App\Service\Social\MastodonApiClient;
 use App\Service\Social\MastodonContextReplies;
 use App\Service\Social\PostResolver\MastodonPostResolver;
 use App\Service\Social\Support\MastodonStatusAddress;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInterface
 {
     public function __construct(
@@ -25,11 +27,6 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
         private MastodonApiClient $publicMastodon,
         private MastodonContextReplies $replies,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function asAccount(SocialAccount $account, string $address): CommentsAnswerModel

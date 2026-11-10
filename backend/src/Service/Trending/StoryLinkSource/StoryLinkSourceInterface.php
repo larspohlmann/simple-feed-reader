@@ -11,8 +11,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.story_link_source')]
 interface StoryLinkSourceInterface
 {
-    public static function key(): string;
-
     /** @return list<StoryLinkModel> each pair at most once */
     public function links(TrendingRun $run): array;
 }

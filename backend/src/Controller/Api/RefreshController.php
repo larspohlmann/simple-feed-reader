@@ -11,6 +11,7 @@ use App\Repository\NetworkScope;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Refresh\TrackedRefreshRunner;
 use App\Service\Refresh\UserRefreshScope;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -28,6 +29,7 @@ final readonly class RefreshController
         private TrackedRefreshRunner $trackedRefreshRunner,
         private UserRefreshScope $scope,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('refreshLimiter')]
         private RateLimiterFactoryInterface $refreshLimiter,
     ) {
     }

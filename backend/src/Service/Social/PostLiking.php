@@ -16,7 +16,7 @@ final readonly class PostLiking
 {
     public function __construct(
         private ActingAccountGuard $guard,
-        #[AutowireLocator('app.social_post_liker', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_post_liker')]
         private ContainerInterface $likers,
     ) {
     }

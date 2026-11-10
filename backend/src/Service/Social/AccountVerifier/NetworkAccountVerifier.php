@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 final readonly class NetworkAccountVerifier implements AccountVerifierInterface
 {
     public function __construct(
-        #[AutowireLocator('app.social_network_verifier', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_network_verifier')]
         private ContainerInterface $verifiers,
     ) {
     }

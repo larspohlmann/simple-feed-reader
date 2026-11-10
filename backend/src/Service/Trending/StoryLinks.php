@@ -14,7 +14,7 @@ final readonly class StoryLinks
 {
     /** @param ServiceProviderInterface<StoryLinkSourceInterface> $sources */
     public function __construct(
-        #[AutowireLocator('app.story_link_source', defaultIndexMethod: 'key')]
+        #[AutowireLocator('app.story_link_source')]
         private ServiceProviderInterface $sources,
     ) {
     }

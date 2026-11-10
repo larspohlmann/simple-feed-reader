@@ -53,8 +53,8 @@ final class TrendingWiring
     public static function storyLinks(): StoryLinks
     {
         return new StoryLinks(new ServiceLocator([
-            HeadlineLinks::key() => static fn (): HeadlineLinks => new HeadlineLinks(),
-            SharedUrlLinks::key() => static fn (): SharedUrlLinks => new SharedUrlLinks(),
+            TaggedItemOf::index(HeadlineLinks::class) => static fn (): HeadlineLinks => new HeadlineLinks(),
+            TaggedItemOf::index(SharedUrlLinks::class) => static fn (): SharedUrlLinks => new SharedUrlLinks(),
         ]));
     }
 

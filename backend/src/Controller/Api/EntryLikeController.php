@@ -9,6 +9,7 @@ use App\Http\SocialLikeJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\SocialLikes;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,6 +22,7 @@ final readonly class EntryLikeController
         private EntryListRepository $entryList,
         private SocialLikes $socialLikes,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('socialLikeLimiter')]
         private RateLimiterFactoryInterface $socialLikeLimiter,
     ) {
     }

@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Http\FeedPreviewJson;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -21,6 +22,7 @@ final readonly class FeedPreviewController
     public function __construct(
         private FeedPreviewService $previews,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('feedPreviewLimiter')]
         private RateLimiterFactoryInterface $feedPreviewLimiter,
     ) {
     }

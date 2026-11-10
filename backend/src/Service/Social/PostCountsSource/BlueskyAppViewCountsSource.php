@@ -12,16 +12,13 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Support\AppViewAnswer;
 use App\Service\Social\Support\PostCounts;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyAppViewCountsSource implements PostCountsSourceInterface
 {
     public function __construct(private AppViewClient $appView)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function countsOf(string $address): SocialCountsModel

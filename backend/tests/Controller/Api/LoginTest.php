@@ -174,7 +174,7 @@ final class LoginTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(429);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertResponseHeaderSame('Retry-After', '900');
+        self::assertResponseHeaderSame('Retry-After', '960');
         self::assertSame('rate_limited', $this->payload($client)['type']);
     }
 

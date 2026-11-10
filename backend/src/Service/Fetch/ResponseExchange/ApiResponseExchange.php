@@ -12,21 +12,18 @@ use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\ResponseExchangeKind;
 use App\Service\Fetch\Support\ResponseBody;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * An API's answer whatever its status, a redirect included; an error status another route may answer differently is
  * asked again over that route first, as FailoverRequestSender does for a blocking call.
  */
+#[AsTaggedItem(index: ResponseExchangeKind::Api->value)]
 final readonly class ApiResponseExchange implements ResponseExchangeInterface
 {
     public function __construct(private FetchRetryPolicy $retryPolicy, private CrossFamilyFailover $failover)
     {
-    }
-
-    public static function kind(): string
-    {
-        return ResponseExchangeKind::Api->value;
     }
 
     public function onHeaders(ResponseInterface $response, FetchAttemptModel $attempt): ExchangeStepModel

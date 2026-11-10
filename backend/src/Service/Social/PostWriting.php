@@ -19,7 +19,7 @@ final readonly class PostWriting
     /** @param ServiceLocator<PostWriterInterface> $writers */
     public function __construct(
         private ActingAccountGuard $guard,
-        #[AutowireLocator('app.social_post_writer', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_post_writer')]
         private ServiceLocator $writers,
     ) {
     }

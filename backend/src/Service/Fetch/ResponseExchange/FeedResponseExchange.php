@@ -17,6 +17,7 @@ use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\RetryAfterHeader;
 use App\Service\Fetch\Support\UrlResolver;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -25,6 +26,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * SECURITY: every redirect target goes back through UrlGuard before the next request; the fetcher sends
  * `max_redirects` 0, so the client never follows one.
  */
+#[AsTaggedItem(index: ResponseExchangeKind::Feed->value)]
 final readonly class FeedResponseExchange implements ResponseExchangeInterface
 {
     private const array REDIRECT_CODES = [
@@ -38,11 +40,6 @@ final readonly class FeedResponseExchange implements ResponseExchangeInterface
 
     public function __construct(private ClockInterface $clock)
     {
-    }
-
-    public static function kind(): string
-    {
-        return ResponseExchangeKind::Feed->value;
     }
 
     public function onHeaders(ResponseInterface $response, FetchAttemptModel $attempt): ExchangeStepModel

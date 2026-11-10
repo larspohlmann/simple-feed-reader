@@ -16,8 +16,6 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 #[AutoconfigureTag('app.response_exchange')]
 interface ResponseExchangeInterface
 {
-    public static function kind(): string;
-
     /**
      * @throws FetchException
      * @throws ExceptionInterface wrapped into a FetchException by the engine

@@ -13,8 +13,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.embed_details_source')]
 interface EmbedDetailsSourceInterface
 {
-    public static function provider(): string;
-
     /** @throws EmbedDescriptionUnreachableException */
     public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel;
 }

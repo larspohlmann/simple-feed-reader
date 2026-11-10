@@ -5,22 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** A maintenance sweep that records the deadlines it was run with. */
+#[AsTaggedItem(index: 'recording')]
 final class RecordingMaintenanceSweep implements MaintenanceSweepInterface
 {
     /** @var list<\DateTimeImmutable> */
     public array $deadlines = [];
-
-    public static function name(): string
-    {
-        return 'recording';
-    }
-
-    public static function priority(): int
-    {
-        return 0;
-    }
 
     public static function ran(): \stdClass
     {

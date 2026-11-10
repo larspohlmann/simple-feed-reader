@@ -8,18 +8,15 @@ use App\Enum\SocialNetwork;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Support\MastodonStatusAddress;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Asks the status's own instance, anonymously: only its 404 proves the status deleted. */
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonHomeServerCheck implements HomeServerCheckInterface
 {
     public function __construct(private MastodonApiClient $mastodon)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function confirmsDeleted(string $address): bool

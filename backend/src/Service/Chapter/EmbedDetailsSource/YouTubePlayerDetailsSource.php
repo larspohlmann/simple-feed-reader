@@ -12,8 +12,10 @@ use App\Service\Chapter\Model\EmbedDescriptionModel;
 use App\Service\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Fetch\Model\ApiRequestModel;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Reads a video's title, length and description from YouTube's player endpoint, which needs no key. */
+#[AsTaggedItem(index: ChapteredEmbed::YouTube->value)]
 final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInterface
 {
     private const string PLAYER = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
@@ -21,11 +23,6 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
 
     public function __construct(private GuardedDescriptionRequest $request, private LoggerInterface $logger)
     {
-    }
-
-    public static function provider(): string
-    {
-        return ChapteredEmbed::YouTube->value;
     }
 
     public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel

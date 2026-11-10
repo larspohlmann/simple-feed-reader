@@ -11,6 +11,7 @@ use App\Service\Account\AccountDeleter;
 use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Auth\RegistrationService;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -25,6 +26,7 @@ final readonly class MeController
         private AccountDeleter $accountDeleter,
         private RegistrationService $registration,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('resendVerificationLimiter')]
         private RateLimiterFactoryInterface $resendVerificationLimiter,
         private MeProfileJson $profile,
     ) {

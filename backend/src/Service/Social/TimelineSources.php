@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 final readonly class TimelineSources
 {
     public function __construct(
-        #[AutowireLocator('app.social_timeline_source', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_timeline_source')]
         private ContainerInterface $sources,
     ) {
     }

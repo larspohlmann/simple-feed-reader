@@ -21,8 +21,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_reply_thread_source')]
 interface ReplyThreadSourceInterface
 {
-    public static function network(): string;
-
     /**
      * The thread as the account's own server shows it to the account.
      *

@@ -17,7 +17,9 @@ use App\Service\Social\Model\PublishedPostModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
 use App\Service\Social\Support\BlueskyStrongRef;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyPostWriter implements PostWriterInterface
 {
     public const int MAX_GRAPHEMES = 300;
@@ -28,11 +30,6 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         private BlueskyFacets $facets,
         private BlueskyExternalEmbeds $externalEmbeds,
     ) {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel

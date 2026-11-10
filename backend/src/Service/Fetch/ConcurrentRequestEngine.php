@@ -43,7 +43,7 @@ final readonly class ConcurrentRequestEngine
         private UrlGuard $urlGuard,
         private EgressProxySourceInterface $egressProxySource,
         private FetchRetryPolicy $retryPolicy,
-        #[AutowireLocator('app.response_exchange', defaultIndexMethod: 'kind')]
+        #[AutowireLocator('app.response_exchange')]
         private ContainerInterface $exchanges,
         private int $concurrency,
         private string $userAgent,

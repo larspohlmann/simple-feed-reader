@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Http\ProxiedImageResponse;
 use App\Service\Image\ImageProxy\ImageProxyInterface;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -19,6 +20,7 @@ final readonly class ImageProxyController
     public function __construct(
         private ImageProxyInterface $imageProxy,
         private RateLimitGuard $rateLimitGuard,
+        #[Target('imageProxyLimiter')]
         private RateLimiterFactoryInterface $imageProxyLimiter,
     ) {
     }

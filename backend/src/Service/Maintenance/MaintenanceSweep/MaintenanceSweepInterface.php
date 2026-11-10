@@ -13,10 +13,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.maintenance_sweep')]
 interface MaintenanceSweepInterface
 {
-    public static function name(): string;
-
-    public static function priority(): int;
-
     /** A sweep with no budget of its own runs whole, whatever the deadline. */
     public function run(\DateTimeImmutable $deadline): object;
 
