@@ -32,6 +32,6 @@ final readonly class TimelinePageModel
     /** @param list<TimelineSelfReplyModel> $selfReplies */
     public function withSelfReplies(array $selfReplies): self
     {
-        return new self($this->parsed, $this->knownShares, $this->newestId, $selfReplies);
+        return clone($this, ['selfReplies' => $selfReplies]);
     }
 }

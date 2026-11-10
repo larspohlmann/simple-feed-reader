@@ -16,17 +16,15 @@ final readonly class PrivateFeedImportModel
     public function counting(PrivateFeedOutcome $outcome): self
     {
         return match ($outcome) {
-            PrivateFeedOutcome::Created => new self($this->added + 1, $this->alreadySubscribed, $this->overLimit),
-            PrivateFeedOutcome::AlreadySubscribed => new self(
-                $this->added,
-                $this->alreadySubscribed + 1,
-                $this->overLimit,
-            ),
+            PrivateFeedOutcome::Created => clone($this, ['added' => $this->added + 1]),
+            PrivateFeedOutcome::AlreadySubscribed => clone($this, [
+                'alreadySubscribed' => $this->alreadySubscribed + 1,
+            ]),
         };
     }
 
     public function countingOverLimit(): self
     {
-        return new self($this->added, $this->alreadySubscribed, $this->overLimit + 1);
+        return clone($this, ['overLimit' => $this->overLimit + 1]);
     }
 }

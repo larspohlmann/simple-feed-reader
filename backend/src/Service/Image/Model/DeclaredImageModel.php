@@ -37,7 +37,7 @@ final readonly class DeclaredImageModel
             }
         }
 
-        return new self($this->url, $this->width, $this->height, $renditions);
+        return clone($this, ['renditions' => $renditions]);
     }
 
     private function showsSamePictureAs(self $other, ImageIdentityModel $identity): bool

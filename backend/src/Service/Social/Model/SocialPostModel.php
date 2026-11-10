@@ -86,15 +86,12 @@ final readonly class SocialPostModel
         ?SocialCountsModel $counts = null,
         ?ResponseContextModel $responseContext = null,
     ): self {
-        return new self(
-            $this->account,
-            $this->postId,
-            $this->contentId,
-            $existingLikeId ?? $this->existingLikeId,
-            $existingRepostId ?? $this->existingRepostId,
-            $canRepost ?? $this->canRepost,
-            $counts ?? $this->counts,
-            $responseContext ?? $this->responseContext,
-        );
+        return clone($this, [
+            'existingLikeId' => $existingLikeId ?? $this->existingLikeId,
+            'existingRepostId' => $existingRepostId ?? $this->existingRepostId,
+            'canRepost' => $canRepost ?? $this->canRepost,
+            'counts' => $counts ?? $this->counts,
+            'responseContext' => $responseContext ?? $this->responseContext,
+        ]);
     }
 }

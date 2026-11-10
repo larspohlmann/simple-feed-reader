@@ -22,6 +22,6 @@ final readonly class ComposerDefaultsModel
 
     public function withoutMentions(): self
     {
-        return new self($this->maxCharacters, $this->visibility);
+        return clone($this, ['mentions' => []]);
     }
 }

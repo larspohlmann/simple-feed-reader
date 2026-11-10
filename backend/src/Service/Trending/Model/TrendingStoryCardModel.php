@@ -36,14 +36,12 @@ final readonly class TrendingStoryCardModel
      */
     public function withCopies(array $copies): self
     {
-        return new self(
-            $this->lead->withDuplicates(self::otherFeedsThan(
+        return clone($this, [
+            'lead' => $this->lead->withDuplicates(self::otherFeedsThan(
                 $this->lead,
                 self::newestPerFeed([...$this->lead->duplicates, ...$copies]),
             )),
-            $this->story,
-            $this->viewed,
-        );
+        ]);
     }
 
     /**

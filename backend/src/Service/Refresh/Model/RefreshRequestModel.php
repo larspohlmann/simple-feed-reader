@@ -39,37 +39,16 @@ final readonly class RefreshRequestModel
 
     public function withoutPruning(): self
     {
-        return new self(
-            $this->userId,
-            $this->target,
-            $this->force,
-            $this->budgetSeconds,
-            false,
-            $this->batchLimit,
-        );
+        return clone($this, ['prune' => false]);
     }
 
     public function ignoringSchedule(): self
     {
-        return new self(
-            $this->userId,
-            $this->target,
-            true,
-            $this->budgetSeconds,
-            $this->prune,
-            $this->batchLimit,
-        );
+        return clone($this, ['force' => true]);
     }
 
     public function limitedTo(int $batchLimit): self
     {
-        return new self(
-            $this->userId,
-            $this->target,
-            $this->force,
-            $this->budgetSeconds,
-            $this->prune,
-            $batchLimit,
-        );
+        return clone($this, ['batchLimit' => $batchLimit]);
     }
 }

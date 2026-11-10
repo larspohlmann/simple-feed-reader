@@ -20,29 +20,11 @@ final readonly class EntryCommentModel
 
     public function withPost(CommentPostModel $post): self
     {
-        return new self(
-            $this->author,
-            $this->url,
-            $this->publishedAt,
-            $this->html,
-            $this->byEntryAuthor,
-            $this->embeds,
-            $this->depth,
-            $post,
-        );
+        return clone($this, ['post' => $post]);
     }
 
     public function atDepth(int $depth): self
     {
-        return new self(
-            $this->author,
-            $this->url,
-            $this->publishedAt,
-            $this->html,
-            $this->byEntryAuthor,
-            $this->embeds,
-            $depth,
-            $this->post,
-        );
+        return clone($this, ['depth' => $depth]);
     }
 }

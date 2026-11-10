@@ -55,6 +55,6 @@ final readonly class ApiRequestModel
     /** @param array<string, string> $headers */
     public function withHeaders(array $headers): self
     {
-        return new self($this->method, $this->url, [...$this->headers, ...$headers], $this->json, $this->body);
+        return clone($this, ['headers' => [...$this->headers, ...$headers]]);
     }
 }

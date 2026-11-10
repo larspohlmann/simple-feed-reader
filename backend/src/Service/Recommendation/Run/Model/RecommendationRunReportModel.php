@@ -60,17 +60,7 @@ final readonly class RecommendationRunReportModel
     /** A pure status read: somebody else drives the run, so this request advanced nothing. */
     public function inBackground(): self
     {
-        return new self(
-            $this->status,
-            $this->batchesTotal,
-            $this->batchesDone,
-            $this->error,
-            background: true,
-            waitingForLock: $this->waitingForLock,
-            streamedChars: $this->streamedChars,
-            start: $this->start,
-            plan: $this->plan,
-        );
+        return clone($this, ['background' => true]);
     }
 
     /**
@@ -79,16 +69,6 @@ final readonly class RecommendationRunReportModel
      */
     public function waitingForLock(): self
     {
-        return new self(
-            $this->status,
-            $this->batchesTotal,
-            $this->batchesDone,
-            $this->error,
-            background: $this->background,
-            waitingForLock: true,
-            streamedChars: $this->streamedChars,
-            start: $this->start,
-            plan: $this->plan,
-        );
+        return clone($this, ['waitingForLock' => true]);
     }
 }

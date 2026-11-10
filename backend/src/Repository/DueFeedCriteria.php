@@ -31,13 +31,6 @@ final readonly class DueFeedCriteria
      */
     public function excluding(array $feedIds): self
     {
-        return new self(
-            $this->now,
-            $this->target,
-            $this->userId,
-            $this->force,
-            $this->cooldownCutoff,
-            $feedIds,
-        );
+        return clone($this, ['excludedFeedIds' => $feedIds]);
     }
 }
