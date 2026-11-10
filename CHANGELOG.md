@@ -10,6 +10,19 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Mastodon search with `||`.** A Mastodon search feed can combine up to eight
+alternatives in one feed.
+
+**Performance.** Unread and All views load faster, and the server answers faster
+under load thanks to class preloading and a larger PHP pool.
+
+**Bug fixes.** Dialogs and the sidebar behave properly again on mobile.
+
+**Under the hood.** Refactoring made the reader and feed-management code smaller
+and clearer.
+
 ## [v1.9.0] - 2026-11-08
 
 ### Highlights
