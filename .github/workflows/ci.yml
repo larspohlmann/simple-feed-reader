@@ -56,9 +56,6 @@ jobs:
       - name: Warm cache for symfony-lsp
         run: php bin/console cache:warmup
 
-      # PHPMD codesize was a local-only discipline gate and silently broke once
-      # (pdepend could not parse PHP 8.4 syntax, #183) — so the sweep now runs
-      # here too.
       - name: PHPMD (codesize)
         run: composer md
 
