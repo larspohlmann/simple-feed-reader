@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Subscription;
-use App\Entity\Tag;
 use App\Enum\FeedGroup;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -73,46 +72,6 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
             ->getSingleColumnResult();
 
         return array_map(intval(...), $ids);
-    }
-
-    /** @return list<int> */
-    public function idsIncludedInAllItemsForUser(int $userId): array
-    {
-        /** @var list<int|string> $ids */
-        $ids = $this->createQueryBuilder('s')
-            ->select('s.id')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->andWhere('s.includeInAllItems = true')
-            ->getQuery()
-            ->getSingleColumnResult();
-
-        return array_map(intval(...), $ids);
-    }
-
-    /** @return array<int, list<int>> tag id => the subscriptions carrying it or a tag below it, each once */
-    public function idsPerTagScopeForUser(int $userId): array
-    {
-        $qb = $this->createQueryBuilder('s')
-            ->select('DISTINCT scopeTag.id AS tagId', 's.id AS subscriptionId')
-            ->innerJoin('s.subscriptionTags', 'subscriptionTag')
-            ->innerJoin('subscriptionTag.tag', TagLineageDql::alias('lineage', 0));
-        TagLineageDql::joinAncestors($qb, 'lineage');
-        $qb->innerJoin(
-            Tag::class,
-            'scopeTag',
-            'ON',
-            TagLineageDql::reaches('lineage', 'scopeTag.id') . ' AND scopeTag.user = :userId',
-        )
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId);
-
-        $scopes = [];
-        /** @var list<array{tagId: int|string, subscriptionId: int|string}> $rows */
-        $rows = $qb->getQuery()->getScalarResult();
-        foreach ($rows as $row) {
-            $scopes[(int) $row['tagId']][] = (int) $row['subscriptionId'];
-        }
-
-        return $scopes;
     }
 
     /** @return list<Subscription> */

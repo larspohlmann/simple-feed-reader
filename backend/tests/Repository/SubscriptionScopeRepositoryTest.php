@@ -108,56 +108,6 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         );
     }
 
-    public function testEveryTagScopeListsItsCarriersAndItsChildrensEachOnce(): void
-    {
-        $user = $this->user('tag-scopes-owner@example.com');
-        $reading = new Tag($user, 'Reading');
-        $this->entityManager->persist($reading);
-        $longReads = new Tag($user, 'Long reads');
-        $longReads->setParent($reading);
-        $this->entityManager->persist($longReads);
-        $parentOnly = $this->fixtures()->subscribe($user, 'https://parent.example/feed.xml');
-        $parentOnly->addTag($reading, 0);
-        $childOnly = $this->fixtures()->subscribe($user, 'https://child.example/feed.xml');
-        $childOnly->addTag($longReads, 0);
-        $both = $this->fixtures()->subscribe($user, 'https://both.example/feed.xml');
-        $both->addTag($reading, 1);
-        $both->addTag($longReads, 1);
-        $this->fixtures()->subscribe($user, 'https://untagged.example/feed.xml');
-        $stranger = $this->user('tag-scopes-stranger@example.com');
-        $strangersTag = new Tag($stranger, 'Reading');
-        $this->entityManager->persist($strangersTag);
-        $this->fixtures()->subscribe($stranger, 'https://stranger.example/feed.xml')->addTag($strangersTag, 0);
-        $this->entityManager->flush();
-
-        $scopes = array_map(
-            static fn (array $ids): array => [...$ids],
-            $this->subscriptions()->idsPerTagScopeForUser($user->requireId()),
-        );
-        array_walk($scopes, sort(...));
-        ksort($scopes);
-
-        self::assertSame([
-            $reading->requireId() => [$parentOnly->requireId(), $childOnly->requireId(), $both->requireId()],
-            $longReads->requireId() => [$childOnly->requireId(), $both->requireId()],
-        ], $scopes);
-    }
-
-    public function testAllItemsHoldsOnlyTheUsersIncludedSubscriptions(): void
-    {
-        $user = $this->user('all-items-owner@example.com');
-        $included = $this->fixtures()->subscribe($user, 'https://included.example/feed.xml');
-        $this->fixtures()->subscribe($user, 'https://hidden.example/feed.xml')->setIncludeInAllItems(false);
-        $stranger = $this->user('all-items-stranger@example.com');
-        $this->fixtures()->subscribe($stranger, 'https://stranger.example/feed.xml');
-        $this->entityManager->flush();
-
-        self::assertSame(
-            [$included->requireId()],
-            $this->subscriptions()->idsIncludedInAllItemsForUser($user->requireId()),
-        );
-    }
-
     public function testATagScopeHoldsTheTagsCarriersAndItsChildrensEachOnce(): void
     {
         $user = $this->user('tag-scope-owner@example.com');

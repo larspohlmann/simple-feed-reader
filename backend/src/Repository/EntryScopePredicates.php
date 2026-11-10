@@ -41,12 +41,7 @@ final readonly class EntryScopePredicates
     }
 
     /** One row per tag a subscription carries, to group by the tag. */
-    public function joinTags(QueryBuilder $qb, EntryAliases $aliases): void
-    {
-        $qb->innerJoin(\sprintf('%s.subscriptionTags', $aliases->subscription), $aliases->tag);
-    }
-
-    public function joinNetworkFeeds(QueryBuilder $qb, EntryAliases $aliases): void
+    private function joinNetworkFeeds(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed)
             ->andWhere($aliases->networkKey() . ' IS NOT NULL');

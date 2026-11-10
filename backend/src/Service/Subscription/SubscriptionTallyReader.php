@@ -39,8 +39,8 @@ final readonly class SubscriptionTallyReader
             new UnreadTotalsModel(
                 $this->unreadCounts->allItems($userId, $perSubscription),
                 $this->unreadCounts->perTag($userId, $perSubscription),
-                $this->unreadCounts->perNetwork($userId),
-                $this->unreadCounts->perNetworkProfiles($userId),
+                $this->unreadCounts->perNetwork($userId, $perSubscription),
+                $this->unreadCounts->perNetworkProfiles($userId, $perSubscription),
                 $this->recommendationItems->countForYou($userId),
                 $this->unreadCounts->perFeedGroup($userId, $perSubscription),
             ),
