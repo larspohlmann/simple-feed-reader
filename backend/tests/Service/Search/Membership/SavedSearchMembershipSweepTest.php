@@ -129,7 +129,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
 
         self::assertTrue($second->caughtUp);
         self::assertSame(1, $second->entriesScanned);
-        self::assertSame(end($ids), $this->markOf($search));
+        self::assertSame(array_last($ids), $this->markOf($search));
     }
 
     public function testEntriesScannedSumsAcrossEveryChunkInOneRun(): void

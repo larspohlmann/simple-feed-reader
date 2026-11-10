@@ -152,8 +152,6 @@ final class BackupPartWalk
      */
     private function lastIdOf(array $batch, int $fallback): int
     {
-        $lastKey = array_key_last($batch);
-
-        return null === $lastKey ? $fallback : $batch[$lastKey]->requireId();
+        return array_last($batch)?->requireId() ?? $fallback;
     }
 }

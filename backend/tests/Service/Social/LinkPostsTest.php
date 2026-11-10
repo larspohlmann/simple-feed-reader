@@ -331,7 +331,7 @@ final class LinkPostsTest extends DbTestCase
             new PostDraftModel('Look'),
         );
 
-        $lastRequest = end($http->requests);
+        $lastRequest = array_last($http->requests);
         self::assertIsArray($lastRequest);
         self::assertSame(self::CREATE_RECORD, $lastRequest['method'] . ' ' . $lastRequest['url']);
         $created = json_decode($lastRequest['body'], true);

@@ -107,7 +107,7 @@ final class SearchReindexCommand extends Command
             $this->writer->upsert($this->indexer->toIndexedEntries($batch));
 
             $indexed += \count($batch);
-            $lastId = $batch[array_key_last($batch)]->requireId();
+            $lastId = array_last($batch)->requireId();
             $io->writeln(\sprintf('  %d indexed', $indexed));
 
             // Keeps the run's memory bounded over a full table: without this,

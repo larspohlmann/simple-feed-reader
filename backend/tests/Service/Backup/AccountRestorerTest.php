@@ -661,7 +661,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertInstanceOf(Subscription::class, $subscription);
         $subscriptionTags = $subscription->getSubscriptionTags();
         self::assertCount(1, $subscriptionTags);
-        $subscriptionTag = reset($subscriptionTags);
+        $subscriptionTag = array_first($subscriptionTags);
         self::assertInstanceOf(SubscriptionTag::class, $subscriptionTag);
 
         $feed = $subscription->getFeed();
