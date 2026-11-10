@@ -411,6 +411,21 @@ larger body ends the call with the bare status sentence. Both that client and th
 carries the account's `user_id`. The connection's API key is replaced by `[redacted]` wherever it appears in the
 reason, and only then is the reason clipped to 500 characters, so a key the clip would cut leaves no prefix.
 
+## Rate limits
+
+Every limited endpoint calls `RateLimitGuard` from its action: `enforceForUser()` keys the bucket on the verified user
+id, `enforceForClient()` on `Request::getClientIp()`. Where the call sits is part of the rule. An action that loads an
+entry, a configuration or an account first checks ownership and only then spends the budget, so an unknown or
+foreign id answers 404 without draining the caller's allowance (`EntryReaderController` limits only when there is a
+page to fetch). A refused call answers the `rate_limited` problem with a `Retry-After` of at least 1 second; 0 would
+read as "now".
+
+Symfony 8.1's `#[RateLimit]` attribute does not replace the guard (decided in #2156). It consumes before the action
+runs, so it cannot follow an ownership check or a condition (30 of the 50 calls do); its `Retry-After` comes from
+`time()` and may be 0, bypassing the injected clock; its 429 is a bare `TooManyRequestsHttpException`, not the
+`rate_limited` problem; and a per-user key needs a closure on every attribute. Converting only the 20 calls that
+open their action would leave two mechanisms side by side.
+
 ## Self-update (updater)
 
 The optional `updater` container (compose profile `updater`, off unless the operator enabled it) mounts the Docker
