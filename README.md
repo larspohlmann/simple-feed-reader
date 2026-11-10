@@ -68,7 +68,8 @@ More in the [screenshot gallery](docs/screenshots.md).
 - **Podcasts, SoundCloud, Mixcloud and YouTube** — paste a profile, show or
   channel link and subscribe; audio plays in a persistent playlist.
 - **Bluesky and Mastodon** — connect an account and its timelines, lists and
-  follows arrive as feeds.
+  follows arrive as feeds; save a search and its new matches arrive as a feed
+  too.
 - **Feed discovery** from a website's address, feed previews before you
   subscribe, OPML import and export, tags with colors and icons.
 - **Trending** — the stories several of your feeds are covering, from the last
