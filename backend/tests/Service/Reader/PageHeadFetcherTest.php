@@ -53,6 +53,25 @@ final class PageHeadFetcherTest extends TestCase
         return $fetcher->fetch('https://example.com/huge')->head;
     }
 
+    public function testTheHeadIsRequestedUncompressed(): void
+    {
+        /** @var list<string> $seenHeaders */
+        $seenHeaders = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenHeaders): MockResponse {
+                /** @var list<string> $headers */
+                $headers = $options['headers'];
+                $seenHeaders = $headers;
+
+                return new MockResponse('<html lang="en"><head></head><body>ok</body></html>', ['http_code' => 200]);
+            },
+        );
+
+        $fetcher->fetch('https://example.com/post');
+
+        self::assertContains('Accept-Encoding: identity', $seenHeaders);
+    }
+
     public function testAHeadStopsReadingOnceTheHeadHasEnded(): void
     {
         $opening = str_pad('<html lang="en"><head><title>Story</title></head><body>', 20_000);
