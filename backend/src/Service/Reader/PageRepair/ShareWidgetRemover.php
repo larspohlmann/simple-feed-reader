@@ -51,7 +51,7 @@ final readonly class ShareWidgetRemover implements PageRepairInterface
     private function elementsWithClass(HTMLDocument $document): array
     {
         $elements = [];
-        foreach ((new XPath($document))->query('//*[@class]') as $node) {
+        foreach (new XPath($document)->query('//*[@class]') as $node) {
             if ($node instanceof Element) {
                 $elements[] = $node;
             }

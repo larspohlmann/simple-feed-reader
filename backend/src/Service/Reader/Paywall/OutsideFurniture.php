@@ -24,7 +24,7 @@ final readonly class OutsideFurniture
 
     public function holdsMatchFor(HTMLDocument $document, string $xpath): bool
     {
-        foreach ((new XPath($document))->query($xpath) as $element) {
+        foreach (new XPath($document)->query($xpath) as $element) {
             if ($element instanceof Element && !self::isDocumentRoot($element) && !$this->furniture->holds($element)) {
                 return true;
             }

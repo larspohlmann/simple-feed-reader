@@ -38,7 +38,7 @@ final readonly class PageMediaScanner
         // rescues it, or it is dropped before it reaches the client.
         $withPosters = $this->withResolvedPosters($reconciled, $feedMedia->posterFallback());
 
-        return (new ArticleMediaModel(\array_slice($withPosters, 0, ArticleMediaModel::MAX_ITEMS)))
+        return new ArticleMediaModel(\array_slice($withPosters, 0, ArticleMediaModel::MAX_ITEMS))
             ->withoutRedundantStreams();
     }
 

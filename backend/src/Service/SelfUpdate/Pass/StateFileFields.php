@@ -44,7 +44,7 @@ final readonly class StateFileFields
         }
 
         try {
-            return (new \DateTimeImmutable($this->requiredString($name)))->setTimezone(new \DateTimeZone('UTC'));
+            return new \DateTimeImmutable($this->requiredString($name))->setTimezone(new \DateTimeZone('UTC'));
         } catch (\DateMalformedStringException $exception) {
             throw new MalformedUpdateStateException(
                 sprintf('%s carries an unreadable "%s".', $this->fileName, $name),

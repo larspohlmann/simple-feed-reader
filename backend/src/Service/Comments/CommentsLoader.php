@@ -46,7 +46,7 @@ final readonly class CommentsLoader
     {
         $source = $this->sourceOrNull($entry);
         if (null !== $source) {
-            $this->cache->forget((new CommentsRequest($source, $user, $entry))->cacheKey);
+            $this->cache->forget(new CommentsRequest($source, $user, $entry)->cacheKey);
         }
     }
 

@@ -78,13 +78,13 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             throw new FeedParseException('Atom feed had neither a title nor any entries');
         }
 
-        return (new ParsedFeedModel(
+        return new ParsedFeedModel(
             PlainText::from($title),
             self::alternateLink($feed),
             $feed->text($this->descriptionElement()),
             FeedImageExtractor::fromAtomFeed($feed),
             $entries,
-        ))->withShowArtwork(PodcastArtwork::of($root));
+        )->withShowArtwork(PodcastArtwork::of($root));
     }
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel

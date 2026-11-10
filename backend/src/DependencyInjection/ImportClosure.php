@@ -36,7 +36,7 @@ final class ImportClosure
         }
 
         $this->modules[$module] = $this->sourceDirectory . '/Service/' . $module;
-        foreach ((new Finder())->files()->in($this->modules[$module])->name('*.php') as $file) {
+        foreach (new Finder()->files()->in($this->modules[$module])->name('*.php') as $file) {
             $this->moduleFiles[] = $file->getPathname();
             $this->followFile($file->getPathname());
         }

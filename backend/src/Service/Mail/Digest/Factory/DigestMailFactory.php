@@ -39,7 +39,7 @@ final readonly class DigestMailFactory
         $text = $this->textRenderer->render($model, $locale);
 
         $identity = $this->mailSettings->identity();
-        $email = (new Email())
+        $email = new Email()
             ->from(new Address($identity->address, $identity->name))
             ->to($user->getEmail())
             ->subject($text->subject)

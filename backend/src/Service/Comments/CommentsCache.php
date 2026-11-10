@@ -31,7 +31,7 @@ final readonly class CommentsCache
     public function remember(string $key, CommentsAnswerModel $answer, \DateTimeImmutable $fetchedAt): void
     {
         $item = $this->cache->getItem(self::keyOf($key));
-        $item->set((new CachedCommentsModel($answer->body, $fetchedAt))->toCacheEntry());
+        $item->set(new CachedCommentsModel($answer->body, $fetchedAt)->toCacheEntry());
         $item->expiresAt($fetchedAt->setTimestamp($fetchedAt->getTimestamp() + $this->lifetimeOf($answer)));
         $this->cache->save($item);
     }

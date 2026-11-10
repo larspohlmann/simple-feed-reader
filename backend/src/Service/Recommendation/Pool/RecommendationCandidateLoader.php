@@ -32,7 +32,7 @@ final readonly class RecommendationCandidateLoader
         );
 
         /** @var list<ArticleLineModel> $shuffled shuffleArray() has no generic stub, so it widens to mixed */
-        $shuffled = (new Randomizer(new Mt19937($request->orderSeed)))->shuffleArray($lines);
+        $shuffled = new Randomizer(new Mt19937($request->orderSeed))->shuffleArray($lines);
 
         return $shuffled;
     }
@@ -84,8 +84,8 @@ final readonly class RecommendationCandidateLoader
 
         return new CandidatePoolSummaryModel(
             total: (int) $row['total'],
-            oldest: (new \DateTimeImmutable($oldest))->format('Y-m-d'),
-            newest: (new \DateTimeImmutable($newest))->format('Y-m-d'),
+            oldest: new \DateTimeImmutable($oldest)->format('Y-m-d'),
+            newest: new \DateTimeImmutable($newest)->format('Y-m-d'),
         );
     }
 }

@@ -72,7 +72,7 @@ final readonly class MailConnectionTester
     ): MailTestResultModel {
         try {
             $transport->send(
-                (new Email())
+                new Email()
                     ->from(new Address($identity->address, $identity->name))
                     ->to($recipient)
                     ->subject('Simple Feed Reader test message')

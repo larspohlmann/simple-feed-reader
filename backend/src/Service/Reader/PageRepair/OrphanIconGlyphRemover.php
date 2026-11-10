@@ -52,7 +52,7 @@ final readonly class OrphanIconGlyphRemover implements PageRepairInterface
     private function textNodes(HTMLDocument $document): array
     {
         $nodes = [];
-        foreach ((new XPath($document))->query('//text()') as $node) {
+        foreach (new XPath($document)->query('//text()') as $node) {
             if ($node instanceof Text) {
                 $nodes[] = $node;
             }

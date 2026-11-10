@@ -91,8 +91,8 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
     private static function spanSeconds(string $startedAt, string $finishedAt): float
     {
         return (float) (
-            (new \DateTimeImmutable($finishedAt))->getTimestamp()
-            - (new \DateTimeImmutable($startedAt))->getTimestamp()
+            new \DateTimeImmutable($finishedAt)->getTimestamp()
+            - new \DateTimeImmutable($startedAt)->getTimestamp()
         );
     }
 }

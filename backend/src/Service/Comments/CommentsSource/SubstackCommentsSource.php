@@ -71,7 +71,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         $nodes = JsonNodeModel::of(json_decode($answer, true))->listAt('comments')
             ?? throw new CommentsUnavailableException('Substack answered without a comment list.');
 
-        return new CommentsPageModel((new SubstackThread(self::postOf($entry), $entry->getAuthor()))->comments($nodes));
+        return new CommentsPageModel(new SubstackThread(self::postOf($entry), $entry->getAuthor())->comments($nodes));
     }
 
     /** @throws FetchException */

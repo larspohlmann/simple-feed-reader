@@ -61,7 +61,7 @@ final readonly class UserPasskeyFactory
     /** The spec's all-zero "no AAGUID assigned" is stored as null, not as an identifier that looks real. */
     private static function aaguidOrNull(Uuid $aaguid): ?string
     {
-        return (new NilUuid())->equals($aaguid) ? null : $aaguid->toRfc4122();
+        return new NilUuid()->equals($aaguid) ? null : $aaguid->toRfc4122();
     }
 
     /**

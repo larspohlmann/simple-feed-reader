@@ -36,9 +36,9 @@ final class PasskeyCeremony
 
     public function serializer(): SerializerInterface
     {
-        return $this->serializer ??= (new WebauthnSerializerFactory(
+        return $this->serializer ??= new WebauthnSerializerFactory(
             AttestationStatementSupportManager::create(),
-        ))->create();
+        )->create();
     }
 
     /**
