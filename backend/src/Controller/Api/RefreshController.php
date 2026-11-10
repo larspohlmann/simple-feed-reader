@@ -29,7 +29,7 @@ final readonly class RefreshController
         private TrackedRefreshRunner $trackedRefreshRunner,
         private UserRefreshScope $scope,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('refreshLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $refreshLimiter,
     ) {
     }

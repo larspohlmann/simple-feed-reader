@@ -22,7 +22,7 @@ final readonly class FeedPreviewController
     public function __construct(
         private FeedPreviewService $previews,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('feedPreviewLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $feedPreviewLimiter,
     ) {
     }

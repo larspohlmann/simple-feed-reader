@@ -26,7 +26,7 @@ final readonly class EntryReaderController
         private EntryArticleReader $articleReader,
         private OriginalHeroResolver $originalHero,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('readerLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }

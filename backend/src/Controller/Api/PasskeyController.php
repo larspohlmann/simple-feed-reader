@@ -37,7 +37,7 @@ final readonly class PasskeyController
         private PasskeyListing $listing,
         private PasskeyRemoval $removal,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('passkeyChallengeLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $passkeyChallengeLimiter,
         private PasskeySignInAvailability $availability,
     ) {

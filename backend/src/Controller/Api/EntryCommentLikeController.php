@@ -24,7 +24,7 @@ final readonly class EntryCommentLikeController
         private EntryListRepository $entryList,
         private SocialCommentLikes $commentLikes,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialLikeLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialLikeLimiter,
     ) {
     }

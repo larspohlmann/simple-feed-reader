@@ -39,7 +39,7 @@ final readonly class AiSettingsController
         private AiConfigurationEditor $editor,
         private AiConfigurationForUser $configurations,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('aiProviderLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $aiProviderLimiter,
         private AiSettingsJson $settingsJson,
     ) {

@@ -32,9 +32,9 @@ final readonly class EntrySocialPostController
         private SocialResponses $responses,
         private OwnPostDeletion $ownPosts,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialViewerLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialViewerLimiter,
-        #[Target('socialWritesLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialWritesLimiter,
     ) {
     }

@@ -24,7 +24,7 @@ final readonly class EntryRepostController
         private EntryListRepository $entryList,
         private SocialReposts $reposts,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialWritesLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialWritesLimiter,
     ) {
     }

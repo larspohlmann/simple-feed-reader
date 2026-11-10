@@ -27,7 +27,7 @@ final readonly class SocialSearchController
     public function __construct(
         private SocialAccountForUser $socialAccount,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialSearchPreviewLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialSearchPreviewLimiter,
         private SocialSearchInterface $socialSearch,
         private SocialSearchPreviewJson $searchPreviewJson,

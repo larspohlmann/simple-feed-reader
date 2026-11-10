@@ -25,7 +25,7 @@ final readonly class SignedUrlReaderController
         private ClockInterface $clock,
         private ArticleExtractorInterface $extractor,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('readerLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }

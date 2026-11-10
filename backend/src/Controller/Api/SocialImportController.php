@@ -26,7 +26,7 @@ final readonly class SocialImportController
         private ImportCandidates $importCandidates,
         private SocialImporter $importer,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialImportLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialImportLimiter,
         private SocialImportJson $importJson,
     ) {

@@ -34,9 +34,9 @@ final readonly class AuthController
         private RegistrationPolicy $policy,
         private AltchaService $altcha,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('registrationLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $registrationLimiter,
-        #[Target('passwordResetRequestLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $passwordResetRequestLimiter,
     ) {
     }

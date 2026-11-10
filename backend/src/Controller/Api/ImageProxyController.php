@@ -20,7 +20,7 @@ final readonly class ImageProxyController
     public function __construct(
         private ImageProxyInterface $imageProxy,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('imageProxyLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $imageProxyLimiter,
     ) {
     }

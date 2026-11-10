@@ -26,7 +26,7 @@ final readonly class DigestSettingsController
         private SendTestDigest $sendTestDigest,
         private TestDigestEligibility $testDigestEligibility,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('digestTestLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $digestTestLimiter,
         private MeProfileJson $profile,
     ) {

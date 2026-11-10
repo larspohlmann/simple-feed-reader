@@ -23,7 +23,7 @@ final readonly class EntrySocialCountsController
         private EntryListRepository $entryList,
         private SocialCounts $socialCounts,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialCountsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialCountsLimiter,
     ) {
     }

@@ -22,7 +22,7 @@ final readonly class EntrySocialViewerController
         private EntryListRepository $entryList,
         private SocialLikes $socialLikes,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialViewerLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialViewerLimiter,
     ) {
     }

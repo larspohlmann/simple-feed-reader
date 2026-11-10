@@ -76,7 +76,7 @@ Non-negotiables:
   `…ExceptionInterface`). A property holding a `…Factory` or `…FactoryInterface`
   ends in `Factory` too (`$tagFactory`, never `$tags`, which elsewhere names a
   repository); Symfony's `RateLimiterFactoryInterface $…Limiter` keeps its name and carries
-  `#[Target('…Limiter')]`, as the container binds it by that name. A property holding a repository or a
+  a bare `#[Target]`, as the container binds it by that name. A property holding a repository or a
   consumer-owned repository interface is named for what it holds (`$tags`,
   `$storedSettings`), never `$repository` or `$…Repo`. No name is a single letter
   or a truncated word, closure parameters, comparator operands, caught exceptions

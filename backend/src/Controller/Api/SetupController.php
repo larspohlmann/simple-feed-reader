@@ -25,7 +25,7 @@ final readonly class SetupController
         private UserRepository $users,
         private WebAdminSetup $setup,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('setupLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $setupLimiter,
         private RegistrationPolicy $policy,
         private PasskeySignInAvailability $passkeySignInAvailability,

@@ -48,7 +48,7 @@ final readonly class OAuthController
         private OAuthSignIn $signIn,
         private OAuthCallback $callback,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('oauthStartLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $oauthStartLimiter,
         private FlowCookie $flowCookie,
         private OAuthRedirectFactory $oauthRedirectFactory,

@@ -27,9 +27,9 @@ final readonly class SocialLinkPostController
     public function __construct(
         private LinkPosts $links,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialViewerLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialViewerLimiter,
-        #[Target('socialWritesLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialWritesLimiter,
     ) {
     }

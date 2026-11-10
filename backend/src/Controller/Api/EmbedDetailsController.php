@@ -22,7 +22,7 @@ final readonly class EmbedDetailsController
     public function __construct(
         private EmbedDetails $embedDetails,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('embedDetailsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $embedDetailsLimiter,
     ) {
     }

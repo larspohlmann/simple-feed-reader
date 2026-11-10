@@ -47,7 +47,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         private ContainerInterface $threads,
         private ReplyThreadOrder $order,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialRepliesLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialRepliesLimiter,
         private SocialAccountRepository $socialAccounts,
     ) {

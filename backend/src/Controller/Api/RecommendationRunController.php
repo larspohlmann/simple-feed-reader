@@ -33,9 +33,9 @@ final readonly class RecommendationRunController
         private RecommendationRunCanceller $canceller,
         private RecommendationRunStatusResolver $status,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('aiRecommendationsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
-        #[Target('aiRecommendationStartsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
     ) {
     }

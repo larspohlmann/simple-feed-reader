@@ -21,7 +21,7 @@ final readonly class ClientErrorController
 {
     public function __construct(
         private RateLimitGuard $rateLimitGuard,
-        #[Target('clientErrorsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $clientErrorsLimiter,
         private ClientErrorRecorder $recorder,
     ) {

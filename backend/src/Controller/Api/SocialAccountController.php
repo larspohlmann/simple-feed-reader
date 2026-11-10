@@ -30,7 +30,7 @@ final readonly class SocialAccountController
         private SocialAccountEditor $editor,
         private SocialAccountForUser $socialAccount,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('socialAccountLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $socialAccountLimiter,
         private SocialAccountJson $accountJson,
         private PrivateFeedSyncChangeRepository $syncChanges,

@@ -28,7 +28,7 @@ final readonly class ProfileRunStarter
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('aiProfileRunsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $aiProfileRunsLimiter,
     ) {
     }

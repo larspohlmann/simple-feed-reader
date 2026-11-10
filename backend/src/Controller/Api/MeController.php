@@ -26,7 +26,7 @@ final readonly class MeController
         private AccountDeleter $accountDeleter,
         private RegistrationService $registration,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('resendVerificationLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $resendVerificationLimiter,
         private MeProfileJson $profile,
     ) {

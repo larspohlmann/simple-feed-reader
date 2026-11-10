@@ -22,7 +22,7 @@ final readonly class EntryCompletionController
     public function __construct(
         private EntryCompletion $completion,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('entryCompletionLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $entryCompletionLimiter,
         private EntryJson $entryJson,
     ) {

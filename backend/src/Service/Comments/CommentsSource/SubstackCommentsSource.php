@@ -30,7 +30,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         private FeedFetcherInterface $fetcher,
         private HostThrottle $hostThrottle,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('commentsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $commentsLimiter,
     ) {
     }

@@ -34,7 +34,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         private EntrySanitizer $sanitizer,
         private HostThrottle $hostThrottle,
         private RateLimitGuard $rateLimitGuard,
-        #[Target('commentsLimiter')]
+        #[Target]
         private RateLimiterFactoryInterface $commentsLimiter,
     ) {
     }
