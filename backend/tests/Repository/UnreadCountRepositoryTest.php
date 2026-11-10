@@ -68,7 +68,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($topFeed, 'top-entry', null);
         $this->unreadEntry($essayOnlyFeed, 'essay-only-entry', null);
 
-        $counts = $this->repository()->perTag($user->requireId());
+        $counts = $this->perTag($user);
         ksort($counts);
 
         self::assertSame(
@@ -128,7 +128,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($feedB, 'b', 'shared-hash');
         $this->unreadEntry($feedB, 'unique', null);
 
-        self::assertSame(3, $this->repository()->allItems($user->requireId()));
+        self::assertSame(3, $this->allItems($user));
     }
 
     public function testAllItemsSkipsFeedsExcludedFromAllItems(): void
@@ -140,7 +140,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($excludedFeed, 'excluded-copy', 'shared-hash');
         $this->unreadEntry($includedFeed, 'included-copy', 'shared-hash');
 
-        self::assertSame(1, $this->repository()->allItems($user->requireId()));
+        self::assertSame(1, $this->allItems($user));
     }
 
     public function testATagCountsEveryCopyItHolds(): void
@@ -154,7 +154,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($feedA, 'a', 'shared-hash');
         $this->unreadEntry($feedB, 'b', 'shared-hash');
 
-        $counts = $this->repository()->perTag($user->requireId());
+        $counts = $this->perTag($user);
 
         self::assertSame(2, $counts[$tag->requireId()] ?? 0);
     }
@@ -169,7 +169,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($untaggedFeed, 'untagged-copy', 'shared-hash');
         $this->unreadEntry($taggedFeed, 'tagged-copy', 'shared-hash');
 
-        $counts = $this->repository()->perTag($user->requireId());
+        $counts = $this->perTag($user);
 
         self::assertSame(1, $counts[$tag->requireId()] ?? 0);
     }
@@ -184,7 +184,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $subscription->addTag($tech);
         $this->unreadEntry($feed, 'a', null);
 
-        $counts = $this->repository()->perTag($user->requireId());
+        $counts = $this->perTag($user);
 
         self::assertSame([$news->requireId() => 1, $tech->requireId() => 1], $counts);
     }
@@ -205,7 +205,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($childFeed, 'child-entry', null);
         $this->unreadEntry($bothFeed, 'both-entry', null);
 
-        $counts = $this->repository()->perTag($user->requireId());
+        $counts = $this->perTag($user);
 
         self::assertSame(3, $counts[$reading->requireId()] ?? 0);
         self::assertSame(2, $counts[$longReads->requireId()] ?? 0);
@@ -220,7 +220,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $childOnly->addTag($longReads);
         $this->unreadEntry($childFeed, 'child-entry', null);
 
-        $counts = $this->repository()->perTag($user->requireId());
+        $counts = $this->perTag($user);
 
         self::assertSame(1, $counts[$reading->requireId()] ?? 0);
         self::assertSame(1, $counts[$longReads->requireId()] ?? 0);
@@ -299,7 +299,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
 
         self::assertSame(
             [FeedGroup::Tags->value => 1, FeedGroup::Feeds->value => 1],
-            $this->repository()->perFeedGroup($user->requireId()),
+            $this->perFeedGroup($user),
         );
     }
 
@@ -314,8 +314,31 @@ final class UnreadCountRepositoryTest extends DbTestCase
 
         self::assertSame(
             [FeedGroup::Tags->value => 0, FeedGroup::Feeds->value => 1],
-            $this->repository()->perFeedGroup($user->requireId()),
+            $this->perFeedGroup($user),
         );
+    }
+
+    /** @return array<int, int> */
+    private function perTag(User $user): array
+    {
+        return $this->repository()->perTag($user->requireId(), $this->perSubscription($user));
+    }
+
+    private function allItems(User $user): int
+    {
+        return $this->repository()->allItems($user->requireId(), $this->perSubscription($user));
+    }
+
+    /** @return array{tags: int, feeds: int} */
+    private function perFeedGroup(User $user): array
+    {
+        return $this->repository()->perFeedGroup($user->requireId(), $this->perSubscription($user));
+    }
+
+    /** @return array<int, int> */
+    private function perSubscription(User $user): array
+    {
+        return $this->repository()->perSubscription($user->requireId());
     }
 
     private function repository(): UnreadCountRepository
