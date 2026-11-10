@@ -254,12 +254,25 @@ final class UnreadCountRepositoryTest extends DbTestCase
         }
         $this->unreadEntry($customFeed, 'custom-extra', 'hash-extra');
 
-        $repository = $this->repository();
-        $perSubscription = $repository->perSubscription($user->requireId());
+        $perSubscription = $this->perSubscription($user);
 
         self::assertSame(9, $this->perNetwork($user)[SocialNetwork::Bluesky->value] ?? 0);
         self::assertSame(4, $perSubscription[$home->requireId()] ?? 0);
         self::assertSame(5, $perSubscription[$custom->requireId()] ?? 0);
+    }
+
+    public function testAScopeWithNothingUnreadIsAbsent(): void
+    {
+        $user = $this->user();
+        $news = $this->tag($user, 'news');
+        [$tagged] = $this->subscribedFeed($user, 'https://example.com/read.xml');
+        $tagged->addTag($news);
+        $this->subscribedFeed($user, 'social:bluesky:1:home', SourceFormat::BLUESKY_API);
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->perTag($user));
+        self::assertSame([], $this->perNetwork($user));
+        self::assertSame([], $this->perNetworkProfiles($user));
     }
 
     public function testAFeedOnNoNetworkIsInNoNetworkCount(): void

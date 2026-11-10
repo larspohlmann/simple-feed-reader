@@ -36,14 +36,10 @@ final readonly class UnreadCountRepository
             ->groupBy('s.id');
         $this->scope->unread($qb, EntryAliases::primary());
 
-        $counts = [];
-        /** @var list<array{subscriptionId: int|string, unreadCount: int|string}> $rows */
+        /** @var list<array{subscriptionId: int, unreadCount: int}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
-        foreach ($rows as $row) {
-            $counts[(int) $row['subscriptionId']] = (int) $row['unreadCount'];
-        }
 
-        return $counts;
+        return array_column($rows, 'unreadCount', 'subscriptionId');
     }
 
     /**
@@ -102,10 +98,10 @@ final readonly class UnreadCountRepository
     {
         $qb = $this->userSubscriptions($userId)->select('s.id');
         $this->scope->inAllItems($qb, EntryAliases::primary());
-        /** @var list<int|string> $ids */
+        /** @var list<int> $ids */
         $ids = $qb->getQuery()->getSingleColumnResult();
 
-        return self::sumOver($perSubscription, array_map(intval(...), $ids));
+        return self::sumOver($perSubscription, $ids);
     }
 
     /** @return array<int, list<int>> tag id => the subscriptions carrying it or a tag below it, each once */
@@ -120,26 +116,22 @@ final readonly class UnreadCountRepository
             Tag::class,
             'scopeTag',
             'ON',
-            TagLineageDql::reaches('lineage', 'scopeTag.id') . ' AND scopeTag.user = :user',
+            TagLineageDql::reaches('lineage', 'scopeTag.id'),
         );
 
-        $scopes = [];
-        foreach (self::scopeRows($qb) as $row) {
-            $scopes[(int) $row['scopeKey']][] = (int) $row['subscriptionId'];
-        }
+        /** @var list<array{scopeKey: int, subscriptionId: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
 
-        return $scopes;
+        return self::subscriptionIdsPerScope($rows);
     }
 
     /** @return array<string, list<int>> network => its subscriptions */
     private function subscriptionIdsPerNetwork(QueryBuilder $qb): array
     {
-        $scopes = [];
-        foreach (self::scopeRows($qb) as $row) {
-            $scopes[(string) $row['scopeKey']][] = (int) $row['subscriptionId'];
-        }
+        /** @var list<array{scopeKey: string, subscriptionId: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
 
-        return $scopes;
+        return self::subscriptionIdsPerScope($rows);
     }
 
     private function subscriptionsOnAnyNetwork(int $userId): QueryBuilder
@@ -158,13 +150,19 @@ final readonly class UnreadCountRepository
             ->setParameter('user', $userId);
     }
 
-    /** @return list<array{scopeKey: int|string, subscriptionId: int|string}> */
-    private static function scopeRows(QueryBuilder $qb): array
+    /**
+     * @template TScope of int|string
+     * @param list<array{scopeKey: TScope, subscriptionId: int}> $rows
+     * @return array<TScope, list<int>>
+     */
+    private static function subscriptionIdsPerScope(array $rows): array
     {
-        /** @var list<array{scopeKey: int|string, subscriptionId: int|string}> $rows */
-        $rows = $qb->getQuery()->getScalarResult();
+        $scopes = [];
+        foreach ($rows as $row) {
+            $scopes[$row['scopeKey']][] = $row['subscriptionId'];
+        }
 
-        return $rows;
+        return $scopes;
     }
 
     /**
