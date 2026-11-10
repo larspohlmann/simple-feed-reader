@@ -11,6 +11,7 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\EntryArticleReader;
 use App\Service\Reader\OriginalHeroResolver;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -25,6 +26,7 @@ final readonly class EntryReaderController
         private EntryArticleReader $articleReader,
         private OriginalHeroResolver $originalHero,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }

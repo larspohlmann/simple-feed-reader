@@ -20,8 +20,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_timeline_source')]
 interface TimelineSourceInterface
 {
-    public static function network(): string;
-
     /**
      * @return non-empty-list<ApiRequestModel> sent one after another, a Mastodon search once per `||` alternative
      *

@@ -354,7 +354,8 @@ final class PasswordResetTest extends WebTestCase
         $retryAfter = $this->client->getResponse()->headers->get('Retry-After');
         self::assertNotNull($retryAfter);
         self::assertGreaterThan(0, (int) $retryAfter);
-        self::assertLessThanOrEqual(900, (int) $retryAfter);
+        // Symfony 8.1 rounds the limiter's reset up to the next whole second.
+        self::assertLessThanOrEqual(901, (int) $retryAfter);
     }
 
     /**

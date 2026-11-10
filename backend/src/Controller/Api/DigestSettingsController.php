@@ -12,6 +12,7 @@ use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\Digest\TestDigestEligibility;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -25,6 +26,7 @@ final readonly class DigestSettingsController
         private SendTestDigest $sendTestDigest,
         private TestDigestEligibility $testDigestEligibility,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $digestTestLimiter,
         private MeProfileJson $profile,
     ) {

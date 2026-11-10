@@ -9,16 +9,13 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\BlueskyRecords;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyPostReposter implements PostReposterInterface
 {
     public function __construct(private BlueskyRecords $records)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
     }
 
     public function repost(SocialPostModel $post): void

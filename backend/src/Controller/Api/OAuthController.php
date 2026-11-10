@@ -17,6 +17,7 @@ use App\Service\OAuth\OAuthStateStore;
 use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
 use Random\RandomException;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -47,6 +48,7 @@ final readonly class OAuthController
         private OAuthSignIn $signIn,
         private OAuthCallback $callback,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $oauthStartLimiter,
         private FlowCookie $flowCookie,
         private OAuthRedirectFactory $oauthRedirectFactory,

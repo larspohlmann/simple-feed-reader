@@ -10,6 +10,7 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\ReaderUrlSignature;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -24,6 +25,7 @@ final readonly class SignedUrlReaderController
         private ClockInterface $clock,
         private ArticleExtractorInterface $extractor,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }

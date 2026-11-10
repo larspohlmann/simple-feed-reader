@@ -8,7 +8,9 @@ use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
 use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\PrivateFeedSyncSweep;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'privateFeedSync', priority: 20)]
 final readonly class PrivateFeedSyncTickSweep implements MaintenanceSweepInterface
 {
     private const int MAX_ACCOUNTS = 1;
@@ -17,16 +19,6 @@ final readonly class PrivateFeedSyncTickSweep implements MaintenanceSweepInterfa
         private PrivateFeedSyncSweep $privateFeedSyncSweep,
         private ClockInterface $clock,
     ) {
-    }
-
-    public static function name(): string
-    {
-        return 'privateFeedSync';
-    }
-
-    public static function priority(): int
-    {
-        return 20;
     }
 
     public function run(\DateTimeImmutable $deadline): PrivateFeedSyncReportModel

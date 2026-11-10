@@ -9,6 +9,7 @@ use App\Http\SocialRepostJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\SocialReposts;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -23,6 +24,7 @@ final readonly class EntryRepostController
         private EntryListRepository $entryList,
         private SocialReposts $reposts,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialWritesLimiter,
     ) {
     }

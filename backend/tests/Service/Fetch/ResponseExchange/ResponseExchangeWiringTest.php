@@ -9,6 +9,7 @@ use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\Model\ResponseExchangeKind;
 use App\Service\Fetch\ResponseExchange\ApiResponseExchange;
 use App\Service\Fetch\ResponseExchange\ResponseExchangeInterface;
+use App\Tests\Support\TaggedItemOf;
 use Psr\Container\ContainerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -20,7 +21,7 @@ final class ResponseExchangeWiringTest extends KernelTestCase
         foreach (ResponseExchangeKind::cases() as $kind) {
             $exchange = $exchanges->get($kind->value);
             self::assertInstanceOf(ResponseExchangeInterface::class, $exchange);
-            self::assertSame($kind->value, $exchange::kind());
+            self::assertSame($kind->value, TaggedItemOf::index($exchange::class));
         }
     }
 

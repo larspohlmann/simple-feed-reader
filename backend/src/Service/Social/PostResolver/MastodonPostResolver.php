@@ -19,8 +19,10 @@ use App\Service\Social\Support\MastodonQuoting;
 use App\Service\Social\Support\MastodonVisibility;
 use App\Service\Social\Support\PostCounts;
 use App\Service\Text\Support\PlainText;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonPostResolver implements PostResolverInterface
 {
     private const string SEARCH = '/api/v2/search?q=%s&resolve=true&type=statuses&limit=1';
@@ -28,11 +30,6 @@ final readonly class MastodonPostResolver implements PostResolverInterface
 
     public function __construct(private MastodonAccountApi $mastodon)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function resolve(SocialAccount $account, string $address): SocialPostModel

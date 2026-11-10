@@ -8,7 +8,9 @@ use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\Model\ImageVerificationBudgetModel;
 use App\Service\Image\Model\ImageVerificationReportModel;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'imageVerification', priority: 80)]
 final readonly class ImageVerificationTickSweep implements MaintenanceSweepInterface
 {
     private const int MAX_SECONDS = 45;
@@ -17,16 +19,6 @@ final readonly class ImageVerificationTickSweep implements MaintenanceSweepInter
         private ImageVerificationSweep $imageVerificationSweep,
         private ClockInterface $clock,
     ) {
-    }
-
-    public static function name(): string
-    {
-        return 'imageVerification';
-    }
-
-    public static function priority(): int
-    {
-        return 80;
     }
 
     public function run(\DateTimeImmutable $deadline): ImageVerificationReportModel

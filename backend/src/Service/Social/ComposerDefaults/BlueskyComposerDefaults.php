@@ -9,14 +9,11 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostWriter\BlueskyPostWriter;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyComposerDefaults implements ComposerDefaultsInterface
 {
-    public static function network(): string
-    {
-        return SocialNetwork::Bluesky->value;
-    }
-
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         return $this->forAccount($target->account);

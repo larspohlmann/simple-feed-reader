@@ -11,6 +11,7 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\ImportCandidates;
 use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialImporter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -25,6 +26,7 @@ final readonly class SocialImportController
         private ImportCandidates $importCandidates,
         private SocialImporter $importer,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialImportLimiter,
         private SocialImportJson $importJson,
     ) {

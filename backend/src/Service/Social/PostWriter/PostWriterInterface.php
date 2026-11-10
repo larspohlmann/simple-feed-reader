@@ -21,8 +21,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_post_writer')]
 interface PostWriterInterface
 {
-    public static function network(): string;
-
     /**
      * @throws SocialPostTooLongException
      * @throws SocialPostNotFoundException

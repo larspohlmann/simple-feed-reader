@@ -24,7 +24,7 @@ final readonly class MaintenanceTick
     /** @param iterable<string, MaintenanceSweepInterface> $sweeps */
     public function __construct(
         private RefreshRunner $refreshRunner,
-        #[AutowireIterator('app.maintenance_sweep', defaultIndexMethod: 'name', defaultPriorityMethod: 'priority')]
+        #[AutowireIterator('app.maintenance_sweep', indexAttribute: 'index')]
         private iterable $sweeps,
         private LokiSpoolShipper $logSpoolShipper,
         private ClockInterface $clock,

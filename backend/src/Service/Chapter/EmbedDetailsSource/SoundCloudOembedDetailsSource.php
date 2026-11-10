@@ -10,8 +10,10 @@ use App\Service\Chapter\Model\EmbedAddressModel;
 use App\Service\Chapter\Model\EmbedDescriptionModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Url\Support\HttpsImageUrl;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Reads a track's title, description and artwork from SoundCloud's oEmbed endpoint, which needs no key and tells no length. */
+#[AsTaggedItem(index: ChapteredEmbed::SoundCloud->value)]
 final readonly class SoundCloudOembedDetailsSource implements EmbedDetailsSourceInterface
 {
     private const string OEMBED = 'https://soundcloud.com/oembed?';
@@ -19,11 +21,6 @@ final readonly class SoundCloudOembedDetailsSource implements EmbedDetailsSource
 
     public function __construct(private GuardedDescriptionRequest $request)
     {
-    }
-
-    public static function provider(): string
-    {
-        return ChapteredEmbed::SoundCloud->value;
     }
 
     public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel

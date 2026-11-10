@@ -220,10 +220,11 @@ final readonly class RefreshRunners
         $extractor = $container->get(HtmlItemExtractor::class);
 
         return new FeedBodyParser(new ServiceLocator([
-            XmlBodyParser::format() => static fn (): XmlBodyParser => new XmlBodyParser(
+            TaggedItemOf::index(XmlBodyParser::class) => static fn (): XmlBodyParser => new XmlBodyParser(
                 new FeedParser(new FeedParserFactory(FeedFormatParsers::all())),
             ),
-            ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
+            TaggedItemOf::index(ScrapedBodyParser::class)
+                => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
         ]));
     }
 }

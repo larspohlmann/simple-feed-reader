@@ -13,6 +13,7 @@ use App\Service\Recommendation\Run\RecommendationPollDriver;
 use App\Service\Recommendation\Run\RecommendationRunCanceller;
 use App\Service\Recommendation\Run\RecommendationRunPurger;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -32,7 +33,9 @@ final readonly class RecommendationRunController
         private RecommendationRunCanceller $canceller,
         private RecommendationRunStatusResolver $status,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
+        #[Target]
         private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
     ) {
     }

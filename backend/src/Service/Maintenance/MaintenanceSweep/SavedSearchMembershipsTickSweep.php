@@ -8,7 +8,9 @@ use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'savedSearchMemberships', priority: 30)]
 final readonly class SavedSearchMembershipsTickSweep implements MaintenanceSweepInterface
 {
     /** The membership sweep's own cap inside the tick window: enough for ~50 chunks on Strato. */
@@ -18,16 +20,6 @@ final readonly class SavedSearchMembershipsTickSweep implements MaintenanceSweep
         private SavedSearchMembershipSweep $membershipSweep,
         private ClockInterface $clock,
     ) {
-    }
-
-    public static function name(): string
-    {
-        return 'savedSearchMemberships';
-    }
-
-    public static function priority(): int
-    {
-        return 30;
     }
 
     public function run(\DateTimeImmutable $deadline): SavedSearchMembershipSweepReportModel

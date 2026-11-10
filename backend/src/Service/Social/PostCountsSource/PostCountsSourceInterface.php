@@ -15,8 +15,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_post_counts_source')]
 interface PostCountsSourceInterface
 {
-    public static function network(): string;
-
     /**
      * @throws PostNotPubliclyCountableException
      * @throws SocialPostNotFoundException

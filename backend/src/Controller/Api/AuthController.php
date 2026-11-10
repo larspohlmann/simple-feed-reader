@@ -16,6 +16,7 @@ use App\Service\Auth\RegistrationService;
 use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
 use Random\RandomException;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,7 +34,9 @@ final readonly class AuthController
         private RegistrationPolicy $policy,
         private AltchaService $altcha,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $registrationLimiter,
+        #[Target]
         private RateLimiterFactoryInterface $passwordResetRequestLimiter,
     ) {
     }

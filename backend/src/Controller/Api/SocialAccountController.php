@@ -14,6 +14,7 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\SocialAccountConnector;
 use App\Service\Social\SocialAccountEditor;
 use App\Service\Social\SocialAccountForUser;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -29,6 +30,7 @@ final readonly class SocialAccountController
         private SocialAccountEditor $editor,
         private SocialAccountForUser $socialAccount,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialAccountLimiter,
         private SocialAccountJson $accountJson,
         private PrivateFeedSyncChangeRepository $syncChanges,

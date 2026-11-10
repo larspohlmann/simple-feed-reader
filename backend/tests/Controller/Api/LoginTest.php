@@ -174,7 +174,8 @@ final class LoginTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(429);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertResponseHeaderSame('Retry-After', '900');
+        // Symfony reports whole minutes of a reset it rounds up to the next second: 15 or 16 depending on the clock.
+        self::assertContains($client->getResponse()->headers->get('Retry-After'), ['900', '960']);
         self::assertSame('rate_limited', $this->payload($client)['type']);
     }
 

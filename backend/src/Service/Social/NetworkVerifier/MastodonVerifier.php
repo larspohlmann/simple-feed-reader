@@ -11,16 +11,13 @@ use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\MastodonSessionModel;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Model\VerifiedAccountModel;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonVerifier implements NetworkVerifierInterface
 {
     public function __construct(private MastodonApiClient $mastodon)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function verify(SocialCredentialsModel $credentials): VerifiedAccountModel

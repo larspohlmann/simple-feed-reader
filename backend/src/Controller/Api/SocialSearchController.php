@@ -13,6 +13,7 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\SearchFeedEditor;
 use App\Service\Social\SocialAccountForUser;
 use App\Service\Social\SocialSearch\SocialSearchInterface;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
@@ -26,6 +27,7 @@ final readonly class SocialSearchController
     public function __construct(
         private SocialAccountForUser $socialAccount,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialSearchPreviewLimiter,
         private SocialSearchInterface $socialSearch,
         private SocialSearchPreviewJson $searchPreviewJson,

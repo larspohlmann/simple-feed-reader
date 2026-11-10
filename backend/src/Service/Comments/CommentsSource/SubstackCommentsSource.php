@@ -21,6 +21,7 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final readonly class SubstackCommentsSource implements CommentsSourceInterface
@@ -29,6 +30,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         private FeedFetcherInterface $fetcher,
         private HostThrottle $hostThrottle,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $commentsLimiter,
     ) {
     }

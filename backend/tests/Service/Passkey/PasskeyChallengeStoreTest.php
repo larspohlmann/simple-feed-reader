@@ -162,7 +162,7 @@ final class PasskeyChallengeStoreTest extends TestCase
     private function store(?ClockInterface $clock = null, ?CacheItemPoolInterface $pool = null): PasskeyChallengeStore
     {
         return new PasskeyChallengeStore(
-            $pool ?? new ArrayAdapter(storeSerialized: false),
+            $pool ?? new ArrayAdapter(deepClone: false),
             $clock ?? new MockClock('2026-08-29 10:00:00'),
         );
     }

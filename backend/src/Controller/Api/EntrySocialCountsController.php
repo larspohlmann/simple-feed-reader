@@ -9,6 +9,7 @@ use App\Http\SocialCountsJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\SocialCounts;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -22,6 +23,7 @@ final readonly class EntrySocialCountsController
         private EntryListRepository $entryList,
         private SocialCounts $socialCounts,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialCountsLimiter,
     ) {
     }

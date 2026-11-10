@@ -11,18 +11,15 @@ use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\MastodonStatusAction;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonPostLiker implements PostLikerInterface
 {
     private const string FAVOURITES_SCOPE = 'write:favourites';
 
     public function __construct(private MastodonAccountApi $mastodon)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function like(SocialPostModel $post): SocialLikeResultModel

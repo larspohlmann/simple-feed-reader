@@ -4,7 +4,7 @@ This project's conventions, commands, architecture, and coding standards are doc
 
 ## Quick reference
 
-- **Backend:** Symfony 7.4 / PHP 8.5 — run `composer check`, `php bin/phpunit` from `backend/`
+- **Backend:** Symfony 8.1 / PHP 8.5 — run `composer check`, `php bin/phpunit` from `backend/`
 - **Frontend:** Angular 20 — run `npm run check`, `npm test` from `frontend/`
 - **Docker:** `docker compose up -d` from root
 - **Git flow:** feature branches off `develop`, PRs merge to `develop`

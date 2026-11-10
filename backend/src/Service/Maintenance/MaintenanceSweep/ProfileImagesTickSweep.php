@@ -8,7 +8,9 @@ use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\ProfileImageSweep;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'profileImages', priority: 50)]
 final readonly class ProfileImagesTickSweep implements MaintenanceSweepInterface
 {
     private const int MAX_CALLS = 1;
@@ -17,16 +19,6 @@ final readonly class ProfileImagesTickSweep implements MaintenanceSweepInterface
         private ProfileImageSweep $profileImageSweep,
         private ClockInterface $clock,
     ) {
-    }
-
-    public static function name(): string
-    {
-        return 'profileImages';
-    }
-
-    public static function priority(): int
-    {
-        return 50;
     }
 
     public function run(\DateTimeImmutable $deadline): ProfileImageSweepReportModel

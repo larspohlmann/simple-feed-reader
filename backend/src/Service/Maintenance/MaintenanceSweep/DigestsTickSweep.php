@@ -6,21 +6,13 @@ namespace App\Service\Maintenance\MaintenanceSweep;
 
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Mail\Digest\SendDueDigests;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'digests', priority: 90)]
 final readonly class DigestsTickSweep implements MaintenanceSweepInterface
 {
     public function __construct(private SendDueDigests $sendDueDigests)
     {
-    }
-
-    public static function name(): string
-    {
-        return 'digests';
-    }
-
-    public static function priority(): int
-    {
-        return 90;
     }
 
     public function run(\DateTimeImmutable $deadline): DigestSweepReportModel

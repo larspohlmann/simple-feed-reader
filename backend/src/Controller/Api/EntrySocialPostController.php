@@ -15,6 +15,7 @@ use App\Service\Social\Model\ResponseKind;
 use App\Service\Social\Model\ResponseTargetModel;
 use App\Service\Social\OwnPostDeletion;
 use App\Service\Social\SocialResponses;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -31,7 +32,9 @@ final readonly class EntrySocialPostController
         private SocialResponses $responses,
         private OwnPostDeletion $ownPosts,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialViewerLimiter,
+        #[Target]
         private RateLimiterFactoryInterface $socialWritesLimiter,
     ) {
     }

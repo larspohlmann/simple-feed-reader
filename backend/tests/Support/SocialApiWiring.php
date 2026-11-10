@@ -152,12 +152,14 @@ final class SocialApiWiring
     public static function timelineSources(HttpClientInterface $http, ArrayAdapter $cache): TimelineSources
     {
         return new TimelineSources(new ServiceLocator([
-            BlueskyTimelineSource::network() => static fn (): BlueskyTimelineSource => new BlueskyTimelineSource(
-                self::blueskySessions($http, $cache),
-            ),
-            MastodonTimelineSource::network() => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
-                self::mastodonAccountApi($http),
-            ),
+            TaggedItemOf::index(BlueskyTimelineSource::class)
+                => static fn (): BlueskyTimelineSource => new BlueskyTimelineSource(
+                    self::blueskySessions($http, $cache),
+                ),
+            TaggedItemOf::index(MastodonTimelineSource::class)
+                => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
+                    self::mastodonAccountApi($http),
+                ),
         ]));
     }
 

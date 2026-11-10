@@ -18,6 +18,7 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -97,7 +98,7 @@ final class MastodonCandidateSourceTest extends TestCase
 
     public function testTheNetworkKeyIsMastodon(): void
     {
-        self::assertSame('mastodon', MastodonCandidateSource::network());
+        self::assertSame('mastodon', TaggedItemOf::index(MastodonCandidateSource::class));
     }
 
     public function testAFollowCarriesItsStillAvatarAndFallsBackToTheAnimatedOne(): void

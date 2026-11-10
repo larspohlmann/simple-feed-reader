@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Http\EntryJson;
 use App\Service\Completion\EntryCompletion;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -21,6 +22,7 @@ final readonly class EntryCompletionController
     public function __construct(
         private EntryCompletion $completion,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $entryCompletionLimiter,
         private EntryJson $entryJson,
     ) {

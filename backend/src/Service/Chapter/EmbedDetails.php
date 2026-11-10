@@ -22,7 +22,7 @@ final readonly class EmbedDetails
 {
     public function __construct(
         private EmbedDetailsCache $cache,
-        #[AutowireLocator('app.embed_details_source', defaultIndexMethod: 'provider')]
+        #[AutowireLocator('app.embed_details_source')]
         private ContainerInterface $sources,
     ) {
     }

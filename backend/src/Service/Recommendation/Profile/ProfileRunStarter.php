@@ -15,6 +15,7 @@ use App\Service\Recommendation\Profile\Exception\ProfileConnectionMissingExcepti
 use App\Service\Recommendation\Run\Support\RunLogRetention;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /** Opens a profile run; an active one is returned as it is, so a second start opens no duplicate. */
@@ -27,6 +28,7 @@ final readonly class ProfileRunStarter
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $aiProfileRunsLimiter,
     ) {
     }

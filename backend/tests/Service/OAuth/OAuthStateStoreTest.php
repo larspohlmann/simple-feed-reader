@@ -20,12 +20,12 @@ final class OAuthStateStoreTest extends TestCase
     private OAuthStateStore $store;
 
     /**
-     * `storeSerialized: false`, so getValues() returns the payload as written, not a serialised blob that could hide
+     * `deepClone: false`, so getValues() returns the payload as written, not a serialised blob that could hide
      * the plaintext state.
      */
     protected function setUp(): void
     {
-        $this->cache = new ArrayAdapter(storeSerialized: false);
+        $this->cache = new ArrayAdapter(deepClone: false);
         $this->clock = new MockClock('2026-07-21 12:00:00');
         $this->store = new OAuthStateStore($this->cache, $this->clock);
     }

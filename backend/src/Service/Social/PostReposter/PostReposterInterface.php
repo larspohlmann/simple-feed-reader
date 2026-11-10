@@ -17,8 +17,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_post_reposter')]
 interface PostReposterInterface
 {
-    public static function network(): string;
-
     /**
      * @throws SocialPostNotFoundException
      * @throws SocialCredentialsRejectedException

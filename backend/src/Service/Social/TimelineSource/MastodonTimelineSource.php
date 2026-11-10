@@ -22,18 +22,15 @@ use App\Service\Social\Support\MastodonSearchQueries;
 use App\Service\Social\Support\MastodonTimelinePage;
 use App\Service\Social\Support\PrivateFeedRules;
 use App\Service\Social\Support\SocialSearchPaths;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 40;
 
     public function __construct(private MastodonAccountApi $mastodon)
     {
-    }
-
-    public static function network(): string
-    {
-        return SocialNetwork::Mastodon->value;
     }
 
     public function requests(SocialFeed $socialFeed): array

@@ -17,6 +17,7 @@ use App\Service\Ai\AiConfigurationEditor;
 use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\RateLimit\RateLimitGuard;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -38,6 +39,7 @@ final readonly class AiSettingsController
         private AiConfigurationEditor $editor,
         private AiConfigurationForUser $configurations,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $aiProviderLimiter,
         private AiSettingsJson $settingsJson,
     ) {

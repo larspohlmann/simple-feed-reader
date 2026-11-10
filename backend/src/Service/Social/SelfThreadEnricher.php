@@ -40,7 +40,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ShareEnrichmentRepository $enrichments,
-        #[AutowireLocator('app.social_reply_thread_source', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_reply_thread_source')]
         private ContainerInterface $threads,
         private SelfReplyChain $chain,
         private SelfThreadFolder $folder,

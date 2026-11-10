@@ -27,6 +27,7 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -163,7 +164,7 @@ final class BlueskyCandidateSourceTest extends TestCase
 
     public function testTheNetworkKeyIsBluesky(): void
     {
-        self::assertSame('bluesky', BlueskyCandidateSource::network());
+        self::assertSame('bluesky', TaggedItemOf::index(BlueskyCandidateSource::class));
     }
 
     public function testFollowsArePagedByCursorAndReadAsDidKeyedProfileFeeds(): void

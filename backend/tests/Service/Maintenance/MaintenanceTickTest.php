@@ -67,6 +67,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\StageStamps;
 use App\Tests\Support\StubSocialCandidates;
+use App\Tests\Support\TaggedItemOf;
 use App\Tests\Support\TickingClock;
 use App\Tests\Support\TrendingWiring;
 use Psr\Clock\ClockInterface;
@@ -165,7 +166,7 @@ final class MaintenanceTickTest extends DbTestCase
     ): MaintenanceTick {
         return new MaintenanceTick(
             $refreshRunner,
-            [RecordingMaintenanceSweep::name() => $sweep],
+            [TaggedItemOf::index(RecordingMaintenanceSweep::class) => $sweep],
             new LokiSpoolShipper(
                 new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
@@ -471,11 +472,11 @@ final class MaintenanceTickTest extends DbTestCase
         usort(
             $sweeps,
             static fn (MaintenanceSweepInterface $left, MaintenanceSweepInterface $right): int
-                => $right::priority() <=> $left::priority(),
+                => TaggedItemOf::priority($right::class) <=> TaggedItemOf::priority($left::class),
         );
         $keyed = [];
         foreach ($sweeps as $sweep) {
-            $keyed[$sweep::name()] = $sweep;
+            $keyed[TaggedItemOf::index($sweep::class)] = $sweep;
         }
 
         return $keyed;

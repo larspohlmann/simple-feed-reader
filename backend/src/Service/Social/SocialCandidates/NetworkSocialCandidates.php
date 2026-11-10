@@ -14,7 +14,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 final readonly class NetworkSocialCandidates implements SocialCandidatesInterface
 {
     public function __construct(
-        #[AutowireLocator('app.social_candidate_source', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_candidate_source')]
         private ContainerInterface $sources,
     ) {
     }

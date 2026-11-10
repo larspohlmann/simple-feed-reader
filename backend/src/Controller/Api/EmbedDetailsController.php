@@ -11,6 +11,7 @@ use App\Service\Chapter\Model\ChapteredEmbed;
 use App\Service\Chapter\Model\EmbedAddressModel;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Url\Support\YouTubeUrl;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,6 +22,7 @@ final readonly class EmbedDetailsController
     public function __construct(
         private EmbedDetails $embedDetails,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $embedDetailsLimiter,
     ) {
     }

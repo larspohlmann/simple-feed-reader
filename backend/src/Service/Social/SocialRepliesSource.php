@@ -32,6 +32,7 @@ use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 #[AsTaggedItem(priority: 10)]
@@ -42,10 +43,11 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     public function __construct(
         private ActingAccountChooser $accounts,
         private ActingAccountGuard $guard,
-        #[AutowireLocator('app.social_reply_thread_source', defaultIndexMethod: 'network')]
+        #[AutowireLocator('app.social_reply_thread_source')]
         private ContainerInterface $threads,
         private ReplyThreadOrder $order,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialRepliesLimiter,
         private SocialAccountRepository $socialAccounts,
     ) {

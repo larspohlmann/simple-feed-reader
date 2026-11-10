@@ -12,8 +12,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_composer_defaults')]
 interface ComposerDefaultsInterface
 {
-    public static function network(): string;
-
     /**
      * Never fails: what the network does not answer falls back to its documented default.
      *

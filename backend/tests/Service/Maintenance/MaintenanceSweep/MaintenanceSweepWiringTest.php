@@ -21,6 +21,7 @@ use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Refresh\Model\RefreshReportModel;
+use App\Tests\Support\TaggedItemOf;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class MaintenanceSweepWiringTest extends KernelTestCase
@@ -62,7 +63,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
     public function testEachSweepIsKeyedByItsOwnName(): void
     {
         foreach ($this->wiredSweeps() as $name => $class) {
-            self::assertSame($name, $class::name());
+            self::assertSame($name, TaggedItemOf::index($class));
         }
     }
 
@@ -116,7 +117,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
      */
     private static function byPriority(string $left, string $right): int
     {
-        return $right::priority() <=> $left::priority();
+        return TaggedItemOf::priority($right) <=> TaggedItemOf::priority($left);
     }
 
     /** @return list<class-string<MaintenanceSweepInterface>> */

@@ -11,6 +11,7 @@ use App\Http\ComposerContextJson;
 use App\Http\PublishedPostJson;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\LinkPosts;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -26,7 +27,9 @@ final readonly class SocialLinkPostController
     public function __construct(
         private LinkPosts $links,
         private RateLimitGuard $rateLimitGuard,
+        #[Target]
         private RateLimiterFactoryInterface $socialViewerLimiter,
+        #[Target]
         private RateLimiterFactoryInterface $socialWritesLimiter,
     ) {
     }

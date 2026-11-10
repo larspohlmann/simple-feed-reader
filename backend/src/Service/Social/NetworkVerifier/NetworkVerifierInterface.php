@@ -15,8 +15,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_network_verifier')]
 interface NetworkVerifierInterface
 {
-    public static function network(): string;
-
     /**
      * @throws SocialCredentialsRejectedException
      * @throws SocialAccountUnresolvableException

@@ -8,7 +8,9 @@ use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
+#[AsTaggedItem(index: 'hiddenProfiles', priority: 40)]
 final readonly class HiddenProfilesTickSweep implements MaintenanceSweepInterface
 {
     private const int MAX_CALLS = 1;
@@ -17,16 +19,6 @@ final readonly class HiddenProfilesTickSweep implements MaintenanceSweepInterfac
         private HiddenProfileSwitchSweep $hiddenProfileSwitchSweep,
         private ClockInterface $clock,
     ) {
-    }
-
-    public static function name(): string
-    {
-        return 'hiddenProfiles';
-    }
-
-    public static function priority(): int
-    {
-        return 40;
     }
 
     public function run(\DateTimeImmutable $deadline): HiddenProfileSwitchReportModel

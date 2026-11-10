@@ -14,6 +14,7 @@ use App\Service\Social\NetworkVerifier\MastodonVerifier;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -99,7 +100,7 @@ final class MastodonVerifierTest extends TestCase
 
     public function testTheNetworkKeyIsMastodon(): void
     {
-        self::assertSame('mastodon', MastodonVerifier::network());
+        self::assertSame('mastodon', TaggedItemOf::index(MastodonVerifier::class));
     }
 
     public function testANonDefaultPortStaysInTheIdentityAndHandle(): void

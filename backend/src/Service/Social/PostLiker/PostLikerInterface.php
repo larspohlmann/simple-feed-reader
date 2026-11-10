@@ -18,8 +18,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_post_liker')]
 interface PostLikerInterface
 {
-    public static function network(): string;
-
     /**
      * @throws SocialPostNotFoundException
      * @throws SocialCredentialsRejectedException

@@ -13,6 +13,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -110,7 +111,7 @@ final class SoundCloudOembedDetailsSourceTest extends TestCase
 
     public function testIsTheSoundCloudSource(): void
     {
-        self::assertSame('soundcloud', SoundCloudOembedDetailsSource::provider());
+        self::assertSame('soundcloud', TaggedItemOf::index(SoundCloudOembedDetailsSource::class));
     }
 
     private function detailsAnswering(string $body): EmbedDescriptionModel

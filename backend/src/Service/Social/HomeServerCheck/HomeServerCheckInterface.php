@@ -11,8 +11,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.social_home_server_check')]
 interface HomeServerCheckInterface
 {
-    public static function network(): string;
-
     /**
      * True only when the post's own server answers that the post is gone; any other answer proves nothing.
      *
