@@ -184,6 +184,7 @@ final readonly class ImageIdentityModel
         return $this->asSizelessFileInFolder()->isSameRendition($other->asSizelessFileInFolder());
     }
 
+    #[\NoDiscard]
     private function asSizelessFileInFolder(): self
     {
         $sizelessStem = self::withoutTrailingSize($this->stem);

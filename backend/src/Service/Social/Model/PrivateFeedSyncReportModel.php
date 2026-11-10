@@ -19,6 +19,7 @@ final readonly class PrivateFeedSyncReportModel
         return new self(0, 0, 0, 0);
     }
 
+    #[\NoDiscard]
     public function adding(PrivateFeedSyncOutcomeModel $outcome): self
     {
         return new self(

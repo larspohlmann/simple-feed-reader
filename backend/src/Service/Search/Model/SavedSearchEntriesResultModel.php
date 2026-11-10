@@ -18,6 +18,7 @@ final readonly class SavedSearchEntriesResultModel
     }
 
     /** @param list<EntryListRow> $rows */
+    #[\NoDiscard]
     public function withRows(array $rows): self
     {
         return new self($rows);

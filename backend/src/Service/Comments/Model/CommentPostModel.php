@@ -19,6 +19,7 @@ final readonly class CommentPostModel
     ) {
     }
 
+    #[\NoDiscard]
     public function ownedByViewer(): self
     {
         return clone($this, ['viewer' => $this->viewer->ownedByViewer()]);

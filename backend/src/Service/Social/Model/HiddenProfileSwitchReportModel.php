@@ -18,6 +18,7 @@ final readonly class HiddenProfileSwitchReportModel
         return new self(0, 0);
     }
 
+    #[\NoDiscard]
     public function counting(HiddenProfileMoveOutcome $outcome): self
     {
         return match ($outcome) {

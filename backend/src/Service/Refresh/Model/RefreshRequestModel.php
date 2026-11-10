@@ -37,16 +37,19 @@ final readonly class RefreshRequestModel
         return new self(null, new FeedTargetModel($feedId), true, $budgetSeconds, false);
     }
 
+    #[\NoDiscard]
     public function withoutPruning(): self
     {
         return clone($this, ['prune' => false]);
     }
 
+    #[\NoDiscard]
     public function ignoringSchedule(): self
     {
         return clone($this, ['force' => true]);
     }
 
+    #[\NoDiscard]
     public function limitedTo(int $batchLimit): self
     {
         return clone($this, ['batchLimit' => $batchLimit]);

@@ -23,6 +23,7 @@ final readonly class BulkSubscribeResultModel
     /**
      * @param list<Tag> $tagsCreated
      */
+    #[\NoDiscard]
     public function with(
         int $imported = 0,
         int $alreadySubscribed = 0,

@@ -40,26 +40,31 @@ final readonly class SocialPostModel
         return self::fresh($account, $statusId, null);
     }
 
+    #[\NoDiscard]
     public function alreadyLikedAs(string $likeId): self
     {
         return $this->with(existingLikeId: $likeId);
     }
 
+    #[\NoDiscard]
     public function alreadyRepostedAs(string $repostId): self
     {
         return $this->with(existingRepostId: $repostId);
     }
 
+    #[\NoDiscard]
     public function notRepostable(): self
     {
         return $this->with(canRepost: false);
     }
 
+    #[\NoDiscard]
     public function withCounts(?SocialCountsModel $counts): self
     {
         return $this->with(counts: $counts);
     }
 
+    #[\NoDiscard]
     public function inResponseContext(ResponseContextModel $responseContext): self
     {
         return $this->with(responseContext: $responseContext);
@@ -79,6 +84,7 @@ final readonly class SocialPostModel
         );
     }
 
+    #[\NoDiscard]
     private function with(
         ?string $existingLikeId = null,
         ?string $existingRepostId = null,

@@ -15,6 +15,7 @@ final readonly class ParsedEntryMediaModel
     }
 
     /** An episode without artwork of its own shows the show's; any other item stays without an image. */
+    #[\NoDiscard]
     public function withShowArtwork(?DeclaredImageModel $showArtwork): self
     {
         if ($this->image !== null || !($this->mediaBundle?->isEpisode() ?? false)) {

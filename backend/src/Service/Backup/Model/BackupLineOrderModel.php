@@ -43,6 +43,7 @@ final readonly class BackupLineOrderModel
     /**
      * @throws InvalidBackupException
      */
+    #[\NoDiscard]
     public function admit(string $kind, int $lineNumber): self
     {
         $rank = self::KIND_RANK[$kind]

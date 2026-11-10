@@ -26,11 +26,13 @@ final readonly class CoreElement
         return new self($element, $namespace->value);
     }
 
+    #[\NoDiscard]
     public function in(FeedNamespace $namespace): self
     {
         return self::extension($this->element, $namespace);
     }
 
+    #[\NoDiscard]
     public function at(\DOMElement $element): self
     {
         return clone($this, ['element' => $element]);

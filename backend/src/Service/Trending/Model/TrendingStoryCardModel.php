@@ -34,6 +34,7 @@ final readonly class TrendingStoryCardModel
      *
      * @param list<EntryListRow> $copies
      */
+    #[\NoDiscard]
     public function withCopies(array $copies): self
     {
         return clone($this, [

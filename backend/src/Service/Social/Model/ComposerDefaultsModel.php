@@ -20,6 +20,7 @@ final readonly class ComposerDefaultsModel
     ) {
     }
 
+    #[\NoDiscard]
     public function withoutMentions(): self
     {
         return clone($this, ['mentions' => []]);

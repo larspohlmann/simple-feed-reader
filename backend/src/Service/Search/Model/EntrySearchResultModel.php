@@ -37,6 +37,7 @@ final readonly class EntrySearchResultModel
     }
 
     /** @param list<EntryListRow> $rows */
+    #[\NoDiscard]
     public function withRows(array $rows): self
     {
         return new self($rows, $this->matchedWords, $this->matchCount, $this->continuationRow);

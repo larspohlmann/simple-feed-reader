@@ -32,6 +32,7 @@ final readonly class FetchAttemptModel
         return $this->hop < self::MAX_REDIRECTS;
     }
 
+    #[\NoDiscard]
     public function followedTo(string $url, bool $permanent): self
     {
         return clone($this, [
@@ -48,6 +49,7 @@ final readonly class FetchAttemptModel
      * The same hop re-driven over the next address family, for a family that connects and only then dies (a reset at
      * TLS), which the client does not fall back from. The redirect hop count stays as it is.
      */
+    #[\NoDiscard]
     public function overNextPinnedAddress(): self
     {
         return clone($this, ['pinnedAddressAttempt' => $this->pinnedAddressAttempt + 1, 'firstSend' => false]);
@@ -63,6 +65,7 @@ final readonly class FetchAttemptModel
         return null !== $this->proxy;
     }
 
+    #[\NoDiscard]
     public function withoutProxy(): self
     {
         return clone($this, ['pinnedAddressAttempt' => 0, 'proxy' => null, 'firstSend' => false]);

@@ -27,6 +27,7 @@ final readonly class ArticleMediaModel
         return $this->candidates === [];
     }
 
+    #[\NoDiscard]
     public function withoutEmbeds(): self
     {
         return $this->keeping(
@@ -34,12 +35,14 @@ final readonly class ArticleMediaModel
         );
     }
 
+    #[\NoDiscard]
     public function withoutVideos(): self
     {
         return $this->keeping(static fn (MediaCandidateModel $candidate): bool => !$candidate->kind->isVideo());
     }
 
     /** A file plays everywhere without a library; a stream is the fallback for a page that offers no file. */
+    #[\NoDiscard]
     public function withoutRedundantStreams(): self
     {
         if (!$this->offers(MediaKind::Video)) {
@@ -52,12 +55,14 @@ final readonly class ArticleMediaModel
     }
 
     /** @param list<MediaCandidateModel> $more */
+    #[\NoDiscard]
     public function with(array $more): self
     {
         return new self(\array_slice(array_merge($this->candidates, $more), 0, self::MAX_ITEMS));
     }
 
     /** @param callable(MediaCandidateModel): bool $keep */
+    #[\NoDiscard]
     private function keeping(callable $keep): self
     {
         return new self(array_values(array_filter($this->candidates, $keep)));

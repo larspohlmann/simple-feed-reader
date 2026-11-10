@@ -15,7 +15,7 @@ final class BackupLineOrderModelTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('The first line must be a header.');
 
-        BackupLineOrderModel::beforeTheFirstLine()->admit('account', 1);
+        (void) BackupLineOrderModel::beforeTheFirstLine()->admit('account', 1);
     }
 
     public function testAnUnknownKindIsRefusedBeforeTheFirstLineRule(): void
@@ -23,7 +23,7 @@ final class BackupLineOrderModelTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('Line 1 has an unknown kind "bogus".');
 
-        BackupLineOrderModel::beforeTheFirstLine()->admit('bogus', 1);
+        (void) BackupLineOrderModel::beforeTheFirstLine()->admit('bogus', 1);
     }
 
     public function testAnUnknownKindLaterNamesItsLine(): void
@@ -31,7 +31,7 @@ final class BackupLineOrderModelTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('Line 3 has an unknown kind "bogus".');
 
-        BackupLineOrderModel::beforeTheFirstLine()->admit('header', 1)->admit('account', 2)->admit('bogus', 3);
+        (void) BackupLineOrderModel::beforeTheFirstLine()->admit('header', 1)->admit('account', 2)->admit('bogus', 3);
     }
 
     public function testARankMayNotMoveBackwards(): void
@@ -39,7 +39,7 @@ final class BackupLineOrderModelTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('Line 4 is out of order.');
 
-        BackupLineOrderModel::beforeTheFirstLine()
+        (void) BackupLineOrderModel::beforeTheFirstLine()
             ->admit('header', 1)
             ->admit('account', 2)
             ->admit('feed', 3)
@@ -51,14 +51,14 @@ final class BackupLineOrderModelTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('Line 3 repeats the singleton kind "account".');
 
-        BackupLineOrderModel::beforeTheFirstLine()->admit('header', 1)->admit('account', 2)->admit('account', 3);
+        (void) BackupLineOrderModel::beforeTheFirstLine()->admit('header', 1)->admit('account', 2)->admit('account', 3);
     }
 
     public function testARepeatableKindMayRepeatAndTheFooterCloses(): void
     {
         $this->expectNotToPerformAssertions();
 
-        BackupLineOrderModel::beforeTheFirstLine()
+        (void) BackupLineOrderModel::beforeTheFirstLine()
             ->admit('header', 1)
             ->admit('account', 2)
             ->admit('feed', 3)
@@ -69,11 +69,11 @@ final class BackupLineOrderModelTest extends TestCase
     public function testAdmittingLeavesTheEarlierOrderAsItWas(): void
     {
         $start = BackupLineOrderModel::beforeTheFirstLine();
-        $start->admit('header', 1);
+        (void) $start->admit('header', 1);
 
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('The first line must be a header.');
 
-        $start->admit('account', 2);
+        (void) $start->admit('account', 2);
     }
 }

@@ -13,6 +13,7 @@ final readonly class PrivateFeedImportModel
     ) {
     }
 
+    #[\NoDiscard]
     public function counting(PrivateFeedOutcome $outcome): self
     {
         return match ($outcome) {
@@ -23,6 +24,7 @@ final readonly class PrivateFeedImportModel
         };
     }
 
+    #[\NoDiscard]
     public function countingOverLimit(): self
     {
         return clone($this, ['overLimit' => $this->overLimit + 1]);

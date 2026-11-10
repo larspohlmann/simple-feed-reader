@@ -18,11 +18,13 @@ final readonly class EntryCommentModel
     ) {
     }
 
+    #[\NoDiscard]
     public function withPost(CommentPostModel $post): self
     {
         return clone($this, ['post' => $post]);
     }
 
+    #[\NoDiscard]
     public function atDepth(int $depth): self
     {
         return clone($this, ['depth' => $depth]);

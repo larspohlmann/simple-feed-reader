@@ -66,6 +66,7 @@ final readonly class SettlementModel
      *
      * @return self<U>
      */
+    #[\NoDiscard]
     public function mapOutcome(\Closure $mapping): self
     {
         if (null !== $this->ticket) {

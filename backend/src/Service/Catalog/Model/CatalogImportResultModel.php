@@ -18,6 +18,7 @@ final readonly class CatalogImportResultModel
     ) {
     }
 
+    #[\NoDiscard]
     public function with(
         int $categoriesCreated = 0,
         int $categoriesUpdated = 0,
