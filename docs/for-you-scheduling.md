@@ -107,7 +107,7 @@ carries the runs exactly as before.
 
 The CLI binary is named by `DRAIN_PHP_CLI_BINARY`; a web SAPI must not run
 `bin/console` with its own binary (on Strato the web SAPI is `cgi-fcgi`
-with a 240 s execution cap, while `/opt/RZphp84/bin/php-cli` is unbounded).
+with a 240 s execution cap, while `/opt/RZphp85/bin/php-cli` is unbounded).
 Empty is fine wherever PHP already runs as `cli` or a real worker exists.
 
 ## One call for everything
