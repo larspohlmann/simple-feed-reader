@@ -28,17 +28,17 @@ esac
 RELEASE="${ROOT}/releases/${NAME}"
 SHARED="${ROOT}/shared"
 
-# An absolute vendor path, not the `php84` on PATH, because the two are not the
-# same SAPI. `php84` is a symlink to the cgi-fcgi binary: it has to be spelled
+# An absolute vendor path, not the `php85` on PATH, because the two are not the
+# same SAPI. `php85` is a symlink to the cgi-fcgi binary: it has to be spelled
 # `-q -f <script> -- <args>` (the -q suppresses HTTP headers, the -- stops the
 # SAPI swallowing the first dash-prefixed argument), it chdir()s into the
 # script's directory, and its ini caps max_execution_time at 240 seconds. None
 # of that is wanted here -- least of all the ceiling, which is enough to kill a
 # migration on a table with real data.
 #
-# /opt/RZphp84/bin/php-cli is the same PHP 8.4.22 build, differing only in SAPI.
-# Measured on the host 2026-07-25: max_execution_time 0 (no ceiling), memory
-# limit 512M as with cgi-fcgi, every extension this app requires present, empty
+# /opt/RZphp85/bin/php-cli is the same build as the vhost's, differing only in
+# SAPI. Measured on the host: max_execution_time 0 (no ceiling), memory limit
+# 512M as with cgi-fcgi, every extension this app requires present, empty
 # disable_functions, date.timezone UTC, ordinary argument passing, and exit
 # codes propagate. The path shape is a Strato convention rather than a one-off:
 # php-cli exists identically under /opt/RZphp82, RZphp83, RZphp84 and RZphp85.
@@ -48,11 +48,11 @@ SHARED="${ROOT}/shared"
 # CLI does *not* chdir, it stays in the directory it was invoked from, and an
 # SSH command starts in $HOME. ${RELEASE} is absolute anyway, by the
 # normalization above.
-PHP=/opt/RZphp84/bin/php-cli
+PHP=/opt/RZphp85/bin/php-cli
 
 console() { "${PHP}" "${RELEASE}/bin/console" "$@"; }
 
-test -x "${PHP}" || die "no PHP CLI at ${PHP} -- if Strato has reorganised /opt, look for the new path with 'ls -d /opt/RZphp*/bin/php-cli' and update this script. The cgi-fcgi binary on PATH still works as a fallback, spelled: php84 -q -f ${RELEASE}/bin/console -- <command>"
+test -x "${PHP}" || die "no PHP CLI at ${PHP} -- if Strato has reorganised /opt, look for the new path with 'ls -d /opt/RZphp*/bin/php-cli' and update this script. The cgi-fcgi binary on PATH still works as a fallback, spelled: php85 -q -f ${RELEASE}/bin/console -- <command>"
 test -d "${RELEASE}" || die "no such release: ${RELEASE}"
 test -f "${SHARED}/.env.local" || die "missing ${SHARED}/.env.local"
 test -f "${SHARED}/config/jwt/private.pem" || die "missing shared JWT key: ${SHARED}/config/jwt/private.pem"

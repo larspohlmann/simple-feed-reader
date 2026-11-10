@@ -11,11 +11,11 @@ final class DetachedConsoleCommandLineTest extends TestCase
 {
     public function testBuildsTheFullDetachedShellLineFromTheConfiguredBinary(): void
     {
-        $line = $this->commandLine(configuredCliBinary: '/opt/RZphp84/bin/php-cli', runningSapi: 'cgi-fcgi')
+        $line = $this->commandLine(configuredCliBinary: '/opt/php/bin/php-cli', runningSapi: 'cgi-fcgi')
             ->forCommand('app:recommendations:drain', '--detach');
 
         self::assertSame(
-            "'/opt/RZphp84/bin/php-cli' '/srv/app/bin/console' 'app:recommendations:drain' '--detach'"
+            "'/opt/php/bin/php-cli' '/srv/app/bin/console' 'app:recommendations:drain' '--detach'"
             . " --env='prod' </dev/null >/dev/null 2>&1 &",
             $line,
         );

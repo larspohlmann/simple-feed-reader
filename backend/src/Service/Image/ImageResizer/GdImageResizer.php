@@ -26,11 +26,7 @@ final readonly class GdImageResizer implements ImageResizerInterface
         $scale = max($width / imagesx($source), $height / imagesy($source));
         $this->drawCentred($canvas, $source, $scale, $width, $height);
 
-        $out = $this->capture(static fn (\GdImage $image): bool => imagejpeg($image, null, 72), $canvas);
-        imagedestroy($source);
-        imagedestroy($canvas);
-
-        return $out;
+        return $this->capture(static fn (\GdImage $image): bool => imagejpeg($image, null, 72), $canvas);
     }
 
     public function containPng(string $sourceBytes, int $width, int $height): string
@@ -45,11 +41,7 @@ final readonly class GdImageResizer implements ImageResizerInterface
         $scale = min($width / imagesx($source), $height / imagesy($source));
         $this->drawCentred($canvas, $source, $scale, $width, $height);
 
-        $out = $this->capture(static fn (\GdImage $image): bool => imagepng($image), $canvas);
-        imagedestroy($source);
-        imagedestroy($canvas);
-
-        return $out;
+        return $this->capture(static fn (\GdImage $image): bool => imagepng($image), $canvas);
     }
 
     /** @phpstan-assert positive-int $width

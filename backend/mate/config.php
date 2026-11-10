@@ -14,7 +14,7 @@ return static function (ContainerConfigurator $container): void {
         // The PHP version this project runs on. Mate refuses to start under a different
         // major.minor, because it would then report on a runtime that is not your application's
         // and extensions may behave differently. Set to null to disable the check.
-        ->set('mate.php_version', '8.4')
+        ->set('mate.php_version', '8.5')
 
         // Override default parameters here
         // ->set('mate.cache_dir', sys_get_temp_dir().'/mate')

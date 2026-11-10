@@ -1,6 +1,6 @@
 # simple-feed-reader
 
-Multi-user RSS/Atom reader. **Symfony 7.4 LTS JSON API** in `backend/` (PHP 8.4),
+Multi-user RSS/Atom reader. **Symfony 7.4 LTS JSON API** in `backend/` (PHP 8.5),
 **Angular 20 SPA** in `frontend/` (Node 22). MySQL in production and Docker,
 SQLite for the native test run.
 

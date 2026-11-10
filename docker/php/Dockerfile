@@ -9,13 +9,13 @@
 # the root .dockerignore keeps vendor/, var/, node_modules/ and all TLS
 # material out of the context.
 
-FROM php:8.4-fpm-alpine AS dev
+FROM php:8.5-fpm-alpine AS dev
 
 # install-php-extensions resolves each extension's build- and runtime-deps on
 # alpine (icu for intl, libzip for zip, phpize toolchain for the xdebug pecl
 # build) and cleans the build deps up afterwards.
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-RUN install-php-extensions pdo_mysql intl opcache zip xdebug gd
+RUN install-php-extensions pdo_mysql intl zip xdebug gd
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -26,12 +26,12 @@ COPY docker/php/fpm/pool-dev.conf /usr/local/etc/php-fpm.d/zz-pool.conf
 WORKDIR /app
 
 
-FROM php:8.4-fpm-alpine AS prod
+FROM php:8.5-fpm-alpine AS prod
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 # su-exec: the entrypoint fixes volume ownership as root, then drops to
 # www-data for the cache warmup so runtime writes stay www-data-owned.
-RUN install-php-extensions pdo_mysql intl opcache zip gd \
+RUN install-php-extensions pdo_mysql intl zip gd \
     && apk add --no-cache su-exec
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

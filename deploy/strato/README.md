@@ -97,10 +97,9 @@ while the URL 404s. Verification step 1 is what catches that.
    `MAIL_FROM` is `simplefeedreader@lars-pohlmann.de`, a real mailbox on the domain. The
    domain also has a catch-all, so bounces and replies arrive whatever address is used —
    and with the local MTA there is no authenticated mailbox this has to match.
-4. ~~**PHP version**~~ — nothing to do. The vhost was measured serving **PHP 8.4.22**
-   (cgi-fcgi) on 2026-07-25, which is what reader mode needs (readability.php v4). The shell
-   side runs the same 8.4.22 build through a real CLI binary — see *Running a console command
-   on the server* below.
+4. **PHP version** — set the vhost to **PHP 8.5** in the Strato panel. The app requires it:
+   Composer's platform check fails every request on an older version. The shell side runs the
+   same build through a real CLI binary — see *Running a console command on the server* below.
 5. **Google OAuth** — register the redirect URI, exactly:
    `https://lars-pohlmann.de/reader/api/auth/oauth/google/callback`
 6. **Subdomain** — `reader.lars-pohlmann.de` already exists and already points at
@@ -163,7 +162,7 @@ while the URL 404s. Verification step 1 is what catches that.
    turns every one of them into ciphertext nobody can open, and each account is told only
    to enter its key again.
 
-   Also set `DRAIN_PHP_CLI_BINARY=/opt/RZphp84/bin/php-cli`: it names the CLI binary the web
+   Also set `DRAIN_PHP_CLI_BINARY=/opt/RZphp85/bin/php-cli`: it names the CLI binary the web
    request uses to spawn the recommendation drainer; without it, runs fall back to the
    maintenance cron's pace.
 
@@ -212,20 +211,20 @@ while the URL 404s. Verification step 1 is what catches that.
     to have arrived: the statement below makes the account active outright.
 
     ```bash
-    ssh strato-feedreader "/opt/RZphp84/bin/php-cli ~/simplefeedreader/current/bin/console dbal:run-sql \"UPDATE app_user SET roles = JSON_ARRAY('ROLE_ADMIN'), status = 'active', approved_at = UTC_TIMESTAMP() WHERE email = 'you@example.com'\""
+    ssh strato-feedreader "/opt/RZphp85/bin/php-cli ~/simplefeedreader/current/bin/console dbal:run-sql \"UPDATE app_user SET roles = JSON_ARRAY('ROLE_ADMIN'), status = 'active', approved_at = UTC_TIMESTAMP() WHERE email = 'you@example.com'\""
     ```
 
     It reports one row affected. Read it back before believing it:
 
     ```bash
-    ssh strato-feedreader "/opt/RZphp84/bin/php-cli ~/simplefeedreader/current/bin/console dbal:run-sql \"SELECT id, email, roles, status, approved_at FROM app_user\""
+    ssh strato-feedreader "/opt/RZphp85/bin/php-cli ~/simplefeedreader/current/bin/console dbal:run-sql \"SELECT id, email, roles, status, approved_at FROM app_user\""
     ```
 
     Each part of that statement is load-bearing:
 
-    - `/opt/RZphp84/bin/php-cli` is the host's real PHP CLI. It is not on `PATH`, which is
+    - `/opt/RZphp85/bin/php-cli` is the host's real PHP CLI. It is not on `PATH`, which is
       why the absolute path is spelled out; *Running a console command on the server* below
-      explains why the `php84` on `PATH` is the wrong binary for this.
+      explains why the `php85` on `PATH` is the wrong binary for this.
     - `dbal:run-sql` is doctrine-bundle's own command. It is registered in **every**
       environment, not just dev, and it reaches the database through PHP's mysqlnd. That is
       the point: the host's `mysql` CLI is a 5.6 client and cannot authenticate to this
@@ -348,9 +347,9 @@ any other.
 ## Running a console command on the server
 
 **The host has two PHP binaries, and the one on `PATH` is the wrong one.** They are the same
-build — PHP 8.4.22, built 8 June 2026 — and differ only in SAPI:
+build and differ only in SAPI:
 
-| | `php84` (on `PATH`) | `/opt/RZphp84/bin/php-cli` |
+| | `php85` (on `PATH`) | `/opt/RZphp85/bin/php-cli` |
 | --- | --- | --- |
 | SAPI | cgi-fcgi | cli |
 | `max_execution_time` | **240s** | **0 — no ceiling** |
@@ -359,7 +358,7 @@ build — PHP 8.4.22, built 8 June 2026 — and differ only in SAPI:
 | `php -r` | unavailable | works |
 | `memory_limit`, extensions, `disable_functions`, `date.timezone` | 512M, all present, none, UTC | identical |
 
-`php84` is a symlink to the cgi-fcgi binary. It is what a shell finds, which is why every
+`php85` is a symlink to the cgi-fcgi binary. It is what a shell finds, which is why every
 earlier note here was written around its quirks, but it is not the binary you want: its 240
 second execution ceiling is enough to kill a migration on a table with real data, and MySQL
 commits DDL implicitly, so being killed halfway is not recoverable by a retry.
@@ -368,7 +367,7 @@ So use the real CLI, by its absolute path — it is simply not on `PATH`:
 
 ```bash
 ssh strato-feedreader \
-  '/opt/RZphp84/bin/php-cli ~/simplefeedreader/current/bin/console doctrine:migrations:status'
+  '/opt/RZphp85/bin/php-cli ~/simplefeedreader/current/bin/console doctrine:migrations:status'
 ```
 
 That is exactly what `activate-release.sh` does, deliberately: a command you run by hand and a
@@ -378,8 +377,12 @@ starts in `$HOME`. The `~` above qualifies; a bare `bin/console` does not.
 
 The path shape is a Strato convention rather than a lucky find: `php-cli` exists identically
 under `/opt/RZphp82`, `RZphp83`, `RZphp84` and `RZphp85`, and the ini is
-`/opt/RZphp84/etc/php.ini`. `activate-release.sh` checks the binary is there before doing
+`/opt/RZphp85/etc/php.ini`. `activate-release.sh` checks the binary is there before doing
 anything and tells you this if it is not.
+
+**Upgrading the PHP version.** First switch the vhost in the Strato panel and point
+`DRAIN_PHP_CLI_BINARY` in `shared/.env.local` at the new `/opt/RZphpNN/bin/php-cli`: the
+running release keeps working on the newer version. Then deploy the release that needs it.
 
 **If Strato ever reorganises `/opt`**, find the new path with
 `ssh strato-feedreader 'ls -d /opt/RZphp*/bin/php-cli'` — and the cgi-fcgi binary still works
@@ -387,7 +390,7 @@ as a fallback, spelled the long way:
 
 ```bash
 ssh strato-feedreader \
-  'php84 -q -f ~/simplefeedreader/current/bin/console -- doctrine:migrations:status'
+  'php85 -q -f ~/simplefeedreader/current/bin/console -- doctrine:migrations:status'
 ```
 
 In that form `-q` suppresses the HTTP headers the SAPI prints ahead of the output, and **the
@@ -452,7 +455,7 @@ What a rollback does **not** do, because `activate-release.sh` is not re-run:
    once that step has been done and you are signed in as that admin.
 5. Google sign-in completes and lands back under `/reader`.
 6. Subscribe to a feed, refresh, open an article, switch to reader mode — this is what
-   proves PHP 8.4 on the vhost.
+   proves PHP 8.5 on the vhost.
 7. <https://lars-pohlmann.de/> and `/de/` still work. The mount must not disturb the
    portfolio it lives inside.
 8. Deploy again: logins survive (shared JWT keys) and rate-limit state survives (shared
@@ -488,12 +491,12 @@ earlier review rounds had flagged as undiagnosable:
 | `mod_deflate` | yes — probed 2026-08-03 with a throwaway directory carrying its own `AddOutputFilterByType DEFLATE`: the response came back `content-encoding: gzip` with `vary: Accept-Encoding`, 13,600 B → 108 B. `AllowOverride` therefore permits `FileInfo` too. Nothing on the host compressed before #254 because nothing asked it to. |
 | `mod_authz_core` | yes — dotfile denied with 403 |
 | Symlinked directory served over the web | **yes** — 200 through a symlink in the docroot |
-| Web-context PHP | **8.4.22**, cgi-fcgi — already correct, no panel change needed |
+| Web-context PHP | **8.5.12**, cgi-fcgi — set in the Strato panel |
 | Required extensions | all present (ctype, dom, iconv, libxml, filter, mbstring, openssl, sodium, xml, pdo_mysql, curl, intl, tokenizer, session, json) |
 | `memory_limit` / `max_execution_time` | 512M / 240s |
 | opcache / `allow_url_fopen` / `disable_functions` | on / on / none |
 | `date.timezone` | UTC — matches how the app persists datetimes |
-| Shell-context PHP | **8.4.22 cli** at `/opt/RZphp84/bin/php-cli` — same build as the vhost's, not on `PATH`; 512M, `max_execution_time` **0**, all required extensions, no `disable_functions`, UTC, exit codes propagate |
+| Shell-context PHP | **8.5.12 cli** at `/opt/RZphp85/bin/php-cli` — same build as the vhost's, not on `PATH`; 512M, `max_execution_time` **0**, all required extensions, no `disable_functions`, UTC, exit codes propagate |
 
 The decisive detail for the subpath: a request to `/_probe/d/api/health` arrived with
 `SCRIPT_NAME=/_probe/d/index.php` and `REQUEST_URI=/_probe/d/api/health` — exactly the pair

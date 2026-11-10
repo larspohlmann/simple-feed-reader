@@ -191,7 +191,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $lines = $this->exportedEntryLines($user);
         self::assertNotSame([], $lines, 'No entry line was exported.');
 
-        return $lines[array_key_first($lines)];
+        return array_values($lines)[0];
     }
 
     /** @return array<string, array<string, mixed>> entry lines by guid */

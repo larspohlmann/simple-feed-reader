@@ -53,7 +53,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           extensions: intl, pdo_sqlite, pdo_mysql, zip
           coverage: none
           # backend/bin/e2e.sh concatenates the system CA bundle with the mkcert
@@ -73,7 +73,7 @@ jobs:
       # then fails to update `installed.php` with a permission error. Installing
       # once, up front, as the runner user, means the bind mount simply carries
       # that tree into the container and `bin/console` sees it too -- both
-      # sides are PHP 8.4 and these are pure-PHP packages, so one install
+      # sides are PHP 8.5 and these are pure-PHP packages, so one install
       # satisfies both.
       #
       # --no-scripts is load-bearing, not an optimisation. Composer's

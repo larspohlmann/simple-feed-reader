@@ -44,7 +44,7 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
     private function registerSearchFunctions(Connection $connection): void
     {
         $nativeConnection = $connection->getNativeConnection();
-        if (!$nativeConnection instanceof \PDO) {
+        if (!$nativeConnection instanceof \Pdo\Sqlite) {
             return;
         }
 
@@ -55,7 +55,7 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
             SearchFoldFunction::NAME => SearchFolding::fold(...),
         ];
         foreach ($functions as $name => $function) {
-            $nativeConnection->sqliteCreateFunction(
+            $nativeConnection->createFunction(
                 $name,
                 static fn (?string $value): ?string => $value === null ? null : $function($value),
                 1,

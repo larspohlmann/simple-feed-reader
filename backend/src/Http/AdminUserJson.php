@@ -46,11 +46,11 @@ final class AdminUserJson
                 'approvedAt' => $user->getApprovedAt()?->format(\DateTimeInterface::ATOM),
                 // How this person signed up: an OAuth account has no verification mail to chase and may
                 // carry an `@oauth.invalid` placeholder, which both look like anomalies without it.
-                'identities' => $providersByUserId[$user->getId()] ?? [],
+                'identities' => $providersByUserId[$user->requireId()] ?? [],
                 // Footprint at a glance. A user with none of either is absent
                 // from the batched counts, hence the ?? 0.
-                'feedsCount' => $feedCounts[$user->getId()] ?? 0,
-                'tagsCount' => $tagCounts[$user->getId()] ?? 0,
+                'feedsCount' => $feedCounts[$user->requireId()] ?? 0,
+                'tagsCount' => $tagCounts[$user->requireId()] ?? 0,
                 'lastLoginAt' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
                 'trialEndsAt' => TrialEndJson::of($user),
                 'maxSubscriptions' => $user->getMaxSubscriptions(),

@@ -51,7 +51,7 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
             // The engine's count, not count($rows): hydration drops ghost ids and the unread filter drops read rows,
             // yet the engine may still hold matches beyond this page.
             matchCount: \count($matches->entryIds),
-            continuationRow: $candidates[array_key_last($candidates)] ?? null,
+            continuationRow: array_last($candidates),
         );
     }
 

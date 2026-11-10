@@ -242,7 +242,7 @@ final readonly class ConcurrentRequestEngine
     private function retire(FetchQueue $queue, \SplObjectStorage $inFlight, ResponseInterface $response): void
     {
         $queue->onRetired($inFlight[$response]);
-        $inFlight->detach($response);
+        unset($inFlight[$response]);
         $response->cancel();
     }
 

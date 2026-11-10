@@ -45,7 +45,7 @@ final readonly class EntryPage
         EntryListSort $sort,
         ?EntryListRow $continuationRow = null,
     ): array {
-        $resumeAfter = $continuationRow ?? ($rows[array_key_last($rows)] ?? null);
+        $resumeAfter = $continuationRow ?? array_last($rows);
         $nextCursor = $matchCount >= $limit ? self::cursorFromRow($resumeAfter, $sort) : null;
 
         return [

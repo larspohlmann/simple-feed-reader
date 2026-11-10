@@ -110,7 +110,7 @@ final readonly class ClusterLayer implements ScrapeLayerInterface
     ): array {
         $items = [];
         foreach ($anchors as $anchor) {
-            if (!$built->contains($anchor)) {
+            if (!$built->offsetExists($anchor)) {
                 $built[$anchor] = $cardFields->item($this->container($anchor, $counts), $anchor);
             }
             $item = $built[$anchor];
@@ -149,7 +149,7 @@ final readonly class ClusterLayer implements ScrapeLayerInterface
     /** @param \SplObjectStorage<Element, int> $counts */
     private function eligibleAnchorCount(Element $element, \SplObjectStorage $counts): int
     {
-        if ($counts->contains($element)) {
+        if ($counts->offsetExists($element)) {
             return $counts[$element];
         }
 

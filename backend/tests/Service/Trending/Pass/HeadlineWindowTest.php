@@ -154,6 +154,6 @@ final class HeadlineWindowTest extends TestCase
 
     private static function uniqueWord(int $index): string
     {
-        return 'zeta' . \chr(97 + intdiv($index, 26)) . \chr(97 + $index % 26);
+        return 'zeta' . pack('C2', 97 + intdiv($index, 26), 97 + $index % 26);
     }
 }
