@@ -3,7 +3,7 @@
   class="pill"
   cdkOverlayOrigin
   #origin="cdkOverlayOrigin"
-  aria-haspopup="true"
+  aria-haspopup="dialog"
   [class.set]="active() || count() > 0"
   [attr.aria-expanded]="open()"
   (click)="open.set(!open())"
@@ -23,9 +23,10 @@
   [cdkConnectedOverlayDisposeOnNavigation]="true"
   cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
   (backdropClick)="open.set(false)"
-  (detach)="open.set(false)"
+  (attach)="focusFirstOption()"
+  (detach)="closed()"
 >
-  <div class="pop" role="group" [attr.aria-label]="menuLabel()">
+  <div class="pop" role="group" cdkTrapFocus [attr.aria-label]="menuLabel()">
     @for (option of options(); track option.value) {
       @if (choice() === 'many') {
         <label class="option">

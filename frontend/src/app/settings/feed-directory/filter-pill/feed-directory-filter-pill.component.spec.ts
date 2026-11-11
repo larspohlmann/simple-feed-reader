@@ -3,11 +3,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import {
   FeedDirectoryFilterPillComponent,
-  FilterPillChoice,
-  FilterPillOption,
+  FeedDirectoryFilterPillChoice,
+  FeedDirectoryFilterPillOption,
 } from './feed-directory-filter-pill.component';
 
-const OPTIONS: FilterPillOption[] = [
+const OPTIONS: FeedDirectoryFilterPillOption[] = [
   { value: 'DE', label: 'Germany', count: '1,237', selected: true },
   { value: 'AT', label: 'Austria', selected: false },
 ];
@@ -16,7 +16,7 @@ describe('FeedDirectoryFilterPillComponent', () => {
   let fixture: ComponentFixture<FeedDirectoryFilterPillComponent<string>>;
   let chosen: string[];
 
-  function render(choice: FilterPillChoice, active = false): void {
+  function render(choice: FeedDirectoryFilterPillChoice, active = false): void {
     TestBed.configureTestingModule({
       imports: [FeedDirectoryFilterPillComponent, provideTranslocoTesting()],
     });
@@ -122,5 +122,58 @@ describe('FeedDirectoryFilterPillComponent', () => {
     ]);
 
     expect(openPop().querySelector('.name')!.textContent).toBe('A–Z');
+  });
+
+  it('announces a dialog-like popup on the pill', () => {
+    render('many');
+
+    expect(pill().getAttribute('aria-haspopup')).toBe('dialog');
+  });
+
+  it('moves focus into the pop on open and back to the pill after a pick', () => {
+    render('one');
+    pill().focus();
+
+    const menu = openPop();
+    expect(document.activeElement).toBe(menu.querySelector('button.option'));
+
+    menu.querySelectorAll<HTMLButtonElement>('button.option')[1].click();
+    fixture.detectChanges();
+
+    expect(pop()).toBeNull();
+    expect(document.activeElement).toBe(pill());
+  });
+
+  it('focuses the first checkbox of a multiple choice', () => {
+    render('many');
+
+    const menu = openPop();
+
+    expect(document.activeElement).toBe(menu.querySelector('input[type="checkbox"]'));
+  });
+
+  it('returns focus to the pill when Escape closes the pop', () => {
+    render('many');
+    const menu = openPop();
+
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+    fixture.detectChanges();
+
+    expect(pop()).toBeNull();
+    expect(document.activeElement).toBe(pill());
+  });
+
+  it('returns focus to the pill when a click outside closes the pop', () => {
+    render('many');
+    openPop();
+
+    TestBed.inject(OverlayContainer)
+      .getContainerElement()
+      .querySelector<HTMLElement>('.cdk-overlay-backdrop')!
+      .click();
+    fixture.detectChanges();
+
+    expect(pop()).toBeNull();
+    expect(document.activeElement).toBe(pill());
   });
 });

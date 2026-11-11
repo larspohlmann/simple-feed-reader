@@ -34,7 +34,7 @@ import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectoryScope } from './feed-directory.models';
 import {
   FeedDirectoryFilterPillComponent,
-  FilterPillOption,
+  FeedDirectoryFilterPillOption,
 } from './filter-pill/feed-directory-filter-pill.component';
 import {
   FEED_DIRECTORY_ROW_HEIGHT,
@@ -100,7 +100,7 @@ export class FeedDirectorySectionComponent {
     return code === null ? null : this.names.country(code);
   });
 
-  protected readonly countryOptions = computed<FilterPillOption[]>(() => {
+  protected readonly countryOptions = computed<FeedDirectoryFilterPillOption[]>(() => {
     const counts = this.store.countryCounts();
     const all = [...counts.values()].reduce((sum, count) => sum + count, 0);
     return [
@@ -118,33 +118,35 @@ export class FeedDirectorySectionComponent {
       })),
     ];
   });
-  protected readonly categoryOptions = computed<FilterPillOption[]>(() =>
+  protected readonly categoryOptions = computed<FeedDirectoryFilterPillOption[]>(() =>
     this.store.categoryOptions().map((name) => ({
       value: name,
       label: name,
       selected: this.store.categories().has(name),
     })),
   );
-  protected readonly lengthOptions = computed<FilterPillOption<FeedDirectoryLength>[]>(() =>
-    LENGTHS.map((length) => ({
-      value: length,
-      labelKey: `settings.feedDirectory.lengths.${length}`,
-      selected: this.store.lengths().has(length),
-    })),
+  protected readonly lengthOptions = computed<FeedDirectoryFilterPillOption<FeedDirectoryLength>[]>(
+    () =>
+      LENGTHS.map((length) => ({
+        value: length,
+        labelKey: `settings.feedDirectory.lengths.${length}`,
+        selected: this.store.lengths().has(length),
+      })),
   );
-  protected readonly languageOptions = computed<FilterPillOption[]>(() =>
+  protected readonly languageOptions = computed<FeedDirectoryFilterPillOption[]>(() =>
     this.scopes.scope().languages.map((code) => ({
       value: code,
       label: this.names.language(code),
       selected: this.store.languages().has(code),
     })),
   );
-  protected readonly sortOptions = computed<FilterPillOption<FeedDirectorySort>[]>(() =>
-    SORTS.map((sort) => ({
-      value: sort,
-      labelKey: `settings.feedDirectory.sort.${sort}`,
-      selected: this.store.sort() === sort,
-    })),
+  protected readonly sortOptions = computed<FeedDirectoryFilterPillOption<FeedDirectorySort>[]>(
+    () =>
+      SORTS.map((sort) => ({
+        value: sort,
+        labelKey: `settings.feedDirectory.sort.${sort}`,
+        selected: this.store.sort() === sort,
+      })),
   );
 
   constructor() {
