@@ -30,7 +30,7 @@ Everything is called **FeedDirectory**, kept apart from the onboarding `Catalog`
 | Controller | `Controller/Api/FeedDirectoryController` |
 | API | `/api/feed-directory/…` |
 | Data and snapshot script | `backend/resources/feed-directory/` |
-| Frontend area and route | `frontend/src/app/feed-directory/`, `/feed-directory` |
+| Frontend area and route | `frontend/src/app/settings/feed-directory/`, `/settings/feed-directory` |
 | Preference fields | `feedDirectoryCountries`, `feedDirectoryLanguages` |
 
 ## Data
@@ -40,7 +40,7 @@ Everything is called **FeedDirectory**, kept apart from the onboarding `Catalog`
 The InfoBubble page loads `docs/data/catalog.js` from `infobubble/infobubble-support`: one
 `window.CATALOG_DATA={…}` assignment around plain JSON (12 MB, 42,020 domains, 86,786 channel and 13,452
 podcast feeds). It is derived from the repository's `Sources/` database, which is licensed **ODbL**. The
-snapshot ships with the upstream `Sources/ABOUT.txt` and `Sources/LICENSE.txt`, and the directory page
+snapshot ships with the upstream `Sources/ABOUT.txt` and `Sources/LICENSE.txt`, and the directory section
 carries the attribution InfoBubble's footer carries (InfoBubble, GDELT Project, Tranco, Majestic Million
 CC BY 3.0).
 
@@ -72,9 +72,12 @@ fields as nullable.
 - `SOURCE` — the upstream URL, the commit SHA of `docs/data/catalog.js`, and the fetch date.
 - `snapshot.php` — see below.
 
-The **country key** is the ASCII slug of the display name (NFKD, lower-case, runs of non-alphanumerics to
-`-`, trimmed): `cote-d-ivoire`, `bosnia-herzegovina`, `congo-brazzaville`. All 231 slugs are distinct.
-Display names stay upstream's (`Côte d’Ivoire`).
+The **country key** is the ISO 3166-1 alpha-2 code, upper-case (`DE`, `CI`, `CG`). Upstream names are
+CLDR English region names, so the snapshot script maps them through ICU (`Locale::getDisplayRegion`): 230
+of 231 match exactly, and the one exception is overridden in the script (`St. Helena` → `SH`). The script
+fails if any name stays unmapped or two names map to one code. Files are named by code
+(`countries/DE.json.gz`). The frontend shows country names in the user's UI language through
+`Intl.DisplayNames` (type `region`), falling back to upstream's English name from `index.json`.
 
 ### Snapshot script
 
@@ -93,13 +96,17 @@ and a feed by its **URL** — never by an array position, since a new snapshot r
 
 The directory is **hard-scoped** to the user's choice: it shows only the chosen countries, and within them
 only domains with at least one chosen language. Choosing is required — **at least one country and one
-language**. Until both are set, the directory page shows the scope picker instead of the list.
+language**. Until both are set, the directory section shows the scope picker instead of the list.
 
 ### Storage
 
 `Preferences` gains two JSON list columns, `feed_directory_countries` (country keys) and
 `feed_directory_languages` (language codes), both defaulting to an empty list. One migration, verified on
 SQLite and MySQL by the migrate-from-empty CI leg.
+
+Like every preference, the scope is part of the account backup: the `account` line gains
+`feedDirectoryCountries` and `feedDirectoryLanguages` (a file without them restores an empty scope), and
+`docs/backup.md` documents both.
 
 ### API
 
@@ -113,10 +120,12 @@ asks again.
 
 ### Picker
 
-One standalone component, `FeedDirectoryScopePicker`, used in two places: a new **Feed directory**
-section in Settings, and the directory page's empty state. Two multi-select lists with a filter box each:
-countries (name and source count) and languages (display name via `Intl.DisplayNames`, and source count).
-Counts come from `index.json` and add channels and podcasts together. Saving needs one of each.
+One standalone component, `FeedDirectoryScopePickerComponent`, used in two places inside the directory's
+own Settings section: inline as the section's content while no scope is saved (first visit), and in a dialog
+(`<app-overlay-panel>`) opened by **Change scope** afterwards. Two checklists side by side (stacked on a
+phone), each with a filter box and the current picks as removable chips above it: countries (name and site
+count) and languages (display name via `Intl.DisplayNames`, and site count). Counts come from `index.json`
+and add channels and podcasts together. **Save** needs one of each.
 
 ## Backend
 
@@ -149,18 +158,23 @@ and normalises them with `FeedDirectoryUrl`.
 A `Support/` helper with the one normalising rule: lower-case scheme and host, `https` and `http` treated
 alike, a leading `www.` dropped, a trailing `/` dropped, query kept. It also derives the host. The same rule
 is implemented in TypeScript (below); both are tested against **one shared table of cases**
-(`backend/resources/feed-directory/url-cases.json`, read by PHPUnit and by Jest), so the two cannot drift.
+(`frontend/src/app/settings/feed-directory/feed-directory-url-cases.json`, read by Jest and by PHPUnit), so
+the two cannot drift. It lives under `frontend/` because the Docker frontend container mounts only that
+folder, while PHPUnit can read across the repository.
 
 ## Frontend
 
 ### Route and entry point
 
-A lazy `/feed-directory` route. It is reached from a **Browse feed directory** link in the add-feed
-dialog's footer, next to the existing link to the onboarding catalog.
+The directory is a **wide Settings section**: one `SETTINGS_SECTIONS` entry (`path: 'feed-directory'`,
+icon `travel_explore`, group `general`, `wide: true`) placed directly after Organise, and one lazy child
+route in `settings.routes.ts`, so it lives at `/settings/feed-directory` inside the Settings shell (its
+back link, its nav rail on desktop, its hub on a phone). It is also reached from a **Browse feed
+directory** link in the add-feed dialog's footer, next to the existing link to the onboarding catalog.
 
 ### `FeedDirectoryStore`
 
-Signals throughout. On open it reads the user's scope; with no scope it stops and the page shows the
+Signals throughout. On open it reads the user's scope; with no scope it stops and the section shows the
 picker. Otherwise it loads `index.json`, `/subscribed` and the chosen countries' files in parallel, and
 prepares each domain once, like InfoBubble's `prepare()`: lower-cased search text (host and summary),
 channel and podcast categories, channel and podcast feed counts, length bucket, and subscribed state.
@@ -168,7 +182,7 @@ Domains with none of the chosen languages are dropped at load.
 
 Filter state: mode (channels or podcasts), selected country (one of the scope, or all of it), categories,
 length buckets, languages (a subset of the scope), sort, query. Computed: the filtered and sorted rows,
-the per-country counts for the sidebar, the total.
+the per-country counts for the country menu, the total.
 
 - **Length buckets**, from InfoBubble: Headlines under 500 characters, Summaries 500 to under 2,500, Long
   reads 2,500 and over; a domain without a length belongs to none.
@@ -176,28 +190,37 @@ the per-country counts for the sidebar, the total.
   current mode, then Top).
 - A domain with no feeds in the current mode never shows.
 
-### Page layout
+### Section layout
 
-Built from `docs/design-language.md` and the shared components, styles in sibling `.scss` files, strings
-through transloco.
+Agreed in the visual round: variant C of [the mockup](2026-11-11-2176-feed-directory-mockup.html), which is the visual reference (A and B below it were the rejected options). It follows the Organise section's pattern, built from
+`docs/design-language.md` and the shared components, styles in sibling `.scss` files, strings through
+transloco (en and de).
 
-- **Toolbar**: title, Channels/Podcasts segmented control, filter pills for Category, Length and Language
-  (menus in a CDK overlay), sort select, and a link to change the scope in Settings.
-- **Sidebar**: the scoped countries with live counts and an "All" row; on narrow screens it collapses into
-  a country select in the toolbar.
-- **List**: `cdk-virtual-scroll-viewport` with fixed-height rows. A row shows the host, the summary
-  clamped to two lines, category chips, languages, the feed count in the current mode, and its state.
-- **Footer**: the ODbL attribution.
-- **Empty states**: no scope (the picker), nothing matches the filters, a country file failed to load (with
-  retry).
+- **Section head**: an icon tile (`travel_explore`), the title, "N sites in your countries and languages",
+  and a **Change scope** button on the right.
+- **Toolbar card**: the Channels/Podcasts segmented control (`<app-segmented-choice>`), filter pills for
+  Countries (only when the scope holds more than one; "All countries" plus each scoped country with its live
+  count), Category, Length and Language (only when the scope holds more than one), each a menu in a CDK
+  overlay, a sort pill (Top, A–Z, Most feeds), and the search field (`<app-search-field>`). A second line
+  inside the card shows the scope as chips and the "N shown" count. On a phone the pills scroll sideways and
+  the search field takes its own line.
+- **Rows card**: `cdk-virtual-scroll-viewport` with fixed-height rows inside a rounded card. A row shows the
+  host (and the Following badge), a meta line (country · languages · length bucket · rank), the summary
+  clamped to two lines, the category chips (hidden on a phone), and the action on the right. No favicons:
+  catalog feeds carry none (#2130).
+- **Footer line**: the ODbL attribution under the card.
+- **Empty states**: no scope (the picker, inline), nothing matches the filters, a country file failed to load
+  (with retry).
 
 ### Subscribing from a row
 
 - **One feed in the current mode**: the row's **Subscribe** opens `AddFeedDialogComponent` with
   `{ url }`, which runs discovery at once and offers its tag picker and live preview.
-- **Several feeds**: the row's **Subscribe** opens a popover anchored to the row (CDK overlay, so the
-  virtual list keeps its fixed row height) listing the feeds by category and URL path, each with its own
-  **Subscribe** opening the same dialog.
+- **Several feeds**: the row's button reads **N feeds ▾** (or **N feeds · M subscribed ▾**). On a fine
+  pointer it opens a popover anchored to the row (CDK overlay, so the virtual list keeps its fixed row
+  height) listing the feeds grouped by category, each by URL path with its own **Subscribe** opening the
+  same dialog, or a **Subscribed** mark. On a coarse pointer the same list opens through the `ActionSheet`
+  service: the host as title, a `{ note }` per category, one action per feed, subscribed feeds marked.
 - When the dialog closes with a subscription, the store marks that feed subscribed and the row updates.
 
 ### Subscribed state
@@ -232,7 +255,7 @@ Left to that spec: batch scoring, checking a feed is alive before recommending i
     language is a `422` problem, as is one empty list beside a non-empty one; two empty lists clear it.
   - `FeedDirectoryUrl` against the shared case table.
   - The suite runs against small fixture files, not the committed snapshot.
-- **Frontend (Jest)**: the store (scope gating, language drop at load, every filter, each sort, sidebar
+- **Frontend (Jest)**: the store (scope gating, language drop at load, every filter, each sort, country menu
   counts, mode switch), `feedDirectoryUrl()` against the shared case table, the scope picker (requires one
   of each), a single-feed row opening the dialog with its URL, the multi-feed popover, the subscribed and
   following states.
