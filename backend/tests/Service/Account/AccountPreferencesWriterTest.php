@@ -98,7 +98,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $this->writer()->answerPasskeyOffer($user);
 
-        self::assertNotNull($this->reload($user)->getPreferences()->getPasskeyOfferAnsweredAt());
+        self::assertNotNull($this->reload($user)->getPasskeyOfferAnsweredAt());
     }
 
     private function writer(): AccountPreferencesWriter

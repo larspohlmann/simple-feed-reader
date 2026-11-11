@@ -37,12 +37,10 @@ final class MeJson
      */
     public static function preferences(User $user, AccountSettingsModel $settings, string $instanceTimezone): array
     {
-        $preferences = $user->getPreferences();
-
         return [
             'scrapeFallbackEnabled' => $settings->reading->isScrapeFallbackEnabled(),
             'magazineStyle' => $settings->reading->getMagazineStyle()->value,
-            'passkeyOfferAnswered' => null !== $preferences->getPasskeyOfferAnsweredAt(),
+            'passkeyOfferAnswered' => null !== $user->getPasskeyOfferAnsweredAt(),
             'trendingEnabled' => $settings->reading->isTrendingEnabled(),
             'sharing' => [
                 'enabled' => $settings->sharing->isEnabled(),

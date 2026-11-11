@@ -10,7 +10,6 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCardContent;
-use App\Entity\Preferences;
 use App\Entity\ReadingSettings;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
@@ -661,7 +660,7 @@ final class AccountRestorerTest extends DbTestCase
      * fresh so a caller can compare a source account's rows against a restored
      * account's rows field by field.
      *
-     * @return array{user: User, preferences: Preferences, readingSettings: ReadingSettings,
+     * @return array{user: User, readingSettings: ReadingSettings,
      *     sharingSettings: SharingSettings,
      *     tag: Tag, savedSearch: SavedSearch, feed: Feed, subscription: Subscription,
      *     subscriptionTag: SubscriptionTag, entry: Entry, entryState: EntryState}
@@ -692,7 +691,6 @@ final class AccountRestorerTest extends DbTestCase
 
         return [
             'user' => $user,
-            'preferences' => $user->getPreferences(),
             'readingSettings' => StoredUserSettings::reading($this->entityManager, $user),
             'sharingSettings' => StoredUserSettings::sharing($this->entityManager, $user),
             'tag' => $tag,

@@ -267,12 +267,11 @@ picker.
 | `emailVerifiedAt` | The date this instance proved you control your address. Written by the verify-email and sign-in-with-provider flows, never by you. A restore runs against an account this instance already verified or did not. |
 | `accountLimits.trialEndsAt` | The end of the trial period this instance gave the account. The instance decides its own terms. |
 | `accountLimits.maxSubscriptions` | The subscription limit an administrator gave the account. If the file carried it, you could write your own limit. |
-| `preferences` | Not a value, but the pointer from the account to its preferences row. The `account` line writes the preference itself, so the pointer becomes no key in the file. |
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
 | `recommendationSettings` | The pointer to your "For you" settings row. It points at data that section 6.2 drops in full. |
 | `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey. It records that the app showed you the offer, not a setting you chose. A restore into a fresh account should let that account see the offer. |
 
-**On each row you own.** The preferences, the reading settings, the sharing settings, the digest settings, each tag, each subscription, each
+**On each row you own.** The reading settings, the sharing settings, the digest settings, each tag, each subscription, each
 article mark, each included social network and each social network kept out of For you all hold one pointer to their owner.
 
 | Field | Why the file leaves it out |

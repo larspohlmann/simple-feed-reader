@@ -20,12 +20,10 @@ final readonly class PasskeyOffer
 
     public function markAnswered(User $user): void
     {
-        $preferences = $user->getPreferences();
-
-        if (null !== $preferences->getPasskeyOfferAnsweredAt()) {
+        if (null !== $user->getPasskeyOfferAnsweredAt()) {
             return;
         }
 
-        $preferences->markPasskeyOfferAnswered($this->clock->now());
+        $user->markPasskeyOfferAnswered($this->clock->now());
     }
 }

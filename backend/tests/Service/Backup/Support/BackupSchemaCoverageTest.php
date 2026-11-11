@@ -23,7 +23,6 @@ use App\Entity\KnownSocialCollection;
 use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
-use App\Entity\Preferences;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
@@ -225,9 +224,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'sign-up flow or by an admin.',
             'accountLimits.maxSubscriptions' => 'A per-account cap an admin grants. Carried in the '
                 . 'file, it would be a quota the account holder writes for themselves.',
-            'preferences' => 'Not a carried value: the pointer to the account\'s preferences row. '
-                . 'The account line inlines that row\'s field instead of nesting it, so the '
-                . 'pointer itself becomes no key.',
+            'passkeyOfferAnsweredAt' => 'Interface state, not account configuration: it records that the '
+                . 'one-time enrolment offer was shown and answered. A restore into a fresh account should '
+                . 'let that account see the offer.',
             'activeAiProviderSettings' => 'Points at an AiProviderSettings row, which '
                 . 'ACCOUNT_SCOPED_WHOLLY_DROPPED leaves out in full.',
             'recommendationSettings' => 'Points at a RecommendationSettings row, which '
@@ -235,12 +234,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
         ReadingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
         SharingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
-        Preferences::class => [
-            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
-            'passkeyOfferAnsweredAt' => 'Interface state, not account configuration: it records that the '
-                . 'one-time enrolment offer was shown and answered. A restore into a fresh account should '
-                . 'let that account see the offer.',
-        ],
         Tag::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],

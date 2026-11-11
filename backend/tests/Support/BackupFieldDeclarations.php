@@ -10,7 +10,6 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCard;
-use App\Entity\Preferences;
 use App\Entity\ReadingSettings;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
@@ -36,7 +35,6 @@ final class BackupFieldDeclarations
         User::class => [
             'locale' => 'locale',
         ],
-        Preferences::class => [],
         SharingSettings::class => [
             'enabled' => 'sharingEnabled',
             'hiddenTargets' => 'hiddenShareTargets',
@@ -130,7 +128,6 @@ final class BackupFieldDeclarations
     /** Doctrine class => the `kind` of the line its fields are written on. */
     public const array KIND_OF = [
         User::class => BackupSchema::KIND_ACCOUNT,
-        Preferences::class => BackupSchema::KIND_ACCOUNT,
         ReadingSettings::class => BackupSchema::KIND_ACCOUNT,
         SharingSettings::class => BackupSchema::KIND_ACCOUNT,
         Tag::class => BackupSchema::KIND_TAG,
