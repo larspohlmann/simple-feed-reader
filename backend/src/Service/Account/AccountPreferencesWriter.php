@@ -27,7 +27,7 @@ final readonly class AccountPreferencesWriter
         private SharingSettingsRepository $sharingSettings,
         private DigestSettingsRepository $digestSettings,
         private FeedDirectoryScopeRepository $feedDirectoryScopes,
-        private FeedDirectoryFiles $feedDirectory,
+        private FeedDirectoryFiles $feedDirectoryFiles,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -67,7 +67,7 @@ final readonly class AccountPreferencesWriter
 
     public function changeFeedDirectoryScope(User $user, FeedDirectoryScopeModel $scope): void
     {
-        $this->feedDirectory->requireKnown($scope);
+        $this->feedDirectoryFiles->requireKnown($scope);
         $this->feedDirectoryScopes->forUser($user)->change($scope->countries, $scope->languages);
         $this->entityManager->flush();
     }

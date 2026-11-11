@@ -7,7 +7,6 @@ namespace App\Dto\Me;
 use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/** No defaults: an empty body must never clear the scope. */
 final readonly class UpdateFeedDirectoryScopeRequest
 {
     private const int MAX_ENTRIES = 300;
