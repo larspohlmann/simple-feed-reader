@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.9.2] - 2026-11-11
+
 ### Highlights
 
 **Faster sidebar.** Unread counts now come from a single pass over your entries,
@@ -25,6 +27,26 @@ browsers do, so links like `?page=2`, `#comments` or `../img/a.jpg` point to the
 right place.
 
 **Under the hood.** Upgrades to PHP 8.5 and Symfony 8.1.
+
+## What's Changed
+* docs(#2146): list Trending and social search feeds in the README and docs/features.md by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2147
+* perf(#2157): fetch compressed, inflate under the size limit by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2160
+* Faster local Infection: reusable coverage, lighter sweep test (#2161) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2162
+* chore(#2153): upgrade phpmd and pdepend to 3.0 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2163
+* PHP 8.5 (#2148) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2164
+* Symfony 8.1 and DoctrineBundle 3 (#2155) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2165
+* Persistent connections and a pin that holds across reuse (#2155) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2166
+* fix(#2149): resolve relative references with the WHATWG URL parser by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2167
+* refactor(#2152): read an array's ends with array_first() and array_last() by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2168
+* refactor(#2154): drop the #183 parentheses around new in a chain by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2169
+* refactor(#2150): withers copy with clone-with by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2170
+* feat(#2151): withers carry #[\NoDiscard] by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2171
+* perf(#2159): the unread tally scans entries once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2172
+* docs(#2156): keep RateLimitGuard; #[RateLimit] does not fit by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2173
+* docs(#2174): v1.9.2 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2175
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.9.1...v1.9.2
 
 ## [v1.9.1] - 2026-11-10
 
