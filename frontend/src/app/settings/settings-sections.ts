@@ -22,6 +22,13 @@ export const SETTINGS_SECTIONS = [
     group: 'general',
     wide: true,
   },
+  {
+    path: 'feed-directory',
+    icon: 'travel_explore',
+    labelKey: 'settings.feedDirectory.title',
+    group: 'general',
+    wide: true,
+  },
   { path: 'import', icon: 'import_export', labelKey: 'settings.opml.title', group: 'general' },
   { path: 'preferences', icon: 'tune', labelKey: 'settings.preferences', group: 'general' },
   { path: 'email', icon: 'mail', labelKey: 'settings.email.title', group: 'general' },

@@ -830,6 +830,49 @@
         "remove": "Remove {{name}}",
         "save": "Save",
         "saveFailed": "Your choice wasn't saved. Try again."
+      },
+      "subscribe": "Subscribe",
+      "subscribed": "Subscribed",
+      "following": "Following",
+      "feeds": "{{count}} feeds",
+      "feedsSubscribed": "{{count}} feeds · {{subscribed}} subscribed",
+      "rank": "Rank {{rank}}",
+      "lengths": {
+        "headlines": "Headlines",
+        "summaries": "Summaries",
+        "long": "Long reads"
+      },
+      "modeLabel": "Feed type",
+      "mode": {
+        "channels": "Channels",
+        "podcasts": "Podcasts"
+      },
+      "sortLabel": "Sort",
+      "sort": {
+        "top": "Top",
+        "az": "A–Z",
+        "feeds": "Most feeds"
+      },
+      "filters": {
+        "countries": "Countries",
+        "allCountries": "All countries",
+        "category": "Category",
+        "length": "Length",
+        "language": "Language"
+      },
+      "search": "Search sites and summaries",
+      "shown": "{{count}} shown",
+      "noMatches": "No sites match these filters.",
+      "loading": "Loading the directory",
+      "loadFailed": "The directory couldn't be loaded.",
+      "retry": "Retry",
+      "attribution": {
+        "data": "Data:",
+        "catalog": "InfoBubble sources catalog",
+        "hostnames": "hostnames from",
+        "and": "and",
+        "ranking": "ranking from",
+        "disclaimer": "Matched and summarised automatically; errors possible."
       }
     },
     "health": {

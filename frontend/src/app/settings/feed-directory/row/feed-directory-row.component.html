@@ -1,0 +1,62 @@
+<div class="body">
+  <div class="host">
+    <span class="name">{{ row().host }}</span>
+    @if (row().following) {
+      <span class="follow">
+        <app-icon name="check" size="text" />{{ 'settings.feedDirectory.following' | transloco }}
+      </span>
+    }
+  </div>
+  <div class="meta">
+    <span>{{ names.country(row().country) }}</span>
+    <i aria-hidden="true">·</i>
+    <span>{{ languageNames() }}</span>
+    @if (row().length; as length) {
+      <i aria-hidden="true">·</i>
+      <span>{{ 'settings.feedDirectory.lengths.' + length | transloco }}</span>
+    }
+    @if (row().rank; as rank) {
+      <i aria-hidden="true">·</i>
+      <span>{{ 'settings.feedDirectory.rank' | transloco: { rank: names.count(rank) } }}</span>
+    }
+  </div>
+  @if (row().summary; as summary) {
+    <p class="summary">{{ summary }}</p>
+  }
+  <div class="chips">
+    @for (category of categories(); track $index) {
+      <span class="chip">{{ category }}</span>
+    }
+  </div>
+</div>
+
+<div class="action">
+  @if (onlyFeed(); as feed) {
+    @if (feed.subscribed) {
+      <span class="done">
+        <app-icon name="check" size="sm" />{{ 'settings.feedDirectory.subscribed' | transloco }}
+      </span>
+    } @else {
+      <app-button size="sm" data-test="subscribe" (click)="request($event)">
+        <app-icon name="add" size="sm" />{{ 'settings.feedDirectory.subscribe' | transloco }}
+      </app-button>
+    }
+  } @else {
+    <app-button
+      size="sm"
+      data-test="feeds"
+      [variant]="subscribedCount() ? 'ghost' : 'default'"
+      (click)="request($event)"
+    >
+      @if (subscribedCount()) {
+        {{
+          'settings.feedDirectory.feedsSubscribed'
+            | transloco: { count: feeds().length, subscribed: subscribedCount() }
+        }}
+      } @else {
+        {{ 'settings.feedDirectory.feeds' | transloco: { count: feeds().length } }}
+      }
+      <app-icon name="expand_more" size="sm" />
+    </app-button>
+  }
+</div>

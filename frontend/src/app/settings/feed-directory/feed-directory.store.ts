@@ -1,5 +1,5 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { forkJoin, of } from 'rxjs';
+import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Subscription, forkJoin, of } from 'rxjs';
 import { toggled } from '../../core/toggled-set';
 import { FeedDirectoryApi } from './feed-directory-api';
 import {
@@ -15,16 +15,17 @@ import {
   withSubscribed,
 } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
-import { FeedDirectoryIndex } from './feed-directory.models';
+import { FeedDirectoryIndex, FeedDirectoryScope } from './feed-directory.models';
 
 @Injectable()
-export class FeedDirectoryStore {
+export class FeedDirectoryStore implements OnDestroy {
   private readonly api = inject(FeedDirectoryApi);
   private readonly scopes = inject(FeedDirectoryScopeService);
 
   readonly status = signal<'loading' | 'ready' | 'failed'>('loading');
   readonly index = signal<FeedDirectoryIndex | null>(null);
   private readonly loaded = signal<FeedDirectoryRow[]>([]);
+  private loading = Subscription.EMPTY;
 
   readonly mode = signal<FeedDirectoryMode>('channels');
   readonly country = signal<string | null>(null);
@@ -65,8 +66,10 @@ export class FeedDirectoryStore {
     const countryFiles = scope.countries.length
       ? forkJoin(scope.countries.map((code) => this.api.country(code)))
       : of([]);
+    this.loading.unsubscribe();
+    this.keepFiltersWithin(scope);
     this.status.set('loading');
-    forkJoin({
+    this.loading = forkJoin({
       index: this.api.index(),
       subscribed: this.api.subscribed(),
       files: countryFiles,
@@ -84,6 +87,10 @@ export class FeedDirectoryStore {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.loading.unsubscribe();
+  }
+
   markSubscribed(feedUrl: string): void {
     this.loaded.update((rows) => withSubscribed(rows, feedUrl));
   }
@@ -98,5 +105,12 @@ export class FeedDirectoryStore {
 
   toggleLanguage(code: string): void {
     this.languages.update((set) => toggled(set, code));
+  }
+
+  private keepFiltersWithin(scope: FeedDirectoryScope): void {
+    this.country.update((code) => (code !== null && scope.countries.includes(code) ? code : null));
+    this.languages.update(
+      (codes) => new Set([...codes].filter((code) => scope.languages.includes(code))),
+    );
   }
 }

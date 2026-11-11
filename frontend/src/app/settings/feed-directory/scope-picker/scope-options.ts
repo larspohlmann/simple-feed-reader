@@ -1,3 +1,4 @@
+import { displayName } from '../feed-directory-names';
 import { FeedDirectoryIndex } from '../feed-directory.models';
 
 export interface ScopeOption {
@@ -26,14 +27,6 @@ export function languageOptions(index: FeedDirectoryIndex, lang: string): ScopeO
   }));
 
   return byName(options, lang);
-}
-
-function displayName(names: Intl.DisplayNames, code: string, fallback: string): string {
-  try {
-    return names.of(code) ?? fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 function byName(options: ScopeOption[], lang: string): ScopeOption[] {

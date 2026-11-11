@@ -1,0 +1,179 @@
+<app-settings-stack>
+  @if (!scopes.hasScope()) {
+    <app-settings-group
+      icon="travel_explore"
+      [title]="'settings.feedDirectory.scope.heading' | transloco"
+      [caption]="'settings.feedDirectory.scope.intro' | transloco"
+    >
+      <app-feed-directory-scope-picker class="picker" [initial]="scopes.scope()" />
+    </app-settings-group>
+  } @else {
+    <app-settings-group
+      icon="travel_explore"
+      [title]="'settings.feedDirectory.title' | transloco"
+      [caption]="
+        store.status() === 'ready'
+          ? ('settings.feedDirectory.summary' | transloco: { count: names.count(store.total()) })
+          : ''
+      "
+    >
+      <app-button groupActions size="sm" data-test="change-scope" (click)="changeScope()">
+        <app-icon name="tune" size="sm" /> {{ 'settings.feedDirectory.changeScope' | transloco }}
+      </app-button>
+
+      <div class="tools">
+        <div class="filters">
+          <app-segmented-choice
+            [options]="modes"
+            [selected]="store.mode()"
+            ariaLabelKey="settings.feedDirectory.modeLabel"
+            labelPrefix="settings.feedDirectory.mode."
+            (pick)="store.mode.set($event)"
+          />
+          @if (countryChoice()) {
+            <app-feed-directory-filter-pill
+              data-test="countries"
+              choice="one"
+              [label]="
+                chosenCountry() ?? ('settings.feedDirectory.filters.allCountries' | transloco)
+              "
+              [menuLabel]="'settings.feedDirectory.filters.countries' | transloco"
+              [options]="countryOptions()"
+              [active]="store.country() !== null"
+              (choose)="chooseCountry($event)"
+            />
+          }
+          <app-feed-directory-filter-pill
+            data-test="category"
+            [label]="'settings.feedDirectory.filters.category' | transloco"
+            [menuLabel]="'settings.feedDirectory.filters.category' | transloco"
+            [options]="categoryOptions()"
+            [count]="store.categories().size"
+            (choose)="store.toggleCategory($event)"
+          />
+          <app-feed-directory-filter-pill
+            data-test="length"
+            [label]="'settings.feedDirectory.filters.length' | transloco"
+            [menuLabel]="'settings.feedDirectory.filters.length' | transloco"
+            [options]="lengthOptions()"
+            [count]="store.lengths().size"
+            (choose)="store.toggleLength($event)"
+          />
+          @if (languageChoice()) {
+            <app-feed-directory-filter-pill
+              data-test="language"
+              [label]="'settings.feedDirectory.filters.language' | transloco"
+              [menuLabel]="'settings.feedDirectory.filters.language' | transloco"
+              [options]="languageOptions()"
+              [count]="store.languages().size"
+              (choose)="store.toggleLanguage($event)"
+            />
+          }
+          <app-feed-directory-filter-pill
+            data-test="sort"
+            choice="one"
+            icon="swap_vert"
+            [label]="'settings.feedDirectory.sort.' + store.sort() | transloco"
+            [menuLabel]="'settings.feedDirectory.sortLabel' | transloco"
+            [options]="sortOptions()"
+            (choose)="store.sort.set($event)"
+          />
+        </div>
+        <div class="search">
+          <app-icon class="search-icon" name="search" size="sm" />
+          <input
+            type="search"
+            class="query"
+            data-test="search"
+            autocomplete="off"
+            [attr.aria-label]="'settings.feedDirectory.search' | transloco"
+            [placeholder]="'settings.feedDirectory.search' | transloco"
+            [value]="store.query()"
+            (input)="store.query.set(inputValue($event))"
+          />
+        </div>
+      </div>
+
+      <div class="scope-line" data-test="scope">
+        <app-icon name="public" size="sm" />
+        @for (name of countryNames(); track $index) {
+          <span class="scope-chip">{{ name }}</span>
+        }
+        <span class="separator" aria-hidden="true">·</span>
+        @for (name of languageNames(); track $index) {
+          <span class="scope-chip">{{ name }}</span>
+        }
+        @if (store.status() === 'ready') {
+          <span class="shown">{{
+            'settings.feedDirectory.shown' | transloco: { count: names.count(store.rows().length) }
+          }}</span>
+        }
+      </div>
+    </app-settings-group>
+  }
+</app-settings-stack>
+
+@if (scopes.hasScope()) {
+  <div class="results">
+    <section class="rows-card">
+      @switch (store.status()) {
+        @case ('loading') {
+          <app-skeleton
+            class="state"
+            [label]="'settings.feedDirectory.loading' | transloco"
+            [rows]="6"
+          />
+        }
+        @case ('failed') {
+          <app-error-banner
+            class="state"
+            [message]="'settings.feedDirectory.loadFailed' | transloco"
+            [actionLabel]="'settings.feedDirectory.retry' | transloco"
+            (action)="store.retry()"
+          />
+        }
+        @default {
+          @if (store.rows().length === 0) {
+            <p class="state empty">{{ 'settings.feedDirectory.noMatches' | transloco }}</p>
+          } @else {
+            <cdk-virtual-scroll-viewport
+              scrollWindow
+              class="viewport"
+              [itemSize]="rowHeight"
+              [minBufferPx]="rowHeight * 4"
+              [maxBufferPx]="rowHeight * 8"
+            >
+              <app-feed-directory-row
+                *cdkVirtualFor="let row of store.rows(); trackBy: byHost"
+                [row]="row"
+                [mode]="store.mode()"
+              />
+            </cdk-virtual-scroll-viewport>
+          }
+        }
+      }
+    </section>
+
+    <p class="attribution">
+      {{ 'settings.feedDirectory.attribution.data' | transloco }}
+      <a
+        href="https://github.com/infobubble/infobubble-support"
+        target="_blank"
+        rel="noopener noreferrer"
+        >{{ 'settings.feedDirectory.attribution.catalog' | transloco }}</a
+      >
+      (ODbL) · {{ 'settings.feedDirectory.attribution.hostnames' | transloco }}
+      <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener noreferrer">GDELT</a>
+      {{ 'settings.feedDirectory.attribution.and' | transloco }}
+      <a href="https://tranco-list.eu/" target="_blank" rel="noopener noreferrer">Tranco</a>
+      · {{ 'settings.feedDirectory.attribution.ranking' | transloco }}
+      <a
+        href="https://majestic.com/reports/majestic-million"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Majestic Million</a
+      >
+      (CC BY 3.0). {{ 'settings.feedDirectory.attribution.disclaimer' | transloco }}
+    </p>
+  </div>
+}

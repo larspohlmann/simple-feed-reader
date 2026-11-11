@@ -1,0 +1,58 @@
+<button
+  type="button"
+  class="pill"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  aria-haspopup="true"
+  [class.set]="active() || count() > 0"
+  [attr.aria-expanded]="open()"
+  (click)="open.set(!open())"
+>
+  {{ caption() }}
+  <app-icon [name]="icon()" size="sm" />
+</button>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="open()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  [cdkConnectedOverlayDisposeOnNavigation]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="open.set(false)"
+  (detach)="open.set(false)"
+>
+  <div class="pop" role="group" [attr.aria-label]="menuLabel()">
+    @for (option of options(); track option.value) {
+      @if (choice() === 'many') {
+        <label class="option">
+          <input type="checkbox" [checked]="option.selected" (change)="pick(option.value)" />
+          <span class="name">{{
+            option.labelKey ? (option.labelKey | transloco) : option.label
+          }}</span>
+          @if (option.count !== undefined) {
+            <span class="count">{{ option.count }}</span>
+          }
+        </label>
+      } @else {
+        <button
+          type="button"
+          class="option"
+          [attr.aria-pressed]="option.selected"
+          (click)="pick(option.value)"
+        >
+          <app-icon class="mark" name="check" size="sm" [class.on]="option.selected" />
+          <span class="name">{{
+            option.labelKey ? (option.labelKey | transloco) : option.label
+          }}</span>
+          @if (option.count !== undefined) {
+            <span class="count">{{ option.count }}</span>
+          }
+        </button>
+      }
+    }
+  </div>
+</ng-template>

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { FeedDirectoryApi } from '../feed-directory-api';
 import { FeedDirectoryScopeService } from '../feed-directory-scope.service';
@@ -19,10 +19,12 @@ const EMPTY_SCOPE: FeedDirectoryScope = { countries: [], languages: [] };
 describe('FeedDirectoryScopePickerComponent', () => {
   let fixture: ComponentFixture<FeedDirectoryScopePickerComponent>;
   let index: FeedDirectoryIndex;
+  let indexRequest: jest.Mock<Observable<FeedDirectoryIndex>, []>;
   let save: jest.Mock<Observable<boolean>, [FeedDirectoryScope]>;
 
   beforeEach(() => {
     index = INDEX;
+    indexRequest = jest.fn(() => of(index));
   });
 
   async function render(initial: FeedDirectoryScope = EMPTY_SCOPE): Promise<void> {
@@ -30,7 +32,7 @@ describe('FeedDirectoryScopePickerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [FeedDirectoryScopePickerComponent, provideTranslocoTesting()],
       providers: [
-        { provide: FeedDirectoryApi, useValue: { index: () => of(index) } },
+        { provide: FeedDirectoryApi, useValue: { index: indexRequest } },
         { provide: FeedDirectoryScopeService, useValue: { save } },
       ],
     }).compileComponents();
@@ -186,5 +188,22 @@ describe('FeedDirectoryScopePickerComponent', () => {
     expect(isChecked('countries', 'Austria')).toBe(false);
     expect(chipNames('countries')).toEqual([]);
     expect(saveButton().disabled).toBe(true);
+  });
+
+  it('shows the load failure with Retry instead of empty lists, and Retry loads again', async () => {
+    indexRequest.mockReturnValueOnce(throwError(() => new Error('offline')));
+    await render();
+
+    const banner: HTMLElement = fixture.nativeElement.querySelector('app-error-banner');
+    expect(banner.textContent).toContain("The directory couldn't be loaded.");
+    expect(box('countries')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-test="save"]')).toBeNull();
+
+    banner.querySelector<HTMLButtonElement>('button.action')!.click();
+    fixture.detectChanges();
+
+    expect(indexRequest).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.querySelector('app-error-banner')).toBeNull();
+    expect(optionTexts('countries')).toEqual(['Austria 302', 'Germany 1,329']);
   });
 });

@@ -1,15 +1,15 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { catchError, of } from 'rxjs';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -34,12 +34,10 @@ export class FeedDirectoryScopePickerComponent {
   readonly initial = input.required<FeedDirectoryScope>();
   readonly saved = output<FeedDirectoryScope>();
 
-  private readonly index = toSignal(
-    inject(FeedDirectoryApi)
-      .index()
-      .pipe(catchError(() => of(null))),
-    { initialValue: null as FeedDirectoryIndex | null },
-  );
+  private readonly api = inject(FeedDirectoryApi);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly index = signal<FeedDirectoryIndex | null>(null);
+  protected readonly loadFailed = signal(false);
   private readonly lang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
@@ -69,6 +67,21 @@ export class FeedDirectoryScopePickerComponent {
   protected readonly saveFailed = signal(false);
   protected readonly siteCount = computed(() => new Intl.NumberFormat(this.lang()));
   protected readonly inputValue = inputValue;
+
+  constructor() {
+    this.loadIndex();
+  }
+
+  protected loadIndex(): void {
+    this.loadFailed.set(false);
+    this.api
+      .index()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (index) => this.index.set(index),
+        error: () => this.loadFailed.set(true),
+      });
+  }
 
   protected save(): void {
     const scope: FeedDirectoryScope = {

@@ -232,6 +232,44 @@ describe('FeedDirectoryStore', () => {
     expect(hosts()).toContain('orf.at');
   });
 
+  it('drops an earlier load when a new one starts, so its late result never lands', () => {
+    const firstDe = new Subject<FeedDirectoryCountryFile>();
+    country.mockImplementationOnce(() => firstDe).mockImplementationOnce(() => of(AT));
+    store.load();
+
+    scope.set({ countries: ['AT'], languages: ['de'] });
+    store.load();
+    expect(hosts()).toEqual(['orf.at']);
+
+    firstDe.next(DE);
+    firstDe.complete();
+
+    expect(store.status()).toBe('ready');
+    expect(hosts()).toEqual(['orf.at']);
+    expect(firstDe.observed).toBe(false);
+  });
+
+  it('keeps the country and language filters only where the scope still holds them', () => {
+    scope.set({ countries: ['DE', 'AT'], languages: ['de', 'en'] });
+    store.country.set('DE');
+    store.toggleLanguage('en');
+    store.toggleLanguage('de');
+
+    scope.set({ countries: ['AT'], languages: ['de'] });
+    store.load();
+
+    expect(store.country()).toBeNull();
+    expect([...store.languages()]).toEqual(['de']);
+  });
+
+  it('keeps a country filter the scope still holds', () => {
+    store.country.set('AT');
+
+    store.load();
+
+    expect(store.country()).toBe('AT');
+  });
+
   it('marks a feed subscribed and its row followed', () => {
     loadedStore();
     const before = store.rows().find((row) => row.host === 'zeit.de')!;
