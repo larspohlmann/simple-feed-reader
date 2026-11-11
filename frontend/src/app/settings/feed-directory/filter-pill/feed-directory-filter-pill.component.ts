@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
 
 export interface FeedDirectoryFilterPillOption<T extends string = string> {
   readonly value: T;
@@ -50,6 +51,7 @@ export class FeedDirectoryFilterPillComponent<T extends string> {
     this.count() > 0 ? `${this.label()} · ${this.count()}` : this.label(),
   );
   protected readonly positions = UNDER_THE_PILL;
+  protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   private readonly pill = viewChild.required(CdkOverlayOrigin);
   private readonly overlay = viewChild.required(CdkConnectedOverlay);
 

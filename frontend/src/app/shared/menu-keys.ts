@@ -6,6 +6,8 @@ export const TOOLBAR_MENU_POSITIONS: ConnectedPosition[] = [
   { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
 ];
 
+export const MENU_VIEWPORT_MARGIN = 8;
+
 /** Steps focus through the role=menu the key was pressed in. */
 export function stepMenu(event: KeyboardEvent): void {
   const menu = (event.target as Element).closest('[role="menu"]');

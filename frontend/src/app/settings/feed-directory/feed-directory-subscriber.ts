@@ -14,14 +14,12 @@ import { SubscriptionDto } from '../../reader/models';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { ActionSheetItem } from '../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
-import { TOOLBAR_MENU_POSITIONS } from '../../shared/menu-keys';
+import { MENU_VIEWPORT_MARGIN, TOOLBAR_MENU_POSITIONS } from '../../shared/menu-keys';
 import { feedGroups, feedPath } from './feed-directory-feed-groups';
 import { FeedDirectoryFeed, feedsIn } from './feed-directory-rows';
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectoryFeedsPopoverComponent } from './feeds-popover/feed-directory-feeds-popover.component';
 import { FeedDirectorySubscribeRequest } from './row/feed-directory-row.component';
-
-const VIEWPORT_MARGIN = 8;
 
 @Injectable()
 export class FeedDirectorySubscriber implements OnDestroy {
@@ -89,7 +87,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
         .position()
         .flexibleConnectedTo(anchor)
         .withPositions(TOOLBAR_MENU_POSITIONS)
-        .withViewportMargin(VIEWPORT_MARGIN),
+        .withViewportMargin(MENU_VIEWPORT_MARGIN),
       scrollStrategy: this.overlay.scrollStrategies.close(),
       hasBackdrop: true,
       backdropClass: 'cdk-overlay-transparent-backdrop',
