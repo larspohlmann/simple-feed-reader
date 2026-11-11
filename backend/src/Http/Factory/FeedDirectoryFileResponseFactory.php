@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Factory;
 
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Request;
 
 final readonly class FeedDirectoryFileResponseFactory
@@ -26,11 +27,16 @@ final readonly class FeedDirectoryFileResponseFactory
 
     private function cached(Request $request, BinaryFileResponse $response): BinaryFileResponse
     {
-        $response->setAutoEtag();
+        $response->setEtag(self::fingerprint($response->getFile()));
         $response->setPrivate();
         $response->setMaxAge(self::MAX_AGE_SECONDS);
         $response->isNotModified($request);
 
         return $response;
+    }
+
+    private static function fingerprint(File $file): string
+    {
+        return hash('xxh128', implode("\0", [$file->getPathname(), $file->getMTime(), $file->getSize()]));
     }
 }

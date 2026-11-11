@@ -10,14 +10,20 @@ use PHPUnit\Framework\TestCase;
 
 final class FeedDirectoryScopeModelTest extends TestCase
 {
-    public function testBothListsEmptyIsAClearedScope(): void
+    public function testAHalfScopeIsNoScope(): void
     {
-        self::assertTrue(new FeedDirectoryScopeModel([], [])->isEmpty());
+        $withoutLanguages = FeedDirectoryScopeModel::orNone(['DE'], []);
+        $withoutCountries = FeedDirectoryScopeModel::orNone([], ['de']);
+
+        self::assertSame([[], []], [$withoutLanguages->countries, $withoutLanguages->languages]);
+        self::assertSame([[], []], [$withoutCountries->countries, $withoutCountries->languages]);
     }
 
-    public function testBothListsFilledIsAScope(): void
+    public function testAFullScopeIsKept(): void
     {
-        self::assertFalse(new FeedDirectoryScopeModel(['DE'], ['de'])->isEmpty());
+        $scope = FeedDirectoryScopeModel::orNone(['DE', 'DE'], ['de']);
+
+        self::assertSame([['DE'], ['de']], [$scope->countries, $scope->languages]);
     }
 
     public function testCountriesWithoutLanguagesAreRejected(): void

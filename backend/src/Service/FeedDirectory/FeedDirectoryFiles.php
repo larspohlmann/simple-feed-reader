@@ -36,26 +36,20 @@ final readonly class FeedDirectoryFiles
     /** @return list<string> */
     public function countryCodes(): array
     {
-        $codes = [];
-        foreach ($this->entriesAt('countries') as $country) {
-            if (\is_array($country) && \is_string($country['code'] ?? null)) {
-                $codes[] = $country['code'];
-            }
-        }
-
-        return $codes;
+        return self::countryCodesIn($this->index());
     }
 
     /** @return list<string> */
     public function languageCodes(): array
     {
-        return array_values(array_filter(array_keys($this->entriesAt('languages')), is_string(...)));
+        return self::languageCodesIn($this->index());
     }
 
     public function requireKnown(FeedDirectoryScopeModel $scope): void
     {
-        $unknownCountries = array_diff($scope->countries, $this->countryCodes());
-        $unknownLanguages = array_diff($scope->languages, $this->languageCodes());
+        $index = $this->index();
+        $unknownCountries = array_diff($scope->countries, self::countryCodesIn($index));
+        $unknownLanguages = array_diff($scope->languages, self::languageCodesIn($index));
         if ($unknownCountries !== [] || $unknownLanguages !== []) {
             throw new InvalidFeedDirectoryScopeException(
                 \sprintf(
@@ -66,10 +60,41 @@ final readonly class FeedDirectoryFiles
         }
     }
 
-    /** @return array<mixed> */
-    private function entriesAt(string $key): array
+    /**
+     * @param array<mixed> $index
+     *
+     * @return list<string>
+     */
+    private static function countryCodesIn(array $index): array
     {
-        $value = $this->index()[$key] ?? [];
+        $codes = [];
+        foreach (self::entriesAt($index, 'countries') as $country) {
+            if (\is_array($country) && \is_string($country['code'] ?? null)) {
+                $codes[] = $country['code'];
+            }
+        }
+
+        return $codes;
+    }
+
+    /**
+     * @param array<mixed> $index
+     *
+     * @return list<string>
+     */
+    private static function languageCodesIn(array $index): array
+    {
+        return array_values(array_filter(array_keys(self::entriesAt($index, 'languages')), is_string(...)));
+    }
+
+    /**
+     * @param array<mixed> $index
+     *
+     * @return array<mixed>
+     */
+    private static function entriesAt(array $index, string $key): array
+    {
+        $value = $index[$key] ?? [];
 
         return \is_array($value) ? $value : [];
     }

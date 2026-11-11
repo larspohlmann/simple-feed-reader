@@ -27,8 +27,16 @@ final readonly class FeedDirectoryScopeModel
         $this->languages = array_values(array_unique($languages));
     }
 
-    public function isEmpty(): bool
+    /**
+     * @param list<string> $countries
+     * @param list<string> $languages
+     */
+    public static function orNone(array $countries, array $languages): self
     {
-        return $this->countries === [];
+        if ($countries === [] || $languages === []) {
+            return new self([], []);
+        }
+
+        return new self($countries, $languages);
     }
 }

@@ -103,13 +103,10 @@ final readonly class AccountLine
     /** @param array<string, mixed> $fields */
     private static function feedDirectoryScope(array $fields): FeedDirectoryScopeModel
     {
-        $countries = LineFieldWithDefault::stringList($fields, 'countries');
-        $languages = LineFieldWithDefault::stringList($fields, 'languages');
-        if ($countries === [] || $languages === []) {
-            return new FeedDirectoryScopeModel([], []);
-        }
-
-        return new FeedDirectoryScopeModel($countries, $languages);
+        return FeedDirectoryScopeModel::orNone(
+            LineFieldWithDefault::stringList($fields, 'countries'),
+            LineFieldWithDefault::stringList($fields, 'languages'),
+        );
     }
 
     /**
