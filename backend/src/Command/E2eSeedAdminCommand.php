@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\User;
+use App\Repository\ReadingSettingsRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -29,6 +30,7 @@ final class E2eSeedAdminCommand extends Command
 {
     public function __construct(
         private readonly UserRepository $users,
+        private readonly ReadingSettingsRepository $readingSettings,
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $hasher,
         private readonly ClockInterface $clock,
@@ -66,11 +68,12 @@ final class E2eSeedAdminCommand extends Command
         $user->setRoles(['ROLE_ADMIN']);
         $user->approve($now);
         $user->setPasswordHash($this->hasher->hashPassword($user, $password), $now);
-        // The scrape fallback is opt-in and the reader suite exercises it, so the fixture states the preference
-        // rather than inherit the default.
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
 
         $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        // The scrape fallback is opt-in and the reader suite exercises it, so the fixture states the preference
+        // rather than inherit the default.
+        $this->readingSettings->forUser($user)->setScrapeFallbackEnabled(true);
         $this->entityManager->flush();
 
         $io->success(\sprintf('Active admin ready: %s', $email));

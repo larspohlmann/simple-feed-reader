@@ -12,6 +12,7 @@ use App\Http\MeJson;
 use App\Http\MeProfileJson;
 use App\Http\RecommendationCapabilitiesJson;
 use App\Repository\CatalogFeedRepository;
+use App\Service\Account\AccountSettings;
 use App\Service\Mail\MailCapability;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\DbTestCase;
@@ -30,7 +31,8 @@ final class MeProfileJsonTest extends DbTestCase
 
         self::assertSame(
             [
-                ...MeJson::profile($user, false, 'Europe/Berlin'),
+                ...MeJson::profile($user, false),
+                'preferences' => MeJson::preferences($user, $this->accountSettings()->of($user), 'Europe/Berlin'),
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => self::EMPTY_CATALOG,
             ],
@@ -45,7 +47,8 @@ final class MeProfileJsonTest extends DbTestCase
 
         self::assertSame(
             [
-                ...MeJson::profile($user, true, 'UTC'),
+                ...MeJson::profile($user, true),
+                'preferences' => MeJson::preferences($user, $this->accountSettings()->of($user), 'UTC'),
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => self::EMPTY_CATALOG,
             ],
@@ -65,7 +68,8 @@ final class MeProfileJsonTest extends DbTestCase
 
         self::assertSame(
             [
-                ...MeJson::profile($user, false, 'UTC'),
+                ...MeJson::profile($user, false),
+                'preferences' => MeJson::preferences($user, $this->accountSettings()->of($user), 'UTC'),
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => ['hasEntries' => true],
             ],
@@ -86,14 +90,27 @@ final class MeProfileJsonTest extends DbTestCase
 
         return new MeProfileJson(
             $mail,
+            $this->accountSettings(),
             new ActiveAiJson(new RecommendationCapabilitiesJson($engines)),
             $catalogFeeds,
             $instanceTimezone,
         );
     }
 
+    private function accountSettings(): AccountSettings
+    {
+        $accountSettings = self::getContainer()->get(AccountSettings::class);
+        self::assertInstanceOf(AccountSettings::class, $accountSettings);
+
+        return $accountSettings;
+    }
+
     private function user(): User
     {
-        return new User('profile@example.test', new \DateTimeImmutable('2026-08-01T00:00:00Z'));
+        $user = new User('profile@example.test', new \DateTimeImmutable('2026-08-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
     }
 }

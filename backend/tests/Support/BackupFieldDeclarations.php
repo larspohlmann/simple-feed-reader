@@ -11,6 +11,7 @@ use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCard;
 use App\Entity\Preferences;
+use App\Entity\ReadingSettings;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
@@ -35,11 +36,13 @@ final class BackupFieldDeclarations
             'locale' => 'locale',
         ],
         Preferences::class => [
-            'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
-            'magazineStyle' => 'magazineStyle',
             'sharingEnabled' => 'sharingEnabled',
             'hiddenShareTargets' => 'hiddenShareTargets',
             'rememberingShares' => 'rememberShares',
+        ],
+        ReadingSettings::class => [
+            'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
+            'magazineStyle' => 'magazineStyle',
             'trendingEnabled' => 'trendingEnabled',
         ],
         Tag::class => [
@@ -126,6 +129,7 @@ final class BackupFieldDeclarations
     public const array KIND_OF = [
         User::class => BackupSchema::KIND_ACCOUNT,
         Preferences::class => BackupSchema::KIND_ACCOUNT,
+        ReadingSettings::class => BackupSchema::KIND_ACCOUNT,
         Tag::class => BackupSchema::KIND_TAG,
         SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
         SavedSearchNetworkInclusion::class => BackupSchema::KIND_ACCOUNT,

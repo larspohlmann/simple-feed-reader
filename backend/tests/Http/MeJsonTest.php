@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Http\MeJson;
+use App\Service\Account\Model\AccountSettingsModel;
 use PHPUnit\Framework\TestCase;
 
 final class MeJsonTest extends TestCase
@@ -16,7 +18,7 @@ final class MeJsonTest extends TestCase
         return new User('reader@example.test', new \DateTimeImmutable('2026-08-09 09:00:00'));
     }
 
-    public function testProfileEmitsMailDigestAndVerification(): void
+    public function testTheProfileEmitsMailAndVerificationAndThePreferencesTheDigest(): void
     {
         $user = $this->user();
         $user->markEmailVerified(new \DateTimeImmutable('2026-08-09 09:10:00'));
@@ -26,11 +28,12 @@ final class MeJsonTest extends TestCase
         $preferences->setDigestSendHour(9);
         $preferences->setDigestWeekday(3);
 
-        $profile = MeJson::profile($user, true, 'Europe/Berlin');
+        $profile = MeJson::profile($user, true);
+        $settings = new AccountSettingsModel(new ReadingSettings($user));
+        $preferencesJson = MeJson::preferences($user, $settings, 'Europe/Berlin');
 
         self::assertSame(['enabled' => true], $profile['mail']);
         self::assertTrue($profile['emailVerified']);
-        self::assertIsArray($profile['preferences']);
         self::assertSame(
             [
                 'enabled' => true,
@@ -40,7 +43,7 @@ final class MeJsonTest extends TestCase
                 'weekday' => 3,
                 'timezone' => 'Europe/Berlin',
             ],
-            $profile['preferences']['digest'],
+            $preferencesJson['digest'],
         );
     }
 }

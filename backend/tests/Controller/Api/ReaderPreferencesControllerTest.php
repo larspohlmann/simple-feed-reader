@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -65,14 +66,14 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $reloaded = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $reloaded);
-        self::assertTrue($reloaded->getPreferences()->isScrapeFallbackEnabled());
+        self::assertTrue(StoredUserSettings::reading($this->entityManager(), $reloaded)->isScrapeFallbackEnabled());
     }
 
     public function testANonBooleanPreferenceIsRejected(): void
     {
         $client = self::createClient();
         $user = $this->factory()->create('prefs-invalid@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager(), $user)->setScrapeFallbackEnabled(true);
         $this->entityManager()->flush();
         $this->authenticate($client, $user);
 
@@ -88,14 +89,14 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $unchanged = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $unchanged);
-        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
+        self::assertTrue(StoredUserSettings::reading($this->entityManager(), $unchanged)->isScrapeFallbackEnabled());
     }
 
     public function testAnEmptyBodyIsRejectedRatherThanSilentlyDisablingScraping(): void
     {
         $client = self::createClient();
         $user = $this->factory()->create('prefs-empty@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager(), $user)->setScrapeFallbackEnabled(true);
         $this->entityManager()->flush();
         $this->authenticate($client, $user);
 
@@ -111,7 +112,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $unchanged = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $unchanged);
-        self::assertTrue($unchanged->getPreferences()->isScrapeFallbackEnabled());
+        self::assertTrue(StoredUserSettings::reading($this->entityManager(), $unchanged)->isScrapeFallbackEnabled());
     }
 
     public function testANewAccountShowsTrending(): void
@@ -138,7 +139,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $reloaded = $this->users()->findOneBy(['email' => 'no-trending@example.test']);
         self::assertNotNull($reloaded);
-        self::assertFalse($reloaded->getPreferences()->isTrendingEnabled());
+        self::assertFalse(StoredUserSettings::reading($this->entityManager(), $reloaded)->isTrendingEnabled());
     }
 
     public function testSwitchingTrendingBackOnPersistsIt(): void

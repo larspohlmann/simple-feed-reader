@@ -192,14 +192,19 @@ final class MeControllerTest extends ApiTestCase
         $this->patch($client, '/api/me/preferences', ['scrapeFallbackEnabled' => true]);
         $this->patch($client, '/api/me/magazine-style', ['magazineStyle' => 'airy']);
         $this->patch($client, '/api/me/trending', ['trendingEnabled' => false]);
-        $this->patch($client, '/api/me/sharing', ['enabled' => false, 'hiddenTargets' => ['x', 'email'], 'rememberShares' => false]);
+        $this->patch(
+            $client,
+            '/api/me/sharing',
+            ['enabled' => false, 'hiddenTargets' => ['x', 'email'], 'rememberShares' => false],
+        );
         $this->patch(
             $client,
             '/api/me/digest',
             ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
         );
         $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","passkeyOfferAnswered":true,'
-            . '"trendingEnabled":false,"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'
+            . '"trendingEnabled":false,'
+            . '"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'
             . '"digest":{"enabled":true,"cadence":"weekly","format":"text","sendHour":9,"weekday":3,"timezone":"UTC"}}';
         self::assertSame($expected, json_encode($this->payload($client)['preferences'], \JSON_THROW_ON_ERROR));
 
@@ -212,7 +217,12 @@ final class MeControllerTest extends ApiTestCase
     /** @param array<string, mixed> $body */
     private function patch(KernelBrowser $client, string $uri, array $body): void
     {
-        $client->request('PATCH', $uri, server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($body, \JSON_THROW_ON_ERROR));
+        $client->request(
+            'PATCH',
+            $uri,
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
         self::assertResponseIsSuccessful();
     }
 

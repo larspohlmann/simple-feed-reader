@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\User;
+use App\Service\Account\Model\AccountSettingsModel;
 
 /**
  * The client's view of its own account. Deliberately hand-built rather than
@@ -16,10 +17,8 @@ final class MeJson
     /**
      * @return array<string, mixed>
      */
-    public static function profile(User $user, bool $mailEnabled, string $instanceTimezone): array
+    public static function profile(User $user, bool $mailEnabled): array
     {
-        $preferences = $user->getPreferences();
-
         return [
             'id' => $user->getId(),
             'email' => $user->getEmail(),
@@ -30,24 +29,33 @@ final class MeJson
             'trialEndsAt' => TrialEndJson::of($user),
             'mail' => ['enabled' => $mailEnabled],
             'emailVerified' => $user->isEmailVerified(),
-            'preferences' => [
-                'scrapeFallbackEnabled' => $preferences->isScrapeFallbackEnabled(),
-                'magazineStyle' => $preferences->getMagazineStyle()->value,
-                'passkeyOfferAnswered' => null !== $preferences->getPasskeyOfferAnsweredAt(),
-                'trendingEnabled' => $preferences->isTrendingEnabled(),
-                'sharing' => [
-                    'enabled' => $preferences->isSharingEnabled(),
-                    'hiddenTargets' => $preferences->getHiddenShareTargets(),
-                    'rememberShares' => $preferences->isRememberingShares(),
-                ],
-                'digest' => [
-                    'enabled' => $preferences->isDigestEnabled(),
-                    'cadence' => $preferences->getDigestCadence()->value,
-                    'format' => $preferences->getDigestFormat()->value,
-                    'sendHour' => $preferences->getDigestSendHour(),
-                    'weekday' => $preferences->getDigestWeekday(),
-                    'timezone' => $instanceTimezone,
-                ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function preferences(User $user, AccountSettingsModel $settings, string $instanceTimezone): array
+    {
+        $preferences = $user->getPreferences();
+
+        return [
+            'scrapeFallbackEnabled' => $settings->reading->isScrapeFallbackEnabled(),
+            'magazineStyle' => $settings->reading->getMagazineStyle()->value,
+            'passkeyOfferAnswered' => null !== $preferences->getPasskeyOfferAnsweredAt(),
+            'trendingEnabled' => $settings->reading->isTrendingEnabled(),
+            'sharing' => [
+                'enabled' => $preferences->isSharingEnabled(),
+                'hiddenTargets' => $preferences->getHiddenShareTargets(),
+                'rememberShares' => $preferences->isRememberingShares(),
+            ],
+            'digest' => [
+                'enabled' => $preferences->isDigestEnabled(),
+                'cadence' => $preferences->getDigestCadence()->value,
+                'format' => $preferences->getDigestFormat()->value,
+                'sendHour' => $preferences->getDigestSendHour(),
+                'weekday' => $preferences->getDigestWeekday(),
+                'timezone' => $instanceTimezone,
             ],
         ];
     }

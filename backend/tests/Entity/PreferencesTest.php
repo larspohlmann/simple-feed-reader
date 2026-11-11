@@ -11,13 +11,6 @@ use PHPUnit\Framework\TestCase;
 
 final class PreferencesTest extends TestCase
 {
-    public function testANewUserHasPreferencesWithScrapingDisabled(): void
-    {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
-
-        self::assertFalse($user->getPreferences()->isScrapeFallbackEnabled());
-    }
-
     public function testDigestDefaultsAreOffDailyEightMonday(): void
     {
         $preferences = (new User('a@b.example', new \DateTimeImmutable()))->getPreferences();
@@ -52,16 +45,5 @@ final class PreferencesTest extends TestCase
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
 
         self::assertSame($user, $user->getPreferences()->getUser());
-    }
-
-    public function testScrapeFallbackCanBeEnabled(): void
-    {
-        $preferences = new Preferences(
-            new User('reader@example.com', new \DateTimeImmutable('2026-08-02 10:00:00')),
-        );
-
-        $preferences->setScrapeFallbackEnabled(true);
-
-        self::assertTrue($preferences->isScrapeFallbackEnabled());
     }
 }

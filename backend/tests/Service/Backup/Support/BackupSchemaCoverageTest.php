@@ -26,6 +26,7 @@ use App\Entity\Preferences;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
+use App\Entity\ReadingSettings;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -228,6 +229,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'recommendationSettings' => 'Points at a RecommendationSettings row, which '
                 . 'ACCOUNT_SCOPED_WHOLLY_DROPPED leaves out in full (#935).',
         ],
+        ReadingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
         Preferences::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
             'digestEnabled' => self::DIGEST_BACKUP_NOT_YET_WIRED,

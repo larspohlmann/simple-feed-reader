@@ -13,6 +13,7 @@ use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\StoredUserSettings;
 
 final class AccountPreferencesWriterTest extends DbTestCase
 {
@@ -31,23 +32,25 @@ final class AccountPreferencesWriterTest extends DbTestCase
     public function testChangeScrapeFallbackPersists(): void
     {
         $user = $this->user('prefs-scrape@example.com');
-        $wanted = !$user->getPreferences()->isScrapeFallbackEnabled();
+        $wanted = !StoredUserSettings::reading($this->entityManager, $user)->isScrapeFallbackEnabled();
 
         $this->writer()->changeScrapeFallback($user, $wanted);
 
-        self::assertSame($wanted, $this->reload($user)->getPreferences()->isScrapeFallbackEnabled());
+        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
+        self::assertSame($wanted, $reloaded->isScrapeFallbackEnabled());
     }
 
     public function testChangeMagazineStylePersists(): void
     {
         $user = $this->user('prefs-magazine@example.com');
-        $wanted = MagazineStyle::Airy === $user->getPreferences()->getMagazineStyle()
+        $wanted = MagazineStyle::Airy === StoredUserSettings::reading($this->entityManager, $user)->getMagazineStyle()
             ? MagazineStyle::Boxed
             : MagazineStyle::Airy;
 
         $this->writer()->changeMagazineStyle($user, $wanted);
 
-        self::assertSame($wanted, $this->reload($user)->getPreferences()->getMagazineStyle());
+        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
+        self::assertSame($wanted, $reloaded->getMagazineStyle());
     }
 
     public function testChangeTrendingPersists(): void
@@ -56,7 +59,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $this->writer()->changeTrending($user, false);
 
-        self::assertFalse($this->reload($user)->getPreferences()->isTrendingEnabled());
+        self::assertFalse(StoredUserSettings::reading($this->entityManager, $this->reload($user))->isTrendingEnabled());
     }
 
     public function testChangeDigestPersistsTheConfiguration(): void

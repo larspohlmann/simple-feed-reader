@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Tests\DbTestCase;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Support\StoredUserSettings;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -41,17 +41,16 @@ final class E2eSeedAdminCommandTest extends DbTestCase
         $admin = $users->findOneByEmail('scrape-admin@example.com');
 
         self::assertInstanceOf(User::class, $admin);
-        self::assertTrue($admin->getPreferences()->isScrapeFallbackEnabled());
+        self::assertTrue(StoredUserSettings::reading($this->entityManager, $admin)->isScrapeFallbackEnabled());
     }
 
     public function testPromotingAnExistingUserTurnsTheScrapeFallbackOn(): void
     {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $existing = new User('opted-out@example.com', new \DateTimeImmutable('2026-01-01 00:00:00'));
-        $existing->getPreferences()->setScrapeFallbackEnabled(false);
-        $entityManager->persist($existing);
-        $entityManager->flush();
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
+        StoredUserSettings::reading($this->entityManager, $existing)->setScrapeFallbackEnabled(false);
+        $this->entityManager->flush();
 
         $this->runSeedAdminCommand(['email' => 'opted-out@example.com', 'password' => 'promoted-pw-123']);
 
@@ -60,7 +59,7 @@ final class E2eSeedAdminCommandTest extends DbTestCase
         $admin = $users->findOneByEmail('opted-out@example.com');
 
         self::assertInstanceOf(User::class, $admin);
-        self::assertTrue($admin->getPreferences()->isScrapeFallbackEnabled());
+        self::assertTrue(StoredUserSettings::reading($this->entityManager, $admin)->isScrapeFallbackEnabled());
     }
 
     public function testIsIdempotentAndPromotesAnExistingUser(): void

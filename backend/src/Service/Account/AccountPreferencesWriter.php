@@ -6,6 +6,7 @@ namespace App\Service\Account;
 
 use App\Entity\User;
 use App\Enum\MagazineStyle;
+use App\Repository\ReadingSettingsRepository;
 use App\Service\Account\Model\SharingSettingsModel;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
@@ -17,6 +18,7 @@ final readonly class AccountPreferencesWriter
     public function __construct(
         private DigestEnablement $digestEnablement,
         private PasskeyOffer $passkeyOffer,
+        private ReadingSettingsRepository $readingSettings,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -29,13 +31,13 @@ final readonly class AccountPreferencesWriter
 
     public function changeScrapeFallback(User $user, bool $scrapeFallbackEnabled): void
     {
-        $user->getPreferences()->setScrapeFallbackEnabled($scrapeFallbackEnabled);
+        $this->readingSettings->forUser($user)->setScrapeFallbackEnabled($scrapeFallbackEnabled);
         $this->entityManager->flush();
     }
 
     public function changeMagazineStyle(User $user, MagazineStyle $magazineStyle): void
     {
-        $user->getPreferences()->setMagazineStyle($magazineStyle);
+        $this->readingSettings->forUser($user)->setMagazineStyle($magazineStyle);
         $this->entityManager->flush();
     }
 
@@ -49,7 +51,7 @@ final readonly class AccountPreferencesWriter
 
     public function changeTrending(User $user, bool $trendingEnabled): void
     {
-        $user->getPreferences()->setTrendingEnabled($trendingEnabled);
+        $this->readingSettings->forUser($user)->setTrendingEnabled($trendingEnabled);
         $this->entityManager->flush();
     }
 

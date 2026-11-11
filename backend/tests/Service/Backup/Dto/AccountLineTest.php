@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Entity\ReadingSettings;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
+use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\AccountNetworkSwitchesModel;
@@ -145,12 +147,13 @@ final class AccountLineTest extends TestCase
     {
         $user = BackupLineRecords::user();
         $user->setLocale('de');
+        $settings = new AccountSettingsModel(new ReadingSettings($user));
+        $settings->reading->setScrapeFallbackEnabled(true);
+        $settings->reading->setMagazineStyle(MagazineStyle::Airy);
+        $settings->reading->setTrendingEnabled(false);
         $preferences = $user->getPreferences();
-        $preferences->setScrapeFallbackEnabled(true);
-        $preferences->setMagazineStyle(MagazineStyle::Airy);
         $preferences->setHiddenShareTargets(['mastodon', 'email']);
         $preferences->setRememberingShares(false);
-        $preferences->setTrendingEnabled(false);
         $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [SocialNetwork::Mastodon]);
 
         self::assertSame(
@@ -158,7 +161,7 @@ final class AccountLineTest extends TestCase
             . '"sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],"rememberShares":false,'
             . '"trendingEnabled":false,"savedSearchIncludedNetworks":["bluesky"],'
             . '"forYouExcludedNetworks":["mastodon"]}',
-            AccountLine::of($user, $networks)->toBackupLine(),
+            AccountLine::of($user, $settings, $networks)->toBackupLine(),
         );
     }
 }

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup\Pass;
 
 use App\Entity\Feed;
+use App\Entity\ReadingSettings;
 use App\Entity\User;
+use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
@@ -36,7 +38,13 @@ final class RestoreLoadPassTest extends TestCase
             ->method('findByUrlsIndexedByUrl')
             ->with(['https://known.example/feed.xml', 'https://new.example/feed.xml'])
             ->willReturn(['https://known.example/feed.xml' => new Feed('https://known.example/feed.xml')]);
-        $pass = new RestoreLoadPass($entityManager, $feeds, $this->savedSearchSlug(), self::rows());
+        $pass = new RestoreLoadPass(
+            $entityManager,
+            $feeds,
+            $this->savedSearchSlug(),
+            self::rows(),
+            $this->settingsOf($user),
+        );
 
         $result = $pass->run($user, (function () {
             yield $this->feedLine('https://known.example/feed.xml');
@@ -58,7 +66,13 @@ final class RestoreLoadPassTest extends TestCase
             ->method('findByUrlsIndexedByUrl')
             ->with(['https://orphan-one.example/feed.xml', 'https://orphan-two.example/feed.xml'])
             ->willReturn([]);
-        $pass = new RestoreLoadPass($entityManager, $feeds, $this->savedSearchSlug(), self::rows());
+        $pass = new RestoreLoadPass(
+            $entityManager,
+            $feeds,
+            $this->savedSearchSlug(),
+            self::rows(),
+            $this->settingsOf($user),
+        );
 
         // No subscription line ever runs, so loadSubscription() never gets a
         // chance to call resolveHeldFeeds() itself — only the final flush can
@@ -70,6 +84,11 @@ final class RestoreLoadPassTest extends TestCase
 
         self::assertSame(2, $result->feeds);
         self::assertSame(0, $result->subscriptions);
+    }
+
+    private function settingsOf(User $user): AccountSettingsModel
+    {
+        return new AccountSettingsModel(new ReadingSettings($user));
     }
 
     private function feedLine(string $url): FeedLine
@@ -109,6 +128,7 @@ final class RestoreLoadPassTest extends TestCase
             $this->createStub(RestoreFeedsInterface::class),
             $this->savedSearchSlug(),
             self::rows(),
+            $this->settingsOf(new User('settings@example.com', new \DateTimeImmutable('2026-08-01'))),
         );
 
         $this->expectException(BackupLoadFailedException::class);
@@ -124,6 +144,7 @@ final class RestoreLoadPassTest extends TestCase
             $this->createStub(RestoreFeedsInterface::class),
             $this->savedSearchSlug(),
             self::rows(),
+            $this->settingsOf(new User('settings@example.com', new \DateTimeImmutable('2026-08-01'))),
         );
 
         try {

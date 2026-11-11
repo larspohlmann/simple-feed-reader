@@ -14,6 +14,7 @@ use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
+use App\Service\Account\AccountSettings;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\FeedLine;
@@ -40,6 +41,7 @@ final readonly class AccountBackupExporter
 {
     public function __construct(
         private UserRepository $users,
+        private AccountSettings $accountSettings,
         private TagRepository $tags,
         private SavedSearchRepository $savedSearches,
         private SavedSearchNetworkInclusionRepository $includedNetworks,
@@ -80,9 +82,11 @@ final readonly class AccountBackupExporter
             $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::Backup),
         );
         $feedsById = self::feedsById($subscriptions);
+        $user = $this->users->getById($userId);
 
         return new FoundationSnapshotModel(
-            AccountLine::of($this->users->getById($userId), $this->networkSwitchesOf($userId))->toBackupLine(),
+            AccountLine::of($user, $this->accountSettings->of($user), $this->networkSwitchesOf($userId))
+                ->toBackupLine(),
             array_map(
                 static fn (Tag $tag): string => TagLine::of($tag)->toBackupLine(),
                 self::parentsFirst($this->tags->findForUser($userId)),

@@ -11,6 +11,7 @@ use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCardContent;
 use App\Entity\Preferences;
+use App\Entity\ReadingSettings;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
@@ -36,6 +37,7 @@ use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\ExportedFoundation;
 use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -284,7 +286,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->entityManager->persist($viewed);
 
         $user->setLocale('de');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
 
         $this->entityManager->flush();
         self::assertNotNull($entryB->getId());
@@ -372,7 +374,7 @@ final class AccountRestorerTest extends DbTestCase
 
         $restored = $this->reload($user);
         self::assertSame('de', $restored->getLocale());
-        self::assertTrue($restored->getPreferences()->isScrapeFallbackEnabled());
+        self::assertTrue(StoredUserSettings::reading($this->entityManager, $restored)->isScrapeFallbackEnabled());
 
         $tags = $this->entityManager->getRepository(Tag::class)->findBy(['user' => $userId], ['name' => 'ASC']);
         self::assertCount(2, $tags);
@@ -553,6 +555,11 @@ final class AccountRestorerTest extends DbTestCase
 
         $this->assertFieldsRoundTripped(User::class, $sourceRows['user'], $targetRows['user']);
         $this->assertFieldsRoundTripped(Preferences::class, $sourceRows['preferences'], $targetRows['preferences']);
+        $this->assertFieldsRoundTripped(
+            ReadingSettings::class,
+            $sourceRows['readingSettings'],
+            $targetRows['readingSettings'],
+        );
         $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag'], ['parent']);
         self::assertSame('Reading', $targetRows['tag']->getParent()?->getName());
         $this->assertFieldsRoundTripped(SavedSearch::class, $sourceRows['savedSearch'], $targetRows['savedSearch']);
@@ -649,7 +656,7 @@ final class AccountRestorerTest extends DbTestCase
      * fresh so a caller can compare a source account's rows against a restored
      * account's rows field by field.
      *
-     * @return array{user: User, preferences: Preferences,
+     * @return array{user: User, preferences: Preferences, readingSettings: ReadingSettings,
      *     tag: Tag, savedSearch: SavedSearch, feed: Feed, subscription: Subscription,
      *     subscriptionTag: SubscriptionTag, entry: Entry, entryState: EntryState}
      */
@@ -680,6 +687,7 @@ final class AccountRestorerTest extends DbTestCase
         return [
             'user' => $user,
             'preferences' => $user->getPreferences(),
+            'readingSettings' => StoredUserSettings::reading($this->entityManager, $user),
             'tag' => $tag,
             'savedSearch' => $savedSearch,
             'feed' => $feed,

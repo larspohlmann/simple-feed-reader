@@ -9,6 +9,7 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -128,9 +129,9 @@ final class FeedPreviewControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->bearerAndUser('preview-scraped@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        StoredUserSettings::reading($entityManager, $user)->setScrapeFallbackEnabled(true);
         $entityManager->flush();
 
         $fetcher = new StubFeedFetcher();
@@ -202,9 +203,9 @@ final class FeedPreviewControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->bearerAndUser('preview-navonly@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        StoredUserSettings::reading($entityManager, $user)->setScrapeFallbackEnabled(true);
         $entityManager->flush();
 
         $fetcher = new StubFeedFetcher();
