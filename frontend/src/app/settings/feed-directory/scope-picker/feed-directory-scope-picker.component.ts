@@ -8,13 +8,14 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { inputValue } from '../../../shared/input-value';
 import { FeedDirectoryApi } from '../feed-directory-api';
+import { FeedDirectoryNames } from '../feed-directory-names';
 import { FeedDirectoryScopeService } from '../feed-directory-scope.service';
 import { FeedDirectoryIndex, FeedDirectoryScope } from '../feed-directory.models';
 import { ScopeChecklist } from './scope-checklist';
@@ -29,7 +30,7 @@ import { ScopeOption, countryOptions, languageOptions } from './scope-options';
 })
 export class FeedDirectoryScopePickerComponent {
   private readonly scopes = inject(FeedDirectoryScopeService);
-  private readonly transloco = inject(TranslocoService);
+  protected readonly names = inject(FeedDirectoryNames);
 
   readonly initial = input.required<FeedDirectoryScope>();
   readonly saved = output<FeedDirectoryScope>();
@@ -38,9 +39,6 @@ export class FeedDirectoryScopePickerComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly index = signal<FeedDirectoryIndex | null>(null);
   protected readonly loadFailed = signal(false);
-  private readonly lang = toSignal(this.transloco.langChanges$, {
-    initialValue: this.transloco.getActiveLang(),
-  });
 
   protected readonly countries = new ScopeChecklist(
     {
@@ -65,7 +63,6 @@ export class FeedDirectoryScopePickerComponent {
   protected readonly canSave = computed(() => this.countries.hasPick() && this.languages.hasPick());
   protected readonly saving = signal(false);
   protected readonly saveFailed = signal(false);
-  protected readonly siteCount = computed(() => new Intl.NumberFormat(this.lang()));
   protected readonly inputValue = inputValue;
 
   constructor() {
@@ -78,7 +75,10 @@ export class FeedDirectoryScopePickerComponent {
       .index()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (index) => this.index.set(index),
+        next: (index) => {
+          this.names.learnCountryNames(index);
+          this.index.set(index);
+        },
         error: () => this.loadFailed.set(true),
       });
   }
@@ -101,10 +101,10 @@ export class FeedDirectoryScopePickerComponent {
   }
 
   private optionsFrom(
-    build: (index: FeedDirectoryIndex, lang: string) => ScopeOption[],
+    build: (index: FeedDirectoryIndex, names: FeedDirectoryNames) => ScopeOption[],
   ): ScopeOption[] {
     const index = this.index();
 
-    return index === null ? [] : build(index, this.lang());
+    return index === null ? [] : build(index, this.names);
   }
 }

@@ -1,4 +1,4 @@
-import { displayName } from '../feed-directory-names';
+import { FeedDirectoryNames } from '../feed-directory-names';
 import { FeedDirectoryIndex } from '../feed-directory.models';
 
 export interface ScopeOption {
@@ -7,26 +7,30 @@ export interface ScopeOption {
   readonly sites: number;
 }
 
-export function countryOptions(index: FeedDirectoryIndex, lang: string): ScopeOption[] {
-  const names = new Intl.DisplayNames([lang], { type: 'region', fallback: 'none' });
+export function countryOptions(
+  index: FeedDirectoryIndex,
+  names: FeedDirectoryNames,
+): ScopeOption[] {
   const options = index.countries.map((country) => ({
     code: country.code,
-    name: displayName(names, country.code, country.name),
+    name: names.country(country.code),
     sites: country.sites,
   }));
 
-  return byName(options, lang);
+  return byName(options, names.lang());
 }
 
-export function languageOptions(index: FeedDirectoryIndex, lang: string): ScopeOption[] {
-  const names = new Intl.DisplayNames([lang], { type: 'language', fallback: 'none' });
+export function languageOptions(
+  index: FeedDirectoryIndex,
+  names: FeedDirectoryNames,
+): ScopeOption[] {
   const options = Object.entries(index.languages).map(([code, sites]) => ({
     code,
-    name: displayName(names, code, code),
+    name: names.language(code),
     sites,
   }));
 
-  return byName(options, lang);
+  return byName(options, names.lang());
 }
 
 function byName(options: ScopeOption[], lang: string): ScopeOption[] {
