@@ -75,3 +75,9 @@ services:
     # RefreshControllerTest clears it, or a stale run could be resumed by a same-id user.
     test.cache.refresh_run:
         alias: refresh.run.cache
+
+    # The feed directory endpoints serve the AT and DE fixtures, not the bundled snapshot.
+    App\Service\FeedDirectory\FeedDirectoryFiles:
+        autowire: true
+        arguments:
+            $directory: '%kernel.project_dir%/tests/Fixtures/feed-directory'
