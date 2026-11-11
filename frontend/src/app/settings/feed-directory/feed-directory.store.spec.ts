@@ -1,7 +1,9 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { FeedDirectoryApi } from './feed-directory-api';
+import { FeedDirectoryNames } from './feed-directory-names';
 import { countByCountry, prepareRows } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryStore } from './feed-directory.store';
@@ -46,7 +48,14 @@ const AT: FeedDirectoryCountryFile = {
   languages: ['de'],
   domains: [['orf.at', 500, 3000, [0], [[0, 0, ['https://orf.at/feed']]], 'Public broadcaster.']],
 };
-const INDEX: FeedDirectoryIndex = { countries: [], languages: {} };
+const INDEX: FeedDirectoryIndex = {
+  countries: [
+    { code: 'DE', name: 'Germany', sites: 4, languages: { de: 3, en: 2 } },
+    { code: 'AT', name: 'Austria', sites: 1, languages: { de: 1 } },
+    { code: 'QQ', name: 'Qland', sites: 0, languages: {} },
+  ],
+  languages: { de: 4, en: 2 },
+};
 const SUBSCRIBED: FeedDirectorySubscribed = {
   urls: ['heise.de/rss/heise.rdf'],
   hosts: ['heise.de'],
@@ -68,6 +77,7 @@ describe('FeedDirectoryStore', () => {
     scope.set({ countries: ['DE', 'AT'], languages: ['de'] });
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         FeedDirectoryStore,
         { provide: FeedDirectoryScopeService, useValue: { scope } },
@@ -91,6 +101,35 @@ describe('FeedDirectoryStore', () => {
     expect(store.status()).toBe('ready');
     expect(store.index()).toBe(INDEX);
     expect(hosts()).toEqual(['orf.at', 'heise.de', 'zeit.de', 'b.de']);
+  });
+
+  it('skips a scoped country the index does not list', () => {
+    scope.set({ countries: ['XX', 'AT'], languages: ['de'] });
+
+    loadedStore();
+
+    expect(country.mock.calls.map(([code]) => code)).toEqual(['AT']);
+    expect(store.status()).toBe('ready');
+    expect(hosts()).toEqual(['orf.at']);
+  });
+
+  it('becomes ready with no rows when the index lists none of the scoped countries', () => {
+    scope.set({ countries: ['XX'], languages: ['de'] });
+
+    loadedStore();
+
+    expect(country).not.toHaveBeenCalled();
+    expect(store.status()).toBe('ready');
+    expect(store.rows()).toEqual([]);
+  });
+
+  it('names a country Intl cannot name after the index', () => {
+    const names = TestBed.inject(FeedDirectoryNames);
+    expect(names.country('QQ')).toBe('QQ');
+
+    loadedStore();
+
+    expect(names.country('QQ')).toBe('Qland');
   });
 
   it('requests the country files in parallel', () => {

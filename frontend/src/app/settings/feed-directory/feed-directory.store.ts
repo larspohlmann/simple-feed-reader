@@ -1,7 +1,8 @@
 import { Injectable, OnDestroy, computed, inject, linkedSignal, signal } from '@angular/core';
-import { Subscription, forkJoin, of } from 'rxjs';
+import { Observable, Subscription, forkJoin, map, of, switchMap } from 'rxjs';
 import { toggled } from '../../core/toggled-set';
 import { FeedDirectoryApi } from './feed-directory-api';
+import { FeedDirectoryNames } from './feed-directory-names';
 import {
   FeedDirectoryFilter,
   FeedDirectoryLength,
@@ -15,12 +16,17 @@ import {
   withSubscribed,
 } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
-import { FeedDirectoryIndex, FeedDirectoryScope } from './feed-directory.models';
+import {
+  FeedDirectoryCountryFile,
+  FeedDirectoryIndex,
+  FeedDirectoryScope,
+} from './feed-directory.models';
 
 @Injectable()
 export class FeedDirectoryStore implements OnDestroy {
   private readonly api = inject(FeedDirectoryApi);
   private readonly scopes = inject(FeedDirectoryScopeService);
+  private readonly names = inject(FeedDirectoryNames);
 
   readonly status = signal<'loading' | 'ready' | 'failed'>('loading');
   readonly index = signal<FeedDirectoryIndex | null>(null);
@@ -67,24 +73,26 @@ export class FeedDirectoryStore implements OnDestroy {
   load(): void {
     const scope = this.scopes.scope();
     const scopeLanguages = new Set(scope.languages);
-    const countryFiles = scope.countries.length
-      ? forkJoin(scope.countries.map((code) => this.api.country(code)))
-      : of([]);
     this.loading.unsubscribe();
     this.keepFiltersWithin(scope);
     this.status.set('loading');
-    this.loading = forkJoin({
-      index: this.api.index(),
-      subscribed: this.api.subscribed(),
-      files: countryFiles,
-    }).subscribe({
-      next: ({ index, subscribed, files }) => {
-        this.index.set(index);
-        this.loaded.set(files.flatMap((file) => prepareRows(file, scopeLanguages, subscribed)));
-        this.status.set('ready');
-      },
-      error: () => this.status.set('failed'),
-    });
+    this.loading = forkJoin({ index: this.api.index(), subscribed: this.api.subscribed() })
+      .pipe(
+        switchMap(({ index, subscribed }) =>
+          this.countryFiles(knownCountries(scope, index)).pipe(
+            map((files) => ({ index, subscribed, files })),
+          ),
+        ),
+      )
+      .subscribe({
+        next: ({ index, subscribed, files }) => {
+          this.index.set(index);
+          this.names.learnCountryNames(index);
+          this.loaded.set(files.flatMap((file) => prepareRows(file, scopeLanguages, subscribed)));
+          this.status.set('ready');
+        },
+        error: () => this.status.set('failed'),
+      });
   }
 
   retry(): void {
@@ -111,10 +119,19 @@ export class FeedDirectoryStore implements OnDestroy {
     this.languages.update((set) => toggled(set, code));
   }
 
+  private countryFiles(codes: readonly string[]): Observable<FeedDirectoryCountryFile[]> {
+    return codes.length ? forkJoin(codes.map((code) => this.api.country(code))) : of([]);
+  }
+
   private keepFiltersWithin(scope: FeedDirectoryScope): void {
     this.country.update((code) => (code !== null && scope.countries.includes(code) ? code : null));
     this.languages.update(
       (codes) => new Set([...codes].filter((code) => scope.languages.includes(code))),
     );
   }
+}
+
+function knownCountries(scope: FeedDirectoryScope, index: FeedDirectoryIndex): string[] {
+  const listed = new Set(index.countries.map((country) => country.code));
+  return scope.countries.filter((code) => listed.has(code));
 }

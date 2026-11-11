@@ -1,6 +1,7 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
+import { FeedDirectoryIndex } from './feed-directory.models';
 
 export function displayName(names: Intl.DisplayNames, code: string, fallback: string): string {
   try {
@@ -13,7 +14,7 @@ export function displayName(names: Intl.DisplayNames, code: string, fallback: st
 @Injectable({ providedIn: 'root' })
 export class FeedDirectoryNames {
   private readonly transloco = inject(TranslocoService);
-  private readonly lang = toSignal(this.transloco.langChanges$, {
+  readonly lang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
   private readonly regions = computed(
@@ -23,9 +24,14 @@ export class FeedDirectoryNames {
     () => new Intl.DisplayNames([this.lang()], { type: 'language', fallback: 'none' }),
   );
   private readonly numbers = computed(() => new Intl.NumberFormat(this.lang()));
+  private readonly indexCountryNames = signal<ReadonlyMap<string, string>>(new Map());
+
+  learnCountryNames(index: FeedDirectoryIndex): void {
+    this.indexCountryNames.set(new Map(index.countries.map(({ code, name }) => [code, name])));
+  }
 
   country(code: string): string {
-    return displayName(this.regions(), code, code);
+    return displayName(this.regions(), code, this.indexCountryNames().get(code) ?? code);
   }
 
   language(code: string): string {
