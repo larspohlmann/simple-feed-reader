@@ -7,7 +7,6 @@ namespace App\Tests\Service\Mail\Digest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Enum\DigestFormat;
-use App\Repository\DigestSettingsRepository;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
@@ -107,7 +106,7 @@ final class SendTestDigestTest extends DbTestCase
         self::assertTrue($result);
     }
 
-    /** The window runs back from the clock, not from digestLastSentAt, and its boundary is exclusive. */
+    /** The window runs back from the clock, not from DigestSettings::getLastSentAt(), and its boundary is exclusive. */
     public function testTheSinceCutoffPassedToTheFinderIsDaysBeforeNowAndIsExclusive(): void
     {
         $fixture = new SavedSearchMatchFixture($this->entityManager);
@@ -160,7 +159,7 @@ final class SendTestDigestTest extends DbTestCase
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
-            $this->digestSettings(),
+            StoredUserSettings::digestRepository($this->entityManager),
         );
 
         return new DigestMailer($transport, $builder);
@@ -192,14 +191,6 @@ final class SendTestDigestTest extends DbTestCase
         self::assertCount(1, $this->sentEmails);
         self::assertNull($this->sentEmails[0]->getHtmlBody());
         self::assertNotNull($this->sentEmails[0]->getTextBody());
-    }
-
-    private function digestSettings(): DigestSettingsRepository
-    {
-        $repository = self::getContainer()->get(DigestSettingsRepository::class);
-        self::assertInstanceOf(DigestSettingsRepository::class, $repository);
-
-        return $repository;
     }
 
     private function mailIdentity(string $address, string $name): MailSendingSettingsInterface

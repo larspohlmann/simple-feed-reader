@@ -6,7 +6,6 @@ namespace App\Tests\Service\Mail\Digest\DigestMailer;
 
 use App\Entity\User;
 use App\Enum\DigestFormat;
-use App\Repository\DigestSettingsRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
@@ -72,7 +71,7 @@ final class DigestMailerTest extends DbTestCase
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 5)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
-            $this->digestSettings(),
+            StoredUserSettings::digestRepository($this->entityManager),
         );
 
         $this->mailer = new DigestMailer($transport, $builder);
@@ -157,14 +156,6 @@ final class DigestMailerTest extends DbTestCase
         $email = $this->sent[0];
         self::assertNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
-    }
-
-    private function digestSettings(): DigestSettingsRepository
-    {
-        $repository = self::getContainer()->get(DigestSettingsRepository::class);
-        self::assertInstanceOf(DigestSettingsRepository::class, $repository);
-
-        return $repository;
     }
 
     private function mailIdentity(string $address, string $name): MailSendingSettingsInterface

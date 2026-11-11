@@ -16,7 +16,7 @@ use App\Tests\Support\StoredUserSettings;
 use Psr\Cache\CacheItemPoolInterface;
 
 /**
- * The "send me a test digest" button: a preview send over the last N days that never advances digestLastSentAt,
+ * The "send me a test digest" button: a preview send over the last N days that never advances the last-sent time,
  * gated on mail being on and the address being verified, and capped by the digest_test limiter.
  */
 final class MeDigestTestControllerTest extends ApiTestCase

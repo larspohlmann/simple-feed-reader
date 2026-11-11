@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest\Factory;
 
 use App\Entity\User;
-use App\Repository\DigestSettingsRepository;
 use App\Enum\DigestFormat;
+use App\Repository\DigestSettingsRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;

@@ -10,7 +10,7 @@ use Psr\Clock\ClockInterface;
 
 /**
  * The "send me a test digest" action: composes over the last N days and sends at once, but never advances
- * digestLastSentAt, because it is a preview, not a real send.
+ * the digest settings' last-sent time, because it is a preview, not a real send.
  */
 final readonly class SendTestDigest
 {

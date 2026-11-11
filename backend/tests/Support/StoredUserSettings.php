@@ -34,10 +34,15 @@ final class StoredUserSettings
 
     public static function digest(EntityManagerInterface $entityManager, User $user): DigestSettings
     {
+        return self::digestRepository($entityManager)->forUser($user);
+    }
+
+    public static function digestRepository(EntityManagerInterface $entityManager): DigestSettingsRepository
+    {
         $repository = $entityManager->getRepository(DigestSettings::class);
         Assert::assertInstanceOf(DigestSettingsRepository::class, $repository);
 
-        return $repository->forUser($user);
+        return $repository;
     }
 
     private function __construct()

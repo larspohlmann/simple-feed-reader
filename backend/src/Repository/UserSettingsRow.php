@@ -18,7 +18,7 @@ final class UserSettingsRow
     public static function required(?object $row, User $user): object
     {
         if (null === $row) {
-            throw new \LogicException(sprintf(
+            throw new \LogicException(\sprintf(
                 'User %d has no settings row; UserSettingsRowsListener creates every one with the account.',
                 $user->requireId(),
             ));
