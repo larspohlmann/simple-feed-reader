@@ -2,6 +2,7 @@
 // the stack's group gap would part them from the toolbar card far wider than the mockup.
 @use '../../theme/breakpoints' as bp;
 @use '../../theme/glass-rim';
+@use 'directory-mixins';
 
 .picker {
   padding: var(--panel-inset-y) var(--panel-inset-x);
@@ -28,27 +29,24 @@ app-segmented-choice {
 }
 
 .search {
-  position: relative;
-  display: flex;
+  @include directory-mixins.search-box;
+
   flex: 1;
-  align-items: center;
   min-width: 11.25rem;
 }
 
 .search-icon {
-  position: absolute;
-  left: var(--space-3);
-  color: var(--text-muted);
-  pointer-events: none;
+  @include directory-mixins.search-icon(var(--space-3));
 }
 
 .query {
   --field-rim-base: var(--border);
 
+  @include directory-mixins.search-input;
+
   flex: 1;
   min-width: 0;
   height: var(--tool-h);
-  padding-left: calc(var(--space-3) + var(--icon-sm) + var(--space-2));
   font-size: var(--fs-sm);
 }
 

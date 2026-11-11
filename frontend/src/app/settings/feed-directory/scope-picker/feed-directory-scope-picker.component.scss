@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
+@use '../directory-mixins';
 
 :host {
   display: block;
@@ -52,23 +53,20 @@ h3 {
 }
 
 .search {
-  position: relative;
-  display: flex;
-  align-items: center;
+  @include directory-mixins.search-box;
+
   padding: var(--space-3) var(--space-4);
 }
 
 .search-icon {
-  position: absolute;
-  left: calc(var(--space-4) + var(--space-3));
-  color: var(--text-muted);
-  pointer-events: none;
+  @include directory-mixins.search-icon(calc(var(--space-4) + var(--space-3)));
 }
 
 .filter {
+  @include directory-mixins.search-input;
+
   flex: 1;
   min-width: 0;
-  padding-left: calc(var(--space-3) + var(--icon-sm) + var(--space-2));
 }
 
 .options {

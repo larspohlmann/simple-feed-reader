@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../directory-mixins';
 
 .pop {
   @include glass-rim.filled(var(--surface-2), var(--border-strong));
@@ -68,10 +69,5 @@
 }
 
 .done {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  color: var(--success);
-  white-space: nowrap;
+  @include directory-mixins.done;
 }
