@@ -7,6 +7,7 @@ namespace App\Service\Backup\Dto;
 use App\Entity\User;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
+use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
@@ -57,18 +58,16 @@ final readonly class AccountLine
         );
     }
 
-    public static function of(User $user, AccountNetworkSwitchesModel $networks): self
+    public static function of(User $user, AccountSettingsModel $settings, AccountNetworkSwitchesModel $networks): self
     {
-        $preferences = $user->getPreferences();
-
         return new self(
             locale: $user->getLocale(),
-            scrapeFallbackEnabled: $preferences->isScrapeFallbackEnabled(),
-            magazineStyle: $preferences->getMagazineStyle(),
-            sharingEnabled: $preferences->isSharingEnabled(),
-            hiddenShareTargets: $preferences->getHiddenShareTargets(),
-            rememberShares: $preferences->isRememberingShares(),
-            trendingEnabled: $preferences->isTrendingEnabled(),
+            scrapeFallbackEnabled: $settings->reading->isScrapeFallbackEnabled(),
+            magazineStyle: $settings->reading->getMagazineStyle(),
+            sharingEnabled: $settings->sharing->isEnabled(),
+            hiddenShareTargets: $settings->sharing->getHiddenTargets(),
+            rememberShares: $settings->sharing->isRememberingShares(),
+            trendingEnabled: $settings->reading->isTrendingEnabled(),
             savedSearchIncludedNetworks: $networks->savedSearchIncludedNetworks,
             forYouExcludedNetworks: $networks->forYouExcludedNetworks,
         );

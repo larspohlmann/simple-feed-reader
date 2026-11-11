@@ -15,6 +15,7 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -46,7 +47,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $user = $entityManager->getRepository(User::class)->findOneBy(['email' => User::normalizeEmail($email)]);
         self::assertInstanceOf(User::class, $user);
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($entityManager, $user)->setScrapeFallbackEnabled(true);
         $entityManager->flush();
     }
 
@@ -523,7 +524,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->factory()->create('atcap@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($entityManager, $user)->setScrapeFallbackEnabled(true);
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         for ($index = 0; $index < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $index++) {
             $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $index));

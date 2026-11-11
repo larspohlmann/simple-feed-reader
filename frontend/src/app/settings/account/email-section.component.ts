@@ -47,8 +47,8 @@ const SEND_HOURS: readonly { value: number; label: string }[] = Array.from(
   (_unused, hour) => ({ value: hour, label: `${String(hour).padStart(2, '0')}:00` }),
 );
 
-/** ISO-8601 weekday numbering (1=Mon … 7=Sun), matching `Preferences::getDigestWeekday()`
- *  on the backend -- see `backend/src/Entity/Preferences.php`. */
+/** ISO-8601 weekday numbering (1=Mon … 7=Sun), matching `DigestSettings::getWeekday()`
+ *  on the backend -- see `backend/src/Entity/DigestSettings.php`. */
 const WEEKDAYS: readonly { value: number; labelKey: string }[] = [
   { value: 1, labelKey: 'settings.email.weekdayMonday' },
   { value: 2, labelKey: 'settings.email.weekdayTuesday' },

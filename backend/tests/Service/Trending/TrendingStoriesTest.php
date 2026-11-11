@@ -16,6 +16,7 @@ use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Clock\NaiveUtcClock;
@@ -676,6 +677,8 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertInstanceOf(EntryListRepository::class, $entryList);
         $enricher = self::getContainer()->get(EntryListRowEnricher::class);
         self::assertInstanceOf(EntryListRowEnricher::class, $enricher);
+        $readingSettings = self::getContainer()->get(ReadingSettingsRepository::class);
+        self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
 
         return new TrendingStories(
             $this->storyRepository(),
@@ -683,6 +686,7 @@ final class TrendingStoriesTest extends DbTestCase
             TrendingWiring::snapshots($this->entityManager),
             $entryList,
             $enricher,
+            $readingSettings,
         );
     }
 

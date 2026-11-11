@@ -49,12 +49,14 @@ final readonly class FullyPopulatedAccount
     public function create(string $email): User
     {
         $user = (new UserFactory($this->entityManager, $this->hasher))->create($email, locale: 'de');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
-        $user->getPreferences()->setSharingEnabled(false);
-        $user->getPreferences()->setHiddenShareTargets(['facebook', 'x']);
-        $user->getPreferences()->setRememberingShares(false);
-        $user->getPreferences()->setTrendingEnabled(false);
+        $reading = StoredUserSettings::reading($this->entityManager, $user);
+        $reading->setScrapeFallbackEnabled(true);
+        $reading->setMagazineStyle(MagazineStyle::Airy);
+        $reading->setTrendingEnabled(false);
+        $sharing = StoredUserSettings::sharing($this->entityManager, $user);
+        $sharing->setEnabled(false);
+        $sharing->setHiddenTargets(['facebook', 'x']);
+        $sharing->setRememberingShares(false);
 
         $parentTag = $this->parentTagFor($user);
         $this->entityManager->persist($parentTag);

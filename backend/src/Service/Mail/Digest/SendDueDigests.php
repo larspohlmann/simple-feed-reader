@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
-use App\Entity\Preferences;
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Enum\MailKind;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
@@ -22,7 +21,7 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 /**
  * Mails every account whose digest occurrence has passed since its last send, for the worker and the maintenance cron.
  * The digest's security boundary: mail capability, email verification and account status are re-checked here, because
- * a preferences row can outlive the state that made it valid.
+ * a settings row can outlive the state that made it valid.
  */
 final readonly class SendDueDigests
 {
@@ -50,10 +49,10 @@ final readonly class SendDueDigests
         $sent = 0;
         $skippedEmpty = 0;
 
-        foreach ($this->recipients->findWithDigestEnabled() as $preferences) {
+        foreach ($this->recipients->findWithDigestEnabled() as $settings) {
             ++$considered;
 
-            $attempt = $this->attemptSend($preferences, $now);
+            $attempt = $this->attemptSend($settings, $now);
             if (DigestAttempt::Sent === $attempt) {
                 ++$sent;
             } elseif (DigestAttempt::NothingToReport === $attempt) {
@@ -64,36 +63,36 @@ final readonly class SendDueDigests
         return new DigestSweepReportModel($considered, $sent, $skippedEmpty);
     }
 
-    private function attemptSend(Preferences $preferences, \DateTimeImmutable $now): DigestAttempt
+    private function attemptSend(DigestSettings $settings, \DateTimeImmutable $now): DigestAttempt
     {
-        $occurrence = $this->dueOccurrence($preferences, $now);
+        $occurrence = $this->dueOccurrence($settings, $now);
         if (null === $occurrence) {
             return DigestAttempt::NotDue;
         }
 
-        $user = $preferences->getUser();
+        $user = $settings->getUser();
         if (!$user->isEmailVerified() || !$user->isActiveAt($now)) {
             return DigestAttempt::Ineligible;
         }
 
-        $model = $this->composer->compose($user, $preferences->getDigestLastSentAt() ?? $occurrence);
+        $model = $this->composer->compose($user, $settings->getLastSentAt() ?? $occurrence);
         if (null === $model) {
             return DigestAttempt::NothingToReport;
         }
 
-        return $this->sendAndAdvance($user, $model, $preferences, $occurrence);
+        return $this->sendAndAdvance($settings, $model, $occurrence);
     }
 
     /** One recipient's transport failure must not stop the sweep; the untouched watermark retries it next tick. */
     private function sendAndAdvance(
-        User $user,
+        DigestSettings $settings,
         DigestModel $model,
-        Preferences $preferences,
         \DateTimeImmutable $occurrence,
     ): DigestAttempt {
         try {
-            $this->mailer->send($user, $model);
+            $this->mailer->send($settings, $model);
         } catch (TransportExceptionInterface $exception) {
+            $user = $settings->getUser();
             $this->logger->error(
                 'Digest send failed: {userId} <{email}>',
                 ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $exception],
@@ -104,21 +103,21 @@ final readonly class SendDueDigests
         }
 
         $this->health->recordSuccess();
-        $preferences->setDigestLastSentAt($occurrence);
+        $settings->setLastSentAt($occurrence);
         $this->entityManager->flush();
 
         return DigestAttempt::Sent;
     }
 
     /** The schedule's occurrence, but only if it is newer than the last send. */
-    private function dueOccurrence(Preferences $preferences, \DateTimeImmutable $now): ?\DateTimeImmutable
+    private function dueOccurrence(DigestSettings $settings, \DateTimeImmutable $now): ?\DateTimeImmutable
     {
-        $occurrence = $this->schedule->mostRecentDue($preferences, $now);
+        $occurrence = $this->schedule->mostRecentDue($settings, $now);
         if (null === $occurrence) {
             return null;
         }
 
-        $lastSent = $preferences->getDigestLastSentAt();
+        $lastSent = $settings->getLastSentAt();
 
         return (null === $lastSent || $lastSent < $occurrence) ? $occurrence : null;
     }

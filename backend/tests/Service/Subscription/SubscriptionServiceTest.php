@@ -7,11 +7,13 @@ namespace App\Tests\Service\Subscription;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Entity\ReadingSettings;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Enum\SourceFormat;
 use App\Repository\OrphanedFeedRepository;
+use App\Repository\ReadingSettingsRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
@@ -40,6 +42,7 @@ use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingSubscribeRoute;
+use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
@@ -92,6 +95,8 @@ final class SubscriptionServiceTest extends DbTestCase
     private function service(FeedDiscoveryInterface $discovery, array $routes = []): SubscriptionService
     {
         $clock = new MockClock('2026-06-01T00:00:00Z');
+        $readingSettings = $this->entityManager->getRepository(ReadingSettings::class);
+        self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
 
         return new SubscriptionService(
             $discovery,
@@ -104,7 +109,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 new SubscriptionLimitResolver(),
                 new FeedFactory(),
             ),
-            new ScrapeFallbackPolicy(),
+            new ScrapeFallbackPolicy($readingSettings),
             new FirstFetchRecorder(
                 EntryIngestors::build($this->entityManager, $clock),
                 FeedSchedulers::build($clock),
@@ -253,7 +258,7 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testScrapedSubscribeNeverDowngradesAnXmlFeed(): void
     {
         $user = $this->factory()->create('downgrader@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
         $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
         $this->entityManager->persist($feed);
         $this->entityManager->flush();
@@ -294,7 +299,7 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testScrapedSubscribeAttachesTheGivenTags(): void
     {
         $user = $this->factory()->create('scrapedtagger@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
         $blog = new Tag($user, 'Blogs');
         $this->entityManager->persist($blog);
         $this->entityManager->flush();
@@ -325,7 +330,7 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testAScrapedSubscribeSucceedsWhenTheUserHasScrapingEnabled(): void
     {
         $user = $this->factory()->create('scrape-on@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
         $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $outcome = $service->subscribe($user, 'https://example.com/blog', SourceFormat::SCRAPED);
@@ -386,7 +391,7 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testScrapedSubscribeDoesNotSeedTheCandidateTitle(): void
     {
         $user = $this->factory()->create('scraped-title@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
         $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $outcome = $service->subscribe(

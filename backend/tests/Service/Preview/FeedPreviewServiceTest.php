@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Preview;
 
+use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Enum\SourceFormat;
+use App\Repository\ReadingSettingsRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -14,12 +16,13 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\Refresh\FeedBodyParser;
+use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\StubFeedFetcher;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-final class FeedPreviewServiceTest extends KernelTestCase
+final class FeedPreviewServiceTest extends DbTestCase
 {
     use ScrapedFixtures;
     use ReadsFixtures;
@@ -31,19 +34,30 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $bodyParser = self::getContainer()->get(FeedBodyParser::class);
         self::assertInstanceOf(FeedBodyParser::class, $bodyParser);
 
-        return new FeedPreviewService($fetcher, $bodyParser, new ScrapeFallbackPolicy());
+        $readingSettings = $this->entityManager->getRepository(ReadingSettings::class);
+        self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
+
+        return new FeedPreviewService($fetcher, $bodyParser, new ScrapeFallbackPolicy($readingSettings));
     }
 
-    /** These tests never touch the database, so a User is built inline rather than through a factory. */
     private function user(): User
     {
-        return new User('preview@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
+        return $this->persisted(new User('preview@example.com', new \DateTimeImmutable('2026-08-02 10:00:00')));
     }
 
     private function userWithScrapingEnabled(): User
     {
-        $user = new User('preview-scraper@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $user = $this->user();
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function persisted(User $user): User
+    {
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }
@@ -347,7 +361,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
     public function testAScrapedPreviewIsRefusedWhenTheUserHasScrapingDisabled(): void
     {
-        $user = new User('preview-off@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
+        $user = $this->user();
 
         $this->expectException(ScrapingDisabledException::class);
 

@@ -8,6 +8,7 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Tokens come straight from the JWT manager, so no case touches, or is poisoned by, the login throttler's pool. */
@@ -179,6 +180,50 @@ final class MeControllerTest extends ApiTestCase
             ],
             $this->payload($client)['preferences'],
         );
+    }
+
+    public function testThePreferencesObjectKeepsItsShapeForEveryStoredSetting(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'every-setting@example.test');
+
+        $client->request('POST', '/api/me/passkey-offer/answer');
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        $this->patch($client, '/api/me/preferences', ['scrapeFallbackEnabled' => true]);
+        $this->patch($client, '/api/me/magazine-style', ['magazineStyle' => 'airy']);
+        $this->patch($client, '/api/me/trending', ['trendingEnabled' => false]);
+        $this->patch(
+            $client,
+            '/api/me/sharing',
+            ['enabled' => false, 'hiddenTargets' => ['x', 'email'], 'rememberShares' => false],
+        );
+        $this->patch(
+            $client,
+            '/api/me/digest',
+            ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
+        );
+        $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","passkeyOfferAnswered":true,'
+            . '"trendingEnabled":false,'
+            . '"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'
+            . '"digest":{"enabled":true,"cadence":"weekly","format":"text","sendHour":9,"weekday":3,"timezone":"UTC"}}';
+        self::assertSame($expected, json_encode($this->payload($client)['preferences'], \JSON_THROW_ON_ERROR));
+
+        $client->request('GET', '/api/me');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($expected, json_encode($this->payload($client)['preferences'], \JSON_THROW_ON_ERROR));
+    }
+
+    /** @param array<string, mixed> $body */
+    private function patch(KernelBrowser $client, string $uri, array $body): void
+    {
+        $client->request(
+            'PATCH',
+            $uri,
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
     }
 
     public function testAUserDeletesTheirOwnAccount(): void

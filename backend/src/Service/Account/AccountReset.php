@@ -6,6 +6,7 @@ namespace App\Service\Account;
 
 use App\Entity\User;
 use App\Repository\AccountWipeRepository;
+use App\Repository\ReadingSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -16,6 +17,7 @@ final readonly class AccountReset
 {
     public function __construct(
         private AccountWipeRepository $wipe,
+        private ReadingSettingsRepository $readingSettings,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -25,7 +27,7 @@ final readonly class AccountReset
         $this->wipe->deleteRecommendationData($user);
         $this->wipe->deleteOwnedRows($user);
         $this->wipe->deletePrivateFeedSyncMemory($user);
-        $user->getPreferences()->setScrapeFallbackEnabled(false);
+        $this->readingSettings->forUser($user)->setScrapeFallbackEnabled(false);
         $this->entityManager->flush();
         $this->entityManager->clear();
     }

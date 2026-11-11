@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest\DigestMailer;
 
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\MailCapability;
 use Psr\Log\LoggerInterface;
@@ -21,16 +21,16 @@ final readonly class MailGatedDigestMailer implements DigestMailerInterface
     ) {
     }
 
-    public function send(User $user, DigestModel $model): void
+    public function send(DigestSettings $settings, DigestModel $model): void
     {
         if (!$this->mail->isEnabled()) {
             $this->logger->info('Mail disabled; skipped digest mail to {email}.', [
-                'email' => $user->getEmail(),
+                'email' => $settings->getUser()->getEmail(),
             ]);
 
             return;
         }
 
-        $this->inner->send($user, $model);
+        $this->inner->send($settings, $model);
     }
 }

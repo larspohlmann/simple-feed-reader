@@ -30,6 +30,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
+use App\Tests\Support\StoredUserSettings;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Component\Clock\MockClock;
@@ -40,7 +41,7 @@ use Symfony\Component\Translation\Translator;
 
 /**
  * Composes over exactly the requested window back from the clock, sends only when there is something to report, and
- * never touches digestLastSentAt: that watermark belongs to DigestEnablement and the scheduled send.
+ * never touches lastSentAt: that watermark belongs to DigestEnablement and the scheduled send.
  */
 final class SendTestDigestTest extends DbTestCase
 {
@@ -72,6 +73,7 @@ final class SendTestDigestTest extends DbTestCase
                 new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
             ),
             $mailer ?? $this->mailer,
+            StoredUserSettings::digestRepository($this->entityManager),
             $clock,
         );
     }
@@ -97,7 +99,10 @@ final class SendTestDigestTest extends DbTestCase
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->once())
             ->method('send')
-            ->with($this->user, self::isInstanceOf(DigestModel::class));
+            ->with(
+                StoredUserSettings::digest($this->entityManager, $this->user),
+                self::isInstanceOf(DigestModel::class),
+            );
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $mailer)
             ->send($this->user, 7);
@@ -105,7 +110,7 @@ final class SendTestDigestTest extends DbTestCase
         self::assertTrue($result);
     }
 
-    /** The window runs back from the clock, not from digestLastSentAt, and its boundary is exclusive. */
+    /** The window runs back from the clock, not from DigestSettings::getLastSentAt(), and its boundary is exclusive. */
     public function testTheSinceCutoffPassedToTheFinderIsDaysBeforeNowAndIsExclusive(): void
     {
         $fixture = new SavedSearchMatchFixture($this->entityManager);
@@ -166,7 +171,7 @@ final class SendTestDigestTest extends DbTestCase
     public function testHtmlFormatUserGetsAnHtmlBodyThroughTheRealMailer(): void
     {
         $this->givenOneMatch(new \DateTimeImmutable('2026-08-27T00:00:00Z'));
-        $this->user->getPreferences()->setDigestFormat(DigestFormat::Html);
+        StoredUserSettings::digest($this->entityManager, $this->user)->setFormat(DigestFormat::Html);
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
             ->send($this->user, 7);
@@ -180,7 +185,7 @@ final class SendTestDigestTest extends DbTestCase
     public function testTextFormatUserGetsNoHtmlBodyThroughTheRealMailer(): void
     {
         $this->givenOneMatch(new \DateTimeImmutable('2026-08-27T00:00:00Z'));
-        $this->user->getPreferences()->setDigestFormat(DigestFormat::Text);
+        StoredUserSettings::digest($this->entityManager, $this->user)->setFormat(DigestFormat::Text);
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
             ->send($this->user, 7);

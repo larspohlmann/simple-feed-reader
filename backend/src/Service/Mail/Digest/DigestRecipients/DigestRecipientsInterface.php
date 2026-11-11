@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest\DigestRecipients;
 
-use App\Entity\Preferences;
+use App\Entity\DigestSettings;
 
 interface DigestRecipientsInterface
 {
-    /** @return list<Preferences> */
+    /** @return list<DigestSettings> */
     public function findWithDigestEnabled(): array;
 }

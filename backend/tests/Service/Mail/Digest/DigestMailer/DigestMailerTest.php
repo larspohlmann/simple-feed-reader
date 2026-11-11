@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest\DigestMailer;
 
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
@@ -22,6 +22,7 @@ use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Model\MailIdentityModel;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\MailerInterface;
@@ -90,17 +91,17 @@ final class DigestMailerTest extends TestCase
         return new DigestModel([$group], 1);
     }
 
-    private function user(DigestFormat $format): User
+    private function settings(DigestFormat $format): DigestSettings
     {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
-        $user->getPreferences()->setDigestFormat($format);
+        $settings = UnsavedUserSettings::digest();
+        $settings->setFormat($format);
 
-        return $user;
+        return $settings;
     }
 
     public function testSendHandsTheMailerAnEmailWithFromToSubjectAndBody(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Html), $this->model());
 
         self::assertCount(1, $this->sent);
         $email = $this->sent[0];
@@ -117,24 +118,24 @@ final class DigestMailerTest extends TestCase
 
     public function testSendRendersInTheUsersLocale(): void
     {
-        $user = $this->user(DigestFormat::Html);
-        $user->setLocale('de');
+        $settings = $this->settings(DigestFormat::Html);
+        $settings->getUser()->setLocale('de');
 
-        $this->mailer->send($user, $this->model());
+        $this->mailer->send($settings, $this->model());
 
         self::assertStringContainsString('Einstellungen', (string) $this->sent[0]->getTextBody());
     }
 
     public function testSendDefaultsToEnglishWhenNoLocaleIsSet(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Html), $this->model());
 
         self::assertStringContainsString('Settings', (string) $this->sent[0]->getTextBody());
     }
 
     public function testHtmlFormatUserGetsBothHtmlAndTextParts(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Html), $this->model());
 
         $email = $this->sent[0];
         self::assertNotNull($email->getHtmlBody());
@@ -144,7 +145,7 @@ final class DigestMailerTest extends TestCase
 
     public function testTextFormatUserGetsNoHtmlPart(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Text), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Text), $this->model());
 
         $email = $this->sent[0];
         self::assertNull($email->getHtmlBody());

@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Enum\MagazineStyle;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class MagazineStyleControllerTest extends ApiTestCase
@@ -52,7 +53,10 @@ final class MagazineStyleControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $reloaded = $this->users()->findOneBy(['email' => 'airy-reader@example.test']);
         self::assertNotNull($reloaded);
-        self::assertSame(MagazineStyle::Airy, $reloaded->getPreferences()->getMagazineStyle());
+        self::assertSame(
+            MagazineStyle::Airy,
+            StoredUserSettings::reading($this->entityManager(), $reloaded)->getMagazineStyle(),
+        );
     }
 
     public function testAnUnknownStyleIsRejected(): void

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
-use App\Entity\Preferences;
+use App\Entity\DigestSettings;
 use App\Enum\DigestCadence;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -22,20 +22,20 @@ final readonly class DigestSchedule
     }
 
     /** The most recent scheduled occurrence at/before now, as naive UTC, or null. */
-    public function mostRecentDue(Preferences $preferences, \DateTimeImmutable $nowUtc): ?\DateTimeImmutable
+    public function mostRecentDue(DigestSettings $settings, \DateTimeImmutable $nowUtc): ?\DateTimeImmutable
     {
-        if (!$preferences->isDigestEnabled()) {
+        if (!$settings->isEnabled()) {
             return null;
         }
 
         $localNow = $nowUtc->setTimezone(new \DateTimeZone($this->timezone));
 
-        $occurrence = match ($preferences->getDigestCadence()) {
-            DigestCadence::Daily => $this->dailyOccurrence($localNow, $preferences->getDigestSendHour()),
+        $occurrence = match ($settings->getCadence()) {
+            DigestCadence::Daily => $this->dailyOccurrence($localNow, $settings->getSendHour()),
             DigestCadence::Weekly => $this->weeklyOccurrence(
                 $localNow,
-                $preferences->getDigestSendHour(),
-                $preferences->getDigestWeekday(),
+                $settings->getSendHour(),
+                $settings->getWeekday(),
             ),
         };
 
@@ -61,7 +61,7 @@ final readonly class DigestSchedule
         return $occurrence <= $localNow ? $occurrence : $occurrence->modify('-7 days');
     }
 
-    /** The same instant expressed as naive UTC, for comparison against digestLastSentAt. */
+    /** The same instant expressed as naive UTC, for comparison against lastSentAt. */
     private function toNaiveUtc(\DateTimeImmutable $local): \DateTimeImmutable
     {
         return $local->setTimezone(new \DateTimeZone('UTC'));

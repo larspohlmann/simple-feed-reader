@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Passkey;
 
-use App\Entity\Preferences;
 use App\Entity\User;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Passkey\PasskeyOffer;
@@ -13,21 +12,21 @@ use Symfony\Component\Clock\MockClock;
 
 final class PasskeyOfferTest extends TestCase
 {
-    private function preferences(): Preferences
+    private function user(): User
     {
-        return (new User('a@b.example', new \DateTimeImmutable()))->getPreferences();
+        return new User('a@b.example', new \DateTimeImmutable());
     }
 
     public function testFirstAnswerRecordsNow(): void
     {
         $now = new \DateTimeImmutable('2026-08-28T12:00:00Z');
         $offer = new PasskeyOffer(new NaiveUtcClock(new MockClock($now)));
-        $preferences = $this->preferences();
-        self::assertNull($preferences->getPasskeyOfferAnsweredAt());
+        $user = $this->user();
+        self::assertNull($user->getPasskeyOfferAnsweredAt());
 
-        $offer->markAnswered($preferences->getUser());
+        $offer->markAnswered($user);
 
-        self::assertEquals($now, $preferences->getPasskeyOfferAnsweredAt());
+        self::assertEquals($now, $user->getPasskeyOfferAnsweredAt());
     }
 
     /**
@@ -38,25 +37,25 @@ final class PasskeyOfferTest extends TestCase
     {
         $clock = new MockClock('2026-08-01T00:00:00Z');
         $offer = new PasskeyOffer(new NaiveUtcClock($clock));
-        $preferences = $this->preferences();
+        $user = $this->user();
         $seededAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $preferences->markPasskeyOfferAnswered($seededAt);
+        $user->markPasskeyOfferAnswered($seededAt);
 
         $clock->modify('+1 day');
-        $offer->markAnswered($preferences->getUser());
+        $offer->markAnswered($user);
 
-        self::assertEquals($seededAt, $preferences->getPasskeyOfferAnsweredAt());
+        self::assertEquals($seededAt, $user->getPasskeyOfferAnsweredAt());
     }
 
     public function testANonUtcClockIsNormalisedToNaiveUtcBeforeRecording(): void
     {
         $clock = new MockClock('2026-08-28T12:00:00+02:00');
         $offer = new PasskeyOffer(new NaiveUtcClock($clock));
-        $preferences = $this->preferences();
+        $user = $this->user();
 
-        $offer->markAnswered($preferences->getUser());
+        $offer->markAnswered($user);
 
-        $answeredAt = $preferences->getPasskeyOfferAnsweredAt();
+        $answeredAt = $user->getPasskeyOfferAnsweredAt();
         self::assertNotNull($answeredAt);
         self::assertSame('UTC', $answeredAt->getTimezone()->getName());
         self::assertEquals(new \DateTimeImmutable('2026-08-28T10:00:00Z'), $answeredAt);

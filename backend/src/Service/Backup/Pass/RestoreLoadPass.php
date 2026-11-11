@@ -10,6 +10,7 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SavedSearchLine;
@@ -51,6 +52,7 @@ final class RestoreLoadPass
         private readonly RestoreFeedsInterface $feeds,
         private readonly SavedSearchSlug $slug,
         private readonly RestoredFoundationFactory $foundationFactory,
+        private readonly AccountSettingsModel $accountSettings,
     ) {
     }
 
@@ -91,12 +93,12 @@ final class RestoreLoadPass
     private function loadAccount(AccountLine $line): void
     {
         $this->user->setLocale($line->locale);
-        $this->user->getPreferences()->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
-        $this->user->getPreferences()->setMagazineStyle($line->magazineStyle);
-        $this->user->getPreferences()->setSharingEnabled($line->sharingEnabled);
-        $this->user->getPreferences()->setHiddenShareTargets($line->hiddenShareTargets);
-        $this->user->getPreferences()->setRememberingShares($line->rememberShares);
-        $this->user->getPreferences()->setTrendingEnabled($line->trendingEnabled);
+        $this->accountSettings->reading->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
+        $this->accountSettings->reading->setMagazineStyle($line->magazineStyle);
+        $this->accountSettings->sharing->setEnabled($line->sharingEnabled);
+        $this->accountSettings->sharing->setHiddenTargets($line->hiddenShareTargets);
+        $this->accountSettings->sharing->setRememberingShares($line->rememberShares);
+        $this->accountSettings->reading->setTrendingEnabled($line->trendingEnabled);
         foreach ($line->savedSearchIncludedNetworks as $network) {
             $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, $network));
         }

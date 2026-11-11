@@ -10,6 +10,7 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Repository\SharingSettingsRepository;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
@@ -84,7 +85,7 @@ final class SocialRepostsTest extends DbTestCase
 
     public function testARepostTheNetworkAcceptedStillSucceedsWhenRecordingTheShareFails(): void
     {
-        $this->reposts(self::failingShareRecorder())->repost($this->owner, $this->post());
+        $this->reposts($this->failingShareRecorder())->repost($this->owner, $this->post());
 
         self::assertSame(['resolve ' . self::STATUS_URL, 'repost 110'], $this->mastodon->calls);
     }
@@ -241,12 +242,24 @@ final class SocialRepostsTest extends DbTestCase
         );
     }
 
-    private static function failingShareRecorder(): EntryShareRecorder
+    private function failingShareRecorder(): EntryShareRecorder
     {
         return new EntryShareRecorder(
-            new EntryShares(new FailingEntryShareStore(), new MockClock('2026-11-01 12:00:00')),
+            new EntryShares(
+                new FailingEntryShareStore(),
+                new MockClock('2026-11-01 12:00:00'),
+                $this->sharingSettings(),
+            ),
             new NullLogger(),
         );
+    }
+
+    private function sharingSettings(): SharingSettingsRepository
+    {
+        $repository = self::getContainer()->get(SharingSettingsRepository::class);
+        self::assertInstanceOf(SharingSettingsRepository::class, $repository);
+
+        return $repository;
     }
 
     private function shareRecorder(): EntryShareRecorder

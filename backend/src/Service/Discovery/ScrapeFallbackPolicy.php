@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Entity\User;
+use App\Repository\ReadingSettingsRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\Model\ScrapeFallback;
 
@@ -14,9 +15,13 @@ use App\Service\Discovery\Model\ScrapeFallback;
  */
 final readonly class ScrapeFallbackPolicy
 {
+    public function __construct(private ReadingSettingsRepository $readingSettings)
+    {
+    }
+
     public function forUser(User $user): ScrapeFallback
     {
-        return $user->getPreferences()->isScrapeFallbackEnabled()
+        return $this->readingSettings->forUser($user)->isScrapeFallbackEnabled()
             ? ScrapeFallback::Enabled
             : ScrapeFallback::Disabled;
     }

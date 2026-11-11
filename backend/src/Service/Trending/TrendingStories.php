@@ -9,6 +9,7 @@ use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Trending\Model\RankedStoryModel;
@@ -28,6 +29,7 @@ final readonly class TrendingStories
         private TrendingSnapshotRepository $snapshots,
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
+        private ReadingSettingsRepository $readingSettings,
     ) {
     }
 
@@ -45,7 +47,7 @@ final readonly class TrendingStories
     /** Runs no query for a reader who switched Trending off (D39). */
     public function unopenedFor(User $user, TrendingWindow $window): TrendingUnopenedModel
     {
-        if (!$user->getPreferences()->isTrendingEnabled()) {
+        if (!$this->readingSettings->forUser($user)->isTrendingEnabled()) {
             return new TrendingUnopenedModel($window, 0);
         }
 

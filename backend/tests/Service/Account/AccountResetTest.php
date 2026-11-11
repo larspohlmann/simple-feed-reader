@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\KnownSocialCollection;
-use App\Entity\Preferences;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
@@ -33,6 +32,7 @@ use App\Service\Account\AccountReset;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\StoredUserSettings;
 
 final class AccountResetTest extends DbTestCase
 {
@@ -70,7 +70,7 @@ final class AccountResetTest extends DbTestCase
         );
         $this->entityManager->persist($entry);
         $this->entityManager->persist(new EntryState($user, $entry));
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: 'be nice',
@@ -191,9 +191,7 @@ final class AccountResetTest extends DbTestCase
         );
         $subscriptionTags = $this->entityManager->getRepository(SubscriptionTag::class)->findAll();
         self::assertSame([], $subscriptionTags);
-        $preferences = $this->entityManager->getRepository(Preferences::class)->findOneBy(['user' => $userId]);
-        self::assertInstanceOf(Preferences::class, $preferences);
-        self::assertFalse($preferences->isScrapeFallbackEnabled());
+        self::assertFalse(StoredUserSettings::reading($this->entityManager, $user)->isScrapeFallbackEnabled());
     }
 
     public function testAWipedSubscriptionIsGoneWhenLookedUpByIdStraightAfterTheReset(): void
