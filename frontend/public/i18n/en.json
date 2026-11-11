@@ -816,6 +816,22 @@
       "hideFromSavedSearches": "Hide from saved searches",
       "clear": "Clear"
     },
+    "feedDirectory": {
+      "title": "Feed directory",
+      "summary": "{{count}} sites in your countries and languages",
+      "changeScope": "Change scope",
+      "scope": {
+        "heading": "Choose your feed directory",
+        "intro": "Pick the countries and languages you read. The directory only shows those.",
+        "countries": "Countries",
+        "languages": "Languages",
+        "filterCountries": "Filter countries",
+        "filterLanguages": "Filter languages",
+        "remove": "Remove {{name}}",
+        "save": "Save",
+        "saveFailed": "Your choice wasn't saved. Try again."
+      }
+    },
     "health": {
       "title": "Unhealthy feeds",
       "summaryOne": "{{count}} feed needs your attention",

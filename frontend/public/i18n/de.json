@@ -816,6 +816,22 @@
       "hideFromSavedSearches": "Aus gespeicherten Suchen ausblenden",
       "clear": "Zurücksetzen"
     },
+    "feedDirectory": {
+      "title": "Feed-Verzeichnis",
+      "summary": "{{count}} Websites in deinen Ländern und Sprachen",
+      "changeScope": "Auswahl ändern",
+      "scope": {
+        "heading": "Wähle dein Feed-Verzeichnis",
+        "intro": "Wähle die Länder und Sprachen, die du liest. Das Verzeichnis zeigt nur diese.",
+        "countries": "Länder",
+        "languages": "Sprachen",
+        "filterCountries": "Länder filtern",
+        "filterLanguages": "Sprachen filtern",
+        "remove": "{{name}} entfernen",
+        "save": "Speichern",
+        "saveFailed": "Deine Auswahl wurde nicht gespeichert. Versuche es erneut."
+      }
+    },
     "health": {
       "title": "Fehlerhafte Feeds",
       "summaryOne": "{{count}} Feed braucht deine Aufmerksamkeit",

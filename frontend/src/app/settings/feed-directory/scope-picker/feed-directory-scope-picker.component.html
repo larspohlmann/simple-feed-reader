@@ -1,0 +1,67 @@
+<div class="lists">
+  @for (checklist of checklists; track checklist.keys.id) {
+    <section class="box" [attr.data-test]="checklist.keys.id">
+      <h3>{{ checklist.keys.heading | transloco }}</h3>
+      @if (checklist.hasPick()) {
+        <div class="chips">
+          @for (chip of checklist.chips(); track chip.code) {
+            <button
+              type="button"
+              class="chip"
+              [attr.aria-label]="
+                'settings.feedDirectory.scope.remove' | transloco: { name: chip.name }
+              "
+              (click)="checklist.toggle(chip.code)"
+            >
+              <span class="chip-name">{{ chip.name }}</span>
+              <app-icon name="close" size="xs" />
+            </button>
+          }
+        </div>
+      }
+      <div class="search">
+        <app-icon class="search-icon" name="search" size="sm" />
+        <input
+          type="search"
+          class="filter"
+          autocomplete="off"
+          [attr.aria-label]="checklist.keys.filter | transloco"
+          [placeholder]="checklist.keys.filter | transloco"
+          [value]="checklist.filter()"
+          (input)="checklist.filter.set(inputValue($event))"
+        />
+      </div>
+      <div class="options">
+        @for (option of checklist.visible(); track option.code) {
+          <label class="opt">
+            <input
+              type="checkbox"
+              [checked]="checklist.isPicked(option.code)"
+              (change)="checklist.toggle(option.code)"
+            />
+            <span class="name">{{ option.name }}</span>
+            <span class="count">{{ siteCount().format(option.sites) }}</span>
+          </label>
+        }
+      </div>
+    </section>
+  }
+</div>
+
+<div class="actions">
+  @if (saveFailed()) {
+    <app-error-banner
+      class="failure"
+      [message]="'settings.feedDirectory.scope.saveFailed' | transloco"
+    />
+  }
+  <app-button
+    variant="primary"
+    data-test="save"
+    [disabled]="!canSave()"
+    [loading]="saving()"
+    (click)="save()"
+  >
+    {{ 'settings.feedDirectory.scope.save' | transloco }}
+  </app-button>
+</div>
