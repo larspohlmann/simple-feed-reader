@@ -10,6 +10,22 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Faster sidebar.** Unread counts now come from a single pass over your entries,
+so the sidebar and its counts load in about half the time.
+
+**Faster article loading.** The server now runs on PHP 8.5, which extracts
+articles several times faster. Articles and feeds are fetched compressed, and
+connections stay open between fetches. An unreachable site gives up after
+5 seconds instead of 20.
+
+**Links that work.** Relative links and images in articles now resolve the way
+browsers do, so links like `?page=2`, `#comments` or `../img/a.jpg` point to the
+right place.
+
+**Under the hood.** Upgrades to PHP 8.5 and Symfony 8.1.
+
 ## [v1.9.1] - 2026-11-10
 
 ### Highlights
