@@ -6,6 +6,7 @@ import { AiAvailability, AiAvailabilityService } from '../ai-availability.servic
 import { API_BASE_URL } from '../api';
 import { DigestService } from '../preferences/digest.service';
 import { DigestConfig } from '../preferences/digest-writer';
+import { FeedDirectoryScope } from '../preferences/feed-directory-scope';
 import { LanguageService } from '../i18n/language.service';
 import { MagazineStyleService } from '../preferences/magazine-style.service';
 import { PreferencesService } from '../preferences/preferences.service';
@@ -29,6 +30,8 @@ export interface UserPreferences {
   magazineStyle: string;
   sharing: SharingSettings;
   trendingEnabled: boolean;
+  /** Absent on a profile cached before the feed directory shipped. */
+  feedDirectoryScope?: FeedDirectoryScope;
 }
 
 export interface CurrentUser {
