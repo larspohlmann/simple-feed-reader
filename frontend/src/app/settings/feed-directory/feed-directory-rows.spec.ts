@@ -151,4 +151,25 @@ describe('feed directory rows', () => {
     expect(next[0].feeds[0].subscribed).toBe(true);
     expect(next[0].following).toBe(true);
   });
+
+  describe('a subscribed feed on another host', () => {
+    const anchorFeed = 'https://anchor.fm/s/1/podcast/rss';
+    const podcastDe: FeedDirectoryCountryFile = {
+      ...DE,
+      domains: [['podcast.de', 10, null, [0], [[1, 1, [anchorFeed]]], null]],
+    };
+    const subscribedOnRow = (hosts: string[]) =>
+      withSubscribed(prepareRows(podcastDe, new Set(['de']), { urls: [], hosts }), anchorFeed)[0];
+
+    it('marks the feed but does not follow the row', () => {
+      const row = subscribedOnRow([]);
+
+      expect(row.feeds[0].subscribed).toBe(true);
+      expect(row.following).toBe(false);
+    });
+
+    it('keeps a followed row followed', () => {
+      expect(subscribedOnRow(['podcast.de']).following).toBe(true);
+    });
+  });
 });

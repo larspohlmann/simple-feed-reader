@@ -157,7 +157,7 @@ export function withSubscribed(
     row.feeds.some((feed) => feed.url === feedUrl)
       ? {
           ...row,
-          following: true,
+          following: row.following || isFollowed(row.host, [feedDirectoryHost(feedUrl)]),
           feeds: row.feeds.map((feed) =>
             feed.url === feedUrl ? { ...feed, subscribed: true } : feed,
           ),
