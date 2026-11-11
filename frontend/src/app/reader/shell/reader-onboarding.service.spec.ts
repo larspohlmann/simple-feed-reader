@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
@@ -19,6 +19,7 @@ describe('ReaderOnboarding', () => {
   const auth = {
     user,
     accountLoadFailed,
+    accountResolved: computed(() => user() !== null || accountLoadFailed()),
     isAdmin: () => user()?.roles.includes('ROLE_ADMIN') ?? false,
   };
   const subscriptions = {

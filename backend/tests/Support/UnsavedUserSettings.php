@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\DigestSettings;
+use App\Entity\FeedDirectoryScope;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Entity\User;
@@ -33,6 +34,7 @@ final class UnsavedUserSettings
             new ReadingSettings($user),
             new SharingSettings($user),
             new DigestSettings($user),
+            new FeedDirectoryScope($user),
         );
     }
 

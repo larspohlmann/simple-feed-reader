@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\FeedDirectoryScope;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCardContent;
 use App\Entity\ReadingSettings;
@@ -564,6 +565,11 @@ final class AccountRestorerTest extends DbTestCase
             $sourceRows['sharingSettings'],
             $targetRows['sharingSettings'],
         );
+        $this->assertFieldsRoundTripped(
+            FeedDirectoryScope::class,
+            $sourceRows['feedDirectoryScope'],
+            $targetRows['feedDirectoryScope'],
+        );
         $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag'], ['parent']);
         self::assertSame('Reading', $targetRows['tag']->getParent()?->getName());
         $this->assertFieldsRoundTripped(SavedSearch::class, $sourceRows['savedSearch'], $targetRows['savedSearch']);
@@ -661,7 +667,7 @@ final class AccountRestorerTest extends DbTestCase
      * account's rows field by field.
      *
      * @return array{user: User, readingSettings: ReadingSettings,
-     *     sharingSettings: SharingSettings,
+     *     sharingSettings: SharingSettings, feedDirectoryScope: FeedDirectoryScope,
      *     tag: Tag, savedSearch: SavedSearch, feed: Feed, subscription: Subscription,
      *     subscriptionTag: SubscriptionTag, entry: Entry, entryState: EntryState}
      */
@@ -693,6 +699,7 @@ final class AccountRestorerTest extends DbTestCase
             'user' => $user,
             'readingSettings' => StoredUserSettings::reading($this->entityManager, $user),
             'sharingSettings' => StoredUserSettings::sharing($this->entityManager, $user),
+            'feedDirectoryScope' => StoredUserSettings::feedDirectoryScope($this->entityManager, $user),
             'tag' => $tag,
             'savedSearch' => $savedSearch,
             'feed' => $feed,

@@ -24,7 +24,7 @@ import { ListActionDirective } from '../../../shared/list-action/list-action.dir
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
-import { TOOLBAR_MENU_POSITIONS, stepMenu } from '../../../shared/menu-keys';
+import { MENU_VIEWPORT_MARGIN, TOOLBAR_MENU_POSITIONS, stepMenu } from '../../../shared/menu-keys';
 import { SharingService } from '../../../core/preferences/sharing.service';
 import { SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
@@ -99,6 +99,7 @@ export class ShareButtonComponent {
   private readonly recorder = inject(SHARE_RECORDER, { optional: true });
 
   protected readonly glyph = SHARE_GLYPH;
+  protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly positions = computed(() => POSITIONS[this.appearance()]);
   protected readonly step = stepMenu;
   protected readonly compactIconSize = computed((): IconSize =>

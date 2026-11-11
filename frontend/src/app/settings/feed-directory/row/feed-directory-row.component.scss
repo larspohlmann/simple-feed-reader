@@ -1,0 +1,142 @@
+@use '../../../theme/breakpoints' as bp;
+@use '../../../theme/glass-rim';
+@use '../directory-mixins';
+
+:host {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--row-h);
+  padding: var(--space-3) var(--space-4);
+  overflow: hidden;
+}
+
+.body {
+  min-width: 0;
+}
+
+.host {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--fs-base);
+  font-weight: 500;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.follow {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: calc(var(--space-1) - var(--space-0) / 2);
+  padding: calc(var(--space-0) / 2) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-0);
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.meta i {
+  font-style: normal;
+  opacity: 0.6;
+}
+
+.summary {
+  display: -webkit-box;
+  margin: var(--space-1) 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  margin-top: calc(var(--space-1) + var(--space-0));
+  overflow: hidden;
+}
+
+.chip {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
+  padding: calc(var(--space-0) / 2) var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(var(--space-1) + var(--space-0));
+  min-width: 8.75rem;
+}
+
+.done {
+  @include directory-mixins.done;
+
+  font-size: var(--fs-sm);
+}
+
+@media (width < bp.$bp-sm) {
+  :host {
+    align-content: start;
+    align-items: center;
+    row-gap: 0;
+  }
+
+  .body {
+    display: contents;
+  }
+
+  .host {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .action {
+    grid-row: 1;
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .meta,
+  .summary {
+    grid-column: 1 / -1;
+  }
+
+  .chips,
+  .subscribed-part {
+    display: none;
+  }
+
+  .follow {
+    padding-inline: var(--space-1);
+  }
+}

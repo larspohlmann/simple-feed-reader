@@ -36,11 +36,12 @@ services:
       target: dev
     volumes:
       - ./backend:/app
-      # Two tests read through paths that escape the backend mount (#593, #1094); without these the
+      # Tests read through paths that escape the backend mount (#593, #1094, #2176); without these the
       # container run is spuriously red and aborts in-container Infection. Read-only, and a directory,
       # not the one file: a single-file bind mount goes stale when git replaces the file.
       - ./docs:/docs:ro
       - ./frontend/src/app/reader:/frontend/src/app/reader:ro
+      - ./frontend/src/app/settings/feed-directory:/frontend/src/app/settings/feed-directory:ro
     environment:
       # The container's own kernel cache (compiled container + cache pools), so a
       # native run over the same bind mount never shares its rate limiters (#1173).

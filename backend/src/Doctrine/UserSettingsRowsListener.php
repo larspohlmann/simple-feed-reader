@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Doctrine;
 
 use App\Entity\DigestSettings;
+use App\Entity\FeedDirectoryScope;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Entity\User;
@@ -21,5 +22,6 @@ final readonly class UserSettingsRowsListener
         $objectManager->persist(new ReadingSettings($user));
         $objectManager->persist(new SharingSettings($user));
         $objectManager->persist(new DigestSettings($user));
+        $objectManager->persist(new FeedDirectoryScope($user));
     }
 }

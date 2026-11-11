@@ -816,6 +816,68 @@
       "hideFromSavedSearches": "Aus gespeicherten Suchen ausblenden",
       "clear": "Zurücksetzen"
     },
+    "feedDirectory": {
+      "browse": "Feed-Verzeichnis durchsuchen",
+      "title": "Feed-Verzeichnis",
+      "summary": "{{count}} Websites in deinen Ländern und Sprachen",
+      "changeScope": "Auswahl ändern",
+      "scope": {
+        "heading": "Wähle dein Feed-Verzeichnis",
+        "intro": "Wähle die Länder und Sprachen, die du liest. Das Verzeichnis zeigt nur diese.",
+        "countries": "Länder",
+        "languages": "Sprachen",
+        "filterCountries": "Länder filtern",
+        "filterLanguages": "Sprachen filtern",
+        "remove": "{{name}} entfernen",
+        "save": "Speichern",
+        "saveFailed": "Deine Auswahl wurde nicht gespeichert. Versuche es erneut."
+      },
+      "subscribe": "Abonnieren",
+      "subscribeTo": "{{feed}} abonnieren",
+      "subscribed": "Abonniert",
+      "following": "Du folgst",
+      "feeds": "{{count}} Feeds",
+      "feedsSubscribed": "{{count}} Feeds · {{subscribed}} abonniert",
+      "subscribedCount": "{{count}} abonniert",
+      "rank": "Rang {{rank}}",
+      "lengths": {
+        "headlines": "Schlagzeilen",
+        "summaries": "Zusammenfassungen",
+        "long": "Lange Texte"
+      },
+      "modeLabel": "Feed-Art",
+      "mode": {
+        "channels": "Kanäle",
+        "podcasts": "Podcasts"
+      },
+      "sortLabel": "Sortierung",
+      "sort": {
+        "top": "Top",
+        "az": "A–Z",
+        "feeds": "Meiste Feeds"
+      },
+      "filters": {
+        "countries": "Länder",
+        "allCountries": "Alle Länder",
+        "category": "Kategorie",
+        "length": "Länge",
+        "language": "Sprache"
+      },
+      "search": "Websites und Beschreibungen durchsuchen",
+      "shown": "{{count}} angezeigt",
+      "noMatches": "Keine Website passt zu diesen Filtern.",
+      "loading": "Verzeichnis wird geladen",
+      "loadFailed": "Das Verzeichnis konnte nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "attribution": {
+        "data": "Daten:",
+        "catalog": "InfoBubble-Quellenkatalog",
+        "hostnames": "Hostnamen von",
+        "and": "und",
+        "ranking": "Ranking von",
+        "disclaimer": "Automatisch zugeordnet und zusammengefasst; Fehler möglich."
+      }
+    },
     "health": {
       "title": "Fehlerhafte Feeds",
       "summaryOne": "{{count}} Feed braucht deine Aufmerksamkeit",

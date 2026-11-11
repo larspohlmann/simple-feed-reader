@@ -27,6 +27,14 @@ export const SETTINGS_ROUTES: Routes = [
       // for stale bookmarks -- no section entry, no title, it is not a page.
       { path: 'tags', redirectTo: 'organise', pathMatch: 'full' },
       {
+        path: 'feed-directory',
+        title: sectionLabelKey('feed-directory'),
+        loadComponent: () =>
+          import('./feed-directory/feed-directory-section.component').then(
+            (module) => module.FeedDirectorySectionComponent,
+          ),
+      },
+      {
         path: 'import',
         title: sectionLabelKey('import'),
         loadComponent: () =>

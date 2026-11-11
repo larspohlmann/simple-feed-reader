@@ -57,6 +57,7 @@ final readonly class FullyPopulatedAccount
         $sharing->setEnabled(false);
         $sharing->setHiddenTargets(['facebook', 'x']);
         $sharing->setRememberingShares(false);
+        StoredUserSettings::feedDirectoryScope($this->entityManager, $user)->change(['DE', 'AT'], ['de']);
 
         $parentTag = $this->parentTagFor($user);
         $this->entityManager->persist($parentTag);

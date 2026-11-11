@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CatalogAvailability } from './catalog-availability';
 
@@ -12,7 +12,16 @@ describe('CatalogAvailability', () => {
     user.set(null);
     accountLoadFailed.set(false);
     TestBed.configureTestingModule({
-      providers: [{ provide: AuthService, useValue: { user, accountLoadFailed } }],
+      providers: [
+        {
+          provide: AuthService,
+          useValue: {
+            user,
+            accountLoadFailed,
+            accountResolved: computed(() => user() !== null || accountLoadFailed()),
+          },
+        },
+      ],
     });
     availability = TestBed.inject(CatalogAvailability);
   });

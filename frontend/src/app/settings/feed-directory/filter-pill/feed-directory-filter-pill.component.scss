@@ -1,0 +1,81 @@
+@use '../../../theme/glass-rim';
+
+:host {
+  display: inline-flex;
+  flex: none;
+}
+
+.pill {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--tool-h, var(--control-h));
+  padding: 0 calc(var(--space-2) + var(--space-0)) 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pill.set {
+  --rim-base: var(--accent);
+  --rim-fill: var(--accent-soft);
+
+  color: var(--accent);
+}
+
+.pop {
+  @include glass-rim.filled(var(--surface-2), var(--border-strong));
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 14rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  box-shadow: var(--panel-shadow);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .option:hover {
+    background: var(--surface-0);
+  }
+}
+
+.mark {
+  visibility: hidden;
+  color: var(--accent);
+}
+
+.mark.on {
+  visibility: visible;
+}
+
+.count {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}

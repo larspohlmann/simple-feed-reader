@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feed directory mockup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0,0">
+<style>
+:root{--space-0:2px;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--radius-sm:4px;--radius:8px;--radius-lg:12px;--radius-pill:999px;--control-h:40px;--fs-xs:11px;--fs-sm:13px;--fs-dense:14px;--fs-base:15px;--fs-lg:18px;--fs-xl:24px;--font-sans:system-ui,-apple-system,'Segoe UI',roboto,sans-serif}
+[data-mode=light]{--surface-0:#f5f5f4;--surface-1:#fff;--surface-2:#fff;--surface-sunken:#f2f2f0;--border:#e4e4e2;--border-strong:#d4d4d1;--text-primary:#2a2a2a;--text-secondary:#5f5f5c;--text-muted:#8f8f8b;--accent:#3f8676;--accent-soft:#e9f1ef;--on-accent:#fff;--success:#3f7a52;--bg-success:#e9f1ec}
+[data-mode=dark]{--surface-0:#161616;--surface-1:#1c1c1c;--surface-2:#242424;--surface-sunken:#171717;--border:#2a2a2a;--border-strong:#383836;--text-primary:#c2c2c0;--text-secondary:#9a9a97;--text-muted:#6a6a67;--accent:#5aa694;--accent-soft:#20302c;--on-accent:#0f1a17;--success:#7faf8c;--bg-success:#1c2620}
+*{box-sizing:border-box}
+body{margin:0;background:#0d0d0d;font-family:var(--font-sans);font-size:var(--fs-base);color:var(--text-primary);padding:var(--space-5)}
+[data-mode=light] body{background:#dcdcd9}
+.ms{font-family:'Material Symbols Outlined';font-size:20px;line-height:1;vertical-align:middle;font-weight:400}
+.ms.sm{font-size:16px}.ms.xs{font-size:14px}
+.cap{color:#9a9a97;font-size:13px;margin:var(--space-6) 0 var(--space-2);max-width:1200px}
+.cap b{color:#e0e0de;font-weight:500;font-size:15px;display:block;margin-bottom:var(--space-1)}
+[data-mode=light] .cap{color:#5f5f5c}[data-mode=light] .cap b{color:#2a2a2a}
+.toggle{position:fixed;top:12px;right:12px;z-index:9;background:#333;color:#eee;border:0;border-radius:8px;padding:8px 12px;font:13px var(--font-sans);cursor:pointer}
+.frame{background:var(--surface-0);border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);position:relative}
+.desk{width:1200px;height:780px;display:flex}
+.side{width:300px;flex:none;padding:var(--space-3) var(--space-2);display:flex;flex-direction:column;gap:var(--space-2)}
+.brand{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1) var(--space-2) var(--space-2);font-size:var(--fs-sm)}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:6px}
+.srow{height:36px;display:flex;align-items:center;gap:var(--space-3);padding:0 10px;border-radius:var(--radius);font-size:var(--fs-base);color:var(--text-primary)}
+.srow .n{margin-left:auto;font-size:var(--fs-xs);color:var(--text-muted)}
+.srow.on{background:var(--accent-soft);color:var(--accent)}
+.srow.on .n{color:var(--accent)}
+.srow.dim{color:var(--text-muted)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.lhead{height:56px;display:flex;align-items:center;gap:var(--space-3);padding:0 var(--space-5);border-bottom:1px solid var(--border)}
+.lhead h1{font-size:var(--fs-lg);font-weight:500;margin:0}
+.lhead .count{font-size:var(--fs-xs);color:var(--text-muted)}
+.lhead .right{margin-left:auto;display:flex;gap:var(--space-4);align-items:center}
+.link{color:var(--accent);font-size:var(--fs-sm);display:flex;align-items:center;gap:var(--space-1);cursor:pointer}
+.scope{font-size:var(--fs-sm);color:var(--text-secondary);display:flex;align-items:center;gap:var(--space-2)}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--border)}
+.seg{display:inline-flex;background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--radius);padding:2px;height:34px}
+.seg span{padding:0 var(--space-3);display:flex;align-items:center;font-size:var(--fs-sm);border-radius:6px;color:var(--text-secondary)}
+.seg span.on{background:var(--surface-2);color:var(--text-primary);box-shadow:0 0 0 1px var(--border-strong)}
+.pill{height:34px;display:inline-flex;align-items:center;gap:var(--space-1);padding:0 10px 0 var(--space-3);border:1px solid var(--border-strong);border-radius:var(--radius-pill);font-size:var(--fs-sm);color:var(--text-secondary);white-space:nowrap}
+.pill.set{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.search{flex:1;min-width:180px;white-space:nowrap;height:34px;display:flex;align-items:center;gap:var(--space-2);padding:0 var(--space-3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-muted);font-size:var(--fs-sm);background:var(--surface-1)}
+.shown{font-size:var(--fs-xs);color:var(--text-muted);white-space:nowrap}
+.list{flex:1;overflow:hidden;position:relative}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-4);align-items:center;padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--border);height:112px}
+.row.hl{background:var(--surface-1)}
+.host{font-size:var(--fs-base);font-weight:500;display:flex;align-items:center;gap:var(--space-2);min-width:0}
+.meta{font-size:var(--fs-xs);color:var(--text-muted);display:flex;gap:var(--space-2);align-items:center;margin-top:2px;white-space:nowrap;overflow:hidden}
+.meta i{font-style:normal;opacity:.6}
+.sum{font-size:var(--fs-sm);color:var(--text-secondary);line-height:1.4;margin-top:var(--space-1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.follow{font-size:var(--fs-xs);color:var(--accent);background:var(--accent-soft);border-radius:var(--radius-pill);padding:1px 8px;font-weight:400;display:inline-flex;align-items:center;gap:3px}
+.act{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:140px}
+.btn{height:32px;display:inline-flex;align-items:center;gap:var(--space-1);padding:0 var(--space-3);border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text-primary);font-size:var(--fs-sm);white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--text-secondary)}
+.btn.done{border-color:transparent;background:transparent;color:var(--success)}
+.chips{display:flex;gap:var(--space-1);flex-wrap:nowrap;overflow:hidden}
+.chip{font-size:var(--fs-xs);color:var(--text-secondary);border:1px solid var(--border);border-radius:var(--radius-pill);padding:1px 8px;white-space:nowrap}
+.foot{font-size:var(--fs-xs);color:var(--text-muted);padding:var(--space-2) var(--space-5);border-top:1px solid var(--border)}
+.foot a{color:var(--text-secondary)}
+.pop{position:absolute;width:380px;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--radius-lg);box-shadow:0 12px 32px rgb(0 0 0 / 35%);z-index:5;overflow:hidden}
+.pop header{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--border);font-size:var(--fs-sm)}
+.pop header b{font-weight:500;font-size:var(--fs-base)}
+.pop .grp{font-size:var(--fs-xs);color:var(--text-muted);padding:var(--space-2) var(--space-4) var(--space-1);text-transform:none}
+.pop .f{display:flex;align-items:center;gap:var(--space-2);padding:6px var(--space-2) 6px var(--space-4);font-size:var(--fs-sm)}
+.pop .f code{font:var(--fs-sm) ui-monospace,monospace;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pop .body{max-height:330px;overflow:hidden}
+.ccol{width:220px;flex:none;border-right:1px solid var(--border);padding:var(--space-3) var(--space-2)}
+.crow{height:32px;display:flex;align-items:center;padding:0 10px;border-radius:var(--radius);font-size:var(--fs-dense);color:var(--text-primary)}
+.crow .n{margin-left:auto;font-size:var(--fs-xs);color:var(--text-muted)}
+.crow.on{background:var(--accent-soft);color:var(--accent)}
+.topbar{height:48px;display:flex;align-items:center;gap:var(--space-4);padding:0 var(--space-4);border-bottom:1px solid var(--border);font-size:var(--fs-sm)}
+.topbar .back{color:var(--text-secondary);display:flex;align-items:center;gap:2px}
+.topbar b{font-weight:500;font-size:var(--fs-base)}
+.phone{width:390px;height:780px;border-radius:36px;border:8px solid #2f2f2f;display:flex;flex-direction:column}
+.phone .lhead{padding:0 var(--space-4);height:52px}
+.phone .tools{padding:var(--space-2) var(--space-4);flex-wrap:nowrap;overflow:hidden}
+.phone .row{padding:var(--space-3) var(--space-4);height:auto;grid-template-columns:minmax(0,1fr) auto;align-items:start}
+.phone .act{min-width:0}
+.wrap{display:flex;gap:var(--space-6);align-items:flex-start}
+.picker{width:1200px;height:560px;display:flex;flex-direction:column}
+.pk{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5);padding:var(--space-5);flex:1;min-height:0}
+.pk h3{font-size:var(--fs-base);font-weight:500;margin:0 0 var(--space-2)}
+.pk .box{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface-1);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.pk .opt{display:flex;align-items:center;gap:var(--space-3);padding:7px var(--space-4);font-size:var(--fs-dense)}
+.pk .opt .n{margin-left:auto;color:var(--text-muted);font-size:var(--fs-xs)}
+.cb{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.cb.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.selchips{display:flex;flex-wrap:wrap;gap:var(--space-1);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--border)}
+.selchips .chip{color:var(--accent);border-color:var(--accent);background:var(--accent-soft);display:inline-flex;align-items:center;gap:2px}
+</style>
+</head>
+<body>
+<button class="toggle" onclick="document.documentElement.dataset.mode=document.documentElement.dataset.mode==='dark'?'light':'dark'">Light / dark</button>
+
+<style>
+.set-top{height:56px;display:flex;align-items:center;gap:var(--space-4);padding:0 var(--space-4);border-bottom:1px solid var(--border);background:var(--surface-1)}
+.set-top .back{color:var(--text-secondary);font-size:var(--fs-sm);display:flex;align-items:center;gap:var(--space-1);padding-right:var(--space-4);border-right:1px solid var(--border)}
+.set-top b{font-size:var(--fs-lg);font-weight:500}
+.set-nav{width:220px;flex:none;padding:var(--space-4) var(--space-3);display:flex;flex-direction:column;gap:var(--space-0)}
+.set-nav .it{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius);font-size:var(--fs-sm);color:var(--text-secondary)}
+.set-nav .it.on{background:var(--surface-1);color:var(--accent)}
+.set-nav .grp{font-size:var(--fs-xs);color:var(--text-muted);padding:var(--space-4) var(--space-3) var(--space-1)}
+.set-body{flex:1;min-width:0;padding:var(--space-5) var(--space-5) 0;display:flex;flex-direction:column;gap:var(--space-4);overflow:hidden}
+.sec-head{display:flex;align-items:center;gap:var(--space-3)}
+.tile{width:36px;height:36px;border-radius:var(--radius);background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
+.sec-head h2{margin:0;font-size:var(--fs-lg);font-weight:500}
+.sec-head .sub{font-size:var(--fs-sm);color:var(--text-secondary)}
+.sec-head .acts{margin-left:auto;display:flex;gap:var(--space-2)}
+.scard{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.scard .tools{border-bottom:0;padding:var(--space-3) var(--space-4)}
+.scard.rows{overflow:hidden;position:relative;flex:1}
+.scard.rows .row{padding:var(--space-3) var(--space-4)}
+.scard.rows .row:last-child{border-bottom:0}
+.scope-line{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-3) var(--space-4);border-top:1px solid var(--border);font-size:var(--fs-sm);color:var(--text-secondary)}
+.scope-line .chip{color:var(--text-primary)}
+</style>
+<p class="cap"><b>C · A Settings section (your call)</b>"Feed directory" sits in the Settings nav, between Organise and Import and export. It follows the Organise section's pattern: icon tile and count, actions on the right, a toolbar card, then the rows in a card. Your scope shows as chips under the toolbar, with "Change scope" opening the picker.</p>
+<div class="frame desk" id="c" style="flex-direction:column;height:820px">
+  <div class="set-top"><span class="back"><span class="ms sm">arrow_back</span>Reader</span><b>Settings</b></div>
+  <div style="display:flex;flex:1;min-height:0">
+    <nav class="set-nav">
+      <span class="it"><span class="ms sm">rss_feed</span>Organise</span>
+      <span class="it on"><span class="ms sm">travel_explore</span>Feed directory</span>
+      <span class="it"><span class="ms sm">import_export</span>Import and export</span>
+      <span class="it"><span class="ms sm">tune</span>Preferences</span>
+      <span class="it"><span class="ms sm">mail</span>Email</span>
+      <span class="it"><span class="ms sm">person</span>Account</span>
+      <span class="it"><span class="ms sm">smart_toy</span>AI</span>
+      <span class="it"><span class="ms sm">forum</span>Social media</span>
+      <span class="it"><span class="ms sm">insights</span>Statistics</span>
+      <span class="grp">Admin</span>
+      <span class="it"><span class="ms sm">shield_person</span>Users</span>
+      <span class="it"><span class="ms sm">category</span>Feed catalog</span>
+    </nav>
+    <div class="set-body">
+      <div class="sec-head">
+        <span class="tile"><span class="ms">travel_explore</span></span>
+        <div><h2>Feed directory</h2><div class="sub">1,632 sites in your countries and languages</div></div>
+        <div class="acts"><span class="btn"><span class="ms sm">tune</span>Change scope</span></div>
+      </div>
+      <div class="scard">
+        <div class="tools">
+          <span class="seg"><span class="on">Channels</span><span>Podcasts</span></span>
+          <span class="pill">All countries<span class="ms sm">expand_more</span></span>
+          <span class="pill set">Category · 2<span class="ms sm">expand_more</span></span>
+          <span class="pill">Length<span class="ms sm">expand_more</span></span>
+          <span class="pill">Top<span class="ms sm">swap_vert</span></span>
+          <span class="search"><span class="ms sm">search</span>Search sites and summaries</span>
+        </div>
+        <div class="scope-line"><span class="ms sm">public</span><span class="chip">Germany</span><span class="chip">Austria</span><span class="chip">Switzerland</span><span style="opacity:.5">·</span><span class="chip">German</span><span class="shown" style="margin-left:auto">1,201 shown</span></div>
+      </div>
+      <div class="scard rows" data-rows="c"></div>
+      <div class="foot" style="border:0;padding:var(--space-2) 0">Data: <a>InfoBubble sources catalog</a> (ODbL) · hostnames from <a>GDELT</a> and <a>Tranco</a> · ranking from <a>Majestic Million</a> (CC BY 3.0). Matched and summarised automatically; errors possible.</div>
+    </div>
+  </div>
+</div>
+
+<p class="cap"><b>A · Inside the reader shell (earlier option)</b>A sidebar entry under the smart views opens the directory in the list column, like any other list. Your scope is only a few countries, so country is a pill, not a column. Rows use the comfortable density of the entry list. spiegel.de has its multi-feed popover open; heise.de shows "Following" because you subscribe to one of its feeds.</p>
+<div class="frame desk" id="a">
+  <aside class="side">
+    <div class="brand"><span class="ms sm">rss_feed</span>simple feed reader</div>
+    <div class="card">
+      <div class="srow"><span class="ms">inbox</span>All items<span class="n">62,807</span></div>
+      <div class="srow"><span class="ms">star</span>Favorites<span class="n">33</span></div>
+      <div class="srow"><span class="ms">trending_up</span>Trending<span class="n">10</span></div>
+      <div class="srow"><span class="ms">auto_awesome</span>For you<span class="n">87</span></div>
+      <div class="srow on"><span class="ms">travel_explore</span>Feed directory<span class="n">1,632</span></div>
+    </div>
+    <div class="card">
+      <div class="srow dim"><span class="ms">sell</span>Tags</div>
+      <div class="srow dim"><span class="ms">label</span>News</div>
+      <div class="srow dim"><span class="ms">label</span>Politics</div>
+      <div class="srow dim"><span class="ms">label</span>Tech</div>
+    </div>
+  </aside>
+  <section class="main">
+    <div class="lhead">
+      <h1>Feed directory</h1><span class="count">1,632 sites</span>
+      <div class="right">
+        <span class="scope"><span class="ms sm">public</span>Germany, Austria, Switzerland · German</span>
+        <span class="link"><span class="ms sm">tune</span>Change scope</span>
+      </div>
+    </div>
+    <div class="tools">
+      <span class="seg"><span class="on">Channels</span><span>Podcasts</span></span>
+      <span class="pill">All countries<span class="ms sm">expand_more</span></span>
+      <span class="pill set">Category · 2<span class="ms sm">expand_more</span></span>
+      <span class="pill">Length<span class="ms sm">expand_more</span></span>
+      <span class="pill">Top<span class="ms sm">swap_vert</span></span>
+      <span class="search"><span class="ms sm">search</span>Search sites and summaries</span>
+      <span class="shown">1,201 shown</span>
+    </div>
+    <div class="list" data-rows="desk"></div>
+    <div class="foot">Data: <a>InfoBubble sources catalog</a> (ODbL) · hostnames from <a>GDELT</a> and <a>Tranco</a> · ranking from <a>Majestic Million</a> (CC BY 3.0). Matched and summarised automatically; errors possible.</div>
+  </section>
+</div>
+
+<p class="cap"><b>B · Its own page, InfoBubble-style</b>Outside the reader, like Settings: a back link, a country column with live counts, and the same toolbar and rows. Closer to InfoBubble, but the column holds only your three countries.</p>
+<div class="frame desk" id="b" style="flex-direction:column;height:640px">
+  <div class="topbar"><span class="back"><span class="ms sm">chevron_left</span>Reader</span><b>Feed directory</b><span style="margin-left:auto" class="link"><span class="ms sm">tune</span>Change scope</span></div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div class="ccol">
+      <div class="crow on">All countries<span class="n">1,632</span></div>
+      <div class="crow">Germany<span class="n">1,237</span></div>
+      <div class="crow">Austria<span class="n">214</span></div>
+      <div class="crow">Switzerland<span class="n">181</span></div>
+    </div>
+    <section class="main">
+      <div class="tools">
+        <span class="seg"><span class="on">Channels</span><span>Podcasts</span></span>
+        <span class="pill">Category<span class="ms sm">expand_more</span></span>
+        <span class="pill">Length<span class="ms sm">expand_more</span></span>
+        <span class="pill">Top<span class="ms sm">swap_vert</span></span>
+        <span class="search"><span class="ms sm">search</span>Search sites and summaries</span>
+        <span class="shown">1,632 shown</span>
+      </div>
+      <div class="list" data-rows="b"></div>
+    </section>
+  </div>
+</div>
+
+<p class="cap"><b>Phone · variant A</b>The toolbar scrolls sideways; the action sits top-right of each row; the multi-feed list opens as a bottom sheet instead of a popover.</p>
+<div class="wrap">
+  <div class="frame phone">
+    <div class="lhead"><span class="ms">menu</span><h1>Feed directory</h1><span class="link" style="margin-left:auto"><span class="ms sm">tune</span></span></div>
+    <div class="tools">
+      <span class="seg"><span class="on">Channels</span><span>Podcasts</span></span>
+      <span class="pill">Countries<span class="ms sm">expand_more</span></span>
+      <span class="pill">Category<span class="ms sm">expand_more</span></span>
+      <span class="pill">Length</span>
+    </div>
+    <div class="tools" style="border-bottom:1px solid var(--border)"><span class="search"><span class="ms sm">search</span>Search sites and summaries</span></div>
+    <div class="list" data-rows="phone"></div>
+  </div>
+  <div class="frame phone" style="position:relative">
+    <div class="lhead"><span class="ms">menu</span><h1>Feed directory</h1></div>
+    <div class="list" data-rows="phone" style="opacity:.35"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:var(--surface-2);border-top-left-radius:16px;border-top-right-radius:16px;border-top:1px solid var(--border-strong)" class="pop" id="sheet"></div>
+  </div>
+</div>
+
+<p class="cap"><b>Scope picker</b>The same component in Settings and as the directory's first-visit screen. Both lists need at least one pick before Save. Counts are sites in each country or language.</p>
+<div class="frame picker">
+  <div class="lhead"><h1>Choose your feed directory</h1><span class="count">Pick the countries and languages you read</span><span style="margin-left:auto" class="btn primary">Save</span></div>
+  <div class="pk">
+    <div class="box">
+      <div style="padding:var(--space-3) var(--space-4) 0"><h3>Countries</h3></div>
+      <div class="selchips"><span class="chip">Germany <span class="ms xs">close</span></span><span class="chip">Austria <span class="ms xs">close</span></span><span class="chip">Switzerland <span class="ms xs">close</span></span></div>
+      <div style="padding:var(--space-3) var(--space-4)"><span class="search" style="width:100%"><span class="ms sm">search</span>Filter countries</span></div>
+      <div class="opt"><span class="cb"></span>Argentina<span class="n">1,031</span></div>
+      <div class="opt"><span class="cb on"><span class="ms xs">check</span></span>Austria<span class="n">302</span></div>
+      <div class="opt"><span class="cb"></span>Belgium<span class="n">404</span></div>
+      <div class="opt"><span class="cb"></span>France<span class="n">1,169</span></div>
+      <div class="opt"><span class="cb on"><span class="ms xs">check</span></span>Germany<span class="n">1,329</span></div>
+      <div class="opt"><span class="cb"></span>Italy<span class="n">1,422</span></div>
+    </div>
+    <div class="box">
+      <div style="padding:var(--space-3) var(--space-4) 0"><h3>Languages</h3></div>
+      <div class="selchips"><span class="chip">German <span class="ms xs">close</span></span></div>
+      <div style="padding:var(--space-3) var(--space-4)"><span class="search" style="width:100%"><span class="ms sm">search</span>Filter languages</span></div>
+      <div class="opt"><span class="cb"></span>English<span class="n">12,525</span></div>
+      <div class="opt"><span class="cb"></span>French<span class="n">2,485</span></div>
+      <div class="opt"><span class="cb on"><span class="ms xs">check</span></span>German<span class="n">1,723</span></div>
+      <div class="opt"><span class="cb"></span>Italian<span class="n">1,415</span></div>
+      <div class="opt"><span class="cb"></span>Spanish<span class="n">4,326</span></div>
+    </div>
+  </div>
+</div>
+
+<script>const ROWS=[{"host": "spiegel.de", "country": "Germany", "rank": 529, "len": 436, "langs": ["de"], "groups": [["Science & Technology", 0, ["https://www.spiegel.de/kultur/index.rss", "https://www.spiegel.de/thema/sigmund_freud/index.rss"]], ["Lifestyle & Culture", 0, ["https://www.spiegel.de/kultur/kino/index.rss", "https://www.spiegel.de/thema/film/index.rss", "https://www.spiegel.de/thema/serien/index.rss", "https://www.spiegel.de/familie/index.rss", "https://www.spiegel.de/thema/podcast_smarter_leben/index.rss", "https://www.spiegel.de/thema/leben/index.rss", "https://www.spiegel.de/thema/familie/index.rss", "https://www.spiegel.de/thema/psychologie/index.rss", "https://www.spiegel.de/thema/eltern/index.rss", "https://www.spiegel.de/thema/kindheit_und_jugend/index.rss", "https://www.spiegel.de/thema/amanda_knox/index.rss"]], ["Business & Economy", 0, ["https://www.spiegel.de/thema/arnold_schwarzenegger/index.rss", "https://www.spiegel.de/karriere/index.rss", "https://www.spiegel.de/thema/atomkraft/index.rss", "https://www.spiegel.de/thema/atomkraftwerke/index.rss"]], ["World / International", 0, ["https://www.spiegel.de/thema/woody_allen/index.rss", "https://www.spiegel.de/thema/reeperbahn/index.rss", "https://www.spiegel.de/panorama/index.rss", "https://www.spiegel.de/panorama/justiz/index.rss", "https://www.spiegel.de/schlagzeilen/index.rss", "https://www.spiegel.de/thema/donald_trump/index.rss", "https://www.spiegel.de/thema/grossbritannien/index.rss", "https://www.spiegel.de/thema/keir-starmer/index.rss", "https://www.spiegel.de/thema/labour_party/index.rss", "https://www.spiegel.de/thema/oesterreich/index.rss", "https://www.spiegel.de/thema/polizei/index.rss", "https://www.spiegel.de/thema/prostitution/index.rss", "https://www.spiegel.de/thema/spiegel-tv/index.rss", "https://www.spiegel.de/ausland/index.rss", "https://www.spiegel.de/index.rss", "https://www.spiegel.de/thema/podcast-acht-milliarden/index.rss", "https://www.spiegel.de/thema/podcasts_vom_spiegel/index.rss", "https://www.spiegel.de/thema/ronald_reagan/index.rss", "https://www.spiegel.de/thema/russland/index.rss", "https://www.spiegel.de/thema/sowjetunion/index.rss", "https://www.spiegel.de/thema/tschernobyl/index.rss", "https://www.spiegel.de/thema/ukraine/index.rss", "https://www.spiegel.de/thema/ukraine_konflikt/index.rss", "https://www.spiegel.de/thema/wolodymyr_selensky/index.rss", "https://www.spiegel.de/thema/mossad/index.rss", "https://www.spiegel.de/thema/israel/index.rss", "https://www.spiegel.de/thema/spionage/index.rss", "https://www.spiegel.de/thema/krieg-zwischen-israel-und-iran/index.rss", "https://www.spiegel.de/thema/iran/index.rss"]], ["Politics & Society", 0, ["https://www.spiegel.de/thema/hamburg/index.rss", "https://www.spiegel.de/thema/im-verhoer/index.rss", "https://www.spiegel.de/thema/inside-austria-podcast/index.rss", "https://www.spiegel.de/thema/justiz/index.rss", "https://www.spiegel.de/thema/markus_soeder/index.rss", "https://www.spiegel.de/thema/belarus/index.rss", "https://www.spiegel.de/thema/firewall/index.rss", "https://www.spiegel.de/thema/adolf_eichmann/index.rss"]], ["Local News", 0, ["https://www.spiegel.de/thema/st_pauli/index.rss", "https://www.spiegel.de/thema/polizei_hamburg/index.rss"]], ["Science & Technology", 1, ["https://ice-portal-spiegel.podigee.io/feed/mp3", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/c0d9ecd2-8175-4092-82b6-abc000ffb040/e018b8f3-af3b-4db5-af27-abc000ffb040/podcast.rss"]], ["Politics & Society", 1, ["https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/78026ed4-a536-4f9e-b741-b12d00c83dc7/3fd53ec0-ae17-4264-8ddc-b12d00c9e9c2/podcast.rss", "https://omny.fm/shows/inside-austria/playlists/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/008f004b-055e-4e0c-9fd0-abc000ffb04a/3b93bc3f-52cb-4a3b-91ef-abc000ffb053/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/0ea559a3-5648-4a90-becc-adbf00b8605e/22bdabd5-00a4-48a4-8622-adbf00ba4336/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/bb17ca27-51f4-4349-bc1e-abc00102c975/4c18e072-24d2-4d60-9a42-abc00102c97e/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/d041f8f0-cac9-4150-aabf-abc000ffb012/94a22b56-7c89-45bf-8e84-abc000ffb016/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/ffe26a7b-568b-4153-80ab-afaf00d2f7c4/8a2d23ea-031e-4348-a9db-afaf00d89637/podcast.rss"]], ["Lifestyle & Culture", 1, ["https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/895a9f0b-6d87-4d20-aaba-abc000ffb087/913ea7fc-e0c6-4ba8-8360-abc000ffb08c/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/6b7f463e-711c-4d2f-8c4a-ac4b00c24b2a/99a0b60c-25ff-4690-b518-ac4b00c4e2e3/podcast.rss"]], ["World / International", 1, ["https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/2a316725-d935-437a-849a-afcd01080c0d/6cd06f02-cc31-47fb-8cd5-b4a900e44afa/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/2a316725-d935-437a-849a-afcd01080c0d/8e752661-e41c-4d9f-ba6f-afcd011068e3/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/7108bec4-7c03-4d4a-8147-adfd00c882c4/795322c9-0bc1-4673-a37a-adfd00cbf476/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/e45f739c-c25c-47b9-9529-b17000933a5c/7ddf018d-a2f5-47f4-8216-b1700095e4fc/podcast.rss", "https://www.omnycontent.com/d/playlist/5ac1e950-45c7-4eb7-87c0-aa0f018441b8/454f27a0-f1b1-4d7a-99bd-abc000ffb02e/9edc8a83-e191-4bc7-8575-abc000ffb032/podcast.rss"]], ["Sports", 0, ["https://www.11freunde.de/aktuelles/index.rss", "https://www.11freunde.de/fussballkultur/index.rss", "https://www.11freunde.de/thema/so-ist-fussball/index.rss"]]], "summary": "Leading German online news portal and newspaper"}, {"host": "ethz.ch", "country": "Switzerland", "rank": 715, "len": 417, "langs": ["de", "en"], "groups": [["Politics & Society", 1, ["https://1-90-pro-tag.podigee.io/feed/mp3"]], ["Science & Technology", 0, ["https://www.ethz.ch/de/news-und-veranstaltungen/eth-news/news/_jcr_content.feed", "https://www.ethz.ch/de/news-und-veranstaltungen/eth-news/news/_jcr_content.feed.html?tag=news%3Adossiers%2Fzukunftsblog", "https://www.ethz.ch/en/news-und-veranstaltungen/eth-news/news/_jcr_content.feed", "https://www.ethz.ch/en/news-und-veranstaltungen/eth-news/news/_jcr_content.feed.html?tag=news%3Adossiers%2Fzukunftsblog"]]], "summary": "University website providing academic information and news."}, {"host": "heise.de", "country": "Germany", "rank": 776, "len": 1334, "langs": ["de"], "groups": [["Business & Economy", 1, ["https://vorsicht-kunde.podigee.io/feed/mp3", "https://ct-uplink.podigee.io/feed/mp3", "https://digital-health.podigee.io/feed/mp3", "https://passwort-earlyaccess.podigee.io/feed/mp3", "https://passwort.podigee.io/feed/mp3"]], ["Science & Technology", 1, ["https://bestenlisten.podigee.io/feed/mp3", "https://frauen-technik.podigee.io/feed/mp3", "https://hakendran.podigee.io/feed/mp3", "https://heiseshow.podigee.io/feed/mp3", "https://kiupdate.podigee.io/feed/mp3", "https://mittechnologyreview.podigee.io/feed/mp3", "https://bitsundboeses.podigee.io/feed/mp3"]], ["Lifestyle & Culture", 1, ["https://mac-and-i.podigee.io/feed/mp3", "https://www.heise.de/mac-and-i/mac-and-i-podcast.rss"]], ["Politics & Society", 1, ["https://proxyfeed.svmaudio.com/feeds/heise/auslegungssache"]], ["Science & Technology", 0, ["https://www.heise.de/rss/heiseshowhd.rss", "https://www.heise.de/rss/heiseshowsd.rss", "https://www.heise.de/rss/heise-atom.xml", "https://www.heise.de/rss/heise.rdf"]]], "summary": "IT news and background on computers, IT, science, media and politics."}, {"host": "mpg.de", "country": "Germany", "rank": 827, "len": 754, "langs": ["de", "en"], "groups": [["Science & Technology", 0, ["https://www.mpg.de/de/forschung.rss"]], ["Science & Technology", 1, ["https://komm-ins-beet.podigee.io/feed/mp3", "https://h0w4bp.podcaster.de/code-of-the-mind.rss"]], ["Politics & Society", 1, ["https://5i5r8z.podcaster.de/doing-time-talking-crime-folge-1-deutsch.rss", "https://5i5r8z.podcaster.de/max-planck-lawcast.rss", "https://mpisocialanthropology.podcaster.de/talk-on-debates-in-anthropology.rss"]]], "summary": "The Max Planck Society is a research organization that promotes and conducts basic scientific research through its institutes."}, {"host": "welt.de", "country": "Germany", "rank": 924, "len": 1351, "langs": ["de"], "groups": [["Business & Economy", 1, ["https://allesaufaktien.podigee.io/feed/mp3", "https://deffner-und-zschaepitz.podigee.io/feed/mp3"]], ["Politics & Society", 1, ["https://diesachemitderliebe.podigee.io/feed/mp3", "https://meinungsfreiheit.podigee.io/feed/mp3"]], ["Opinion", 1, ["https://news-core.podigee.io/feed/mp3"]], ["Science & Technology", 1, ["https://zehnminutenalltagswissen.podigee.io/feed/mp3"]], ["Sports", 1, ["https://weltmeister.podigee.io/feed/mp3"]], ["World / International", 1, ["https://inside-usa.podigee.io/feed/mp3"]], ["Politics & Society", 0, ["https://www.welt.de/feeds/latest.rss"]]], "summary": "Online news portal and newspaper archive"}, {"host": "zeit.de", "country": "Germany", "rank": 998, "len": 1770, "langs": ["de"], "groups": [["Politics & Society", 1, ["https://feeds.simplecast.com/WGGp_jbi", "https://entspannt-in-den-beruf.podigee.io/feed/mp3", "https://feeds.simplecast.com/rvkz6ybW", "https://feeds.simplecast.com/Sdxt6Bhy", "https://feeds.simplecast.com/dnJhzmyN", "https://feeds.simplecast.com/yEFOt1A_", "https://anchor.fm/s/e4d3342c/podcast/rss", "https://feeds.simplecast.com/ABbaL1KU", "https://feeds.simplecast.com/Oryn9O81", "https://feeds.simplecast.com/yPsdBcxP", "https://feeds.simplecast.com/55iO2e64", "https://feeds.simplecast.com/zrlgFqDd", "https://wastun.podigee.io/feed/mp3"]], ["Business & Economy", 1, ["https://feeds.simplecast.com/wemgpvp0"]], ["Opinion", 1, ["https://feeds.simplecast.com/3Q_JgEtk", "https://feeds.simplecast.com/Y_bRXaw2"]], ["Lifestyle & Culture", 1, ["https://feeds.simplecast.com/5SvofDLL", "https://feeds.simplecast.com/8hfq14id", "https://feeds.simplecast.com/ILj1jAra", "https://feeds.simplecast.com/Lk_TcITz", "https://feeds.simplecast.com/b1Qn2k9W", "https://feeds.simplecast.com/iSy0hk_K", "https://feeds.simplecast.com/lpt_2_Vq", "https://zeit-fuer-literatur.podigee.io/feed/mp3", "https://feeds.simplecast.com/NM3_bR51", "https://feeds.simplecast.com/caS35ftu"]], ["Other", 1, ["https://feeds.simplecast.com/pV8aACV6"]], ["Local News", 1, ["https://feeds.simplecast.com/NcA4SBL2"]], ["World / International", 1, ["https://feeds.simplecast.com/DV4gq1zP", "https://feeds.simplecast.com/RmZrQl_f", "https://feeds.simplecast.com/Xtqjn37O", "https://feeds.simplecast.com/br4J_MDH", "https://feeds.simplecast.com/yWMWUBup", "https://medien.zeit.de/feeds/die-zeit/podcast", "https://feeds.simplecast.com/0f_4iyWx", "https://feeds.simplecast.com/ebr_D43k"]], ["World / International", 0, ["https://newsfeed.zeit.de/index", "https://newsfeed.zeit.de/podcasts/index"]], ["Lifestyle & Culture", 0, ["https://newsfeed.zeit.de/zeit-magazin/index"]]], "summary": "Online news publication providing articles, analyses, and background reports."}, {"host": "sueddeutsche.de", "country": "Germany", "rank": 1013, "len": 528, "langs": ["de"], "groups": [["Business & Economy", 0, ["https://rss.sueddeutsche.de/rss/Wirtschaft"]], ["Lifestyle & Culture", 0, ["https://rss.sueddeutsche.de/rss/Kultur", "https://rss.sueddeutsche.de/rss/Leben", "https://rss.sueddeutsche.de/rss/Reise", "https://rss.sueddeutsche.de/rss/stil"]], ["World / International", 0, ["https://rss.sueddeutsche.de/rss/Medien", "https://rss.sueddeutsche.de/rss/Eilmeldungen", "https://rss.sueddeutsche.de/rss/Topthemen", "https://rss.sueddeutsche.de/alles", "https://rss.sueddeutsche.de/rss/Panorama"]], ["Politics & Society", 0, ["https://rss.sueddeutsche.de/Dachau", "https://rss.sueddeutsche.de/rss/Politik", "https://www.jetzt.de/alle_artikel.rss"]], ["Local News", 0, ["https://rss.sueddeutsche.de/Ebersberg", "https://rss.sueddeutsche.de/Erding", "https://rss.sueddeutsche.de/Freising", "https://rss.sueddeutsche.de/fuerstenfeldbruck", "https://rss.sueddeutsche.de/rss/Muenchen", "https://rss.sueddeutsche.de/starnberg", "https://rss.sueddeutsche.de/wolfratshausen", "https://rss.sueddeutsche.de/lkrmuenchen", "https://rss.sueddeutsche.de/rss/Bayern"]], ["World / International", 1, ["https://der-zug.podigee.io/feed/mp3", "https://china-und-wir.podigee.io/feed/mp3"]], ["Business & Economy", 1, ["https://sz-media-bayern.podigee.io/feed/mp3"]], ["Local News", 1, ["https://muenchenpersoenlich.podigee.io/feed/mp3"]], ["Opinion", 1, ["https://axelhackekolumne.podigee.io/feed/mp3", "https://podcasts.sueddeutsche.de/podcast/2171-das-thema-der-podcast-der-suddeutschen-zeitung/feed/mp3"]], ["Politics & Society", 1, ["https://ice-portal-best-of-sz.podigee.io/feed/mp3", "https://sz-auf-den-punkt.podigee.io/feed/mp3"]], ["Sports", 1, ["https://sz-steilvorlage.podigee.io/feed/mp3"]], ["Opinion", 0, ["https://rss.sueddeutsche.de/rss/Meinung"]], ["Science & Technology", 0, ["https://rss.sueddeutsche.de/rss/Wissen", "https://rss.sueddeutsche.de/rss/auto", "https://rss.sueddeutsche.de/rss/gesundheit"]], ["Sports", 0, ["https://rss.sueddeutsche.de/rss/Sport"]]], "summary": "News from Germany and around the world."}, {"host": "faz.net", "country": "Germany", "rank": 1081, "len": 1641, "langs": ["de"], "groups": [["Science & Technology", 1, ["https://digitec.podigee.io/feed/mp3", "https://fazbornschein.podigee.io/feed/mp3", "https://fazwissen.podigee.io/feed/mp3", "https://kuenstlicheintelligenz.podigee.io/feed/mp3"]], ["Business & Economy", 1, ["https://fazfinanzen.podigee.io/feed/mp3", "https://vw-serie.podigee.io/feed/mp3"]], ["Lifestyle & Culture", 1, ["https://fazbuecherpodcast.podigee.io/feed/mp3", "https://fazgesundheit.podigee.io/feed/mp3", "https://faz-richtig-essen.podigee.io/feed/mp3", "https://wie-erklaere-ich-es-meinem-kind.podigee.io/feed/mp3"]], ["Politics & Society", 1, ["https://fazrheinmainbriefing.podigee.io/feed/mp3", "https://fazfruehdenker.podigee.io/feed/mp3", "https://loehr-pennekamp.podigee.io/feed/mp3", "https://podcastfuerdeutschland.podigee.io/feed/mp3"]], ["World / International", 1, ["https://der-geschichtspodcast-faz-kas.podigee.io/feed/mp3", "https://fazeinspruch.podigee.io/feed/mp3", "https://fazmachtprobe.podigee.io/feed/mp3"]], ["World / International", 0, ["https://www.faz.net/rss/aktuell/"]]], "summary": "Online news portal and newspaper of the Frankfurter Allgemeine Zeitung."}, {"host": "t-online.de", "country": "Germany", "rank": 1181, "len": 372, "langs": ["de"], "groups": [["Business & Economy", 0, ["https://www.t-online.de/finanzen/feed.rss", "https://www.t-online.de/mobilitaet/feed.rss"]], ["Lifestyle & Culture", 0, ["https://www.t-online.de/leben/feed.rss", "https://www.t-online.de/unterhaltung/feed.rss", "https://www.t-online.de/gesundheit/feed.rss", "https://www.t-online.de/spiele/feed.rss"]], ["Politics & Society", 1, ["https://t-onlinetest.podigee.io/feed/mp3", "https://tagesanbruch.podigee.io/feed/mp3"]], ["Lifestyle & Culture", 1, ["https://vorangedacht.podigee.io/feed/mp3"]], ["Sports", 1, ["https://toni-kroos-podcast-the-underrated-one.podigee.io/feed/mp3"]], ["Politics & Society", 0, ["https://www.t-online.de/feed.rss", "https://www.t-online.de/nachrichten/panorama/feed.rss", "https://www.t-online.de/podcasts/feed.rss"]], ["Local News", 0, ["https://www.t-online.de/heim-garten/feed.rss"]], ["Science & Technology", 0, ["https://www.t-online.de/digital/feed.rss", "https://www.t-online.de/klima/feed.rss"]], ["World / International", 0, ["https://www.t-online.de/themen/corona/feed.rss", "https://www.t-online.de/nachrichten/feed.rss", "https://www.t-online.de/nachrichten/ukraine/feed.rss"]], ["Sports", 0, ["https://www.t-online.de/sport/feed.rss", "https://www.t-online.de/sport/fussball/feed.rss"]]], "summary": "Current news portal with lifestyle and e-mail services"}, {"host": "bild.de", "country": "Germany", "rank": 1262, "len": 281, "langs": ["de"], "groups": [["World / International", 1, ["https://bild.podigee.io/feed/mp3"]], ["Politics & Society", 1, ["https://vertraulich-podcast.podigee.io/feed/mp3"]], ["Sports", 1, ["https://phrasenmaeher.podigee.io/feed/mp3"]], ["Business & Economy", 1, ["https://reifistlive.podigee.io/feed/mp3"]], ["World / International", 0, ["http://www.bild.de/rss-feeds/rss-16725492,feed=home.bild.html"]]], "summary": "Online news portal providing current events, politics, sports, and entertainment."}, {"host": "bayern.de", "country": "Germany", "rank": 1311, "len": 2826, "langs": ["de"], "groups": [["Business & Economy", 1, ["https://land-schafft-bayern-podcast.podigee.io/feed/mp3", "https://forstcast-wald-lwf.podigee.io/feed/mp3"]], ["Other", 1, ["https://bayern.podigee.io/feed/mp3"]], ["Politics & Society", 1, ["https://bayerngemeinsamstark.podigee.io/feed/mp3", "https://echt-mehr-bayern.podigee.io/feed/mp3", "https://zeitfuerpolitik.podigee.io/feed/mp3"]], ["Science & Technology", 1, ["https://morgenbeginntheute.podigee.io/feed/mp3"]], ["Local News", 0, ["https://www.bayern.de/rss/newsletter.php", "https://www.bayern.de/rss/pm.php"]], ["Politics & Society", 0, ["https://www.bayern.de/rss/pm_alle.php"]]], "summary": "Official state portal of the Bavarian State Government providing current news and information on the Free State of Bavaria."}, {"host": "tagesschau.de", "country": "Germany", "rank": 1361, "len": 426, "langs": ["de"], "groups": [["World / International", 0, ["https://www.tagesschau.de/multimedia/podcast/index~atom.xml", "https://www.tagesschau.de/multimedia/podcast/index~rss2.xml", "https://www.tagesschau.de/index~atom.xml", "https://www.tagesschau.de/index~rss2.xml"]], ["World / International", 1, ["https://www.tagesschau.de/multimedia/sendung/tagesschau_in_100_sekunden/podcast-ts100-audio-100~podcast.xml", "https://www.tagesschau.de/multimedia/podcast/15-minuten/index~podcast.xml", "https://www.tagesschau.de/multimedia/sendung/tagesschau_20_uhr/podcast-ts2000-audio-100~podcast.xml", "https://www.tagesschau.de/multimedia/sendung/tagesschau_in_einfacher_sprache/podcast-tse-audio-100~podcast.xml", "https://www.tagesschau.de/multimedia/sendung/tagesthemen/podcast-tt-audio-100~podcast.xml"]], ["Science & Technology", 0, ["https://www.tagesschau.de/wissen/klima/index~rss2.xml"]], ["Politics & Society", 1, ["https://www.tagesschau.de/export/video-podcast/webs/tagesthemen", "https://www.tagesschau.de/multimedia/sendung/tagesschau_20_uhr/podcast-ts2000-video-100~podcast.xml", "https://www.tagesschau.de/multimedia/sendung/tagesthemen/podcast-tt-video-100~podcast.xml", "https://www.tagesschau.de/export/video-podcast/webl/tagesthemen/", "https://www.tagesschau.de/export/video-podcast/webl/tagesschau/", "https://www.tagesschau.de/export/video-podcast/webm/tagesschau", "https://www.tagesschau.de/export/video-podcast/webxl/tagesschau", "https://www.tagesschau.de/export/video-podcast/webxl/tagesthemen", "https://www.tagesschau.de/multimedia/sendung/tagesschau_in_einfacher_sprache/podcast-tse-video-100~podcast.xml"]]], "summary": "National news and information portal"}, {"host": "univie.ac.at", "country": "Austria", "rank": 1397, "len": 2274, "langs": ["de"], "groups": [["Lifestyle & Culture", 0, ["https://tfmlog.univie.ac.at/feed/"]], ["Science & Technology", 0, ["https://www.univie.ac.at/aktuelles/aktuelles-rss/feed.xml"]], ["Lifestyle & Culture", 1, ["https://rlp.univie.ac.at/?feed=mp3"]], ["Science & Technology", 1, ["https://rudolphina-an-der-quelle.podigee.io/feed/mp3", "https://rudolphina.univie.ac.at/rss/podcasts"]]], "summary": "The University of Vienna is a university offering a wide range of degree programs and conducting research."}, {"host": "fu-berlin.de", "country": "Germany", "rank": 1598, "len": 200, "langs": ["de", "en"], "groups": [["Lifestyle & Culture", 0, ["http://medien.cedis.fu-berlin.de/itunes/presse_kommunikation/feeds/pki-networks.xml"]], ["Local News", 0, ["https://www.fu-berlin.de/en/newsuebersicht/index.rss?format=rss"]], ["Politics & Society", 1, ["https://medien.cedis.fu-berlin.de/pki/2026/Podcast/podcast_feed_vorlage_2026_optimiert-kum.xml"]]], "summary": "University website for the Free University of Berlin."}];</script>
+<script>
+const LEN = n => n == null ? null : n < 500 ? 'Headlines' : n < 2500 ? 'Summaries' : 'Long reads';
+const LANG = c => new Intl.DisplayNames(['en'], {type: 'language'}).of(c);
+const channels = r => r.groups.filter(g => !g[1]);
+const feedCount = r => channels(r).reduce((n, g) => n + g[2].length, 0);
+const cats = r => [...new Set(channels(r).map(g => g[0]))];
+function action(r, phone) {
+  const n = feedCount(r);
+  if (r.host === 'tagesschau.de') return `<span class="btn ghost">${n} feeds · 1 subscribed<span class="ms sm">expand_more</span></span>`;
+  if (n === 1 && r.host === 'welt.de') return `<span class="btn done"><span class="ms sm">check</span>Subscribed</span>`;
+  if (n === 1) return `<span class="btn"><span class="ms sm">add</span>Subscribe</span>`;
+  return `<span class="btn">${n} feeds<span class="ms sm">expand_more</span></span>`;
+}
+function row(r, phone) {
+  const follow = ['heise.de', 'tagesschau.de'].includes(r.host) ? `<span class="follow"><span class="ms xs">check</span>Following</span>` : '';
+  const meta = [r.country, r.langs.map(LANG).join(', '), LEN(r.len), r.rank ? `Rank ${r.rank.toLocaleString('en')}` : null].filter(Boolean).join(' <i>·</i> ');
+  return `<div class="row${r.host === 'spiegel.de' && !phone ? ' hl' : ''}" data-host="${r.host}">
+    <div style="min-width:0"><div class="host">${r.host}${follow}</div><div class="meta">${meta}</div>
+    <div class="sum">${r.summary ?? ''}</div>
+    ${phone ? '' : `<div class="chips" style="margin-top:6px">${cats(r).map(c => `<span class="chip">${c}</span>`).join('')}</div>`}</div>
+    <div class="act">${action(r, phone)}</div></div>`;
+}
+const rows = ROWS.filter(r => feedCount(r) > 0);
+document.querySelectorAll('[data-rows]').forEach(el => {
+  const phone = el.dataset.rows === 'phone';
+  el.innerHTML = rows.map(r => row(r, phone)).join('');
+});
+const zeit = ROWS.find(r => r.host === 'spiegel.de');
+function popBody(r) {
+  const by = {};
+  channels(r).forEach(g => (by[g[0]] ??= []).push(...g[2]));
+  let first = true;
+  return Object.entries(by).map(([c, urls]) => `<div class="grp">${c} · ${urls.length}</div>` + urls.slice(0, 3).map(u => {
+    const path = u.replace(/^https?:\/\/(www\.)?[^/]+/, '') || '/';
+    const done = first && !(first = false);
+    return `<div class="f"><code>${path}</code>${done ? '<span class="btn done"><span class="ms sm">check</span>Subscribed</span>' : '<span class="btn ghost"><span class="ms sm">add</span>Subscribe</span>'}</div>`;
+  }).join('')).join('');
+}
+const a = document.getElementById('c');
+const zr = a.querySelector('[data-host="spiegel.de"]');
+const pop = document.createElement('div');
+pop.className = 'pop';
+pop.innerHTML = `<header><b>spiegel.de</b><span style="color:var(--text-muted)">${feedCount(zeit)} feeds</span><span class="ms sm" style="margin-left:auto;color:var(--text-muted)">close</span></header><div class="body">${popBody(zeit)}</div>`;
+a.appendChild(pop);
+const ar = a.getBoundingClientRect(), zb = zr.querySelector('.btn').getBoundingClientRect();
+pop.style.top = (zb.bottom - ar.top + 6) + 'px';
+pop.style.left = (zb.right - ar.left - 380) + 'px';
+document.getElementById('sheet').innerHTML = `<div style="width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:8px auto 0"></div><header><b>spiegel.de</b><span style="color:var(--text-muted)">${feedCount(zeit)} feeds</span></header><div class="body">${popBody(zeit)}</div>`;
+</script>
+</body>
+</html>

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\DigestSettings;
+use App\Entity\FeedDirectoryScope;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Entity\User;
 use App\Repository\DigestSettingsRepository;
+use App\Repository\FeedDirectoryScopeRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\SharingSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -31,6 +33,11 @@ final class StoredUserSettings
         return self::digestRepository($entityManager)->forUser($user);
     }
 
+    public static function feedDirectoryScope(EntityManagerInterface $entityManager, User $user): FeedDirectoryScope
+    {
+        return self::feedDirectoryScopeRepository($entityManager)->forUser($user);
+    }
+
     public static function readingRepository(EntityManagerInterface $entityManager): ReadingSettingsRepository
     {
         return self::repository($entityManager, ReadingSettings::class, ReadingSettingsRepository::class);
@@ -44,6 +51,12 @@ final class StoredUserSettings
     public static function digestRepository(EntityManagerInterface $entityManager): DigestSettingsRepository
     {
         return self::repository($entityManager, DigestSettings::class, DigestSettingsRepository::class);
+    }
+
+    public static function feedDirectoryScopeRepository(
+        EntityManagerInterface $entityManager,
+    ): FeedDirectoryScopeRepository {
+        return self::repository($entityManager, FeedDirectoryScope::class, FeedDirectoryScopeRepository::class);
     }
 
     /**

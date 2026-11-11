@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\FeedDirectoryScope;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCard;
 use App\Entity\ReadingSettings;
@@ -44,6 +45,10 @@ final class BackupFieldDeclarations
             'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
             'magazineStyle' => 'magazineStyle',
             'trendingEnabled' => 'trendingEnabled',
+        ],
+        FeedDirectoryScope::class => [
+            'countries' => ['feedDirectoryScope', 'feedDirectoryScope.countries'],
+            'languages' => 'feedDirectoryScope.languages',
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
@@ -130,6 +135,7 @@ final class BackupFieldDeclarations
         User::class => BackupSchema::KIND_ACCOUNT,
         ReadingSettings::class => BackupSchema::KIND_ACCOUNT,
         SharingSettings::class => BackupSchema::KIND_ACCOUNT,
+        FeedDirectoryScope::class => BackupSchema::KIND_ACCOUNT,
         Tag::class => BackupSchema::KIND_TAG,
         SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
         SavedSearchNetworkInclusion::class => BackupSchema::KIND_ACCOUNT,

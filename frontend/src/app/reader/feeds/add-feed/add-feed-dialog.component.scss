@@ -196,12 +196,15 @@ app-tag-picker {
   cursor: pointer;
 }
 
-// The catalog is the alternative to typing a URL, not a third confirmation, so
-// it sits at the far end of the footer rather than beside Cancel and Add.
+// The catalog and the directory are the alternatives to typing a URL, not more
+// confirmations, so they sit at the far end of the footer, not beside Cancel and Add.
 .browse {
-  margin-right: auto;
   align-self: center;
   color: var(--accent);
   font-size: var(--fs-sm);
   text-decoration: none;
+}
+
+.browse:last-of-type {
+  margin-right: auto;
 }

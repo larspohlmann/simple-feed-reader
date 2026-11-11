@@ -7,7 +7,7 @@ export class CatalogAvailability {
   private readonly auth = inject(AuthService);
 
   /** A failed account load resolves as nothing to offer: never redirect into a picker that may not load. */
-  readonly resolved = computed(() => this.auth.user() !== null || this.auth.accountLoadFailed());
+  readonly resolved = this.auth.accountResolved;
 
   readonly hasEntries = computed(() => this.auth.user()?.catalog.hasEntries ?? false);
 

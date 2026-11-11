@@ -1,0 +1,140 @@
+// The rows and the attribution sit outside <app-settings-stack>, as Organise's tree does:
+// the stack's group gap would part them from the toolbar card far wider than the mockup.
+@use '../../theme/breakpoints' as bp;
+@use '../../theme/glass-rim';
+@use 'directory-mixins';
+
+.picker {
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.tools {
+  --tool-h: calc(var(--control-h) - var(--space-1) - var(--space-0));
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.filters {
+  display: contents;
+}
+
+app-segmented-choice {
+  display: flex;
+  flex: none;
+  height: var(--tool-h);
+}
+
+.search {
+  @include directory-mixins.search-box;
+
+  flex: 1;
+  min-width: 11.25rem;
+}
+
+.search-icon {
+  @include directory-mixins.search-icon(var(--space-3));
+}
+
+.query {
+  --field-rim-base: var(--border);
+
+  @include directory-mixins.search-input;
+
+  flex: 1;
+  min-width: 0;
+  height: var(--tool-h);
+  font-size: var(--fs-sm);
+}
+
+.scope-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.scope-chip {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
+  padding: calc(var(--space-0) / 2) var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.separator {
+  opacity: 0.5;
+}
+
+.shown {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.rows-card {
+  @include glass-rim.filled(var(--surface-1));
+
+  border-radius: var(--radius-lg);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+}
+
+.viewport app-feed-directory-row + app-feed-directory-row {
+  border-top: 1px solid var(--border);
+}
+
+.state {
+  display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.attribution {
+  margin: 0;
+  padding: var(--space-2) 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.attribution a {
+  color: var(--text-secondary);
+}
+
+@media (width < bp.$bp-sm) {
+  .filters {
+    display: flex;
+    flex: 1 1 100%;
+    gap: var(--space-2);
+    min-width: 0;
+    overflow: auto hidden;
+    scrollbar-width: none;
+  }
+
+  .search {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}

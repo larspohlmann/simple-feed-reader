@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Me\UpdateFeedDirectoryScopeRequest;
 use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Dto\Me\UpdateSharingRequest;
@@ -67,6 +68,17 @@ final readonly class ReaderPreferencesController
         #[MapRequestPayload] UpdateTrendingRequest $request,
     ): JsonResponse {
         $this->preferences->changeTrending($user, $request->trendingEnabled);
+
+        return new JsonResponse($this->profile->of($user));
+    }
+
+    /** Its own PATCH for the reason updatePreferences() gives. */
+    #[Route('/api/me/feed-directory-scope', name: 'api_me_update_feed_directory_scope', methods: ['PATCH'])]
+    public function updateFeedDirectoryScope(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdateFeedDirectoryScopeRequest $request,
+    ): JsonResponse {
+        $this->preferences->changeFeedDirectoryScope($user, $request->toScope());
 
         return new JsonResponse($this->profile->of($user));
     }
