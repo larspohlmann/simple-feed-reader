@@ -14,6 +14,7 @@ use App\Entity\Preferences;
 use App\Entity\ReadingSettings;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
+use App\Entity\SharingSettings;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -554,11 +555,15 @@ final class AccountRestorerTest extends DbTestCase
         $targetRows = $this->fixtureRowsOf($this->reload($target));
 
         $this->assertFieldsRoundTripped(User::class, $sourceRows['user'], $targetRows['user']);
-        $this->assertFieldsRoundTripped(Preferences::class, $sourceRows['preferences'], $targetRows['preferences']);
         $this->assertFieldsRoundTripped(
             ReadingSettings::class,
             $sourceRows['readingSettings'],
             $targetRows['readingSettings'],
+        );
+        $this->assertFieldsRoundTripped(
+            SharingSettings::class,
+            $sourceRows['sharingSettings'],
+            $targetRows['sharingSettings'],
         );
         $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag'], ['parent']);
         self::assertSame('Reading', $targetRows['tag']->getParent()?->getName());
@@ -657,6 +662,7 @@ final class AccountRestorerTest extends DbTestCase
      * account's rows field by field.
      *
      * @return array{user: User, preferences: Preferences, readingSettings: ReadingSettings,
+     *     sharingSettings: SharingSettings,
      *     tag: Tag, savedSearch: SavedSearch, feed: Feed, subscription: Subscription,
      *     subscriptionTag: SubscriptionTag, entry: Entry, entryState: EntryState}
      */
@@ -688,6 +694,7 @@ final class AccountRestorerTest extends DbTestCase
             'user' => $user,
             'preferences' => $user->getPreferences(),
             'readingSettings' => StoredUserSettings::reading($this->entityManager, $user),
+            'sharingSettings' => StoredUserSettings::sharing($this->entityManager, $user),
             'tag' => $tag,
             'savedSearch' => $savedSearch,
             'feed' => $feed,

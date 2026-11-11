@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup\Pass;
 
 use App\Entity\Feed;
 use App\Entity\ReadingSettings;
+use App\Entity\SharingSettings;
 use App\Entity\User;
 use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\FeedLine;
@@ -88,7 +89,7 @@ final class RestoreLoadPassTest extends TestCase
 
     private function settingsOf(User $user): AccountSettingsModel
     {
-        return new AccountSettingsModel(new ReadingSettings($user));
+        return new AccountSettingsModel(new ReadingSettings($user), new SharingSettings($user));
     }
 
     private function feedLine(string $url): FeedLine

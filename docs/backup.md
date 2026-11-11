@@ -273,7 +273,7 @@ picker.
 | `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
 | `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey. It records that the app showed you the offer, not a setting you chose. A restore into a fresh account should let that account see the offer. |
 
-**On each row you own.** The preferences, the reading settings, each tag, each subscription, each
+**On each row you own.** The preferences, the reading settings, the sharing settings, each tag, each subscription, each
 article mark, each included social network and each social network kept out of For you all hold one pointer to their owner.
 
 | Field | Why the file leaves it out |

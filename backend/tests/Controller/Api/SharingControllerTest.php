@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\Preferences;
+use App\Entity\SharingSettings;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -30,13 +31,13 @@ final class SharingControllerTest extends ApiTestCase
         return $preferences['sharing'];
     }
 
-    private function storedPreferences(string $email): Preferences
+    private function storedSharing(string $email): SharingSettings
     {
         $this->entityManager()->clear();
         $user = $this->users()->findOneBy(['email' => $email]);
         self::assertNotNull($user);
 
-        return $user->getPreferences();
+        return StoredUserSettings::sharing($this->entityManager(), $user);
     }
 
     public function testANewAccountSharesEverything(): void
@@ -70,9 +71,9 @@ final class SharingControllerTest extends ApiTestCase
             'hiddenTargets' => ['facebook', 'x'],
             'rememberShares' => true,
         ], $this->sharing($client));
-        $stored = $this->storedPreferences('quiet-sharer@example.test');
-        self::assertFalse($stored->isSharingEnabled());
-        self::assertSame(['facebook', 'x'], $stored->getHiddenShareTargets());
+        $stored = $this->storedSharing('quiet-sharer@example.test');
+        self::assertFalse($stored->isEnabled());
+        self::assertSame(['facebook', 'x'], $stored->getHiddenTargets());
     }
 
     public function testATargetListedTwiceIsStoredOnce(): void
@@ -87,8 +88,8 @@ final class SharingControllerTest extends ApiTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $stored = $this->storedPreferences('twice-hidden@example.test');
-        self::assertSame(['x', 'reddit'], $stored->getHiddenShareTargets());
+        $stored = $this->storedSharing('twice-hidden@example.test');
+        self::assertSame(['x', 'reddit'], $stored->getHiddenTargets());
     }
 
     public function testAnUnknownButWellFormedIdIsKept(): void
@@ -103,8 +104,8 @@ final class SharingControllerTest extends ApiTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $stored = $this->storedPreferences('future-target@example.test');
-        self::assertSame(['mastodon-app'], $stored->getHiddenShareTargets());
+        $stored = $this->storedSharing('future-target@example.test');
+        self::assertSame(['mastodon-app'], $stored->getHiddenTargets());
     }
 
     /** @return iterable<string, array{array<string, mixed>}> */
@@ -128,7 +129,7 @@ final class SharingControllerTest extends ApiTestCase
             'rememberShares' => true,
             'hiddenTargets' => array_map(
                 static fn (int $index): string => 'target-' . $index,
-                range(1, Preferences::MAX_HIDDEN_SHARE_TARGETS + 1),
+                range(1, SharingSettings::MAX_HIDDEN_TARGETS + 1),
             ),
         ]];
     }
@@ -143,9 +144,9 @@ final class SharingControllerTest extends ApiTestCase
         $this->patchSharing($client, $body);
 
         self::assertResponseStatusCodeSame(422);
-        $stored = $this->storedPreferences('rejected-sharing@example.test');
-        self::assertTrue($stored->isSharingEnabled());
-        self::assertSame([], $stored->getHiddenShareTargets());
+        $stored = $this->storedSharing('rejected-sharing@example.test');
+        self::assertTrue($stored->isEnabled());
+        self::assertSame([], $stored->getHiddenTargets());
     }
 
     public function testExactlyTheMaximumIsAccepted(): void
@@ -154,13 +155,13 @@ final class SharingControllerTest extends ApiTestCase
         $this->signIn($client, 'many-hidden@example.test');
         $ids = array_map(
             static fn (int $index): string => 'target-' . $index,
-            range(1, Preferences::MAX_HIDDEN_SHARE_TARGETS),
+            range(1, SharingSettings::MAX_HIDDEN_TARGETS),
         );
 
         $this->patchSharing($client, ['enabled' => true, 'hiddenTargets' => $ids, 'rememberShares' => true]);
 
         self::assertResponseIsSuccessful();
-        self::assertSame($ids, $this->storedPreferences('many-hidden@example.test')->getHiddenShareTargets());
+        self::assertSame($ids, $this->storedSharing('many-hidden@example.test')->getHiddenTargets());
     }
 
     public function testRememberSharesIsStoredAndEchoed(): void
@@ -175,7 +176,7 @@ final class SharingControllerTest extends ApiTestCase
             ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => false],
             $this->sharing($client),
         );
-        self::assertFalse($this->storedPreferences('forgetful-sharer@example.test')->isRememberingShares());
+        self::assertFalse($this->storedSharing('forgetful-sharer@example.test')->isRememberingShares());
     }
 
     public function testASignedOutClientIsRejected(): void

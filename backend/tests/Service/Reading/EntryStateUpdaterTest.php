@@ -14,6 +14,7 @@ use App\Repository\EntryListRepository;
 use App\Service\Reading\EntryStateUpdater;
 use App\Service\Reading\Model\EntryStateChangeModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StoredUserSettings;
 
 final class EntryStateUpdaterTest extends DbTestCase
 {
@@ -179,7 +180,7 @@ final class EntryStateUpdaterTest extends DbTestCase
             $this->rows()->getRowForUser($user->requireId(), $target->requireId()),
             $this->change(isShared: true),
         );
-        $user->getPreferences()->setRememberingShares(false);
+        StoredUserSettings::sharing($this->entityManager, $user)->setRememberingShares(false);
         $sharedRow = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
 
         $updated = $this->updater()->apply($user, $sharedRow, $this->change(isShared: true));

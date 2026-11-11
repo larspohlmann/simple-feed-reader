@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\ReadingSettings;
+use App\Entity\SharingSettings;
 use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Http\MeJson;
@@ -29,7 +30,7 @@ final class MeJsonTest extends TestCase
         $preferences->setDigestWeekday(3);
 
         $profile = MeJson::profile($user, true);
-        $settings = new AccountSettingsModel(new ReadingSettings($user));
+        $settings = new AccountSettingsModel(new ReadingSettings($user), new SharingSettings($user));
         $preferencesJson = MeJson::preferences($user, $settings, 'Europe/Berlin');
 
         self::assertSame(['enabled' => true], $profile['mail']);

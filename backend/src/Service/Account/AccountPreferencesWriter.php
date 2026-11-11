@@ -7,6 +7,7 @@ namespace App\Service\Account;
 use App\Entity\User;
 use App\Enum\MagazineStyle;
 use App\Repository\ReadingSettingsRepository;
+use App\Repository\SharingSettingsRepository;
 use App\Service\Account\Model\SharingSettingsModel;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
@@ -19,6 +20,7 @@ final readonly class AccountPreferencesWriter
         private DigestEnablement $digestEnablement,
         private PasskeyOffer $passkeyOffer,
         private ReadingSettingsRepository $readingSettings,
+        private SharingSettingsRepository $sharingSettings,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -43,9 +45,10 @@ final readonly class AccountPreferencesWriter
 
     public function changeSharing(User $user, SharingSettingsModel $sharing): void
     {
-        $user->getPreferences()->setSharingEnabled($sharing->enabled);
-        $user->getPreferences()->setHiddenShareTargets($sharing->hiddenTargets);
-        $user->getPreferences()->setRememberingShares($sharing->rememberShares);
+        $settings = $this->sharingSettings->forUser($user);
+        $settings->setEnabled($sharing->enabled);
+        $settings->setHiddenTargets($sharing->hiddenTargets);
+        $settings->setRememberingShares($sharing->rememberShares);
         $this->entityManager->flush();
     }
 

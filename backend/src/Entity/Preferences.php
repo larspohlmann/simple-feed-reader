@@ -19,10 +19,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_preferences_user', columns: ['user_id'])]
 final class Preferences
 {
-    public const string TARGET_ID_PATTERN = '/^[a-z0-9-]{1,32}$/';
-
-    public const int MAX_HIDDEN_SHARE_TARGETS = 64;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -56,20 +52,6 @@ final class Preferences
     /** Naive UTC. Null until the account answers the one-time passkey enrolment offer, which then never shows again. */
     #[ORM\Column(name: 'passkey_offer_answered_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $passkeyOfferAnsweredAt = null;
-
-    #[ORM\Column(name: 'sharing_enabled', options: ['default' => true])]
-    private bool $sharingEnabled = true;
-
-    /**
-     * Nullable so the column could be added to existing rows; null reads as nothing hidden.
-     *
-     * @var list<string>|null
-     */
-    #[ORM\Column(name: 'hidden_share_targets', type: Types::JSON, nullable: true)]
-    private ?array $hiddenShareTargets = null;
-
-    #[ORM\Column(name: 'remember_shares', options: ['default' => true])]
-    private bool $rememberingShares = true;
 
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user)
@@ -160,50 +142,5 @@ final class Preferences
     public function markPasskeyOfferAnswered(\DateTimeImmutable $at): void
     {
         $this->passkeyOfferAnsweredAt = $at;
-    }
-
-    public function isSharingEnabled(): bool
-    {
-        return $this->sharingEnabled;
-    }
-
-    public function setSharingEnabled(bool $sharingEnabled): void
-    {
-        $this->sharingEnabled = $sharingEnabled;
-    }
-
-    /** @return list<string> */
-    public function getHiddenShareTargets(): array
-    {
-        return $this->hiddenShareTargets ?? [];
-    }
-
-    /**
-     * Drops malformed and repeated ids and keeps the first MAX_HIDDEN_SHARE_TARGETS, for the API and a restore alike.
-     *
-     * @param list<string> $hiddenShareTargets
-     */
-    public function setHiddenShareTargets(array $hiddenShareTargets): void
-    {
-        $wellFormed = array_filter(
-            $hiddenShareTargets,
-            static fn (string $id): bool => preg_match(self::TARGET_ID_PATTERN, $id) === 1,
-        );
-        $this->hiddenShareTargets = \array_slice(array_unique($wellFormed), 0, self::MAX_HIDDEN_SHARE_TARGETS);
-    }
-
-    public function isRememberingShares(): bool
-    {
-        return $this->rememberingShares;
-    }
-
-    public function setRememberingShares(bool $rememberingShares): void
-    {
-        $this->rememberingShares = $rememberingShares;
-    }
-
-    public function recordsShares(): bool
-    {
-        return $this->sharingEnabled && $this->rememberingShares;
     }
 }

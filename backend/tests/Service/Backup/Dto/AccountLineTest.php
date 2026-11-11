@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup\Dto;
 
 use App\Entity\ReadingSettings;
+use App\Entity\SharingSettings;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Account\Model\AccountSettingsModel;
@@ -147,13 +148,12 @@ final class AccountLineTest extends TestCase
     {
         $user = BackupLineRecords::user();
         $user->setLocale('de');
-        $settings = new AccountSettingsModel(new ReadingSettings($user));
+        $settings = new AccountSettingsModel(new ReadingSettings($user), new SharingSettings($user));
         $settings->reading->setScrapeFallbackEnabled(true);
         $settings->reading->setMagazineStyle(MagazineStyle::Airy);
         $settings->reading->setTrendingEnabled(false);
-        $preferences = $user->getPreferences();
-        $preferences->setHiddenShareTargets(['mastodon', 'email']);
-        $preferences->setRememberingShares(false);
+        $settings->sharing->setHiddenTargets(['mastodon', 'email']);
+        $settings->sharing->setRememberingShares(false);
         $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [SocialNetwork::Mastodon]);
 
         self::assertSame(

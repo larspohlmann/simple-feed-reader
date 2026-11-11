@@ -45,9 +45,9 @@ final class MeJson
             'passkeyOfferAnswered' => null !== $preferences->getPasskeyOfferAnsweredAt(),
             'trendingEnabled' => $settings->reading->isTrendingEnabled(),
             'sharing' => [
-                'enabled' => $preferences->isSharingEnabled(),
-                'hiddenTargets' => $preferences->getHiddenShareTargets(),
-                'rememberShares' => $preferences->isRememberingShares(),
+                'enabled' => $settings->sharing->isEnabled(),
+                'hiddenTargets' => $settings->sharing->getHiddenTargets(),
+                'rememberShares' => $settings->sharing->isRememberingShares(),
             ],
             'digest' => [
                 'enabled' => $preferences->isDigestEnabled(),

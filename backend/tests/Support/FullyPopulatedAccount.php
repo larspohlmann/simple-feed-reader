@@ -53,9 +53,10 @@ final readonly class FullyPopulatedAccount
         $reading->setScrapeFallbackEnabled(true);
         $reading->setMagazineStyle(MagazineStyle::Airy);
         $reading->setTrendingEnabled(false);
-        $user->getPreferences()->setSharingEnabled(false);
-        $user->getPreferences()->setHiddenShareTargets(['facebook', 'x']);
-        $user->getPreferences()->setRememberingShares(false);
+        $sharing = StoredUserSettings::sharing($this->entityManager, $user);
+        $sharing->setEnabled(false);
+        $sharing->setHiddenTargets(['facebook', 'x']);
+        $sharing->setRememberingShares(false);
 
         $parentTag = $this->parentTagFor($user);
         $this->entityManager->persist($parentTag);

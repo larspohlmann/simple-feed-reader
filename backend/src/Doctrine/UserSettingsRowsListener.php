@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Doctrine;
 
 use App\Entity\ReadingSettings;
+use App\Entity\SharingSettings;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Event\PrePersistEventArgs;
@@ -16,6 +17,8 @@ final readonly class UserSettingsRowsListener
 {
     public function prePersist(User $user, PrePersistEventArgs $event): void
     {
-        $event->getObjectManager()->persist(new ReadingSettings($user));
+        $objectManager = $event->getObjectManager();
+        $objectManager->persist(new ReadingSettings($user));
+        $objectManager->persist(new SharingSettings($user));
     }
 }

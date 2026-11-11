@@ -9,6 +9,7 @@ use App\Enum\DigestFormat;
 use App\Enum\MagazineStyle;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
+use App\Service\Account\Model\SharingSettingsModel;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -51,6 +52,18 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
         self::assertSame($wanted, $reloaded->getMagazineStyle());
+    }
+
+    public function testChangeSharingPersistsAllThreeValues(): void
+    {
+        $user = $this->user('prefs-sharing@example.com');
+
+        $this->writer()->changeSharing($user, new SharingSettingsModel(false, ['x', 'Not An Id', 'x'], false));
+
+        $reloaded = StoredUserSettings::sharing($this->entityManager, $this->reload($user));
+        self::assertFalse($reloaded->isEnabled());
+        self::assertSame(['x'], $reloaded->getHiddenTargets());
+        self::assertFalse($reloaded->isRememberingShares());
     }
 
     public function testChangeTrendingPersists(): void

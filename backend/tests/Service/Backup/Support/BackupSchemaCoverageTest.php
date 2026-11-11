@@ -34,6 +34,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RetentionSetting;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
+use App\Entity\SharingSettings;
 use App\Entity\SavedSearchEntry;
 use App\Entity\ShareEnrichment;
 use App\Entity\SocialAccount;
@@ -230,6 +231,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'ACCOUNT_SCOPED_WHOLLY_DROPPED leaves out in full (#935).',
         ],
         ReadingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
+        SharingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
         Preferences::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
             'digestEnabled' => self::DIGEST_BACKUP_NOT_YET_WIRED,

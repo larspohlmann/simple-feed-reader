@@ -60,15 +60,13 @@ final readonly class AccountLine
 
     public static function of(User $user, AccountSettingsModel $settings, AccountNetworkSwitchesModel $networks): self
     {
-        $preferences = $user->getPreferences();
-
         return new self(
             locale: $user->getLocale(),
             scrapeFallbackEnabled: $settings->reading->isScrapeFallbackEnabled(),
             magazineStyle: $settings->reading->getMagazineStyle(),
-            sharingEnabled: $preferences->isSharingEnabled(),
-            hiddenShareTargets: $preferences->getHiddenShareTargets(),
-            rememberShares: $preferences->isRememberingShares(),
+            sharingEnabled: $settings->sharing->isEnabled(),
+            hiddenShareTargets: $settings->sharing->getHiddenTargets(),
+            rememberShares: $settings->sharing->isRememberingShares(),
             trendingEnabled: $settings->reading->isTrendingEnabled(),
             savedSearchIncludedNetworks: $networks->savedSearchIncludedNetworks,
             forYouExcludedNetworks: $networks->forYouExcludedNetworks,
