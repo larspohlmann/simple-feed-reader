@@ -12,7 +12,6 @@ use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Event\PrePersistEventArgs;
 use Doctrine\ORM\Events;
 
-/** The settings repositories read a row per account and never create one; this is where every account gets them. */
 #[AsEntityListener(event: Events::prePersist, method: 'prePersist', entity: User::class)]
 final readonly class UserSettingsRowsListener
 {

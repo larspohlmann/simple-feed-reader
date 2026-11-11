@@ -105,8 +105,6 @@ final class SendDueDigestsTest extends DbTestCase
     public function testAUserAlreadySentThisPeriodIsNotDueAndIsNotSent(): void
     {
         $user = $this->verifiedUser();
-        // DigestSettings::getLastSentAt() already sits at the current occurrence: the next
-        // occurrence has not arrived yet, so nothing should go out.
         $settings = $this->dueSettings($user, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
         $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 

@@ -10,7 +10,7 @@ use App\Service\Account\AccountSettings;
 use App\Service\Mail\MailCapability;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-/** MeJson::profile and MeJson::preferences plus the parts that need a service: mail, timezone, active AI, catalog availability. */
+/** MeJson::profile plus the parts that need a service: mail, timezone, active AI, catalog availability. */
 final readonly class MeProfileJson
 {
     public function __construct(
