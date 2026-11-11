@@ -14,6 +14,9 @@ final class FeedDirectoryFilesTest extends TestCase
 {
     private const string FIXTURES = __DIR__ . '/../../Fixtures/feed-directory';
 
+    /** @var list<string> */
+    private array $directories = [];
+
     private function files(): FeedDirectoryFiles
     {
         return new FeedDirectoryFiles(self::FIXTURES);
@@ -86,5 +89,47 @@ final class FeedDirectoryFilesTest extends TestCase
         $this->expectException(InvalidFeedDirectoryScopeException::class);
 
         $this->files()->requireKnown(new FeedDirectoryScopeModel(['DE'], ['xx']));
+    }
+
+    public function testAnUnknownCountryAndLanguageAreBothNamedInTheMessage(): void
+    {
+        $this->expectException(InvalidFeedDirectoryScopeException::class);
+        $this->expectExceptionMessage('Unknown in the feed directory: FR, xx.');
+
+        $this->files()->requireKnown(new FeedDirectoryScopeModel(['DE', 'FR'], ['de', 'xx']));
+    }
+
+    public function testOnlyWellFormedCountryEntriesContributeACode(): void
+    {
+        $files = $this->filesWithIndex(
+            '{"countries":[{"code":"AT"},"junk",{"name":"no code"},{"code":5},{"code":"DE"}],"languages":{}}',
+        );
+
+        self::assertSame(['AT', 'DE'], $files->countryCodes());
+    }
+
+    public function testOnlyNamedLanguagesAreListedAsASequentialList(): void
+    {
+        $files = $this->filesWithIndex('{"countries":[],"languages":{"5":1,"de":2,"en":3}}');
+
+        self::assertSame(['de', 'en'], $files->languageCodes());
+    }
+
+    private function filesWithIndex(string $indexJson): FeedDirectoryFiles
+    {
+        $directory = sys_get_temp_dir() . '/feed-directory-' . bin2hex(random_bytes(4));
+        mkdir($directory);
+        file_put_contents($directory . '/index.json', $indexJson);
+        $this->directories[] = $directory;
+
+        return new FeedDirectoryFiles($directory);
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->directories as $directory) {
+            unlink($directory . '/index.json');
+            rmdir($directory);
+        }
     }
 }

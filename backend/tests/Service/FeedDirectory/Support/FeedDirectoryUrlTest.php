@@ -39,4 +39,18 @@ final class FeedDirectoryUrlTest extends TestCase
         self::assertSame($normalised, FeedDirectoryUrl::normalise($url));
         self::assertSame($host, FeedDirectoryUrl::host($url));
     }
+
+    /** @return iterable<string, array{string, string, string}> */
+    public static function paddedUrls(): iterable
+    {
+        yield 'spaces' => ['  https://www.Example.com/feed/  ', 'example.com/feed', 'example.com'];
+        yield 'line breaks' => ["\nhttps://example.com:8080/rss?x=1\r\n", 'example.com:8080/rss?x=1', 'example.com'];
+    }
+
+    #[DataProvider('paddedUrls')]
+    public function testWhitespaceAroundAUrlIsIgnored(string $url, string $normalised, string $host): void
+    {
+        self::assertSame($normalised, FeedDirectoryUrl::normalise($url));
+        self::assertSame($host, FeedDirectoryUrl::host($url));
+    }
 }

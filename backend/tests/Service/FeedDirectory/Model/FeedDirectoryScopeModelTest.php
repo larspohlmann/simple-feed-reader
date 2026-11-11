@@ -41,4 +41,12 @@ final class FeedDirectoryScopeModelTest extends TestCase
         self::assertSame(['DE', 'AT'], $scope->countries);
         self::assertSame(['de'], $scope->languages);
     }
+
+    public function testRepeatedLanguagesCollapseIntoASequentialList(): void
+    {
+        $scope = new FeedDirectoryScopeModel(['DE', 'AT', 'CH'], ['de', 'de', 'en']);
+
+        self::assertSame(['de', 'en'], $scope->languages);
+        self::assertSame(['DE', 'AT', 'CH'], $scope->countries);
+    }
 }
