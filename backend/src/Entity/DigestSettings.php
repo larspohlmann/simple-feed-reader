@@ -13,17 +13,9 @@ use Doctrine\ORM\Mapping as ORM;
 /** One row per account, created with it by UserSettingsRowsListener. */
 #[ORM\Entity(repositoryClass: DigestSettingsRepository::class)]
 #[ORM\Table(name: 'user_digest_settings')]
-#[ORM\UniqueConstraint(name: 'uniq_digest_settings_user', columns: ['user_id'])]
 final class DigestSettings
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
-
-    #[ORM\OneToOne]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private User $user;
+    use KeyedByUser;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $enabled = false;
@@ -45,17 +37,6 @@ final class DigestSettings
     /** Naive UTC. Null until the digest is first enabled; the "since" marker. */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastSentAt = null;
-
-    /** @noinspection AutowireWrongClass Built with new, never autowired */
-    public function __construct(User $user)
-    {
-        $this->user = $user;
-    }
-
-    public function getUser(): User
-    {
-        return $this->user;
-    }
 
     public function isEnabled(): bool
     {

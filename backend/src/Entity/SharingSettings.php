@@ -11,21 +11,13 @@ use Doctrine\ORM\Mapping as ORM;
 /** One row per account, created with it by UserSettingsRowsListener. */
 #[ORM\Entity(repositoryClass: SharingSettingsRepository::class)]
 #[ORM\Table(name: 'user_sharing_settings')]
-#[ORM\UniqueConstraint(name: 'uniq_sharing_settings_user', columns: ['user_id'])]
 final class SharingSettings
 {
+    use KeyedByUser;
+
     public const string TARGET_ID_PATTERN = '/^[a-z0-9-]{1,32}$/';
 
     public const int MAX_HIDDEN_TARGETS = 64;
-
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
-
-    #[ORM\OneToOne]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private User $user;
 
     #[ORM\Column(options: ['default' => true])]
     private bool $enabled = true;
@@ -36,17 +28,6 @@ final class SharingSettings
 
     #[ORM\Column(name: 'remember_shares', options: ['default' => true])]
     private bool $rememberingShares = true;
-
-    /** @noinspection AutowireWrongClass Built with new, never autowired */
-    public function __construct(User $user)
-    {
-        $this->user = $user;
-    }
-
-    public function getUser(): User
-    {
-        return $this->user;
-    }
 
     public function isEnabled(): bool
     {

@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace DoctrineMigrations;
 
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
+require_once __DIR__ . '/SplitsUserPreferences.php';
+
 final class Version20261111110000 extends AbstractMigration
 {
+    use SplitsUserPreferences;
+
     private const string TABLE = 'user_sharing_settings';
 
     public function getDescription(): string
@@ -25,19 +27,18 @@ final class Version20261111110000 extends AbstractMigration
         $this->abortIfUnsupportedPlatform();
 
         if ($this->onMySql()) {
-            $this->addSql('CREATE TABLE user_sharing_settings (id INT AUTO_INCREMENT NOT NULL,'
-                . ' enabled TINYINT DEFAULT 1 NOT NULL, hidden_targets JSON NOT NULL,'
-                . ' remember_shares TINYINT DEFAULT 1 NOT NULL, user_id INT NOT NULL,'
-                . ' UNIQUE INDEX uniq_sharing_settings_user (user_id), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4');
+            $this->addSql('CREATE TABLE user_sharing_settings (enabled TINYINT DEFAULT 1 NOT NULL,'
+                . ' hidden_targets JSON NOT NULL, remember_shares TINYINT DEFAULT 1 NOT NULL, user_id INT NOT NULL,'
+                . ' PRIMARY KEY (user_id)) DEFAULT CHARACTER SET utf8mb4');
             $this->addSql('ALTER TABLE user_sharing_settings ADD CONSTRAINT FK_88232532A76ED395'
                 . ' FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE');
         } else {
-            $this->addSql('CREATE TABLE user_sharing_settings (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
-                . ' enabled BOOLEAN DEFAULT 1 NOT NULL, hidden_targets CLOB NOT NULL,'
-                . ' remember_shares BOOLEAN DEFAULT 1 NOT NULL, user_id INTEGER NOT NULL,'
+            // INT, not INTEGER: a lone INTEGER primary key is a rowid alias, which Doctrine reads back as auto-increment.
+            $this->addSql('CREATE TABLE user_sharing_settings (enabled BOOLEAN DEFAULT 1 NOT NULL,'
+                . ' hidden_targets CLOB NOT NULL, remember_shares BOOLEAN DEFAULT 1 NOT NULL, user_id INT NOT NULL,'
+                . ' PRIMARY KEY (user_id),'
                 . ' CONSTRAINT FK_88232532A76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE'
                 . ' NOT DEFERRABLE INITIALLY IMMEDIATE)');
-            $this->addSql('CREATE UNIQUE INDEX uniq_sharing_settings_user ON user_sharing_settings (user_id)');
         }
 
         $emptyList = $this->emptyJsonList();
@@ -51,7 +52,7 @@ final class Version20261111110000 extends AbstractMigration
             . ' SELECT id, %s FROM app_user WHERE id NOT IN (SELECT user_id FROM user_sharing_settings)',
             $emptyList,
         ));
-        $this->dropPreferenceColumns();
+        $this->dropPreferenceColumns('sharing_enabled', 'hidden_share_targets', 'remember_shares');
     }
 
     public function down(Schema $schema): void
@@ -80,49 +81,8 @@ final class Version20261111110000 extends AbstractMigration
         return false;
     }
 
-    private function abortIfUnsupportedPlatform(): void
-    {
-        $platform = $this->connection->getDatabasePlatform();
-
-        $this->abortIf(
-            !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
-            \sprintf('No DDL defined for platform %s; only MySQL and SQLite are supported.', $platform::class),
-        );
-    }
-
-    private function onMySql(): bool
-    {
-        return $this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform;
-    }
-
     private function emptyJsonList(): string
     {
         return $this->onMySql() ? 'JSON_ARRAY()' : '\'[]\'';
-    }
-
-    private function dropPreferenceColumns(): void
-    {
-        if ($this->onMySql()) {
-            $this->addSql('ALTER TABLE user_preferences DROP sharing_enabled, DROP hidden_share_targets, DROP remember_shares');
-
-            return;
-        }
-
-        $this->addSql('ALTER TABLE user_preferences DROP COLUMN sharing_enabled');
-        $this->addSql('ALTER TABLE user_preferences DROP COLUMN hidden_share_targets');
-        $this->addSql('ALTER TABLE user_preferences DROP COLUMN remember_shares');
-    }
-
-    private function restoreColumn(string $column, string $sharingColumn, ?string $fallback): void
-    {
-        $copy = \sprintf(
-            '(SELECT sharing.%s FROM user_sharing_settings sharing WHERE sharing.user_id = user_preferences.user_id)',
-            $sharingColumn,
-        );
-        $this->addSql(\sprintf(
-            'UPDATE user_preferences SET %s = %s',
-            $column,
-            null === $fallback ? $copy : \sprintf('COALESCE(%s, %s)', $copy, $fallback),
-        ));
     }
 }

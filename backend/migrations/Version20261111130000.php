@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace DoctrineMigrations;
 
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
+require_once __DIR__ . '/SplitsUserPreferences.php';
+
 final class Version20261111130000 extends AbstractMigration
 {
+    use SplitsUserPreferences;
+
     public function getDescription(): string
     {
         return 'The passkey offer marker moves onto app_user; user_preferences is dropped (#2177).';
@@ -63,20 +65,5 @@ final class Version20261111130000 extends AbstractMigration
     public function isTransactional(): bool
     {
         return false;
-    }
-
-    private function abortIfUnsupportedPlatform(): void
-    {
-        $platform = $this->connection->getDatabasePlatform();
-
-        $this->abortIf(
-            !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
-            \sprintf('No DDL defined for platform %s; only MySQL and SQLite are supported.', $platform::class),
-        );
-    }
-
-    private function onMySql(): bool
-    {
-        return $this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform;
     }
 }

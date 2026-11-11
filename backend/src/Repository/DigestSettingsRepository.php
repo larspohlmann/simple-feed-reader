@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\DigestSettings;
-use App\Entity\User;
 use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -13,14 +12,12 @@ use Doctrine\Persistence\ManagerRegistry;
 /** @extends ServiceEntityRepository<DigestSettings> */
 final class DigestSettingsRepository extends ServiceEntityRepository implements DigestRecipientsInterface
 {
+    /** @use UserSettingsRowLookup<DigestSettings> */
+    use UserSettingsRowLookup;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, DigestSettings::class);
-    }
-
-    public function forUser(User $user): DigestSettings
-    {
-        return UserSettingsRow::required($this->findOneBy(['user' => $user]), $user);
     }
 
     /**
