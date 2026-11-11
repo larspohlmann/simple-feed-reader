@@ -8,6 +8,7 @@ import { entryRelativeTime } from '../../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
+import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
 import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
 import { alsoFootOf } from './also-foot';
 
@@ -40,6 +41,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   /** The row the footer sits on; deleting from a copy's card deletes this row's post (#1972). */
   readonly entry = input.required<EntryDto>();
   private readonly foot = computed(() => alsoFootOf(this.entry()));
+  protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly copies = computed(() => this.foot().copies);
   protected readonly label = computed(() => this.foot().label);
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
