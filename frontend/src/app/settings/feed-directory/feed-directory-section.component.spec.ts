@@ -6,7 +6,9 @@ import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { FeedDirectoryApi } from './feed-directory-api';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectorySectionComponent } from './feed-directory-section.component';
@@ -62,6 +64,7 @@ describe('FeedDirectorySectionComponent', () => {
   let retryAccount: jest.Mock;
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
   let dialogOpen: jest.Mock;
+  let reloadQuietly: jest.Mock;
   let fixture: ComponentFixture<FeedDirectorySectionComponent>;
 
   async function render(initial: FeedDirectoryScope): Promise<HTMLElement> {
@@ -72,6 +75,7 @@ describe('FeedDirectorySectionComponent', () => {
     retryAccount = jest.fn();
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     dialogOpen = jest.fn();
+    reloadQuietly = jest.fn();
     await TestBed.configureTestingModule({
       imports: [FeedDirectorySectionComponent, provideTranslocoTesting()],
       providers: [
@@ -98,7 +102,8 @@ describe('FeedDirectorySectionComponent', () => {
           },
         },
         { provide: Dialog, useValue: { open: dialogOpen } },
-        { provide: LayoutService, useValue: { isPhone } },
+        { provide: LayoutService, useValue: { isPhone, isCoarse: signal(false) } },
+        { provide: SubscriptionsStore, useValue: { reloadQuietly } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(FeedDirectorySectionComponent);
@@ -292,6 +297,25 @@ describe('FeedDirectorySectionComponent', () => {
     expect(dialogOpen).toHaveBeenCalledWith(FeedDirectoryScopeDialogComponent, {
       panelClass: 'app-dialog',
     });
+  });
+
+  it('subscribes from a row through the add-feed dialog and marks the feed', async () => {
+    const page = await render({ countries: ['DE'], languages: ['de'] });
+    dialogOpen.mockReturnValue({ closed: of({ id: 3 }) });
+    const zeit = (): Element =>
+      Array.from(page.querySelectorAll('app-feed-directory-row')).find(
+        (row) => text(row.querySelector('.name')) === 'zeit.de',
+      )!;
+
+    zeit().querySelector<HTMLButtonElement>('[data-test="subscribe"] button')!.click();
+    await settle();
+
+    expect(dialogOpen).toHaveBeenCalledWith(AddFeedDialogComponent, {
+      panelClass: 'app-dialog',
+      data: { url: 'https://www.zeit.de/politik/index' },
+    });
+    expect(reloadQuietly).toHaveBeenCalled();
+    expect(text(zeit().querySelector('.done'))).toContain('Subscribed');
   });
 
   it('reloads when a saved scope changes what the directory holds', async () => {

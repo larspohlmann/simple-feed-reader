@@ -1,0 +1,43 @@
+<section class="pop" role="dialog" cdkTrapFocus [attr.aria-label]="host()">
+  <header class="head">
+    <span class="site">{{ host() }}</span>
+    <span class="total">{{
+      'settings.feedDirectory.feeds' | transloco: { count: feeds().length }
+    }}</span>
+    <button
+      type="button"
+      class="close"
+      appIconButton
+      [attr.aria-label]="'common.close' | transloco"
+      (click)="dismiss.emit()"
+    >
+      <app-icon name="close" size="sm" />
+    </button>
+  </header>
+  <div class="body">
+    @for (group of groups(); track group.category) {
+      <p class="group">{{ group.category }} · {{ group.feeds.length }}</p>
+      @for (feed of group.feeds; track feed.url) {
+        <div class="feed">
+          <code class="path" [title]="feed.url">{{ feed.path }}</code>
+          @if (feed.subscribed) {
+            <span class="done">
+              <app-icon name="check" size="sm" />{{
+                'settings.feedDirectory.subscribed' | transloco
+              }}
+            </span>
+          } @else {
+            <app-button
+              size="sm"
+              variant="ghost"
+              [ariaLabel]="'settings.feedDirectory.subscribeTo' | transloco: { feed: feed.path }"
+              (click)="choose.emit(feed.url)"
+            >
+              <app-icon name="add" size="sm" />{{ 'settings.feedDirectory.subscribe' | transloco }}
+            </app-button>
+          }
+        </div>
+      }
+    }
+  </div>
+</section>

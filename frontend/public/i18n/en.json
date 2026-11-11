@@ -817,6 +817,7 @@
       "clear": "Clear"
     },
     "feedDirectory": {
+      "browse": "Browse feed directory",
       "title": "Feed directory",
       "summary": "{{count}} sites in your countries and languages",
       "changeScope": "Change scope",
@@ -832,6 +833,7 @@
         "saveFailed": "Your choice wasn't saved. Try again."
       },
       "subscribe": "Subscribe",
+      "subscribeTo": "Subscribe to {{feed}}",
       "subscribed": "Subscribed",
       "following": "Following",
       "feeds": "{{count}} feeds",

@@ -3,7 +3,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../../core/api';
 import { AddFeedDialogComponent, AddFeedDialogData } from './add-feed-dialog.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
@@ -55,6 +55,21 @@ describe('AddFeedDialogComponent', () => {
       .expectOne('https://api.test/api/subscriptions')
       .flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 9 });
+  });
+
+  it('links to the feed directory and closes on the way there', () => {
+    TestBed.inject(Router).resetConfig([{ path: 'settings/feed-directory', children: [] }]);
+    const fixture = create();
+    const links = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('a.browse'),
+    );
+    const directory = links.find(
+      (link) => link.getAttribute('href') === '/settings/feed-directory',
+    );
+
+    expect(directory?.textContent?.trim()).toBe('Browse feed directory');
+    directory!.click();
+    expect(close).toHaveBeenCalledWith();
   });
 
   it('reports that a search is running while the subscribe is in flight', () => {

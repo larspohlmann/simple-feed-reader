@@ -817,6 +817,7 @@
       "clear": "Zurücksetzen"
     },
     "feedDirectory": {
+      "browse": "Feed-Verzeichnis durchsuchen",
       "title": "Feed-Verzeichnis",
       "summary": "{{count}} Websites in deinen Ländern und Sprachen",
       "changeScope": "Auswahl ändern",
@@ -832,6 +833,7 @@
         "saveFailed": "Deine Auswahl wurde nicht gespeichert. Versuche es erneut."
       },
       "subscribe": "Abonnieren",
+      "subscribeTo": "{{feed}} abonnieren",
       "subscribed": "Abonniert",
       "following": "Du folgst",
       "feeds": "{{count}} Feeds",

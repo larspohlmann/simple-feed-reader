@@ -32,6 +32,7 @@ import {
 } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryStore } from './feed-directory.store';
+import { FeedDirectorySubscriber } from './feed-directory-subscriber';
 import { FeedDirectoryScope } from './feed-directory.models';
 import {
   FeedDirectoryFilterPillComponent,
@@ -68,7 +69,7 @@ const SORTS: readonly FeedDirectorySort[] = ['top', 'az', 'feeds'];
     SkeletonComponent,
     TranslocoPipe,
   ],
-  providers: [FeedDirectoryStore],
+  providers: [FeedDirectoryStore, FeedDirectorySubscriber],
   templateUrl: './feed-directory-section.component.html',
   styleUrl: './feed-directory-section.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,6 +78,7 @@ export class FeedDirectorySectionComponent {
   protected readonly store = inject(FeedDirectoryStore);
   protected readonly scopes = inject(FeedDirectoryScopeService);
   protected readonly names = inject(FeedDirectoryNames);
+  protected readonly subscriber = inject(FeedDirectorySubscriber);
   private readonly dialog = inject(Dialog);
   private readonly layout = inject(LayoutService);
   private readonly scopeToLoad = computed(
