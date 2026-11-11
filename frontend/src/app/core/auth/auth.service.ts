@@ -30,7 +30,6 @@ export interface UserPreferences {
   magazineStyle: string;
   sharing: SharingSettings;
   trendingEnabled: boolean;
-  /** Absent on a profile cached before the feed directory shipped. */
   feedDirectoryScope?: FeedDirectoryScope;
 }
 
