@@ -3,10 +3,10 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { CurrentUser } from '../../core/auth/auth.service';
+import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
 import {
   FeedDirectoryCountryFile,
   FeedDirectoryIndex,
-  FeedDirectoryScope,
   FeedDirectorySubscribed,
 } from './feed-directory.models';
 

@@ -1,5 +1,6 @@
 import { FeedDirectoryCountryFile } from './feed-directory.models';
 import {
+  FeedDirectoryCriteria,
   FeedDirectoryFilter,
   countByCountry,
   feedsIn,
@@ -38,15 +39,14 @@ const DE: FeedDirectoryCountryFile = {
   ],
 };
 const SUBSCRIBED = { urls: ['heise.de/rss/heise.rdf'], hosts: ['heise.de'] };
-const ALL: FeedDirectoryFilter = {
+const ANY_CRITERIA: FeedDirectoryCriteria = {
   mode: 'channels',
-  country: null,
   categories: new Set(),
   lengths: new Set(),
   languages: new Set(),
   query: '',
-  sort: 'top',
 };
+const ALL: FeedDirectoryFilter = { ...ANY_CRITERIA, country: null, sort: 'top' };
 
 describe('feed directory rows', () => {
   const rows = prepareRows(DE, new Set(['de']), SUBSCRIBED);
@@ -138,8 +138,11 @@ describe('feed directory rows', () => {
     ]);
   });
 
-  it('counts per country ignoring the country filter', () => {
-    expect(countByCountry(rows, { ...ALL, country: 'AT' })).toEqual(new Map([['DE', 3]]));
+  it('counts per country by the criteria', () => {
+    expect(countByCountry(rows, ANY_CRITERIA)).toEqual(new Map([['DE', 3]]));
+    expect(countByCountry(rows, { ...ANY_CRITERIA, query: 'WEEKLY' })).toEqual(
+      new Map([['DE', 1]]),
+    );
   });
 
   it('filters by country', () => {
@@ -147,9 +150,39 @@ describe('feed directory rows', () => {
   });
 
   it('marks one more feed subscribed', () => {
-    const next = withSubscribed(rows, 'https://www.zeit.de/politik/index');
+    const next = withSubscribed(rows, 'zeit.de', 'https://www.zeit.de/politik/index');
     expect(next[0].feeds[0].subscribed).toBe(true);
     expect(next[0].following).toBe(true);
+  });
+
+  it('leaves the rows of other hosts as they are', () => {
+    const next = withSubscribed(rows, 'zeit.de', 'https://www.zeit.de/politik/index');
+    expect(next.slice(1)).toEqual(rows.slice(1));
+    expect(next[1]).toBe(rows[1]);
+  });
+
+  it('counts the feeds and categories of each mode', () => {
+    const zeit = rows[0];
+    expect(zeit.byMode.channels).toEqual({
+      feedCount: 1,
+      categories: new Set(['Politics & Society']),
+    });
+    expect(zeit.byMode.podcasts).toEqual({ feedCount: 1, categories: new Set(['Sports']) });
+  });
+
+  it('follows a row by its bare host, whatever www prefix the directory gives it', () => {
+    const wwwDe: FeedDirectoryCountryFile = {
+      ...DE,
+      domains: [['www.zeit.de', 1, null, [0], [[0, 0, ['https://www.zeit.de/feed']]], null]],
+    };
+    expect(prepareRows(wwwDe, new Set(['de']), { urls: [], hosts: ['zeit.de'] })[0].following).toBe(
+      true,
+    );
+  });
+
+  it('does not follow a row through a host that merely ends in its name', () => {
+    const [row] = prepareRows(DE, new Set(['de']), { urls: [], hosts: ['notzeit.de'] });
+    expect(row.following).toBe(false);
   });
 
   describe('a subscribed feed on another host', () => {
@@ -159,7 +192,11 @@ describe('feed directory rows', () => {
       domains: [['podcast.de', 10, null, [0], [[1, 1, [anchorFeed]]], null]],
     };
     const subscribedOnRow = (hosts: string[]) =>
-      withSubscribed(prepareRows(podcastDe, new Set(['de']), { urls: [], hosts }), anchorFeed)[0];
+      withSubscribed(
+        prepareRows(podcastDe, new Set(['de']), { urls: [], hosts }),
+        'podcast.de',
+        anchorFeed,
+      )[0];
 
     it('marks the feed but does not follow the row', () => {
       const row = subscribedOnRow([]);

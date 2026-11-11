@@ -92,6 +92,7 @@ describe('ReaderShellComponent', () => {
       preferences: { passkeyOfferAnswered: true },
     }),
     accountLoadFailed: signal(false),
+    accountResolved: signal(true),
     loadMe: () => of({}),
     logout: jest.fn(),
     isAdmin: jest.fn().mockReturnValue(false),

@@ -36,7 +36,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
   open(request: FeedDirectorySubscribeRequest): void {
     const feeds = feedsIn(request.row, this.store.mode());
     if (feeds.length === 1) {
-      this.subscribeTo(feeds[0].url);
+      this.subscribeTo(request.row.host, feeds[0].url);
     } else if (this.layout.isCoarse()) {
       this.openSheet(request.row.host, feeds);
     } else {
@@ -48,7 +48,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
     this.popover?.detach();
   }
 
-  private subscribeTo(url: string): void {
+  private subscribeTo(host: string, url: string): void {
     this.dialog
       .open<SubscriptionDto>(AddFeedDialogComponent, {
         panelClass: 'app-dialog',
@@ -56,7 +56,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
       })
       .closed.subscribe((subscription) => {
         if (!subscription) return;
-        this.store.markSubscribed(url);
+        this.store.markSubscribed(host, url);
         this.subscriptions.reloadQuietly();
       });
   }
@@ -73,7 +73,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
     ]);
     const total = this.i18n.translate('settings.feedDirectory.feeds', { count: feeds.length });
     this.sheet.open({ title: `${host} · ${total}`, actions }).subscribe((url) => {
-      if (url) this.subscribeTo(url);
+      if (url) this.subscribeTo(host, url);
     });
   }
 
@@ -116,7 +116,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
       .pipe(takeUntil(closed))
       .subscribe((url) => {
         closeByUser();
-        this.subscribeTo(url);
+        this.subscribeTo(row.host, url);
       });
     closed.pipe(take(1)).subscribe(() => {
       popover.dispose();

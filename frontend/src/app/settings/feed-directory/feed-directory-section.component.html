@@ -1,7 +1,7 @@
 <app-settings-stack>
-  @if (!scopes.known()) {
+  @if (scopes.accountState() === 'loading') {
     <app-skeleton [label]="'settings.feedDirectory.loading' | transloco" [rows]="3" />
-  } @else if (scopes.accountFailed()) {
+  } @else if (scopes.accountState() === 'failed') {
     <app-error-banner
       [message]="'settings.feedDirectory.loadFailed' | transloco"
       [actionLabel]="'settings.feedDirectory.retry' | transloco"
@@ -38,7 +38,7 @@
             labelPrefix="settings.feedDirectory.mode."
             (pick)="store.mode.set($event)"
           />
-          @if (countryChoice()) {
+          @if (scopes.scope().countries.length > 1) {
             <app-feed-directory-filter-pill
               data-test="countries"
               choice="one"
@@ -67,7 +67,7 @@
             [count]="store.lengths().size"
             (choose)="store.toggleLength($event)"
           />
-          @if (languageChoice()) {
+          @if (scopes.scope().languages.length > 1) {
             <app-feed-directory-filter-pill
               data-test="language"
               [label]="'settings.feedDirectory.filters.language' | transloco"
@@ -97,7 +97,7 @@
             [attr.aria-label]="'settings.feedDirectory.search' | transloco"
             [placeholder]="'settings.feedDirectory.search' | transloco"
             [value]="store.query()"
-            (input)="store.query.set(inputValue($event))"
+            (input)="search($event)"
           />
         </div>
       </div>
@@ -137,7 +137,7 @@
             class="state"
             [message]="'settings.feedDirectory.loadFailed' | transloco"
             [actionLabel]="'settings.feedDirectory.retry' | transloco"
-            (action)="store.retry()"
+            (action)="store.load()"
           />
         }
         @default {

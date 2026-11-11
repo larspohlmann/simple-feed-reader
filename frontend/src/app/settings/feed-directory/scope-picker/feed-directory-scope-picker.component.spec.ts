@@ -3,7 +3,8 @@ import { Observable, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { FeedDirectoryApi } from '../feed-directory-api';
 import { FeedDirectoryScopeService } from '../feed-directory-scope.service';
-import { FeedDirectoryIndex, FeedDirectoryScope } from '../feed-directory.models';
+import { FeedDirectoryScope } from '../../../core/preferences/feed-directory-scope';
+import { FeedDirectoryIndex } from '../feed-directory.models';
 import { FeedDirectoryScopePickerComponent } from './feed-directory-scope-picker.component';
 
 const INDEX: FeedDirectoryIndex = {
@@ -128,7 +129,7 @@ describe('FeedDirectoryScopePickerComponent', () => {
     expect(optionTexts('languages')).toHaveLength(2);
   });
 
-  it('saves the checked scope and emits it', async () => {
+  it('saves the checked scope and reports it saved', async () => {
     await render();
     const saved = jest.fn();
     fixture.componentInstance.saved.subscribe(saved);
@@ -139,7 +140,7 @@ describe('FeedDirectoryScopePickerComponent', () => {
     fixture.detectChanges();
 
     expect(save).toHaveBeenCalledWith({ countries: ['DE'], languages: ['de'] });
-    expect(saved).toHaveBeenCalledWith({ countries: ['DE'], languages: ['de'] });
+    expect(saved).toHaveBeenCalledTimes(1);
     expect(fixture.nativeElement.querySelector('app-error-banner')).toBeNull();
   });
 

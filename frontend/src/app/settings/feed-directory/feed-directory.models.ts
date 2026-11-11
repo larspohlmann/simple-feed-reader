@@ -1,5 +1,3 @@
-export type { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
-
 export interface FeedDirectoryIndexCountry {
   code: string;
   name: string;

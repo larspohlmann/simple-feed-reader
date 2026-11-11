@@ -17,7 +17,8 @@ import { inputValue } from '../../../shared/input-value';
 import { FeedDirectoryApi } from '../feed-directory-api';
 import { FeedDirectoryNames } from '../feed-directory-names';
 import { FeedDirectoryScopeService } from '../feed-directory-scope.service';
-import { FeedDirectoryIndex, FeedDirectoryScope } from '../feed-directory.models';
+import { FeedDirectoryScope } from '../../../core/preferences/feed-directory-scope';
+import { FeedDirectoryIndex } from '../feed-directory.models';
 import { ScopeChecklist } from './scope-checklist';
 import { ScopeOption, countryOptions, languageOptions } from './scope-options';
 
@@ -33,7 +34,7 @@ export class FeedDirectoryScopePickerComponent {
   protected readonly names = inject(FeedDirectoryNames);
 
   readonly initial = input.required<FeedDirectoryScope>();
-  readonly saved = output<FeedDirectoryScope>();
+  readonly saved = output<void>();
 
   private readonly api = inject(FeedDirectoryApi);
   private readonly destroyRef = inject(DestroyRef);
@@ -96,7 +97,7 @@ export class FeedDirectoryScopePickerComponent {
         this.saveFailed.set(true);
         return;
       }
-      this.saved.emit(scope);
+      this.saved.emit();
     });
   }
 

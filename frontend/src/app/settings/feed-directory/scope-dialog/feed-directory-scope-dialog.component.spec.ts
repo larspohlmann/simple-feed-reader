@@ -13,7 +13,7 @@ const INDEX: FeedDirectoryIndex = {
 };
 
 describe('FeedDirectoryScopeDialogComponent', () => {
-  it('opens on the saved scope and closes with true once the picker saves', async () => {
+  it('opens on the saved scope and closes once the picker saves', async () => {
     const close = jest.fn();
     const save = jest.fn(() => of(true));
     await TestBed.configureTestingModule({
@@ -36,6 +36,6 @@ describe('FeedDirectoryScopeDialogComponent', () => {
     fixture.nativeElement.querySelector('[data-test="save"]').click();
 
     expect(save).toHaveBeenCalledWith({ countries: ['DE'], languages: ['de'] });
-    expect(close).toHaveBeenCalledWith(true);
+    expect(close).toHaveBeenCalledWith();
   });
 });

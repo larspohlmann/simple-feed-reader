@@ -1,6 +1,6 @@
 /** The backend's FeedDirectoryUrl rule; feed-directory-url-cases.json keeps the two in step. */
 export function feedDirectoryUrl(url: string): string {
-  const parsed = parse(url);
+  const parsed = parseUrl(url);
   if (!parsed) return url.toLowerCase();
   const path = parsed.search ? parsed.pathname : parsed.pathname.replace(/\/+$/, '');
   const port = parsed.port ? `:${parsed.port}` : '';
@@ -8,11 +8,11 @@ export function feedDirectoryUrl(url: string): string {
 }
 
 export function feedDirectoryHost(url: string): string {
-  const parsed = parse(url);
+  const parsed = parseUrl(url);
   return parsed ? hostOf(parsed) : '';
 }
 
-function parse(url: string): URL | null {
+export function parseUrl(url: string): URL | null {
   try {
     return new URL(url.trim());
   } catch {
@@ -20,6 +20,6 @@ function parse(url: string): URL | null {
   }
 }
 
-function hostOf(url: URL): string {
+export function hostOf(url: URL): string {
   return url.hostname.replace(/^www\./, '');
 }

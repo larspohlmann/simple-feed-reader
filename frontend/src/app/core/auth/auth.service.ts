@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, finalize, of, shareReplay, tap } from 'rxjs';
 import { AiAvailability, AiAvailabilityService } from '../ai-availability.service';
@@ -64,6 +64,7 @@ export class AuthService {
 
   readonly user = signal<CurrentUser | null>(null);
   readonly accountLoadFailed = signal(false);
+  readonly accountResolved = computed(() => this.user() !== null || this.accountLoadFailed());
   private userInFlight: Observable<CurrentUser> | null = null;
 
   login(email: string, password: string): Observable<{ token: string }> {
@@ -72,26 +73,28 @@ export class AuthService {
       .pipe(tap((response) => this.tokens.set(response.token)));
   }
 
-  /** The single place the account's locale is adopted into the UI -- every
-   *  caller (login, OAuth callback, the admin guard, a deep-link reader or
-   *  settings mount) goes through here, so none of them touch `LanguageService`
-   *  directly any more. */
   loadMe(): Observable<CurrentUser> {
     return this.http.get<CurrentUser>(`${this.base}/api/me`).pipe(
       tap({
-        next: (user) => {
-          this.accountLoadFailed.set(false);
-          this.user.set(user);
-          this.language.adopt(user.locale);
-          this.preferences.adopt(user);
-          this.magazineStyle.adopt(user);
-          this.sharing.adopt(user);
-          this.digest.adopt(user);
-          this.ai.adopt(user);
-        },
+        next: (user) => this.adopt(user),
         error: () => this.accountLoadFailed.set(true),
       }),
     );
+  }
+
+  /** The single place the account's locale is adopted into the UI -- every
+   *  caller (login, OAuth callback, the admin guard, a deep-link reader or
+   *  settings mount, a saved profile) goes through here, so none of them touch
+   *  `LanguageService` directly any more. */
+  adopt(user: CurrentUser): void {
+    this.accountLoadFailed.set(false);
+    this.user.set(user);
+    this.language.adopt(user.locale);
+    this.preferences.adopt(user);
+    this.magazineStyle.adopt(user);
+    this.sharing.adopt(user);
+    this.digest.adopt(user);
+    this.ai.adopt(user);
   }
 
   /** The signed-in user, fetched only when none is loaded; concurrent callers share one request. */

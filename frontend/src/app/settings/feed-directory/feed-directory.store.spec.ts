@@ -7,10 +7,10 @@ import { FeedDirectoryNames } from './feed-directory-names';
 import { countByCountry, prepareRows } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryStore } from './feed-directory.store';
+import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
 import {
   FeedDirectoryCountryFile,
   FeedDirectoryIndex,
-  FeedDirectoryScope,
   FeedDirectorySubscribed,
 } from './feed-directory.models';
 
@@ -99,7 +99,6 @@ describe('FeedDirectoryStore', () => {
 
     expect(country.mock.calls.map(([code]) => code)).toEqual(['DE', 'AT']);
     expect(store.status()).toBe('ready');
-    expect(store.index()).toBe(INDEX);
     expect(hosts()).toEqual(['orf.at', 'heise.de', 'zeit.de', 'b.de']);
   });
 
@@ -228,16 +227,34 @@ describe('FeedDirectoryStore', () => {
       ],
       {
         mode: 'channels',
-        country: null,
         categories: new Set(['Politics & Society']),
         lengths: new Set(),
         languages: new Set(),
         query: '',
-        sort: 'top',
       },
     );
     expect(store.countryCounts()).toEqual(expected);
     expect(store.countryCounts().get('DE')).toBe(2);
+  });
+
+  it('keeps the country counts when only the country or the sort changes', () => {
+    loadedStore();
+    const counts = store.countryCounts();
+
+    store.country.set('AT');
+    store.sort.set('az');
+
+    expect(store.countryCounts()).toBe(counts);
+  });
+
+  it('keeps the picked categories as they are when the new mode drops none of them', () => {
+    loadedStore();
+    store.toggleCategory('Sports');
+    const picked = store.categories();
+
+    store.mode.set('podcasts');
+
+    expect(store.categories()).toBe(picked);
   });
 
   it('totals the rows in scope for the current mode, whatever the filters', () => {
@@ -268,7 +285,7 @@ describe('FeedDirectoryStore', () => {
     expect(hosts()).toEqual(['zeit.de']);
   });
 
-  it('fails when a country request fails, and retry loads again', () => {
+  it('fails when a country request fails, and the next load succeeds', () => {
     country.mockImplementation((code) =>
       code === 'AT' ? throwError(() => new Error('boom')) : of(DE),
     );
@@ -276,7 +293,7 @@ describe('FeedDirectoryStore', () => {
     expect(store.status()).toBe('failed');
 
     country.mockImplementation((code) => of(code === 'DE' ? DE : AT));
-    store.retry();
+    store.load();
 
     expect(store.status()).toBe('ready');
     expect(hosts()).toContain('orf.at');
@@ -325,7 +342,7 @@ describe('FeedDirectoryStore', () => {
     const before = store.rows().find((row) => row.host === 'zeit.de')!;
     expect(before.following).toBe(false);
 
-    store.markSubscribed('https://www.zeit.de/politik/index');
+    store.markSubscribed('zeit.de', 'https://www.zeit.de/politik/index');
 
     const after = store.rows().find((row) => row.host === 'zeit.de')!;
     expect(after.following).toBe(true);

@@ -1,9 +1,9 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService, CurrentUser } from '../../core/auth/auth.service';
 import { FeedDirectoryApi } from './feed-directory-api';
-import { FeedDirectoryScope } from './feed-directory.models';
+import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 
 function userWith(scope: FeedDirectoryScope | undefined): CurrentUser {
@@ -24,7 +24,15 @@ describe('FeedDirectoryScopeService', () => {
     saveScope = jest.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: AuthService, useValue: { user, accountLoadFailed, ensureUserLoaded } },
+        {
+          provide: AuthService,
+          useValue: {
+            user,
+            accountResolved: computed(() => user() !== null || accountLoadFailed()),
+            adopt: (adopted: CurrentUser) => user.set(adopted),
+            ensureUserLoaded,
+          },
+        },
         { provide: FeedDirectoryApi, useValue: { saveScope } },
       ],
     });
@@ -32,18 +40,17 @@ describe('FeedDirectoryScopeService', () => {
   });
 
   it('knows the scope only once the account has arrived', () => {
-    expect(service.known()).toBe(false);
+    expect(service.accountState()).toBe('loading');
 
     user.set(userWith(undefined));
 
-    expect(service.known()).toBe(true);
+    expect(service.accountState()).toBe('ready');
   });
 
   it('knows there is no scope to read when the account failed to load', () => {
     accountLoadFailed.set(true);
 
-    expect(service.known()).toBe(true);
-    expect(service.accountFailed()).toBe(true);
+    expect(service.accountState()).toBe('failed');
     expect(service.hasScope()).toBe(false);
   });
 
@@ -51,7 +58,7 @@ describe('FeedDirectoryScopeService', () => {
     accountLoadFailed.set(true);
     user.set(userWith(undefined));
 
-    expect(service.accountFailed()).toBe(false);
+    expect(service.accountState()).toBe('ready');
   });
 
   it('asks for the account again on retry, and survives a second failure', () => {
@@ -82,7 +89,7 @@ describe('FeedDirectoryScopeService', () => {
     expect(service.hasScope()).toBe(false);
   });
 
-  it('saves and replaces the user with the returned profile', () => {
+  it('saves and adopts the returned profile', () => {
     const scope = { countries: ['AT'], languages: ['de'] };
     saveScope.mockReturnValue(of(userWith(scope)));
     let saved: boolean | undefined;

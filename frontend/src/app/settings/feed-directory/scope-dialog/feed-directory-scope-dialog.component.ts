@@ -14,6 +14,6 @@ import { FeedDirectoryScopePickerComponent } from '../scope-picker/feed-director
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FeedDirectoryScopeDialogComponent {
-  protected readonly ref = inject<DialogRef<boolean>>(DialogRef);
+  protected readonly ref = inject<DialogRef<void>>(DialogRef);
   protected readonly scopes = inject(FeedDirectoryScopeService);
 }

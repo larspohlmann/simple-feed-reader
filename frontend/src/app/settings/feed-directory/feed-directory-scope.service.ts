@@ -1,8 +1,10 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
 import { FeedDirectoryApi } from './feed-directory-api';
-import { FeedDirectoryScope } from './feed-directory.models';
+
+export type FeedDirectoryAccountState = 'loading' | 'failed' | 'ready';
 
 const EMPTY_SCOPE: FeedDirectoryScope = { countries: [], languages: [] };
 
@@ -11,10 +13,10 @@ export class FeedDirectoryScopeService {
   private readonly auth = inject(AuthService);
   private readonly api = inject(FeedDirectoryApi);
 
-  readonly known = computed(() => this.auth.user() !== null || this.auth.accountLoadFailed());
-  readonly accountFailed = computed(
-    () => this.auth.user() === null && this.auth.accountLoadFailed(),
-  );
+  readonly accountState = computed<FeedDirectoryAccountState>(() => {
+    if (this.auth.user() !== null) return 'ready';
+    return this.auth.accountResolved() ? 'failed' : 'loading';
+  });
   readonly scope = computed(() => this.auth.user()?.preferences.feedDirectoryScope ?? EMPTY_SCOPE);
   readonly hasScope = computed(
     () => this.scope().countries.length > 0 && this.scope().languages.length > 0,
@@ -26,7 +28,7 @@ export class FeedDirectoryScopeService {
 
   save(scope: FeedDirectoryScope): Observable<boolean> {
     return this.api.saveScope(scope).pipe(
-      tap((user) => this.auth.user.set(user)),
+      tap((user) => this.auth.adopt(user)),
       map(() => true),
       catchError(() => of(false)),
     );

@@ -13,7 +13,11 @@ import {
   inject,
   untracked,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { Subject, debounceTime } from 'rxjs';
+import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
+import { sameIds } from '../../core/same-ids';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -33,7 +37,6 @@ import {
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectorySubscriber } from './feed-directory-subscriber';
-import { FeedDirectoryScope } from './feed-directory.models';
 import {
   FeedDirectoryFilterPillComponent,
   FeedDirectoryFilterPillOption,
@@ -49,6 +52,7 @@ const ALL_COUNTRIES = '';
 const MODES: readonly FeedDirectoryMode[] = ['channels', 'podcasts'];
 const LENGTHS: readonly FeedDirectoryLength[] = ['headlines', 'summaries', 'long'];
 const SORTS: readonly FeedDirectorySort[] = ['top', 'az', 'feeds'];
+const SEARCH_DEBOUNCE_MS = 150;
 
 @Component({
   selector: 'app-feed-directory-section',
@@ -90,11 +94,9 @@ export class FeedDirectorySectionComponent {
     this.layout.isPhone() ? FEED_DIRECTORY_ROW_HEIGHT.phone : FEED_DIRECTORY_ROW_HEIGHT.wide,
   );
   protected readonly modes = MODES;
-  protected readonly inputValue = inputValue;
   protected readonly byHost = (_index: number, row: FeedDirectoryRow): string => row.host;
+  private readonly typedQuery = new Subject<string>();
 
-  protected readonly countryChoice = computed(() => this.scopes.scope().countries.length > 1);
-  protected readonly languageChoice = computed(() => this.scopes.scope().languages.length > 1);
   protected readonly countryNames = computed(() =>
     this.scopes.scope().countries.map((code) => this.names.country(code)),
   );
@@ -124,41 +126,46 @@ export class FeedDirectorySectionComponent {
       })),
     ];
   });
-  protected readonly categoryOptions = computed<FeedDirectoryFilterPillOption[]>(() =>
-    this.store.categoryOptions().map((name) => ({
-      value: name,
-      label: name,
-      selected: this.store.categories().has(name),
-    })),
+  protected readonly categoryOptions = computed(() =>
+    optionsOf(
+      this.store.categoryOptions(),
+      (name) => ({ label: name }),
+      (name) => this.store.categories().has(name),
+    ),
   );
-  protected readonly lengthOptions = computed<FeedDirectoryFilterPillOption<FeedDirectoryLength>[]>(
-    () =>
-      LENGTHS.map((length) => ({
-        value: length,
-        labelKey: `settings.feedDirectory.lengths.${length}`,
-        selected: this.store.lengths().has(length),
-      })),
+  protected readonly lengthOptions = computed(() =>
+    optionsOf(
+      LENGTHS,
+      (length) => ({ labelKey: `settings.feedDirectory.lengths.${length}` }),
+      (length) => this.store.lengths().has(length),
+    ),
   );
-  protected readonly languageOptions = computed<FeedDirectoryFilterPillOption[]>(() =>
-    this.scopes.scope().languages.map((code) => ({
-      value: code,
-      label: this.names.language(code),
-      selected: this.store.languages().has(code),
-    })),
+  protected readonly languageOptions = computed(() =>
+    optionsOf(
+      this.scopes.scope().languages,
+      (code) => ({ label: this.names.language(code) }),
+      (code) => this.store.languages().has(code),
+    ),
   );
-  protected readonly sortOptions = computed<FeedDirectoryFilterPillOption<FeedDirectorySort>[]>(
-    () =>
-      SORTS.map((sort) => ({
-        value: sort,
-        labelKey: `settings.feedDirectory.sort.${sort}`,
-        selected: this.store.sort() === sort,
-      })),
+  protected readonly sortOptions = computed(() =>
+    optionsOf(
+      SORTS,
+      (sort) => ({ labelKey: `settings.feedDirectory.sort.${sort}` }),
+      (sort) => this.store.sort() === sort,
+    ),
   );
 
   constructor() {
     effect(() => {
       if (this.scopeToLoad() !== null) untracked(() => this.store.load());
     });
+    this.typedQuery
+      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed())
+      .subscribe((query) => this.store.query.set(query));
+  }
+
+  protected search(event: Event): void {
+    this.typedQuery.next(inputValue(event));
   }
 
   protected chooseCountry(code: string): void {
@@ -172,8 +179,13 @@ export class FeedDirectorySectionComponent {
 
 function sameScope(left: FeedDirectoryScope | null, right: FeedDirectoryScope | null): boolean {
   if (left === null || right === null) return left === right;
-  return (
-    left.countries.join() === right.countries.join() &&
-    left.languages.join() === right.languages.join()
-  );
+  return sameIds(left.countries, right.countries) && sameIds(left.languages, right.languages);
+}
+
+function optionsOf<T extends string>(
+  values: readonly T[],
+  labelOf: (value: T) => Pick<FeedDirectoryFilterPillOption<T>, 'label' | 'labelKey'>,
+  isSelected: (value: T) => boolean,
+): FeedDirectoryFilterPillOption<T>[] {
+  return values.map((value) => ({ value, ...labelOf(value), selected: isSelected(value) }));
 }

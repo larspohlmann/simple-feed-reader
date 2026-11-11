@@ -11,7 +11,12 @@ import { SubscriptionDto } from '../../reader/models';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { ActionSheetData } from '../../shared/action-sheet/action-sheet.component';
-import { FeedDirectoryFeed, FeedDirectoryMode, FeedDirectoryRow } from './feed-directory-rows';
+import {
+  FeedDirectoryFeed,
+  FeedDirectoryMode,
+  FeedDirectoryRow,
+  modeSummaries,
+} from './feed-directory-rows';
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectorySubscriber } from './feed-directory-subscriber';
 
@@ -30,6 +35,7 @@ const row = (feeds: FeedDirectoryFeed[]): FeedDirectoryRow => ({
   languages: ['de'],
   summary: null,
   feeds,
+  byMode: modeSummaries(feeds),
   following: false,
   searchText: 'spiegel.de',
 });
@@ -110,7 +116,7 @@ describe('FeedDirectorySubscriber', () => {
     subscriber.open({ row: ONE, anchor });
     closed.next({ id: 7 } as SubscriptionDto);
 
-    expect(markSubscribed).toHaveBeenCalledWith('https://www.spiegel.de/index.rss');
+    expect(markSubscribed).toHaveBeenCalledWith('spiegel.de', 'https://www.spiegel.de/index.rss');
     expect(reloadQuietly).toHaveBeenCalledTimes(1);
   });
 

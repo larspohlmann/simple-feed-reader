@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { LanguageService } from '../../core/i18n/language.service';
 import { FeedDirectoryNames } from './feed-directory-names';
 import { FeedDirectoryIndex } from './feed-directory.models';
 
@@ -16,6 +16,7 @@ describe('FeedDirectoryNames', () => {
   let names: FeedDirectoryNames;
 
   beforeEach(() => {
+    localStorage.clear();
     TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
     names = TestBed.inject(FeedDirectoryNames);
   });
@@ -23,7 +24,7 @@ describe('FeedDirectoryNames', () => {
   it('names a country in the active language', () => {
     expect(names.country('DE')).toBe('Germany');
 
-    TestBed.inject(TranslocoService).setActiveLang('de');
+    TestBed.inject(LanguageService).set('de');
 
     expect(names.country('DE')).toBe('Deutschland');
   });
@@ -48,7 +49,7 @@ describe('FeedDirectoryNames', () => {
   });
 
   it('formats a count in the active language', () => {
-    TestBed.inject(TranslocoService).setActiveLang('de');
+    TestBed.inject(LanguageService).set('de');
 
     expect(names.count(12525)).toBe('12.525');
   });

@@ -10,14 +10,14 @@ import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dia
 import { LayoutService } from '../../reader/layout.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { FeedDirectoryApi } from './feed-directory-api';
-import { FeedDirectoryScopeService } from './feed-directory-scope.service';
+import {
+  FeedDirectoryAccountState,
+  FeedDirectoryScopeService,
+} from './feed-directory-scope.service';
 import { FeedDirectorySectionComponent } from './feed-directory-section.component';
 import { FeedDirectoryStore } from './feed-directory.store';
-import {
-  FeedDirectoryCountryFile,
-  FeedDirectoryIndex,
-  FeedDirectoryScope,
-} from './feed-directory.models';
+import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
+import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
 import { FEED_DIRECTORY_ROW_HEIGHT } from './row/feed-directory-row.component';
 import { FeedDirectoryScopeDialogComponent } from './scope-dialog/feed-directory-scope-dialog.component';
 
@@ -59,8 +59,7 @@ const NO_SCOPE: FeedDirectoryScope = { countries: [], languages: [] };
 describe('FeedDirectorySectionComponent', () => {
   const scope = signal<FeedDirectoryScope>(NO_SCOPE);
   const isPhone = signal(false);
-  const known = signal(true);
-  const accountFailed = signal(false);
+  const accountState = signal<FeedDirectoryAccountState>('ready');
   let retryAccount: jest.Mock;
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
   let dialogOpen: jest.Mock;
@@ -70,8 +69,7 @@ describe('FeedDirectorySectionComponent', () => {
   async function render(initial: FeedDirectoryScope): Promise<HTMLElement> {
     scope.set(initial);
     isPhone.set(false);
-    known.set(true);
-    accountFailed.set(false);
+    accountState.set('ready');
     retryAccount = jest.fn();
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     dialogOpen = jest.fn();
@@ -91,8 +89,7 @@ describe('FeedDirectorySectionComponent', () => {
           provide: FeedDirectoryScopeService,
           useValue: {
             scope,
-            known,
-            accountFailed,
+            accountState,
             retryAccount,
             hasScope: computed(() => scope().countries.length > 0),
             save: (saved: FeedDirectoryScope) => {
@@ -139,13 +136,13 @@ describe('FeedDirectorySectionComponent', () => {
 
   it('waits for the account before it offers the picker', async () => {
     const page = await render(NO_SCOPE);
-    known.set(false);
+    accountState.set('loading');
     await settle();
 
     expect(page.querySelector('app-feed-directory-scope-picker')).toBeNull();
     expect(page.querySelector('app-skeleton')).not.toBeNull();
 
-    known.set(true);
+    accountState.set('ready');
     await settle();
 
     expect(page.querySelector('app-feed-directory-scope-picker')).not.toBeNull();
@@ -153,7 +150,7 @@ describe('FeedDirectorySectionComponent', () => {
 
   it('offers a retry instead of the picker when the account failed to load', async () => {
     const page = await render(NO_SCOPE);
-    accountFailed.set(true);
+    accountState.set('failed');
     await settle();
 
     expect(page.querySelector('app-feed-directory-scope-picker')).toBeNull();
@@ -237,12 +234,17 @@ describe('FeedDirectorySectionComponent', () => {
     expect(text(page.querySelector('[data-test="countries"] .pill'))).toContain('Austria');
   });
 
-  it('narrows the rows to what the search matches', async () => {
+  it('narrows the rows to what the search matches once typing pauses', async () => {
     const page = await render({ countries: ['DE', 'AT'], languages: ['de'] });
     const search = page.querySelector<HTMLInputElement>('[data-test="search"]')!;
+    jest.useFakeTimers();
 
     search.value = 'broadcaster';
     search.dispatchEvent(new Event('input'));
+    jest.advanceTimersByTime(149);
+    expect(store().query()).toBe('');
+    jest.advanceTimersByTime(1);
+    jest.useRealTimers();
     await settle();
 
     expect(hosts()).toEqual(['orf.at']);
@@ -280,12 +282,12 @@ describe('FeedDirectorySectionComponent', () => {
 
     const banner = page.querySelector('.rows-card app-error-banner')!;
     expect(text(banner)).toContain("The directory couldn't be loaded.");
-    const retry = jest.spyOn(store(), 'retry');
+    const load = jest.spyOn(store(), 'load');
     country.mockReturnValue(of(DE));
     banner.querySelector<HTMLButtonElement>('button.action')!.click();
     await settle();
 
-    expect(retry).toHaveBeenCalled();
+    expect(load).toHaveBeenCalled();
     expect(hosts()).toEqual(['heise.de', 'zeit.de']);
   });
 
@@ -342,7 +344,7 @@ describe('FeedDirectorySectionComponent', () => {
       ],
     };
     country.mockReturnValue(of(spiegel));
-    store().retry();
+    store().load();
     await settle();
     dialogOpen.mockReturnValue({ closed: of({ id: 4 }) });
 

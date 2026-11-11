@@ -16,6 +16,11 @@ export interface FeedDirectoryFeed {
   readonly subscribed: boolean;
 }
 
+export interface FeedDirectoryModeSummary {
+  readonly feedCount: number;
+  readonly categories: ReadonlySet<string>;
+}
+
 export interface FeedDirectoryRow {
   readonly host: string;
   readonly country: string;
@@ -24,23 +29,27 @@ export interface FeedDirectoryRow {
   readonly languages: readonly string[];
   readonly summary: string | null;
   readonly feeds: readonly FeedDirectoryFeed[];
+  readonly byMode: Readonly<Record<FeedDirectoryMode, FeedDirectoryModeSummary>>;
   readonly following: boolean;
   readonly searchText: string;
 }
 
-export interface FeedDirectoryFilter {
+export interface FeedDirectoryCriteria {
   readonly mode: FeedDirectoryMode;
-  readonly country: string | null;
   readonly categories: ReadonlySet<string>;
   readonly lengths: ReadonlySet<FeedDirectoryLength>;
   readonly languages: ReadonlySet<string>;
   readonly query: string;
+}
+
+export interface FeedDirectoryFilter extends FeedDirectoryCriteria {
+  readonly country: string | null;
   readonly sort: FeedDirectorySort;
 }
 
 interface SubscribedLookup {
   readonly urls: ReadonlySet<string>;
-  readonly hosts: readonly string[];
+  readonly domains: ReadonlySet<string>;
 }
 
 const LONG_READ_CHARACTERS = 2500;
@@ -57,10 +66,25 @@ export function prepareRows(
   scopeLanguages: ReadonlySet<string>,
   subscribed: FeedDirectorySubscribed,
 ): FeedDirectoryRow[] {
-  const lookup: SubscribedLookup = { urls: new Set(subscribed.urls), hosts: subscribed.hosts };
+  const lookup: SubscribedLookup = {
+    urls: new Set(subscribed.urls),
+    domains: enclosingDomains(subscribed.hosts),
+  };
   return file.domains
-    .map((domain) => toRow(file, domain, lookup))
-    .filter((row) => row.languages.some((language) => scopeLanguages.has(language)));
+    .filter(([, , , languageIndexes]) =>
+      languageIndexes.some((index) => scopeLanguages.has(file.languages[index])),
+    )
+    .map((domain) => toRow(file, domain, lookup));
+}
+
+export function modeSummaries(
+  feeds: readonly FeedDirectoryFeed[],
+): Record<FeedDirectoryMode, FeedDirectoryModeSummary> {
+  const summaryOf = (podcast: boolean): FeedDirectoryModeSummary => {
+    const members = feeds.filter((feed) => feed.podcast === podcast);
+    return { feedCount: members.length, categories: new Set(members.map((feed) => feed.category)) };
+  };
+  return { channels: summaryOf(false), podcasts: summaryOf(true) };
 }
 
 function toRow(
@@ -84,29 +108,46 @@ function toRow(
     languages: languageIndexes.map((index) => file.languages[index]),
     summary,
     feeds,
-    following: isFollowed(host, subscribed.hosts),
+    byMode: modeSummaries(feeds),
+    following: subscribed.domains.has(bareHost(host)),
     searchText: `${host}\n${summary ?? ''}`.toLowerCase(),
   };
 }
 
-function isFollowed(host: string, followedHosts: readonly string[]): boolean {
-  const domain = feedDirectoryHost(`https://${host}`);
-  return followedHosts.some((followed) => followed === domain || followed.endsWith(`.${domain}`));
+function enclosingDomains(hosts: readonly string[]): Set<string> {
+  const domains = new Set<string>();
+  for (const host of hosts) {
+    const labels = host.split('.');
+    labels.forEach((_label, index) => domains.add(labels.slice(index).join('.')));
+  }
+  return domains;
+}
+
+function bareHost(host: string): string {
+  return host.startsWith('www.') ? host.slice('www.'.length) : host;
 }
 
 export function feedsIn(row: FeedDirectoryRow, mode: FeedDirectoryMode): FeedDirectoryFeed[] {
   return row.feeds.filter((feed) => feed.podcast === (mode === 'podcasts'));
 }
 
-function matches(row: FeedDirectoryRow, filter: FeedDirectoryFilter): boolean {
-  const feeds = feedsIn(row, filter.mode);
-  if (feeds.length === 0) return false;
-  if (filter.categories.size && !feeds.some((feed) => filter.categories.has(feed.category)))
-    return false;
-  if (filter.lengths.size && (row.length === null || !filter.lengths.has(row.length))) return false;
-  if (filter.languages.size && !row.languages.some((language) => filter.languages.has(language)))
-    return false;
-  return !filter.query || row.searchText.includes(filter.query.toLowerCase());
+function matcher(criteria: FeedDirectoryCriteria): (row: FeedDirectoryRow) => boolean {
+  const query = criteria.query.toLowerCase();
+  const categories = [...criteria.categories];
+  return (row) => {
+    const summary = row.byMode[criteria.mode];
+    if (summary.feedCount === 0) return false;
+    if (categories.length && !categories.some((category) => summary.categories.has(category)))
+      return false;
+    if (criteria.lengths.size && (row.length === null || !criteria.lengths.has(row.length)))
+      return false;
+    if (
+      criteria.languages.size &&
+      !row.languages.some((language) => criteria.languages.has(language))
+    )
+      return false;
+    return !query || row.searchText.includes(query);
+  };
 }
 
 const byTop = (left: FeedDirectoryRow, right: FeedDirectoryRow): number =>
@@ -120,7 +161,7 @@ function comparator(
       return (left, right) => left.host.localeCompare(right.host);
     case 'feeds':
       return (left, right) =>
-        feedsIn(right, filter.mode).length - feedsIn(left, filter.mode).length ||
+        right.byMode[filter.mode].feedCount - left.byMode[filter.mode].feedCount ||
         byTop(left, right);
     default:
       return byTop;
@@ -131,33 +172,35 @@ export function filterRows(
   rows: readonly FeedDirectoryRow[],
   filter: FeedDirectoryFilter,
 ): FeedDirectoryRow[] {
+  const matches = matcher(filter);
   return rows
-    .filter(
-      (row) => (filter.country === null || row.country === filter.country) && matches(row, filter),
-    )
+    .filter((row) => (filter.country === null || row.country === filter.country) && matches(row))
     .sort(comparator(filter));
 }
 
 export function countByCountry(
   rows: readonly FeedDirectoryRow[],
-  filter: FeedDirectoryFilter,
+  criteria: FeedDirectoryCriteria,
 ): Map<string, number> {
+  const matches = matcher(criteria);
   const counts = new Map<string, number>();
   for (const row of rows) {
-    if (matches(row, filter)) counts.set(row.country, (counts.get(row.country) ?? 0) + 1);
+    if (matches(row)) counts.set(row.country, (counts.get(row.country) ?? 0) + 1);
   }
   return counts;
 }
 
 export function withSubscribed(
   rows: readonly FeedDirectoryRow[],
+  host: string,
   feedUrl: string,
 ): FeedDirectoryRow[] {
+  const feedDomains = enclosingDomains([feedDirectoryHost(feedUrl)]);
   return rows.map((row) =>
-    row.feeds.some((feed) => feed.url === feedUrl)
+    row.host === host
       ? {
           ...row,
-          following: row.following || isFollowed(row.host, [feedDirectoryHost(feedUrl)]),
+          following: row.following || feedDomains.has(bareHost(row.host)),
           feeds: row.feeds.map((feed) =>
             feed.url === feedUrl ? { ...feed, subscribed: true } : feed,
           ),

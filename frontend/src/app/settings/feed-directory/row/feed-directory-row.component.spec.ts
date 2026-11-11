@@ -2,7 +2,12 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LayoutService } from '../../../reader/layout.service';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { FeedDirectoryFeed, FeedDirectoryMode, FeedDirectoryRow } from '../feed-directory-rows';
+import {
+  FeedDirectoryFeed,
+  FeedDirectoryMode,
+  FeedDirectoryRow,
+  modeSummaries,
+} from '../feed-directory-rows';
 import {
   FeedDirectoryRowComponent,
   FeedDirectorySubscribeRequest,
@@ -18,6 +23,13 @@ function feed(url: string, overrides: Partial<FeedDirectoryFeed> = {}): FeedDire
   };
 }
 
+const FEEDS = [
+  feed('https://www.tagesschau.de/index~rss2.xml'),
+  feed('https://www.tagesschau.de/wissen/klima/index~rss2.xml', {
+    category: 'Science & Technology',
+  }),
+  feed('https://www.tagesschau.de/podcast.xml', { podcast: true }),
+];
 const ROW: FeedDirectoryRow = {
   host: 'tagesschau.de',
   country: 'DE',
@@ -25,13 +37,8 @@ const ROW: FeedDirectoryRow = {
   length: 'headlines',
   languages: ['de', 'en'],
   summary: 'National news and information portal',
-  feeds: [
-    feed('https://www.tagesschau.de/index~rss2.xml'),
-    feed('https://www.tagesschau.de/wissen/klima/index~rss2.xml', {
-      category: 'Science & Technology',
-    }),
-    feed('https://www.tagesschau.de/podcast.xml', { podcast: true }),
-  ],
+  feeds: FEEDS,
+  byMode: modeSummaries(FEEDS),
   following: false,
   searchText: 'tagesschau.de',
 };

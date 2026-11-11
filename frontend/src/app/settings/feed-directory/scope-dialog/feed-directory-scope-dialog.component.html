@@ -1,4 +1,4 @@
 <app-overlay-panel cdkTrapFocus [heading]="'settings.feedDirectory.scope.heading' | transloco">
   <p class="intro">{{ 'settings.feedDirectory.scope.intro' | transloco }}</p>
-  <app-feed-directory-scope-picker [initial]="scopes.scope()" (saved)="ref.close(true)" />
+  <app-feed-directory-scope-picker [initial]="scopes.scope()" (saved)="ref.close()" />
 </app-overlay-panel>

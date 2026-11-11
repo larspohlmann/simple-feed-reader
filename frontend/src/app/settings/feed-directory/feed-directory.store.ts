@@ -1,26 +1,23 @@
 import { Injectable, OnDestroy, computed, inject, linkedSignal, signal } from '@angular/core';
 import { Observable, Subscription, forkJoin, map, of, switchMap } from 'rxjs';
+import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
+import { sameIds } from '../../core/same-ids';
 import { toggled } from '../../core/toggled-set';
 import { FeedDirectoryApi } from './feed-directory-api';
 import { FeedDirectoryNames } from './feed-directory-names';
 import {
-  FeedDirectoryFilter,
+  FeedDirectoryCriteria,
   FeedDirectoryLength,
   FeedDirectoryMode,
   FeedDirectoryRow,
   FeedDirectorySort,
   countByCountry,
-  feedsIn,
   filterRows,
   prepareRows,
   withSubscribed,
 } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
-import {
-  FeedDirectoryCountryFile,
-  FeedDirectoryIndex,
-  FeedDirectoryScope,
-} from './feed-directory.models';
+import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
 
 @Injectable()
 export class FeedDirectoryStore implements OnDestroy {
@@ -29,7 +26,6 @@ export class FeedDirectoryStore implements OnDestroy {
   private readonly names = inject(FeedDirectoryNames);
 
   readonly status = signal<'loading' | 'ready' | 'failed'>('loading');
-  readonly index = signal<FeedDirectoryIndex | null>(null);
   private readonly loaded = signal<FeedDirectoryRow[]>([]);
   private loading = Subscription.EMPTY;
 
@@ -40,34 +36,33 @@ export class FeedDirectoryStore implements OnDestroy {
   readonly query = signal('');
   readonly sort = signal<FeedDirectorySort>('top');
 
-  private readonly filter = computed<FeedDirectoryFilter>(() => ({
+  private readonly criteria = computed<FeedDirectoryCriteria>(() => ({
     mode: this.mode(),
-    country: this.country(),
     categories: this.categories(),
     lengths: this.lengths(),
     languages: this.languages(),
     query: this.query(),
-    sort: this.sort(),
   }));
 
-  readonly rows = computed(() => filterRows(this.loaded(), this.filter()));
-  readonly countryCounts = computed(() =>
-    countByCountry(this.loaded(), { ...this.filter(), country: null }),
+  readonly rows = computed(() =>
+    filterRows(this.loaded(), {
+      ...this.criteria(),
+      country: this.country(),
+      sort: this.sort(),
+    }),
   );
+  readonly countryCounts = computed(() => countByCountry(this.loaded(), this.criteria()));
   readonly total = computed(
-    () => this.loaded().filter((row) => feedsIn(row, this.mode()).length > 0).length,
+    () => this.loaded().filter((row) => row.byMode[this.mode()].feedCount > 0).length,
   );
-  readonly categoryOptions = computed(() =>
-    [
-      ...new Set(
-        this.loaded().flatMap((row) => feedsIn(row, this.mode()).map((feed) => feed.category)),
-      ),
-    ].sort(),
+  readonly categoryOptions = computed(
+    () =>
+      [...new Set(this.loaded().flatMap((row) => [...row.byMode[this.mode()].categories]))].sort(),
+    { equal: sameIds },
   );
   readonly categories = linkedSignal<readonly string[], ReadonlySet<string>>({
     source: this.categoryOptions,
-    computation: (options, previous) =>
-      new Set([...(previous?.value ?? [])].filter((name) => options.includes(name))),
+    computation: (options, previous) => keptWithin(previous?.value ?? new Set(), options),
   });
 
   load(): void {
@@ -86,7 +81,6 @@ export class FeedDirectoryStore implements OnDestroy {
       )
       .subscribe({
         next: ({ index, subscribed, files }) => {
-          this.index.set(index);
           this.names.learnCountryNames(index);
           this.loaded.set(files.flatMap((file) => prepareRows(file, scopeLanguages, subscribed)));
           this.status.set('ready');
@@ -95,16 +89,12 @@ export class FeedDirectoryStore implements OnDestroy {
       });
   }
 
-  retry(): void {
-    this.load();
-  }
-
   ngOnDestroy(): void {
     this.loading.unsubscribe();
   }
 
-  markSubscribed(feedUrl: string): void {
-    this.loaded.update((rows) => withSubscribed(rows, feedUrl));
+  markSubscribed(host: string, feedUrl: string): void {
+    this.loaded.update((rows) => withSubscribed(rows, host, feedUrl));
   }
 
   toggleCategory(name: string): void {
@@ -129,6 +119,11 @@ export class FeedDirectoryStore implements OnDestroy {
       (codes) => new Set([...codes].filter((code) => scope.languages.includes(code))),
     );
   }
+}
+
+function keptWithin(picked: ReadonlySet<string>, options: readonly string[]): ReadonlySet<string> {
+  const kept = [...picked].filter((name) => options.includes(name));
+  return kept.length === picked.size ? picked : new Set(kept);
 }
 
 function knownCountries(scope: FeedDirectoryScope, index: FeedDirectoryIndex): string[] {

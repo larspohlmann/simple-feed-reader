@@ -1,5 +1,5 @@
 import { FeedDirectoryFeed } from './feed-directory-rows';
-import { feedDirectoryHost } from './feed-directory-url';
+import { hostOf, parseUrl } from './feed-directory-url';
 
 export interface FeedDirectoryFeedGroup {
   readonly category: string;
@@ -15,9 +15,8 @@ export function feedGroups(feeds: readonly FeedDirectoryFeed[]): FeedDirectoryFe
 }
 
 export function feedPath(feedUrl: string, siteHost: string): string {
-  const host = feedDirectoryHost(feedUrl);
-  if (host === '') return feedUrl;
-  const parsed = new URL(feedUrl.trim());
+  const parsed = parseUrl(feedUrl);
+  if (parsed === null || parsed.hostname === '') return feedUrl;
   const path = `${parsed.pathname}${parsed.search}`;
-  return host === siteHost ? path : `${parsed.hostname}${path}`;
+  return hostOf(parsed) === siteHost ? path : `${parsed.hostname}${path}`;
 }

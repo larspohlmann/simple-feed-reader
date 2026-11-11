@@ -174,6 +174,23 @@ describe('AuthService', () => {
     expect(service.accountLoadFailed()).toBe(false);
   });
 
+  it('resolves the account once it loads or fails to', () => {
+    expect(service.accountResolved()).toBe(false);
+
+    service.loadMe().subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    expect(service.accountResolved()).toBe(true);
+
+    service.logout();
+    expect(service.accountResolved()).toBe(false);
+
+    service.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
+    expect(service.accountResolved()).toBe(true);
+  });
+
   it('logout forgets a failed account load', () => {
     service.loadMe().subscribe({ error: () => undefined });
     ctrl
