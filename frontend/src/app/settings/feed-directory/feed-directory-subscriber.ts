@@ -3,6 +3,7 @@ import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Injectable, Injector, OnDestroy, inject } from '@angular/core';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import { TranslocoService } from '@jsverse/transloco';
 import { filter, merge, take, takeUntil } from 'rxjs';
 import {
   AddFeedDialogComponent,
@@ -31,6 +32,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
   private readonly store = inject(FeedDirectoryStore);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly injector = inject(Injector);
+  private readonly i18n = inject(TranslocoService);
   private popover: OverlayRef | null = null;
 
   open(request: FeedDirectorySubscribeRequest): void {
@@ -71,7 +73,8 @@ export class FeedDirectorySubscriber implements OnDestroy {
         disabled: feed.subscribed,
       })),
     ]);
-    this.sheet.open({ title: host, actions }).subscribe((url) => {
+    const total = this.i18n.translate('settings.feedDirectory.feeds', { count: feeds.length });
+    this.sheet.open({ title: `${host} · ${total}`, actions }).subscribe((url) => {
       if (url) this.subscribeTo(url);
     });
   }
@@ -98,6 +101,11 @@ export class FeedDirectorySubscriber implements OnDestroy {
     content.setInput('feeds', feeds);
     this.popover = popover;
 
+    let closedByUser = false;
+    const closeByUser = (): void => {
+      closedByUser = true;
+      popover.detach();
+    };
     const closed = popover.detachments();
     merge(
       popover.backdropClick(),
@@ -105,17 +113,17 @@ export class FeedDirectorySubscriber implements OnDestroy {
       outputToObservable(content.instance.dismiss),
     )
       .pipe(takeUntil(closed))
-      .subscribe(() => popover.detach());
+      .subscribe(closeByUser);
     outputToObservable(content.instance.choose)
       .pipe(takeUntil(closed))
       .subscribe((url) => {
-        popover.detach();
+        closeByUser();
         this.subscribeTo(url);
       });
     closed.pipe(take(1)).subscribe(() => {
       popover.dispose();
       if (this.popover === popover) this.popover = null;
-      (anchor.querySelector('button') ?? anchor).focus({ preventScroll: true });
+      if (closedByUser) (anchor.querySelector('button') ?? anchor).focus({ preventScroll: true });
     });
   }
 }

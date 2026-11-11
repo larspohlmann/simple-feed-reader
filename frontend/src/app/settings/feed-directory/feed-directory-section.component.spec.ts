@@ -318,6 +318,47 @@ describe('FeedDirectorySectionComponent', () => {
     expect(text(zeit().querySelector('.done'))).toContain('Subscribed');
   });
 
+  it('subscribes to one of several feeds through the popover and counts it on the row', async () => {
+    const page = await render({ countries: ['DE'], languages: ['de'] });
+    const spiegel: FeedDirectoryCountryFile = {
+      country: 'DE',
+      categories: ['World'],
+      languages: ['de'],
+      domains: [
+        [
+          'spiegel.de',
+          529,
+          436,
+          [0],
+          [
+            [
+              0,
+              0,
+              ['https://www.spiegel.de/index.rss', 'https://www.spiegel.de/ausland/index.rss'],
+            ],
+          ],
+          null,
+        ],
+      ],
+    };
+    country.mockReturnValue(of(spiegel));
+    store().retry();
+    await settle();
+    dialogOpen.mockReturnValue({ closed: of({ id: 4 }) });
+
+    page.querySelector<HTMLButtonElement>('[data-test="feeds"] button')!.click();
+    await settle();
+    const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+    overlay.querySelectorAll<HTMLButtonElement>('.feed app-button button')[1].click();
+    await settle();
+
+    expect(dialogOpen).toHaveBeenCalledWith(AddFeedDialogComponent, {
+      panelClass: 'app-dialog',
+      data: { url: 'https://www.spiegel.de/ausland/index.rss' },
+    });
+    expect(text(page.querySelector('[data-test="feeds"] .subscribed-part'))).toBe('· 1 subscribed');
+  });
+
   it('reloads when a saved scope changes what the directory holds', async () => {
     await render({ countries: ['DE'], languages: ['de'] });
     country.mockClear();

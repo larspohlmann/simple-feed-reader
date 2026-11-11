@@ -1,8 +1,9 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { OverlayContainer } from '@angular/cdk/overlay';
+import { ScrollDispatcher } from '@angular/cdk/scrolling';
 import { ApplicationRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Observable, Subject, of } from 'rxjs';
+import { Observable, Subject, firstValueFrom, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
@@ -159,6 +160,17 @@ describe('FeedDirectorySubscriber', () => {
       expect(dialogOpen).not.toHaveBeenCalled();
     });
 
+    it('leaves focus where it is when a page scroll closes it', async () => {
+      openPopover();
+      const scrolled = firstValueFrom(TestBed.inject(ScrollDispatcher).scrolled());
+      document.dispatchEvent(new Event('scroll'));
+      await scrolled;
+      render();
+
+      expect(popover()).toBeNull();
+      expect(document.activeElement).not.toBe(anchor.querySelector('button'));
+    });
+
     it('closes on a click outside', () => {
       openPopover();
       container().querySelector<HTMLElement>('.cdk-overlay-backdrop')!.click();
@@ -191,7 +203,7 @@ describe('FeedDirectorySubscriber', () => {
 
       expect(popover()).toBeNull();
       expect(sheetOpen).toHaveBeenCalledWith({
-        title: 'spiegel.de',
+        title: 'spiegel.de · 3 feeds',
         actions: [
           { note: 'Culture · 2' },
           {
