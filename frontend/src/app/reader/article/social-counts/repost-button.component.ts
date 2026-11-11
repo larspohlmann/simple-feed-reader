@@ -14,7 +14,7 @@ import { CdkConnectedOverlay, CdkOverlayOrigin } from '@angular/cdk/overlay';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { TOOLBAR_MENU_POSITIONS, stepMenu } from '../../../shared/menu-keys';
+import { MENU_VIEWPORT_MARGIN, TOOLBAR_MENU_POSITIONS, stepMenu } from '../../../shared/menu-keys';
 import { SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
 
@@ -50,6 +50,7 @@ export class RepostButtonComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly positions = TOOLBAR_MENU_POSITIONS;
+  protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly step = stepMenu;
   protected readonly popup = computed(() => (this.screen.isCoarse() ? 'dialog' : 'menu'));
   protected readonly open = signal(false);

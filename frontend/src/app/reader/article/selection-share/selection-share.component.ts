@@ -16,6 +16,7 @@ import {
 } from '@angular/cdk/overlay';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { animationFrameScheduler, auditTime, fromEvent } from 'rxjs';
+import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
 import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { LayoutService } from '../../layout.service';
 import { ArticleSelection } from './article-selection.service';
@@ -53,6 +54,7 @@ export class SelectionShareComponent {
   protected readonly coarse = inject(LayoutService).isCoarse;
   private readonly scrolls = signal(0);
   protected readonly positions = UNDER_THE_LAST_LINE;
+  protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   /** A press may collapse the selection before its click; the bar stays for that click. */
   protected readonly pressing = signal(false);
   protected readonly barQuote = computed(
