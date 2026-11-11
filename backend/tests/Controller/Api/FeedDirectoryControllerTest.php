@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -69,5 +72,45 @@ final class FeedDirectoryControllerTest extends ApiTestCase
         $client->request('GET', '/api/feed-directory/index');
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testSubscribedFeedsComeBackNormalisedWithTheirHosts(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'directory-subscribed@example.test');
+        $this->subscribe($user, 'https://www.example.de/feed/');
+        $this->subscribe($user, 'http://podcasts.example.at/rss');
+
+        $client->request('GET', '/api/feed-directory/subscribed');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            [
+                'urls' => ['example.de/feed', 'podcasts.example.at/rss'],
+                'hosts' => ['example.de', 'podcasts.example.at'],
+            ],
+            $this->payload($client),
+        );
+    }
+
+    public function testAnotherUsersSubscriptionsAreNotListed(): void
+    {
+        $client = self::createClient();
+        $other = $this->factory()->create('directory-other@example.test');
+        $this->subscribe($other, 'https://example.de/feed');
+        $this->signIn($client, 'directory-mine@example.test');
+
+        $client->request('GET', '/api/feed-directory/subscribed');
+
+        self::assertSame(['urls' => [], 'hosts' => []], $this->payload($client));
+    }
+
+    private function subscribe(User $user, string $url): void
+    {
+        $feed = new Feed($url);
+        $this->entityManager()->persist($feed);
+        $subscribedAt = new \DateTimeImmutable('2026-07-01 00:00:00');
+        $this->entityManager()->persist(new Subscription($user, $feed, $subscribedAt));
+        $this->entityManager()->flush();
     }
 }
