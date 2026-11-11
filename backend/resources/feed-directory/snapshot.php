@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-const UPSTREAM = 'https://raw.githubusercontent.com/infobubble/infobubble-support/main/';
-const COMMITS = 'https://api.github.com/repos/infobubble/infobubble-support/commits?path=docs/data/catalog.js&per_page=1';
+const UPSTREAM = 'https://raw.githubusercontent.com/infobubble/infobubble-support/';
+const CATALOG = 'docs/data/catalog.js';
+const COMMITS = 'https://api.github.com/repos/infobubble/infobubble-support/commits?path=' . CATALOG . '&per_page=1';
 const REGION_OVERRIDES = ['St. Helena' => 'SH'];
 
 function download(string $url): string
@@ -74,12 +75,18 @@ final class CountryFile
     }
 
     /** @param list<string> $languages @param list<array{string, int, list<string>}> $groups */
-    public function addDomain(string $host, ?int $rank, ?int $avgLength, array $languages, array $groups, ?string $summary): void
-    {
+    public function addDomain(
+        string $host,
+        ?int $rank,
+        ?int $averageLength,
+        array $languages,
+        array $groups,
+        ?string $summary,
+    ): void {
         $this->domains[] = [
             $host,
             $rank,
-            $avgLength,
+            $averageLength,
             array_map(fn (string $language): int => $this->languageIndex($language), $languages),
             array_map(fn (array $group): array => [$this->categoryIndex($group[0]), $group[1], $group[2]], $groups),
             $summary,
@@ -143,7 +150,9 @@ final class CountryFile
 function groupByCountry(array $catalog, array $codes): array
 {
     $files = [];
-    foreach ($catalog['domains'] as [$host, $countryIndex, $rank, $avgLength, $languageIndexes, $groups, $summary]) {
+    foreach (
+        $catalog['domains'] as [$host, $countryIndex, $rank, $averageLength, $languageIndexes, $groups, $summary]
+    ) {
         $code = $codes[$countryIndex];
         $files[$code] ??= new CountryFile($code);
         $languages = array_map(static fn (int $languageIndex): string => $catalog['languages'][$languageIndex], $languageIndexes);
@@ -151,7 +160,7 @@ function groupByCountry(array $catalog, array $codes): array
             static fn (array $group): array => [$catalog['categories'][$group[0]], $group[1], $group[2]],
             $groups,
         );
-        $files[$code]->addDomain($host, $rank, $avgLength, $languages, $categorised, $summary);
+        $files[$code]->addDomain($host, $rank, $averageLength, $languages, $categorised, $summary);
     }
 
     return $files;
@@ -208,13 +217,22 @@ function writeIndex(array $countries, array $languageSites, string $target): voi
     );
 }
 
-function writeSource(string $target): void
+function latestCatalogCommit(): array
 {
-    file_put_contents($target . '/ABOUT.txt', download(UPSTREAM . 'Sources/ABOUT.txt'));
-    file_put_contents($target . '/LICENSE.txt', download(UPSTREAM . 'Sources/LICENSE.txt'));
-    $commit = json_decode(download(COMMITS), true, flags: JSON_THROW_ON_ERROR)[0];
+    return json_decode(download(COMMITS), true, flags: JSON_THROW_ON_ERROR)[0];
+}
+
+function upstreamUrl(string $sha, string $path): string
+{
+    return UPSTREAM . $sha . '/' . $path;
+}
+
+function writeSource(string $target, array $commit): void
+{
+    file_put_contents($target . '/ABOUT.txt', download(upstreamUrl($commit['sha'], 'Sources/ABOUT.txt')));
+    file_put_contents($target . '/LICENSE.txt', download(upstreamUrl($commit['sha'], 'Sources/LICENSE.txt')));
     file_put_contents($target . '/SOURCE', implode("\n", [
-        'url: ' . UPSTREAM . 'docs/data/catalog.js',
+        'url: ' . upstreamUrl($commit['sha'], CATALOG),
         'commit: ' . $commit['sha'],
         'committed: ' . $commit['commit']['committer']['date'],
         'fetched: ' . gmdate('Y-m-d'),
@@ -222,12 +240,13 @@ function writeSource(string $target): void
 }
 
 $target = __DIR__;
-$catalog = unwrap(download(UPSTREAM . 'docs/data/catalog.js'));
+$commit = latestCatalogCommit();
+$catalog = unwrap(download(upstreamUrl($commit['sha'], CATALOG)));
 $codes = isoCodes($catalog['countries']);
 $files = groupByCountry($catalog, $codes);
 
 writeCountryFiles($files, $target);
 writeIndex(buildCountryIndex($catalog, $files, $codes), catalogLanguageSites($catalog), $target);
-writeSource($target);
+writeSource($target, $commit);
 
 printf("%d countries, %d domains\n", count($files), count($catalog['domains']));
