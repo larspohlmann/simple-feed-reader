@@ -1,0 +1,11 @@
+[
+  { "url": "https://www.example.com/feed/", "normalised": "example.com/feed", "host": "example.com" },
+  { "url": "http://example.com/feed", "normalised": "example.com/feed", "host": "example.com" },
+  { "url": "HTTPS://Example.COM/Feed", "normalised": "example.com/Feed", "host": "example.com" },
+  { "url": "https://example.com/", "normalised": "example.com", "host": "example.com" },
+  { "url": "https://example.com", "normalised": "example.com", "host": "example.com" },
+  { "url": "https://feeds.example.com/rss?x=1", "normalised": "feeds.example.com/rss?x=1", "host": "feeds.example.com" },
+  { "url": "https://www.example.com/rss/?format=xml", "normalised": "example.com/rss/?format=xml", "host": "example.com" },
+  { "url": "https://example.com:8443/feed", "normalised": "example.com:8443/feed", "host": "example.com" },
+  { "url": "https://www2.example.com/feed", "normalised": "www2.example.com/feed", "host": "www2.example.com" }
+]
