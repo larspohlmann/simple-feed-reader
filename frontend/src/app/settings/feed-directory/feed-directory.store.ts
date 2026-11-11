@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, inject, linkedSignal, signal } from '@angular/core';
 import { Subscription, forkJoin, of } from 'rxjs';
 import { toggled } from '../../core/toggled-set';
 import { FeedDirectoryApi } from './feed-directory-api';
@@ -29,7 +29,6 @@ export class FeedDirectoryStore implements OnDestroy {
 
   readonly mode = signal<FeedDirectoryMode>('channels');
   readonly country = signal<string | null>(null);
-  readonly categories = signal<ReadonlySet<string>>(new Set());
   readonly lengths = signal<ReadonlySet<FeedDirectoryLength>>(new Set());
   readonly languages = signal<ReadonlySet<string>>(new Set());
   readonly query = signal('');
@@ -59,6 +58,11 @@ export class FeedDirectoryStore implements OnDestroy {
       ),
     ].sort(),
   );
+  readonly categories = linkedSignal<readonly string[], ReadonlySet<string>>({
+    source: this.categoryOptions,
+    computation: (options, previous) =>
+      new Set([...(previous?.value ?? [])].filter((name) => options.includes(name))),
+  });
 
   load(): void {
     const scope = this.scopes.scope();

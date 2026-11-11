@@ -218,6 +218,17 @@ describe('FeedDirectoryStore', () => {
     expect(store.categoryOptions()).toEqual(['Sports']);
   });
 
+  it('drops picked categories the new mode does not offer', () => {
+    loadedStore();
+    store.toggleCategory('Politics & Society');
+    store.toggleCategory('Sports');
+
+    store.mode.set('podcasts');
+
+    expect([...store.categories()]).toEqual(['Sports']);
+    expect(hosts()).toEqual(['zeit.de']);
+  });
+
   it('fails when a country request fails, and retry loads again', () => {
     country.mockImplementation((code) =>
       code === 'AT' ? throwError(() => new Error('boom')) : of(DE),
