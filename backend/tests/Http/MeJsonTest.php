@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
-use App\Entity\DigestSettings;
-use App\Entity\ReadingSettings;
-use App\Entity\SharingSettings;
 use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Http\MeJson;
-use App\Service\Account\Model\AccountSettingsModel;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 
 final class MeJsonTest extends TestCase
@@ -24,15 +21,14 @@ final class MeJsonTest extends TestCase
     {
         $user = $this->user();
         $user->markEmailVerified(new \DateTimeImmutable('2026-08-09 09:10:00'));
-        $digest = new DigestSettings($user);
-        $digest->setEnabled(true);
-        $digest->setCadence(DigestCadence::Weekly);
-        $digest->setSendHour(9);
-        $digest->setWeekday(3);
+        $settings = UnsavedUserSettings::of($user);
+        $settings->digest->setEnabled(true);
+        $settings->digest->setCadence(DigestCadence::Weekly);
+        $settings->digest->setSendHour(9);
+        $settings->digest->setWeekday(3);
 
         $profile = MeJson::profile($user, true);
-        $settings = new AccountSettingsModel(new ReadingSettings($user), new SharingSettings($user), $digest);
-        $preferencesJson = MeJson::preferences($user, $settings, 'Europe/Berlin');
+        $preferencesJson = MeJson::preferences($settings, false, 'Europe/Berlin');
 
         self::assertSame(['enabled' => true], $profile['mail']);
         self::assertTrue($profile['emailVerified']);

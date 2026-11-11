@@ -32,7 +32,7 @@ final class MeProfileJsonTest extends DbTestCase
         self::assertSame(
             [
                 ...MeJson::profile($user, false),
-                'preferences' => MeJson::preferences($user, $this->accountSettings()->of($user), 'Europe/Berlin'),
+                'preferences' => MeJson::preferences($this->accountSettings()->of($user), false, 'Europe/Berlin'),
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => self::EMPTY_CATALOG,
             ],
@@ -48,7 +48,7 @@ final class MeProfileJsonTest extends DbTestCase
         self::assertSame(
             [
                 ...MeJson::profile($user, true),
-                'preferences' => MeJson::preferences($user, $this->accountSettings()->of($user), 'UTC'),
+                'preferences' => MeJson::preferences($this->accountSettings()->of($user), false, 'UTC'),
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => self::EMPTY_CATALOG,
             ],
@@ -69,7 +69,7 @@ final class MeProfileJsonTest extends DbTestCase
         self::assertSame(
             [
                 ...MeJson::profile($user, false),
-                'preferences' => MeJson::preferences($user, $this->accountSettings()->of($user), 'UTC'),
+                'preferences' => MeJson::preferences($this->accountSettings()->of($user), false, 'UTC'),
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => ['hasEntries' => true],
             ],

@@ -28,7 +28,11 @@ final readonly class MeProfileJson
     {
         return [
             ...MeJson::profile($user, $this->mail->isEnabled()),
-            'preferences' => MeJson::preferences($user, $this->accountSettings->of($user), $this->instanceTimezone),
+            'preferences' => MeJson::preferences(
+                $this->accountSettings->of($user),
+                null !== $user->getPasskeyOfferAnsweredAt(),
+                $this->instanceTimezone,
+            ),
             'ai' => $this->activeAi->of($user),
             'catalog' => ['hasEntries' => $this->catalogFeeds->hasPickableFeed()],
         ];

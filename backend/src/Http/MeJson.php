@@ -35,12 +35,15 @@ final class MeJson
     /**
      * @return array<string, mixed>
      */
-    public static function preferences(User $user, AccountSettingsModel $settings, string $instanceTimezone): array
-    {
+    public static function preferences(
+        AccountSettingsModel $settings,
+        bool $passkeyOfferAnswered,
+        string $instanceTimezone,
+    ): array {
         return [
             'scrapeFallbackEnabled' => $settings->reading->isScrapeFallbackEnabled(),
             'magazineStyle' => $settings->reading->getMagazineStyle()->value,
-            'passkeyOfferAnswered' => null !== $user->getPasskeyOfferAnsweredAt(),
+            'passkeyOfferAnswered' => $passkeyOfferAnswered,
             'trendingEnabled' => $settings->reading->isTrendingEnabled(),
             'sharing' => [
                 'enabled' => $settings->sharing->isEnabled(),
