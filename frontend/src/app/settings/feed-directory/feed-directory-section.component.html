@@ -1,6 +1,12 @@
 <app-settings-stack>
   @if (!scopes.known()) {
     <app-skeleton [label]="'settings.feedDirectory.loading' | transloco" [rows]="3" />
+  } @else if (scopes.accountFailed()) {
+    <app-error-banner
+      [message]="'settings.feedDirectory.loadFailed' | transloco"
+      [actionLabel]="'settings.feedDirectory.retry' | transloco"
+      (action)="scopes.retryAccount()"
+    />
   } @else if (!scopes.hasScope()) {
     <app-settings-group
       icon="travel_explore"

@@ -58,6 +58,8 @@ describe('FeedDirectorySectionComponent', () => {
   const scope = signal<FeedDirectoryScope>(NO_SCOPE);
   const isPhone = signal(false);
   const known = signal(true);
+  const accountFailed = signal(false);
+  let retryAccount: jest.Mock;
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
   let dialogOpen: jest.Mock;
   let fixture: ComponentFixture<FeedDirectorySectionComponent>;
@@ -66,6 +68,8 @@ describe('FeedDirectorySectionComponent', () => {
     scope.set(initial);
     isPhone.set(false);
     known.set(true);
+    accountFailed.set(false);
+    retryAccount = jest.fn();
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     dialogOpen = jest.fn();
     await TestBed.configureTestingModule({
@@ -84,6 +88,8 @@ describe('FeedDirectorySectionComponent', () => {
           useValue: {
             scope,
             known,
+            accountFailed,
+            retryAccount,
             hasScope: computed(() => scope().countries.length > 0),
             save: (saved: FeedDirectoryScope) => {
               scope.set(saved);
@@ -138,6 +144,20 @@ describe('FeedDirectorySectionComponent', () => {
     await settle();
 
     expect(page.querySelector('app-feed-directory-scope-picker')).not.toBeNull();
+  });
+
+  it('offers a retry instead of the picker when the account failed to load', async () => {
+    const page = await render(NO_SCOPE);
+    accountFailed.set(true);
+    await settle();
+
+    expect(page.querySelector('app-feed-directory-scope-picker')).toBeNull();
+    const banner = page.querySelector('app-error-banner')!;
+    expect(text(banner)).toContain("The directory couldn't be loaded.");
+
+    banner.querySelector<HTMLButtonElement>('button.action')!.click();
+
+    expect(retryAccount).toHaveBeenCalled();
   });
 
   it('loads the directory once the inline picker saves a scope', async () => {

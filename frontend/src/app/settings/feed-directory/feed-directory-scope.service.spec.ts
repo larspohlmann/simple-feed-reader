@@ -12,15 +12,19 @@ function userWith(scope: FeedDirectoryScope | undefined): CurrentUser {
 
 describe('FeedDirectoryScopeService', () => {
   const user = signal<CurrentUser | null>(null);
+  const accountLoadFailed = signal(false);
+  let ensureUserLoaded: jest.Mock<Observable<CurrentUser>, []>;
   let saveScope: jest.Mock<Observable<CurrentUser>, [FeedDirectoryScope]>;
   let service: FeedDirectoryScopeService;
 
   beforeEach(() => {
     user.set(null);
+    accountLoadFailed.set(false);
+    ensureUserLoaded = jest.fn(() => throwError(() => new Error('offline')));
     saveScope = jest.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: AuthService, useValue: { user } },
+        { provide: AuthService, useValue: { user, accountLoadFailed, ensureUserLoaded } },
         { provide: FeedDirectoryApi, useValue: { saveScope } },
       ],
     });
@@ -33,6 +37,29 @@ describe('FeedDirectoryScopeService', () => {
     user.set(userWith(undefined));
 
     expect(service.known()).toBe(true);
+  });
+
+  it('knows there is no scope to read when the account failed to load', () => {
+    accountLoadFailed.set(true);
+
+    expect(service.known()).toBe(true);
+    expect(service.accountFailed()).toBe(true);
+    expect(service.hasScope()).toBe(false);
+  });
+
+  it('does not report a failed account once the account has arrived', () => {
+    accountLoadFailed.set(true);
+    user.set(userWith(undefined));
+
+    expect(service.accountFailed()).toBe(false);
+  });
+
+  it('asks for the account again on retry, and survives a second failure', () => {
+    accountLoadFailed.set(true);
+
+    service.retryAccount();
+
+    expect(ensureUserLoaded).toHaveBeenCalledTimes(1);
   });
 
   it('reads the scope from the signed-in user', () => {
