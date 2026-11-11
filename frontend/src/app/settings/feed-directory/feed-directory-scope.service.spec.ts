@@ -27,6 +27,14 @@ describe('FeedDirectoryScopeService', () => {
     service = TestBed.inject(FeedDirectoryScopeService);
   });
 
+  it('knows the scope only once the account has arrived', () => {
+    expect(service.known()).toBe(false);
+
+    user.set(userWith(undefined));
+
+    expect(service.known()).toBe(true);
+  });
+
   it('reads the scope from the signed-in user', () => {
     user.set(userWith({ countries: ['DE'], languages: ['de'] }));
 

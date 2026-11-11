@@ -1,8 +1,9 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { LayoutService } from '../../../reader/layout.service';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { FeedDirectoryFeed, FeedDirectoryMode, FeedDirectoryRow } from '../feed-directory-rows';
 import {
-  FEED_DIRECTORY_ROW_HEIGHT,
   FeedDirectoryRowComponent,
   FeedDirectorySubscribeRequest,
 } from './feed-directory-row.component';
@@ -38,10 +39,14 @@ const ROW: FeedDirectoryRow = {
 describe('FeedDirectoryRowComponent', () => {
   let fixture: ComponentFixture<FeedDirectoryRowComponent>;
   let requests: FeedDirectorySubscribeRequest[];
+  const isPhone = signal(false);
+
+  beforeEach(() => isPhone.set(false));
 
   function render(row: FeedDirectoryRow, mode: FeedDirectoryMode = 'channels'): HTMLElement {
     TestBed.configureTestingModule({
       imports: [FeedDirectoryRowComponent, provideTranslocoTesting()],
+      providers: [{ provide: LayoutService, useValue: { isPhone } }],
     });
     fixture = TestBed.createComponent(FeedDirectoryRowComponent);
     fixture.componentRef.setInput('row', row);
@@ -133,9 +138,39 @@ describe('FeedDirectoryRowComponent', () => {
     expect(text(element.querySelector('[data-test="feeds"]'))).toContain('3 feeds · 1 subscribed');
   });
 
-  it('sizes itself from the height the viewport scrolls by', () => {
+  it('names the list button in full, so the count of subscribed feeds survives a phone', () => {
+    const element = render({
+      ...ROW,
+      feeds: [feed('https://a.de/1', { subscribed: true }), feed('https://a.de/2')],
+    });
+    const button = element.querySelector('[data-test="feeds"] button')!;
+
+    expect(button.getAttribute('aria-label')).toBe('2 feeds · 1 subscribed');
+    expect(text(element.querySelector('[data-test="feeds"] .subscribed-part'))).toBe(
+      '· 1 subscribed',
+    );
+  });
+
+  it('leaves the list button to its text while no feed is subscribed', () => {
     const element = render(ROW);
 
-    expect(element.style.getPropertyValue('--row-h')).toBe(`${FEED_DIRECTORY_ROW_HEIGHT}px`);
+    expect(element.querySelector('[data-test="feeds"] button')!.hasAttribute('aria-label')).toBe(
+      false,
+    );
+  });
+
+  it('keeps the Following label for screen readers only on a phone', () => {
+    isPhone.set(true);
+    const element = render({ ...ROW, following: true });
+    const label = element.querySelector('.follow-label')!;
+
+    expect(label.classList).toContain('sr-only');
+    expect(label.textContent).toBe('Following');
+  });
+
+  it('shows the Following label on a wide screen', () => {
+    const element = render({ ...ROW, following: true });
+
+    expect(element.querySelector('.follow-label')!.classList).not.toContain('sr-only');
   });
 });

@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { LayoutService } from '../../../reader/layout.service';
 import { FeedDirectoryNames } from '../feed-directory-names';
 import { FeedDirectoryMode, FeedDirectoryRow, feedsIn } from '../feed-directory-rows';
 
-export const FEED_DIRECTORY_ROW_HEIGHT = 132;
+export const FEED_DIRECTORY_ROW_HEIGHT = { wide: 132, phone: 114 } as const;
 
 export interface FeedDirectorySubscribeRequest {
   readonly row: FeedDirectoryRow;
@@ -18,7 +19,6 @@ export interface FeedDirectorySubscribeRequest {
   templateUrl: './feed-directory-row.component.html',
   styleUrl: './feed-directory-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[style.--row-h.px]': 'height' },
 })
 export class FeedDirectoryRowComponent {
   readonly row = input.required<FeedDirectoryRow>();
@@ -26,7 +26,7 @@ export class FeedDirectoryRowComponent {
   readonly subscribe = output<FeedDirectorySubscribeRequest>();
 
   protected readonly names = inject(FeedDirectoryNames);
-  protected readonly height = FEED_DIRECTORY_ROW_HEIGHT;
+  protected readonly layout = inject(LayoutService);
 
   protected readonly feeds = computed(() => feedsIn(this.row(), this.mode()));
   protected readonly onlyFeed = computed(() =>

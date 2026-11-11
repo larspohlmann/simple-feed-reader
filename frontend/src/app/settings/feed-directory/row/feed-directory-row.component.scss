@@ -107,7 +107,7 @@
   white-space: nowrap;
 }
 
-@media (width <= bp.$bp-sm) {
+@media (width < bp.$bp-sm) {
   :host {
     align-content: start;
     align-items: center;
@@ -134,7 +134,12 @@
     grid-column: 1 / -1;
   }
 
-  .chips {
+  .chips,
+  .subscribed-part {
     display: none;
+  }
+
+  .follow {
+    padding-inline: var(--space-1);
   }
 }

@@ -836,6 +836,7 @@
       "following": "Du folgst",
       "feeds": "{{count}} Feeds",
       "feedsSubscribed": "{{count}} Feeds · {{subscribed}} abonniert",
+      "subscribedCount": "{{count}} abonniert",
       "rank": "Rang {{rank}}",
       "lengths": {
         "headlines": "Schlagzeilen",

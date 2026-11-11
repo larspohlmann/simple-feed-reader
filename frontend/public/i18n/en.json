@@ -836,6 +836,7 @@
       "following": "Following",
       "feeds": "{{count}} feeds",
       "feedsSubscribed": "{{count}} feeds · {{subscribed}} subscribed",
+      "subscribedCount": "{{count}} subscribed",
       "rank": "Rank {{rank}}",
       "lengths": {
         "headlines": "Headlines",

@@ -1,9 +1,12 @@
 import { Dialog } from '@angular/cdk/dialog';
+import { CdkFixedSizeVirtualScroll } from '@angular/cdk/scrolling';
+import { By } from '@angular/platform-browser';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { LayoutService } from '../../reader/layout.service';
 import { FeedDirectoryApi } from './feed-directory-api';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectorySectionComponent } from './feed-directory-section.component';
@@ -13,6 +16,7 @@ import {
   FeedDirectoryIndex,
   FeedDirectoryScope,
 } from './feed-directory.models';
+import { FEED_DIRECTORY_ROW_HEIGHT } from './row/feed-directory-row.component';
 import { FeedDirectoryScopeDialogComponent } from './scope-dialog/feed-directory-scope-dialog.component';
 
 const DE: FeedDirectoryCountryFile = {
@@ -52,12 +56,16 @@ const NO_SCOPE: FeedDirectoryScope = { countries: [], languages: [] };
 
 describe('FeedDirectorySectionComponent', () => {
   const scope = signal<FeedDirectoryScope>(NO_SCOPE);
+  const isPhone = signal(false);
+  const known = signal(true);
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
   let dialogOpen: jest.Mock;
   let fixture: ComponentFixture<FeedDirectorySectionComponent>;
 
   async function render(initial: FeedDirectoryScope): Promise<HTMLElement> {
     scope.set(initial);
+    isPhone.set(false);
+    known.set(true);
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     dialogOpen = jest.fn();
     await TestBed.configureTestingModule({
@@ -75,6 +83,7 @@ describe('FeedDirectorySectionComponent', () => {
           provide: FeedDirectoryScopeService,
           useValue: {
             scope,
+            known,
             hasScope: computed(() => scope().countries.length > 0),
             save: (saved: FeedDirectoryScope) => {
               scope.set(saved);
@@ -83,6 +92,7 @@ describe('FeedDirectorySectionComponent', () => {
           },
         },
         { provide: Dialog, useValue: { open: dialogOpen } },
+        { provide: LayoutService, useValue: { isPhone } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(FeedDirectorySectionComponent);
@@ -114,6 +124,20 @@ describe('FeedDirectorySectionComponent', () => {
     expect(text(page.querySelector('.g-title'))).toBe('Choose your feed directory');
     expect(page.querySelector('.rows-card')).toBeNull();
     expect(country).not.toHaveBeenCalled();
+  });
+
+  it('waits for the account before it offers the picker', async () => {
+    const page = await render(NO_SCOPE);
+    known.set(false);
+    await settle();
+
+    expect(page.querySelector('app-feed-directory-scope-picker')).toBeNull();
+    expect(page.querySelector('app-skeleton')).not.toBeNull();
+
+    known.set(true);
+    await settle();
+
+    expect(page.querySelector('app-feed-directory-scope-picker')).not.toBeNull();
   });
 
   it('loads the directory once the inline picker saves a scope', async () => {
@@ -279,6 +303,28 @@ describe('FeedDirectorySectionComponent', () => {
 
     expect(country).toHaveBeenCalledWith('DE');
     expect(hosts()).toEqual(['heise.de', 'zeit.de']);
+  });
+
+  it('scrolls by one row height, and sizes the rows by it, for each breakpoint', async () => {
+    await render({ countries: ['DE'], languages: ['de'] });
+    const viewport = (): HTMLElement => element().querySelector('cdk-virtual-scroll-viewport')!;
+    const itemSize = (): number =>
+      fixture.debugElement
+        .query(By.directive(CdkFixedSizeVirtualScroll))
+        .injector.get(CdkFixedSizeVirtualScroll).itemSize;
+
+    expect(itemSize()).toBe(FEED_DIRECTORY_ROW_HEIGHT.wide);
+    expect(viewport().style.getPropertyValue('--row-h')).toBe(
+      `${FEED_DIRECTORY_ROW_HEIGHT.wide}px`,
+    );
+
+    isPhone.set(true);
+    await settle();
+
+    expect(itemSize()).toBe(FEED_DIRECTORY_ROW_HEIGHT.phone);
+    expect(viewport().style.getPropertyValue('--row-h')).toBe(
+      `${FEED_DIRECTORY_ROW_HEIGHT.phone}px`,
+    );
   });
 
   it('carries the attribution of the directory data', async () => {

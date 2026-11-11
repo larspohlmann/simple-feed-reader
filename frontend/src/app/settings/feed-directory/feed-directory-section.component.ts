@@ -22,6 +22,7 @@ import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmente
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
+import { LayoutService } from '../../reader/layout.service';
 import { FeedDirectoryNames } from './feed-directory-names';
 import {
   FeedDirectoryLength,
@@ -77,12 +78,15 @@ export class FeedDirectorySectionComponent {
   protected readonly scopes = inject(FeedDirectoryScopeService);
   protected readonly names = inject(FeedDirectoryNames);
   private readonly dialog = inject(Dialog);
+  private readonly layout = inject(LayoutService);
   private readonly scopeToLoad = computed(
     () => (this.scopes.hasScope() ? this.scopes.scope() : null),
     { equal: sameScope },
   );
 
-  protected readonly rowHeight = FEED_DIRECTORY_ROW_HEIGHT;
+  protected readonly rowHeight = computed(() =>
+    this.layout.isPhone() ? FEED_DIRECTORY_ROW_HEIGHT.phone : FEED_DIRECTORY_ROW_HEIGHT.wide,
+  );
   protected readonly modes = MODES;
   protected readonly inputValue = inputValue;
   protected readonly byHost = (_index: number, row: FeedDirectoryRow): string => row.host;

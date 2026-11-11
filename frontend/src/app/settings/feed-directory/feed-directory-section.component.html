@@ -1,5 +1,7 @@
 <app-settings-stack>
-  @if (!scopes.hasScope()) {
+  @if (!scopes.known()) {
+    <app-skeleton [label]="'settings.feedDirectory.loading' | transloco" [rows]="3" />
+  } @else if (!scopes.hasScope()) {
     <app-settings-group
       icon="travel_explore"
       [title]="'settings.feedDirectory.scope.heading' | transloco"
@@ -139,9 +141,10 @@
             <cdk-virtual-scroll-viewport
               scrollWindow
               class="viewport"
-              [itemSize]="rowHeight"
-              [minBufferPx]="rowHeight * 4"
-              [maxBufferPx]="rowHeight * 8"
+              [itemSize]="rowHeight()"
+              [minBufferPx]="rowHeight() * 4"
+              [maxBufferPx]="rowHeight() * 8"
+              [style.--row-h.px]="rowHeight()"
             >
               <app-feed-directory-row
                 *cdkVirtualFor="let row of store.rows(); trackBy: byHost"

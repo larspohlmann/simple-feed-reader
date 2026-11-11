@@ -3,7 +3,11 @@
     <span class="name">{{ row().host }}</span>
     @if (row().following) {
       <span class="follow">
-        <app-icon name="check" size="text" />{{ 'settings.feedDirectory.following' | transloco }}
+        <app-icon name="check" size="text" /><span
+          class="follow-label"
+          [class.sr-only]="layout.isPhone()"
+          >{{ 'settings.feedDirectory.following' | transloco }}</span
+        >
       </span>
     }
   </div>
@@ -46,15 +50,22 @@
       size="sm"
       data-test="feeds"
       [variant]="subscribedCount() ? 'ghost' : 'default'"
+      [ariaLabel]="
+        subscribedCount()
+          ? ('settings.feedDirectory.feedsSubscribed'
+            | transloco: { count: feeds().length, subscribed: subscribedCount() })
+          : undefined
+      "
       (click)="request($event)"
     >
+      {{ 'settings.feedDirectory.feeds' | transloco: { count: feeds().length } }}
       @if (subscribedCount()) {
-        {{
-          'settings.feedDirectory.feedsSubscribed'
-            | transloco: { count: feeds().length, subscribed: subscribedCount() }
-        }}
-      } @else {
-        {{ 'settings.feedDirectory.feeds' | transloco: { count: feeds().length } }}
+        <span class="subscribed-part"
+          >·
+          {{
+            'settings.feedDirectory.subscribedCount' | transloco: { count: subscribedCount() }
+          }}</span
+        >
       }
       <app-icon name="expand_more" size="sm" />
     </app-button>

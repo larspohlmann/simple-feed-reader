@@ -11,6 +11,7 @@ export class FeedDirectoryScopeService {
   private readonly auth = inject(AuthService);
   private readonly api = inject(FeedDirectoryApi);
 
+  readonly known = computed(() => this.auth.user() !== null);
   readonly scope = computed(() => this.auth.user()?.preferences.feedDirectoryScope ?? EMPTY_SCOPE);
   readonly hasScope = computed(
     () => this.scope().countries.length > 0 && this.scope().languages.length > 0,
