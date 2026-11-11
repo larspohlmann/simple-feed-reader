@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Pass;
 
-use App\Entity\DigestSettings;
 use App\Entity\Feed;
-use App\Entity\ReadingSettings;
-use App\Entity\SharingSettings;
 use App\Entity\User;
-use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
@@ -20,6 +16,7 @@ use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Search\SavedSearchSlug;
 use App\Service\Tag\Factory\TagFactory;
+use App\Tests\Support\UnsavedUserSettings;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -45,7 +42,7 @@ final class RestoreLoadPassTest extends TestCase
             $feeds,
             $this->savedSearchSlug(),
             self::rows(),
-            $this->settingsOf($user),
+            UnsavedUserSettings::of($user),
         );
 
         $result = $pass->run($user, (function () {
@@ -73,7 +70,7 @@ final class RestoreLoadPassTest extends TestCase
             $feeds,
             $this->savedSearchSlug(),
             self::rows(),
-            $this->settingsOf($user),
+            UnsavedUserSettings::of($user),
         );
 
         // No subscription line ever runs, so loadSubscription() never gets a
@@ -86,15 +83,6 @@ final class RestoreLoadPassTest extends TestCase
 
         self::assertSame(2, $result->feeds);
         self::assertSame(0, $result->subscriptions);
-    }
-
-    private function settingsOf(User $user): AccountSettingsModel
-    {
-        return new AccountSettingsModel(
-            new ReadingSettings($user),
-            new SharingSettings($user),
-            new DigestSettings($user),
-        );
     }
 
     private function feedLine(string $url): FeedLine
@@ -134,7 +122,7 @@ final class RestoreLoadPassTest extends TestCase
             $this->createStub(RestoreFeedsInterface::class),
             $this->savedSearchSlug(),
             self::rows(),
-            $this->settingsOf(new User('settings@example.com', new \DateTimeImmutable('2026-08-01'))),
+            UnsavedUserSettings::of(new User('settings@example.com', new \DateTimeImmutable('2026-08-01'))),
         );
 
         $this->expectException(BackupLoadFailedException::class);
@@ -150,7 +138,7 @@ final class RestoreLoadPassTest extends TestCase
             $this->createStub(RestoreFeedsInterface::class),
             $this->savedSearchSlug(),
             self::rows(),
-            $this->settingsOf(new User('settings@example.com', new \DateTimeImmutable('2026-08-01'))),
+            UnsavedUserSettings::of(new User('settings@example.com', new \DateTimeImmutable('2026-08-01'))),
         );
 
         try {

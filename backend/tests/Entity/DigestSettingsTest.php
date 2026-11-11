@@ -8,13 +8,14 @@ use App\Entity\DigestSettings;
 use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 
 final class DigestSettingsTest extends TestCase
 {
     public function testTheDigestIsOffDailyHtmlAtEightOnMondayAndNeverSentByDefault(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::digest();
 
         self::assertFalse($settings->isEnabled());
         self::assertSame(DigestCadence::Daily, $settings->getCadence());
@@ -26,7 +27,7 @@ final class DigestSettingsTest extends TestCase
 
     public function testItKeepsWhatItIsGiven(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::digest();
         $sentAt = new \DateTimeImmutable('2026-08-28 06:00:00');
 
         $settings->setEnabled(true);
@@ -49,10 +50,5 @@ final class DigestSettingsTest extends TestCase
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-11-03 09:00:00'));
 
         self::assertSame($user, new DigestSettings($user)->getUser());
-    }
-
-    private function newSettings(): DigestSettings
-    {
-        return new DigestSettings(new User('reader@example.com', new \DateTimeImmutable('2026-11-03 09:00:00')));
     }
 }

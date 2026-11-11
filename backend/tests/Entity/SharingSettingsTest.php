@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\SharingSettings;
-use App\Entity\User;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -13,7 +13,7 @@ final class SharingSettingsTest extends TestCase
 {
     public function testSharingIsOnWithNothingHiddenAndSharesRememberedByDefault(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::sharing();
 
         self::assertTrue($settings->isEnabled());
         self::assertSame([], $settings->getHiddenTargets());
@@ -22,7 +22,7 @@ final class SharingSettingsTest extends TestCase
 
     public function testItKeepsWhatItIsGiven(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::sharing();
 
         $settings->setEnabled(false);
         $settings->setHiddenTargets(['facebook', 'x']);
@@ -35,7 +35,7 @@ final class SharingSettingsTest extends TestCase
 
     public function testMalformedAndRepeatedTargetIdsAreDropped(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::sharing();
 
         $settings->setHiddenTargets(['x', 'Not An Id', 'x', '', 'reddit']);
 
@@ -44,7 +44,7 @@ final class SharingSettingsTest extends TestCase
 
     public function testOnlyTheFirstMaximumOfHiddenTargetsIsKept(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::sharing();
         $ids = array_map(
             static fn (int $number): string => 'target-' . $number,
             range(1, SharingSettings::MAX_HIDDEN_TARGETS + 1),
@@ -62,7 +62,7 @@ final class SharingSettingsTest extends TestCase
         bool $rememberingShares,
         bool $expected,
     ): void {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::sharing();
         $settings->setEnabled($enabled);
         $settings->setRememberingShares($rememberingShares);
 
@@ -75,10 +75,5 @@ final class SharingSettingsTest extends TestCase
         yield 'sharing off' => [false, true, false];
         yield 'not remembering' => [true, false, false];
         yield 'both on' => [true, true, true];
-    }
-
-    private function newSettings(): SharingSettings
-    {
-        return new SharingSettings(new User('reader@example.com', new \DateTimeImmutable('2026-11-03 09:00:00')));
     }
 }

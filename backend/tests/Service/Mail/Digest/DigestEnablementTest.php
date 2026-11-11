@@ -4,27 +4,21 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Entity\DigestSettings;
-use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
 final class DigestEnablementTest extends TestCase
 {
-    private function settings(): DigestSettings
-    {
-        return new DigestSettings(new User('a@b.example', new \DateTimeImmutable()));
-    }
-
     public function testItAppliesAllFourSettings(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
 
         $enablement->applyTo($settings, new DigestConfigurationModel(
             enabled: true,
@@ -44,7 +38,7 @@ final class DigestEnablementTest extends TestCase
     {
         $now = new \DateTimeImmutable('2026-08-28T12:00:00Z');
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock($now)));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
         self::assertFalse($settings->isEnabled());
         self::assertNull($settings->getLastSentAt());
 
@@ -62,7 +56,7 @@ final class DigestEnablementTest extends TestCase
     public function testANonTransitioningEnabledWriteDoesNotMoveDigestLastSentAt(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
         $settings->setEnabled(true);
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $settings->setLastSentAt($seededAt);
@@ -81,7 +75,7 @@ final class DigestEnablementTest extends TestCase
     public function testAnAlreadyDisabledWriteThatStaysDisabledDoesNotSeed(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
         self::assertFalse($settings->isEnabled());
         self::assertNull($settings->getLastSentAt());
 
@@ -100,7 +94,7 @@ final class DigestEnablementTest extends TestCase
     public function testDisablingDoesNotSeedOrClearDigestLastSentAt(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
         $settings->setEnabled(true);
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $settings->setLastSentAt($seededAt);
@@ -120,7 +114,7 @@ final class DigestEnablementTest extends TestCase
     public function testReenablingAfterDisableDoesNotReseedBecauseLastSentAtIsAlreadySet(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
         $settings->setEnabled(false);
         // Simulates an account that already received at least one digest before
         // being turned off: lastSentAt is set, even though isEnabled
@@ -143,7 +137,7 @@ final class DigestEnablementTest extends TestCase
     {
         $clock = new MockClock('2026-08-28T12:00:00+02:00');
         $enablement = new DigestEnablement(new NaiveUtcClock($clock));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
 
         $enablement->applyTo($settings, new DigestConfigurationModel(
             enabled: true,
@@ -162,7 +156,7 @@ final class DigestEnablementTest extends TestCase
     public function testApplyToSetsTheDigestFormat(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $settings = $this->settings();
+        $settings = UnsavedUserSettings::digest();
 
         $enablement->applyTo($settings, new DigestConfigurationModel(
             enabled: true,

@@ -18,18 +18,12 @@ final class StoredUserSettings
 {
     public static function reading(EntityManagerInterface $entityManager, User $user): ReadingSettings
     {
-        $repository = $entityManager->getRepository(ReadingSettings::class);
-        Assert::assertInstanceOf(ReadingSettingsRepository::class, $repository);
-
-        return $repository->forUser($user);
+        return self::readingRepository($entityManager)->forUser($user);
     }
 
     public static function sharing(EntityManagerInterface $entityManager, User $user): SharingSettings
     {
-        $repository = $entityManager->getRepository(SharingSettings::class);
-        Assert::assertInstanceOf(SharingSettingsRepository::class, $repository);
-
-        return $repository->forUser($user);
+        return self::sharingRepository($entityManager)->forUser($user);
     }
 
     public static function digest(EntityManagerInterface $entityManager, User $user): DigestSettings
@@ -37,10 +31,36 @@ final class StoredUserSettings
         return self::digestRepository($entityManager)->forUser($user);
     }
 
+    public static function readingRepository(EntityManagerInterface $entityManager): ReadingSettingsRepository
+    {
+        return self::repository($entityManager, ReadingSettings::class, ReadingSettingsRepository::class);
+    }
+
+    public static function sharingRepository(EntityManagerInterface $entityManager): SharingSettingsRepository
+    {
+        return self::repository($entityManager, SharingSettings::class, SharingSettingsRepository::class);
+    }
+
     public static function digestRepository(EntityManagerInterface $entityManager): DigestSettingsRepository
     {
-        $repository = $entityManager->getRepository(DigestSettings::class);
-        Assert::assertInstanceOf(DigestSettingsRepository::class, $repository);
+        return self::repository($entityManager, DigestSettings::class, DigestSettingsRepository::class);
+    }
+
+    /**
+     * @template TRepository of object
+     *
+     * @param class-string                $settingsClass
+     * @param class-string<TRepository>   $repositoryClass
+     *
+     * @return TRepository
+     */
+    private static function repository(
+        EntityManagerInterface $entityManager,
+        string $settingsClass,
+        string $repositoryClass,
+    ): object {
+        $repository = $entityManager->getRepository($settingsClass);
+        Assert::assertInstanceOf($repositoryClass, $repository);
 
         return $repository;
     }

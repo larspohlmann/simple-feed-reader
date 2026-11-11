@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Digest;
 
 use App\Entity\DigestSettings;
-use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Service\Mail\Digest\DigestSchedule;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 
 final class DigestScheduleTest extends TestCase
 {
     private function settings(DigestCadence $cadence, int $hour, int $weekday): DigestSettings
     {
-        $settings = new DigestSettings(new User('a@b.example', new \DateTimeImmutable()));
+        $settings = UnsavedUserSettings::digest();
         $settings->setEnabled(true);
         $settings->setCadence($cadence);
         $settings->setSendHour($hour);

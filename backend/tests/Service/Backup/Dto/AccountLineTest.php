@@ -4,16 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
-use App\Entity\DigestSettings;
-use App\Entity\ReadingSettings;
-use App\Entity\SharingSettings;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
-use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Tests\Support\BackupLineRecords;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 
 final class AccountLineTest extends TestCase
@@ -149,11 +146,7 @@ final class AccountLineTest extends TestCase
     {
         $user = BackupLineRecords::user();
         $user->setLocale('de');
-        $settings = new AccountSettingsModel(
-            new ReadingSettings($user),
-            new SharingSettings($user),
-            new DigestSettings($user),
-        );
+        $settings = UnsavedUserSettings::of($user);
         $settings->reading->setScrapeFallbackEnabled(true);
         $settings->reading->setMagazineStyle(MagazineStyle::Airy);
         $settings->reading->setTrendingEnabled(false);

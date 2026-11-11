@@ -7,13 +7,14 @@ namespace App\Tests\Entity;
 use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Enum\MagazineStyle;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 
 final class ReadingSettingsTest extends TestCase
 {
     public function testANewRowHasScrapingOffTheBoxedStyleAndTrendingOn(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::reading();
 
         self::assertFalse($settings->isScrapeFallbackEnabled());
         self::assertSame(MagazineStyle::Boxed, $settings->getMagazineStyle());
@@ -22,7 +23,7 @@ final class ReadingSettingsTest extends TestCase
 
     public function testScrapeFallbackCanBeEnabled(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::reading();
 
         $settings->setScrapeFallbackEnabled(true);
 
@@ -31,7 +32,7 @@ final class ReadingSettingsTest extends TestCase
 
     public function testTheMagazineStyleKeepsWhatItIsGiven(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::reading();
 
         $settings->setMagazineStyle(MagazineStyle::Airy);
 
@@ -40,7 +41,7 @@ final class ReadingSettingsTest extends TestCase
 
     public function testTrendingKeepsWhatItIsGiven(): void
     {
-        $settings = $this->newSettings();
+        $settings = UnsavedUserSettings::reading();
 
         $settings->setTrendingEnabled(false);
 
@@ -52,10 +53,5 @@ final class ReadingSettingsTest extends TestCase
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-11-04 09:00:00'));
 
         self::assertSame($user, new ReadingSettings($user)->getUser());
-    }
-
-    private function newSettings(): ReadingSettings
-    {
-        return new ReadingSettings(new User('reader@example.com', new \DateTimeImmutable('2026-11-04 09:00:00')));
     }
 }
