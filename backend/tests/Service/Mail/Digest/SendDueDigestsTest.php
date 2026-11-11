@@ -68,7 +68,7 @@ final class SendDueDigestsTest extends DbTestCase
         $settings = $this->givenDueWithOneMatch($user);
 
         $this->mailer->expects($this->once())->method('send')
-            ->with($user, self::isInstanceOf(DigestModel::class));
+            ->with($settings, self::isInstanceOf(DigestModel::class));
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->once())->method('flush');
@@ -94,7 +94,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 
         $this->mailer->expects($this->once())->method('send')
-            ->with($user, self::isInstanceOf(DigestModel::class));
+            ->with($settings, self::isInstanceOf(DigestModel::class));
 
         $report = $this->sweep()->run();
 
@@ -205,7 +205,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->recipients->method('findWithDigestEnabled')->willReturn([$dueSettings, $notDueSettings]);
 
         $this->mailer->expects($this->once())->method('send')
-            ->with($dueUser, self::isInstanceOf(DigestModel::class));
+            ->with($dueSettings, self::isInstanceOf(DigestModel::class));
 
         $report = $this->sweep()->run();
 
@@ -233,8 +233,8 @@ final class SendDueDigestsTest extends DbTestCase
             ->willReturn([$failingSettings, $healthySettings]);
 
         $this->mailer->expects($this->exactly(2))->method('send')
-            ->willReturnCallback(static function (User $user) use ($failingUser): void {
-                if ($user === $failingUser) {
+            ->willReturnCallback(static function (DigestSettings $settings) use ($failingSettings): void {
+                if ($settings === $failingSettings) {
                     throw new TransportException('relay rejected the recipient');
                 }
             });

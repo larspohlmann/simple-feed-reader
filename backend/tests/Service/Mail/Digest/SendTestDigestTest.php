@@ -73,6 +73,7 @@ final class SendTestDigestTest extends DbTestCase
                 new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
             ),
             $mailer ?? $this->mailer,
+            StoredUserSettings::digestRepository($this->entityManager),
             $clock,
         );
     }
@@ -98,7 +99,10 @@ final class SendTestDigestTest extends DbTestCase
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->once())
             ->method('send')
-            ->with($this->user, self::isInstanceOf(DigestModel::class));
+            ->with(
+                StoredUserSettings::digest($this->entityManager, $this->user),
+                self::isInstanceOf(DigestModel::class),
+            );
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $mailer)
             ->send($this->user, 7);
@@ -159,7 +163,6 @@ final class SendTestDigestTest extends DbTestCase
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
-            StoredUserSettings::digestRepository($this->entityManager),
         );
 
         return new DigestMailer($transport, $builder);

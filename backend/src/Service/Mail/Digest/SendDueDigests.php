@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest;
 
 use App\Entity\DigestSettings;
-use App\Entity\User;
 use App\Enum\MailKind;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
@@ -81,19 +80,19 @@ final readonly class SendDueDigests
             return DigestAttempt::NothingToReport;
         }
 
-        return $this->sendAndAdvance($user, $model, $settings, $occurrence);
+        return $this->sendAndAdvance($settings, $model, $occurrence);
     }
 
     /** One recipient's transport failure must not stop the sweep; the untouched watermark retries it next tick. */
     private function sendAndAdvance(
-        User $user,
-        DigestModel $model,
         DigestSettings $settings,
+        DigestModel $model,
         \DateTimeImmutable $occurrence,
     ): DigestAttempt {
         try {
-            $this->mailer->send($user, $model);
+            $this->mailer->send($settings, $model);
         } catch (TransportExceptionInterface $exception) {
+            $user = $settings->getUser();
             $this->logger->error(
                 'Digest send failed: {userId} <{email}>',
                 ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $exception],

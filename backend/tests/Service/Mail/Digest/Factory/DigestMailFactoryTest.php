@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest\Factory;
 
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
@@ -20,17 +20,15 @@ use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\Digest\Model\EmbeddedImageModel;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Model\MailIdentityModel;
-use App\Tests\DbTestCase;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
-use App\Tests\Support\StoredUserSettings;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\UnsavedUserSettings;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
-final class DigestMailFactoryTest extends DbTestCase
+final class DigestMailFactoryTest extends TestCase
 {
     private function factory(DigestImageSetModel $set): DigestMailFactory
     {
@@ -56,7 +54,6 @@ final class DigestMailFactoryTest extends DbTestCase
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 5)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
-            StoredUserSettings::digestRepository($this->entityManager),
         );
     }
 
@@ -75,21 +72,19 @@ final class DigestMailFactoryTest extends DbTestCase
         return new DigestModel([new DigestGroupModel('rust', 1, [$entry], false, 'https://reader.example/?q=rust')], 1);
     }
 
-    private function user(DigestFormat $format): User
+    private function settings(DigestFormat $format): DigestSettings
     {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = new UserFactory($this->entityManager, $hasher)->create('reader@example.com');
-        StoredUserSettings::digest($this->entityManager, $user)->setFormat($format);
+        $settings = UnsavedUserSettings::digest();
+        $settings->setFormat($format);
 
-        return $user;
+        return $settings;
     }
 
     public function testHtmlFormatBuildsAlternativeWithHtmlTextAndInlineImage(): void
     {
         $set = new DigestImageSetModel([new EmbeddedImageModel('imgFAV', 'PNGBYTES', 'image/png')], []);
 
-        $email = $this->factory($set)->build($this->user(DigestFormat::Html), $this->model());
+        $email = $this->factory($set)->build($this->settings(DigestFormat::Html), $this->model());
 
         self::assertNotNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
@@ -105,7 +100,7 @@ final class DigestMailFactoryTest extends DbTestCase
     public function testTextFormatBuildsPlainTextOnly(): void
     {
         $email = $this->factory(new DigestImageSetModel([], []))
-            ->build($this->user(DigestFormat::Text), $this->model());
+            ->build($this->settings(DigestFormat::Text), $this->model());
 
         self::assertNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest\DigestMailer;
 
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
@@ -20,20 +20,18 @@ use App\Service\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Model\MailIdentityModel;
-use App\Tests\DbTestCase;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
-use App\Tests\Support\StoredUserSettings;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\UnsavedUserSettings;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
 /** Wraps a real DigestMailFactory, which picks the message shape, and asserts what reaches the stubbed mailer. */
-final class DigestMailerTest extends DbTestCase
+final class DigestMailerTest extends TestCase
 {
     /** @var list<Email> */
     private array $sent = [];
@@ -41,7 +39,6 @@ final class DigestMailerTest extends DbTestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
         $this->sent = [];
 
         $transport = $this->createStub(MailerInterface::class);
@@ -71,7 +68,6 @@ final class DigestMailerTest extends DbTestCase
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 5)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
-            StoredUserSettings::digestRepository($this->entityManager),
         );
 
         $this->mailer = new DigestMailer($transport, $builder);
@@ -95,19 +91,17 @@ final class DigestMailerTest extends DbTestCase
         return new DigestModel([$group], 1);
     }
 
-    private function user(DigestFormat $format): User
+    private function settings(DigestFormat $format): DigestSettings
     {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = new UserFactory($this->entityManager, $hasher)->create('reader@example.com');
-        StoredUserSettings::digest($this->entityManager, $user)->setFormat($format);
+        $settings = UnsavedUserSettings::digest();
+        $settings->setFormat($format);
 
-        return $user;
+        return $settings;
     }
 
     public function testSendHandsTheMailerAnEmailWithFromToSubjectAndBody(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Html), $this->model());
 
         self::assertCount(1, $this->sent);
         $email = $this->sent[0];
@@ -124,24 +118,24 @@ final class DigestMailerTest extends DbTestCase
 
     public function testSendRendersInTheUsersLocale(): void
     {
-        $user = $this->user(DigestFormat::Html);
-        $user->setLocale('de');
+        $settings = $this->settings(DigestFormat::Html);
+        $settings->getUser()->setLocale('de');
 
-        $this->mailer->send($user, $this->model());
+        $this->mailer->send($settings, $this->model());
 
         self::assertStringContainsString('Einstellungen', (string) $this->sent[0]->getTextBody());
     }
 
     public function testSendDefaultsToEnglishWhenNoLocaleIsSet(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Html), $this->model());
 
         self::assertStringContainsString('Settings', (string) $this->sent[0]->getTextBody());
     }
 
     public function testHtmlFormatUserGetsBothHtmlAndTextParts(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Html), $this->model());
 
         $email = $this->sent[0];
         self::assertNotNull($email->getHtmlBody());
@@ -151,7 +145,7 @@ final class DigestMailerTest extends DbTestCase
 
     public function testTextFormatUserGetsNoHtmlPart(): void
     {
-        $this->mailer->send($this->user(DigestFormat::Text), $this->model());
+        $this->mailer->send($this->settings(DigestFormat::Text), $this->model());
 
         $email = $this->sent[0];
         self::assertNull($email->getHtmlBody());

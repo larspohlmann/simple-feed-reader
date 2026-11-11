@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest;
 
 use App\Entity\User;
+use App\Repository\DigestSettingsRepository;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -17,6 +18,7 @@ final readonly class SendTestDigest
     public function __construct(
         private DigestComposer $composer,
         private DigestMailerInterface $mailer,
+        private DigestSettingsRepository $digestSettings,
         private ClockInterface $clock,
     ) {
     }
@@ -29,7 +31,7 @@ final readonly class SendTestDigest
             return false;
         }
 
-        $this->mailer->send($user, $model);
+        $this->mailer->send($this->digestSettings->forUser($user), $model);
 
         return true;
     }

@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest\Factory;
 
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Enum\DigestFormat;
-use App\Repository\DigestSettingsRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
@@ -31,12 +30,12 @@ final readonly class DigestMailFactory
         private DigestLinkBuilder $links,
         private DigestBrandLogo $brandLogo,
         private MailSendingSettingsInterface $mailSettings,
-        private DigestSettingsRepository $digestSettings,
     ) {
     }
 
-    public function build(User $user, DigestModel $model): Email
+    public function build(DigestSettings $settings, DigestModel $model): Email
     {
+        $user = $settings->getUser();
         $locale = $user->getLocale();
         $text = $this->textRenderer->render($model, $locale);
 
@@ -49,7 +48,7 @@ final readonly class DigestMailFactory
 
         $email->getHeaders()->addTextHeader('List-Unsubscribe', '<' . $this->links->settingsEmailUrl() . '>');
 
-        if ($this->digestSettings->forUser($user)->getFormat() === DigestFormat::Text) {
+        if ($settings->getFormat() === DigestFormat::Text) {
             return $email;
         }
 
