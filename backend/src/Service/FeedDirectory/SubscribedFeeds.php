@@ -31,7 +31,7 @@ final readonly class SubscribedFeeds
      */
     private static function sortedUnique(array $values): array
     {
-        $unique = array_values(array_unique($values));
+        $unique = array_unique($values);
         sort($unique);
 
         return $unique;
