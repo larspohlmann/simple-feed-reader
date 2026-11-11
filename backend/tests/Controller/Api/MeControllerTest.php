@@ -168,6 +168,7 @@ final class MeControllerTest extends ApiTestCase
                 'magazineStyle' => 'boxed',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
+                'feedDirectoryScope' => ['countries' => [], 'languages' => []],
                 'sharing' => ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true],
                 'digest' => [
                     'enabled' => false,
@@ -192,6 +193,7 @@ final class MeControllerTest extends ApiTestCase
         $this->patch($client, '/api/me/preferences', ['scrapeFallbackEnabled' => true]);
         $this->patch($client, '/api/me/magazine-style', ['magazineStyle' => 'airy']);
         $this->patch($client, '/api/me/trending', ['trendingEnabled' => false]);
+        $this->patch($client, '/api/me/feed-directory-scope', ['countries' => ['DE'], 'languages' => ['de']]);
         $this->patch(
             $client,
             '/api/me/sharing',
@@ -203,7 +205,7 @@ final class MeControllerTest extends ApiTestCase
             ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
         );
         $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","passkeyOfferAnswered":true,'
-            . '"trendingEnabled":false,'
+            . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'
             . '"digest":{"enabled":true,"cadence":"weekly","format":"text","sendHour":9,"weekday":3,"timezone":"UTC"}}';
         self::assertSame($expected, json_encode($this->payload($client)['preferences'], \JSON_THROW_ON_ERROR));

@@ -7,9 +7,12 @@ namespace App\Service\Account;
 use App\Entity\User;
 use App\Enum\MagazineStyle;
 use App\Repository\DigestSettingsRepository;
+use App\Repository\FeedDirectoryScopeRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\SharingSettingsRepository;
 use App\Service\Account\Model\SharingSettingsModel;
+use App\Service\FeedDirectory\FeedDirectoryFiles;
+use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Service\Passkey\PasskeyOffer;
@@ -23,6 +26,8 @@ final readonly class AccountPreferencesWriter
         private ReadingSettingsRepository $readingSettings,
         private SharingSettingsRepository $sharingSettings,
         private DigestSettingsRepository $digestSettings,
+        private FeedDirectoryScopeRepository $feedDirectoryScopes,
+        private FeedDirectoryFiles $feedDirectory,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -57,6 +62,13 @@ final readonly class AccountPreferencesWriter
     public function changeTrending(User $user, bool $trendingEnabled): void
     {
         $this->readingSettings->forUser($user)->setTrendingEnabled($trendingEnabled);
+        $this->entityManager->flush();
+    }
+
+    public function changeFeedDirectoryScope(User $user, FeedDirectoryScopeModel $scope): void
+    {
+        $this->feedDirectory->requireKnown($scope);
+        $this->feedDirectoryScopes->forUser($user)->change($scope->countries, $scope->languages);
         $this->entityManager->flush();
     }
 

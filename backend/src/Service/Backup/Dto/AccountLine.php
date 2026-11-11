@@ -13,6 +13,7 @@ use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
+use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
 
 /**
  * The account's own settings, exactly once per backup.
@@ -32,6 +33,7 @@ final readonly class AccountLine
         public array $hiddenShareTargets,
         public bool $rememberShares,
         public bool $trendingEnabled,
+        public FeedDirectoryScopeModel $feedDirectoryScope,
         public array $savedSearchIncludedNetworks,
         public array $forYouExcludedNetworks,
     ) {
@@ -53,6 +55,7 @@ final readonly class AccountLine
             hiddenShareTargets: LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
             rememberShares: LineFieldWithDefault::bool($line, 'rememberShares', true),
             trendingEnabled: LineFieldWithDefault::bool($line, 'trendingEnabled', true),
+            feedDirectoryScope: self::feedDirectoryScope(LineField::objectOrNull($line, 'feedDirectoryScope') ?? []),
             savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
             forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
         );
@@ -68,6 +71,10 @@ final readonly class AccountLine
             hiddenShareTargets: $settings->sharing->getHiddenTargets(),
             rememberShares: $settings->sharing->isRememberingShares(),
             trendingEnabled: $settings->reading->isTrendingEnabled(),
+            feedDirectoryScope: new FeedDirectoryScopeModel(
+                $settings->feedDirectoryScope->getCountries(),
+                $settings->feedDirectoryScope->getLanguages(),
+            ),
             savedSearchIncludedNetworks: $networks->savedSearchIncludedNetworks,
             forYouExcludedNetworks: $networks->forYouExcludedNetworks,
         );
@@ -84,9 +91,25 @@ final readonly class AccountLine
             'hiddenShareTargets' => $this->hiddenShareTargets,
             'rememberShares' => $this->rememberShares,
             'trendingEnabled' => $this->trendingEnabled,
+            'feedDirectoryScope' => [
+                'countries' => $this->feedDirectoryScope->countries,
+                'languages' => $this->feedDirectoryScope->languages,
+            ],
             'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->savedSearchIncludedNetworks),
             'forYouExcludedNetworks' => SocialNetwork::valuesOf($this->forYouExcludedNetworks),
         ]);
+    }
+
+    /** @param array<string, mixed> $fields */
+    private static function feedDirectoryScope(array $fields): FeedDirectoryScopeModel
+    {
+        $countries = LineFieldWithDefault::stringList($fields, 'countries');
+        $languages = LineFieldWithDefault::stringList($fields, 'languages');
+        if ($countries === [] || $languages === []) {
+            return new FeedDirectoryScopeModel([], []);
+        }
+
+        return new FeedDirectoryScopeModel($countries, $languages);
     }
 
     /**

@@ -10,6 +10,8 @@ use App\Enum\MagazineStyle;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Account\Model\SharingSettingsModel;
+use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -73,6 +75,32 @@ final class AccountPreferencesWriterTest extends DbTestCase
         $this->writer()->changeTrending($user, false);
 
         self::assertFalse(StoredUserSettings::reading($this->entityManager, $this->reload($user))->isTrendingEnabled());
+    }
+
+    public function testChangeFeedDirectoryScopePersistsBothLists(): void
+    {
+        $user = $this->user('prefs-scope@example.com');
+
+        $this->writer()->changeFeedDirectoryScope($user, new FeedDirectoryScopeModel(['DE', 'AT'], ['de']));
+
+        $reloaded = StoredUserSettings::feedDirectoryScope($this->entityManager, $this->reload($user));
+        self::assertSame(['DE', 'AT'], $reloaded->getCountries());
+        self::assertSame(['de'], $reloaded->getLanguages());
+    }
+
+    public function testAnUnknownCodeLeavesTheScopeAsItWas(): void
+    {
+        $user = $this->user('prefs-scope-unknown@example.com');
+        $this->writer()->changeFeedDirectoryScope($user, new FeedDirectoryScopeModel(['DE'], ['de']));
+
+        try {
+            $this->writer()->changeFeedDirectoryScope($user, new FeedDirectoryScopeModel(['FR'], ['de']));
+            self::fail('An unknown country must be rejected.');
+        } catch (InvalidFeedDirectoryScopeException) {
+            $reloaded = StoredUserSettings::feedDirectoryScope($this->entityManager, $this->reload($user));
+            self::assertSame(['DE'], $reloaded->getCountries());
+            self::assertSame(['de'], $reloaded->getLanguages());
+        }
     }
 
     public function testChangeDigestPersistsTheConfiguration(): void

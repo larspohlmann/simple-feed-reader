@@ -43,6 +43,11 @@ final class MeRoutesTest extends ApiTestCase
             '/api/me/trending',
             ReaderPreferencesController::class . '::updateTrending',
         ],
+        'api_me_update_feed_directory_scope' => [
+            'PATCH',
+            '/api/me/feed-directory-scope',
+            ReaderPreferencesController::class . '::updateFeedDirectoryScope',
+        ],
     ];
 
     public function testEveryAccountRouteKeepsItsNameMethodAndPathOnTheControllerOfItsConcern(): void

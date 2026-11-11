@@ -99,6 +99,10 @@ final class RestoreLoadPass
         $this->accountSettings->sharing->setHiddenTargets($line->hiddenShareTargets);
         $this->accountSettings->sharing->setRememberingShares($line->rememberShares);
         $this->accountSettings->reading->setTrendingEnabled($line->trendingEnabled);
+        $this->accountSettings->feedDirectoryScope->change(
+            $line->feedDirectoryScope->countries,
+            $line->feedDirectoryScope->languages,
+        );
         foreach ($line->savedSearchIncludedNetworks as $network) {
             $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, $network));
         }

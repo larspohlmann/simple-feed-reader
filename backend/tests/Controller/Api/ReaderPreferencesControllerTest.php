@@ -30,6 +30,26 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         return $preferences['trendingEnabled'];
     }
 
+    private function patchScope(KernelBrowser $client, string $body): void
+    {
+        $client->request(
+            'PATCH',
+            '/api/me/feed-directory-scope',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $body,
+        );
+    }
+
+    /** @return array<mixed> */
+    private function scope(KernelBrowser $client): array
+    {
+        $preferences = $this->payload($client)['preferences'];
+        self::assertIsArray($preferences);
+        self::assertIsArray($preferences['feedDirectoryScope']);
+
+        return $preferences['feedDirectoryScope'];
+    }
+
     public function testScrapeFallbackCanBeEnabled(): void
     {
         $client = self::createClient();
@@ -50,6 +70,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
                 'magazineStyle' => 'boxed',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
+                'feedDirectoryScope' => ['countries' => [], 'languages' => []],
                 'sharing' => ['enabled' => true, 'hiddenTargets' => [], 'rememberShares' => true],
                 'digest' => [
                     'enabled' => false,
@@ -198,5 +219,77 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertFalse($this->trendingEnabled($client));
+    }
+
+    public function testANewAccountHasNoFeedDirectoryScope(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'scope-new@example.test');
+
+        $client->request('GET', '/api/me');
+
+        self::assertSame(['countries' => [], 'languages' => []], $this->scope($client));
+    }
+
+    public function testAScopeIsSavedAndReadBack(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'scope-save@example.test');
+
+        $this->patchScope($client, '{"countries":["DE","AT"],"languages":["de"]}');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['countries' => ['DE', 'AT'], 'languages' => ['de']], $this->scope($client));
+    }
+
+    public function testTwoEmptyListsClearTheScope(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'scope-clear@example.test');
+        $this->patchScope($client, '{"countries":["DE"],"languages":["de"]}');
+
+        $this->patchScope($client, '{"countries":[],"languages":[]}');
+
+        self::assertSame(['countries' => [], 'languages' => []], $this->scope($client));
+    }
+
+    public function testCountriesWithoutLanguagesAreRejected(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'scope-half@example.test');
+
+        $this->patchScope($client, '{"countries":["DE"],"languages":[]}');
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAnUnknownCountryIsRejected(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'scope-unknown@example.test');
+
+        $this->patchScope($client, '{"countries":["FR"],"languages":["de"]}');
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAnUnknownLanguageIsRejected(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'scope-language@example.test');
+
+        $this->patchScope($client, '{"countries":["DE"],"languages":["xx"]}');
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAnEmptyBodyIsRejectedRatherThanClearingTheScope(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'scope-empty@example.test');
+
+        $this->patchScope($client, '{}');
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }

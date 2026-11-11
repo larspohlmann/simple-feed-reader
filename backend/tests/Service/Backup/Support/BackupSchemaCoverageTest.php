@@ -16,6 +16,7 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
+use App\Entity\FeedDirectoryScope;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
@@ -234,6 +235,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
         ReadingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
         SharingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
+        FeedDirectoryScope::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
         Tag::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],

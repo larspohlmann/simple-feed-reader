@@ -45,6 +45,10 @@ final class MeJson
             'magazineStyle' => $settings->reading->getMagazineStyle()->value,
             'passkeyOfferAnswered' => $passkeyOfferAnswered,
             'trendingEnabled' => $settings->reading->isTrendingEnabled(),
+            'feedDirectoryScope' => [
+                'countries' => $settings->feedDirectoryScope->getCountries(),
+                'languages' => $settings->feedDirectoryScope->getLanguages(),
+            ],
             'sharing' => [
                 'enabled' => $settings->sharing->isEnabled(),
                 'hiddenTargets' => $settings->sharing->getHiddenTargets(),

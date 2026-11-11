@@ -9,6 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\AccountNetworkSwitchesModel;
+use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
 use App\Tests\Support\BackupLineRecords;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
@@ -35,6 +36,36 @@ final class AccountLineTest extends TestCase
         $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'trendingEnabled' => false]);
 
         self::assertFalse($line->trendingEnabled);
+    }
+
+    public function testAnOlderBackupHasNoFeedDirectoryScope(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertEquals(new FeedDirectoryScopeModel([], []), $line->feedDirectoryScope);
+    }
+
+    public function testItReadsTheFeedDirectoryScope(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'feedDirectoryScope' => ['countries' => ['DE', 'AT'], 'languages' => ['de']],
+        ]);
+
+        self::assertSame(['DE', 'AT'], $line->feedDirectoryScope->countries);
+        self::assertSame(['de'], $line->feedDirectoryScope->languages);
+    }
+
+    public function testAHalfScopeRestoresAsNoScope(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'feedDirectoryScope' => ['countries' => ['DE'], 'languages' => []],
+        ]);
+
+        self::assertEquals(new FeedDirectoryScopeModel([], []), $line->feedDirectoryScope);
     }
 
     public function testItReadsSharing(): void
@@ -152,12 +183,14 @@ final class AccountLineTest extends TestCase
         $settings->reading->setTrendingEnabled(false);
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
         $settings->sharing->setRememberingShares(false);
+        $settings->feedDirectoryScope->change(['DE'], ['de']);
         $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [SocialNetwork::Mastodon]);
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
             . '"sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],"rememberShares":false,'
-            . '"trendingEnabled":false,"savedSearchIncludedNetworks":["bluesky"],'
+            . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
+            . '"savedSearchIncludedNetworks":["bluesky"],'
             . '"forYouExcludedNetworks":["mastodon"]}',
             AccountLine::of($user, $settings, $networks)->toBackupLine(),
         );
