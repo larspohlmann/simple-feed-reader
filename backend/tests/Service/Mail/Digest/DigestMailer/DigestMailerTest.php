@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Digest\DigestMailer;
 
 use App\Entity\User;
 use App\Enum\DigestFormat;
+use App\Repository\DigestSettingsRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
@@ -20,17 +21,20 @@ use App\Service\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Model\MailIdentityModel;
+use App\Tests\DbTestCase;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
-use PHPUnit\Framework\TestCase;
+use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
 /** Wraps a real DigestMailFactory, which picks the message shape, and asserts what reaches the stubbed mailer. */
-final class DigestMailerTest extends TestCase
+final class DigestMailerTest extends DbTestCase
 {
     /** @var list<Email> */
     private array $sent = [];
@@ -38,6 +42,7 @@ final class DigestMailerTest extends TestCase
 
     protected function setUp(): void
     {
+        parent::setUp();
         $this->sent = [];
 
         $transport = $this->createStub(MailerInterface::class);
@@ -67,6 +72,7 @@ final class DigestMailerTest extends TestCase
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 5)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
+            $this->digestSettings(),
         );
 
         $this->mailer = new DigestMailer($transport, $builder);
@@ -92,8 +98,10 @@ final class DigestMailerTest extends TestCase
 
     private function user(DigestFormat $format): User
     {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
-        $user->getPreferences()->setDigestFormat($format);
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
+        $user = new UserFactory($this->entityManager, $hasher)->create('reader@example.com');
+        StoredUserSettings::digest($this->entityManager, $user)->setFormat($format);
 
         return $user;
     }
@@ -149,6 +157,14 @@ final class DigestMailerTest extends TestCase
         $email = $this->sent[0];
         self::assertNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
+    }
+
+    private function digestSettings(): DigestSettingsRepository
+    {
+        $repository = self::getContainer()->get(DigestSettingsRepository::class);
+        self::assertInstanceOf(DigestSettingsRepository::class, $repository);
+
+        return $repository;
     }
 
     private function mailIdentity(string $address, string $name): MailSendingSettingsInterface

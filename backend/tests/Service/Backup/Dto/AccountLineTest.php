@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Entity\DigestSettings;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Enum\MagazineStyle;
@@ -148,7 +149,11 @@ final class AccountLineTest extends TestCase
     {
         $user = BackupLineRecords::user();
         $user->setLocale('de');
-        $settings = new AccountSettingsModel(new ReadingSettings($user), new SharingSettings($user));
+        $settings = new AccountSettingsModel(
+            new ReadingSettings($user),
+            new SharingSettings($user),
+            new DigestSettings($user),
+        );
         $settings->reading->setScrapeFallbackEnabled(true);
         $settings->reading->setMagazineStyle(MagazineStyle::Airy);
         $settings->reading->setTrendingEnabled(false);

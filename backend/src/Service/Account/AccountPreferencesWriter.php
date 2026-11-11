@@ -6,6 +6,7 @@ namespace App\Service\Account;
 
 use App\Entity\User;
 use App\Enum\MagazineStyle;
+use App\Repository\DigestSettingsRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\SharingSettingsRepository;
 use App\Service\Account\Model\SharingSettingsModel;
@@ -21,6 +22,7 @@ final readonly class AccountPreferencesWriter
         private PasskeyOffer $passkeyOffer,
         private ReadingSettingsRepository $readingSettings,
         private SharingSettingsRepository $sharingSettings,
+        private DigestSettingsRepository $digestSettings,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -60,7 +62,7 @@ final readonly class AccountPreferencesWriter
 
     public function changeDigest(User $user, DigestConfigurationModel $configuration): void
     {
-        $this->digestEnablement->applyTo($user->getPreferences(), $configuration);
+        $this->digestEnablement->applyTo($this->digestSettings->forUser($user), $configuration);
         $this->entityManager->flush();
     }
 

@@ -84,12 +84,12 @@ final class AccountPreferencesWriterTest extends DbTestCase
             new DigestConfigurationModel(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
         );
 
-        $preferences = $this->reload($user)->getPreferences();
-        self::assertTrue($preferences->isDigestEnabled());
-        self::assertSame(DigestCadence::Weekly, $preferences->getDigestCadence());
-        self::assertSame(7, $preferences->getDigestSendHour());
-        self::assertSame(3, $preferences->getDigestWeekday());
-        self::assertSame(DigestFormat::Text, $preferences->getDigestFormat());
+        $settings = StoredUserSettings::digest($this->entityManager, $this->reload($user));
+        self::assertTrue($settings->isEnabled());
+        self::assertSame(DigestCadence::Weekly, $settings->getCadence());
+        self::assertSame(7, $settings->getSendHour());
+        self::assertSame(3, $settings->getWeekday());
+        self::assertSame(DigestFormat::Text, $settings->getFormat());
     }
 
     public function testAnswerPasskeyOfferPersistsTheAnswer(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\DigestSettings;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Entity\User;
@@ -23,14 +24,14 @@ final class MeJsonTest extends TestCase
     {
         $user = $this->user();
         $user->markEmailVerified(new \DateTimeImmutable('2026-08-09 09:10:00'));
-        $preferences = $user->getPreferences();
-        $preferences->setDigestEnabled(true);
-        $preferences->setDigestCadence(DigestCadence::Weekly);
-        $preferences->setDigestSendHour(9);
-        $preferences->setDigestWeekday(3);
+        $digest = new DigestSettings($user);
+        $digest->setEnabled(true);
+        $digest->setCadence(DigestCadence::Weekly);
+        $digest->setSendHour(9);
+        $digest->setWeekday(3);
 
         $profile = MeJson::profile($user, true);
-        $settings = new AccountSettingsModel(new ReadingSettings($user), new SharingSettings($user));
+        $settings = new AccountSettingsModel(new ReadingSettings($user), new SharingSettings($user), $digest);
         $preferencesJson = MeJson::preferences($user, $settings, 'Europe/Berlin');
 
         self::assertSame(['enabled' => true], $profile['mail']);

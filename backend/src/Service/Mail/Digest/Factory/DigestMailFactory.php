@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest\Factory;
 
 use App\Entity\User;
+use App\Repository\DigestSettingsRepository;
 use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
@@ -17,7 +18,7 @@ use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 
 /**
- * Builds the digest Email from a DigestModel, honouring the recipient's digest_format: `text` sends the plain body
+ * Builds the digest Email from a DigestModel, honouring the recipient's digest format: `text` sends the plain body
  * only; `html` adds the airy HTML body plus its CID images, keeping text as the alternative fallback.
  */
 final readonly class DigestMailFactory
@@ -30,6 +31,7 @@ final readonly class DigestMailFactory
         private DigestLinkBuilder $links,
         private DigestBrandLogo $brandLogo,
         private MailSendingSettingsInterface $mailSettings,
+        private DigestSettingsRepository $digestSettings,
     ) {
     }
 
@@ -47,7 +49,7 @@ final readonly class DigestMailFactory
 
         $email->getHeaders()->addTextHeader('List-Unsubscribe', '<' . $this->links->settingsEmailUrl() . '>');
 
-        if ($user->getPreferences()->getDigestFormat() === DigestFormat::Text) {
+        if ($this->digestSettings->forUser($user)->getFormat() === DigestFormat::Text) {
             return $email;
         }
 

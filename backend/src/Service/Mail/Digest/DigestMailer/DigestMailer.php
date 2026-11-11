@@ -12,7 +12,7 @@ use Symfony\Component\Mailer\MailerInterface;
 
 /**
  * Sends a rendered digest to its recipient. The message shape (plain text, or
- * HTML + text) is decided by DigestMailFactory from the user's digest_format.
+ * HTML + text) is decided by DigestMailFactory from the user's digest format.
  */
 final readonly class DigestMailer implements DigestMailerInterface
 {

@@ -50,11 +50,11 @@ final class MeJson
                 'rememberShares' => $settings->sharing->isRememberingShares(),
             ],
             'digest' => [
-                'enabled' => $preferences->isDigestEnabled(),
-                'cadence' => $preferences->getDigestCadence()->value,
-                'format' => $preferences->getDigestFormat()->value,
-                'sendHour' => $preferences->getDigestSendHour(),
-                'weekday' => $preferences->getDigestWeekday(),
+                'enabled' => $settings->digest->isEnabled(),
+                'cadence' => $settings->digest->getCadence()->value,
+                'format' => $settings->digest->getFormat()->value,
+                'sendHour' => $settings->digest->getSendHour(),
+                'weekday' => $settings->digest->getWeekday(),
                 'timezone' => $instanceTimezone,
             ],
         ];

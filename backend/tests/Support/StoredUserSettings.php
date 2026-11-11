@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\DigestSettings;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Entity\User;
+use App\Repository\DigestSettingsRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\SharingSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +28,14 @@ final class StoredUserSettings
     {
         $repository = $entityManager->getRepository(SharingSettings::class);
         Assert::assertInstanceOf(SharingSettingsRepository::class, $repository);
+
+        return $repository->forUser($user);
+    }
+
+    public static function digest(EntityManagerInterface $entityManager, User $user): DigestSettings
+    {
+        $repository = $entityManager->getRepository(DigestSettings::class);
+        Assert::assertInstanceOf(DigestSettingsRepository::class, $repository);
 
         return $repository->forUser($user);
     }

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Mail\Digest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Enum\DigestFormat;
+use App\Repository\DigestSettingsRepository;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
@@ -30,6 +31,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
+use App\Tests\Support\StoredUserSettings;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Component\Clock\MockClock;
@@ -40,7 +42,7 @@ use Symfony\Component\Translation\Translator;
 
 /**
  * Composes over exactly the requested window back from the clock, sends only when there is something to report, and
- * never touches digestLastSentAt: that watermark belongs to DigestEnablement and the scheduled send.
+ * never touches lastSentAt: that watermark belongs to DigestEnablement and the scheduled send.
  */
 final class SendTestDigestTest extends DbTestCase
 {
@@ -158,6 +160,7 @@ final class SendTestDigestTest extends DbTestCase
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
+            $this->digestSettings(),
         );
 
         return new DigestMailer($transport, $builder);
@@ -166,7 +169,7 @@ final class SendTestDigestTest extends DbTestCase
     public function testHtmlFormatUserGetsAnHtmlBodyThroughTheRealMailer(): void
     {
         $this->givenOneMatch(new \DateTimeImmutable('2026-08-27T00:00:00Z'));
-        $this->user->getPreferences()->setDigestFormat(DigestFormat::Html);
+        StoredUserSettings::digest($this->entityManager, $this->user)->setFormat(DigestFormat::Html);
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
             ->send($this->user, 7);
@@ -180,7 +183,7 @@ final class SendTestDigestTest extends DbTestCase
     public function testTextFormatUserGetsNoHtmlBodyThroughTheRealMailer(): void
     {
         $this->givenOneMatch(new \DateTimeImmutable('2026-08-27T00:00:00Z'));
-        $this->user->getPreferences()->setDigestFormat(DigestFormat::Text);
+        StoredUserSettings::digest($this->entityManager, $this->user)->setFormat(DigestFormat::Text);
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
             ->send($this->user, 7);
@@ -189,6 +192,14 @@ final class SendTestDigestTest extends DbTestCase
         self::assertCount(1, $this->sentEmails);
         self::assertNull($this->sentEmails[0]->getHtmlBody());
         self::assertNotNull($this->sentEmails[0]->getTextBody());
+    }
+
+    private function digestSettings(): DigestSettingsRepository
+    {
+        $repository = self::getContainer()->get(DigestSettingsRepository::class);
+        self::assertInstanceOf(DigestSettingsRepository::class, $repository);
+
+        return $repository;
     }
 
     private function mailIdentity(string $address, string $name): MailSendingSettingsInterface

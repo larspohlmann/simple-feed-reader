@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Entity\Preferences;
+use App\Entity\DigestSettings;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Enum\DigestCadence;
@@ -27,6 +27,7 @@ use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
+use App\Tests\Support\StoredUserSettings;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
@@ -35,7 +36,7 @@ use Symfony\Component\Mailer\Exception\TransportException;
 
 /**
  * The sweep is the digest's security boundary, because a stale row can outlive the state that made it valid. With the
- * real schedule and composer, digestLastSentAt advances only on a real send: never on an empty compose, an ineligible
+ * real schedule and composer, lastSentAt advances only on a real send: never on an empty compose, an ineligible
  * or a not-yet-due account.
  */
 final class SendDueDigestsTest extends DbTestCase
@@ -64,7 +65,7 @@ final class SendDueDigestsTest extends DbTestCase
     public function testADueUserWithMatchesIsSentAndTheMarkerAdvancesToTheOccurrence(): void
     {
         $user = $this->verifiedUser();
-        $preferences = $this->givenDueWithOneMatch($user);
+        $settings = $this->givenDueWithOneMatch($user);
 
         $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
@@ -77,7 +78,7 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertSame(1, $report->considered);
         self::assertSame(1, $report->sent);
         self::assertSame(0, $report->skippedEmpty);
-        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $preferences->getDigestLastSentAt());
+        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $settings->getLastSentAt());
     }
 
     /**
@@ -87,10 +88,10 @@ final class SendDueDigestsTest extends DbTestCase
     public function testSinceIsTheLastSendNotJustTheOccurrenceThatBecameDue(): void
     {
         $user = $this->verifiedUser();
-        $preferences = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable('2026-08-27T08:00:00Z'));
+        $settings = $this->dueSettings($user, lastSentAt: new \DateTimeImmutable('2026-08-27T08:00:00Z'));
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-27T20:00:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 
         $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
@@ -106,8 +107,8 @@ final class SendDueDigestsTest extends DbTestCase
         $user = $this->verifiedUser();
         // digestLastSentAt already sits at the current occurrence: the next
         // occurrence has not arrived yet, so nothing should go out.
-        $preferences = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $settings = $this->dueSettings($user, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 
         $this->mailer->expects($this->never())->method('send');
 
@@ -116,16 +117,16 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertSame(1, $report->considered);
         self::assertSame(0, $report->sent);
         self::assertSame(0, $report->skippedEmpty);
-        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $preferences->getDigestLastSentAt());
+        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $settings->getLastSentAt());
     }
 
     public function testADueUserWithNoMatchesIsCountedAsSkippedEmptyAndTheMarkerStaysPut(): void
     {
         $user = $this->verifiedUser();
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
-        $preferences = $this->duePreferences($user, lastSentAt: $seededAt);
+        $settings = $this->dueSettings($user, lastSentAt: $seededAt);
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 
         $this->mailer->expects($this->never())->method('send');
 
@@ -134,7 +135,7 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertSame(1, $report->considered);
         self::assertSame(0, $report->sent);
         self::assertSame(1, $report->skippedEmpty);
-        self::assertEquals($seededAt, $preferences->getDigestLastSentAt());
+        self::assertEquals($seededAt, $settings->getLastSentAt());
     }
 
     public function testADueButUnverifiedUserIsSkippedAndNotCountedAsSent(): void
@@ -178,7 +179,7 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertSame(1, $this->sweep()->run()->sent);
     }
 
-    public function testMailDisabledGloballyShortCircuitsWithoutTouchingAnyPreferences(): void
+    public function testMailDisabledGloballyShortCircuitsWithoutTouchingAnySettings(): void
     {
         $recipients = $this->createMock(DigestRecipientsInterface::class);
         $recipients->expects($this->never())->method('findWithDigestEnabled');
@@ -194,14 +195,14 @@ final class SendDueDigestsTest extends DbTestCase
     public function testOneDueAndOneNotDueUserAreBothConsideredButOnlyTheDueOneIsSent(): void
     {
         $dueUser = $this->verifiedUser();
-        $duePreferences = $this->duePreferences($dueUser, lastSentAt: null);
+        $dueSettings = $this->dueSettings($dueUser, lastSentAt: null);
 
         $notDueUser = $this->verifiedUser();
-        $notDuePreferences = $this->duePreferences($notDueUser, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
+        $notDueSettings = $this->dueSettings($notDueUser, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
 
         $search = $this->givenOneMatch($dueUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$duePreferences, $notDuePreferences]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$dueSettings, $notDueSettings]);
 
         $this->mailer->expects($this->once())->method('send')
             ->with($dueUser, self::isInstanceOf(DigestModel::class));
@@ -210,17 +211,17 @@ final class SendDueDigestsTest extends DbTestCase
 
         self::assertSame(2, $report->considered);
         self::assertSame(1, $report->sent);
-        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $duePreferences->getDigestLastSentAt());
-        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $notDuePreferences->getDigestLastSentAt());
+        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $dueSettings->getLastSentAt());
+        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $notDueSettings->getLastSentAt());
     }
 
     public function testAFailingSendForOneUserDoesNotStarveTheRestOfTheSweep(): void
     {
         $failingUser = $this->verifiedUser();
-        $failingPreferences = $this->duePreferences($failingUser, lastSentAt: null);
+        $failingSettings = $this->dueSettings($failingUser, lastSentAt: null);
 
         $healthyUser = $this->verifiedUser();
-        $healthyPreferences = $this->duePreferences($healthyUser, lastSentAt: null);
+        $healthySettings = $this->dueSettings($healthyUser, lastSentAt: null);
 
         $failingSearch = $this->givenOneMatch($failingUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $healthySearch = $this->givenOneMatch($healthyUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
@@ -229,7 +230,7 @@ final class SendDueDigestsTest extends DbTestCase
             [$healthyUser->requireId(), [$healthySearch]],
         ]);
         $this->recipients->method('findWithDigestEnabled')
-            ->willReturn([$failingPreferences, $healthyPreferences]);
+            ->willReturn([$failingSettings, $healthySettings]);
 
         $this->mailer->expects($this->exactly(2))->method('send')
             ->willReturnCallback(static function (User $user) use ($failingUser): void {
@@ -242,14 +243,14 @@ final class SendDueDigestsTest extends DbTestCase
 
         self::assertSame(2, $report->considered);
         self::assertSame(1, $report->sent);
-        self::assertNull($failingPreferences->getDigestLastSentAt());
-        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $healthyPreferences->getDigestLastSentAt());
+        self::assertNull($failingSettings->getLastSentAt());
+        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $healthySettings->getLastSentAt());
     }
 
     public function testAFailedSendIsLoggedWithTheRecipientAndTheTransportException(): void
     {
         $user = $this->verifiedUser();
-        $preferences = $this->givenDueWithOneMatch($user);
+        $settings = $this->givenDueWithOneMatch($user);
         $failure = new TransportException('relay rejected the recipient');
         $this->mailer->expects($this->once())->method('send')->willThrowException($failure);
 
@@ -266,7 +267,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     private function assertIneligibleUserIsSkipped(User $user): void
     {
-        $preferences = $this->givenDueWithOneMatch($user);
+        $settings = $this->givenDueWithOneMatch($user);
 
         $this->mailer->expects($this->never())->method('send');
 
@@ -275,17 +276,17 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertSame(1, $report->considered);
         self::assertSame(0, $report->sent);
         self::assertSame(0, $report->skippedEmpty);
-        self::assertNull($preferences->getDigestLastSentAt());
+        self::assertNull($settings->getLastSentAt());
     }
 
-    private function givenDueWithOneMatch(User $user): Preferences
+    private function givenDueWithOneMatch(User $user): DigestSettings
     {
-        $preferences = $this->duePreferences($user, lastSentAt: null);
+        $settings = $this->dueSettings($user, lastSentAt: null);
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 
-        return $preferences;
+        return $settings;
     }
 
     private function sweep(
@@ -319,15 +320,15 @@ final class SendDueDigestsTest extends DbTestCase
     }
 
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */
-    private function duePreferences(User $user, ?\DateTimeImmutable $lastSentAt): Preferences
+    private function dueSettings(User $user, ?\DateTimeImmutable $lastSentAt): DigestSettings
     {
-        $preferences = $user->getPreferences();
-        $preferences->setDigestEnabled(true);
-        $preferences->setDigestCadence(DigestCadence::Daily);
-        $preferences->setDigestSendHour(8);
-        $preferences->setDigestLastSentAt($lastSentAt);
+        $settings = StoredUserSettings::digest($this->entityManager, $user);
+        $settings->setEnabled(true);
+        $settings->setCadence(DigestCadence::Daily);
+        $settings->setSendHour(8);
+        $settings->setLastSentAt($lastSentAt);
 
-        return $preferences;
+        return $settings;
     }
 
     private function givenOneMatch(User $user, \DateTimeImmutable $effectiveDate): SavedSearch

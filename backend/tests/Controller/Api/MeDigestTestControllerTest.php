@@ -12,6 +12,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
+use App\Tests\Support\StoredUserSettings;
 use Psr\Cache\CacheItemPoolInterface;
 
 /**
@@ -95,7 +96,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
         $client = static::createClient();
         $this->seedEnabledMailInstance();
         $user = $this->verifiedUserWithAMatchingDigestSearch('digest-test-watermark@example.test');
-        $before = $user->getPreferences()->getDigestLastSentAt();
+        $before = StoredUserSettings::digest($this->entityManager(), $user)->getLastSentAt();
 
         $this->authenticate($client, $user);
         $client->request(
@@ -110,7 +111,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $reloaded = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $reloaded);
-        self::assertEquals($before, $reloaded->getPreferences()->getDigestLastSentAt());
+        self::assertEquals($before, StoredUserSettings::digest($this->entityManager(), $reloaded)->getLastSentAt());
     }
 
     public function testAUserWithNothingToReportGetsSentFalseAndNoMail(): void

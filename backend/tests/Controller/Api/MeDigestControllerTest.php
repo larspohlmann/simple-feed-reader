@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 
 /** Includes first-enable seeding: an account's first digest covers only entries that arrive after it opts in. */
 final class MeDigestControllerTest extends ApiTestCase
@@ -44,7 +45,7 @@ final class MeDigestControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $reloaded = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $reloaded);
-        self::assertTrue($reloaded->getPreferences()->isDigestEnabled());
+        self::assertTrue(StoredUserSettings::digest($this->entityManager(), $reloaded)->isEnabled());
     }
 
     public function testTheLowestAndHighestValidSendHoursAreAccepted(): void
@@ -219,7 +220,7 @@ final class MeDigestControllerTest extends ApiTestCase
         $user = $this->factory()->create('digest-first-enable@example.test');
         $this->authenticate($client, $user);
 
-        self::assertNull($user->getPreferences()->getDigestLastSentAt());
+        self::assertNull(StoredUserSettings::digest($this->entityManager(), $user)->getLastSentAt());
 
         $client->request(
             'PATCH',
@@ -236,7 +237,7 @@ final class MeDigestControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $reloaded = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $reloaded);
-        self::assertNotNull($reloaded->getPreferences()->getDigestLastSentAt());
+        self::assertNotNull(StoredUserSettings::digest($this->entityManager(), $reloaded)->getLastSentAt());
     }
 
     public function testASecondEnablingPatchDoesNotMoveDigestLastSentAt(): void
@@ -259,7 +260,7 @@ final class MeDigestControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $afterFirstEnable = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $afterFirstEnable);
-        $seededAt = $afterFirstEnable->getPreferences()->getDigestLastSentAt();
+        $seededAt = StoredUserSettings::digest($this->entityManager(), $afterFirstEnable)->getLastSentAt();
         self::assertNotNull($seededAt);
 
         $client->request(
@@ -276,7 +277,8 @@ final class MeDigestControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $afterSecondEnable = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $afterSecondEnable);
-        self::assertEquals($seededAt, $afterSecondEnable->getPreferences()->getDigestLastSentAt());
+        $lastSentAt = StoredUserSettings::digest($this->entityManager(), $afterSecondEnable)->getLastSentAt();
+        self::assertEquals($seededAt, $lastSentAt);
     }
 
     public function testDisablingThenReenablingDoesNotReseedDigestLastSentAt(): void
@@ -299,7 +301,7 @@ final class MeDigestControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $afterEnable = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $afterEnable);
-        $seededAt = $afterEnable->getPreferences()->getDigestLastSentAt();
+        $seededAt = StoredUserSettings::digest($this->entityManager(), $afterEnable)->getLastSentAt();
         self::assertNotNull($seededAt);
 
         $client->request(
@@ -327,7 +329,8 @@ final class MeDigestControllerTest extends ApiTestCase
         $this->entityManager()->clear();
         $afterReenable = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $afterReenable);
-        self::assertEquals($seededAt, $afterReenable->getPreferences()->getDigestLastSentAt());
+        $lastSentAt = StoredUserSettings::digest($this->entityManager(), $afterReenable)->getLastSentAt();
+        self::assertEquals($seededAt, $lastSentAt);
     }
 
     public function testUpdatingTheDigestRequiresAuthentication(): void

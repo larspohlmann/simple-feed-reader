@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Doctrine;
 
+use App\Entity\DigestSettings;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Entity\User;
@@ -23,6 +24,7 @@ final class UserSettingsRowsListenerTest extends DbTestCase
         self::assertInstanceOf(User::class, $reloaded);
         self::assertFalse(StoredUserSettings::reading($this->entityManager, $reloaded)->isScrapeFallbackEnabled());
         self::assertTrue(StoredUserSettings::sharing($this->entityManager, $reloaded)->isEnabled());
+        self::assertFalse(StoredUserSettings::digest($this->entityManager, $reloaded)->isEnabled());
     }
 
     public function testPersistingAManagedAccountAgainAddsNoSecondRow(): void
@@ -36,5 +38,6 @@ final class UserSettingsRowsListenerTest extends DbTestCase
 
         self::assertSame(1, $this->entityManager->getRepository(ReadingSettings::class)->count(['user' => $user]));
         self::assertSame(1, $this->entityManager->getRepository(SharingSettings::class)->count(['user' => $user]));
+        self::assertSame(1, $this->entityManager->getRepository(DigestSettings::class)->count(['user' => $user]));
     }
 }

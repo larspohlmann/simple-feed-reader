@@ -232,6 +232,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `UserIdentity` | Your links to Google and Apple sign-in. A restore writes what the file says, and the file comes from you. See section 7. |
 | `ActionToken` | Short-lived tokens for address verification and password reset. Each token lives for minutes and works once. |
 | `RecommendationSettings` | Your "For you" settings: the guidance prompt, the learned profile, the caps and limits, and the batch size. They are quick to set again after a restore, and not worth carrying in a file you handle and send. |
+| `DigestSettings` | Your email digest settings: on or off, how often, the format, the hour and the weekday, and when the last digest went out. The backup format does not carry them yet. A restored "last sent" date would only delay the next send. |
 | `RecommendationRun` | The history of your "For you" runs. Run the engine again to get new results. The history is large, and it points at articles the restore has replaced. |
 | `ProfileRun` | The history of your interest-profile generations. Run it again to get a new profile. It has no meaning without the entries it was built from, which the restore replaces. |
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
@@ -269,11 +270,9 @@ picker.
 | `preferences` | Not a value, but the pointer from the account to its preferences row. The `account` line writes the preference itself, so the pointer becomes no key in the file. |
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
 | `recommendationSettings` | The pointer to your "For you" settings row. It points at data that section 6.2 drops in full. |
-| `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday`, `digestFormat` | The email digest settings. The backup format does not carry them yet. |
-| `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
 | `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey. It records that the app showed you the offer, not a setting you chose. A restore into a fresh account should let that account see the offer. |
 
-**On each row you own.** The preferences, the reading settings, the sharing settings, each tag, each subscription, each
+**On each row you own.** The preferences, the reading settings, the sharing settings, the digest settings, each tag, each subscription, each
 article mark, each included social network and each social network kept out of For you all hold one pointer to their owner.
 
 | Field | Why the file leaves it out |
