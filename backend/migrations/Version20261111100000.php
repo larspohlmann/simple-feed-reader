@@ -22,6 +22,7 @@ final class Version20261111100000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
+        $this->abortIfHalfSplit($schema, self::TABLE, 'scrape_fallback_enabled', 'magazine_style', 'trending_enabled');
         $this->skipIf($schema->hasTable(self::TABLE), 'Already applied.');
 
         $this->abortIfUnsupportedPlatform();
@@ -50,6 +51,7 @@ final class Version20261111100000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        $this->abortIfHalfSplit($schema, self::TABLE, 'scrape_fallback_enabled', 'magazine_style', 'trending_enabled');
         $this->skipIf(!$schema->hasTable(self::TABLE), 'Not applied.');
 
         $this->abortIfUnsupportedPlatform();
@@ -63,9 +65,9 @@ final class Version20261111100000 extends AbstractMigration
             $this->addSql('ALTER TABLE user_preferences ADD COLUMN trending_enabled BOOLEAN DEFAULT 1 NOT NULL');
         }
 
-        $this->restoreColumn('scrape_fallback_enabled', 'scrape_fallback_enabled', '0');
-        $this->restoreColumn('magazine_style', 'magazine_style', '\'boxed\'');
-        $this->restoreColumn('trending_enabled', 'trending_enabled', '1');
+        $this->restoreColumn(self::TABLE, 'scrape_fallback_enabled', 'scrape_fallback_enabled', '0');
+        $this->restoreColumn(self::TABLE, 'magazine_style', 'magazine_style', '\'boxed\'');
+        $this->restoreColumn(self::TABLE, 'trending_enabled', 'trending_enabled', '1');
         $this->addSql('DROP TABLE user_reading_settings');
     }
 

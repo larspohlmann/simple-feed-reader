@@ -12,9 +12,11 @@ trait UserSettingsRowLookup
     /** @return T */
     public function forUser(User $user): object
     {
-        return $this->find($user->requireId()) ?? throw new \LogicException(\sprintf(
+        $userId = $user->requireId();
+
+        return $this->find($userId) ?? throw new \LogicException(\sprintf(
             'User %d has no %s row; UserSettingsRowsListener creates every one with the account.',
-            $user->requireId(),
+            $userId,
             $this->getClassName(),
         ));
     }

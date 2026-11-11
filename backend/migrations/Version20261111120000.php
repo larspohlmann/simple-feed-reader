@@ -22,6 +22,7 @@ final class Version20261111120000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
+        $this->abortIfHalfSplit($schema, self::TABLE, 'digest_enabled', 'digest_cadence', 'digest_format', 'digest_send_hour', 'digest_weekday', 'digest_last_sent_at');
         $this->skipIf($schema->hasTable(self::TABLE), 'Already applied.');
 
         $this->abortIfUnsupportedPlatform();
@@ -62,6 +63,7 @@ final class Version20261111120000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        $this->abortIfHalfSplit($schema, self::TABLE, 'digest_enabled', 'digest_cadence', 'digest_format', 'digest_send_hour', 'digest_weekday', 'digest_last_sent_at');
         $this->skipIf(!$schema->hasTable(self::TABLE), 'Not applied.');
 
         $this->abortIfUnsupportedPlatform();
@@ -81,12 +83,12 @@ final class Version20261111120000 extends AbstractMigration
             $this->addSql('ALTER TABLE user_preferences ADD COLUMN digest_format VARCHAR(10) DEFAULT \'html\' NOT NULL');
         }
 
-        $this->restoreColumn('digest_enabled', 'enabled', '0');
-        $this->restoreColumn('digest_cadence', 'cadence', '\'daily\'');
-        $this->restoreColumn('digest_send_hour', 'send_hour', '8');
-        $this->restoreColumn('digest_weekday', 'weekday', '1');
-        $this->restoreColumn('digest_last_sent_at', 'last_sent_at', null);
-        $this->restoreColumn('digest_format', 'format', '\'html\'');
+        $this->restoreColumn(self::TABLE, 'digest_enabled', 'enabled', '0');
+        $this->restoreColumn(self::TABLE, 'digest_cadence', 'cadence', '\'daily\'');
+        $this->restoreColumn(self::TABLE, 'digest_send_hour', 'send_hour', '8');
+        $this->restoreColumn(self::TABLE, 'digest_weekday', 'weekday', '1');
+        $this->restoreColumn(self::TABLE, 'digest_last_sent_at', 'last_sent_at', null);
+        $this->restoreColumn(self::TABLE, 'digest_format', 'format', '\'html\'');
         $this->addSql('DROP TABLE user_digest_settings');
     }
 

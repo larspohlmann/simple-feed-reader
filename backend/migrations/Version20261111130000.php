@@ -20,6 +20,7 @@ final class Version20261111130000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
+        $this->abortIfHalfMoved($schema);
         $this->skipIf(!$schema->hasTable('user_preferences'), 'Already applied.');
 
         $this->abortIfUnsupportedPlatform();
@@ -37,6 +38,7 @@ final class Version20261111130000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        $this->abortIfHalfMoved($schema);
         $this->skipIf($schema->hasTable('user_preferences'), 'Not applied.');
 
         $this->abortIfUnsupportedPlatform();
@@ -65,5 +67,14 @@ final class Version20261111130000 extends AbstractMigration
     public function isTransactional(): bool
     {
         return false;
+    }
+
+    private function abortIfHalfMoved(Schema $schema): void
+    {
+        $this->abortIf(
+            $schema->hasTable('user_preferences') && $schema->getTable('app_user')->hasColumn('passkey_offer_answered_at'),
+            'Both user_preferences and app_user.passkey_offer_answered_at exist: an earlier run stopped part-way'
+            . ' (DDL does not roll back). Repair by hand: decide which side holds the data, drop the other, then rerun.',
+        );
     }
 }

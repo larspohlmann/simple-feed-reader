@@ -6,8 +6,9 @@ namespace DoctrineMigrations;
 
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
+use Doctrine\DBAL\Schema\Schema;
 
-/** The #2177 migrations that split user_preferences; a split one names its settings table in TABLE. */
+/** Shared by the #2177 migrations that split user_preferences. */
 trait SplitsUserPreferences
 {
     private function abortIfUnsupportedPlatform(): void
@@ -17,6 +18,22 @@ trait SplitsUserPreferences
         $this->abortIf(
             !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
             \sprintf('No DDL defined for platform %s; only MySQL and SQLite are supported.', $platform::class),
+        );
+    }
+
+    private function abortIfHalfSplit(Schema $schema, string $table, string ...$columns): void
+    {
+        $columnsRemain = $schema->hasTable('user_preferences')
+            && array_any($columns, $schema->getTable('user_preferences')->hasColumn(...));
+
+        $this->abortIf(
+            $schema->hasTable($table) && $columnsRemain,
+            \sprintf(
+                'Both %s and the matching user_preferences columns exist: an earlier run stopped part-way'
+                . ' (DDL does not roll back). Repair by hand: decide which side holds the data, remove the'
+                . ' other side (the table, or the partly added or dropped columns), then rerun.',
+                $table,
+            ),
         );
     }
 
@@ -38,12 +55,12 @@ trait SplitsUserPreferences
         }
     }
 
-    private function restoreColumn(string $column, string $settingsColumn, ?string $fallback): void
+    private function restoreColumn(string $table, string $column, string $settingsColumn, ?string $fallback): void
     {
         $copy = \sprintf(
             '(SELECT settings.%s FROM %s settings WHERE settings.user_id = user_preferences.user_id)',
             $settingsColumn,
-            self::TABLE,
+            $table,
         );
         $this->addSql(\sprintf(
             'UPDATE user_preferences SET %s = %s',
