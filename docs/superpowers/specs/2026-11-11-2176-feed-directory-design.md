@@ -61,13 +61,16 @@ fields as nullable.
 
 `backend/resources/feed-directory/` holds:
 
-- `countries/<key>.json.gz` — one file per country: `{ "country": key, "categories": […], "languages":
-  […], "domains": [ … ] }`. Domain tuples keep the upstream positions, but `categories` and `languages`
-  are the file's own lists, so a file is self-contained. Each domain belongs to exactly one country, so no
-  domain is duplicated. Largest: United States, 4,682 domains, 325 KB gzipped; median 2.5 KB.
-- `index.json` — `{ "countries": [ { "key", "name", "languages": { "<code>": { "channels": n,
-  "podcasts": n } } } ], "languages": [codes] }`. Enough to drive the scope picker with counts and to
-  know which country files hold a language, without opening any of them.
+- `countries/<code>.json.gz` — one file per country: `{ "country": code, "categories": […], "languages":
+  […], "domains": [ … ] }`. A domain is `[host, rank|null, avgArticleLength|null, languageIndexes[],
+  groups[], summary|null]`: upstream's tuple without the country slot, with category and language indexes
+  pointing into the file's own `categories` and `languages`, so a file is self-contained. Each domain
+  belongs to exactly one country, so no domain is duplicated. Largest: United States, 4,682 domains,
+  325 KB gzipped; median 2.5 KB.
+- `index.json` — `{ "countries": [ { "code", "name", "sites": n, "languages": { "<code>": n } } ],
+  "languages": { "<code>": n } }`, where each `n` counts sites (channels and podcasts together). Enough to
+  drive the scope picker with counts and to know which country files hold a language, without opening any
+  of them.
 - `ABOUT.txt`, `LICENSE.txt` — copied from upstream `Sources/`.
 - `SOURCE` — the upstream URL, the commit SHA of `docs/data/catalog.js`, and the fetch date.
 - `snapshot.php` — see below.
