@@ -7,10 +7,10 @@ export interface ScopeOption {
 }
 
 export function countryOptions(index: FeedDirectoryIndex, lang: string): ScopeOption[] {
-  const names = new Intl.DisplayNames([lang], { type: 'region' });
+  const names = new Intl.DisplayNames([lang], { type: 'region', fallback: 'none' });
   const options = index.countries.map((country) => ({
     code: country.code,
-    name: names.of(country.code) ?? country.name,
+    name: displayName(names, country.code, country.name),
     sites: country.sites,
   }));
 
@@ -18,14 +18,22 @@ export function countryOptions(index: FeedDirectoryIndex, lang: string): ScopeOp
 }
 
 export function languageOptions(index: FeedDirectoryIndex, lang: string): ScopeOption[] {
-  const names = new Intl.DisplayNames([lang], { type: 'language' });
+  const names = new Intl.DisplayNames([lang], { type: 'language', fallback: 'none' });
   const options = Object.entries(index.languages).map(([code, sites]) => ({
     code,
-    name: names.of(code) ?? code,
+    name: displayName(names, code, code),
     sites,
   }));
 
   return byName(options, lang);
+}
+
+function displayName(names: Intl.DisplayNames, code: string, fallback: string): string {
+  try {
+    return names.of(code) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function byName(options: ScopeOption[], lang: string): ScopeOption[] {

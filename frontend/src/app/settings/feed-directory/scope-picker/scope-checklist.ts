@@ -8,7 +8,6 @@ export interface ScopeChecklistKeys {
   readonly filter: string;
 }
 
-/** One of the picker's two boxes: its options, the filter over them, and the picks in pick order. */
 export class ScopeChecklist {
   readonly filter = signal('');
   readonly picked: WritableSignal<ReadonlySet<string>>;

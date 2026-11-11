@@ -18,14 +18,19 @@ const EMPTY_SCOPE: FeedDirectoryScope = { countries: [], languages: [] };
 
 describe('FeedDirectoryScopePickerComponent', () => {
   let fixture: ComponentFixture<FeedDirectoryScopePickerComponent>;
+  let index: FeedDirectoryIndex;
   let save: jest.Mock<Observable<boolean>, [FeedDirectoryScope]>;
+
+  beforeEach(() => {
+    index = INDEX;
+  });
 
   async function render(initial: FeedDirectoryScope = EMPTY_SCOPE): Promise<void> {
     save = jest.fn<Observable<boolean>, [FeedDirectoryScope]>(() => of(true));
     await TestBed.configureTestingModule({
       imports: [FeedDirectoryScopePickerComponent, provideTranslocoTesting()],
       providers: [
-        { provide: FeedDirectoryApi, useValue: { index: () => of(INDEX) } },
+        { provide: FeedDirectoryApi, useValue: { index: () => of(index) } },
         { provide: FeedDirectoryScopeService, useValue: { save } },
       ],
     }).compileComponents();
@@ -76,6 +81,26 @@ describe('FeedDirectoryScopePickerComponent', () => {
     expect(optionTexts('countries')).toEqual(['Austria 302', 'Germany 1,329']);
     expect(optionTexts('languages')).toEqual(['English 12,525', 'German 1,723']);
     expect(fixture.nativeElement.querySelectorAll('input[type="checkbox"]')).toHaveLength(4);
+  });
+
+  it('falls back to the index name for a country Intl cannot name', async () => {
+    index = {
+      ...INDEX,
+      countries: [
+        ...INDEX.countries,
+        { code: 'QQ', name: 'Qland', sites: 7, languages: { de: 7 } },
+      ],
+    };
+    await render();
+
+    expect(optionTexts('countries')).toEqual(['Austria 302', 'Germany 1,329', 'Qland 7']);
+  });
+
+  it('falls back to the code for a malformed language code instead of failing', async () => {
+    index = { ...INDEX, languages: { ...INDEX.languages, 'not a code!': 3 } };
+    await render();
+
+    expect(optionTexts('languages')).toEqual(['English 12,525', 'German 1,723', 'not a code! 3']);
   });
 
   it('keeps Save disabled until one country and one language are checked', async () => {
