@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
-use App\Entity\Preferences;
+use App\Entity\DigestSettings;
 use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Repository\EntryListRepository;
@@ -28,6 +28,7 @@ use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
+use App\Tests\Support\StoredUserSettings;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use Psr\Log\NullLogger;
@@ -55,15 +56,15 @@ final class SendDueDigestsHandlerTest extends DbTestCase
     public function testFiringSendsTheDigestForADueVerifiedAccount(): void
     {
         $user = $this->verifiedUser();
-        $duePreferences = $this->duePreferences($user);
+        $dueSettings = $this->dueSettings($user);
         $search = (new SavedSearchMatchFixture($this->entityManager))
             ->oneMatch($user, 'rust', new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
         $savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
         $recipients = $this->createStub(DigestRecipientsInterface::class);
-        $recipients->method('findWithDigestEnabled')->willReturn([$duePreferences]);
+        $recipients->method('findWithDigestEnabled')->willReturn([$dueSettings]);
         $mailer = $this->createMock(DigestMailerInterface::class);
-        $mailer->expects($this->once())->method('send')->with($user, self::isInstanceOf(DigestModel::class));
+        $mailer->expects($this->once())->method('send')->with($dueSettings, self::isInstanceOf(DigestModel::class));
 
         $this->handler($recipients, $mailer, $savedSearches)->__invoke(new SendDueDigests());
     }
@@ -126,15 +127,15 @@ final class SendDueDigestsHandlerTest extends DbTestCase
     }
 
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */
-    private function duePreferences(User $user): Preferences
+    private function dueSettings(User $user): DigestSettings
     {
-        $duePreferences = $user->getPreferences();
-        $duePreferences->setDigestEnabled(true);
-        $duePreferences->setDigestCadence(DigestCadence::Daily);
-        $duePreferences->setDigestSendHour(8);
-        $duePreferences->setDigestLastSentAt(null);
+        $dueSettings = StoredUserSettings::digest($this->entityManager, $user);
+        $dueSettings->setEnabled(true);
+        $dueSettings->setCadence(DigestCadence::Daily);
+        $dueSettings->setSendHour(8);
+        $dueSettings->setLastSentAt(null);
 
-        return $duePreferences;
+        return $dueSettings;
     }
 
     private function members(): SavedSearchEntryRepository

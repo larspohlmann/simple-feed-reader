@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class EntrySharedTest extends ApiTestCase
@@ -89,7 +90,7 @@ final class EntrySharedTest extends ApiTestCase
     public function testAShareIsIgnoredWhileRememberingIsOff(): void
     {
         [$headers, $user] = $this->bearerAndUser('share-off@example.com');
-        $user->getPreferences()->setRememberingShares(false);
+        StoredUserSettings::sharing($this->entityManager(), $user)->setRememberingShares(false);
         $entryId = $this->subscribedEntry($user, 'share-off');
 
         self::assertFalse($this->patchState($headers, $entryId, ['isShared' => true])['isShared']);
@@ -98,7 +99,7 @@ final class EntrySharedTest extends ApiTestCase
     public function testAShareIsIgnoredWhileSharingIsOff(): void
     {
         [$headers, $user] = $this->bearerAndUser('share-disabled@example.com');
-        $user->getPreferences()->setSharingEnabled(false);
+        StoredUserSettings::sharing($this->entityManager(), $user)->setEnabled(false);
         $entryId = $this->subscribedEntry($user, 'share-disabled');
 
         self::assertFalse($this->patchState($headers, $entryId, ['isShared' => true])['isShared']);
@@ -109,7 +110,7 @@ final class EntrySharedTest extends ApiTestCase
         [$headers, $user] = $this->bearerAndUser('share-remove-off@example.com');
         $entryId = $this->subscribedEntry($user, 'share-remove-off');
         $this->patchState($headers, $entryId, ['isShared' => true]);
-        $user->getPreferences()->setRememberingShares(false);
+        StoredUserSettings::sharing($this->entityManager(), $user)->setRememberingShares(false);
         $this->entityManager()->flush();
 
         self::assertFalse($this->patchState($headers, $entryId, ['isShared' => false])['isShared']);

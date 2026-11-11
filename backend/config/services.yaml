@@ -171,7 +171,7 @@ services:
     App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface: '@App\Repository\UserIdentityRepository'
     App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface: '@App\Repository\UserPasskeyRepository'
     App\Service\Auth\UserByEmail\UserByEmailInterface: '@App\Repository\UserRepository'
-    App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface: '@App\Repository\PreferencesRepository'
+    App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface: '@App\Repository\DigestSettingsRepository'
     App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface: '@App\Repository\SavedSearchRepository'
     App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface: '@App\Repository\GrafanaSettingsRepository'
     App\Service\Image\ProbedLadder\ProbedLadderInterface: '@App\Repository\ProbedLadderRepository'

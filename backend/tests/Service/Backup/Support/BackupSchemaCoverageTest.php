@@ -9,6 +9,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Entity\Category;
+use App\Entity\DigestSettings;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Entity\EntryShare;
@@ -22,10 +23,10 @@ use App\Entity\KnownSocialCollection;
 use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
-use App\Entity\Preferences;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
+use App\Entity\ReadingSettings;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -34,6 +35,7 @@ use App\Entity\RetentionSetting;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SavedSearchEntry;
+use App\Entity\SharingSettings;
 use App\Entity\ShareEnrichment;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
@@ -191,6 +193,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'radius of a leaked backup file for no gain.',
         SavedSearchEntry::class => 'A derived saved-search membership row (#1116); rebuilt by the sweep, '
             . 'so a restore carries none.',
+        DigestSettings::class => 'The email digest settings (#636): ' . self::DIGEST_BACKUP_NOT_YET_WIRED
+            . ' The last-sent watermark is system-written; a restored one would only delay the next send.',
         TrendingHiddenEntry::class => 'The Trending stories the reader hid (#2017). A hide matters only while its '
             . 'story can trend, at most a week, and a restore regroups Trending from the restored entries.',
     ];
@@ -220,27 +224,16 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'sign-up flow or by an admin.',
             'accountLimits.maxSubscriptions' => 'A per-account cap an admin grants. Carried in the '
                 . 'file, it would be a quota the account holder writes for themselves.',
-            'preferences' => 'Not a carried value: the pointer to the account\'s preferences row. '
-                . 'The account line inlines that row\'s field instead of nesting it, so the '
-                . 'pointer itself becomes no key.',
+            'passkeyOfferAnsweredAt' => 'Interface state, not account configuration: it records that the '
+                . 'one-time enrolment offer was shown and answered. A restore into a fresh account should '
+                . 'let that account see the offer.',
             'activeAiProviderSettings' => 'Points at an AiProviderSettings row, which '
                 . 'ACCOUNT_SCOPED_WHOLLY_DROPPED leaves out in full.',
             'recommendationSettings' => 'Points at a RecommendationSettings row, which '
                 . 'ACCOUNT_SCOPED_WHOLLY_DROPPED leaves out in full (#935).',
         ],
-        Preferences::class => [
-            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
-            'digestEnabled' => self::DIGEST_BACKUP_NOT_YET_WIRED,
-            'digestCadence' => self::DIGEST_BACKUP_NOT_YET_WIRED,
-            'digestSendHour' => self::DIGEST_BACKUP_NOT_YET_WIRED,
-            'digestWeekday' => self::DIGEST_BACKUP_NOT_YET_WIRED,
-            'digestFormat' => self::DIGEST_BACKUP_NOT_YET_WIRED,
-            'digestLastSentAt' => 'System-written, like lastLoginAt: the next send overwrites it, '
-                . 'and a restored value would only delay that send by a stale watermark.',
-            'passkeyOfferAnsweredAt' => 'Interface state, not account configuration: it records that the '
-                . 'one-time enrolment offer was shown and answered. A restore into a fresh account should '
-                . 'let that account see the offer.',
-        ],
+        ReadingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
+        SharingSettings::class => ['user' => self::OWNER_IS_THE_RESTORING_ACCOUNT],
         Tag::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],

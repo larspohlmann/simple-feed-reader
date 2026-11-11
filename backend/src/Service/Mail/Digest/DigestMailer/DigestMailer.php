@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest\DigestMailer;
 
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Service\Mail\Digest\Factory\DigestMailFactory;
 use App\Service\Mail\Digest\Model\DigestModel;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -12,7 +12,7 @@ use Symfony\Component\Mailer\MailerInterface;
 
 /**
  * Sends a rendered digest to its recipient. The message shape (plain text, or
- * HTML + text) is decided by DigestMailFactory from the user's digest_format.
+ * HTML + text) is decided by DigestMailFactory from the user's digest format.
  */
 final readonly class DigestMailer implements DigestMailerInterface
 {
@@ -25,8 +25,8 @@ final readonly class DigestMailer implements DigestMailerInterface
     /**
      * @throws TransportExceptionInterface
      */
-    public function send(User $user, DigestModel $model): void
+    public function send(DigestSettings $settings, DigestModel $model): void
     {
-        $this->mailer->send($this->mailFactory->build($user, $model));
+        $this->mailer->send($this->mailFactory->build($settings, $model));
     }
 }

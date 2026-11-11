@@ -6,6 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\User;
 use App\Repository\FeedRepository;
+use App\Service\Account\AccountSettings;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Backup\Model\RestoreResultModel;
 use App\Service\Backup\Pass\RestoreLoadPass;
@@ -24,6 +25,7 @@ final readonly class RestoreLoader
         private FeedRepository $feeds,
         private SavedSearchSlug $savedSearchSlug,
         private RestoredFoundationFactory $foundationFactory,
+        private AccountSettings $accountSettings,
     ) {
     }
 
@@ -34,6 +36,7 @@ final readonly class RestoreLoader
             $this->feeds,
             $this->savedSearchSlug,
             $this->foundationFactory,
+            $this->accountSettings->of($user),
         );
 
         return $pass->run($user, $this->reader->read($gzipBytes, $user->requireId()));

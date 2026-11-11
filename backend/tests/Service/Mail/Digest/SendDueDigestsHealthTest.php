@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Entity\Preferences;
+use App\Entity\DigestSettings;
 use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Enum\MailKind;
@@ -26,6 +26,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
+use App\Tests\Support\StoredUserSettings;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use Psr\Log\NullLogger;
@@ -64,9 +65,9 @@ final class SendDueDigestsHealthTest extends DbTestCase
     public function testAFailedDigestSendIsRecorded(): void
     {
         $user = $this->verifiedUser();
-        $preferences = $this->duePreferences($user, lastSentAt: null);
+        $settings = $this->dueSettings($user, lastSentAt: null);
         $this->givenOneMatch($user);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 
         $mailer = $this->createStub(DigestMailerInterface::class);
         $mailer->method('send')->willThrowException(new TransportException('SMTP is down'));
@@ -83,9 +84,9 @@ final class SendDueDigestsHealthTest extends DbTestCase
         $this->health->recordFailure(MailKind::Digest, 'old@example.test', 'earlier outage');
 
         $user = $this->verifiedUser();
-        $preferences = $this->duePreferences($user, lastSentAt: null);
+        $settings = $this->dueSettings($user, lastSentAt: null);
         $this->givenOneMatch($user);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$settings]);
 
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->once())->method('send');
@@ -123,15 +124,15 @@ final class SendDueDigestsHealthTest extends DbTestCase
     }
 
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */
-    private function duePreferences(User $user, ?\DateTimeImmutable $lastSentAt): Preferences
+    private function dueSettings(User $user, ?\DateTimeImmutable $lastSentAt): DigestSettings
     {
-        $preferences = $user->getPreferences();
-        $preferences->setDigestEnabled(true);
-        $preferences->setDigestCadence(DigestCadence::Daily);
-        $preferences->setDigestSendHour(8);
-        $preferences->setDigestLastSentAt($lastSentAt);
+        $settings = StoredUserSettings::digest($this->entityManager, $user);
+        $settings->setEnabled(true);
+        $settings->setCadence(DigestCadence::Daily);
+        $settings->setSendHour(8);
+        $settings->setLastSentAt($lastSentAt);
 
-        return $preferences;
+        return $settings;
     }
 
     private function givenOneMatch(User $user): void

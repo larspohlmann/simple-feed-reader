@@ -9,10 +9,12 @@ use App\Enum\DigestFormat;
 use App\Enum\MagazineStyle;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
+use App\Service\Account\Model\SharingSettingsModel;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\StoredUserSettings;
 
 final class AccountPreferencesWriterTest extends DbTestCase
 {
@@ -31,23 +33,37 @@ final class AccountPreferencesWriterTest extends DbTestCase
     public function testChangeScrapeFallbackPersists(): void
     {
         $user = $this->user('prefs-scrape@example.com');
-        $wanted = !$user->getPreferences()->isScrapeFallbackEnabled();
+        $wanted = !StoredUserSettings::reading($this->entityManager, $user)->isScrapeFallbackEnabled();
 
         $this->writer()->changeScrapeFallback($user, $wanted);
 
-        self::assertSame($wanted, $this->reload($user)->getPreferences()->isScrapeFallbackEnabled());
+        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
+        self::assertSame($wanted, $reloaded->isScrapeFallbackEnabled());
     }
 
     public function testChangeMagazineStylePersists(): void
     {
         $user = $this->user('prefs-magazine@example.com');
-        $wanted = MagazineStyle::Airy === $user->getPreferences()->getMagazineStyle()
+        $wanted = MagazineStyle::Airy === StoredUserSettings::reading($this->entityManager, $user)->getMagazineStyle()
             ? MagazineStyle::Boxed
             : MagazineStyle::Airy;
 
         $this->writer()->changeMagazineStyle($user, $wanted);
 
-        self::assertSame($wanted, $this->reload($user)->getPreferences()->getMagazineStyle());
+        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
+        self::assertSame($wanted, $reloaded->getMagazineStyle());
+    }
+
+    public function testChangeSharingPersistsAllThreeValues(): void
+    {
+        $user = $this->user('prefs-sharing@example.com');
+
+        $this->writer()->changeSharing($user, new SharingSettingsModel(false, ['x', 'Not An Id', 'x'], false));
+
+        $reloaded = StoredUserSettings::sharing($this->entityManager, $this->reload($user));
+        self::assertFalse($reloaded->isEnabled());
+        self::assertSame(['x'], $reloaded->getHiddenTargets());
+        self::assertFalse($reloaded->isRememberingShares());
     }
 
     public function testChangeTrendingPersists(): void
@@ -56,7 +72,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $this->writer()->changeTrending($user, false);
 
-        self::assertFalse($this->reload($user)->getPreferences()->isTrendingEnabled());
+        self::assertFalse(StoredUserSettings::reading($this->entityManager, $this->reload($user))->isTrendingEnabled());
     }
 
     public function testChangeDigestPersistsTheConfiguration(): void
@@ -68,12 +84,12 @@ final class AccountPreferencesWriterTest extends DbTestCase
             new DigestConfigurationModel(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
         );
 
-        $preferences = $this->reload($user)->getPreferences();
-        self::assertTrue($preferences->isDigestEnabled());
-        self::assertSame(DigestCadence::Weekly, $preferences->getDigestCadence());
-        self::assertSame(7, $preferences->getDigestSendHour());
-        self::assertSame(3, $preferences->getDigestWeekday());
-        self::assertSame(DigestFormat::Text, $preferences->getDigestFormat());
+        $settings = StoredUserSettings::digest($this->entityManager, $this->reload($user));
+        self::assertTrue($settings->isEnabled());
+        self::assertSame(DigestCadence::Weekly, $settings->getCadence());
+        self::assertSame(7, $settings->getSendHour());
+        self::assertSame(3, $settings->getWeekday());
+        self::assertSame(DigestFormat::Text, $settings->getFormat());
     }
 
     public function testAnswerPasskeyOfferPersistsTheAnswer(): void
@@ -82,7 +98,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $this->writer()->answerPasskeyOffer($user);
 
-        self::assertNotNull($this->reload($user)->getPreferences()->getPasskeyOfferAnsweredAt());
+        self::assertNotNull($this->reload($user)->getPasskeyOfferAnsweredAt());
     }
 
     private function writer(): AccountPreferencesWriter

@@ -76,12 +76,9 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Embedded(class: AccountLimits::class, columnPrefix: false)]
     private AccountLimits $accountLimits;
 
-    /**
-     * Created by the constructor, so every creation path has one. Nullable only because hydration bypasses the
-     * constructor: a row without preferences is corrupt, and getPreferences() says so.
-     */
-    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
-    private ?Preferences $preferences = null;
+    /** Naive UTC. Null until the account answers the one-time passkey enrolment offer, which then never shows again. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $passkeyOfferAnsweredAt = null;
 
     /**
      * The one configuration AI features use: a pointer, so two cannot be active at once. AiProviderConfigurator clears
@@ -104,7 +101,6 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         $this->email = $email;
         $this->createdAt = $createdAt;
-        $this->preferences = new Preferences($this);
         $this->accountLimits = new AccountLimits();
     }
 
@@ -270,18 +266,14 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->accountLimits->setMaxSubscriptions($maxSubscriptions);
     }
 
-    /**
-     * Mirrors the getUserIdentifier() guard: the invariant is set in the
-     * constructor, and Doctrine hydration bypasses it, so it is re-checked
-     * here where callers actually depend on it.
-     */
-    public function getPreferences(): Preferences
+    public function getPasskeyOfferAnsweredAt(): ?\DateTimeImmutable
     {
-        if (null === $this->preferences) {
-            throw new \LogicException('User has no preferences row; the stored row is corrupt.');
-        }
+        return $this->passkeyOfferAnsweredAt;
+    }
 
-        return $this->preferences;
+    public function markPasskeyOfferAnswered(\DateTimeImmutable $at): void
+    {
+        $this->passkeyOfferAnsweredAt = $at;
     }
 
     /** Null until the account activates a configuration — see AiProviderSettings. */

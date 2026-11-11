@@ -6,6 +6,7 @@ namespace App\Service\Reading;
 
 use App\Entity\Entry;
 use App\Entity\User;
+use App\Repository\SharingSettingsRepository;
 use App\Service\Reading\EntryShareStore\EntryShareStoreInterface;
 use Doctrine\DBAL\Exception as DbalException;
 use Psr\Clock\ClockInterface;
@@ -16,6 +17,7 @@ final readonly class EntryShares
     public function __construct(
         private EntryShareStoreInterface $shares,
         private ClockInterface $clock,
+        private SharingSettingsRepository $sharingSettings,
     ) {
     }
 
@@ -26,7 +28,7 @@ final readonly class EntryShares
      */
     public function record(User $user, Entry $entry): ?\DateTimeImmutable
     {
-        if (!$user->getPreferences()->recordsShares()) {
+        if (!$this->sharingSettings->forUser($user)->recordsShares()) {
             return null;
         }
 

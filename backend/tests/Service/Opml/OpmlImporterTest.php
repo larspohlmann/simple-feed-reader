@@ -15,6 +15,7 @@ use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\StoredUserSettings;
 
 final class OpmlImporterTest extends DbTestCase
 {
@@ -535,7 +536,7 @@ final class OpmlImporterTest extends DbTestCase
     public function testAScrapedOutlineIsInvalidEvenWhenScrapingIsOn(): void
     {
         $user = $this->user('scrape@example.com');
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
         $this->entityManager->flush();
         $scrapedUrl = 'https://page.example.com/news';
         $opml = $this->opml(

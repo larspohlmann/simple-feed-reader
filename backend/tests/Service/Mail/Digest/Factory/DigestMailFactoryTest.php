@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest\Factory;
 
-use App\Entity\User;
+use App\Entity\DigestSettings;
 use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
@@ -22,6 +22,7 @@ use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Model\MailIdentityModel;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
+use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
@@ -71,19 +72,19 @@ final class DigestMailFactoryTest extends TestCase
         return new DigestModel([new DigestGroupModel('rust', 1, [$entry], false, 'https://reader.example/?q=rust')], 1);
     }
 
-    private function user(DigestFormat $format): User
+    private function settings(DigestFormat $format): DigestSettings
     {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
-        $user->getPreferences()->setDigestFormat($format);
+        $settings = UnsavedUserSettings::digest();
+        $settings->setFormat($format);
 
-        return $user;
+        return $settings;
     }
 
     public function testHtmlFormatBuildsAlternativeWithHtmlTextAndInlineImage(): void
     {
         $set = new DigestImageSetModel([new EmbeddedImageModel('imgFAV', 'PNGBYTES', 'image/png')], []);
 
-        $email = $this->factory($set)->build($this->user(DigestFormat::Html), $this->model());
+        $email = $this->factory($set)->build($this->settings(DigestFormat::Html), $this->model());
 
         self::assertNotNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
@@ -99,7 +100,7 @@ final class DigestMailFactoryTest extends TestCase
     public function testTextFormatBuildsPlainTextOnly(): void
     {
         $email = $this->factory(new DigestImageSetModel([], []))
-            ->build($this->user(DigestFormat::Text), $this->model());
+            ->build($this->settings(DigestFormat::Text), $this->model());
 
         self::assertNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());

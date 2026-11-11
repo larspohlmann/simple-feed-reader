@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\User;
 use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\TrendingFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Response;
@@ -79,7 +80,7 @@ final class SubscriptionTrendingCountsTest extends ApiTestCase
 
     private function switchTrendingOff(User $user): void
     {
-        $user->getPreferences()->setTrendingEnabled(false);
+        StoredUserSettings::reading($this->entityManager(), $user)->setTrendingEnabled(false);
         $this->entityManager()->flush();
     }
 

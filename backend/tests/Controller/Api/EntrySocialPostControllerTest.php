@@ -6,12 +6,13 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
 use App\Entity\EntryShare;
-use App\Entity\Preferences;
+use App\Entity\SharingSettings;
 use App\Entity\User;
 use App\Repository\EntryShareRepository;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
+use App\Tests\Support\StoredUserSettings;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -281,7 +282,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertNotNull($this->sharedAtOf($user, $entryId));
     }
 
-    /** @param \Closure(Preferences): void $turnOff */
+    /** @param \Closure(SharingSettings): void $turnOff */
     #[DataProvider('switchesThatStopRecording')]
     public function testAQuoteRecordsNothingWhileSharesAreNotRemembered(\Closure $turnOff): void
     {
@@ -290,7 +291,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             self::STATUSES => self::published('201'),
         ]);
         $user = $this->signIn($client, sprintf('quote-forgetful-%s@example.test', md5((string) $this->dataName())));
-        $turnOff($user->getPreferences());
+        $turnOff(StoredUserSettings::sharing($this->entityManager(), $user));
         $this->entityManager()->flush();
         $this->mastodonAccountOf($user);
         $entryId = $this->mastodonPostFor($user);
@@ -301,11 +302,11 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertNull($this->sharedAtOf($user, $entryId));
     }
 
-    /** @return iterable<string, array{\Closure(Preferences): void}> */
+    /** @return iterable<string, array{\Closure(SharingSettings): void}> */
     public static function switchesThatStopRecording(): iterable
     {
-        yield 'remembering off' => [static fn (Preferences $preferences) => $preferences->setRememberingShares(false)];
-        yield 'sharing off' => [static fn (Preferences $preferences) => $preferences->setSharingEnabled(false)];
+        yield 'remembering off' => [static fn (SharingSettings $settings) => $settings->setRememberingShares(false)];
+        yield 'sharing off' => [static fn (SharingSettings $settings) => $settings->setEnabled(false)];
     }
 
     public function testAQuoteOfAReplyInTheThreadLeavesTheEntryUnshared(): void

@@ -4,51 +4,65 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Discovery;
 
+use App\Entity\ReadingSettings;
 use App\Entity\User;
+use App\Repository\ReadingSettingsRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
-use PHPUnit\Framework\TestCase;
+use App\Tests\DbTestCase;
+use App\Tests\Support\StoredUserSettings;
 
-/**
- * No database needed: the policy only reads the in-memory Preferences the
- * User constructor already attaches, so a plain TestCase is enough.
- */
-final class ScrapeFallbackPolicyTest extends TestCase
+final class ScrapeFallbackPolicyTest extends DbTestCase
 {
-    private function user(): User
-    {
-        return new User('scrape-policy@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
-    }
-
     public function testForUserMapsTheDefaultOffPreferenceToDisabled(): void
     {
-        self::assertSame(ScrapeFallback::Disabled, (new ScrapeFallbackPolicy())->forUser($this->user()));
+        self::assertSame(ScrapeFallback::Disabled, $this->policy()->forUser($this->user()));
     }
 
     public function testForUserMapsAnEnabledPreferenceToEnabled(): void
     {
-        $user = $this->user();
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
-
-        self::assertSame(ScrapeFallback::Enabled, (new ScrapeFallbackPolicy())->forUser($user));
+        self::assertSame(ScrapeFallback::Enabled, $this->policy()->forUser($this->userWithScrapingEnabled()));
     }
 
     public function testAssertMayScrapeThrowsWhenThePreferenceIsOff(): void
     {
         $this->expectException(ScrapingDisabledException::class);
 
-        (new ScrapeFallbackPolicy())->assertMayScrape($this->user());
+        $this->policy()->assertMayScrape($this->user());
     }
 
     public function testAssertMayScrapeAllowsWhenThePreferenceIsOn(): void
     {
-        $user = $this->user();
-        $user->getPreferences()->setScrapeFallbackEnabled(true);
-
-        (new ScrapeFallbackPolicy())->assertMayScrape($user);
+        $this->policy()->assertMayScrape($this->userWithScrapingEnabled());
 
         // Reaching here without an exception IS the assertion; nothing more to check.
         $this->addToAssertionCount(1);
+    }
+
+    private function policy(): ScrapeFallbackPolicy
+    {
+        $readingSettings = $this->entityManager->getRepository(ReadingSettings::class);
+        self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
+
+        return new ScrapeFallbackPolicy($readingSettings);
+    }
+
+    private function user(): User
+    {
+        $user = new User('scrape-policy@example.com', new \DateTimeImmutable('2026-08-02 10:00:00'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function userWithScrapingEnabled(): User
+    {
+        $user = $this->user();
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $this->entityManager->flush();
+
+        return $user;
     }
 }

@@ -12,7 +12,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One account's AI provider. Unlike Preferences, no row is created with the account: no row means "not configured".
+ * One account's AI provider. No row is created with the account: no row means "not configured".
  * No readable secret is stored; `apiKeyHint`, the key's last four characters, is clear text on purpose.
  */
 #[ORM\Entity(repositoryClass: AiProviderSettingsRepository::class)]

@@ -10,10 +10,11 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCard;
-use App\Entity\Preferences;
+use App\Entity\ReadingSettings;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
+use App\Entity\SharingSettings;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -34,12 +35,14 @@ final class BackupFieldDeclarations
         User::class => [
             'locale' => 'locale',
         ],
-        Preferences::class => [
+        SharingSettings::class => [
+            'enabled' => 'sharingEnabled',
+            'hiddenTargets' => 'hiddenShareTargets',
+            'rememberingShares' => 'rememberShares',
+        ],
+        ReadingSettings::class => [
             'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
             'magazineStyle' => 'magazineStyle',
-            'sharingEnabled' => 'sharingEnabled',
-            'hiddenShareTargets' => 'hiddenShareTargets',
-            'rememberingShares' => 'rememberShares',
             'trendingEnabled' => 'trendingEnabled',
         ],
         Tag::class => [
@@ -125,7 +128,8 @@ final class BackupFieldDeclarations
     /** Doctrine class => the `kind` of the line its fields are written on. */
     public const array KIND_OF = [
         User::class => BackupSchema::KIND_ACCOUNT,
-        Preferences::class => BackupSchema::KIND_ACCOUNT,
+        ReadingSettings::class => BackupSchema::KIND_ACCOUNT,
+        SharingSettings::class => BackupSchema::KIND_ACCOUNT,
         Tag::class => BackupSchema::KIND_TAG,
         SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
         SavedSearchNetworkInclusion::class => BackupSchema::KIND_ACCOUNT,

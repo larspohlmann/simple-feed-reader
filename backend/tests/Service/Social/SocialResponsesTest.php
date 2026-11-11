@@ -11,6 +11,7 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Repository\SharingSettingsRepository;
 use App\Repository\SocialAccountRepository;
 use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
@@ -327,7 +328,7 @@ final class SocialResponsesTest extends DbTestCase
 
     public function testAQuoteTheNetworkAcceptedStillSucceedsWhenRecordingTheShareFails(): void
     {
-        $responses = $this->responses(self::failingShareRecorder());
+        $responses = $this->responses($this->failingShareRecorder());
 
         $published = $responses->respond(
             $this->owner,
@@ -515,12 +516,24 @@ final class SocialResponsesTest extends DbTestCase
         );
     }
 
-    private static function failingShareRecorder(): EntryShareRecorder
+    private function failingShareRecorder(): EntryShareRecorder
     {
         return new EntryShareRecorder(
-            new EntryShares(new FailingEntryShareStore(), new MockClock('2026-11-01 12:00:00')),
+            new EntryShares(
+                new FailingEntryShareStore(),
+                new MockClock('2026-11-01 12:00:00'),
+                $this->sharingSettings(),
+            ),
             new NullLogger(),
         );
+    }
+
+    private function sharingSettings(): SharingSettingsRepository
+    {
+        $repository = self::getContainer()->get(SharingSettingsRepository::class);
+        self::assertInstanceOf(SharingSettingsRepository::class, $repository);
+
+        return $repository;
     }
 
     private function shareRecorder(): EntryShareRecorder

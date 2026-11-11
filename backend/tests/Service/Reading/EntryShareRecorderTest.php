@@ -7,16 +7,19 @@ namespace App\Tests\Service\Reading;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\User;
+use App\Repository\SharingSettingsRepository;
 use App\Service\Reading\EntryShareRecorder;
 use App\Service\Reading\EntryShares;
+use App\Tests\DbTestCase;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\FailingEntryShareStore;
-use PHPUnit\Framework\TestCase;
+use App\Tests\Support\UserFactory;
 use Psr\Log\AbstractLogger;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /** A share the network already accepted must not turn into a failed request: a retried quote posts twice (#2007). */
-final class EntryShareRecorderTest extends TestCase
+final class EntryShareRecorderTest extends DbTestCase
 {
     use AssignsEntityIds;
 
@@ -32,23 +35,39 @@ final class EntryShareRecorderTest extends TestCase
             }
         };
         $recorder = new EntryShareRecorder(
-            new EntryShares(new FailingEntryShareStore(), new MockClock('2026-11-03 10:00:00')),
+            new EntryShares(
+                new FailingEntryShareStore(),
+                new MockClock('2026-11-03 10:00:00'),
+                $this->sharingSettings(),
+            ),
             $logger,
         );
+        $user = $this->user();
 
-        $recorder->record($this->user(), $this->entry());
+        $recorder->record($user, $this->entry());
 
         self::assertCount(1, $logger->records);
         [$level, , $context] = $logger->records[0];
         self::assertSame('warning', $level);
-        self::assertSame(7, $context['userId']);
+        self::assertSame($user->requireId(), $context['userId']);
         self::assertSame(11, $context['entryId']);
         self::assertInstanceOf(\Throwable::class, $context['exception']);
     }
 
     private function user(): User
     {
-        return self::withId(new User('recorder@example.test', new \DateTimeImmutable('2026-11-01')), 7);
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
+
+        return (new UserFactory($this->entityManager, $hasher))->create('recorder@example.test');
+    }
+
+    private function sharingSettings(): SharingSettingsRepository
+    {
+        $repository = self::getContainer()->get(SharingSettingsRepository::class);
+        self::assertInstanceOf(SharingSettingsRepository::class, $repository);
+
+        return $repository;
     }
 
     private function entry(): Entry

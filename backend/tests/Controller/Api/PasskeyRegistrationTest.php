@@ -164,7 +164,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         self::assertResponseStatusCodeSame(201);
         $stored = $this->users()->findOneByEmail('enroller@example.test');
         self::assertInstanceOf(User::class, $stored);
-        self::assertNotNull($stored->getPreferences()->getPasskeyOfferAnsweredAt());
+        self::assertNotNull($stored->getPasskeyOfferAnsweredAt());
     }
 
     public function testAReplayedHandleIsRejected(): void
