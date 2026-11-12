@@ -976,7 +976,6 @@
       "contentFull": "Volltext",
       "contentSummary": "Nur Zusammenfassung",
       "contentTitles": "Nur Titel",
-      "formatFeed": "Feed",
       "failBlocked": "Diese Seite blockiert automatisierten Zugriff – sie kann nicht abonniert werden.",
       "failThrottled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut.",
       "failUnreachable": "Die Seite konnte nicht erreicht werden – prüfe die Adresse oder versuche es später erneut.",
