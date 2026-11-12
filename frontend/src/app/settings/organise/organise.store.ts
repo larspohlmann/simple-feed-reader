@@ -271,14 +271,9 @@ export class OrganiseStore {
   }
 
   toggleGroup(key: GroupKey): void {
-    this.expandedKeys.update((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      persistExpanded(next);
-
-      return next;
-    });
+    const next = toggled(this.expandedKeys(), key);
+    this.expandedKeys.set(next);
+    persistExpanded(next);
   }
 
   /** Every group key that exists, independent of the title/tag filter —

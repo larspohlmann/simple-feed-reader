@@ -64,6 +64,7 @@ import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { sameIds } from '../../../core/same-ids';
 import { TagsStore } from '../../state/tags.store';
+import { toggled } from '../../../core/toggled-set';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -217,7 +218,7 @@ export class SidebarComponent {
   private readonly exitOrganiseOnFinePointer = effect(() => {
     if (!this.screen.isCoarse()) untracked(() => this.organising.set(false));
   });
-  readonly expanded = signal<Set<number>>(new Set());
+  readonly expanded = signal<ReadonlySet<number>>(new Set());
 
   readonly tagGroups = computed<TagBranchView[]>(() => {
     const expanded = this.expanded();
@@ -367,14 +368,6 @@ export class SidebarComponent {
   }
 
   toggle(tagId: number): void {
-    this.expanded.update((set) => {
-      const next = new Set(set);
-      if (next.has(tagId)) {
-        next.delete(tagId);
-      } else {
-        next.add(tagId);
-      }
-      return next;
-    });
+    this.expanded.update((set) => toggled(set, tagId));
   }
 }
