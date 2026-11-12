@@ -174,8 +174,8 @@ Adding a feed takes two requests, so a client can show what it found before anyt
    `feed_throttled`; this endpoint never answers with candidates. Send the address to `/api/feeds/discover` for the
    feeds it offers.
 
-A candidate without `preview` or `noPreviewReason` is previewed on demand with `POST /api/feeds/preview`. Decode
-`format` and `noPreviewReason` leniently: new values are added.
+A candidate without `preview` or `noPreviewReason` is previewed on demand with `POST /api/feeds/preview`, with its
+`storedFormat` as `format` when it carries one. Decode `format` and `noPreviewReason` leniently: new values are added.
 
 ## 7. Where database access lives
 
