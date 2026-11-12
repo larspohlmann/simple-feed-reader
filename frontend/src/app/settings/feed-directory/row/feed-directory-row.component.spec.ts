@@ -75,10 +75,31 @@ describe('FeedDirectoryRowComponent', () => {
       Array.from(element.querySelectorAll('.meta span')).map((part) => part.textContent),
     ).toEqual(['Germany', 'German, English', 'Headlines', 'Rank 1,361']);
     expect(text(element.querySelector('.summary'))).toBe('National news and information portal');
-    expect(Array.from(element.querySelectorAll('.chip')).map((chip) => chip.textContent)).toEqual([
+    expect(Array.from(element.querySelectorAll('.chip')).map((chip) => text(chip))).toEqual([
       'World / International',
       'Science & Technology',
     ]);
+  });
+
+  it('asks to filter by a category from its pill', () => {
+    const element = render(ROW);
+    const chosen: string[] = [];
+    fixture.componentInstance.focusCategory.subscribe((category) => chosen.push(category));
+
+    element.querySelectorAll<HTMLButtonElement>('button.chip')[1].click();
+
+    expect(chosen).toEqual(['Science & Technology']);
+  });
+
+  it('presses the pill of the only category the filter shows', () => {
+    const element = render(ROW);
+    fixture.componentRef.setInput('focusedCategory', 'Science & Technology');
+    fixture.detectChanges();
+
+    const pills = element.querySelectorAll<HTMLButtonElement>('button.chip');
+    expect(pills[0].getAttribute('aria-pressed')).toBe('false');
+    expect(pills[1].getAttribute('aria-pressed')).toBe('true');
+    expect(pills[1].getAttribute('title')).toBe('Show only Science & Technology');
   });
 
   it('leaves out the length and the rank when the directory has none', () => {

@@ -85,8 +85,24 @@
   padding: calc(var(--space-0) / 2) var(--space-2);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
+  font: inherit;
   font-size: var(--fs-xs);
+  line-height: inherit;
   white-space: nowrap;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+
+  &[aria-pressed='true'] {
+    --rim-base: var(--accent);
+    --rim-fill: var(--accent-soft);
+
+    color: var(--accent);
+  }
 }
 
 .action {

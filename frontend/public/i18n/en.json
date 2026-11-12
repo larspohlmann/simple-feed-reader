@@ -835,6 +835,7 @@
       "subscribe": "Subscribe",
       "subscribeTo": "Subscribe to {{feed}}",
       "subscribed": "Subscribed",
+      "showOnlyCategory": "Show only {{category}}",
       "editSubscription": "Edit subscription",
       "editSubscriptionTo": "Edit subscription to {{feed}}",
       "following": "Following",

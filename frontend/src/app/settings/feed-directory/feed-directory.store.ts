@@ -92,6 +92,11 @@ export class FeedDirectoryStore implements OnDestroy {
     computation: (options, previous) => keptWithin(previous?.value ?? new Set(), options),
   });
 
+  readonly onlyCategory = computed(() => {
+    const picked = this.categories();
+    return picked.size === 1 ? [...picked][0] : null;
+  });
+
   load(): void {
     const scope = this.scopes.scope();
     const scopeLanguages = new Set(scope.languages);
@@ -126,6 +131,10 @@ export class FeedDirectoryStore implements OnDestroy {
 
   toggleCategory(name: string): void {
     this.categories.update((set) => toggled(set, name));
+  }
+
+  focusCategory(name: string): void {
+    this.categories.set(this.onlyCategory() === name ? new Set() : new Set([name]));
   }
 
   toggleLength(length: FeedDirectoryLength): void {

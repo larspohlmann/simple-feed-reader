@@ -216,6 +216,43 @@ describe('FeedDirectoryStore', () => {
     expect([...store.categories()]).toEqual([]);
   });
 
+  it('narrows the category filter to the one category a pill names', () => {
+    loadedStore();
+    store.toggleCategory('Sports');
+    store.focusCategory('Politics & Society');
+
+    expect([...store.categories()]).toEqual(['Politics & Society']);
+    expect(store.onlyCategory()).toBe('Politics & Society');
+  });
+
+  it('clears the category filter when the pill of the only chosen category is clicked again', () => {
+    loadedStore();
+    store.focusCategory('Sports');
+    store.focusCategory('Sports');
+
+    expect(store.categories().size).toBe(0);
+    expect(store.onlyCategory()).toBeNull();
+  });
+
+  it('leaves the other filters alone when a pill narrows the category', () => {
+    loadedStore();
+    store.query.set('heise');
+    store.sort.set('az');
+    store.focusCategory('Sports');
+
+    expect(store.query()).toBe('heise');
+    expect(store.sort()).toBe('az');
+    expect(store.mode()).toBe('channels');
+  });
+
+  it('has no single category while two are chosen', () => {
+    loadedStore();
+    store.toggleCategory('Sports');
+    store.toggleCategory('Politics & Society');
+
+    expect(store.onlyCategory()).toBeNull();
+  });
+
   it('counts per country ignoring the country filter', () => {
     loadedStore();
     store.country.set('AT');

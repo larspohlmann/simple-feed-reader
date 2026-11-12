@@ -835,6 +835,7 @@
       "subscribe": "Abonnieren",
       "subscribeTo": "{{feed}} abonnieren",
       "subscribed": "Abonniert",
+      "showOnlyCategory": "Nur {{category}} zeigen",
       "editSubscription": "Abonnement bearbeiten",
       "editSubscriptionTo": "Abonnement von {{feed}} bearbeiten",
       "following": "Du folgst",

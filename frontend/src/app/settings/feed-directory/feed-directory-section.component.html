@@ -157,6 +157,8 @@
                 [row]="row"
                 [mode]="store.mode()"
                 (subscribe)="subscriber.open($event)"
+                [focusedCategory]="store.onlyCategory()"
+                (focusCategory)="store.focusCategory($event)"
                 (edit)="subscriber.edit($event)"
               />
             </cdk-virtual-scroll-viewport>

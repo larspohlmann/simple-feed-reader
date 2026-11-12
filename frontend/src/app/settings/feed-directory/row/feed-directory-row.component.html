@@ -29,7 +29,15 @@
   }
   <div class="chips">
     @for (category of categories(); track $index) {
-      <span class="chip">{{ category }}</span>
+      <button
+        type="button"
+        class="chip"
+        [attr.aria-pressed]="category === focusedCategory()"
+        [title]="'settings.feedDirectory.showOnlyCategory' | transloco: { category }"
+        (click)="focusCategory.emit(category)"
+      >
+        {{ category }}
+      </button>
     }
   </div>
 </div>
