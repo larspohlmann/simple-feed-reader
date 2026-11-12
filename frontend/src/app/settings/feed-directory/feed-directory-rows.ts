@@ -1,8 +1,4 @@
-import {
-  FeedDirectoryCountryFile,
-  FeedDirectoryDomainTuple,
-  FeedDirectorySubscribed,
-} from './feed-directory.models';
+import { FeedDirectoryCountryFile, FeedDirectoryDomainTuple } from './feed-directory.models';
 import { feedDirectoryHost, feedDirectoryUrl } from './feed-directory-url';
 
 export type FeedDirectoryMode = 'channels' | 'podcasts';
@@ -47,7 +43,7 @@ export interface FeedDirectoryFilter extends FeedDirectoryCriteria {
   readonly sort: FeedDirectorySort;
 }
 
-interface SubscribedLookup {
+export interface SubscribedLookup {
   readonly urls: ReadonlySet<string>;
   readonly domains: ReadonlySet<string>;
 }
@@ -61,20 +57,36 @@ export function lengthOf(averageLength: number | null): FeedDirectoryLength | nu
   return averageLength >= SUMMARY_CHARACTERS ? 'summaries' : 'headlines';
 }
 
+export function subscribedLookup(feedUrls: readonly string[]): SubscribedLookup {
+  return {
+    urls: new Set(feedUrls.map(feedDirectoryUrl)),
+    domains: enclosingDomains(feedUrls.map(feedDirectoryHost)),
+  };
+}
+
 export function prepareRows(
   file: FeedDirectoryCountryFile,
   scopeLanguages: ReadonlySet<string>,
-  subscribed: FeedDirectorySubscribed,
 ): FeedDirectoryRow[] {
-  const lookup: SubscribedLookup = {
-    urls: new Set(subscribed.urls),
-    domains: enclosingDomains(subscribed.hosts),
-  };
   return file.domains
     .filter(([, , , languageIndexes]) =>
       languageIndexes.some((index) => scopeLanguages.has(file.languages[index])),
     )
-    .map((domain) => toRow(file, domain, lookup));
+    .map((domain) => toRow(file, domain));
+}
+
+export function withSubscriptions(
+  rows: readonly FeedDirectoryRow[],
+  lookup: SubscribedLookup,
+): FeedDirectoryRow[] {
+  return rows.map((row) => ({
+    ...row,
+    following: lookup.domains.has(bareHost(row.host)),
+    feeds: row.feeds.map((feed) => ({
+      ...feed,
+      subscribed: lookup.urls.has(feedDirectoryUrl(feed.url)),
+    })),
+  }));
 }
 
 export function modeSummaries(
@@ -90,14 +102,13 @@ export function modeSummaries(
 function toRow(
   file: FeedDirectoryCountryFile,
   [host, rank, averageLength, languageIndexes, groups, summary]: FeedDirectoryDomainTuple,
-  subscribed: SubscribedLookup,
 ): FeedDirectoryRow {
   const feeds = groups.flatMap(([categoryIndex, podcast, urls]) =>
     urls.map((url) => ({
       url,
       category: file.categories[categoryIndex],
       podcast: podcast === 1,
-      subscribed: subscribed.urls.has(feedDirectoryUrl(url)),
+      subscribed: false,
     })),
   );
   return {
@@ -109,7 +120,7 @@ function toRow(
     summary,
     feeds,
     byMode: modeSummaries(feeds),
-    following: subscribed.domains.has(bareHost(host)),
+    following: false,
     searchText: `${host}\n${summary ?? ''}`.toLowerCase(),
   };
 }
@@ -188,23 +199,4 @@ export function countByCountry(
     if (matches(row)) counts.set(row.country, (counts.get(row.country) ?? 0) + 1);
   }
   return counts;
-}
-
-export function withSubscribed(
-  rows: readonly FeedDirectoryRow[],
-  host: string,
-  feedUrl: string,
-): FeedDirectoryRow[] {
-  const feedDomains = enclosingDomains([feedDirectoryHost(feedUrl)]);
-  return rows.map((row) =>
-    row.host === host
-      ? {
-          ...row,
-          following: row.following || feedDomains.has(bareHost(row.host)),
-          feeds: row.feeds.map((feed) =>
-            feed.url === feedUrl ? { ...feed, subscribed: true } : feed,
-          ),
-        }
-      : row,
-  );
 }

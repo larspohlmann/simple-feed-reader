@@ -56,7 +56,6 @@ describe('FeedDirectorySubscriber', () => {
   let closed: Subject<SubscriptionDto | undefined>;
   let dialogOpen: jest.Mock;
   let sheetOpen: jest.Mock<Observable<string | undefined>, [ActionSheetData]>;
-  let markSubscribed: jest.Mock;
   let reloadQuietly: jest.Mock;
   let subscriber: FeedDirectorySubscriber;
   let anchor: HTMLElement;
@@ -67,7 +66,6 @@ describe('FeedDirectorySubscriber', () => {
     closed = new Subject();
     dialogOpen = jest.fn(() => ({ closed }));
     sheetOpen = jest.fn<Observable<string | undefined>, [ActionSheetData]>(() => of(undefined));
-    markSubscribed = jest.fn();
     reloadQuietly = jest.fn();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -76,7 +74,7 @@ describe('FeedDirectorySubscriber', () => {
         { provide: Dialog, useValue: { open: dialogOpen } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LayoutService, useValue: { isCoarse } },
-        { provide: FeedDirectoryStore, useValue: { mode, markSubscribed } },
+        { provide: FeedDirectoryStore, useValue: { mode } },
         { provide: SubscriptionsStore, useValue: { reloadQuietly } },
       ],
     });
@@ -112,11 +110,10 @@ describe('FeedDirectorySubscriber', () => {
     expect(sheetOpen).not.toHaveBeenCalled();
   });
 
-  it('marks the feed and reloads the subscriptions once the dialog subscribes', () => {
+  it('reloads the subscriptions once the dialog subscribes', () => {
     subscriber.open({ row: ONE, anchor });
     closed.next({ id: 7 } as SubscriptionDto);
 
-    expect(markSubscribed).toHaveBeenCalledWith('spiegel.de', 'https://www.spiegel.de/index.rss');
     expect(reloadQuietly).toHaveBeenCalledTimes(1);
   });
 
@@ -124,7 +121,6 @@ describe('FeedDirectorySubscriber', () => {
     subscriber.open({ row: ONE, anchor });
     closed.next(undefined);
 
-    expect(markSubscribed).not.toHaveBeenCalled();
     expect(reloadQuietly).not.toHaveBeenCalled();
   });
 

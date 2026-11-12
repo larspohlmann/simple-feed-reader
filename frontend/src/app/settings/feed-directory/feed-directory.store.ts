@@ -1,5 +1,7 @@
 import { Injectable, OnDestroy, computed, inject, linkedSignal, signal } from '@angular/core';
 import { Observable, Subscription, forkJoin, map, of, switchMap } from 'rxjs';
+import { SubscriptionDto } from '../../reader/models';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
 import { sameIds } from '../../core/same-ids';
 import { toggled } from '../../core/toggled-set';
@@ -14,8 +16,10 @@ import {
   countByCountry,
   filterRows,
   prepareRows,
-  withSubscribed,
+  subscribedLookup,
+  withSubscriptions,
 } from './feed-directory-rows';
+import { feedDirectoryUrl } from './feed-directory-url';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
 
@@ -25,8 +29,31 @@ export class FeedDirectoryStore implements OnDestroy {
   private readonly scopes = inject(FeedDirectoryScopeService);
   private readonly names = inject(FeedDirectoryNames);
 
-  readonly status = signal<'loading' | 'ready' | 'failed'>('loading');
+  private readonly subscriptionStore = inject(SubscriptionsStore);
+
+  private readonly fileStatus = signal<'loading' | 'ready' | 'failed'>('loading');
+  readonly status = computed(() =>
+    this.fileStatus() === 'ready' && !this.subscriptionStore.resolved()
+      ? 'loading'
+      : this.fileStatus(),
+  );
   private readonly loaded = signal<FeedDirectoryRow[]>([]);
+  private readonly subscriptionsByUrl = computed(
+    () =>
+      new Map(
+        this.subscriptionStore
+          .subscriptions()
+          .map((subscription) => [feedDirectoryUrl(subscription.feedUrl), subscription] as const),
+      ),
+  );
+  private readonly marked = computed(() =>
+    withSubscriptions(
+      this.loaded(),
+      subscribedLookup(
+        this.subscriptionStore.subscriptions().map((subscription) => subscription.feedUrl),
+      ),
+    ),
+  );
   private loading = Subscription.EMPTY;
 
   readonly mode = signal<FeedDirectoryMode>('channels');
@@ -45,7 +72,7 @@ export class FeedDirectoryStore implements OnDestroy {
   }));
 
   readonly rows = computed(() =>
-    filterRows(this.loaded(), {
+    filterRows(this.marked(), {
       ...this.criteria(),
       country: this.country(),
       sort: this.sort(),
@@ -70,22 +97,22 @@ export class FeedDirectoryStore implements OnDestroy {
     const scopeLanguages = new Set(scope.languages);
     this.loading.unsubscribe();
     this.keepFiltersWithin(scope);
-    this.status.set('loading');
-    this.loading = forkJoin({ index: this.api.index(), subscribed: this.api.subscribed() })
+    this.fileStatus.set('loading');
+    this.subscriptionStore.loadIfStale();
+    this.loading = this.api
+      .index()
       .pipe(
-        switchMap(({ index, subscribed }) =>
-          this.countryFiles(knownCountries(scope, index)).pipe(
-            map((files) => ({ index, subscribed, files })),
-          ),
+        switchMap((index) =>
+          this.countryFiles(knownCountries(scope, index)).pipe(map((files) => ({ index, files }))),
         ),
       )
       .subscribe({
-        next: ({ index, subscribed, files }) => {
+        next: ({ index, files }) => {
           this.names.learnCountryNames(index);
-          this.loaded.set(files.flatMap((file) => prepareRows(file, scopeLanguages, subscribed)));
-          this.status.set('ready');
+          this.loaded.set(files.flatMap((file) => prepareRows(file, scopeLanguages)));
+          this.fileStatus.set('ready');
         },
-        error: () => this.status.set('failed'),
+        error: () => this.fileStatus.set('failed'),
       });
   }
 
@@ -93,8 +120,8 @@ export class FeedDirectoryStore implements OnDestroy {
     this.loading.unsubscribe();
   }
 
-  markSubscribed(host: string, feedUrl: string): void {
-    this.loaded.update((rows) => withSubscribed(rows, host, feedUrl));
+  subscriptionFor(feedUrl: string): SubscriptionDto | null {
+    return this.subscriptionsByUrl().get(feedDirectoryUrl(feedUrl)) ?? null;
   }
 
   toggleCategory(name: string): void {

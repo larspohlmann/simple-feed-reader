@@ -4,11 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { CurrentUser } from '../../core/auth/auth.service';
 import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
-import {
-  FeedDirectoryCountryFile,
-  FeedDirectoryIndex,
-  FeedDirectorySubscribed,
-} from './feed-directory.models';
+import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
 
 @Injectable({ providedIn: 'root' })
 export class FeedDirectoryApi {
@@ -23,10 +19,6 @@ export class FeedDirectoryApi {
     return this.http.get<FeedDirectoryCountryFile>(
       `${this.base}/api/feed-directory/countries/${encodeURIComponent(code)}`,
     );
-  }
-
-  subscribed(): Observable<FeedDirectorySubscribed> {
-    return this.http.get<FeedDirectorySubscribed>(`${this.base}/api/feed-directory/subscribed`);
   }
 
   saveScope(scope: FeedDirectoryScope): Observable<CurrentUser> {

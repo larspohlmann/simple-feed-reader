@@ -8,6 +8,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
+import { SubscriptionDto } from '../../reader/models';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { FeedDirectoryApi } from './feed-directory-api';
 import {
@@ -63,7 +64,11 @@ describe('FeedDirectorySectionComponent', () => {
   let retryAccount: jest.Mock;
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
   let dialogOpen: jest.Mock;
+  const subscriptions = signal<Partial<SubscriptionDto>[]>([]);
   let reloadQuietly: jest.Mock;
+  const subscribeOnReload = (feedUrl: string): void => {
+    reloadQuietly.mockImplementation(() => subscriptions.update((held) => [...held, { feedUrl }]));
+  };
   let fixture: ComponentFixture<FeedDirectorySectionComponent>;
 
   async function render(initial: FeedDirectoryScope): Promise<HTMLElement> {
@@ -74,6 +79,7 @@ describe('FeedDirectorySectionComponent', () => {
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     dialogOpen = jest.fn();
     reloadQuietly = jest.fn();
+    subscriptions.set([{ id: 1, feedUrl: 'https://www.heise.de/other.xml' }]);
     await TestBed.configureTestingModule({
       imports: [FeedDirectorySectionComponent, provideTranslocoTesting()],
       providers: [
@@ -81,7 +87,6 @@ describe('FeedDirectorySectionComponent', () => {
           provide: FeedDirectoryApi,
           useValue: {
             index: () => of(INDEX),
-            subscribed: () => of({ urls: [], hosts: ['heise.de'] }),
             country,
           },
         },
@@ -100,7 +105,15 @@ describe('FeedDirectorySectionComponent', () => {
         },
         { provide: Dialog, useValue: { open: dialogOpen } },
         { provide: LayoutService, useValue: { isPhone, isCoarse: signal(false) } },
-        { provide: SubscriptionsStore, useValue: { reloadQuietly } },
+        {
+          provide: SubscriptionsStore,
+          useValue: {
+            reloadQuietly,
+            subscriptions,
+            resolved: signal(true),
+            loadIfStale: jest.fn(),
+          },
+        },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(FeedDirectorySectionComponent);
@@ -304,6 +317,7 @@ describe('FeedDirectorySectionComponent', () => {
   it('subscribes from a row through the add-feed dialog and marks the feed', async () => {
     const page = await render({ countries: ['DE'], languages: ['de'] });
     dialogOpen.mockReturnValue({ closed: of({ id: 3 }) });
+    subscribeOnReload('https://www.zeit.de/politik/index');
     const zeit = (): Element =>
       Array.from(page.querySelectorAll('app-feed-directory-row')).find(
         (row) => text(row.querySelector('.name')) === 'zeit.de',
@@ -344,6 +358,7 @@ describe('FeedDirectorySectionComponent', () => {
       ],
     };
     country.mockReturnValue(of(spiegel));
+    subscribeOnReload('https://www.spiegel.de/ausland/index.rss');
     store().load();
     await settle();
     dialogOpen.mockReturnValue({ closed: of({ id: 4 }) });

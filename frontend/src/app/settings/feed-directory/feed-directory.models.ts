@@ -29,8 +29,3 @@ export interface FeedDirectoryCountryFile {
   languages: readonly string[];
   domains: readonly FeedDirectoryDomainTuple[];
 }
-
-export interface FeedDirectorySubscribed {
-  urls: readonly string[];
-  hosts: readonly string[];
-}
