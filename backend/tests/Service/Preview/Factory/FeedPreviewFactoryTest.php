@@ -64,6 +64,16 @@ final class FeedPreviewFactoryTest extends TestCase
         self::assertCount(3, $preview->items);
     }
 
+    public function testATieBetweenTiersGoesToTheRicherOne(): void
+    {
+        $preview = new FeedPreviewFactory()->fromDocument(new ParsedFeedModel('Tie', null, null, null, [
+            $this->entry(1, summary: null, contentHtml: str_repeat('x', 700)),
+            $this->entry(2),
+        ]));
+
+        self::assertSame('full', $preview->content);
+    }
+
     public function testABodyOfExactlySixHundredCharactersIsFullText(): void
     {
         $preview = new FeedPreviewFactory()->fromDocument(new ParsedFeedModel('Full', null, null, null, [
