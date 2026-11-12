@@ -965,6 +965,7 @@
       "loadingPreview": "Vorschau wird geladen…",
       "noRecentItems": "Keine aktuellen Einträge",
       "subscribe": "Abonnieren",
+      "notAFeed": "Unter dieser Adresse ließ sich kein Feed lesen.",
       "noneFound": "Unter dieser Adresse wurden keine Feeds gefunden.",
       "preview": "Vorschau",
       "hidePreview": "Vorschau ausblenden",

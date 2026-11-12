@@ -37,6 +37,11 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
   ['too_large', 'failTooLarge'],
 ]);
 
+const PROBLEM_TEXT_KEYS = new Map<string, string>([
+  ['not_a_feed', 'notAFeed'],
+  ['feed_throttled', 'failThrottled'],
+]);
+
 const NO_PREVIEW_TEXT_KEYS = new Map<NoPreviewReason, string>([
   ['hidden_profile', 'noPreviewHiddenProfile'],
   ['connect_bluesky_account', 'noPreviewConnectBluesky'],
@@ -177,7 +182,7 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.loading() || this.subscribing()) return;
     this.discover(this.form.getRawValue().url);
   }
 
@@ -222,8 +227,6 @@ export class AddFeedDialogComponent implements OnInit {
     this.error.set(null);
     this.searched.set(false);
     this.failureReason.set(null);
-    // Start every search visually clean — a previous search's cards must not
-    // linger above a new result, least of all above a scrape-failure warning.
     this.candidates.set([]);
     this.previews.set({});
     this.expanded.set(null);
@@ -254,7 +257,12 @@ export class AddFeedDialogComponent implements OnInit {
 
   private showError(error: HttpErrorResponse): void {
     const problem = parseProblem(error);
-    this.error.set(problem.errors?.['url']?.[0] ?? problem.detail ?? problem.title);
+    const translatedKey = PROBLEM_TEXT_KEYS.get(problem.type);
+    this.error.set(
+      translatedKey
+        ? this.i18n.translate(`dialog.addFeed.${translatedKey}`)
+        : (problem.errors?.['url']?.[0] ?? problem.detail ?? problem.title),
+    );
   }
 
   /** Fetches a candidate's preview once, the first time it is expanded — a

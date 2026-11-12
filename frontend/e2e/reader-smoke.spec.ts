@@ -50,7 +50,7 @@ test('Add feed warns, and offers no subscribe, for a site that cannot be scraped
   await expect(field).toBeFocused();
   await field.fill('https://no-such-host.sfr-e2e.example/');
   await expect(field).toHaveValue('https://no-such-host.sfr-e2e.example/');
-  await dialog.getByRole('button', { name: 'Add' }).click();
+  await dialog.getByRole('button', { name: 'Preview', exact: true }).click();
 
   // A warning appears; no Subscribe control is offered anywhere in the dialog.
   await expect(dialog.getByRole('alert')).toContainText("couldn't be reached", { timeout: 30_000 });

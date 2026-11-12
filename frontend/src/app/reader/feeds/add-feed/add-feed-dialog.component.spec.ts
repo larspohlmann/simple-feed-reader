@@ -121,17 +121,70 @@ describe('AddFeedDialogComponent', () => {
         type: 'not_a_feed',
         title: 'Not a feed',
         status: 422,
-        detail:
-          'No feed could be read at that address. POST it to /api/feeds/discover for the feeds it offers.',
+        detail: 'No feed could be read at that address.',
       },
       { status: 422, statusText: 'Unprocessable' },
     );
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.error()).toContain('No feed could be read');
+    expect(fixture.componentInstance.error()).toBe('No feed could be read at that address.');
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('.card').length).toBe(1);
     expect(subscribeButton(fixture).disabled).toBe(false);
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it('shows the throttled text when the site is rationing requests on subscribe', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+    });
+    fixture.detectChanges();
+
+    subscribeButton(fixture).click();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(
+      {
+        type: 'feed_throttled',
+        title: 'Site is rationing requests',
+        status: 503,
+        detail: 'The site asked us to slow down. Try again in a minute.',
+      },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+
+    expect(fixture.componentInstance.error()).toBe(
+      'This site is limiting requests right now — wait a moment and try again.',
+    );
+  });
+
+  it('sends no second discover request while a subscribe is in flight', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+    });
+    fixture.detectChanges();
+    subscribeButton(fixture).click();
+    const pending = ctrl.expectOne('https://api.test/api/subscriptions');
+
+    fixture.componentInstance.submit();
+
+    ctrl.expectNone('https://api.test/api/feeds/discover');
+    pending.flush({ subscription: { id: 1 } }, { status: 201, statusText: 'Created' });
+  });
+
+  it('sends no second discover request while one is in flight', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
+    fixture.componentInstance.submit();
+    const pending = ctrl.expectOne('https://api.test/api/feeds/discover');
+
+    fixture.componentInstance.submit();
+
+    ctrl.expectNone('https://api.test/api/feeds/discover');
+    pending.flush({ candidates: [] });
   });
 
   it('links to the feed directory and closes on the way there', () => {
@@ -205,8 +258,6 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.toggleTag(1);
     fixture.componentInstance.form.setValue({ url: 'https://example.com' });
     fixture.componentInstance.submit();
-    // The first POST resolves to a SINGLE candidate, which auto-expands and
-    // previews — tags are not applied yet, they ride along on the follow-up pick.
     ctrl
       .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
@@ -276,7 +327,7 @@ describe('AddFeedDialogComponent', () => {
 
     const cards = (fixture.nativeElement as HTMLElement).querySelectorAll('.card');
     expect(cards.length).toBe(1);
-    // The footer "Add" submit is hidden once cards (each with Subscribe) show.
+    // The footer "Preview" submit is hidden once cards (each with Subscribe) show.
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('button[type="submit"]'),
     ).toBeNull();
@@ -528,7 +579,7 @@ describe('AddFeedDialogComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.warn')?.textContent).toContain('blocks automated access');
     expect(element.querySelector('button.subscribe')).toBeNull();
-    // Nothing can be subscribed here, so the footer "Add" would be a dead end.
+    // Nothing can be subscribed here, so the footer "Preview" would be a dead end.
     expect(element.querySelector('button[type="submit"]')).toBeNull();
     expect(close).not.toHaveBeenCalled();
   });
@@ -816,7 +867,7 @@ describe('AddFeedDialogComponent', () => {
     expect(suggestions()).toEqual(['Tech']);
   });
 
-  it('fills in a URL it was opened with and waits for Add, so tags can be picked first', () => {
+  it('fills in a URL it was opened with and waits for Preview, so tags can be picked first', () => {
     dialogData = { url: 'https://dropped.example/' };
     const fixture = create();
 

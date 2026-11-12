@@ -138,7 +138,7 @@
          sense before a search. A scrape failure hides it until the URL changes. -->
     @if (!candidates().length && !failureReason()) {
       <app-button footer type="submit" variant="primary" [disabled]="loading()">
-        {{ 'common.add' | transloco }}
+        {{ 'dialog.addFeed.preview' | transloco }}
       </app-button>
     }
   </app-overlay-panel>
