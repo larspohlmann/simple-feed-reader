@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryPillsComponent } from './entry-pills.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
@@ -99,16 +100,27 @@ describe('EntryPillsComponent', () => {
     expect(parentClick).not.toHaveBeenCalled();
   });
 
-  describe('network pill', () => {
-    function mountFor(subscriptionId: number | null, networks: [number, 'bluesky' | 'mastodon'][]) {
+  describe('social feed pill', () => {
+    interface SocialFeedFixture {
+      id: number;
+      network: 'bluesky' | 'mastodon';
+      customTitle?: string;
+    }
+
+    function mountFor(subscriptionId: number | null, feeds: SocialFeedFixture[]) {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [EntryPillsComponent, provideTranslocoTesting()],
         providers: [provideRouter([{ path: '**', children: [] }])],
       });
       TestBed.inject(SubscriptionRows).stored.set(
-        networks.map(([id, network]) =>
-          makeSubscription({ id, social: { network, accountId: 1, kind: 'home' } }),
+        feeds.map(({ id, network, customTitle }) =>
+          makeSubscription({
+            id,
+            title: customTitle ?? 'stored title',
+            customTitle: customTitle ?? null,
+            social: { network, accountId: 1, kind: 'home' },
+          }),
         ),
       );
       const fixture = TestBed.createComponent(EntryPillsComponent);
@@ -118,44 +130,49 @@ describe('EntryPillsComponent', () => {
       return fixture.nativeElement as HTMLElement;
     }
 
-    it('leads with the short network name before the tags', () => {
-      const element = mountFor(5, [[5, 'bluesky']]);
+    it("leads with the feed's name and its network logo, before the tags", () => {
+      const element = mountFor(5, [{ id: 5, network: 'bluesky', customTitle: 'Friends' }]);
       const first = element.querySelector('.pill')!;
 
-      expect(first.textContent?.trim()).toBe('bsky');
+      expect(first.textContent?.trim()).toBe('Friends');
+      expect(first.getAttribute('title')).toBe('Friends');
       expect(first.querySelector('app-network-logo svg.bluesky')).not.toBeNull();
       expect(element.querySelectorAll('.pill')[1].textContent).toContain('Tech');
     });
 
-    it("links to the network's combined view", () => {
-      const pill = mountFor(5, [[5, 'mastodon']]).querySelector('a.pill.network')!;
+    it('names an unrenamed home feed by its localised label', () => {
+      const pill = mountFor(5, [{ id: 5, network: 'mastodon' }]).querySelector('.pill')!;
 
-      expect(pill.getAttribute('href')).toContain('network=mastodon');
+      expect(pill.textContent?.trim()).toBe(
+        TestBed.inject(TranslocoService).translate('reader.socialHome', { network: 'mastodon' }),
+      );
+      expect(pill.querySelector('app-network-logo svg.mastodon')).not.toBeNull();
+    });
+
+    it('links to the feed', () => {
+      const pill = mountFor(5, [{ id: 5, network: 'mastodon' }]).querySelector('a.pill.feed')!;
+
+      expect(pill.getAttribute('href')).toContain('subscription=5');
+      expect(pill.getAttribute('href')).not.toContain('network=');
     });
 
     it('stops its click from bubbling so the parent entry does not open', () => {
-      const element = mountFor(5, [[5, 'bluesky']]);
+      const element = mountFor(5, [{ id: 5, network: 'bluesky' }]);
       const parentClick = jest.fn();
       element.addEventListener('click', parentClick);
 
       element
-        .querySelector('a.pill.network')!
+        .querySelector('a.pill.feed')!
         .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
       expect(parentClick).not.toHaveBeenCalled();
     });
 
-    it('names Mastodon too', () => {
-      expect(
-        mountFor(5, [[5, 'mastodon']])
-          .querySelector('.pill')
-          ?.textContent?.trim(),
-      ).toBe('mastodon');
-    });
-
     it('shows nothing for an ordinary feed or no subscription', () => {
-      expect(mountFor(6, [[5, 'bluesky']]).querySelectorAll('.pill').length).toBe(1);
-      expect(mountFor(null, [[5, 'bluesky']]).querySelectorAll('.pill').length).toBe(1);
+      const feeds: SocialFeedFixture[] = [{ id: 5, network: 'bluesky' }];
+
+      expect(mountFor(6, feeds).querySelectorAll('.pill').length).toBe(1);
+      expect(mountFor(null, feeds).querySelectorAll('.pill').length).toBe(1);
     });
   });
 });
