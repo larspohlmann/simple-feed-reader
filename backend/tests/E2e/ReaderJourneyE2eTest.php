@@ -8,6 +8,7 @@ use App\Tests\E2e\Support\E2eTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -39,18 +40,18 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     private static ?string $adminJwt = null;
 
     /**
-     * Posting a homepage answers 200 with well-formed candidates: its advertised feeds, or the 'scraped' fallback the
-     * seeded admin is offered. An empty list is the site's doing and skips; a scrapeFailureReason is checked if given.
+     * Discovering a homepage answers 200 with well-formed candidates: its advertised feeds, or the 'scraped' fallback
+     * the seeded admin is offered. An empty list is the site's doing and skips; a scrapeFailureReason is checked.
      */
     #[DataProvider('provideDomains')]
     public function testHomepageFeedDiscovery(string $label, string $homepage): void
     {
         $this->skipUnlessReachable($label, $homepage);
 
-        $response = $this->postJson('/api/subscriptions', ['url' => $homepage], $this->adminJwt());
+        $response = $this->postJson('/api/feeds/discover', ['url' => $homepage], $this->adminJwt());
         $status = $response->getStatusCode();
 
-        self::assertSame(200, $status, $label . ' homepage discovery should return 200 candidates');
+        self::assertSame(Response::HTTP_OK, $status, $label . ' homepage discovery should return 200 candidates');
 
         if ([] === ($response->toArray()['candidates'] ?? [])) {
             $reason = $response->toArray()['scrapeFailureReason'] ?? null;
@@ -363,7 +364,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 continue;
             }
 
-            $response = $this->postJson('/api/subscriptions', ['url' => $homepage], $token);
+            $response = $this->postJson('/api/feeds/discover', ['url' => $homepage], $token);
             if (200 !== $response->getStatusCode()) {
                 continue;
             }
@@ -377,8 +378,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 $url = is_array($candidate) ? ($candidate['url'] ?? null) : null;
                 if (is_array($candidate) && is_string($url) && '' !== trim($url)) {
                     // Carry the format: a 'scraped' candidate's URL is the homepage
-                    // itself, so re-posting it without the format just re-runs
-                    // discovery (200 candidates) instead of subscribing (201).
+                    // itself, so re-posting it without the format is refused as
+                    // not a feed (422) instead of subscribing (201).
                     $format = $candidate['format'] ?? null;
                     $found[] = [$label, $url, is_string($format) ? $format : null];
                 }

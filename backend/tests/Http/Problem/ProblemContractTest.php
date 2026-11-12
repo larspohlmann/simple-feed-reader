@@ -7,6 +7,7 @@ namespace App\Tests\Http\Problem;
 use App\EventListener\ApiExceptionListener;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Subscription\Exception\NotAFeedException;
 use App\Exception\InvalidCredentialsException;
 use App\Exception\InvalidSelectionException;
 use App\Repository\Exception\RecordNotFoundException;
@@ -342,6 +343,16 @@ final class ProblemContractTest extends KernelTestCase
         yield 'already subscribed' => [
             new AlreadySubscribedException(),
             ['type' => 'already_subscribed', 'title' => 'Already subscribed to that feed', 'status' => 409],
+        ];
+        yield 'not a feed' => [
+            new NotAFeedException(),
+            [
+                'type' => 'not_a_feed',
+                'title' => 'Not a feed',
+                'status' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                'detail' => 'No feed could be read at that address. '
+                    . 'POST it to /api/feeds/discover for the feeds it offers.',
+            ],
         ];
         yield 'tag name taken' => [
             new TagNameTakenException(),

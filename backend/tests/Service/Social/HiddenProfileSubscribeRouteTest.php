@@ -48,7 +48,7 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
 
         self::assertSame(
             sprintf('social:bluesky:%d:author:%s', $account->requireId(), BlueskyProfiles::RUSTY),
-            $outcome?->subscription?->getFeed()->getUrl(),
+            $outcome?->subscription->getFeed()->getUrl(),
         );
         self::assertSame([['rusty-17.bsky.social']], $this->hiddenProfiles->asked);
     }
@@ -62,7 +62,7 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
 
         self::assertSame(
             sprintf('social:bluesky:%d:author:%s', $account->requireId(), BlueskyProfiles::RUSTY),
-            $outcome?->subscription?->getFeed()->getUrl(),
+            $outcome?->subscription->getFeed()->getUrl(),
         );
         self::assertSame([[BlueskyProfiles::RUSTY]], $this->hiddenProfiles->asked);
     }

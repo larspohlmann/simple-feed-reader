@@ -7,6 +7,7 @@ namespace App\Http\Problem\ExceptionProblems;
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -25,6 +26,12 @@ final readonly class SubscriptionProblems implements ExceptionProblemsInterface
                 'already_subscribed',
                 'Already subscribed to that feed',
                 Response::HTTP_CONFLICT,
+            )),
+            $exception instanceof NotAFeedException => new ResolvedProblem(new ApiProblem(
+                'not_a_feed',
+                'Not a feed',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                'No feed could be read at that address. POST it to /api/feeds/discover for the feeds it offers.',
             )),
             default => null,
         };
