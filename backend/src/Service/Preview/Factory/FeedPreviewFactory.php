@@ -11,6 +11,7 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Preview\Model\FeedPreviewItemModel;
 use App\Service\Preview\Model\FeedPreviewModel;
 use App\Service\Text\Support\PlainText;
+use App\Service\Url\Support\HttpsImageUrl;
 
 final readonly class FeedPreviewFactory
 {
@@ -59,14 +60,14 @@ final readonly class FeedPreviewFactory
         );
     }
 
-    // The SPA is https, so an http/relative/data image is useless in an <img>.
     private function httpsImage(?DeclaredImageModel $image): ?DeclaredImageModel
     {
-        if ($image === null) {
+        $url = HttpsImageUrl::orNull($image?->url);
+        if ($image === null || $url === null) {
             return null;
         }
 
-        return str_starts_with($image->url, 'https://') ? $image : null;
+        return new DeclaredImageModel($url, $image->width, $image->height, $image->renditions);
     }
 
     private function tier(ParsedEntryModel $entry): string

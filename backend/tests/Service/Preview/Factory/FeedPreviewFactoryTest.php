@@ -10,6 +10,7 @@ use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Preview\Factory\FeedPreviewFactory;
+use App\Service\Url\Support\HttpsImageUrl;
 use PHPUnit\Framework\TestCase;
 
 final class FeedPreviewFactoryTest extends TestCase
@@ -131,6 +132,30 @@ final class FeedPreviewFactoryTest extends TestCase
         self::assertNull($preview->items[1]->imageWidth);
         self::assertNull($preview->items[1]->imageHeight);
         self::assertNull($preview->items[2]->imageUrl);
+    }
+
+    public function testAProtocolRelativeImageIsUpgradedToHttps(): void
+    {
+        $preview = new FeedPreviewFactory()->fromDocument(new ParsedFeedModel('Pictures', null, null, null, [
+            $this->entry(1, image: '//cdn.example.com/1.jpg', width: 640, height: 360),
+        ]));
+
+        self::assertTrue($preview->hasImages);
+        self::assertSame('https://cdn.example.com/1.jpg', $preview->items[0]->imageUrl);
+        self::assertSame(640, $preview->items[0]->imageWidth);
+        self::assertSame(360, $preview->items[0]->imageHeight);
+    }
+
+    public function testAnImageUrlLongerThanTheColumnIsDropped(): void
+    {
+        $tooLong = 'https://example.com/' . str_repeat('x', HttpsImageUrl::MAX_LENGTH);
+        $preview = new FeedPreviewFactory()->fromDocument(new ParsedFeedModel('Pictures', null, null, null, [
+            $this->entry(1, image: $tooLong, width: 640, height: 360),
+        ]));
+
+        self::assertFalse($preview->hasImages);
+        self::assertNull($preview->items[0]->imageUrl);
+        self::assertNull($preview->items[0]->imageWidth);
     }
 
     private function entry(
