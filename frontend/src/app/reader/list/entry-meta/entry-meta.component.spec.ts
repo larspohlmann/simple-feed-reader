@@ -100,7 +100,7 @@ describe('EntryMetaComponent', () => {
     });
   });
 
-  it("shows the network pill of the entry's subscription", () => {
+  it("shows the feed pill of the entry's subscription", () => {
     const testEntry = { ...anEntry(), subscriptionId: 7 };
     TestBed.configureTestingModule({
       imports: [EntryMetaComponent, provideTranslocoTesting()],
@@ -111,13 +111,18 @@ describe('EntryMetaComponent', () => {
       ],
     });
     TestBed.inject(SubscriptionRows).stored.set([
-      makeSubscription({ id: 7, social: { network: 'mastodon', accountId: 1, kind: 'home' } }),
+      makeSubscription({
+        id: 7,
+        title: 'Friends',
+        customTitle: 'Friends',
+        social: { network: 'mastodon', accountId: 1, kind: 'home' },
+      }),
     ]);
     const fixture = TestBed.createComponent(EntryMetaComponent);
     fixture.componentRef.setInput('entry', testEntry);
     fixture.detectChanges();
 
     const pill = (fixture.nativeElement as HTMLElement).querySelector('.pill.network');
-    expect(pill?.textContent?.trim()).toBe('mastodon');
+    expect(pill?.textContent?.trim()).toBe('Friends');
   });
 });

@@ -9,8 +9,8 @@ import { selectionQueryParams } from '../../query/query';
 import { SubscriptionRows } from '../../state/subscription-rows';
 
 /**
- * The network pill of a social feed, the Short pill, tag pills, then saved-search pills, as one wrapping list. Clicks stop
- * propagating so a pill inside a clickable card follows its link instead.
+ * The feed pill of a social post (network logo, feed title), the Short pill, tag pills, then saved-search pills, as
+ * one wrapping list. Clicks stop propagating so a pill inside a clickable card follows its link instead.
  */
 @Component({
   selector: 'app-entry-pills',
@@ -27,10 +27,9 @@ export class EntryPillsComponent {
   readonly subscriptionId = input<number | null>(null);
 
   private readonly rows = inject(SubscriptionRows);
-  protected readonly network = computed(() => {
+  protected readonly socialFeed = computed(() => {
     const subscriptionId = this.subscriptionId();
-    return subscriptionId === null
-      ? null
-      : (this.rows.find(subscriptionId)?.social?.network ?? null);
+    const feed = subscriptionId === null ? null : this.rows.find(subscriptionId);
+    return feed?.social ? { id: feed.id, title: feed.title, network: feed.social.network } : null;
   });
 }
