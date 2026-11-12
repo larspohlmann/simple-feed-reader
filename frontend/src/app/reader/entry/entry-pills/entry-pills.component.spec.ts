@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { TranslocoService } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryPillsComponent } from './entry-pills.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
@@ -117,7 +117,7 @@ describe('EntryPillsComponent', () => {
         feeds.map(({ id, network, customTitle }) =>
           makeSubscription({
             id,
-            title: customTitle ?? 'Home',
+            title: customTitle ?? 'stored title',
             customTitle: customTitle ?? null,
             social: { network, accountId: 1, kind: 'home' },
           }),
@@ -135,6 +135,7 @@ describe('EntryPillsComponent', () => {
       const first = element.querySelector('.pill')!;
 
       expect(first.textContent?.trim()).toBe('Friends');
+      expect(first.getAttribute('title')).toBe('Friends');
       expect(first.querySelector('app-network-logo svg.bluesky')).not.toBeNull();
       expect(element.querySelectorAll('.pill')[1].textContent).toContain('Tech');
     });
