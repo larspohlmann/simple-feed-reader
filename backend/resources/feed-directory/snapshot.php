@@ -142,12 +142,16 @@ final class CountryFile
     }
 }
 
-/** @return array{string, int, list<string>} category, podcast flag, feed URLs */
-function feedGroup(string $name, array $urls): array
+/** @param array<string, list<string>> $feeds @return list<array{string, int, list<string>}> category, podcast flag, feed URLs */
+function feedGroups(array $feeds): array
 {
-    return str_starts_with($name, PODCASTS)
-        ? [substr($name, strlen(PODCASTS)), 1, array_values($urls)]
-        : [$name, 0, array_values($urls)];
+    $groups = [];
+    foreach ($feeds as $name => $urls) {
+        $podcast = str_starts_with($name, PODCASTS);
+        $groups[] = [$podcast ? substr($name, strlen(PODCASTS)) : $name, (int) $podcast, array_values($urls)];
+    }
+
+    return $groups;
 }
 
 /** @param array<string, array<string, array<string, mixed>>> $sources @return array<string, CountryFile> */
@@ -163,7 +167,7 @@ function countryFiles(array $sources): array
                 $site['rank'] ?? null,
                 $site['avg_article_length'] ?? null,
                 $site['languages'] ?? [],
-                array_map(feedGroup(...), array_keys($site['feeds'] ?? []), array_values($site['feeds'] ?? [])),
+                feedGroups($site['feeds'] ?? []),
                 $site['summary'] ?? null,
             );
         }
