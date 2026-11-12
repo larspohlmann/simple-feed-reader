@@ -197,15 +197,9 @@ app-category-chips {
   color: var(--accent);
 }
 
-// The panel's footer packs its children to the right; `margin-left: auto` on
-// the first action is what leaves the count behind on the left.
 .cnt {
   font-size: var(--fs-sm);
   font-weight: 600;
-}
-
-.skip {
-  margin-left: auto;
 }
 
 .error {
