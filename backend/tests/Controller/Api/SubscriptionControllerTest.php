@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
@@ -343,7 +344,26 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertSame('Mine', $tags[0]['name']);
     }
 
-    public function testSubscribingAPageIsRefusedWithAPointerToDiscover(): void
+    public function testSubscribingToAThrottledSiteIsServiceUnavailable(): void
+    {
+        $client = self::createClient();
+        $headers = $this->bearerFor($this->factory()->create('slow@example.com'));
+        $stub = new StubFeedFetcher();
+        $stub->willThrow('https://slow.example.com/feed', new FeedThrottledException('429', 90));
+        $this->installFetcher($stub);
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://slow.example.com/feed'], \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertRejected($client, Response::HTTP_SERVICE_UNAVAILABLE);
+        self::assertSame('feed_throttled', $this->payload($client)['type'] ?? null);
+    }
+
+    public function testSubscribingAPageIsRefusedAsNotAFeed(): void
     {
         $client = self::createClient();
         $headers = $this->bearerFor($this->factory()->create('html@example.com'));
@@ -373,9 +393,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
         $problem = $this->payload($client);
         self::assertSame('not_a_feed', $problem['type'] ?? null);
-        $detail = $problem['detail'] ?? null;
-        self::assertIsString($detail);
-        self::assertStringContainsString('/api/feeds/discover', $detail);
+        self::assertSame('No feed could be read at that address.', $problem['detail'] ?? null);
         self::assertSame(0, $this->entityManager()->getRepository(Subscription::class)->count([]));
     }
 

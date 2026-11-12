@@ -169,7 +169,9 @@ Adding a feed takes two requests, so a client can show what it found before anyt
    `scrapeFailureReason`. Limited per user (`feed_discover`).
 2. `POST /api/subscriptions` with the picked candidate's `url`, its `format` when that is `scraped`, `wp-json` or
    `mixcloud-api`, and optional `title` and `tagIds`, answers `201` with the `subscription`. An address that serves no
-   feed is a `422` problem of type `not_a_feed`; this endpoint never answers with candidates.
+   feed is a `422` problem of type `not_a_feed`, and one whose site asked us to slow down is a `503` problem of
+   type `feed_throttled`; this endpoint never answers with candidates. Send the address to `/api/feeds/discover`
+   for the feeds it offers.
 
 A candidate without `preview` or `noPreviewReason` is previewed on demand with `POST /api/feeds/preview`. Decode
 `format` and `noPreviewReason` leniently: new values are added.

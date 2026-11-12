@@ -7,6 +7,7 @@ namespace App\Http\Problem\ExceptionProblems;
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Subscription\Exception\FeedThrottledOnSubscribeException;
 use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,7 +32,13 @@ final readonly class SubscriptionProblems implements ExceptionProblemsInterface
                 'not_a_feed',
                 'Not a feed',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
-                'No feed could be read at that address. POST it to /api/feeds/discover for the feeds it offers.',
+                'No feed could be read at that address.',
+            )),
+            $exception instanceof FeedThrottledOnSubscribeException => new ResolvedProblem(new ApiProblem(
+                'feed_throttled',
+                'Site is rationing requests',
+                Response::HTTP_SERVICE_UNAVAILABLE,
+                'The site asked us to slow down. Try again in a minute.',
             )),
             default => null,
         };

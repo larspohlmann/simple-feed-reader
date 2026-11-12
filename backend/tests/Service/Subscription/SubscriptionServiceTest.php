@@ -28,6 +28,7 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Subscription\Exception\FeedThrottledOnSubscribeException;
 use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\FirstFetchRecorder;
@@ -454,6 +455,17 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $this->expectException(NotAFeedException::class);
         $service->subscribe($user, 'https://gone.example.com/feed');
+    }
+
+    public function testAThrottledSiteIsReportedAsThrottledNotAsNotAFeed(): void
+    {
+        $user = $this->factory()->create('throttled@example.com');
+        $service = $this->service($this->discoveryReturning(
+            FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Throttled),
+        ));
+
+        $this->expectException(FeedThrottledOnSubscribeException::class);
+        $service->subscribe($user, 'https://slow.example.com/feed');
     }
 
     public function testSubscribeNeverAsksDiscoveryForAScrapedFallback(): void

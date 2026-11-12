@@ -7,6 +7,7 @@ namespace App\Tests\Http\Problem;
 use App\EventListener\ApiExceptionListener;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Subscription\Exception\FeedThrottledOnSubscribeException;
 use App\Service\Subscription\Exception\NotAFeedException;
 use App\Exception\InvalidCredentialsException;
 use App\Exception\InvalidSelectionException;
@@ -350,8 +351,16 @@ final class ProblemContractTest extends KernelTestCase
                 'type' => 'not_a_feed',
                 'title' => 'Not a feed',
                 'status' => Response::HTTP_UNPROCESSABLE_ENTITY,
-                'detail' => 'No feed could be read at that address. '
-                    . 'POST it to /api/feeds/discover for the feeds it offers.',
+                'detail' => 'No feed could be read at that address.',
+            ],
+        ];
+        yield 'feed throttled on subscribe' => [
+            new FeedThrottledOnSubscribeException(),
+            [
+                'type' => 'feed_throttled',
+                'title' => 'Site is rationing requests',
+                'status' => Response::HTTP_SERVICE_UNAVAILABLE,
+                'detail' => 'The site asked us to slow down. Try again in a minute.',
             ],
         ];
         yield 'tag name taken' => [
