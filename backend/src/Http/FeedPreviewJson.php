@@ -9,8 +9,14 @@ use App\Service\Preview\Model\FeedPreviewModel;
 
 final class FeedPreviewJson
 {
+    /** @return array{feed: array<string, mixed>} */
+    public static function one(FeedPreviewModel $preview): array
+    {
+        return ['feed' => self::preview($preview)];
+    }
+
     /**
-     * @return array{feed: array{
+     * @return array{
      *   title: string|null,
      *   itemCount: int,
      *   content: string,
@@ -25,11 +31,11 @@ final class FeedPreviewJson
      *     imageHeight: int|null,
      *     publishedAt: string|null,
      *   }>,
-     * }}
+     * }
      */
-    public static function one(FeedPreviewModel $preview): array
+    public static function preview(FeedPreviewModel $preview): array
     {
-        return ['feed' => [
+        return [
             'title' => $preview->title,
             'itemCount' => $preview->itemCount,
             'content' => $preview->content,
@@ -47,6 +53,6 @@ final class FeedPreviewJson
                 ],
                 $preview->items,
             ),
-        ]];
+        ];
     }
 }

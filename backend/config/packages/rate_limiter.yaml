@@ -78,6 +78,13 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per user, its own budget: a discover fetches a page and may probe a few feed addresses under it (#2182).
+        feed_discover:
+            policy: 'sliding_window'
+            limit: 60
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
         # The anonymous first-admin bootstrap, per IP: guessing a 32-byte secret is infeasible, so this only bounds
         # scripted probing.
         setup:
