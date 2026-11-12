@@ -116,6 +116,8 @@ final class FeedPreviewDiscoverTest extends ApiTestCase
         self::assertSame('https://example.com/feed.xml', $candidate['url']);
         self::assertSame('Example Tech Blog', $candidate['title']);
         self::assertSame('rss', $candidate['format']);
+        self::assertSame('RSS', $candidate['label']);
+        self::assertArrayNotHasKey('storedFormat', $candidate);
         self::assertArrayNotHasKey('noPreviewReason', $candidate);
         $preview = $candidate['preview'] ?? null;
         self::assertIsArray($preview);
@@ -182,7 +184,13 @@ final class FeedPreviewDiscoverTest extends ApiTestCase
 
         self::assertSame(
             ['candidates' => [
-                ['url' => 'https://www.heise.de/', 'title' => 'heise online', 'format' => 'scraped'],
+                [
+                    'url' => 'https://www.heise.de/',
+                    'title' => 'heise online',
+                    'format' => 'scraped',
+                    'label' => 'Scraped',
+                    'storedFormat' => 'scraped',
+                ],
             ]],
             $body,
         );
@@ -277,6 +285,7 @@ final class FeedPreviewDiscoverTest extends ApiTestCase
                 'url' => 'https://bsky.app/profile/rusty-17.bsky.social',
                 'title' => 'Rusty',
                 'format' => 'bluesky-api',
+                'label' => 'Bluesky',
                 'noPreviewReason' => 'hidden_profile',
             ]]],
             $body,

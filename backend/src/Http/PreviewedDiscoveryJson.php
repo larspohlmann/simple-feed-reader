@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Enum\SourceFormat;
+use App\Service\Parser\Model\FeedSyntax;
 use App\Service\Preview\Model\PreviewedCandidateModel;
 use App\Service\Preview\Model\PreviewedDiscoveryModel;
 
 final class PreviewedDiscoveryJson
 {
+    private const array FORMAT_LABELS = [
+        FeedSyntax::Rss->value => 'RSS',
+        FeedSyntax::Atom->value => 'Atom',
+        SourceFormat::WP_JSON => 'WordPress',
+        SourceFormat::MIXCLOUD_API => 'Mixcloud',
+        SourceFormat::BLUESKY_API => 'Bluesky',
+    ];
+
     /** @return array<string, mixed> */
     public static function of(PreviewedDiscoveryModel $found): array
     {
@@ -24,7 +34,16 @@ final class PreviewedDiscoveryJson
     private static function candidate(PreviewedCandidateModel $previewed): array
     {
         $candidate = $previewed->candidate;
-        $json = ['url' => $candidate->url, 'title' => $candidate->title, 'format' => $candidate->format];
+        $json = [
+            'url' => $candidate->url,
+            'title' => $candidate->title,
+            'format' => $candidate->format,
+            'label' => self::labelOf($candidate->format),
+        ];
+        if (SourceFormat::isVerbatim($candidate->format)) {
+            $json['storedFormat'] = $candidate->format;
+        }
+
         if (null !== $previewed->preview) {
             $json['preview'] = FeedPreviewJson::preview($previewed->preview);
         }
@@ -34,5 +53,10 @@ final class PreviewedDiscoveryJson
         }
 
         return $json;
+    }
+
+    private static function labelOf(string $format): string
+    {
+        return self::FORMAT_LABELS[$format] ?? ('' === $format ? 'Feed' : ucfirst($format));
     }
 }

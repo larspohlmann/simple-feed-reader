@@ -161,15 +161,14 @@ kind it does not know, since new kinds are added.
 Adding a feed takes two requests, so a client can show what it found before anything is subscribed (#2182).
 
 1. `POST /api/feeds/discover` with `{"url": …}` (a bare host gets `https://`) looks the address up and never
-   subscribes. It answers `200` with `candidates`, each `{url, title, format}`. A feed discovery has already read
-   carries its `preview`, the object `POST /api/feeds/preview` answers under `feed`. A candidate that cannot be
+   subscribes. It answers `200` with `candidates`, each `{url, title, format, label}`, plus
+   `storedFormat` when subscribe must send one. A feed discovery has already read carries its `preview`, the object `POST /api/feeds/preview` answers under `feed`. A candidate that cannot be
    previewed carries `noPreviewReason`: `hidden_profile` for a Bluesky profile only logged-in users see, which the
    user's connected Bluesky account reads, or `connect_bluesky_account` for such a profile when the user has no ready
    Bluesky account (subscribing it then answers `422 bluesky_profile_hidden`). An empty list may carry
    `scrapeFailureReason`. Limited per user (`feed_discover`).
-2. `POST /api/subscriptions` with the picked candidate's `url`, its `format` when that is `scraped`, `wp-json` or
-   `mixcloud-api`, and optional `title` and `tagIds`, answers `201` with the `subscription`. An address that serves no
-   feed is a `422` problem of type `not_a_feed`, and one whose site asked us to slow down is a `503` problem of
+2. `POST /api/subscriptions` with the picked candidate's `url`, its `storedFormat` as `format` when it carries
+   one, and optional `title` and `tagIds`, answers `201` with the `subscription`. An address that serves no feed is a `422` problem of type `not_a_feed`, and one whose site asked us to slow down is a `503` problem of
    type `feed_throttled`; this endpoint never answers with candidates. Send the address to `/api/feeds/discover`
    for the feeds it offers.
 
