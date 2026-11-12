@@ -52,16 +52,39 @@ final class FeedPreviewFactoryTest extends TestCase
     public function testOnlyTheFirstEightEntriesDecideTheVerdictAndTheImageBadge(): void
     {
         $plain = array_map(fn (int $number): ParsedEntryModel => $this->entry($number), range(1, 8));
-        $late = $this->entry(9, summary: null, contentHtml: str_repeat('x', 700), image: 'https://example.com/9.jpg');
-        $late = [$late, $late, $late, $late, $late, $late, $late, $late, $late];
+        $lateEntry = $this->entry(
+            9,
+            summary: null,
+            contentHtml: str_repeat('x', 700),
+            image: 'https://example.com/9.jpg',
+        );
+        $lateEntries = array_fill(0, 9, $lateEntry);
 
         $preview = new FeedPreviewFactory()->fromDocument(
-            new ParsedFeedModel('Long', null, null, null, [...$plain, ...$late]),
+            new ParsedFeedModel('Long', null, null, null, [...$plain, ...$lateEntries]),
         );
 
         self::assertSame('summary', $preview->content);
         self::assertFalse($preview->hasImages);
-        self::assertCount(3, $preview->items);
+    }
+
+    public function testAtMostTenEntriesAreShown(): void
+    {
+        $entries = array_map(fn (int $number): ParsedEntryModel => $this->entry($number), range(1, 12));
+
+        $preview = new FeedPreviewFactory()->fromDocument(new ParsedFeedModel('Long', null, null, null, $entries));
+
+        self::assertCount(10, $preview->items);
+        self::assertSame(12, $preview->itemCount);
+    }
+
+    public function testAFeedWithFewerEntriesShowsThemAll(): void
+    {
+        $entries = array_map(fn (int $number): ParsedEntryModel => $this->entry($number), range(1, 4));
+
+        $preview = new FeedPreviewFactory()->fromDocument(new ParsedFeedModel('Short', null, null, null, $entries));
+
+        self::assertCount(4, $preview->items);
     }
 
     public function testATieBetweenTiersGoesToTheRicherOne(): void

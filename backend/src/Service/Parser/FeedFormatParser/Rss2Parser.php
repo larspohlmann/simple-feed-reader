@@ -10,9 +10,9 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\FeedNamespace;
+use App\Service\Parser\Model\FeedSyntax;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\FeedSyntax;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\DateParser;
@@ -65,7 +65,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             FeedImageExtractor::fromRss2Channel($channel),
             $entries,
             $channel->text('generator'),
-            FeedSyntax::Rss,
+            syntax: FeedSyntax::Rss,
         )->withShowArtwork(PodcastArtwork::of($channelElement));
     }
 
