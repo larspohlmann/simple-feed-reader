@@ -674,14 +674,18 @@ describe('AddFeedDialogComponent', () => {
     expect(suggestions()).toEqual(['Tech']);
   });
 
-  it('starts searching for a URL it was opened with', () => {
+  it('fills in a URL it was opened with and waits for Add, so tags can be picked first', () => {
     dialogData = { url: 'https://dropped.example/' };
     const fixture = create();
 
     expect(fixture.componentInstance.form.getRawValue().url).toBe('https://dropped.example/');
+    ctrl.expectNone('https://api.test/api/subscriptions');
+
+    fixture.componentInstance.toggleTag(2);
+    fixture.componentInstance.submit();
     const request = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(request.request.body).toEqual(
-      expect.objectContaining({ url: 'https://dropped.example/' }),
+      expect.objectContaining({ url: 'https://dropped.example/', tagIds: [2] }),
     );
     request.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 4 });

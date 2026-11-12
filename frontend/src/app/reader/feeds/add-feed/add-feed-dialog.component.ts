@@ -41,7 +41,7 @@ const FORMAT_LABELS = new Map<string, string>([
   ['mixcloud-api', 'Mixcloud'],
 ]);
 
-/** Opens the dialog already searching for `url`. */
+/** Opens the dialog with `url` filled in, waiting for the user's tags and Add. */
 export interface AddFeedDialogData {
   url: string;
 }
@@ -94,7 +94,6 @@ export class AddFeedDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.tagsStore.tags().length === 0) this.tagsStore.load();
-    if (this.data) this.submit();
   }
 
   toggleTag(id: number): void {

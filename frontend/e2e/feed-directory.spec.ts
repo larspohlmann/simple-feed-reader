@@ -35,7 +35,7 @@ const GERMANY: FeedDirectoryCountryFile = {
 /**
  * The spec owns everything the section reads or writes: the catalog files, the
  * subscribed set, the account's scope (read and saved) and the subscription POST
- * the add-feed dialog fires on open. Nothing reaches the real account.
+ * the add-feed dialog sends on Add. Nothing reaches the real account.
  */
 async function stubFeedDirectory(page: Page): Promise<{ subscribePosts: string[] }> {
   const subscribePosts: string[] = [];
@@ -117,5 +117,8 @@ test('pick a scope, find a site and start subscribing from the feed directory', 
 
   const dialog = page.getByRole('dialog');
   await expect(dialog.locator('input[type=url]')).toHaveValue(ALPHA_FEED);
+  expect(subscribePosts).toEqual([]);
+
+  await dialog.locator('button[type=submit]').click();
   await expect.poll(() => subscribePosts).toEqual([ALPHA_FEED]);
 });
