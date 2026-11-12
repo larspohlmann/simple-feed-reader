@@ -10,6 +10,7 @@ import {
   AddFeedDialogData,
 } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionDto } from '../../reader/models';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { ActionSheetItem } from '../../shared/action-sheet/action-sheet.component';
@@ -29,6 +30,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
   private readonly layout = inject(LayoutService);
   private readonly store = inject(FeedDirectoryStore);
   private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly manage = inject(ManageActions);
   private readonly injector = inject(Injector);
   private readonly i18n = inject(TranslocoService);
   private popover: OverlayRef | null = null;
@@ -42,6 +44,11 @@ export class FeedDirectorySubscriber implements OnDestroy {
     } else {
       this.openPopover(request, feeds);
     }
+  }
+
+  edit(feedUrl: string): void {
+    const subscription = this.store.subscriptionFor(feedUrl);
+    if (subscription) this.manage.editSubscription(subscription);
   }
 
   ngOnDestroy(): void {
@@ -67,12 +74,14 @@ export class FeedDirectorySubscriber implements OnDestroy {
         id: feed.url,
         label: feedPath(feed.url, host),
         symbol: feed.subscribed ? 'check' : 'add',
-        disabled: feed.subscribed,
       })),
     ]);
     const total = this.i18n.translate('settings.feedDirectory.feeds', { count: feeds.length });
+    const byUrl = new Map(feeds.map((feed) => [feed.url, feed]));
     this.sheet.open({ title: `${host} · ${total}`, actions }).subscribe((url) => {
-      if (url) this.subscribeTo(url);
+      if (!url) return;
+      if (byUrl.get(url)?.subscribed) this.edit(url);
+      else this.subscribeTo(url);
     });
   }
 
@@ -116,6 +125,12 @@ export class FeedDirectorySubscriber implements OnDestroy {
       .subscribe((url) => {
         closeByUser();
         this.subscribeTo(url);
+      });
+    outputToObservable(content.instance.edit)
+      .pipe(takeUntil(closed))
+      .subscribe((url) => {
+        closeByUser();
+        this.edit(url);
       });
     closed.pipe(take(1)).subscribe(() => {
       popover.dispose();

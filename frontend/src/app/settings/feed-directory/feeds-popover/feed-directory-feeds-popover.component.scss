@@ -1,5 +1,4 @@
 @use '../../../theme/glass-rim';
-@use '../directory-mixins';
 
 .pop {
   @include glass-rim.filled(var(--surface-2), var(--border-strong));
@@ -66,8 +65,4 @@
   font-size: var(--fs-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.done {
-  @include directory-mixins.done;
 }

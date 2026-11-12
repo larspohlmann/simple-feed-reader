@@ -157,6 +157,7 @@
                 [row]="row"
                 [mode]="store.mode()"
                 (subscribe)="subscriber.open($event)"
+                (edit)="subscriber.edit($event)"
               />
             </cdk-virtual-scroll-viewport>
           }

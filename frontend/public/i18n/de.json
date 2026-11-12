@@ -835,6 +835,8 @@
       "subscribe": "Abonnieren",
       "subscribeTo": "{{feed}} abonnieren",
       "subscribed": "Abonniert",
+      "editSubscription": "Abonnement bearbeiten",
+      "editSubscriptionTo": "Abonnement von {{feed}} bearbeiten",
       "following": "Du folgst",
       "feeds": "{{count}} Feeds",
       "feedsSubscribed": "{{count}} Feeds · {{subscribed}} abonniert",

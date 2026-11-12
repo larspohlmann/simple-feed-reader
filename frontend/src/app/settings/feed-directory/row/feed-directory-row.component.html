@@ -37,9 +37,15 @@
 <div class="action">
   @if (onlyFeed(); as feed) {
     @if (feed.subscribed) {
-      <span class="done">
+      <app-button
+        size="sm"
+        variant="ghost"
+        data-test="edit"
+        [ariaLabel]="'settings.feedDirectory.editSubscription' | transloco"
+        (click)="edit.emit(feed.url)"
+      >
         <app-icon name="check" size="sm" />{{ 'settings.feedDirectory.subscribed' | transloco }}
-      </span>
+      </app-button>
     } @else {
       <app-button size="sm" data-test="subscribe" (click)="request($event)">
         <app-icon name="add" size="sm" />{{ 'settings.feedDirectory.subscribe' | transloco }}

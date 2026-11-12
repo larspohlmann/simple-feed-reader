@@ -109,17 +109,20 @@ describe('FeedDirectoryRowComponent', () => {
     expect(requests).toEqual([{ row: ROW, anchor: button }]);
   });
 
-  it('marks the one feed in the mode as subscribed instead of offering it', () => {
+  it('opens the subscribed feed for editing from its Subscribed status', () => {
+    const url = 'https://www.tagesschau.de/podcast.xml';
     const element = render(
-      {
-        ...ROW,
-        feeds: [feed('https://www.tagesschau.de/podcast.xml', { podcast: true, subscribed: true })],
-      },
+      { ...ROW, feeds: [feed(url, { podcast: true, subscribed: true })] },
       'podcasts',
     );
-
+    const edits: string[] = [];
+    fixture.componentInstance.edit.subscribe((edited) => edits.push(edited));
     expect(element.querySelector('[data-test="subscribe"]')).toBeNull();
-    expect(text(element.querySelector('.done'))).toContain('Subscribed');
+    const status = element.querySelector<HTMLElement>('[data-test="edit"] button')!;
+    expect(text(status)).toContain('Subscribed');
+    expect(status.getAttribute('aria-label')).toBe('Edit subscription');
+    status.click();
+    expect(edits).toEqual([url]);
   });
 
   it('offers the feeds in the mode as a list and emits the row with its button', () => {

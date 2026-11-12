@@ -8,6 +8,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
 import { SubscriptionDto } from '../../reader/models';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { ActionSheetData } from '../../shared/action-sheet/action-sheet.component';
@@ -19,6 +20,8 @@ import {
 } from './feed-directory-rows';
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectorySubscriber } from './feed-directory-subscriber';
+
+const SUBSCRIBED_URL = 'https://www.spiegel.de/kultur/index.rss';
 
 const channel = (url: string, category: string, subscribed = false): FeedDirectoryFeed => ({
   url,
@@ -57,6 +60,7 @@ describe('FeedDirectorySubscriber', () => {
   let dialogOpen: jest.Mock;
   let sheetOpen: jest.Mock<Observable<string | undefined>, [ActionSheetData]>;
   let reloadQuietly: jest.Mock;
+  let editSubscription: jest.Mock;
   let subscriber: FeedDirectorySubscriber;
   let anchor: HTMLElement;
 
@@ -67,6 +71,7 @@ describe('FeedDirectorySubscriber', () => {
     dialogOpen = jest.fn(() => ({ closed }));
     sheetOpen = jest.fn<Observable<string | undefined>, [ActionSheetData]>(() => of(undefined));
     reloadQuietly = jest.fn();
+    editSubscription = jest.fn();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -74,7 +79,14 @@ describe('FeedDirectorySubscriber', () => {
         { provide: Dialog, useValue: { open: dialogOpen } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LayoutService, useValue: { isCoarse } },
-        { provide: FeedDirectoryStore, useValue: { mode } },
+        {
+          provide: FeedDirectoryStore,
+          useValue: {
+            mode,
+            subscriptionFor: (url: string) => (url === SUBSCRIBED_URL ? { id: 7 } : null),
+          },
+        },
+        { provide: ManageActions, useValue: { editSubscription } },
         { provide: SubscriptionsStore, useValue: { reloadQuietly } },
       ],
     });
@@ -124,6 +136,18 @@ describe('FeedDirectorySubscriber', () => {
     expect(reloadQuietly).not.toHaveBeenCalled();
   });
 
+  it('opens the edit dialog for a subscribed feed', () => {
+    subscriber.edit(SUBSCRIBED_URL);
+
+    expect(editSubscription).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
+  });
+
+  it('does nothing for a feed it holds no subscription for', () => {
+    subscriber.edit('https://nowhere.example/feed');
+
+    expect(editSubscription).not.toHaveBeenCalled();
+  });
+
   describe('several feeds on a fine pointer', () => {
     it('opens the feeds popover with the row and its feeds in the mode', () => {
       openPopover();
@@ -137,12 +161,12 @@ describe('FeedDirectorySubscriber', () => {
     it('moves focus to the first feed it offers', () => {
       openPopover();
 
-      expect(document.activeElement).toBe(popover()!.querySelector('.feed app-button button'));
+      expect(document.activeElement).toBe(popover()!.querySelector('.feed button'));
     });
 
     it('closes on a choice and opens the dialog for that feed', () => {
       openPopover();
-      popover()!.querySelector<HTMLButtonElement>('.feed app-button button')!.click();
+      popover()!.querySelector<HTMLButtonElement>('.feed [data-test="subscribe"] button')!.click();
       render();
 
       expect(popover()).toBeNull();
@@ -150,6 +174,16 @@ describe('FeedDirectorySubscriber', () => {
         panelClass: 'app-dialog',
         data: { url: 'https://www.spiegel.de/kultur/kino/index.rss' },
       });
+    });
+
+    it('closes the popover and edits a subscribed feed chosen there', () => {
+      openPopover();
+      popover()!.querySelector<HTMLButtonElement>('[data-test="edit"] button')!.click();
+      render();
+
+      expect(popover()).toBeNull();
+      expect(editSubscription).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
+      expect(dialogOpen).not.toHaveBeenCalled();
     });
 
     it('closes on Escape and gives focus back to the button that opened it', () => {
@@ -200,7 +234,7 @@ describe('FeedDirectorySubscriber', () => {
   describe('several feeds on a coarse pointer', () => {
     beforeEach(() => isCoarse.set(true));
 
-    it('opens an action sheet with a note per category and the subscribed feeds disabled', () => {
+    it('opens an action sheet with a note per category and a check on the subscribed feeds', () => {
       subscriber.open({ row: SEVERAL, anchor });
 
       expect(popover()).toBeNull();
@@ -212,20 +246,17 @@ describe('FeedDirectorySubscriber', () => {
             id: 'https://www.spiegel.de/kultur/index.rss',
             label: '/kultur/index.rss',
             symbol: 'check',
-            disabled: true,
           },
           {
             id: 'https://www.spiegel.de/kultur/kino/index.rss',
             label: '/kultur/kino/index.rss',
             symbol: 'add',
-            disabled: false,
           },
           { note: 'World · 1' },
           {
             id: 'https://www.spiegel.de/ausland/index.rss',
             label: '/ausland/index.rss',
             symbol: 'add',
-            disabled: false,
           },
         ],
       });
@@ -240,6 +271,15 @@ describe('FeedDirectorySubscriber', () => {
         panelClass: 'app-dialog',
         data: { url: 'https://www.spiegel.de/ausland/index.rss' },
       });
+    });
+
+    it('edits a subscribed feed chosen on the sheet instead of opening the add-feed dialog', () => {
+      sheetOpen.mockReturnValue(of(SUBSCRIBED_URL));
+
+      subscriber.open({ row: SEVERAL, anchor });
+
+      expect(editSubscription).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
+      expect(dialogOpen).not.toHaveBeenCalled();
     });
 
     it('opens nothing when the sheet is dismissed', () => {

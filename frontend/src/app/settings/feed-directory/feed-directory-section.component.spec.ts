@@ -9,6 +9,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
 import { SubscriptionDto } from '../../reader/models';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { FeedDirectoryApi } from './feed-directory-api';
 import {
@@ -104,6 +105,7 @@ describe('FeedDirectorySectionComponent', () => {
           },
         },
         { provide: Dialog, useValue: { open: dialogOpen } },
+        { provide: ManageActions, useValue: { editSubscription: jest.fn() } },
         { provide: LayoutService, useValue: { isPhone, isCoarse: signal(false) } },
         {
           provide: SubscriptionsStore,
@@ -331,7 +333,7 @@ describe('FeedDirectorySectionComponent', () => {
       data: { url: 'https://www.zeit.de/politik/index' },
     });
     expect(reloadQuietly).toHaveBeenCalled();
-    expect(text(zeit().querySelector('.done'))).toContain('Subscribed');
+    expect(text(zeit().querySelector('[data-test="edit"]'))).toContain('Subscribed');
   });
 
   it('subscribes to one of several feeds through the popover and counts it on the row', async () => {

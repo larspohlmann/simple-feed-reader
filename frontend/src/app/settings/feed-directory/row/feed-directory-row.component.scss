@@ -1,6 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
-@use '../directory-mixins';
 
 :host {
   display: grid;
@@ -96,12 +95,6 @@
   align-items: flex-end;
   gap: calc(var(--space-1) + var(--space-0));
   min-width: 8.75rem;
-}
-
-.done {
-  @include directory-mixins.done;
-
-  font-size: var(--fs-sm);
 }
 
 @media (width < bp.$bp-sm) {

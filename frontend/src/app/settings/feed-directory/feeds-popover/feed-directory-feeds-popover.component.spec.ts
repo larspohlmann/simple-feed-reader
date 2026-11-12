@@ -59,25 +59,33 @@ describe('FeedDirectoryFeedsPopoverComponent', () => {
     expect(paths[0].title).toBe('https://www.spiegel.de/kultur/index.rss');
   });
 
-  it('marks a subscribed feed instead of offering it', () => {
-    const feeds = element().querySelectorAll('.feed');
-
-    expect(text(feeds[0].querySelector('.done'))).toContain('Subscribed');
-    expect(feeds[0].querySelector('app-button')).toBeNull();
-    expect(feeds[1].querySelector('.done')).toBeNull();
+  it('opens a subscribed feed for editing instead of offering it', () => {
+    const edited: string[] = [];
+    fixture.componentInstance.edit.subscribe((url) => edited.push(url));
+    const subscribed = element().querySelectorAll('.feed')[0];
+    const button = subscribed.querySelector<HTMLButtonElement>('[data-test="edit"] button')!;
+    expect(subscribed.querySelector('[data-test="subscribe"]')).toBeNull();
+    expect(text(button)).toContain('Subscribed');
+    expect(button.getAttribute('aria-label')).toBe('Edit subscription to /kultur/index.rss');
+    button.click();
+    expect(edited).toEqual(['https://www.spiegel.de/kultur/index.rss']);
   });
 
   it('emits the chosen feed address', () => {
     const chosen: string[] = [];
     fixture.componentInstance.choose.subscribe((url) => chosen.push(url));
 
-    element().querySelectorAll<HTMLButtonElement>('.feed app-button button')[1].click();
+    element()
+      .querySelectorAll<HTMLButtonElement>('.feed [data-test="subscribe"] button')[1]
+      .click();
 
     expect(chosen).toEqual(['https://www.spiegel.de/ausland/index.rss']);
   });
 
   it('names each Subscribe button after its feed', () => {
-    const button = element().querySelector<HTMLButtonElement>('.feed app-button button')!;
+    const button = element().querySelector<HTMLButtonElement>(
+      '.feed [data-test="subscribe"] button',
+    )!;
 
     expect(button.getAttribute('aria-label')).toBe('Subscribe to /kultur/kino/index.rss');
   });

@@ -24,6 +24,7 @@ export class FeedDirectoryRowComponent {
   readonly row = input.required<FeedDirectoryRow>();
   readonly mode = input.required<FeedDirectoryMode>();
   readonly subscribe = output<FeedDirectorySubscribeRequest>();
+  readonly edit = output<string>();
 
   protected readonly names = inject(FeedDirectoryNames);
   protected readonly layout = inject(LayoutService);
