@@ -604,8 +604,9 @@ Content slots: default content becomes the scrolling body; `[headerActions]`
 lands beside the heading; `[subheader]` lands between the heading and the body,
 outside the scroller, for controls that steer the body (the social import
 dialog's tabs and filters) and so must never scroll away or swallow a tap mid-fling;
-`[footer]` lands in the footer row; `[footerStart]` lands at the row's start, stacked in a column (secondary links, a destructive action), while `[footer]` buttons stay at the end. The subheader and the footer hide themselves
-when empty, and the footer start area with them.
+`[footer]` lands at the end of the footer row; `[footerStart]` lands at its start,
+stacked in a column (secondary links, a destructive action). The subheader, the
+footer's start area and the footer itself each hide when empty.
 
 ```html
 <app-overlay-panel [heading]="data.title" cdkTrapFocus>

@@ -200,7 +200,6 @@ app-category-chips {
 // The panel's footer packs its children to the right; `margin-left: auto` on
 // the first action is what leaves the count behind on the left.
 .cnt {
-  align-self: center;
   font-size: var(--fs-sm);
   font-weight: 600;
 }
