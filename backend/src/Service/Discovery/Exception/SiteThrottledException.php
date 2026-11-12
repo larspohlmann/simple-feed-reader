@@ -9,6 +9,6 @@ final class SiteThrottledException extends \RuntimeException
 {
     public function __construct(?\Throwable $previous = null)
     {
-        parent::__construct('The site asked us to slow down.', 0, $previous);
+        parent::__construct('The site asked us to slow down.', previous: $previous);
     }
 }
