@@ -1,4 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { TranslocoService } from '@jsverse/transloco';
+import { translationOf } from './i18n/translation-of';
 
 export interface Problem {
   type: string;
@@ -26,6 +28,11 @@ export interface Problem {
 /** The most specific message a problem carries: its first field message, else its detail, else its title. */
 export function problemMessage(problem: Problem): string {
   return Object.values(problem.errors ?? {})[0]?.[0] ?? problem.detail ?? problem.title;
+}
+
+/** The problem in the reader's language when `problem.<type>` is translated, else its most specific message. */
+export function problemText(problem: Problem, i18n: TranslocoService): string {
+  return translationOf(i18n, `problem.${problem.type}`) ?? problemMessage(problem);
 }
 
 /** A request whose outcome the response cannot prove: a dropped connection

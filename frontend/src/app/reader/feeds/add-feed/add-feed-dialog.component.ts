@@ -12,7 +12,8 @@ import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-pan
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.component';
-import { parseProblem, problemMessage } from '../../../core/problem';
+import { translationOf } from '../../../core/i18n/translation-of';
+import { parseProblem, problemText } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
 import {
@@ -28,24 +29,6 @@ type PreviewState =
   | { status: 'loading' }
   | { status: 'error'; message?: string }
   | { status: 'ok'; preview: FeedPreview };
-
-const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
-  ['blocked', 'failBlocked'],
-  ['throttled', 'failThrottled'],
-  ['unreachable', 'failUnreachable'],
-  ['not_scrapable', 'failNotScrapable'],
-  ['too_large', 'failTooLarge'],
-]);
-
-const PROBLEM_TEXT_KEYS = new Map<string, string>([
-  ['not_a_feed', 'notAFeed'],
-  ['feed_throttled', 'failThrottled'],
-]);
-
-const NO_PREVIEW_TEXT_KEYS = new Map<NoPreviewReason, string>([
-  ['hidden_profile', 'noPreviewHiddenProfile'],
-  ['connect_bluesky_account', 'noPreviewConnectBluesky'],
-]);
 
 /** Formats whose candidate URL is the source itself: the backend stores it as offered. */
 const VERBATIM_FORMATS: ReadonlySet<string> = new Set(['scraped', 'wp-json', 'mixcloud-api']);
@@ -165,19 +148,19 @@ export class AddFeedDialogComponent implements OnInit {
     return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
   }
 
-  /**
-   * Why a scrape-fallback failure means this URL is a dead end, in words. The
-   * default keeps an unrecognized future reason from rendering an empty warning
-   * box — the backend's reason set is open, so this build may not know them all.
-   */
+  /** An unrecognized future reason falls back to a generic line rather than an empty warning box. */
   failureText(reason: ScrapeFailureReason): string {
-    const key = FAILURE_TEXT_KEYS.get(reason) ?? 'failGeneric';
-    return this.i18n.translate(`dialog.addFeed.${key}`);
+    return (
+      translationOf(this.i18n, `dialog.addFeed.failure.${reason}`) ??
+      this.i18n.translate('dialog.addFeed.failGeneric')
+    );
   }
 
   noPreviewText(reason: NoPreviewReason): string {
-    const key = NO_PREVIEW_TEXT_KEYS.get(reason) ?? 'noPreviewGeneric';
-    return this.i18n.translate(`dialog.addFeed.${key}`);
+    return (
+      translationOf(this.i18n, `dialog.addFeed.noPreview.${reason}`) ??
+      this.i18n.translate('dialog.addFeed.noPreviewGeneric')
+    );
   }
 
   submit(): void {
@@ -255,13 +238,7 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   private showError(error: HttpErrorResponse): void {
-    const problem = parseProblem(error);
-    const translatedKey = PROBLEM_TEXT_KEYS.get(problem.type);
-    this.error.set(
-      translatedKey
-        ? this.i18n.translate(`dialog.addFeed.${translatedKey}`)
-        : problemMessage(problem),
-    );
+    this.error.set(problemText(parseProblem(error), this.i18n));
   }
 
   /** Fetches a candidate's preview once, the first time it is expanded — a

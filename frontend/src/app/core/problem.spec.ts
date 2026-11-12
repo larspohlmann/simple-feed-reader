@@ -1,10 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import {
   Problem,
   REQUEST_TOO_LARGE,
   parseProblem,
   parseProblemAsync,
   problemMessage,
+  problemText,
 } from './problem';
 
 describe('parseProblem', () => {
@@ -197,5 +201,24 @@ describe('problemMessage', () => {
 
   it('falls back to the title without detail or fields', () => {
     expect(problemMessage(base)).toBe('Title');
+  });
+});
+
+describe('problemText', () => {
+  let i18n: TranslocoService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
+    i18n = TestBed.inject(TranslocoService);
+  });
+
+  it('translates a problem type the dictionary knows', () => {
+    const problem = { type: 'not_a_feed', title: 'Not a feed', status: 422, detail: 'raw' };
+    expect(problemText(problem, i18n)).toBe('No feed could be read at that address.');
+  });
+
+  it('falls back to the problem message for a type it does not know', () => {
+    const problem = { type: 'other', title: 'Other', status: 400, detail: 'The detail.' };
+    expect(problemText(problem, i18n)).toBe('The detail.');
   });
 });
