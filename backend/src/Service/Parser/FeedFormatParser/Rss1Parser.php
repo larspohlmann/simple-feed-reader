@@ -10,6 +10,7 @@ use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\FeedSyntax;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\DateParser;
@@ -54,6 +55,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
             $channel->text('description'),
             FeedImageExtractor::fromRss1Root($root),
             $entries,
+            syntax: FeedSyntax::Rss,
         );
     }
 

@@ -31,12 +31,6 @@ final readonly class FeedLinkScanner
      */
     private const array AMBIGUOUS_TYPES = ['text/xml', 'application/xml'];
 
-    /**
-     * The dialect of a guessed candidate is unknown until something parses it,
-     * so it is offered as a plain 'feed' — the dialog renders that as "Feed".
-     */
-    private const string GUESSED_FORMAT = 'feed';
-
     /** A footer rarely hides more than a couple of feeds; the rest of a match list is noise. */
     private const int MAX_GUESSES = 5;
 
@@ -96,7 +90,11 @@ final readonly class FeedLinkScanner
                 continue;
             }
 
-            $candidates[$url] = new FeedCandidateModel($url, $labels->nameFor($ownLabel), self::GUESSED_FORMAT);
+            $candidates[$url] = new FeedCandidateModel(
+                $url,
+                $labels->nameFor($ownLabel),
+                FeedCandidateModel::GUESSED_FORMAT,
+            );
             if (\count($candidates) === self::MAX_GUESSES) {
                 break;
             }
