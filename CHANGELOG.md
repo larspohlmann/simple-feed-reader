@@ -10,6 +10,13 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Feed directory.** Settings has a new Feed directory: about 50,000 news sites
+and podcasts from the InfoBubble sources catalog, narrowed to the countries and
+languages you choose. Filter by category, article length and language, search
+sites and summaries, and subscribe straight from a row.
+
 ## [v1.9.2] - 2026-11-11
 
 ### Highlights
