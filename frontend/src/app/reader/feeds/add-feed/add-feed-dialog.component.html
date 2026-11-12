@@ -124,14 +124,12 @@
       }
     </div>
 
-    <div footer class="browse-links">
-      <a class="browse" routerLink="/discover" (click)="ref.close()">
-        {{ 'discover.browseCatalog' | transloco }}
-      </a>
-      <a class="browse" routerLink="/settings/feed-directory" (click)="ref.close()">
-        {{ 'settings.feedDirectory.browse' | transloco }}
-      </a>
-    </div>
+    <a footerStart class="browse" routerLink="/discover" (click)="ref.close()">
+      {{ 'discover.browseCatalog' | transloco }}
+    </a>
+    <a footerStart class="browse" routerLink="/settings/feed-directory" (click)="ref.close()">
+      {{ 'settings.feedDirectory.browse' | transloco }}
+    </a>
     <app-button footer (click)="ref.close()">
       {{ 'dialog.cancel' | transloco }}
     </app-button>

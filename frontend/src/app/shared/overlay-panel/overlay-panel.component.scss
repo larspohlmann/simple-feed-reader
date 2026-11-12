@@ -90,6 +90,7 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  align-items: center;
   justify-content: flex-end;
   padding: var(--space-3) var(--space-5) var(--space-5);
 }
@@ -101,7 +102,20 @@ h2 {
   max-width: 100%;
 }
 
-.footer:empty {
+// Zero basis: flex-wrap breaks lines on basis before shrinking, so start content never pushes the buttons down.
+.footer > .footer-start {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+
+.footer-start:empty {
+  display: none;
+}
+
+.footer:not(:has(> :not(.footer-start:empty))) {
   display: none;
 }
 

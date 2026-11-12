@@ -7,6 +7,7 @@ import { OverlayPanelComponent } from './overlay-panel.component';
   template: `
     <app-overlay-panel heading="Edit tag" [headingLevel]="level()" [fillOnMobile]="fill()">
       <p class="body-probe">body</p>
+      <a footerStart class="start-probe">Browse</a>
       <button footer class="footer-probe">Save</button>
     </app-overlay-panel>
   `,
@@ -38,6 +39,13 @@ describe('OverlayPanelComponent', () => {
     const element: HTMLElement = (await mount()).nativeElement;
     expect(element.querySelector('.footer .footer-probe')).not.toBeNull();
     expect(element.querySelector('.body .footer-probe')).toBeNull();
+  });
+
+  it('projects start content into the footer start area, before the end buttons', async () => {
+    const element: HTMLElement = (await mount()).nativeElement;
+    const start = element.querySelector('.footer > .footer-start');
+    expect(start?.querySelector('.start-probe')).not.toBeNull();
+    expect(element.querySelector('.footer')?.firstElementChild).toBe(start);
   });
 
   it('labels the panel with its heading for assistive tech', async () => {
