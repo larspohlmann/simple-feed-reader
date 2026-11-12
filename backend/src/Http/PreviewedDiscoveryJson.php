@@ -17,6 +17,7 @@ final class PreviewedDiscoveryJson
         SourceFormat::WP_JSON => 'WordPress',
         SourceFormat::MIXCLOUD_API => 'Mixcloud',
         SourceFormat::BLUESKY_API => 'Bluesky',
+        '' => 'Feed',
     ];
 
     /** @return array<string, mixed> */
@@ -57,6 +58,6 @@ final class PreviewedDiscoveryJson
 
     private static function labelOf(string $format): string
     {
-        return self::FORMAT_LABELS[$format] ?? ('' === $format ? 'Feed' : ucfirst($format));
+        return self::FORMAT_LABELS[$format] ?? ucfirst($format);
     }
 }

@@ -115,6 +115,7 @@ h2 {
   display: none;
 }
 
+// Not `.footer:empty`: the start area's wrapper is always there, so "empty" means nothing besides an empty wrapper.
 .footer:not(:has(> :not(.footer-start:empty))) {
   display: none;
 }

@@ -123,17 +123,18 @@ export class AddFeedDialogComponent implements OnInit {
 
   /** An unrecognized future reason falls back to a generic line rather than an empty warning box. */
   failureText(reason: ScrapeFailureReason): string {
-    return (
-      translationOf(this.i18n, `dialog.addFeed.failure.${reason}`) ??
-      this.i18n.translate('dialog.addFeed.failGeneric')
-    );
+    return this.translatedOr(`dialog.addFeed.failure.${reason}`, 'dialog.addFeed.failGeneric');
   }
 
   noPreviewText(reason: NoPreviewReason): string {
-    return (
-      translationOf(this.i18n, `dialog.addFeed.noPreview.${reason}`) ??
-      this.i18n.translate('dialog.addFeed.noPreviewGeneric')
+    return this.translatedOr(
+      `dialog.addFeed.noPreview.${reason}`,
+      'dialog.addFeed.noPreviewGeneric',
     );
+  }
+
+  private translatedOr(key: string, fallbackKey: string): string {
+    return translationOf(this.i18n, key) ?? this.i18n.translate(fallbackKey);
   }
 
   submit(): void {

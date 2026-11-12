@@ -62,12 +62,13 @@ final readonly class FeedPreviewFactory
 
     private function httpsImage(?DeclaredImageModel $image): ?DeclaredImageModel
     {
-        $url = HttpsImageUrl::orNull($image?->url);
-        if ($image === null || $url === null) {
+        if ($image === null) {
             return null;
         }
 
-        return new DeclaredImageModel($url, $image->width, $image->height, $image->renditions);
+        $url = HttpsImageUrl::orNull($image->url);
+
+        return $url === null ? null : new DeclaredImageModel($url, $image->width, $image->height, $image->renditions);
     }
 
     private function tier(ParsedEntryModel $entry): string
