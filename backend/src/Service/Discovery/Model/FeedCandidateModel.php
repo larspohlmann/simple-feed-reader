@@ -16,8 +16,12 @@ final readonly class FeedCandidateModel
      * @param string $format 'rss' or 'atom' when advertised or read, GUESSED_FORMAT when only guessed, else a
      *                       SourceFormat value
      */
-    public function __construct(public string $url, public ?string $title, public string $format)
-    {
+    public function __construct(
+        public string $url,
+        public ?string $title,
+        public string $format,
+        public ?NoPreviewReason $noPreviewReason = null,
+    ) {
     }
 
     public static function of(DiscoveredFeedModel $feed): self

@@ -6,11 +6,15 @@ namespace App\Tests\Service\Preview;
 
 use App\Entity\Headline;
 use App\Entity\ReadingSettings;
+use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Repository\ReadingSettingsRepository;
+use App\Service\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Discovery\Model\NoPreviewReason;
 use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
@@ -29,12 +33,32 @@ final class PreviewedDiscoveryTest extends DbTestCase
 {
     use SeedsUsers;
 
-    private function service(FeedDiscoveryInterface $discovery): PreviewedDiscovery
+    /** @param list<AccountOnlyFeedInterface> $accountOnlyFeeds */
+    private function service(FeedDiscoveryInterface $discovery, array $accountOnlyFeeds = []): PreviewedDiscovery
     {
         $readingSettings = $this->entityManager->getRepository(ReadingSettings::class);
         self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
 
-        return new PreviewedDiscovery($discovery, new ScrapeFallbackPolicy($readingSettings), new FeedPreviewFactory());
+        return new PreviewedDiscovery(
+            $discovery,
+            new ScrapeFallbackPolicy($readingSettings),
+            new FeedPreviewFactory(),
+            $accountOnlyFeeds,
+        );
+    }
+
+    private function offering(?FeedCandidateModel $candidate): AccountOnlyFeedInterface
+    {
+        return new readonly class ($candidate) implements AccountOnlyFeedInterface {
+            public function __construct(private ?FeedCandidateModel $candidate)
+            {
+            }
+
+            public function candidateFor(User $user, string $url): ?FeedCandidateModel
+            {
+                return $this->candidate;
+            }
+        };
     }
 
     public function testADirectFeedIsOneCandidateCarryingThePreviewOfTheDocumentDiscoveryRead(): void
@@ -102,5 +126,32 @@ final class PreviewedDiscoveryTest extends DbTestCase
 
         self::assertSame([ScrapeFallback::Disabled], $off->fallbacks);
         self::assertSame([ScrapeFallback::Enabled], $on->fallbacks);
+    }
+
+    public function testAnAccountOnlyFeedAnswersBeforeDiscoveryIsAsked(): void
+    {
+        $hidden = new FeedCandidateModel(
+            'https://bsky.app/profile/rusty-17.bsky.social',
+            'Rusty',
+            SourceFormat::BLUESKY_API,
+            NoPreviewReason::HiddenProfile,
+        );
+        $discovery = new RecordingFeedDiscovery(FeedDiscoveryResultModel::candidates([]));
+
+        $found = $this->service($discovery, [$this->offering(null), $this->offering($hidden)])
+            ->discover($this->user('hidden@example.test'), 'https://bsky.app/profile/rusty-17.bsky.social');
+
+        self::assertEquals([new PreviewedCandidateModel($hidden)], $found->candidates);
+        self::assertSame([], $discovery->urls);
+    }
+
+    public function testADecliningAccountOnlyFeedLeavesTheUrlToDiscovery(): void
+    {
+        $discovery = new RecordingFeedDiscovery(FeedDiscoveryResultModel::candidates([]));
+
+        $this->service($discovery, [$this->offering(null)])
+            ->discover($this->user('declined@example.test'), 'https://example.com/');
+
+        self::assertSame(['https://example.com/'], $discovery->urls);
     }
 }

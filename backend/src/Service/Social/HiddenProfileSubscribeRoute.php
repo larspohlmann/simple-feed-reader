@@ -7,7 +7,6 @@ namespace App\Service\Social;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\Exception\BlueskyProfileHiddenException;
-use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use App\Service\Subscription\Model\SubscribeRequestModel;
@@ -31,11 +30,10 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
      */
     public function subscribe(SubscribeRequestModel $request): ?SubscribeOutcomeModel
     {
-        $actor = ProfileFeedUrl::blueskyProfileActorOf($request->url);
-        $profile = null === $actor ? null : $this->hiddenProfiles->hiddenAmongOrNone(
-            [$actor],
+        $profile = $this->hiddenProfiles->hiddenAt(
+            $request->url,
             'Subscribe could not tell whether a Bluesky profile is hidden; discovery decides.',
-        )[$actor] ?? null;
+        );
         if (null === $profile) {
             return null;
         }

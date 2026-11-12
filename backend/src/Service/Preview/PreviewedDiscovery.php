@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Preview;
 
 use App\Entity\User;
+use App\Service\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Discovery\Model\FeedCandidateModel;
@@ -12,18 +13,27 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Preview\Factory\FeedPreviewFactory;
 use App\Service\Preview\Model\PreviewedCandidateModel;
 use App\Service\Preview\Model\PreviewedDiscoveryModel;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class PreviewedDiscovery
 {
+    /** @param iterable<AccountOnlyFeedInterface> $accountOnlyFeeds */
     public function __construct(
         private FeedDiscoveryInterface $discovery,
         private ScrapeFallbackPolicy $scrapeFallbackPolicy,
         private FeedPreviewFactory $previewFactory,
+        #[AutowireIterator('app.account_only_feed')]
+        private iterable $accountOnlyFeeds,
     ) {
     }
 
     public function discover(User $user, string $url): PreviewedDiscoveryModel
     {
+        $accountOnly = $this->accountOnlyCandidate($user, $url);
+        if (null !== $accountOnly) {
+            return new PreviewedDiscoveryModel([new PreviewedCandidateModel($accountOnly)]);
+        }
+
         $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
         $feed = $result->feed;
         if (null !== $feed) {
@@ -39,6 +49,18 @@ final readonly class PreviewedDiscovery
             ),
             $result->scrapeFailureReason,
         );
+    }
+
+    private function accountOnlyCandidate(User $user, string $url): ?FeedCandidateModel
+    {
+        foreach ($this->accountOnlyFeeds as $accountOnlyFeed) {
+            $candidate = $accountOnlyFeed->candidateFor($user, $url);
+            if (null !== $candidate) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function previewed(DiscoveredFeedModel $feed): PreviewedCandidateModel

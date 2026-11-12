@@ -7,6 +7,7 @@ namespace App\Service\Social;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Support\ProfileFeedUrl;
 use Psr\Log\LoggerInterface;
 
 /** For a caller that carries on as if no profile were hidden when Bluesky cannot say, and only logs it. */
@@ -33,5 +34,16 @@ final readonly class TolerantHiddenProfiles
 
             return [];
         }
+    }
+
+    /** The hidden profile a Bluesky profile URL names; null for any other URL, and when Bluesky cannot say. */
+    public function hiddenAt(string $url, string $warning): ?HiddenProfileModel
+    {
+        $actor = ProfileFeedUrl::blueskyProfileActorOf($url);
+        if (null === $actor) {
+            return null;
+        }
+
+        return $this->hiddenAmongOrNone([$actor], $warning)[$actor] ?? null;
     }
 }

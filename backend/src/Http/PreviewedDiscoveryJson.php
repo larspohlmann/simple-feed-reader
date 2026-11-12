@@ -29,6 +29,10 @@ final class PreviewedDiscoveryJson
             $json['preview'] = FeedPreviewJson::preview($previewed->preview);
         }
 
+        if (null !== $candidate->noPreviewReason) {
+            $json['noPreviewReason'] = $candidate->noPreviewReason->value;
+        }
+
         return $json;
     }
 }

@@ -6,13 +6,17 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\BlueskyProfiles;
+use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\StubFeedFetcher;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -232,5 +236,51 @@ final class FeedPreviewDiscoverTest extends ApiTestCase
         );
 
         $this->assertRejected($client, Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    private function hideRusty(): void
+    {
+        $hiddenProfiles = self::getContainer()->get(StubHiddenProfiles::class);
+        self::assertInstanceOf(StubHiddenProfiles::class, $hiddenProfiles);
+        $hiddenProfiles->hide(new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), 'rusty-17.bsky.social');
+    }
+
+    public function testAHiddenBlueskyProfileTheAccountCanReadIsOfferedWithoutAPreviewAndSaysWhy(): void
+    {
+        $client = self::createClient();
+        $this->hideRusty();
+        $user = $this->factory()->create('discover-hidden@example.test');
+        $this->entityManager()->persist(SocialAccounts::blueskyOf($user));
+        $this->entityManager()->flush();
+        $this->installFetcher(new StubFeedFetcher());
+
+        $body = $this->discover($client, $user, 'https://bsky.app/profile/rusty-17.bsky.social');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        self::assertSame(
+            ['candidates' => [[
+                'url' => 'https://bsky.app/profile/rusty-17.bsky.social',
+                'title' => 'Rusty',
+                'format' => 'bluesky-api',
+                'noPreviewReason' => 'hidden_profile',
+            ]]],
+            $body,
+        );
+    }
+
+    public function testWithoutAConnectedBlueskyAccountTheHiddenProfileSaysToConnectOne(): void
+    {
+        $client = self::createClient();
+        $this->hideRusty();
+        $user = $this->factory()->create('discover-hidden-no-account@example.test');
+        $this->installFetcher(new StubFeedFetcher());
+
+        $body = $this->discover($client, $user, 'https://bsky.app/profile/rusty-17.bsky.social');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $candidates = $body['candidates'] ?? null;
+        self::assertIsArray($candidates);
+        self::assertIsArray($candidates[0]);
+        self::assertSame('connect_bluesky_account', $candidates[0]['noPreviewReason']);
     }
 }
