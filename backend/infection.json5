@@ -94,6 +94,9 @@
     },
     phpUnit: {
         configDir: '.',
+        // Infection otherwise finds it through `composer config bin-dir`, whose stdout an old global Composer pollutes
+        // with a PHP 8.5 deprecation, and falls through to whatever phpunit is first on PATH.
+        customPath: 'vendor/bin/phpunit',
     },
     // Also the skip bar: a mutant whose covering tests' JUnit times sum past it is skipped, not run. ParaTest's times
     // run ~1.2x serial; at 30 that skipped 47 of 102 mutants against serial's 5, at 45 the same 5 (#2188).
