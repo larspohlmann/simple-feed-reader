@@ -6,7 +6,6 @@ namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\SubscriptionProblems;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\FeedThrottledOnSubscribeException;
 use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use PHPUnit\Framework\TestCase;
@@ -44,17 +43,6 @@ final class SubscriptionProblemsTest extends TestCase
         self::assertSame('Not a feed', $resolved->problem->title);
         self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $resolved->problem->status);
         self::assertSame('No feed could be read at that address.', $resolved->problem->detail);
-    }
-
-    public function testAThrottledSiteIsServiceUnavailable(): void
-    {
-        $resolved = (new SubscriptionProblems())->resolve(new FeedThrottledOnSubscribeException());
-
-        self::assertNotNull($resolved);
-        self::assertSame('feed_throttled', $resolved->problem->type);
-        self::assertSame('Site is rationing requests', $resolved->problem->title);
-        self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $resolved->problem->status);
-        self::assertSame('The site asked us to slow down. Try again in a minute.', $resolved->problem->detail);
     }
 
     public function testOtherExceptionsPassThrough(): void

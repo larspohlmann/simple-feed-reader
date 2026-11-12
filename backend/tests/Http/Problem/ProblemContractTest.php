@@ -7,7 +7,6 @@ namespace App\Tests\Http\Problem;
 use App\EventListener\ApiExceptionListener;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\FeedThrottledOnSubscribeException;
 use App\Service\Subscription\Exception\NotAFeedException;
 use App\Exception\InvalidCredentialsException;
 use App\Exception\InvalidSelectionException;
@@ -39,6 +38,7 @@ use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
 use App\Service\Comments\Exception\NoCommentsFeedException;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Discovery\Exception\SiteThrottledException;
 use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Passkey\Exception\AssertionRejectedException;
@@ -354,8 +354,8 @@ final class ProblemContractTest extends KernelTestCase
                 'detail' => 'No feed could be read at that address.',
             ],
         ];
-        yield 'feed throttled on subscribe' => [
-            new FeedThrottledOnSubscribeException(),
+        yield 'site throttled' => [
+            new SiteThrottledException(),
             [
                 'type' => 'feed_throttled',
                 'title' => 'Site is rationing requests',

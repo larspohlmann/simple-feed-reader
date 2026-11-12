@@ -6,9 +6,12 @@ namespace App\Service\Preview;
 
 use App\Entity\User;
 use App\Service\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
+use App\Service\Discovery\Exception\SiteThrottledException;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Preview\Factory\FeedPreviewFactory;
 use App\Service\Preview\Model\PreviewedCandidateModel;
@@ -34,7 +37,7 @@ final readonly class PreviewedDiscovery
             return new PreviewedDiscoveryModel([new PreviewedCandidateModel($accountOnly)]);
         }
 
-        $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
+        $result = $this->discovered($user, $url);
         $feed = $result->feed;
         if (null !== $feed) {
             return new PreviewedDiscoveryModel([$this->previewed($feed)]);
@@ -49,6 +52,15 @@ final readonly class PreviewedDiscovery
             ),
             $result->scrapeFailureReason,
         );
+    }
+
+    private function discovered(User $user, string $url): FeedDiscoveryResultModel
+    {
+        try {
+            return $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
+        } catch (SiteThrottledException) {
+            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Throttled);
+        }
     }
 
     private function accountOnlyCandidate(User $user, string $url): ?FeedCandidateModel

@@ -6,6 +6,7 @@ namespace App\Service\Discovery\FeedDiscovery;
 
 use App\Enum\SourceFormat;
 use App\Service\Discovery\BotChallengePage;
+use App\Service\Discovery\Exception\SiteThrottledException;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\FeedOffer\FeedOfferInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
@@ -31,7 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Turns an entered URL into something to subscribe to, most certain source first: the URL as a feed, the feeds the
  * page links, then the feeds it implies, a feed under a conventional path, and last a 'scraped' candidate from
  * the page.
- * Never throws for a bad address: a failure is a scrapeFailureReason, so the subscribe endpoint can always answer.
+ * A bad address is a scrapeFailureReason, not an exception; only a site that asked us to slow down throws.
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
 {
@@ -69,10 +70,10 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
 
         try {
             $response = $this->fetcher->fetch($url);
-        } catch (FeedThrottledException) {
+        } catch (FeedThrottledException $exception) {
             // The site has just asked us to slow down; the parallel guesses are
             // the opposite of that, and each would draw its own 429.
-            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Throttled);
+            throw new SiteThrottledException($exception);
         } catch (FeedUnreachableException $exception) {
             return $this->feedTheSiteMightStillServe($url, $exception);
         } catch (ResponseTooLargeException) {

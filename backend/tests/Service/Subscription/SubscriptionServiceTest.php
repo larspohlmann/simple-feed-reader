@@ -15,6 +15,7 @@ use App\Enum\SourceFormat;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Discovery\Exception\SiteThrottledException;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Discovery\Model\FeedCandidateModel;
@@ -28,7 +29,6 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\FeedThrottledOnSubscribeException;
 use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\FirstFetchRecorder;
@@ -47,6 +47,7 @@ use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingFeedDiscovery;
 use App\Tests\Support\RecordingSubscribeRoute;
 use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\ThrottledFeedDiscovery;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
@@ -460,11 +461,9 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testAThrottledSiteIsReportedAsThrottledNotAsNotAFeed(): void
     {
         $user = $this->factory()->create('throttled@example.com');
-        $service = $this->service($this->discoveryReturning(
-            FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Throttled),
-        ));
+        $service = $this->service(new ThrottledFeedDiscovery());
 
-        $this->expectException(FeedThrottledOnSubscribeException::class);
+        $this->expectException(SiteThrottledException::class);
         $service->subscribe($user, 'https://slow.example.com/feed');
     }
 

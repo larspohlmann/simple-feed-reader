@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Discovery\FeedDiscovery;
 
+use App\Service\Discovery\Exception\SiteThrottledException;
 use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -338,10 +339,13 @@ final class FeedDiscoveryTest extends KernelTestCase
         $fetcher = $this->fetcher();
         $fetcher->willThrow('https://www.reddit.com/r/Bitwig/', new FeedThrottledException('x: HTTP 429', 60));
 
-        $result = $this->discovery($fetcher)->discover('https://www.reddit.com/r/Bitwig/', ScrapeFallback::Enabled);
+        try {
+            $this->discovery($fetcher)->discover('https://www.reddit.com/r/Bitwig/', ScrapeFallback::Enabled);
+            self::fail('A rationing site must throw, not report a result.');
+        } catch (SiteThrottledException $exception) {
+            self::assertInstanceOf(FeedThrottledException::class, $exception->getPrevious());
+        }
 
-        // Its own reason: "slow down" is not "you may not have this".
-        self::assertSame(ScrapeFailureReason::Throttled, $result->scrapeFailureReason);
         self::assertSame(['https://www.reddit.com/r/Bitwig/'], $fetcher->fetchedUrls);
     }
 

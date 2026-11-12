@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
@@ -215,6 +216,20 @@ final class FeedPreviewDiscoverTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
         self::assertSame(['candidates' => [], 'scrapeFailureReason' => 'blocked'], $body);
+    }
+
+    public function testAThrottledSiteReportsItsReason(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('discover-throttled@example.com');
+        $stub = new StubFeedFetcher();
+        $stub->willThrow('https://slow.example.com', new FeedThrottledException('x: HTTP 429', 60));
+        $this->installFetcher($stub);
+
+        $body = $this->discover($client, $user, 'https://slow.example.com');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        self::assertSame(['candidates' => [], 'scrapeFailureReason' => 'throttled'], $body);
     }
 
     public function testDiscoverDrawsOnItsOwnPerUserBudget(): void

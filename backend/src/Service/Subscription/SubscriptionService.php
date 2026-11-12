@@ -9,13 +9,10 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Discovery\Model\FeedDiscoveryResultModel;
-use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\SavedPosts\SavedPostRescue;
-use App\Service\Subscription\Exception\FeedThrottledOnSubscribeException;
 use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use App\Service\Subscription\Model\SubscribeRequestModel;
@@ -92,19 +89,12 @@ final readonly class SubscriptionService
         }
 
         $result = $this->discovery->discover($url, ScrapeFallback::Disabled);
-        $discovered = $result->feed ?? throw self::noFeedFound($result);
+        $discovered = $result->feed ?? throw new NotAFeedException();
 
         $subscription = $this->creator->create($user, $discovered->url, SourceFormat::XML, $tags);
         $unread = $this->firstFetch->record($subscription->getFeed(), $discovered);
 
         return SubscribeOutcomeModel::subscribed($subscription, $unread);
-    }
-
-    private static function noFeedFound(FeedDiscoveryResultModel $result): \Throwable
-    {
-        return ScrapeFailureReason::Throttled === $result->scrapeFailureReason
-            ? new FeedThrottledOnSubscribeException()
-            : new NotAFeedException();
     }
 
     private function routed(SubscribeRequestModel $request): ?SubscribeOutcomeModel

@@ -28,6 +28,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingFeedDiscovery;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\ThrottledFeedDiscovery;
 
 final class PreviewedDiscoveryTest extends DbTestCase
 {
@@ -111,6 +112,15 @@ final class PreviewedDiscoveryTest extends DbTestCase
 
         self::assertSame([], $found->candidates);
         self::assertSame(ScrapeFailureReason::Blocked, $found->scrapeFailureReason);
+    }
+
+    public function testAThrottledSiteIsAScrapeFailureNotAnError(): void
+    {
+        $found = $this->service(new ThrottledFeedDiscovery())
+            ->discover($this->user('throttled@example.test'), 'https://example.com/');
+
+        self::assertSame([], $found->candidates);
+        self::assertSame(ScrapeFailureReason::Throttled, $found->scrapeFailureReason);
     }
 
     public function testDiscoveryFollowsTheAccountsScrapePreference(): void
