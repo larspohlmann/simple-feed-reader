@@ -82,7 +82,9 @@ the data treats those fields as nullable.
 
 The **country key** is the ISO 3166-1 alpha-2 code, upper-case (`DE`, `CI`, `CG`). Upstream names are
 CLDR English region names, so the snapshot script maps them through ICU (`Locale::getDisplayRegion`): 231
-of 232 match exactly, and the one exception is overridden in the script (`St. Helena` → `SH`). The script
+of 232 match exactly, and the one exception is overridden in the script (`St. Helena` → `SH`). ICU names
+a deprecated alias exactly like its current code (`UK` and `GB` are both "United Kingdom"), so the script
+skips every code ICU's `metadata` bundle lists under `alias/territory` (#2190). The script
 fails if any name stays unmapped or two names map to one code. Files are named by code
 (`countries/DE.json.gz`). The frontend shows country names in the user's UI language through
 `Intl.DisplayNames` (type `region`), falling back to upstream's English name from `index.json`.

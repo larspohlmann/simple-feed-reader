@@ -208,3 +208,31 @@ git commit -m "chore(#2185): regenerate the feed directory from the Sources YAML
 - [ ] **Step 7: Live check (controller)**
 
 On `http://localhost:4200/settings/feed-directory` the summary shows the new site count for the scope, and spiegel.de / tagesschau.de rows render with their categories and feed counts.
+
+---
+
+### Task 3: Countries are keyed by their ISO code, not a deprecated alias (#2190, folded in by Lars)
+
+`regionCodesByName()` walks AA–ZZ, and ICU names a deprecated alias exactly like its ISO code, so the later alias wins: UK/GB, FX/FR, SU/RU, YU/RS, ZR/CD, TP/TL, DY/BJ, HV/BF. ICU's own `metadata` bundle lists every deprecated territory code (`alias/territory`, e.g. `UK → GB`).
+
+Ruling (Lars, 2026-11-12): nothing here is released, so no backup-restore mapping and no migration of saved scopes.
+
+- [ ] Skip every code ICU lists under `alias/territory` in `regionCodesByName()`:
+
+```php
+function deprecatedRegionCodes(): array
+{
+    $aliases = ResourceBundle::create('metadata', 'ICUDATA', false)['alias']['territory'];
+    $codes = [];
+    foreach ($aliases as $code => $alias) {
+        $codes[$code] = true;
+    }
+
+    return $codes;
+}
+```
+
+and `if ($name !== '' && $name !== $code && !isset($deprecated[$code]))`.
+- [ ] Regenerate the snapshot (same upstream commit); confirm the eight countries now carry GB, FR, RU, RS, CD, TL, BJ, BF, that the other 224 keys are unchanged, and that every file's content is otherwise identical.
+- [ ] Spec: the country-key paragraph says the script drops ICU's deprecated aliases.
+- [ ] Commit `fix(#2190): the feed directory keys every country by its ISO code`.

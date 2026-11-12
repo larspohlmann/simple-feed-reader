@@ -25,15 +25,27 @@ function download(string $url): string
     return $body;
 }
 
+/** @return array<string, true> codes ICU keeps only as aliases of a current one, e.g. UK for GB */
+function deprecatedRegionCodes(): array
+{
+    $codes = [];
+    foreach (ResourceBundle::create('metadata', 'ICUDATA', false)['alias']['territory'] as $code => $alias) {
+        $codes[$code] = true;
+    }
+
+    return $codes;
+}
+
 /** @return array<string, string> English CLDR region name => ISO code */
 function regionCodesByName(): array
 {
+    $deprecated = deprecatedRegionCodes();
     $codes = [];
     foreach (range('A', 'Z') as $first) {
         foreach (range('A', 'Z') as $second) {
             $code = $first . $second;
             $name = Locale::getDisplayRegion('und_' . $code, 'en');
-            if ($name !== '' && $name !== $code) {
+            if ($name !== '' && $name !== $code && !isset($deprecated[$code])) {
                 $codes[$name] = $code;
             }
         }
