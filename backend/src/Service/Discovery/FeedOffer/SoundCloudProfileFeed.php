@@ -7,6 +7,7 @@ namespace App\Service\Discovery\FeedOffer;
 use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Html\Support\MetaProperty;
+use App\Service\Parser\Model\FeedSyntax;
 use App\Service\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
 
@@ -32,7 +33,11 @@ final readonly class SoundCloudProfileFeed implements FeedOfferInterface
             return null;
         }
 
-        return new FeedCandidateModel(sprintf(self::FEED_URL, $userId), $this->profileName($document), 'rss');
+        return new FeedCandidateModel(
+            sprintf(self::FEED_URL, $userId),
+            $this->profileName($document),
+            FeedSyntax::Rss->value,
+        );
     }
 
     private function deepLinkedUserId(HTMLDocument $document): ?string

@@ -8,6 +8,7 @@ use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Discovery\Pass\LinkLabels;
 use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Parser\Model\FeedSyntax;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -20,8 +21,8 @@ final readonly class FeedLinkScanner
 {
     /** rel="alternate" types that name a feed document outright, mapped to the dialect they name. */
     private const array ADVERTISED_TYPES = [
-        'application/rss+xml' => 'rss',
-        'application/atom+xml' => 'atom',
+        'application/rss+xml' => FeedSyntax::Rss->value,
+        'application/atom+xml' => FeedSyntax::Atom->value,
     ];
 
     /**
