@@ -10,12 +10,27 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.9.3] - 2026-11-12
+
 ### Highlights
 
 **Feed directory.** Settings has a new Feed directory: about 50,000 news sites
 and podcasts from the InfoBubble sources catalog, narrowed to the countries and
 languages you choose. Filter by category, article length and language, search
 sites and summaries, and subscribe straight from a row.
+
+## What's Changed
+* refactor(#2177): split user_preferences into per-category settings tables by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2178
+* feat(#2176): feed directory in Settings by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2179
+* fix(#2180): prefilled add-feed URL waits for Add by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2181
+* fix(#2182): always preview a feed before subscribing by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2186
+* Feed directory: Subscribed opens the edit dialog, a category pill filters by its category by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2187
+* ci(#2188): collect mutation coverage over ParaTest by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2189
+* Feed directory: build the snapshot from the Sources YAML, keyed by ISO codes by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2191
+* docs(#2192): v1.9.3 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2193
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.9.2...v1.9.3
 
 ## [v1.9.2] - 2026-11-11
 
