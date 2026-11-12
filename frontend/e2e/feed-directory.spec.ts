@@ -100,7 +100,13 @@ async function stubFeedDirectory(page: Page): Promise<{
     return route.fulfill({
       json: {
         candidates: [
-          { url: ALPHA_FEED, title: 'Alpha fixture feed', format: 'rss', preview: ALPHA_PREVIEW },
+          {
+            url: ALPHA_FEED,
+            title: 'Alpha fixture feed',
+            format: 'rss',
+            label: 'RSS',
+            preview: ALPHA_PREVIEW,
+          },
         ],
       },
     });

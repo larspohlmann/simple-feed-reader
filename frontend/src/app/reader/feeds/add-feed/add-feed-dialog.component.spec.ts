@@ -77,15 +77,17 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://example.com/feed' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS', preview: RSS_PREVIEW },
+      ],
     });
     fixture.detectChanges();
     expect(close).not.toHaveBeenCalled();
 
     subscribeButton(fixture).click();
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
+    const subscribeRequest = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subscribeRequest.request.body).toEqual({ url: 'https://f/rss', title: 'RSS' });
+    subscribeRequest.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 9 });
   });
 
@@ -94,7 +96,9 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS', preview: RSS_PREVIEW },
+      ],
     });
     fixture.detectChanges();
 
@@ -109,7 +113,9 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS', preview: RSS_PREVIEW },
+      ],
     });
     fixture.detectChanges();
 
@@ -138,7 +144,9 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS', preview: RSS_PREVIEW },
+      ],
     });
     fixture.detectChanges();
 
@@ -163,7 +171,9 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS', preview: RSS_PREVIEW },
+      ],
     });
     fixture.detectChanges();
     subscribeButton(fixture).click();
@@ -241,14 +251,24 @@ describe('AddFeedDialogComponent', () => {
     expect(discover.request.body).toEqual({ url: 'https://example.com/feed' });
     discover.flush({
       candidates: [
-        { url: 'https://example.com/feed', title: 'Feed', format: 'rss', preview: RSS_PREVIEW },
+        {
+          url: 'https://example.com/feed',
+          title: 'Feed',
+          format: 'rss',
+          label: 'RSS',
+          preview: RSS_PREVIEW,
+        },
       ],
     });
     fixture.detectChanges();
 
     subscribeButton(fixture).click();
     const subscribe = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(subscribe.request.body).toEqual({ url: 'https://example.com/feed', tagIds: [2] });
+    expect(subscribe.request.body).toEqual({
+      url: 'https://example.com/feed',
+      title: 'Feed',
+      tagIds: [2],
+    });
     subscribe.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 9 });
   });
@@ -260,7 +280,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.submit();
     ctrl
       .expectOne('https://api.test/api/feeds/discover')
-      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS' }] });
     ctrl
       .expectOne((request) => request.url.endsWith('/api/feeds/preview'))
       .flush({
@@ -271,7 +291,11 @@ describe('AddFeedDialogComponent', () => {
     const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
     (card.querySelector('.subscribe') as HTMLButtonElement).click();
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(subTestRequest.request.body).toEqual({ url: 'https://f/rss', tagIds: [1] });
+    expect(subTestRequest.request.body).toEqual({
+      url: 'https://f/rss',
+      title: 'RSS',
+      tagIds: [1],
+    });
     subTestRequest.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 4 });
   });
@@ -281,7 +305,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://example.com' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }],
+      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS' }],
     });
     fixture.detectChanges();
     expect(fixture.componentInstance.candidates().length).toBe(1);
@@ -343,7 +367,7 @@ describe('AddFeedDialogComponent', () => {
 
     (rssCard.querySelector('.subscribe') as HTMLButtonElement).click();
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(subTestRequest.request.body).toEqual({ url: 'https://f/rss' });
+    expect(subTestRequest.request.body).toEqual({ url: 'https://f/rss', title: 'RSS' });
     subTestRequest.flush({ subscription: { id: 3 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 3 });
   });
@@ -354,8 +378,8 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [
-        { url: 'https://f/rss', title: 'RSS', format: 'rss' },
-        { url: 'https://f/atom', title: 'ATOM', format: 'atom' },
+        { url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS' },
+        { url: 'https://f/atom', title: 'ATOM', format: 'atom', label: 'Atom' },
       ],
     });
     fixture.detectChanges();
@@ -438,7 +462,15 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://page.example/' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+      candidates: [
+        {
+          url: 'https://page.example/',
+          title: 'Page',
+          format: 'scraped',
+          label: 'Scraped',
+          storedFormat: 'scraped',
+        },
+      ],
     });
     fixture.detectChanges();
 
@@ -461,6 +493,7 @@ describe('AddFeedDialogComponent', () => {
     expect(subTestRequest.request.body).toEqual({
       url: 'https://page.example/',
       format: 'scraped',
+      title: 'Page',
     });
     subTestRequest.flush({ subscription: { id: 7 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 7 });
@@ -476,6 +509,8 @@ describe('AddFeedDialogComponent', () => {
           url: 'https://api.mixcloud.com/johndigweed/cloudcasts/',
           title: 'John Digweed | Mixcloud',
           format: 'mixcloud-api',
+          label: 'Mixcloud',
+          storedFormat: 'mixcloud-api',
         },
       ],
     });
@@ -519,7 +554,13 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [
-        { url: 'https://wp.example/wp-json/wp/v2/posts', title: 'WP', format: 'wp-json' },
+        {
+          url: 'https://wp.example/wp-json/wp/v2/posts',
+          title: 'WP',
+          format: 'wp-json',
+          label: 'WordPress',
+          storedFormat: 'wp-json',
+        },
       ],
     });
     fixture.detectChanges();
@@ -555,7 +596,15 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://page.example/' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+      candidates: [
+        {
+          url: 'https://page.example/',
+          title: 'Page',
+          format: 'scraped',
+          label: 'Scraped',
+          storedFormat: 'scraped',
+        },
+      ],
     });
     fixture.detectChanges();
     ctrl
@@ -655,7 +704,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.submit();
     ctrl
       .expectOne('https://api.test/api/feeds/discover')
-      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS' }] });
     ctrl
       .expectOne((request) => request.url.endsWith('/api/feeds/preview'))
       .flush({
@@ -683,7 +732,15 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://page.example/' });
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/feeds/discover').flush({
-      candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
+      candidates: [
+        {
+          url: 'https://page.example/',
+          title: 'Page',
+          format: 'scraped',
+          label: 'Scraped',
+          storedFormat: 'scraped',
+        },
+      ],
     });
     fixture.detectChanges();
 
@@ -711,7 +768,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.submit();
     ctrl
       .expectOne('https://api.test/api/feeds/discover')
-      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
+      .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS' }] });
     fixture.detectChanges();
 
     ctrl
@@ -783,6 +840,7 @@ describe('AddFeedDialogComponent', () => {
           url: 'https://bsky.app/profile/rusty-17.bsky.social',
           title: 'Rusty',
           format: 'bluesky-api',
+          label: 'Bluesky',
           noPreviewReason: 'hidden_profile',
         },
       ],
@@ -799,6 +857,7 @@ describe('AddFeedDialogComponent', () => {
     const subscribe = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subscribe.request.body).toEqual({
       url: 'https://bsky.app/profile/rusty-17.bsky.social',
+      title: 'Rusty',
     });
     subscribe.flush(
       {
@@ -830,6 +889,7 @@ describe('AddFeedDialogComponent', () => {
           url: 'https://bsky.app/profile/rusty-17.bsky.social',
           title: 'Rusty',
           format: 'bluesky-api',
+          label: 'Bluesky',
           noPreviewReason: 'connect_bluesky_account',
         },
       ],
@@ -884,6 +944,7 @@ describe('AddFeedDialogComponent', () => {
           url: 'https://dropped.example/feed',
           title: 'Dropped',
           format: 'rss',
+          label: 'RSS',
           preview: RSS_PREVIEW,
         },
       ],
@@ -892,8 +953,55 @@ describe('AddFeedDialogComponent', () => {
 
     subscribeButton(fixture).click();
     const request = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(request.request.body).toEqual({ url: 'https://dropped.example/feed', tagIds: [2] });
+    expect(request.request.body).toEqual({
+      url: 'https://dropped.example/feed',
+      title: 'Dropped',
+      tagIds: [2],
+    });
     request.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 4 });
+  });
+
+  it('shows the label the server sent rather than one of its own', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [
+        {
+          url: 'https://f/rss',
+          title: 'RSS',
+          format: 'rss',
+          label: 'Really Simple',
+          preview: RSS_PREVIEW,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('Really Simple');
+  });
+
+  it('disables every card Subscribe while one subscribe runs', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS', format: 'rss', label: 'RSS', preview: RSS_PREVIEW },
+        { url: 'https://f/atom', title: 'Atom', format: 'atom', label: 'Atom' },
+      ],
+    });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    subscribeButton(fixture).click();
+    fixture.detectChanges();
+    const buttons = [...element.querySelectorAll<HTMLButtonElement>('.card .subscribe')];
+    expect(buttons.map((button) => button.disabled)).toEqual([true, true]);
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ subscription: { id: 1 } }, { status: 201, statusText: 'Created' });
   });
 });

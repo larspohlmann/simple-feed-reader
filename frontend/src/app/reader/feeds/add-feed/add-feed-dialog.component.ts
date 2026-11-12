@@ -12,6 +12,7 @@ import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-pan
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.component';
+import { toggled } from '../../../core/toggled-set';
 import { translationOf } from '../../../core/i18n/translation-of';
 import { parseProblem, problemText } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
@@ -29,17 +30,6 @@ type PreviewState =
   | { status: 'loading' }
   | { status: 'error'; message?: string }
   | { status: 'ok'; preview: FeedPreview };
-
-/** Formats whose candidate URL is the source itself: the backend stores it as offered. */
-const VERBATIM_FORMATS: ReadonlySet<string> = new Set(['scraped', 'wp-json', 'mixcloud-api']);
-
-const FORMAT_LABELS = new Map<string, string>([
-  ['rss', 'RSS'],
-  ['atom', 'Atom'],
-  ['wp-json', 'WordPress'],
-  ['mixcloud-api', 'Mixcloud'],
-  ['bluesky-api', 'Bluesky'],
-]);
 
 function inlinePreviews(candidates: FeedCandidate[]): Record<string, PreviewState> {
   const previews: Record<string, PreviewState> = {};
@@ -80,7 +70,7 @@ export class AddFeedDialogComponent implements OnInit {
   private readonly i18n = inject(TranslocoService);
 
   readonly form = this.fb.group({ url: [this.data?.url ?? '', [Validators.required]] });
-  readonly loading = signal(false);
+  readonly busy = signal<'discovering' | 'subscribing' | null>(null);
   readonly error = signal<string | null>(null);
   readonly candidates = signal<FeedCandidate[]>([]);
   readonly searched = signal(false);
@@ -88,10 +78,9 @@ export class AddFeedDialogComponent implements OnInit {
   readonly failureReason = signal<ScrapeFailureReason | null>(null);
   /** Tags to apply to the new feed; they persist across a search so picking a
    *  discovered candidate carries the same selection through. */
-  readonly checked = signal<Set<number>>(new Set());
+  readonly checked = signal<ReadonlySet<number>>(new Set());
   /** The one candidate card currently showing its preview rows, by URL. */
   readonly expanded = signal<string | null>(null);
-  readonly subscribing = signal(false);
 
   constructor() {
     // A scrape failure is about the URL as typed; editing it starts over.
@@ -105,15 +94,7 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   toggleTag(id: number): void {
-    this.checked.update((set) => {
-      const next = new Set(set);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    this.checked.update((set) => toggled(set, id));
   }
 
   okPreview(state: PreviewState | undefined): FeedPreview | null {
@@ -140,14 +121,6 @@ export class AddFeedDialogComponent implements OnInit {
     return this.i18n.translate(`dialog.addFeed.${key}`);
   }
 
-  /** Human label for a candidate's feed syntax; capitalizes any future value
-   *  (e.g. a scraped/generated feed) rather than assuming only RSS/Atom. */
-  formatLabel(format: string): string {
-    const label = FORMAT_LABELS.get(format);
-    if (label) return label;
-    return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
-  }
-
   /** An unrecognized future reason falls back to a generic line rather than an empty warning box. */
   failureText(reason: ScrapeFailureReason): string {
     return (
@@ -164,26 +137,24 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.form.invalid || this.loading() || this.subscribing()) return;
+    if (this.form.invalid || this.busy()) return;
     this.discover(this.form.getRawValue().url);
   }
 
   pick(candidate: FeedCandidate): void {
-    const format = this.storedFormat(candidate);
-    const passesTitle = format !== undefined && format !== 'scraped';
-    this.subscribing.set(true);
+    this.busy.set('subscribing');
     this.error.set(null);
     this.api
       .subscribe({
         url: candidate.url,
-        format,
+        format: candidate.storedFormat,
         tagIds: [...this.checked()],
-        title: passesTitle ? (candidate.title ?? undefined) : undefined,
+        title: candidate.title ?? undefined,
       })
       .subscribe({
         next: (response) => this.ref.close(response.subscription),
         error: (error: HttpErrorResponse) => {
-          this.subscribing.set(false);
+          this.busy.set(null);
           this.showError(error);
         },
       });
@@ -200,12 +171,8 @@ export class AddFeedDialogComponent implements OnInit {
     this.ensurePreview(candidate);
   }
 
-  private storedFormat(candidate: FeedCandidate): string | undefined {
-    return VERBATIM_FORMATS.has(candidate.format) ? candidate.format : undefined;
-  }
-
   private discover(url: string): void {
-    this.loading.set(true);
+    this.busy.set('discovering');
     this.error.set(null);
     this.searched.set(false);
     this.failureReason.set(null);
@@ -214,7 +181,7 @@ export class AddFeedDialogComponent implements OnInit {
     this.expanded.set(null);
     this.api.discoverFeeds(url).subscribe({
       next: (response) => {
-        this.loading.set(false);
+        this.busy.set(null);
         if (response.scrapeFailureReason) {
           this.failureReason.set(response.scrapeFailureReason);
           return;
@@ -222,7 +189,7 @@ export class AddFeedDialogComponent implements OnInit {
         this.showCandidates(response.candidates);
       },
       error: (error: HttpErrorResponse) => {
-        this.loading.set(false);
+        this.busy.set(null);
         this.showError(error);
       },
     });
@@ -246,7 +213,7 @@ export class AddFeedDialogComponent implements OnInit {
   private ensurePreview(candidate: FeedCandidate): void {
     if (this.previews()[candidate.url]) return;
     this.setPreview(candidate.url, { status: 'loading' });
-    this.api.previewFeed(candidate.url, this.storedFormat(candidate)).subscribe({
+    this.api.previewFeed(candidate.url, candidate.storedFormat).subscribe({
       next: (response) => this.setPreview(candidate.url, { status: 'ok', preview: response.feed }),
       error: (error: HttpErrorResponse) =>
         this.setPreview(candidate.url, { status: 'error', message: parseProblem(error).detail }),

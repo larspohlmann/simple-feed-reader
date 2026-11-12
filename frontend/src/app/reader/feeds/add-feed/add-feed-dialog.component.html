@@ -20,7 +20,7 @@
       <!-- Discovery reads the page then guesses feed addresses it never mentioned,
            so a search can run for seconds. This is the one live report of that —
            the footer button only disables, which reads as a stalled dialog. -->
-      @if (loading()) {
+      @if (busy() === 'discovering') {
         <p class="searching" role="status">
           <app-spinner [size]="16" [decorative]="true" />
           {{ 'dialog.addFeed.searching' | transloco }}
@@ -59,7 +59,7 @@
                 }
               </div>
               <div class="badges">
-                <span class="badge format">{{ formatLabel(c.format) }}</span>
+                <span class="badge format">{{ c.label }}</span>
                 @if (p) {
                   <span class="badge">{{ contentLabel(p.content) }}</span>
                   <span class="badge">{{
@@ -107,7 +107,7 @@
               <button
                 type="button"
                 class="subscribe primary"
-                [disabled]="subscribing()"
+                [disabled]="busy() !== null"
                 (click)="pick(c)"
               >
                 {{ 'dialog.addFeed.subscribe' | transloco }}
@@ -137,7 +137,7 @@
          so the footer submit would be a confusing third action — it only makes
          sense before a search. A scrape failure hides it until the URL changes. -->
     @if (!candidates().length && !failureReason()) {
-      <app-button footer type="submit" variant="primary" [disabled]="loading()">
+      <app-button footer type="submit" variant="primary" [disabled]="busy() !== null">
         {{ 'dialog.addFeed.preview' | transloco }}
       </app-button>
     }

@@ -6,10 +6,30 @@ const PHONE = { width: 375, height: 667 };
 
 const SITE = 'https://many-feeds.sfr-e2e.example/';
 const CANDIDATES = [
-  { url: 'https://many-feeds.sfr-e2e.example/rss', title: 'Main feed', format: 'rss' },
-  { url: 'https://many-feeds.sfr-e2e.example/atom', title: 'Main feed (Atom)', format: 'atom' },
-  { url: 'https://many-feeds.sfr-e2e.example/comments', title: 'Comments', format: 'rss' },
-  { url: 'https://many-feeds.sfr-e2e.example/news', title: 'News only', format: 'rss' },
+  {
+    url: 'https://many-feeds.sfr-e2e.example/rss',
+    title: 'Main feed',
+    format: 'rss',
+    label: 'RSS',
+  },
+  {
+    url: 'https://many-feeds.sfr-e2e.example/atom',
+    title: 'Main feed (Atom)',
+    format: 'atom',
+    label: 'Atom',
+  },
+  {
+    url: 'https://many-feeds.sfr-e2e.example/comments',
+    title: 'Comments',
+    format: 'rss',
+    label: 'RSS',
+  },
+  {
+    url: 'https://many-feeds.sfr-e2e.example/news',
+    title: 'News only',
+    format: 'rss',
+    label: 'RSS',
+  },
 ];
 
 /**

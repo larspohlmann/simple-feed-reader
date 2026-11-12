@@ -10,6 +10,7 @@ import { TagPickerComponent } from '../tag-picker/tag-picker.component';
 import { FieldComponent } from '../../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
+import { toggled } from '../../../core/toggled-set';
 import { parseProblem } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
@@ -55,7 +56,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly form = this.fb.group({
     customTitle: [this.prefilledTitle, [Validators.maxLength(512)]],
   });
-  readonly checked = signal<Set<number>>(new Set(this.data.tags.map((tag) => tag.id)));
+  readonly checked = signal<ReadonlySet<number>>(new Set(this.data.tags.map((tag) => tag.id)));
   readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
   readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
@@ -88,15 +89,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   }
 
   toggle(id: number): void {
-    this.checked.update((set) => {
-      const next = new Set(set);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    this.checked.update((set) => toggled(set, id));
   }
 
   submit(): void {
