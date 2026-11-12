@@ -57,10 +57,16 @@ export function lengthOf(averageLength: number | null): FeedDirectoryLength | nu
   return averageLength >= SUMMARY_CHARACTERS ? 'summaries' : 'headlines';
 }
 
-export function subscribedLookup(feedUrls: readonly string[]): SubscribedLookup {
+export function subscribedLookup(
+  subscriptionsByUrl: ReadonlyMap<string, { feedUrl: string }>,
+): SubscribedLookup {
   return {
-    urls: new Set(feedUrls.map(feedDirectoryUrl)),
-    domains: enclosingDomains(feedUrls.map(feedDirectoryHost)),
+    urls: new Set(subscriptionsByUrl.keys()),
+    domains: enclosingDomains(
+      [...subscriptionsByUrl.values()].map((subscription) =>
+        feedDirectoryHost(subscription.feedUrl),
+      ),
+    ),
   };
 }
 

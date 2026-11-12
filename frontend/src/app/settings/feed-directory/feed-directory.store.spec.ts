@@ -10,6 +10,7 @@ import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
 import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
 import { SubscriptionDto } from '../../reader/models';
+import { Problem } from '../../core/problem';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
 const DE: FeedDirectoryCountryFile = {
@@ -59,6 +60,7 @@ describe('FeedDirectoryStore', () => {
   const scope = signal<FeedDirectoryScope>({ countries: ['DE', 'AT'], languages: ['de'] });
   const subscriptions = signal<Partial<SubscriptionDto>[]>([]);
   const resolved = signal(true);
+  const error = signal<Problem | null>(null);
   const loadIfStale = jest.fn();
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
   let store: FeedDirectoryStore;
@@ -74,6 +76,7 @@ describe('FeedDirectoryStore', () => {
     scope.set({ countries: ['DE', 'AT'], languages: ['de'] });
     subscriptions.set([{ id: 7, feedUrl: 'https://www.heise.de/rss/heise.rdf' }]);
     resolved.set(true);
+    error.set(null);
     loadIfStale.mockReset();
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     TestBed.configureTestingModule({
@@ -81,7 +84,7 @@ describe('FeedDirectoryStore', () => {
       providers: [
         FeedDirectoryStore,
         { provide: FeedDirectoryScopeService, useValue: { scope } },
-        { provide: SubscriptionsStore, useValue: { subscriptions, resolved, loadIfStale } },
+        { provide: SubscriptionsStore, useValue: { subscriptions, resolved, error, loadIfStale } },
         {
           provide: FeedDirectoryApi,
           useValue: { index: () => of(INDEX), country },
@@ -397,6 +400,19 @@ describe('FeedDirectoryStore', () => {
     loadedStore();
     expect(store.status()).toBe('loading');
     resolved.set(true);
+    expect(store.status()).toBe('ready');
+  });
+
+  it('fails when the subscriptions could not load and there are none to show', () => {
+    subscriptions.set([]);
+    error.set({ title: 'Boom', status: 500 } as Problem);
+    loadedStore();
+    expect(store.status()).toBe('failed');
+  });
+
+  it('stays ready when a later refresh of the subscriptions fails but some are known', () => {
+    error.set({ title: 'Boom', status: 500 } as Problem);
+    loadedStore();
     expect(store.status()).toBe('ready');
   });
 

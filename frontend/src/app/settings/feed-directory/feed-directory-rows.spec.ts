@@ -1,4 +1,5 @@
 import { FeedDirectoryCountryFile } from './feed-directory.models';
+import { feedDirectoryUrl } from './feed-directory-url';
 import {
   FeedDirectoryCriteria,
   FeedDirectoryFilter,
@@ -155,35 +156,33 @@ describe('feed directory rows', () => {
   });
 
   describe('withSubscriptions', () => {
+    const lookupOf = (feedUrls: string[]) =>
+      subscribedLookup(
+        new Map(feedUrls.map((feedUrl) => [feedDirectoryUrl(feedUrl), { feedUrl }])),
+      );
     const unmarked = (): FeedDirectoryRow[] => prepareRows(DE, new Set(['de', 'en']));
     const heiseOf = (marked: FeedDirectoryRow[]): FeedDirectoryRow =>
       marked.find((row) => row.host === 'heise.de')!;
 
     it('marks a feed whose normalised address is subscribed', () => {
-      const marked = withSubscriptions(
-        unmarked(),
-        subscribedLookup(['http://heise.de/rss/heise.rdf/']),
-      );
+      const marked = withSubscriptions(unmarked(), lookupOf(['http://heise.de/rss/heise.rdf/']));
       expect(heiseOf(marked).feeds.map((feed) => feed.subscribed)).toEqual([true, false]);
       expect(heiseOf(marked).following).toBe(true);
     });
 
     it('follows a site when any subscribed feed sits on it or a subdomain', () => {
-      const marked = withSubscriptions(
-        unmarked(),
-        subscribedLookup(['https://www.heise.de/other.xml']),
-      );
+      const marked = withSubscriptions(unmarked(), lookupOf(['https://www.heise.de/other.xml']));
       expect(heiseOf(marked).following).toBe(true);
       expect(heiseOf(marked).feeds.every((feed) => !feed.subscribed)).toBe(true);
     });
 
     it('follows a subdomain host too', () => {
-      const marked = withSubscriptions(unmarked(), subscribedLookup(['https://feeds.zeit.de/x']));
+      const marked = withSubscriptions(unmarked(), lookupOf(['https://feeds.zeit.de/x']));
       expect(marked.find((row) => row.host === 'zeit.de')!.following).toBe(true);
     });
 
     it('leaves every row unmarked without subscriptions', () => {
-      const marked = withSubscriptions(unmarked(), subscribedLookup([]));
+      const marked = withSubscriptions(unmarked(), lookupOf([]));
       expect(marked.some((row) => row.following || row.feeds.some((feed) => feed.subscribed))).toBe(
         false,
       );
@@ -196,13 +195,13 @@ describe('feed directory rows', () => {
       };
       const [row] = withSubscriptions(
         prepareRows(wwwDe, new Set(['de'])),
-        subscribedLookup(['https://zeit.de/x']),
+        lookupOf(['https://zeit.de/x']),
       );
       expect(row.following).toBe(true);
     });
 
     it('does not follow a row through a host that merely ends in its name', () => {
-      const marked = withSubscriptions(unmarked(), subscribedLookup(['https://notzeit.de/x']));
+      const marked = withSubscriptions(unmarked(), lookupOf(['https://notzeit.de/x']));
       expect(marked.find((row) => row.host === 'zeit.de')!.following).toBe(false);
     });
 
@@ -214,7 +213,7 @@ describe('feed directory rows', () => {
       };
       const [row] = withSubscriptions(
         prepareRows(podcastDe, new Set(['de'])),
-        subscribedLookup([anchorFeed]),
+        lookupOf([anchorFeed]),
       );
       expect(row.feeds[0].subscribed).toBe(true);
       expect(row.following).toBe(false);

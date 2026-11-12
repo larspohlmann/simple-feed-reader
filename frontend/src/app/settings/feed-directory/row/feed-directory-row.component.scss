@@ -97,6 +97,10 @@
     }
   }
 
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+
   &[aria-pressed='true'] {
     --rim-base: var(--accent);
     --rim-fill: var(--accent-soft);

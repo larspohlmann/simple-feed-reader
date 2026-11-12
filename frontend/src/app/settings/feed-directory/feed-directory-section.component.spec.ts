@@ -113,6 +113,7 @@ describe('FeedDirectorySectionComponent', () => {
             reloadQuietly,
             subscriptions,
             resolved: signal(true),
+            error: signal(null),
             loadIfStale: jest.fn(),
           },
         },

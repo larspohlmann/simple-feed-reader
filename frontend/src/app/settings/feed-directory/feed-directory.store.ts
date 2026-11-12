@@ -32,11 +32,13 @@ export class FeedDirectoryStore implements OnDestroy {
   private readonly subscriptionStore = inject(SubscriptionsStore);
 
   private readonly fileStatus = signal<'loading' | 'ready' | 'failed'>('loading');
-  readonly status = computed(() =>
-    this.fileStatus() === 'ready' && !this.subscriptionStore.resolved()
-      ? 'loading'
-      : this.fileStatus(),
-  );
+  readonly status = computed(() => {
+    if (this.fileStatus() !== 'ready') return this.fileStatus();
+    if (this.subscriptionStore.error() && !this.subscriptionStore.subscriptions().length) {
+      return 'failed';
+    }
+    return this.subscriptionStore.resolved() ? 'ready' : 'loading';
+  });
   private readonly loaded = signal<FeedDirectoryRow[]>([]);
   private readonly subscriptionsByUrl = computed(
     () =>
@@ -47,12 +49,7 @@ export class FeedDirectoryStore implements OnDestroy {
       ),
   );
   private readonly marked = computed(() =>
-    withSubscriptions(
-      this.loaded(),
-      subscribedLookup(
-        this.subscriptionStore.subscriptions().map((subscription) => subscription.feedUrl),
-      ),
-    ),
+    withSubscriptions(this.loaded(), subscribedLookup(this.subscriptionsByUrl())),
   );
   private loading = Subscription.EMPTY;
 
