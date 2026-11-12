@@ -61,7 +61,7 @@ describe('FeedDirectoryFeedsPopoverComponent', () => {
 
   it('opens a subscribed feed for editing instead of offering it', () => {
     const edited: string[] = [];
-    fixture.componentInstance.edit.subscribe((url) => edited.push(url));
+    fixture.componentInstance.choose.subscribe((url) => edited.push(url));
     const subscribed = element().querySelectorAll('.feed')[0];
     const button = subscribed.querySelector<HTMLButtonElement>('[data-test="edit"] button')!;
     expect(subscribed.querySelector('[data-test="subscribe"]')).toBeNull();

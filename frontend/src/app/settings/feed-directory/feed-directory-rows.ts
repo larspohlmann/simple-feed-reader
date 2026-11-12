@@ -85,14 +85,20 @@ export function withSubscriptions(
   rows: readonly FeedDirectoryRow[],
   lookup: SubscribedLookup,
 ): FeedDirectoryRow[] {
-  return rows.map((row) => ({
-    ...row,
-    following: lookup.domains.has(bareHost(row.host)),
-    feeds: row.feeds.map((feed) => ({
-      ...feed,
-      subscribed: lookup.urls.has(feedDirectoryUrl(feed.url)),
-    })),
-  }));
+  return rows.map((row) => {
+    const following = lookup.domains.has(bareHost(row.host));
+    const feeds = row.feeds.map((feed) => {
+      const subscribed = lookup.urls.has(feedDirectoryUrl(feed.url));
+      return subscribed === feed.subscribed ? feed : { ...feed, subscribed };
+    });
+    const unchanged =
+      following === row.following && feeds.every((feed, index) => feed === row.feeds[index]);
+    return unchanged ? row : { ...row, following, feeds };
+  });
+}
+
+export function sameLookup(left: SubscribedLookup, right: SubscribedLookup): boolean {
+  return left.urls.size === right.urls.size && [...left.urls].every((url) => right.urls.has(url));
 }
 
 export function modeSummaries(

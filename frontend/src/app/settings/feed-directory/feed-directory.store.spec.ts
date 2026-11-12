@@ -390,6 +390,13 @@ describe('FeedDirectoryStore', () => {
     expect(heise.following).toBe(false);
   });
 
+  it('keeps its rows when the subscriptions change but their addresses do not', () => {
+    loadedStore();
+    const before = store.rows();
+    subscriptions.set(subscriptions().map((subscription) => ({ ...subscription })));
+    expect(store.rows()).toBe(before);
+  });
+
   it('asks the subscriptions store to load when it is stale', () => {
     loadedStore();
     expect(loadIfStale).toHaveBeenCalled();

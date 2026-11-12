@@ -16,6 +16,7 @@ import {
   countByCountry,
   filterRows,
   prepareRows,
+  sameLookup,
   subscribedLookup,
   withSubscriptions,
 } from './feed-directory-rows';
@@ -48,9 +49,10 @@ export class FeedDirectoryStore implements OnDestroy {
           .map((subscription) => [feedDirectoryUrl(subscription.feedUrl), subscription] as const),
       ),
   );
-  private readonly marked = computed(() =>
-    withSubscriptions(this.loaded(), subscribedLookup(this.subscriptionsByUrl())),
-  );
+  private readonly lookup = computed(() => subscribedLookup(this.subscriptionsByUrl()), {
+    equal: sameLookup,
+  });
+  private readonly marked = computed(() => withSubscriptions(this.loaded(), this.lookup()));
   private loading = Subscription.EMPTY;
 
   readonly mode = signal<FeedDirectoryMode>('channels');

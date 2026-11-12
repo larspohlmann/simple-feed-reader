@@ -9,6 +9,7 @@ import {
   filterRows,
   lengthOf,
   prepareRows,
+  sameLookup,
   subscribedLookup,
   withSubscriptions,
 } from './feed-directory-rows';
@@ -55,12 +56,6 @@ describe('feed directory rows', () => {
 
   it('drops domains with none of the scoped languages', () => {
     expect(rows.map((row) => row.host)).toEqual(['zeit.de', 'heise.de', 'b.de']);
-  });
-
-  it('builds every row unmarked', () => {
-    expect(rows.some((row) => row.following || row.feeds.some((feed) => feed.subscribed))).toBe(
-      false,
-    );
   });
 
   it('splits channels from podcasts', () => {
@@ -170,7 +165,7 @@ describe('feed directory rows', () => {
       expect(heiseOf(marked).following).toBe(true);
     });
 
-    it('follows a site when any subscribed feed sits on it or a subdomain', () => {
+    it('follows a site when a subscribed feed sits on it', () => {
       const marked = withSubscriptions(unmarked(), lookupOf(['https://www.heise.de/other.xml']));
       expect(heiseOf(marked).following).toBe(true);
       expect(heiseOf(marked).feeds.every((feed) => !feed.subscribed)).toBe(true);
@@ -181,11 +176,24 @@ describe('feed directory rows', () => {
       expect(marked.find((row) => row.host === 'zeit.de')!.following).toBe(true);
     });
 
-    it('leaves every row unmarked without subscriptions', () => {
-      const marked = withSubscriptions(unmarked(), lookupOf([]));
-      expect(marked.some((row) => row.following || row.feeds.some((feed) => feed.subscribed))).toBe(
-        false,
+    it('hands back every row it leaves unmarked as it was', () => {
+      const rows = unmarked();
+      const marked = withSubscriptions(rows, lookupOf(['http://heise.de/rss/heise.rdf/']));
+      expect(marked.filter((row, index) => row !== rows[index]).map((row) => row.host)).toEqual([
+        'heise.de',
+      ]);
+      expect(withSubscriptions(rows, lookupOf([])).every((row, index) => row === rows[index])).toBe(
+        true,
       );
+    });
+
+    it('takes two lookups of the same addresses as the same', () => {
+      const heise = 'https://www.heise.de/rss/heise.rdf';
+      expect(sameLookup(lookupOf([heise]), lookupOf(['http://heise.de/rss/heise.rdf/']))).toBe(
+        true,
+      );
+      expect(sameLookup(lookupOf([heise]), lookupOf([heise, 'https://b.de/feed']))).toBe(false);
+      expect(sameLookup(lookupOf([heise]), lookupOf(['https://b.de/feed']))).toBe(false);
     });
 
     it('follows a row by its bare host, whatever www prefix the directory gives it', () => {

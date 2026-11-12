@@ -136,16 +136,21 @@ describe('FeedDirectorySubscriber', () => {
     expect(reloadQuietly).not.toHaveBeenCalled();
   });
 
-  it('opens the edit dialog for a subscribed feed', () => {
-    subscriber.edit(SUBSCRIBED_URL);
+  it('opens the edit dialog for a chosen feed you subscribe to', () => {
+    subscriber.choose(SUBSCRIBED_URL);
 
     expect(editSubscription).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
+    expect(dialogOpen).not.toHaveBeenCalled();
   });
 
-  it('does nothing for a feed it holds no subscription for', () => {
-    subscriber.edit('https://nowhere.example/feed');
+  it('offers to subscribe to a chosen feed you do not subscribe to', () => {
+    subscriber.choose('https://nowhere.example/feed');
 
     expect(editSubscription).not.toHaveBeenCalled();
+    expect(dialogOpen).toHaveBeenCalledWith(
+      AddFeedDialogComponent,
+      expect.objectContaining({ data: { url: 'https://nowhere.example/feed' } }),
+    );
   });
 
   describe('several feeds on a fine pointer', () => {

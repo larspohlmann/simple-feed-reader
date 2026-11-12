@@ -27,7 +27,6 @@ export class FeedDirectoryFeedsPopoverComponent {
   readonly host = input.required<string>();
   readonly feeds = input.required<readonly FeedDirectoryFeed[]>();
   readonly choose = output<string>();
-  readonly edit = output<string>();
   readonly dismiss = output();
 
   protected readonly groups = computed(() =>

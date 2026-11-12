@@ -28,7 +28,7 @@
               [ariaLabel]="
                 'settings.feedDirectory.editSubscriptionTo' | transloco: { feed: feed.path }
               "
-              (click)="edit.emit(feed.url)"
+              (click)="choose.emit(feed.url)"
             >
               <app-icon name="check" size="sm" />{{
                 'settings.feedDirectory.subscribed' | transloco

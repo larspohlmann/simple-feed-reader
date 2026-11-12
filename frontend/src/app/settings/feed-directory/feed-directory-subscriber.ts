@@ -46,9 +46,10 @@ export class FeedDirectorySubscriber implements OnDestroy {
     }
   }
 
-  edit(feedUrl: string): void {
+  choose(feedUrl: string): void {
     const subscription = this.store.subscriptionFor(feedUrl);
     if (subscription) this.manage.editSubscription(subscription);
+    else this.subscribeTo(feedUrl);
   }
 
   ngOnDestroy(): void {
@@ -77,11 +78,8 @@ export class FeedDirectorySubscriber implements OnDestroy {
       })),
     ]);
     const total = this.i18n.translate('settings.feedDirectory.feeds', { count: feeds.length });
-    const byUrl = new Map(feeds.map((feed) => [feed.url, feed]));
     this.sheet.open({ title: `${host} · ${total}`, actions }).subscribe((url) => {
-      if (!url) return;
-      if (byUrl.get(url)?.subscribed) this.edit(url);
-      else this.subscribeTo(url);
+      if (url) this.choose(url);
     });
   }
 
@@ -124,13 +122,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
       .pipe(takeUntil(closed))
       .subscribe((url) => {
         closeByUser();
-        this.subscribeTo(url);
-      });
-    outputToObservable(content.instance.edit)
-      .pipe(takeUntil(closed))
-      .subscribe((url) => {
-        closeByUser();
-        this.edit(url);
+        this.choose(url);
       });
     closed.pipe(take(1)).subscribe(() => {
       popover.dispose();

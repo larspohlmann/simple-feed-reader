@@ -198,22 +198,7 @@ test('pick a scope, find a site and start subscribing from the feed directory', 
   page,
 }) => {
   const { discoverPosts, previewPosts, subscribePosts } = await stubFeedDirectory(page);
-  const signedIn = await signInAsAdmin(page);
-  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
-
-  await page.goto('/settings/feed-directory');
-
-  await page
-    .locator('[data-test=countries] label.opt')
-    .filter({ hasText: /Germany|Deutschland/ })
-    .getByRole('checkbox')
-    .check();
-  await page
-    .locator('[data-test=languages] label.opt')
-    .filter({ hasText: /German|Deutsch/ })
-    .getByRole('checkbox')
-    .check();
-  await page.locator('[data-test=save]').click();
+  await openDirectory(page);
 
   const rows = page.locator('app-feed-directory-row');
   await expect(rows).toHaveCount(3);
