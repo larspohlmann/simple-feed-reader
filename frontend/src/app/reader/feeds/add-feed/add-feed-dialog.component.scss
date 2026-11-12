@@ -196,17 +196,13 @@ app-tag-picker {
   cursor: pointer;
 }
 
-// The catalog and the directory are the alternatives to typing a URL, not more
-// confirmations, so they sit at the far end of the footer, not beside Cancel and Add.
 .browse-links {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-right: auto;
   align-self: center;
 
-  // A zero basis: flex-wrap breaks lines on basis sizes, so Cancel and Preview stay on the
-  // links' row and the links wrap instead.
+  // Zero basis: flex-wrap wraps on basis size before shrinking, which would push Cancel and Preview down.
   flex: 1 1 0;
   min-width: 0;
 }

@@ -12,7 +12,7 @@ import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-pan
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.component';
-import { parseProblem } from '../../../core/problem';
+import { parseProblem, problemMessage } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
 import {
@@ -66,7 +66,6 @@ function inlinePreviews(candidates: FeedCandidate[]): Record<string, PreviewStat
   return previews;
 }
 
-/** Opens the dialog with `url` filled in, waiting for the user's tags and Add. */
 export interface AddFeedDialogData {
   url: string;
 }
@@ -261,31 +260,23 @@ export class AddFeedDialogComponent implements OnInit {
     this.error.set(
       translatedKey
         ? this.i18n.translate(`dialog.addFeed.${translatedKey}`)
-        : (problem.errors?.['url']?.[0] ?? problem.detail ?? problem.title),
+        : problemMessage(problem),
     );
   }
 
   /** Fetches a candidate's preview once, the first time it is expanded — a
    *  second expand of the same candidate must not re-fetch. */
   private ensurePreview(candidate: FeedCandidate): void {
-    if (this.previews()[candidate.url]) {
-      return;
-    }
-    this.previews.update((previewsByUrl) => ({
-      ...previewsByUrl,
-      [candidate.url]: { status: 'loading' },
-    }));
+    if (this.previews()[candidate.url]) return;
+    this.setPreview(candidate.url, { status: 'loading' });
     this.api.previewFeed(candidate.url, this.storedFormat(candidate)).subscribe({
-      next: (response) =>
-        this.previews.update((previewsByUrl) => ({
-          ...previewsByUrl,
-          [candidate.url]: { status: 'ok', preview: response.feed },
-        })),
+      next: (response) => this.setPreview(candidate.url, { status: 'ok', preview: response.feed }),
       error: (error: HttpErrorResponse) =>
-        this.previews.update((previewsByUrl) => ({
-          ...previewsByUrl,
-          [candidate.url]: { status: 'error', message: parseProblem(error).detail },
-        })),
+        this.setPreview(candidate.url, { status: 'error', message: parseProblem(error).detail }),
     });
+  }
+
+  private setPreview(url: string, state: PreviewState): void {
+    this.previews.update((previewsByUrl) => ({ ...previewsByUrl, [url]: state }));
   }
 }
