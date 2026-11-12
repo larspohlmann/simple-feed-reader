@@ -14,12 +14,3 @@
 @mixin search-input {
   padding-left: calc(var(--space-3) + var(--icon-sm) + var(--space-2));
 }
-
-@mixin done {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  color: var(--success);
-  white-space: nowrap;
-}

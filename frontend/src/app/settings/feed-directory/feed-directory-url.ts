@@ -1,4 +1,4 @@
-/** The backend's FeedDirectoryUrl rule; feed-directory-url-cases.json keeps the two in step. */
+/** How the directory matches a subscription to its feeds; feed-directory-url-cases.json holds the cases. */
 export function feedDirectoryUrl(url: string): string {
   const parsed = parseUrl(url);
   if (!parsed) return url.toLowerCase();

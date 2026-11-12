@@ -38,14 +38,6 @@ describe('FeedDirectoryApi', () => {
     testRequest.flush({ country: 'DE', categories: [], languages: [], domains: [] });
   });
 
-  it('loads the subscribed urls and hosts', () => {
-    api.subscribed().subscribe();
-
-    const testRequest = http.expectOne('https://api.test/api/feed-directory/subscribed');
-    expect(testRequest.request.method).toBe('GET');
-    testRequest.flush({ urls: [], hosts: [] });
-  });
-
   it('saves the scope with PATCH', () => {
     api.saveScope({ countries: ['DE'], languages: ['de'] }).subscribe();
 

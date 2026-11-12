@@ -75,10 +75,31 @@ describe('FeedDirectoryRowComponent', () => {
       Array.from(element.querySelectorAll('.meta span')).map((part) => part.textContent),
     ).toEqual(['Germany', 'German, English', 'Headlines', 'Rank 1,361']);
     expect(text(element.querySelector('.summary'))).toBe('National news and information portal');
-    expect(Array.from(element.querySelectorAll('.chip')).map((chip) => chip.textContent)).toEqual([
+    expect(Array.from(element.querySelectorAll('.chip')).map((chip) => text(chip))).toEqual([
       'World / International',
       'Science & Technology',
     ]);
+  });
+
+  it('asks to filter by a category from its pill', () => {
+    const element = render(ROW);
+    const chosen: string[] = [];
+    fixture.componentInstance.focusCategory.subscribe((category) => chosen.push(category));
+
+    element.querySelectorAll<HTMLButtonElement>('button.chip')[1].click();
+
+    expect(chosen).toEqual(['Science & Technology']);
+  });
+
+  it('presses the pill of the only category the filter shows', () => {
+    const element = render(ROW);
+    fixture.componentRef.setInput('focusedCategory', 'Science & Technology');
+    fixture.detectChanges();
+
+    const pills = element.querySelectorAll<HTMLButtonElement>('button.chip');
+    expect(pills[0].getAttribute('aria-pressed')).toBe('false');
+    expect(pills[1].getAttribute('aria-pressed')).toBe('true');
+    expect(pills[1].getAttribute('title')).toBe('Show only Science & Technology');
   });
 
   it('leaves out the length and the rank when the directory has none', () => {
@@ -109,17 +130,20 @@ describe('FeedDirectoryRowComponent', () => {
     expect(requests).toEqual([{ row: ROW, anchor: button }]);
   });
 
-  it('marks the one feed in the mode as subscribed instead of offering it', () => {
+  it('opens the subscribed feed for editing from its Subscribed status', () => {
+    const url = 'https://www.tagesschau.de/podcast.xml';
     const element = render(
-      {
-        ...ROW,
-        feeds: [feed('https://www.tagesschau.de/podcast.xml', { podcast: true, subscribed: true })],
-      },
+      { ...ROW, feeds: [feed(url, { podcast: true, subscribed: true })] },
       'podcasts',
     );
-
+    const edits: string[] = [];
+    fixture.componentInstance.edit.subscribe((edited) => edits.push(edited));
     expect(element.querySelector('[data-test="subscribe"]')).toBeNull();
-    expect(text(element.querySelector('.done'))).toContain('Subscribed');
+    const status = element.querySelector<HTMLElement>('[data-test="edit"] button')!;
+    expect(text(status)).toContain('Subscribed');
+    expect(status.getAttribute('aria-label')).toBe('Edit subscription');
+    status.click();
+    expect(edits).toEqual([url]);
   });
 
   it('offers the feeds in the mode as a list and emits the row with its button', () => {

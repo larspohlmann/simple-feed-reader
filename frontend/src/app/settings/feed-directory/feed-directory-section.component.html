@@ -156,7 +156,10 @@
                 *cdkVirtualFor="let row of store.rows(); trackBy: byHost"
                 [row]="row"
                 [mode]="store.mode()"
+                [focusedCategory]="store.onlyCategory()"
                 (subscribe)="subscriber.open($event)"
+                (edit)="subscriber.choose($event)"
+                (focusCategory)="store.focusCategory($event)"
               />
             </cdk-virtual-scroll-viewport>
           }

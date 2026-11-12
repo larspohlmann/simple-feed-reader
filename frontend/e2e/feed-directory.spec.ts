@@ -1,23 +1,54 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
+import type { SubscriptionDto, SubscriptionsResponse } from '../src/app/reader/models';
 import type {
   FeedDirectoryCountryFile,
   FeedDirectoryIndex,
 } from '../src/app/settings/feed-directory/feed-directory.models';
 
 const ALPHA_FEED = 'https://alpha.fixtures.invalid/feed.xml';
+const GAMMA_FEED = 'https://gamma.fixtures.invalid/feed.xml';
+
+const SUBSCRIBED_GAMMA: SubscriptionDto = {
+  id: 990001,
+  feedId: 990001,
+  title: 'Gamma fixture feed',
+  faviconUrl: null,
+  customTitle: null,
+  feedUrl: GAMMA_FEED,
+  siteUrl: null,
+  description: null,
+  imageUrl: null,
+  status: 'active',
+  sourceFormat: 'xml',
+  createdAt: '2026-11-01T10:00:00+00:00',
+  lastFetchedAt: null,
+  lastSuccessfulFetchAt: null,
+  lastNewContentAt: null,
+  nextFetchAt: null,
+  consecutiveFailures: 0,
+  lastErrorMessage: null,
+  position: 0,
+  tags: [],
+  unreadCount: 0,
+  entryCount: 0,
+  includeInAllItems: true,
+  includeInForYou: true,
+  includeInSavedSearches: true,
+  social: null,
+};
 
 const INDEX: FeedDirectoryIndex = {
   countries: [
-    { code: 'DE', name: 'Germany', sites: 2, languages: { de: 2 } },
+    { code: 'DE', name: 'Germany', sites: 3, languages: { de: 3 } },
     { code: 'FR', name: 'France', sites: 1, languages: { fr: 1 } },
   ],
-  languages: { de: 2, fr: 1 },
+  languages: { de: 3, fr: 1 },
 };
 
 const GERMANY: FeedDirectoryCountryFile = {
   country: 'DE',
-  categories: ['News'],
+  categories: ['News', 'Tech'],
   languages: ['de'],
   domains: [
     ['alpha.fixtures.invalid', 1, 800, [0], [[0, 0, [ALPHA_FEED]]], 'Alpha fixture site'],
@@ -29,6 +60,7 @@ const GERMANY: FeedDirectoryCountryFile = {
       [[0, 0, ['https://beta.fixtures.invalid/a.xml', 'https://beta.fixtures.invalid/b.xml']]],
       'Beta fixture site',
     ],
+    ['gamma.fixtures.invalid', 3, 800, [0], [[1, 0, [GAMMA_FEED]]], 'Gamma fixture site'],
   ],
 };
 
@@ -79,9 +111,6 @@ async function stubFeedDirectory(page: Page): Promise<{
   await page.route('**/api/feed-directory/countries/DE', (route) =>
     route.fulfill({ json: GERMANY }),
   );
-  await page.route('**/api/feed-directory/subscribed', (route) =>
-    route.fulfill({ json: { urls: [], hosts: [] } }),
-  );
   await page.route(
     (url) => url.pathname === '/api/me',
     async (route) => {
@@ -118,6 +147,11 @@ async function stubFeedDirectory(page: Page): Promise<{
   await page.route(
     (url) => url.pathname === '/api/subscriptions',
     async (route) => {
+      if (route.request().method() === 'GET') {
+        const response = await route.fetch();
+        const real = (await response.json()) as SubscriptionsResponse;
+        return route.fulfill({ json: { ...real, subscriptions: [SUBSCRIBED_GAMMA] } });
+      }
       if (route.request().method() !== 'POST') return route.fallback();
       subscribePosts.push((route.request().postDataJSON() as { url: string }).url);
       await route.fulfill({
@@ -127,18 +161,26 @@ async function stubFeedDirectory(page: Page): Promise<{
       });
     },
   );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/subscriptions/'),
+    (route) => {
+      const method = route.request().method();
+      if (method !== 'PATCH' && method !== 'DELETE') return route.fallback();
+      return route.fulfill({
+        status: 422,
+        contentType: 'application/problem+json',
+        json: { title: 'Stubbed', detail: 'Stubbed by the spec', status: 422 },
+      });
+    },
+  );
   return { discoverPosts, previewPosts, subscribePosts };
 }
 
-test('pick a scope, find a site and start subscribing from the feed directory', async ({
-  page,
-}) => {
-  const { discoverPosts, previewPosts, subscribePosts } = await stubFeedDirectory(page);
+async function openDirectory(page: Page): Promise<void> {
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await page.goto('/settings/feed-directory');
-
   await page
     .locator('[data-test=countries] label.opt')
     .filter({ hasText: /Germany|Deutschland/ })
@@ -150,9 +192,16 @@ test('pick a scope, find a site and start subscribing from the feed directory', 
     .getByRole('checkbox')
     .check();
   await page.locator('[data-test=save]').click();
+}
+
+test('pick a scope, find a site and start subscribing from the feed directory', async ({
+  page,
+}) => {
+  const { discoverPosts, previewPosts, subscribePosts } = await stubFeedDirectory(page);
+  await openDirectory(page);
 
   const rows = page.locator('app-feed-directory-row');
-  await expect(rows).toHaveCount(2);
+  await expect(rows).toHaveCount(3);
 
   await page.locator('[data-test=search]').fill('alpha.fixtures');
   await expect(rows).toHaveCount(1);
@@ -172,4 +221,34 @@ test('pick a scope, find a site and start subscribing from the feed directory', 
   await dialog.locator('.card .subscribe').click();
   await expect.poll(() => subscribePosts).toEqual([ALPHA_FEED]);
   expect(previewPosts).toEqual([]);
+});
+
+test('a subscribed feed opens its edit dialog', async ({ page }) => {
+  await stubFeedDirectory(page);
+  await openDirectory(page);
+
+  const row = page.locator('app-feed-directory-row').filter({ hasText: 'gamma.fixtures.invalid' });
+  await row.getByRole('button', { name: 'Edit subscription' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Edit feed' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: /^Cancel$/ }).click();
+  await expect(dialog).toBeHidden();
+});
+
+test("a row's category pill narrows the filter to that category", async ({ page }) => {
+  await stubFeedDirectory(page);
+  await openDirectory(page);
+
+  const rows = page.locator('app-feed-directory-row');
+  await expect(rows).toHaveCount(3);
+
+  const pill = rows.first().locator('button.chip', { hasText: 'News' });
+  await pill.click();
+  await expect(rows).toHaveCount(2);
+  await expect(rows.locator('button.chip', { hasText: 'News' })).toHaveCount(2);
+  await expect(pill).toHaveAttribute('aria-pressed', 'true');
+
+  await pill.click();
+  await expect(rows).toHaveCount(3);
 });

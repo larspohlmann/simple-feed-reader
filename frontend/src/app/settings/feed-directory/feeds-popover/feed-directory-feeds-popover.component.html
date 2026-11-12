@@ -21,15 +21,24 @@
         <div class="feed">
           <code class="path" [title]="feed.url">{{ feed.path }}</code>
           @if (feed.subscribed) {
-            <span class="done">
+            <app-button
+              size="sm"
+              variant="ghost"
+              data-test="edit"
+              [ariaLabel]="
+                'settings.feedDirectory.editSubscriptionTo' | transloco: { feed: feed.path }
+              "
+              (click)="choose.emit(feed.url)"
+            >
               <app-icon name="check" size="sm" />{{
                 'settings.feedDirectory.subscribed' | transloco
               }}
-            </span>
+            </app-button>
           } @else {
             <app-button
               size="sm"
               variant="ghost"
+              data-test="subscribe"
               [ariaLabel]="'settings.feedDirectory.subscribeTo' | transloco: { feed: feed.path }"
               (click)="choose.emit(feed.url)"
             >

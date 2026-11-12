@@ -1,6 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
-@use '../directory-mixins';
 
 :host {
   display: grid;
@@ -86,8 +85,28 @@
   padding: calc(var(--space-0) / 2) var(--space-2);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
+  font: inherit;
   font-size: var(--fs-xs);
+  line-height: inherit;
   white-space: nowrap;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+
+  &[aria-pressed='true'] {
+    --rim-base: var(--accent);
+    --rim-fill: var(--accent-soft);
+
+    color: var(--accent);
+  }
 }
 
 .action {
@@ -96,12 +115,6 @@
   align-items: flex-end;
   gap: calc(var(--space-1) + var(--space-0));
   min-width: 8.75rem;
-}
-
-.done {
-  @include directory-mixins.done;
-
-  font-size: var(--fs-sm);
 }
 
 @media (width < bp.$bp-sm) {

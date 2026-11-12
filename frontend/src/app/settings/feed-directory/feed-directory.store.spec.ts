@@ -8,11 +8,10 @@ import { countByCountry, prepareRows } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
-import {
-  FeedDirectoryCountryFile,
-  FeedDirectoryIndex,
-  FeedDirectorySubscribed,
-} from './feed-directory.models';
+import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
+import { SubscriptionDto } from '../../reader/models';
+import { Problem } from '../../core/problem';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
 const DE: FeedDirectoryCountryFile = {
   country: 'DE',
@@ -56,13 +55,13 @@ const INDEX: FeedDirectoryIndex = {
   ],
   languages: { de: 4, en: 2 },
 };
-const SUBSCRIBED: FeedDirectorySubscribed = {
-  urls: ['heise.de/rss/heise.rdf'],
-  hosts: ['heise.de'],
-};
 
 describe('FeedDirectoryStore', () => {
   const scope = signal<FeedDirectoryScope>({ countries: ['DE', 'AT'], languages: ['de'] });
+  const subscriptions = signal<Partial<SubscriptionDto>[]>([]);
+  const resolved = signal(true);
+  const error = signal<Problem | null>(null);
+  const loadIfStale = jest.fn();
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
   let store: FeedDirectoryStore;
 
@@ -75,15 +74,20 @@ describe('FeedDirectoryStore', () => {
 
   beforeEach(() => {
     scope.set({ countries: ['DE', 'AT'], languages: ['de'] });
+    subscriptions.set([{ id: 7, feedUrl: 'https://www.heise.de/rss/heise.rdf' }]);
+    resolved.set(true);
+    error.set(null);
+    loadIfStale.mockReset();
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         FeedDirectoryStore,
         { provide: FeedDirectoryScopeService, useValue: { scope } },
+        { provide: SubscriptionsStore, useValue: { subscriptions, resolved, error, loadIfStale } },
         {
           provide: FeedDirectoryApi,
-          useValue: { index: () => of(INDEX), subscribed: () => of(SUBSCRIBED), country },
+          useValue: { index: () => of(INDEX), country },
         },
       ],
     });
@@ -215,16 +219,50 @@ describe('FeedDirectoryStore', () => {
     expect([...store.categories()]).toEqual([]);
   });
 
+  it('narrows the category filter to the one category a pill names', () => {
+    loadedStore();
+    store.toggleCategory('Sports');
+    store.focusCategory('Politics & Society');
+
+    expect([...store.categories()]).toEqual(['Politics & Society']);
+    expect(store.onlyCategory()).toBe('Politics & Society');
+  });
+
+  it('clears the category filter when the pill of the only chosen category is clicked again', () => {
+    loadedStore();
+    store.focusCategory('Sports');
+    store.focusCategory('Sports');
+
+    expect(store.categories().size).toBe(0);
+    expect(store.onlyCategory()).toBeNull();
+  });
+
+  it('leaves the other filters alone when a pill narrows the category', () => {
+    loadedStore();
+    store.query.set('heise');
+    store.sort.set('az');
+    store.focusCategory('Sports');
+
+    expect(store.query()).toBe('heise');
+    expect(store.sort()).toBe('az');
+    expect(store.mode()).toBe('channels');
+  });
+
+  it('has no single category while two are chosen', () => {
+    loadedStore();
+    store.toggleCategory('Sports');
+    store.toggleCategory('Politics & Society');
+
+    expect(store.onlyCategory()).toBeNull();
+  });
+
   it('counts per country ignoring the country filter', () => {
     loadedStore();
     store.country.set('AT');
     store.toggleCategory('Politics & Society');
 
     const expected = countByCountry(
-      [
-        ...prepareRows(DE, new Set(['de']), SUBSCRIBED),
-        ...prepareRows(AT, new Set(['de']), SUBSCRIBED),
-      ],
+      [...prepareRows(DE, new Set(['de'])), ...prepareRows(AT, new Set(['de']))],
       {
         mode: 'channels',
         categories: new Set(['Politics & Society']),
@@ -337,16 +375,56 @@ describe('FeedDirectoryStore', () => {
     expect(store.country()).toBe('AT');
   });
 
-  it('marks a feed subscribed and its row followed', () => {
+  it('marks the feeds the subscriptions store holds', () => {
     loadedStore();
-    const before = store.rows().find((row) => row.host === 'zeit.de')!;
-    expect(before.following).toBe(false);
+    const heise = store.rows().find((row) => row.host === 'heise.de')!;
+    expect(heise.feeds.map((feed) => feed.subscribed)).toEqual([true, false]);
+    expect(heise.following).toBe(true);
+  });
 
-    store.markSubscribed('zeit.de', 'https://www.zeit.de/politik/index');
+  it('flips a row back when its subscription goes away', () => {
+    loadedStore();
+    subscriptions.set([]);
+    const heise = store.rows().find((row) => row.host === 'heise.de')!;
+    expect(heise.feeds.some((feed) => feed.subscribed)).toBe(false);
+    expect(heise.following).toBe(false);
+  });
 
-    const after = store.rows().find((row) => row.host === 'zeit.de')!;
-    expect(after.following).toBe(true);
-    expect(after.feeds[0].subscribed).toBe(true);
-    expect(after.feeds[1].subscribed).toBe(false);
+  it('keeps its rows when the subscriptions change but their addresses do not', () => {
+    loadedStore();
+    const before = store.rows();
+    subscriptions.set(subscriptions().map((subscription) => ({ ...subscription })));
+    expect(store.rows()).toBe(before);
+  });
+
+  it('asks the subscriptions store to load when it is stale', () => {
+    loadedStore();
+    expect(loadIfStale).toHaveBeenCalled();
+  });
+
+  it('stays loading until the subscriptions store has answered', () => {
+    resolved.set(false);
+    loadedStore();
+    expect(store.status()).toBe('loading');
+    resolved.set(true);
+    expect(store.status()).toBe('ready');
+  });
+
+  it('fails when the subscriptions could not load and there are none to show', () => {
+    subscriptions.set([]);
+    error.set({ title: 'Boom', status: 500 } as Problem);
+    loadedStore();
+    expect(store.status()).toBe('failed');
+  });
+
+  it('stays ready when a later refresh of the subscriptions fails but some are known', () => {
+    error.set({ title: 'Boom', status: 500 } as Problem);
+    loadedStore();
+    expect(store.status()).toBe('ready');
+  });
+
+  it('finds the subscription behind a directory feed by its normalised address', () => {
+    expect(store.subscriptionFor('http://heise.de/rss/heise.rdf/')?.id).toBe(7);
+    expect(store.subscriptionFor('https://heise.de/security/rss')).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import {
   AddFeedDialogData,
 } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionDto } from '../../reader/models';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { ActionSheetItem } from '../../shared/action-sheet/action-sheet.component';
@@ -29,6 +30,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
   private readonly layout = inject(LayoutService);
   private readonly store = inject(FeedDirectoryStore);
   private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly manage = inject(ManageActions);
   private readonly injector = inject(Injector);
   private readonly i18n = inject(TranslocoService);
   private popover: OverlayRef | null = null;
@@ -36,7 +38,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
   open(request: FeedDirectorySubscribeRequest): void {
     const feeds = feedsIn(request.row, this.store.mode());
     if (feeds.length === 1) {
-      this.subscribeTo(request.row.host, feeds[0].url);
+      this.subscribeTo(feeds[0].url);
     } else if (this.layout.isCoarse()) {
       this.openSheet(request.row.host, feeds);
     } else {
@@ -44,11 +46,17 @@ export class FeedDirectorySubscriber implements OnDestroy {
     }
   }
 
+  choose(feedUrl: string): void {
+    const subscription = this.store.subscriptionFor(feedUrl);
+    if (subscription) this.manage.editSubscription(subscription);
+    else this.subscribeTo(feedUrl);
+  }
+
   ngOnDestroy(): void {
     this.popover?.detach();
   }
 
-  private subscribeTo(host: string, url: string): void {
+  private subscribeTo(url: string): void {
     this.dialog
       .open<SubscriptionDto>(AddFeedDialogComponent, {
         panelClass: 'app-dialog',
@@ -56,7 +64,6 @@ export class FeedDirectorySubscriber implements OnDestroy {
       })
       .closed.subscribe((subscription) => {
         if (!subscription) return;
-        this.store.markSubscribed(host, url);
         this.subscriptions.reloadQuietly();
       });
   }
@@ -68,12 +75,11 @@ export class FeedDirectorySubscriber implements OnDestroy {
         id: feed.url,
         label: feedPath(feed.url, host),
         symbol: feed.subscribed ? 'check' : 'add',
-        disabled: feed.subscribed,
       })),
     ]);
     const total = this.i18n.translate('settings.feedDirectory.feeds', { count: feeds.length });
     this.sheet.open({ title: `${host} · ${total}`, actions }).subscribe((url) => {
-      if (url) this.subscribeTo(host, url);
+      if (url) this.choose(url);
     });
   }
 
@@ -116,7 +122,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
       .pipe(takeUntil(closed))
       .subscribe((url) => {
         closeByUser();
-        this.subscribeTo(row.host, url);
+        this.choose(url);
       });
     closed.pipe(take(1)).subscribe(() => {
       popover.dispose();
