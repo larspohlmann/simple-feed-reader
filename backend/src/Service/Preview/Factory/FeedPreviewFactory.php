@@ -36,7 +36,7 @@ final readonly class FeedPreviewFactory
             content: $this->verdict($tiers),
             hasImages: array_any(
                 $sample,
-                fn (ParsedEntryModel $entry): bool => $this->httpsImageUrl($entry->media->image) !== null,
+                fn (ParsedEntryModel $entry): bool => $this->httpsImage($entry->media->image) !== null,
             ),
             items: $items,
         );
@@ -44,8 +44,7 @@ final readonly class FeedPreviewFactory
 
     private function item(ParsedEntryModel $entry): FeedPreviewItemModel
     {
-        $image = $entry->media->image;
-        $imageUrl = $this->httpsImageUrl($image);
+        $image = $this->httpsImage($entry->media->image);
 
         return new FeedPreviewItemModel(
             title: $entry->headline->text,
@@ -54,21 +53,21 @@ final readonly class FeedPreviewFactory
             // Prefers the feed's own summary/teaser field; tier()/plainText() deliberately
             // reverse this precedence (contentHtml ?? summary) to measure the full body.
             summary: EntrySnippet::from($entry->summary ?? $entry->contentHtml),
-            imageUrl: $imageUrl,
-            imageWidth: $imageUrl === null ? null : $image?->width,
-            imageHeight: $imageUrl === null ? null : $image?->height,
+            imageUrl: $image?->url,
+            imageWidth: $image?->width,
+            imageHeight: $image?->height,
             publishedAt: $entry->publishedAt,
         );
     }
 
     // The SPA is https, so an http/relative/data image is useless in an <img>.
-    private function httpsImageUrl(?DeclaredImageModel $image): ?string
+    private function httpsImage(?DeclaredImageModel $image): ?DeclaredImageModel
     {
         if ($image === null) {
             return null;
         }
 
-        return str_starts_with($image->url, 'https://') ? $image->url : null;
+        return str_starts_with($image->url, 'https://') ? $image : null;
     }
 
     private function tier(ParsedEntryModel $entry): string
