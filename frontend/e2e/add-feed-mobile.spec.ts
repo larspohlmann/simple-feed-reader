@@ -38,8 +38,8 @@ async function stubDiscovery(page: Page): Promise<void> {
           itemCount: 12,
           content: 'full',
           hasImages: true,
-          // The backend caps the preview payload at three items; the expanded
-          // card plus the candidate list still outgrow the screen and scroll.
+          // The backend caps the preview payload at ten items; this stub sends three, and the
+          // expanded card plus the candidate list still outgrow the screen and scroll.
           items: Array.from({ length: 3 }, (_unused, index) => ({
             title: `Sample headline ${index + 1}`,
             url: `https://example.com/a${index + 1}`,
@@ -90,8 +90,7 @@ test.describe('Add feed on a phone', () => {
     await expect(subscribes).toHaveCount(CANDIDATES.length);
 
     // The first candidate opens automatically, so its sample entries render as
-    // preview rows without a click — capped at three even though the feed
-    // carries eight.
+    // preview rows without a click — the three the stub sends.
     await expect(dialog.locator('app-preview-entry-row').first()).toBeVisible();
     await expect(dialog.locator('app-preview-entry-row')).toHaveCount(3);
 
