@@ -6,6 +6,7 @@ import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
+import { networkOf } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
 
 /**
@@ -27,9 +28,13 @@ export class EntryPillsComponent {
   readonly subscriptionId = input<number | null>(null);
 
   private readonly rows = inject(SubscriptionRows);
-  protected readonly socialFeed = computed(() => {
+  private readonly feed = computed(() => {
     const subscriptionId = this.subscriptionId();
-    const feed = subscriptionId === null ? null : this.rows.find(subscriptionId);
-    return feed?.social ? { id: feed.id, title: feed.title, network: feed.social.network } : null;
+    return subscriptionId === null ? null : this.rows.find(subscriptionId);
   });
+  protected readonly network = computed(() => {
+    const feed = this.feed();
+    return feed === null ? null : networkOf(feed);
+  });
+  protected readonly feedTitle = computed(() => this.feed()?.title ?? '');
 }

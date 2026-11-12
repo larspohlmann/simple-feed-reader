@@ -1,14 +1,14 @@
-@if (socialFeed(); as feed) {
+@if (network(); as network) {
   <a
-    class="pill network"
+    class="pill feed"
     [routerLink]="['/']"
-    [queryParams]="selectionQueryParams({ subscription: feed.id })"
+    [queryParams]="selectionQueryParams({ subscription: subscriptionId() })"
     queryParamsHandling="merge"
-    [attr.title]="feed.title"
+    [attr.title]="feedTitle()"
     (click)="$event.stopPropagation()"
   >
-    <app-network-logo [network]="feed.network" />
-    <span class="name">{{ feed.title }}</span>
+    <app-network-logo [network]="network" />
+    <span class="name">{{ feedTitle() }}</span>
   </a>
 }
 @if (short()) {

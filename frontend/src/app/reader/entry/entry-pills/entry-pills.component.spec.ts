@@ -150,7 +150,7 @@ describe('EntryPillsComponent', () => {
     });
 
     it('links to the feed', () => {
-      const pill = mountFor(5, [{ id: 5, network: 'mastodon' }]).querySelector('a.pill.network')!;
+      const pill = mountFor(5, [{ id: 5, network: 'mastodon' }]).querySelector('a.pill.feed')!;
 
       expect(pill.getAttribute('href')).toContain('subscription=5');
       expect(pill.getAttribute('href')).not.toContain('network=');
@@ -162,17 +162,17 @@ describe('EntryPillsComponent', () => {
       element.addEventListener('click', parentClick);
 
       element
-        .querySelector('a.pill.network')!
+        .querySelector('a.pill.feed')!
         .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
       expect(parentClick).not.toHaveBeenCalled();
     });
 
     it('shows nothing for an ordinary feed or no subscription', () => {
-      expect(mountFor(6, [{ id: 5, network: 'bluesky' }]).querySelectorAll('.pill').length).toBe(1);
-      expect(mountFor(null, [{ id: 5, network: 'bluesky' }]).querySelectorAll('.pill').length).toBe(
-        1,
-      );
+      const feeds: SocialFeedFixture[] = [{ id: 5, network: 'bluesky' }];
+
+      expect(mountFor(6, feeds).querySelectorAll('.pill').length).toBe(1);
+      expect(mountFor(null, feeds).querySelectorAll('.pill').length).toBe(1);
     });
   });
 });

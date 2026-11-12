@@ -122,7 +122,7 @@ describe('EntryMetaComponent', () => {
     fixture.componentRef.setInput('entry', testEntry);
     fixture.detectChanges();
 
-    const pill = (fixture.nativeElement as HTMLElement).querySelector('.pill.network');
+    const pill = (fixture.nativeElement as HTMLElement).querySelector('.pill.feed');
     expect(pill?.textContent?.trim()).toBe('Friends');
   });
 });
