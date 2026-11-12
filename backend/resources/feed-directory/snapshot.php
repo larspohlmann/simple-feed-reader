@@ -2,10 +2,17 @@
 
 declare(strict_types=1);
 
+require __DIR__ . '/../../vendor/autoload.php';
+
+use Symfony\Component\Yaml\Yaml;
+
 const UPSTREAM = 'https://raw.githubusercontent.com/infobubble/infobubble-support/';
-const CATALOG = 'docs/data/catalog.js';
-const COMMITS = 'https://api.github.com/repos/infobubble/infobubble-support/commits?path=' . CATALOG . '&per_page=1';
+const SOURCES = 'Sources/all.sources.by.hostnames.rss.yaml';
+const COMMITS = 'https://api.github.com/repos/infobubble/infobubble-support/commits?path=' . SOURCES . '&per_page=1';
+const PODCASTS = 'Podcasts: ';
 const REGION_OVERRIDES = ['St. Helena' => 'SH'];
+
+ini_set('memory_limit', '2G');
 
 function download(string $url): string
 {
@@ -48,17 +55,6 @@ function isoCodes(array $names): array
     }
 
     return $codes;
-}
-
-function unwrap(string $script): array
-{
-    $start = strpos($script, '{');
-    $end = strrpos($script, '}');
-    if ($start === false || $end === false) {
-        throw new RuntimeException('catalog.js holds no JSON object.');
-    }
-
-    return json_decode(substr($script, $start, $end - $start + 1), true, flags: JSON_THROW_ON_ERROR);
 }
 
 final class CountryFile
@@ -146,21 +142,34 @@ final class CountryFile
     }
 }
 
-/** @param list<string> $codes @return array<string, CountryFile> */
-function groupByCountry(array $catalog, array $codes): array
+/** @return array{string, int, list<string>} category, podcast flag, feed URLs */
+function feedGroup(string $name, array $urls): array
 {
+    return str_starts_with($name, PODCASTS)
+        ? [substr($name, strlen(PODCASTS)), 1, array_values($urls)]
+        : [$name, 0, array_values($urls)];
+}
+
+/** @param array<string, array<string, array<string, mixed>>> $sources @return array<string, CountryFile> */
+function countryFiles(array $sources): array
+{
+    $codes = array_combine(array_keys($sources), isoCodes(array_keys($sources)));
     $files = [];
-    foreach (
-        $catalog['domains'] as [$host, $countryIndex, $rank, $averageLength, $languageIndexes, $groups, $summary]
-    ) {
-        $code = $codes[$countryIndex];
-        $files[$code] ??= new CountryFile($code);
-        $languages = array_map(static fn (int $languageIndex): string => $catalog['languages'][$languageIndex], $languageIndexes);
-        $categorised = array_map(
-            static fn (array $group): array => [$catalog['categories'][$group[0]], $group[1], $group[2]],
-            $groups,
-        );
-        $files[$code]->addDomain($host, $rank, $averageLength, $languages, $categorised, $summary);
+    foreach ($sources as $country => $hosts) {
+        $file = new CountryFile($codes[$country]);
+        foreach ($hosts ?? [] as $host => $site) {
+            $file->addDomain(
+                (string) $host,
+                $site['rank'] ?? null,
+                $site['avg_article_length'] ?? null,
+                $site['languages'] ?? [],
+                array_map(feedGroup(...), array_keys($site['feeds'] ?? []), array_values($site['feeds'] ?? [])),
+                $site['summary'] ?? null,
+            );
+        }
+        if ($file->siteCount() > 0) {
+            $files[$country] = $file;
+        }
     }
 
     return $files;
@@ -173,40 +182,35 @@ function writeCountryFiles(array $files, string $target): void
         mkdir($target . '/countries');
     }
     array_map('unlink', glob($target . '/countries/*.json.gz') ?: []);
-    foreach ($files as $code => $file) {
-        file_put_contents(sprintf('%s/countries/%s.json.gz', $target, $code), gzencode($file->toJson(), 9));
+    foreach ($files as $file) {
+        file_put_contents(sprintf('%s/countries/%s.json.gz', $target, $file->code), gzencode($file->toJson(), 9));
     }
 }
 
-/** @return array<string, int> domains per language across the whole catalog, most common first */
-function catalogLanguageSites(array $catalog): array
-{
-    $counts = [];
-    foreach ($catalog['domains'] as $domain) {
-        foreach ($domain[4] as $languageIndex) {
-            $language = $catalog['languages'][$languageIndex];
-            $counts[$language] = ($counts[$language] ?? 0) + 1;
-        }
-    }
-    arsort($counts);
-
-    return $counts;
-}
-
-/** @param array<string, CountryFile> $files @param list<string> $codes @return list<array<string, mixed>> */
-function buildCountryIndex(array $catalog, array $files, array $codes): array
+/** @param array<string, CountryFile> $files @return list<array<string, mixed>> */
+function countryIndex(array $files): array
 {
     $countries = [];
-    foreach ($catalog['countries'] as $countryIndex => $name) {
-        $file = $files[$codes[$countryIndex]] ?? null;
-        if ($file === null) {
-            continue;
-        }
+    foreach ($files as $name => $file) {
         $countries[] = ['code' => $file->code, 'name' => $name, 'sites' => $file->siteCount(), 'languages' => $file->languageSites()];
     }
     usort($countries, static fn (array $left, array $right): int => strcmp($left['name'], $right['name']));
 
     return $countries;
+}
+
+/** @param array<string, CountryFile> $files @return array<string, int> sites per language across every country, most common first */
+function languageSites(array $files): array
+{
+    $counts = [];
+    foreach ($files as $file) {
+        foreach ($file->languageSites() as $language => $sites) {
+            $counts[$language] = ($counts[$language] ?? 0) + $sites;
+        }
+    }
+    arsort($counts);
+
+    return $counts;
 }
 
 function writeIndex(array $countries, array $languageSites, string $target): void
@@ -217,7 +221,7 @@ function writeIndex(array $countries, array $languageSites, string $target): voi
     );
 }
 
-function latestCatalogCommit(): array
+function latestSourcesCommit(): array
 {
     return json_decode(download(COMMITS), true, flags: JSON_THROW_ON_ERROR)[0];
 }
@@ -232,7 +236,7 @@ function writeSource(string $target, array $commit): void
     file_put_contents($target . '/ABOUT.txt', download(upstreamUrl($commit['sha'], 'Sources/ABOUT.txt')));
     file_put_contents($target . '/LICENSE.txt', download(upstreamUrl($commit['sha'], 'Sources/LICENSE.txt')));
     file_put_contents($target . '/SOURCE', implode("\n", [
-        'url: ' . upstreamUrl($commit['sha'], CATALOG),
+        'url: ' . upstreamUrl($commit['sha'], SOURCES),
         'commit: ' . $commit['sha'],
         'committed: ' . $commit['commit']['committer']['date'],
         'fetched: ' . gmdate('Y-m-d'),
@@ -240,13 +244,12 @@ function writeSource(string $target, array $commit): void
 }
 
 $target = __DIR__;
-$commit = latestCatalogCommit();
-$catalog = unwrap(download(upstreamUrl($commit['sha'], CATALOG)));
-$codes = isoCodes($catalog['countries']);
-$files = groupByCountry($catalog, $codes);
+$commit = latestSourcesCommit();
+$sources = Yaml::parse(download(upstreamUrl($commit['sha'], SOURCES)));
+$files = countryFiles($sources);
 
 writeCountryFiles($files, $target);
-writeIndex(buildCountryIndex($catalog, $files, $codes), catalogLanguageSites($catalog), $target);
+writeIndex(countryIndex($files), languageSites($files), $target);
 writeSource($target, $commit);
 
-printf("%d countries, %d domains\n", count($files), count($catalog['domains']));
+printf("%d countries, %d domains\n", count($files), array_sum(array_map(static fn (CountryFile $file): int => $file->siteCount(), $files)));

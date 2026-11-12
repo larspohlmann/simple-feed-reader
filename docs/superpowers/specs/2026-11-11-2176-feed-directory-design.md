@@ -37,25 +37,30 @@ Everything is called **FeedDirectory**, kept apart from the onboarding `Catalog`
 
 ### Source and licence
 
-The InfoBubble page loads `docs/data/catalog.js` from `infobubble/infobubble-support`: one
-`window.CATALOG_DATA={…}` assignment around plain JSON (12 MB, 42,020 domains, 86,786 channel and 13,452
-podcast feeds). It is derived from the repository's `Sources/` database, which is licensed **ODbL**. The
-snapshot ships with the upstream `Sources/ABOUT.txt` and `Sources/LICENSE.txt`, and the directory section
-carries the attribution InfoBubble's footer carries (InfoBubble, GDELT Project, Tranco, Majestic Million
-CC BY 3.0).
+The snapshot reads `Sources/all.sources.by.hostnames.rss.yaml` from `infobubble/infobubble-support`
+(`<Country>: <host>: {rank, languages, avg_article_length, summary, feeds: {<Category> | 'Podcasts:
+<Category>': [urls]}}`; 20 MB, 232 countries, 50,642 hosts). It is the source the InfoBubble page's
+`catalog.js` is built from, and upstream updates it more often (#2185 reversed the original choice of
+`catalog.js`). The `Sources/` database is licensed **ODbL**. The snapshot ships with the upstream
+`Sources/ABOUT.txt` and `Sources/LICENSE.txt`, and the directory section carries the attribution
+InfoBubble's footer carries (InfoBubble, GDELT Project, Tranco, Majestic Million CC BY 3.0).
 
-Upstream shape, kept as it is inside each country file:
+Upstream shape, as the YAML holds it:
 
 ```
-countries:  string[]            // display names, 231
-categories: string[]            // 9: "World / International", "Politics & Society", …
-languages:  string[]            // ISO 639-1 codes, 50
-domains:    [host, countryIndex, rank|null, avgArticleLength|null, languageIndexes[], groups[], summary|null][]
-groups:     [categoryIndex, isPodcast (0|1), feedUrls[]][]
+<country display name>:
+  <host>:
+    rank: int | null
+    avg_article_length: int          # absent for some hosts
+    languages: string[]              # ISO 639-1 codes; absent or null for some hosts
+    summary: string | null
+    feeds:
+      <category>: [feedUrl, …]       # 9 categories: "World / International", "Politics & Society", …
+      "Podcasts: <category>": [feedUrl, …]
 ```
 
-24,559 domains have no rank, 831 no article length, 2 no summary; every reader of the data treats those
-fields as nullable.
+25,902 hosts have a null rank, 3,491 no article length, 81 no languages and 1 no summary; every reader of
+the data treats those fields as nullable.
 
 ### Split per country, committed
 
@@ -63,7 +68,7 @@ fields as nullable.
 
 - `countries/<code>.json.gz` — one file per country: `{ "country": code, "categories": […], "languages":
   […], "domains": [ … ] }`. A domain is `[host, rank|null, avgArticleLength|null, languageIndexes[],
-  groups[], summary|null]`: upstream's tuple without the country slot, with category and language indexes
+  groups[], summary|null]`: one tuple per host, with category and language indexes
   pointing into the file's own `categories` and `languages`, so a file is self-contained. Each domain
   belongs to exactly one country, so no domain is duplicated. Largest: United States, 4,682 domains,
   325 KB gzipped; median 2.5 KB.
@@ -72,12 +77,12 @@ fields as nullable.
   drive the scope picker with counts and to know which country files hold a language, without opening any
   of them.
 - `ABOUT.txt`, `LICENSE.txt` — copied from upstream `Sources/`.
-- `SOURCE` — the upstream URL, the commit SHA of `docs/data/catalog.js`, and the fetch date.
+- `SOURCE` — the upstream URL and commit SHA of the YAML, its commit date, and the fetch date.
 - `snapshot.php` — see below.
 
 The **country key** is the ISO 3166-1 alpha-2 code, upper-case (`DE`, `CI`, `CG`). Upstream names are
-CLDR English region names, so the snapshot script maps them through ICU (`Locale::getDisplayRegion`): 230
-of 231 match exactly, and the one exception is overridden in the script (`St. Helena` → `SH`). The script
+CLDR English region names, so the snapshot script maps them through ICU (`Locale::getDisplayRegion`): 231
+of 232 match exactly, and the one exception is overridden in the script (`St. Helena` → `SH`). The script
 fails if any name stays unmapped or two names map to one code. Files are named by code
 (`countries/DE.json.gz`). The frontend shows country names in the user's UI language through
 `Intl.DisplayNames` (type `region`), falling back to upstream's English name from `index.json`.
@@ -85,7 +90,7 @@ fails if any name stays unmapped or two names map to one code. Files are named b
 ### Snapshot script
 
 `backend/resources/feed-directory/snapshot.php` is a standalone PHP CLI script, run by hand when someone
-decides to update the data: it downloads `catalog.js`, `ABOUT.txt` and `LICENSE.txt`, unwraps the JSON,
+decides to update the data: it downloads the YAML, `ABOUT.txt` and `LICENSE.txt`, parses the YAML with `symfony/yaml`,
 writes the per-country files and `index.json`, and rewrites `SOURCE`. It is not wired into deploys, CI,
 the worker or the console; the result is reviewed and committed like any other change. It runs once to
 produce the first snapshot.
