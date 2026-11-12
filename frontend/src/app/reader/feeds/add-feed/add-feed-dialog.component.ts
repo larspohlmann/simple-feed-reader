@@ -12,10 +12,18 @@ import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-pan
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.component';
-import { parseProblem } from '../../../core/problem';
+import { toggled } from '../../../core/toggled-set';
+import { translationOf } from '../../../core/i18n/translation-of';
+import { parseProblem, problemText } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
-import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../../models';
+import {
+  FeedCandidate,
+  FeedPreview,
+  NoPreviewReason,
+  ScrapeFailureReason,
+  SubscriptionDto,
+} from '../../models';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
 type PreviewState =
@@ -23,25 +31,14 @@ type PreviewState =
   | { status: 'error'; message?: string }
   | { status: 'ok'; preview: FeedPreview };
 
-const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
-  ['blocked', 'failBlocked'],
-  ['throttled', 'failThrottled'],
-  ['unreachable', 'failUnreachable'],
-  ['not_scrapable', 'failNotScrapable'],
-  ['too_large', 'failTooLarge'],
-]);
+function inlinePreviews(candidates: FeedCandidate[]): Record<string, PreviewState> {
+  const previews: Record<string, PreviewState> = {};
+  for (const candidate of candidates) {
+    if (candidate.preview) previews[candidate.url] = { status: 'ok', preview: candidate.preview };
+  }
+  return previews;
+}
 
-/** Formats whose candidate URL is the source itself: the backend stores it as offered. */
-const VERBATIM_FORMATS: ReadonlySet<string> = new Set(['scraped', 'wp-json', 'mixcloud-api']);
-
-const FORMAT_LABELS = new Map<string, string>([
-  ['rss', 'RSS'],
-  ['atom', 'Atom'],
-  ['wp-json', 'WordPress'],
-  ['mixcloud-api', 'Mixcloud'],
-]);
-
-/** Opens the dialog with `url` filled in, waiting for the user's tags and Add. */
 export interface AddFeedDialogData {
   url: string;
 }
@@ -73,7 +70,7 @@ export class AddFeedDialogComponent implements OnInit {
   private readonly i18n = inject(TranslocoService);
 
   readonly form = this.fb.group({ url: [this.data?.url ?? '', [Validators.required]] });
-  readonly loading = signal(false);
+  readonly busy = signal<'discovering' | 'subscribing' | null>(null);
   readonly error = signal<string | null>(null);
   readonly candidates = signal<FeedCandidate[]>([]);
   readonly searched = signal(false);
@@ -81,7 +78,7 @@ export class AddFeedDialogComponent implements OnInit {
   readonly failureReason = signal<ScrapeFailureReason | null>(null);
   /** Tags to apply to the new feed; they persist across a search so picking a
    *  discovered candidate carries the same selection through. */
-  readonly checked = signal<Set<number>>(new Set());
+  readonly checked = signal<ReadonlySet<number>>(new Set());
   /** The one candidate card currently showing its preview rows, by URL. */
   readonly expanded = signal<string | null>(null);
 
@@ -97,15 +94,7 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   toggleTag(id: number): void {
-    this.checked.update((set) => {
-      const next = new Set(set);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    this.checked.update((set) => toggled(set, id));
   }
 
   okPreview(state: PreviewState | undefined): FeedPreview | null {
@@ -132,33 +121,44 @@ export class AddFeedDialogComponent implements OnInit {
     return this.i18n.translate(`dialog.addFeed.${key}`);
   }
 
-  /** Human label for a candidate's feed syntax; capitalizes any future value
-   *  (e.g. a scraped/generated feed) rather than assuming only RSS/Atom. */
-  formatLabel(format: string): string {
-    const label = FORMAT_LABELS.get(format);
-    if (label) return label;
-    return format ? format.charAt(0).toUpperCase() + format.slice(1) : 'Feed';
+  /** An unrecognized future reason falls back to a generic line rather than an empty warning box. */
+  failureText(reason: ScrapeFailureReason): string {
+    return this.translatedOr(`dialog.addFeed.failure.${reason}`, 'dialog.addFeed.failGeneric');
   }
 
-  /**
-   * Why a scrape-fallback failure means this URL is a dead end, in words. The
-   * default keeps an unrecognized future reason from rendering an empty warning
-   * box — the backend's reason set is open, so this build may not know them all.
-   */
-  failureText(reason: ScrapeFailureReason): string {
-    const key = FAILURE_TEXT_KEYS.get(reason) ?? 'failGeneric';
-    return this.i18n.translate(`dialog.addFeed.${key}`);
+  noPreviewText(reason: NoPreviewReason): string {
+    return this.translatedOr(
+      `dialog.addFeed.noPreview.${reason}`,
+      'dialog.addFeed.noPreviewGeneric',
+    );
+  }
+
+  private translatedOr(key: string, fallbackKey: string): string {
+    return translationOf(this.i18n, key) ?? this.i18n.translate(fallbackKey);
   }
 
   submit(): void {
-    if (this.form.invalid) return;
-    this.subscribe(this.form.getRawValue().url);
+    if (this.form.invalid || this.busy()) return;
+    this.discover(this.form.getRawValue().url);
   }
 
   pick(candidate: FeedCandidate): void {
-    const format = this.storedFormat(candidate);
-    const passesTitle = format !== undefined && format !== 'scraped';
-    this.subscribe(candidate.url, format, passesTitle ? (candidate.title ?? undefined) : undefined);
+    this.busy.set('subscribing');
+    this.error.set(null);
+    this.api
+      .subscribe({
+        url: candidate.url,
+        format: candidate.storedFormat,
+        tagIds: [...this.checked()],
+        title: candidate.storedFormat ? (candidate.title ?? undefined) : undefined,
+      })
+      .subscribe({
+        next: (response) => this.ref.close(response.subscription),
+        error: (error: HttpErrorResponse) => {
+          this.busy.set(null);
+          this.showError(error);
+        },
+      });
   }
 
   /** Expands or collapses a candidate's preview rows; expanding fetches the
@@ -172,69 +172,56 @@ export class AddFeedDialogComponent implements OnInit {
     this.ensurePreview(candidate);
   }
 
-  private storedFormat(candidate: FeedCandidate): string | undefined {
-    return VERBATIM_FORMATS.has(candidate.format) ? candidate.format : undefined;
-  }
-
-  private subscribe(url: string, format?: string, title?: string): void {
-    this.loading.set(true);
+  private discover(url: string): void {
+    this.busy.set('discovering');
     this.error.set(null);
     this.searched.set(false);
     this.failureReason.set(null);
-    // Start every attempt visually clean — a previous search's candidate cards
-    // must not linger above a new result, least of all above a scrape-failure
-    // warning, where offering subscribe would contradict it.
     this.candidates.set([]);
     this.previews.set({});
-    this.api.subscribe({ url, format, tagIds: [...this.checked()], title }).subscribe({
+    this.expanded.set(null);
+    this.api.discoverFeeds(url).subscribe({
       next: (response) => {
-        this.loading.set(false);
-        if ('subscription' in response) this.ref.close(response.subscription);
-        else if (response.scrapeFailureReason) {
+        this.busy.set(null);
+        if (response.scrapeFailureReason) {
           this.failureReason.set(response.scrapeFailureReason);
-          this.searched.set(false);
-        } else {
-          this.candidates.set(response.candidates);
-          this.searched.set(true);
-          this.previews.set({});
-          this.expanded.set(null);
-          // Open the first candidate immediately so a preview is always in view
-          // — discovery orders native feeds first, so the leading card is the
-          // recommended one. The rest stay collapsed, fetching lazily.
-          if (response.candidates.length > 0) {
-            this.toggle(response.candidates[0]);
-          }
+          return;
         }
+        this.showCandidates(response.candidates);
       },
       error: (error: HttpErrorResponse) => {
-        this.loading.set(false);
-        const problem = parseProblem(error);
-        this.error.set(problem.errors?.['url']?.[0] ?? problem.detail ?? problem.title);
+        this.busy.set(null);
+        this.showError(error);
       },
     });
+  }
+
+  /** Opens the first card so a preview is always in view: discovery orders native feeds first. */
+  private showCandidates(candidates: FeedCandidate[]): void {
+    this.previews.set(inlinePreviews(candidates));
+    this.candidates.set(candidates);
+    this.searched.set(true);
+    const first = candidates[0];
+    if (first && !first.noPreviewReason) this.toggle(first);
+  }
+
+  private showError(error: HttpErrorResponse): void {
+    this.error.set(problemText(parseProblem(error), this.i18n));
   }
 
   /** Fetches a candidate's preview once, the first time it is expanded — a
    *  second expand of the same candidate must not re-fetch. */
   private ensurePreview(candidate: FeedCandidate): void {
-    if (this.previews()[candidate.url]) {
-      return;
-    }
-    this.previews.update((previewsByUrl) => ({
-      ...previewsByUrl,
-      [candidate.url]: { status: 'loading' },
-    }));
-    this.api.previewFeed(candidate.url, this.storedFormat(candidate)).subscribe({
-      next: (response) =>
-        this.previews.update((previewsByUrl) => ({
-          ...previewsByUrl,
-          [candidate.url]: { status: 'ok', preview: response.feed },
-        })),
+    if (this.previews()[candidate.url]) return;
+    this.setPreview(candidate.url, { status: 'loading' });
+    this.api.previewFeed(candidate.url, candidate.storedFormat).subscribe({
+      next: (response) => this.setPreview(candidate.url, { status: 'ok', preview: response.feed }),
       error: (error: HttpErrorResponse) =>
-        this.previews.update((previewsByUrl) => ({
-          ...previewsByUrl,
-          [candidate.url]: { status: 'error', message: parseProblem(error).detail },
-        })),
+        this.setPreview(candidate.url, { status: 'error', message: parseProblem(error).detail }),
     });
+  }
+
+  private setPreview(url: string, state: PreviewState): void {
+    this.previews.update((previewsByUrl) => ({ ...previewsByUrl, [url]: state }));
   }
 }

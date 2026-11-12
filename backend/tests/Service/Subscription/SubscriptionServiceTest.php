@@ -15,10 +15,12 @@ use App\Enum\SourceFormat;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Discovery\Exception\SiteThrottledException;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\Factory\FeedFactory;
@@ -27,6 +29,7 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\FirstFetchRecorder;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
@@ -41,8 +44,10 @@ use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\RecordingFeedDiscovery;
 use App\Tests\Support\RecordingSubscribeRoute;
 use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\ThrottledFeedDiscovery;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
@@ -143,9 +148,7 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $outcome = $service->subscribe($user, 'https://example.com/feed');
 
-        self::assertNotNull($outcome->subscription);
         self::assertSame('https://example.com/feed.xml', $outcome->subscription->getFeed()->getUrl());
-        self::assertSame([], $outcome->candidates);
     }
 
     /** Discovery's document is stored as the feed's first fetch: its entries arrive and the feed gets a schedule. */
@@ -158,9 +161,8 @@ final class SubscriptionServiceTest extends DbTestCase
             'Discovered Feed',
         )));
 
-        $feed = $service->subscribe($user, 'https://example.com/feed')->subscription?->getFeed();
+        $feed = $service->subscribe($user, 'https://example.com/feed')->subscription->getFeed();
 
-        self::assertNotNull($feed);
         self::assertSame('Discovered Feed', $feed->getTitle());
         $entries = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]);
         self::assertCount(1, $entries);
@@ -218,7 +220,6 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $outcome = $service->subscribe($user, 'https://example.com/feed.xml');
 
-        self::assertNotNull($outcome->subscription);
         self::assertSame('xml', $feed->getSourceFormat());
     }
 
@@ -269,7 +270,6 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $outcome = $service->subscribe($user, 'https://example.com/feed.xml', 'scraped');
 
-        self::assertNotNull($outcome->subscription);
         self::assertSame('xml', $feed->getSourceFormat());
     }
 
@@ -288,7 +288,6 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $outcome = $service->subscribe($user, 'https://example.com/feed', null, [$news, $tech]);
 
-        self::assertNotNull($outcome->subscription);
         $tagNames = array_map(
             static fn (Tag $tag): string => $tag->getName(),
             $outcome->subscription->getTags()->toArray(),
@@ -310,7 +309,6 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $outcome = $service->subscribe($user, 'https://example.com/page', 'scraped', [$blog]);
 
-        self::assertNotNull($outcome->subscription);
         self::assertSame(
             ['Blogs'],
             array_map(static fn (Tag $tag): string => $tag->getName(), $outcome->subscription->getTags()->toArray()),
@@ -334,8 +332,6 @@ final class SubscriptionServiceTest extends DbTestCase
         $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $outcome = $service->subscribe($user, 'https://example.com/blog', SourceFormat::SCRAPED);
-
-        self::assertNotNull($outcome->subscription);
     }
 
     public function testWpJsonSubscribeStoresTheFormatVerbatimWithoutDiscovery(): void
@@ -348,7 +344,6 @@ final class SubscriptionServiceTest extends DbTestCase
             . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
         $outcome = $service->subscribe($user, $url, SourceFormat::WP_JSON, [], 'WordPress Example');
 
-        self::assertNotNull($outcome->subscription);
         self::assertSame($url, $outcome->subscription->getFeed()->getUrl());
         self::assertSame(SourceFormat::WP_JSON, $outcome->subscription->getFeed()->getSourceFormat());
         self::assertSame('WordPress Example', $outcome->subscription->getFeed()->getTitle());
@@ -362,7 +357,6 @@ final class SubscriptionServiceTest extends DbTestCase
         $outcome = $service->subscribe($user, 'https://wp.example/wp-json/wp/v2/posts', SourceFormat::WP_JSON);
         $this->entityManager->clear();
 
-        self::assertNotNull($outcome->subscription);
         self::assertInstanceOf(
             Subscription::class,
             $this->entityManager->find(Subscription::class, $outcome->subscription->requireId()),
@@ -384,7 +378,6 @@ final class SubscriptionServiceTest extends DbTestCase
             'WordPress Example',
         );
 
-        self::assertNotNull($outcome->subscription);
         self::assertNull($shared->getTitle());
     }
 
@@ -402,7 +395,6 @@ final class SubscriptionServiceTest extends DbTestCase
             'Scraped Example',
         );
 
-        self::assertNotNull($outcome->subscription);
         self::assertNull($outcome->subscription->getFeed()->getTitle());
     }
 
@@ -419,8 +411,6 @@ final class SubscriptionServiceTest extends DbTestCase
                 . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url',
             SourceFormat::WP_JSON,
         );
-
-        self::assertNotNull($outcome->subscription);
     }
 
     public function testNewlyTaggedFeedAppendsWithinTheTag(): void
@@ -441,30 +431,52 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $outcome = $service->subscribe($user, 'https://fresh.example.com/feed', null, [$tag]);
 
-        self::assertNotNull($outcome->subscription);
         $joins = $outcome->subscription->getSubscriptionTags();
         self::assertCount(1, $joins);
         self::assertSame(1, $joins[0]->getPosition());
     }
 
-    public function testHtmlPageReturnsCandidatesWithoutSubscribing(): void
+    public function testAPageIsRefusedAsNotAFeed(): void
     {
         $user = $this->factory()->create('cand@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([
+            new FeedCandidateModel('https://example.com/rss.xml', 'Main', 'rss'),
+        ])));
 
-        $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResultModel::candidates([
-                new FeedCandidateModel('https://example.com/rss.xml', 'Main', 'rss'),
-            ])),
-        );
+        $this->expectException(NotAFeedException::class);
+        $service->subscribe($user, 'https://example.com/blog');
+    }
 
-        $outcome = $service->subscribe($user, 'https://example.com/blog');
+    public function testAnUnreachableAddressIsRefusedAsNotAFeed(): void
+    {
+        $user = $this->factory()->create('unreachable@example.com');
+        $service = $this->service($this->discoveryReturning(
+            FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Unreachable),
+        ));
 
-        self::assertNull($outcome->subscription);
-        self::assertCount(1, $outcome->candidates);
+        $this->expectException(NotAFeedException::class);
+        $service->subscribe($user, 'https://gone.example.com/feed');
+    }
 
-        /** @var \App\Repository\SubscriptionRepository $repository */
-        $repository = $this->entityManager->getRepository(Subscription::class);
-        self::assertSame(0, $repository->countForUser($user->requireId()));
+    public function testAThrottledSiteIsReportedAsThrottledNotAsNotAFeed(): void
+    {
+        $user = $this->factory()->create('throttled@example.com');
+        $service = $this->service(new ThrottledFeedDiscovery());
+
+        $this->expectException(SiteThrottledException::class);
+        $service->subscribe($user, 'https://slow.example.com/feed');
+    }
+
+    public function testSubscribeNeverAsksDiscoveryForAScrapedFallback(): void
+    {
+        $user = $this->factory()->create('no-scrape-ask@example.com');
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $this->entityManager->flush();
+        $discovery = new RecordingFeedDiscovery($this->discovered('https://example.com/feed.xml'));
+
+        $this->service($discovery)->subscribe($user, 'https://example.com/feed');
+
+        self::assertSame([ScrapeFallback::Disabled], $discovery->fallbacks);
     }
 
     public function testPerUserCapOverridesTheGlobalDefault(): void
@@ -494,7 +506,11 @@ final class SubscriptionServiceTest extends DbTestCase
     {
         $user = $this->factory()->create('routed@example.com');
         $tag = new Tag($user, 'People');
-        $taken = SubscribeOutcomeModel::candidates([]);
+        $taken = SubscribeOutcomeModel::subscribed(new Subscription(
+            $user,
+            new Feed('https://bsky.app/profile/rusty-17.bsky.social'),
+            new \DateTimeImmutable('2026-06-01T00:00:00Z'),
+        ));
         $route = new RecordingSubscribeRoute($taken);
 
         $outcome = $this->service($this->discoveryNeverAsked(), [$route])
@@ -516,18 +532,17 @@ final class SubscriptionServiceTest extends DbTestCase
             [new RecordingSubscribeRoute(null)],
         )->subscribe($user, 'https://example.com/feed');
 
-        self::assertSame('https://example.com/feed.xml', $outcome->subscription?->getFeed()->getUrl());
+        self::assertSame('https://example.com/feed.xml', $outcome->subscription->getFeed()->getUrl());
     }
 
     public function testAVerbatimFormatNeverAsksTheRoutes(): void
     {
         $user = $this->factory()->create('verbatim-route@example.com');
-        $route = new RecordingSubscribeRoute(SubscribeOutcomeModel::candidates([]));
+        $route = new RecordingSubscribeRoute(null);
 
         $outcome = $this->service($this->discoveryNeverAsked(), [$route])
             ->subscribe($user, 'https://example.com/wp-json/wp/v2/posts', SourceFormat::WP_JSON);
 
-        self::assertNotNull($outcome->subscription);
         self::assertSame([], $route->requests);
     }
 
@@ -550,7 +565,6 @@ final class SubscriptionServiceTest extends DbTestCase
         $outcome = $this->service($this->discoveryNeverAsked())
             ->subscribe($user, $url, $format, [], 'Candidate Title');
 
-        self::assertNotNull($outcome->subscription);
         $feed = $outcome->subscription->getFeed();
         self::assertSame($url, $feed->getUrl());
         self::assertSame($format, $feed->getSourceFormat());

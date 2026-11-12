@@ -20,7 +20,7 @@
       <!-- Discovery reads the page then guesses feed addresses it never mentioned,
            so a search can run for seconds. This is the one live report of that —
            the footer button only disables, which reads as a stalled dialog. -->
-      @if (loading()) {
+      @if (busy() === 'discovering') {
         <p class="searching" role="status">
           <app-spinner [size]="16" [decorative]="true" />
           {{ 'dialog.addFeed.searching' | transloco }}
@@ -40,22 +40,26 @@
                     'dialog.addFeed.items' | transloco: { count: p.itemCount }
                   }}</span>
                 }
-                <button
-                  type="button"
-                  class="preview-toggle"
-                  (click)="toggle(c)"
-                  [attr.aria-expanded]="expanded() === c.url"
-                  [attr.aria-controls]="'preview-' + $index"
-                >
-                  {{
-                    (expanded() === c.url ? 'dialog.addFeed.hidePreview' : 'dialog.addFeed.preview')
-                      | transloco
-                  }}
-                  <span class="chev" aria-hidden="true"></span>
-                </button>
+                @if (!c.noPreviewReason) {
+                  <button
+                    type="button"
+                    class="preview-toggle"
+                    (click)="toggle(c)"
+                    [attr.aria-expanded]="expanded() === c.url"
+                    [attr.aria-controls]="'preview-' + $index"
+                  >
+                    {{
+                      (expanded() === c.url
+                        ? 'dialog.addFeed.hidePreview'
+                        : 'dialog.addFeed.preview'
+                      ) | transloco
+                    }}
+                    <span class="chev" aria-hidden="true"></span>
+                  </button>
+                }
               </div>
               <div class="badges">
-                <span class="badge format">{{ formatLabel(c.format) }}</span>
+                <span class="badge format">{{ c.label }}</span>
                 @if (p) {
                   <span class="badge">{{ contentLabel(p.content) }}</span>
                   <span class="badge">{{
@@ -71,6 +75,9 @@
               </div>
               @if (c.format === 'scraped') {
                 <p class="muted scraped-hint">{{ 'dialog.addFeed.scrapedHint' | transloco }}</p>
+              }
+              @if (c.noPreviewReason; as reason) {
+                <p class="muted no-preview">{{ noPreviewText(reason) }}</p>
               }
               @if (expanded() === c.url) {
                 <div [id]="'preview-' + $index">
@@ -97,7 +104,12 @@
                   }
                 </div>
               }
-              <button type="button" class="subscribe primary" (click)="pick(c)">
+              <button
+                type="button"
+                class="subscribe primary"
+                [disabled]="busy() !== null"
+                (click)="pick(c)"
+              >
                 {{ 'dialog.addFeed.subscribe' | transloco }}
               </button>
             </li>
@@ -112,10 +124,10 @@
       }
     </div>
 
-    <a footer class="browse" routerLink="/discover" (click)="ref.close()">
+    <a footerStart class="browse" routerLink="/discover" (click)="ref.close()">
       {{ 'discover.browseCatalog' | transloco }}
     </a>
-    <a footer class="browse" routerLink="/settings/feed-directory" (click)="ref.close()">
+    <a footerStart class="browse" routerLink="/settings/feed-directory" (click)="ref.close()">
       {{ 'settings.feedDirectory.browse' | transloco }}
     </a>
     <app-button footer (click)="ref.close()">
@@ -125,8 +137,8 @@
          so the footer submit would be a confusing third action — it only makes
          sense before a search. A scrape failure hides it until the URL changes. -->
     @if (!candidates().length && !failureReason()) {
-      <app-button footer type="submit" variant="primary" [disabled]="loading()">
-        {{ 'common.add' | transloco }}
+      <app-button footer type="submit" variant="primary" [disabled]="busy() !== null">
+        {{ 'dialog.addFeed.preview' | transloco }}
       </app-button>
     }
   </app-overlay-panel>

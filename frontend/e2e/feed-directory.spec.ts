@@ -32,12 +32,37 @@ const GERMANY: FeedDirectoryCountryFile = {
   ],
 };
 
+const ALPHA_PREVIEW = {
+  title: 'Alpha fixture feed',
+  itemCount: 1,
+  content: 'summary',
+  hasImages: false,
+  items: [
+    {
+      title: 'Alpha headline',
+      url: 'https://alpha.fixtures.invalid/1',
+      author: null,
+      summary: 'A short snippet.',
+      imageUrl: null,
+      imageWidth: null,
+      imageHeight: null,
+      publishedAt: '2026-11-01T10:00:00+00:00',
+    },
+  ],
+};
+
 /**
  * The spec owns everything the section reads or writes: the catalog files, the
- * subscribed set, the account's scope (read and saved) and the subscription POST
- * the add-feed dialog sends on Add. Nothing reaches the real account.
+ * subscribed set, the account's scope (read and saved) and the discover and
+ * subscription POSTs the add-feed dialog sends. Nothing reaches the real account.
  */
-async function stubFeedDirectory(page: Page): Promise<{ subscribePosts: string[] }> {
+async function stubFeedDirectory(page: Page): Promise<{
+  discoverPosts: string[];
+  previewPosts: string[];
+  subscribePosts: string[];
+}> {
+  const discoverPosts: string[] = [];
+  const previewPosts: string[] = [];
   const subscribePosts: string[] = [];
   let account: Record<string, unknown> | null = null;
 
@@ -70,6 +95,26 @@ async function stubFeedDirectory(page: Page): Promise<{ subscribePosts: string[]
     const scope = route.request().postDataJSON() as unknown;
     return route.fulfill({ json: withScope(scope) });
   });
+  await page.route('**/api/feeds/discover', (route) => {
+    discoverPosts.push((route.request().postDataJSON() as { url: string }).url);
+    return route.fulfill({
+      json: {
+        candidates: [
+          {
+            url: ALPHA_FEED,
+            title: 'Alpha fixture feed',
+            format: 'rss',
+            label: 'RSS',
+            preview: ALPHA_PREVIEW,
+          },
+        ],
+      },
+    });
+  });
+  await page.route('**/api/feeds/preview', (route) => {
+    previewPosts.push((route.request().postDataJSON() as { url: string }).url);
+    return route.fulfill({ status: 500 });
+  });
   await page.route(
     (url) => url.pathname === '/api/subscriptions',
     async (route) => {
@@ -82,13 +127,13 @@ async function stubFeedDirectory(page: Page): Promise<{ subscribePosts: string[]
       });
     },
   );
-  return { subscribePosts };
+  return { discoverPosts, previewPosts, subscribePosts };
 }
 
 test('pick a scope, find a site and start subscribing from the feed directory', async ({
   page,
 }) => {
-  const { subscribePosts } = await stubFeedDirectory(page);
+  const { discoverPosts, previewPosts, subscribePosts } = await stubFeedDirectory(page);
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
@@ -120,5 +165,11 @@ test('pick a scope, find a site and start subscribing from the feed directory', 
   expect(subscribePosts).toEqual([]);
 
   await dialog.locator('button[type=submit]').click();
+  await expect.poll(() => discoverPosts).toEqual([ALPHA_FEED]);
+  await expect(dialog.locator('app-preview-entry-row')).toHaveCount(1);
+  expect(subscribePosts).toEqual([]);
+
+  await dialog.locator('.card .subscribe').click();
   await expect.poll(() => subscribePosts).toEqual([ALPHA_FEED]);
+  expect(previewPosts).toEqual([]);
 });

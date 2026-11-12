@@ -8,6 +8,7 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\FeedNamespace;
+use App\Service\Parser\Model\FeedSyntax;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -84,6 +85,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             $feed->text($this->descriptionElement()),
             FeedImageExtractor::fromAtomFeed($feed),
             $entries,
+            syntax: FeedSyntax::Atom,
         )->withShowArtwork(PodcastArtwork::of($root));
     }
 

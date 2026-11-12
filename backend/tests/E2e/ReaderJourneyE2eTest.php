@@ -8,6 +8,7 @@ use App\Tests\E2e\Support\E2eTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -39,18 +40,18 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     private static ?string $adminJwt = null;
 
     /**
-     * Posting a homepage answers 200 with well-formed candidates: its advertised feeds, or the 'scraped' fallback the
-     * seeded admin is offered. An empty list is the site's doing and skips; a scrapeFailureReason is checked if given.
+     * Discovering a homepage answers 200 with well-formed candidates: its advertised feeds, or the 'scraped' fallback
+     * the seeded admin is offered. An empty list is the site's doing and skips; a scrapeFailureReason is checked.
      */
     #[DataProvider('provideDomains')]
     public function testHomepageFeedDiscovery(string $label, string $homepage): void
     {
         $this->skipUnlessReachable($label, $homepage);
 
-        $response = $this->postJson('/api/subscriptions', ['url' => $homepage], $this->adminJwt());
+        $response = $this->postJson('/api/feeds/discover', ['url' => $homepage], $this->adminJwt());
         $status = $response->getStatusCode();
 
-        self::assertSame(200, $status, $label . ' homepage discovery should return 200 candidates');
+        self::assertSame(Response::HTTP_OK, $status, $label . ' homepage discovery should return 200 candidates');
 
         if ([] === ($response->toArray()['candidates'] ?? [])) {
             $reason = $response->toArray()['scrapeFailureReason'] ?? null;
@@ -112,7 +113,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 $unresolved[] = $label . ' subscribe 422';
                 continue;
             }
-            self::assertSame(201, $created->getStatusCode(), $label . ' concrete feed URL should subscribe (201)');
+            self::assertSame(
+                Response::HTTP_CREATED,
+                $created->getStatusCode(),
+                $label . ' concrete feed URL should subscribe (201)',
+            );
 
             $subscription = $created->toArray()['subscription'] ?? null;
             self::assertIsArray($subscription, 'a 201 must carry the created subscription');
@@ -225,7 +230,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             // (a) Force it unread: EntryState rows outlive the subscription, so an earlier run may have left it read.
             $unreadResponse = $this->patchState($token, $entryId, ['isHidden' => false]);
-            self::assertSame(200, $unreadResponse->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $unreadResponse->getStatusCode());
             $unreadState = $unreadResponse->toArray()['state'] ?? null;
             self::assertIsArray($unreadState);
             self::assertFalse($unreadState['isHidden'] ?? null, 'PATCH isHidden=false clears the read flag');
@@ -237,7 +242,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             // (b) Mark it READ → it drops out of the unread view.
             $readResponse = $this->patchState($token, $entryId, ['isHidden' => true]);
-            self::assertSame(200, $readResponse->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $readResponse->getStatusCode());
             $readState = $readResponse->toArray()['state'] ?? null;
             self::assertIsArray($readState);
             self::assertTrue($readState['isHidden'] ?? null, 'PATCH isHidden=true sets the read flag');
@@ -262,7 +267,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 'scope' => 'all',
                 'until' => (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM),
             ], $token);
-            self::assertSame(204, $markRead->getStatusCode());
+            self::assertSame(Response::HTTP_NO_CONTENT, $markRead->getStatusCode());
             self::assertSame(
                 [],
                 $this->entryIds($token, '/api/entries?view=unread'),
@@ -274,7 +279,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $export = $this->http->request('GET', '/api/opml/export', [
                 'headers' => ['Authorization' => 'Bearer ' . $token],
             ]);
-            self::assertSame(200, $export->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $export->getStatusCode());
 
             $opml = $export->getContent();
             self::assertStringContainsString('xmlUrl=', $opml, 'export should list the subscribed feed');
@@ -283,7 +288,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'text/x-opml'],
                 'body' => $opml,
             ]);
-            self::assertSame(200, $reimport->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $reimport->getStatusCode());
             self::assertGreaterThanOrEqual(
                 1,
                 $reimport->toArray()['alreadySubscribed'] ?? 0,
@@ -320,7 +325,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
         for ($attempt = 0; $attempt < 6; ++$attempt) {
             $response = $this->postJson('/api/refresh', [], $token);
-            self::assertSame(200, $response->getStatusCode(), 'refresh always answers 200');
+            self::assertSame(Response::HTTP_OK, $response->getStatusCode(), 'refresh always answers 200');
 
             $report = $response->toArray();
             self::assertNotSame(
@@ -363,7 +368,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 continue;
             }
 
-            $response = $this->postJson('/api/subscriptions', ['url' => $homepage], $token);
+            $response = $this->postJson('/api/feeds/discover', ['url' => $homepage], $token);
             if (200 !== $response->getStatusCode()) {
                 continue;
             }
@@ -377,8 +382,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 $url = is_array($candidate) ? ($candidate['url'] ?? null) : null;
                 if (is_array($candidate) && is_string($url) && '' !== trim($url)) {
                     // Carry the format: a 'scraped' candidate's URL is the homepage
-                    // itself, so re-posting it without the format just re-runs
-                    // discovery (200 candidates) instead of subscribing (201).
+                    // itself, so re-posting it without the format is refused as
+                    // not a feed (422) instead of subscribing (201).
                     $format = $candidate['format'] ?? null;
                     $found[] = [$label, $url, is_string($format) ? $format : null];
                 }
@@ -427,7 +432,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             'headers' => ['Authorization' => 'Bearer ' . $token],
         ]);
 
-        self::assertSame(204, $response->getStatusCode(), 'deleting a subscription should return 204');
+        self::assertSame(
+            Response::HTTP_NO_CONTENT,
+            $response->getStatusCode(),
+            'deleting a subscription should return 204',
+        );
     }
 
     /**

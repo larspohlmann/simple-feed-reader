@@ -18,6 +18,7 @@ final readonly class ParsedFeedModel
         public ?string $imageUrl,
         public array $entries,
         public ?string $generator = null,
+        public ?FeedSyntax $syntax = null,
     ) {
     }
 

@@ -7,6 +7,7 @@ namespace App\Tests\Http\Problem;
 use App\EventListener\ApiExceptionListener;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Subscription\Exception\NotAFeedException;
 use App\Exception\InvalidCredentialsException;
 use App\Exception\InvalidSelectionException;
 use App\Repository\Exception\RecordNotFoundException;
@@ -37,6 +38,7 @@ use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
 use App\Service\Comments\Exception\NoCommentsFeedException;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Discovery\Exception\SiteThrottledException;
 use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Passkey\Exception\AssertionRejectedException;
@@ -342,6 +344,24 @@ final class ProblemContractTest extends KernelTestCase
         yield 'already subscribed' => [
             new AlreadySubscribedException(),
             ['type' => 'already_subscribed', 'title' => 'Already subscribed to that feed', 'status' => 409],
+        ];
+        yield 'not a feed' => [
+            new NotAFeedException(),
+            [
+                'type' => 'not_a_feed',
+                'title' => 'Not a feed',
+                'status' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                'detail' => 'No feed could be read at that address.',
+            ],
+        ];
+        yield 'site throttled' => [
+            new SiteThrottledException(),
+            [
+                'type' => 'feed_throttled',
+                'title' => 'Site is rationing requests',
+                'status' => Response::HTTP_SERVICE_UNAVAILABLE,
+                'detail' => 'The site asked us to slow down. Try again in a minute.',
+            ],
         ];
         yield 'tag name taken' => [
             new TagNameTakenException(),

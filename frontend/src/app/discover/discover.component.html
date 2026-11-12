@@ -104,14 +104,14 @@
     </main>
   </div>
 
-  <span footer class="cnt" aria-live="polite">
+  <span footerStart class="cnt" aria-live="polite">
     {{
       summaryKey()
         | transloco
           : { feeds: selection.selectedCount(), categories: selection.selectedCategoryCount() }
     }}
   </span>
-  <app-button footer class="skip" variant="ghost" (click)="onSkip()">
+  <app-button footer variant="ghost" (click)="onSkip()">
     {{ 'discover.skip' | transloco }}
   </app-button>
   <app-button

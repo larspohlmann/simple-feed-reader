@@ -969,15 +969,21 @@
       "preview": "Vorschau",
       "hidePreview": "Vorschau ausblenden",
       "previewUnavailable": "Vorschau nicht verfügbar",
+      "noPreview": {
+        "hidden_profile": "Dieses Profil sehen nur angemeldete Bluesky-Nutzer, daher gibt es keine Vorschau. Abonniert wird es über dein verbundenes Bluesky-Konto.",
+        "connect_bluesky_account": "Dieses Profil sehen nur angemeldete Bluesky-Nutzer, daher gibt es keine Vorschau. Verbinde unter Einstellungen → Social Media ein Bluesky-Konto, um es zu abonnieren."
+      },
+      "noPreviewGeneric": "Für diesen Feed gibt es keine Vorschau.",
       "contentFull": "Volltext",
       "contentSummary": "Nur Zusammenfassung",
       "contentTitles": "Nur Titel",
-      "formatFeed": "Feed",
-      "failBlocked": "Diese Seite blockiert automatisierten Zugriff – sie kann nicht abonniert werden.",
-      "failThrottled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut.",
-      "failUnreachable": "Die Seite konnte nicht erreicht werden – prüfe die Adresse oder versuche es später erneut.",
-      "failNotScrapable": "Diese Seite bietet keinen Feed und es konnte keine Artikelliste erkannt werden – sie kann nicht abonniert werden.",
-      "failTooLarge": "Dieser Feed ist größer, als der Reader annimmt – er kann nicht abonniert werden.",
+      "failure": {
+        "blocked": "Diese Seite blockiert automatisierten Zugriff – sie kann nicht abonniert werden.",
+        "throttled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut.",
+        "unreachable": "Die Seite konnte nicht erreicht werden – prüfe die Adresse oder versuche es später erneut.",
+        "not_scrapable": "Diese Seite bietet keinen Feed und es konnte keine Artikelliste erkannt werden – sie kann nicht abonniert werden.",
+        "too_large": "Dieser Feed ist größer, als der Reader annimmt – er kann nicht abonniert werden."
+      },
       "failGeneric": "Diese Seite kann nicht abonniert werden."
     },
     "tagForm": {
@@ -1007,6 +1013,10 @@
       "saving": "Wird gespeichert…",
       "save": "Speichern"
     }
+  },
+  "problem": {
+    "not_a_feed": "Unter dieser Adresse ließ sich kein Feed lesen.",
+    "feed_throttled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut."
   },
   "manage": {
     "unsubscribeTitle": "Abbestellen",

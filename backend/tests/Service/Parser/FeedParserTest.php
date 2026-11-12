@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\Model\FeedSyntax;
 use App\Tests\Support\FeedFormatParsers;
 use App\Tests\Support\ReadsFixtures;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class FeedParserTest extends TestCase
@@ -456,5 +458,20 @@ final class FeedParserTest extends TestCase
 
         self::assertSame('Grüße', $feed->title);
         self::assertSame('Äpfel', $feed->entries[0]->headline->text);
+    }
+
+    /** @return iterable<string, array{string, FeedSyntax}> */
+    public static function dialects(): iterable
+    {
+        yield 'RSS 2.0' => ['feeds/rss2-basic.xml', FeedSyntax::Rss];
+        yield 'RSS 1.0' => ['feeds/rss1-basic.xml', FeedSyntax::Rss];
+        yield 'Atom 1.0' => ['feeds/atom-basic.xml', FeedSyntax::Atom];
+        yield 'Atom 0.3' => ['feeds/atom-03-basic.xml', FeedSyntax::Atom];
+    }
+
+    #[DataProvider('dialects')]
+    public function testADocumentNamesTheDialectItWasReadAs(string $fixture, FeedSyntax $syntax): void
+    {
+        self::assertSame($syntax, FeedFormatParsers::feed($this->fixture($fixture))->syntax);
     }
 }

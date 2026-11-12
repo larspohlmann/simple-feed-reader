@@ -9,9 +9,11 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\SavedPosts\SavedPostRescue;
+use App\Service\Subscription\Exception\NotAFeedException;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use App\Service\Subscription\Model\SubscribeRequestModel;
 use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
@@ -68,9 +70,7 @@ final readonly class SubscriptionService
     }
 
     /**
-     * @param list<Tag> $tags the user-owned tags to attach to a newly created
-     *                        subscription; ignored when the outcome is a
-     *                        candidate list rather than a subscription
+     * @param list<Tag> $tags the user-owned tags to attach to the new subscription
      */
     public function subscribe(
         User $user,
@@ -88,12 +88,8 @@ final readonly class SubscriptionService
             return $routed;
         }
 
-        $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
-
-        $discovered = $result->feed;
-        if (null === $discovered) {
-            return SubscribeOutcomeModel::candidates($result->candidates, $result->scrapeFailureReason);
-        }
+        $result = $this->discovery->discover($url, ScrapeFallback::Disabled);
+        $discovered = $result->feed ?? throw new NotAFeedException();
 
         $subscription = $this->creator->create($user, $discovered->url, SourceFormat::XML, $tags);
         $unread = $this->firstFetch->record($subscription->getFeed(), $discovered);

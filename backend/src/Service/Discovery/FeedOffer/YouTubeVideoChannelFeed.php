@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery\FeedOffer;
 
 use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Parser\Model\FeedSyntax;
 use App\Service\Url\Support\YouTubeUrl;
 
 /** Offers the channel feed of the video a YouTube watch page plays; the page names the channel but no feed. */
@@ -25,7 +26,11 @@ final readonly class YouTubeVideoChannelFeed implements FeedOfferInterface
             return null;
         }
 
-        return new FeedCandidateModel(sprintf(self::CHANNEL_FEED, $match[1]), $this->channelName($body), 'atom');
+        return new FeedCandidateModel(
+            sprintf(self::CHANNEL_FEED, $match[1]),
+            $this->channelName($body),
+            FeedSyntax::Atom->value,
+        );
     }
 
     private function channelName(string $body): ?string

@@ -13,9 +13,9 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Subscription } from 'rxjs';
-import { parseProblem, problemMessage } from '../../../core/problem';
+import { parseProblem, problemText } from '../../../core/problem';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../../shared/field/field.component';
@@ -69,6 +69,7 @@ export class ComposerDialogComponent {
   protected readonly ref = inject<DialogRef<SentPost>>(DialogRef);
   protected readonly target = inject<PostTargetDto>(DIALOG_DATA);
   private readonly api = inject(SocialPostApi);
+  private readonly i18n = inject(TranslocoService);
   private readonly idempotencyKey = randomUuid();
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
@@ -138,7 +139,7 @@ export class ComposerDialogComponent {
     this.loading = this.api.composer(this.target, this.accountId()).subscribe({
       next: (context) => this.adopt(context),
       error: (error: HttpErrorResponse) =>
-        this.state.set({ status: 'failed', message: problemMessage(parseProblem(error)) }),
+        this.state.set({ status: 'failed', message: problemText(parseProblem(error), this.i18n) }),
     });
   }
 
@@ -183,7 +184,7 @@ export class ComposerDialogComponent {
       error: (error: HttpErrorResponse) => {
         this.sending.set(false);
         this.ref.disableClose = false;
-        this.sendError.set(problemMessage(parseProblem(error)));
+        this.sendError.set(problemText(parseProblem(error), this.i18n));
       },
     });
   }

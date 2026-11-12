@@ -14,6 +14,7 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Preview\Exception\FeedPreviewException;
+use App\Service\Preview\Factory\FeedPreviewFactory;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\Refresh\FeedBodyParser;
 use App\Tests\DbTestCase;
@@ -37,7 +38,12 @@ final class FeedPreviewServiceTest extends DbTestCase
         $readingSettings = $this->entityManager->getRepository(ReadingSettings::class);
         self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
 
-        return new FeedPreviewService($fetcher, $bodyParser, new ScrapeFallbackPolicy($readingSettings));
+        return new FeedPreviewService(
+            $fetcher,
+            $bodyParser,
+            new ScrapeFallbackPolicy($readingSettings),
+            new FeedPreviewFactory(),
+        );
     }
 
     private function user(): User
@@ -102,7 +108,7 @@ final class FeedPreviewServiceTest extends DbTestCase
             XML;
     }
 
-    public function testFullTextFeedYieldsFullVerdictAndCapsDisplayedItemsAtThree(): void
+    public function testFullTextFeedYieldsFullVerdictAndShowsEveryEntryUpToTheCap(): void
     {
         $items = '';
         for ($index = 1; $index <= 9; ++$index) {
@@ -123,8 +129,7 @@ final class FeedPreviewServiceTest extends DbTestCase
         self::assertSame('Example Feed', $preview->title);
         self::assertSame(9, $preview->itemCount);
         self::assertSame('full', $preview->content);
-        // The verdict reads eight entries, but the dialog only shows three.
-        self::assertCount(3, $preview->items);
+        self::assertCount(9, $preview->items);
         self::assertSame('Post 1', $preview->items[0]->title);
     }
 

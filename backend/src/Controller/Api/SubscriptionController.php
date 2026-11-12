@@ -14,7 +14,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SubscriptionSet;
 use App\Enum\TrendingWindow;
-use App\Http\SubscribeOutcomeJson;
 use App\Http\SubscriptionCountsJson;
 use App\Http\SubscriptionJson;
 use App\Repository\SocialAccountRepository;
@@ -76,10 +75,6 @@ final readonly class SubscriptionController
     {
         $tags = $this->tags->findAllByIdsForUser($user->requireId(), $request->tagIds);
         $outcome = $this->subscriber->subscribe($user, $request->url, $request->format, $tags, $request->title);
-
-        if (null === $outcome->subscription) {
-            return new JsonResponse(SubscribeOutcomeJson::candidates($outcome));
-        }
 
         return new JsonResponse(
             ['subscription' => SubscriptionJson::one($outcome->subscription, $outcome->unreadCount)],

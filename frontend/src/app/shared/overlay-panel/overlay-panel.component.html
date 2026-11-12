@@ -20,6 +20,9 @@
     <ng-content />
   </div>
   <footer class="footer">
+    <div class="footer-start">
+      <ng-content select="[footerStart]" />
+    </div>
     <ng-content select="[footer]" />
   </footer>
 </section>

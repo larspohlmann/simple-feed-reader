@@ -101,6 +101,17 @@ describe('ReaderApi', () => {
     testRequest.flush({ subscription: {} });
   });
 
+  it('POSTs the address to discover, and only the address', () => {
+    let result: unknown;
+    api.discoverFeeds('https://example.com').subscribe((response) => (result = response));
+    const testRequest = ctrl.expectOne('https://api.test/api/feeds/discover');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({ url: 'https://example.com' });
+    testRequest.flush({ candidates: [] });
+
+    expect(result).toEqual({ candidates: [] });
+  });
+
   it('includes tagIds in the subscribe body only when tags are selected', () => {
     api.subscribe({ url: 'https://example.com/feed', tagIds: [2, 5] }).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');

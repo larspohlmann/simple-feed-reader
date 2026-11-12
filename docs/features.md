@@ -75,8 +75,9 @@ screenshots; the [gallery](screenshots.md) has more.
     parentheses to group terms.
   - Mastodon has no `||`, so each alternative runs as its own search, at most 8
     per query. Mastodon search needs full-text search on your instance.
-- Preview a feed before you subscribe: recent items, whether entries carry
-  images, and whether the feed delivers full text or only summaries.
+- Preview every feed before you subscribe: Add shows the feeds it finds at an
+  address with their recent items, whether entries carry images, and whether
+  the feed delivers full text or only summaries.
 - Import and export your subscriptions as OPML.
 - Feed health is visible in the settings — active, erroring, or gone, with a
   plain-language explanation.

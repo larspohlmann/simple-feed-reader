@@ -9,20 +9,19 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Subscription\SubscriptionService;
-use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 final class SubscriptionControllerTest extends ApiTestCase
 {
-    use ScrapedFixtures;
-
     /**
      * Swaps the SSRF-guarded fetcher for a stub, so the real FeedDiscovery runs (it is final and cannot be stubbed).
      * Call it before the request that fetches, while the kernel is still on its first boot.
@@ -345,18 +344,33 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertSame('Mine', $tags[0]['name']);
     }
 
-    public function testSubscribeToHtmlReturnsCandidates(): void
+    public function testSubscribingToAThrottledSiteIsServiceUnavailable(): void
+    {
+        $client = self::createClient();
+        $headers = $this->bearerFor($this->factory()->create('slow@example.com'));
+        $stub = new StubFeedFetcher();
+        $stub->willThrow('https://slow.example.com/feed', new FeedThrottledException('429', 90));
+        $this->installFetcher($stub);
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://slow.example.com/feed'], \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertRejected($client, Response::HTTP_SERVICE_UNAVAILABLE);
+        self::assertSame('feed_throttled', $this->payload($client)['type'] ?? null);
+    }
+
+    public function testSubscribingAPageIsRefusedAsNotAFeed(): void
     {
         $client = self::createClient();
         $headers = $this->bearerFor($this->factory()->create('html@example.com'));
-
         $html = /** @lang TEXT */ '<!doctype html><html><head>'
             . '<link rel="alternate" type="application/rss+xml" href="/rss.xml">'
             . '</head><body>x</body></html>';
-
         $stub = new StubFeedFetcher();
-        // finalUrl carries a trailing slash so the relative /rss.xml resolves to
-        // the site root, not to a nested path.
         $stub->willReturn(
             'https://example.com/blog',
             FetchResponseModel::fetched(
@@ -375,111 +389,12 @@ final class SubscriptionControllerTest extends ApiTestCase
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['url' => 'https://example.com/blog'], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(200);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertIsArray($body['candidates']);
-        $candidate = $body['candidates'][0];
-        self::assertIsArray($candidate);
-        self::assertSame('https://example.com/rss.xml', $candidate['url']);
-        self::assertSame('rss', $candidate['format']);
-        // The reason key appears only when discovery actually failed.
-        self::assertArrayNotHasKey('scrapeFailureReason', $body);
-    }
 
-    public function testSubscribeToFeedlessPageOffersScrapedCandidate(): void
-    {
-        $client = self::createClient();
-        $headers = $this->bearerFor($this->factory()->create('feedless@example.com'));
-        $this->enableScrapeFallback('feedless@example.com');
-
-        $stub = new StubFeedFetcher();
-        $stub->willReturn(
-            'https://www.heise.de',
-            FetchResponseModel::fetched(
-                'https://www.heise.de/',
-                permanentRedirect: false,
-                body: $this->scrapedFixture('heise-2026-07-23.html'),
-                etag: null,
-                lastModified: null,
-            ),
-        );
-        $this->installFetcher($stub);
-
-        $client->request(
-            'POST',
-            '/api/subscriptions',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['url' => 'https://www.heise.de'], \JSON_THROW_ON_ERROR),
-        );
-        self::assertResponseStatusCodeSame(200);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        // Full-shape pin (like the blocked test): exactly one candidate with
-        // exactly these keys, the page's og:site_name as title, and no
-        // scrapeFailureReason key on success.
-        self::assertSame(
-            ['candidates' => [
-                ['url' => 'https://www.heise.de/', 'title' => 'heise online', 'format' => 'scraped'],
-            ]],
-            $body,
-        );
-    }
-
-    /**
-     * The preference stays at its default, off: a wiring that never consults ScrapeFallbackPolicy would still offer
-     * the scraped candidate.
-     */
-    public function testAFeedlessPageOffersNoScrapedCandidateWhenTheFallbackIsDisabled(): void
-    {
-        $client = self::createClient();
-        $headers = $this->bearerFor($this->factory()->create('feedlessdisabled@example.com'));
-
-        $stub = new StubFeedFetcher();
-        $stub->willReturn(
-            'https://www.heise.de',
-            FetchResponseModel::fetched(
-                'https://www.heise.de/',
-                permanentRedirect: false,
-                body: $this->scrapedFixture('heise-2026-07-23.html'),
-                etag: null,
-                lastModified: null,
-            ),
-        );
-        $this->installFetcher($stub);
-
-        $client->request(
-            'POST',
-            '/api/subscriptions',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['url' => 'https://www.heise.de'], \JSON_THROW_ON_ERROR),
-        );
-        self::assertResponseStatusCodeSame(200);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        // 'not_scrapable' here would leak the disabled feature into the UI —
-        // the key must be entirely absent, not merely null.
-        self::assertSame(['candidates' => []], $body);
-    }
-
-    public function testBlockedSiteReportsReasonWithEmptyCandidates(): void
-    {
-        $client = self::createClient();
-        $headers = $this->bearerFor($this->factory()->create('blocked@example.com'));
-
-        $stub = new StubFeedFetcher();
-        $stub->willThrow('https://forbidden.example.com', new FeedUnreachableException('x: HTTP 403', 403));
-        $this->installFetcher($stub);
-
-        $client->request(
-            'POST',
-            '/api/subscriptions',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['url' => 'https://forbidden.example.com'], \JSON_THROW_ON_ERROR),
-        );
-        // Still a 200: "this site refused us" is an expected outcome the
-        // subscribe dialog renders, not an API error.
-        self::assertResponseStatusCodeSame(200);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertSame(['candidates' => [], 'scrapeFailureReason' => 'blocked'], $body);
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $problem = $this->payload($client);
+        self::assertSame('not_a_feed', $problem['type'] ?? null);
+        self::assertSame('No feed could be read at that address.', $problem['detail'] ?? null);
+        self::assertSame(0, $this->entityManager()->getRepository(Subscription::class)->count([]));
     }
 
     public function testScrapedFormatSubscribeSkipsDiscoveryAndMarksTheFeed(): void

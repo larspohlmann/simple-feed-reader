@@ -969,15 +969,21 @@
       "preview": "Preview",
       "hidePreview": "Hide preview",
       "previewUnavailable": "Preview unavailable",
+      "noPreview": {
+        "hidden_profile": "Only logged-in Bluesky users can see this profile, so there is no preview. Subscribing reads it through your connected Bluesky account.",
+        "connect_bluesky_account": "Only logged-in Bluesky users can see this profile, so there is no preview. Connect a Bluesky account in Settings → Social Media to subscribe."
+      },
+      "noPreviewGeneric": "No preview is available for this feed.",
       "contentFull": "Full text",
       "contentSummary": "Summary only",
       "contentTitles": "Titles only",
-      "formatFeed": "Feed",
-      "failBlocked": "This site blocks automated access — it can't be subscribed.",
-      "failThrottled": "This site is limiting requests right now — wait a moment and try again.",
-      "failUnreachable": "The site couldn't be reached — check the address or try again later.",
-      "failNotScrapable": "This page offers no feed and no article list could be detected — it can't be subscribed.",
-      "failTooLarge": "This feed is larger than the reader accepts — it can't be subscribed.",
+      "failure": {
+        "blocked": "This site blocks automated access — it can't be subscribed.",
+        "throttled": "This site is limiting requests right now — wait a moment and try again.",
+        "unreachable": "The site couldn't be reached — check the address or try again later.",
+        "not_scrapable": "This page offers no feed and no article list could be detected — it can't be subscribed.",
+        "too_large": "This feed is larger than the reader accepts — it can't be subscribed."
+      },
       "failGeneric": "This page can't be subscribed."
     },
     "tagForm": {
@@ -1007,6 +1013,10 @@
       "saving": "Saving…",
       "save": "Save"
     }
+  },
+  "problem": {
+    "not_a_feed": "No feed could be read at that address.",
+    "feed_throttled": "This site is limiting requests right now — wait a moment and try again."
   },
   "manage": {
     "unsubscribeTitle": "Unsubscribe",

@@ -5,6 +5,7 @@ import { SocialNetworkName } from '../../core/social-network';
 import { ReaderApi } from '../reader-api';
 import { sameMembers } from './same-members';
 import { SubscriptionsStore } from './subscriptions.store';
+import { toggled } from '../../core/toggled-set';
 
 /** The social networks the user keeps out of For you; every other network's feeds count. */
 @Injectable({ providedIn: 'root' })
@@ -30,12 +31,7 @@ export class ForYouNetworksStore {
 
   toggleNetwork(network: SocialNetworkName): void {
     const excluded = this.excludedNetworks().has(network);
-    this.stored.update((current) => {
-      const next = new Set(current);
-      if (excluded) next.delete(network);
-      else next.add(network);
-      return next;
-    });
+    this.stored.update((current) => toggled(current, network));
     const write = excluded
       ? this.api.includeNetworkInForYou(network)
       : this.api.excludeNetworkFromForYou(network);
