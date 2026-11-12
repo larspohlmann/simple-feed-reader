@@ -15,20 +15,17 @@ const CANDIDATES = [
 /**
  * Discovery with several candidates cannot be produced against a live host —
  * UrlGuard (SSRF protection) refuses locally served fixtures and real sites are
- * non-deterministic — so the two feed endpoints are stubbed. Everything under
+ * non-deterministic — so the feed endpoints are stubbed. Everything under
  * test here is client-side layout, so nothing of value is mocked away: the real
  * component, the real stylesheet and a real browser doing real layout.
  */
 async function stubDiscovery(page: Page): Promise<void> {
+  await page.route('**/api/feeds/discover', (route) =>
+    route.fulfill({ status: 200, json: { candidates: CANDIDATES } }),
+  );
   await page.route('**/api/subscriptions', async (route) => {
     if (route.request().method() !== 'POST') return route.fallback();
-    const url = (route.request().postDataJSON() as { url: string }).url;
-    // The site URL discovers candidates; a candidate's own URL subscribes.
-    const body =
-      url === SITE
-        ? { candidates: CANDIDATES }
-        : { subscription: { id: 4242, title: 'News only' } };
-    await route.fulfill({ status: url === SITE ? 200 : 201, json: body });
+    await route.fulfill({ status: 201, json: { subscription: { id: 4242, title: 'News only' } } });
   });
 
   await page.route('**/api/feeds/preview', async (route) => {
