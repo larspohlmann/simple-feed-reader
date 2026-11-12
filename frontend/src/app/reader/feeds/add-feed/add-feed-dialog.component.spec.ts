@@ -86,7 +86,7 @@ describe('AddFeedDialogComponent', () => {
 
     subscribeButton(fixture).click();
     const subscribeRequest = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(subscribeRequest.request.body).toEqual({ url: 'https://f/rss', title: 'RSS' });
+    expect(subscribeRequest.request.body).toEqual({ url: 'https://f/rss' });
     subscribeRequest.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 9 });
   });
@@ -239,6 +239,29 @@ describe('AddFeedDialogComponent', () => {
     ).toContain('Apple Podcasts');
   });
 
+  it('leaves a long title out of a candidate that stores no format, which the backend would reject', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://example.com/feed' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [
+        {
+          url: 'https://f/rss',
+          title: 'x'.repeat(600),
+          format: 'rss',
+          label: 'RSS',
+          preview: RSS_PREVIEW,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    subscribeButton(fixture).click();
+    const subscribeRequest = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subscribeRequest.request.body).toEqual({ url: 'https://f/rss' });
+    subscribeRequest.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
+  });
+
   it('discovers with the address alone and subscribes the card with the checked tags', () => {
     const fixture = create();
     expect((fixture.nativeElement as HTMLElement).querySelector('app-tag-picker')).not.toBeNull();
@@ -266,7 +289,6 @@ describe('AddFeedDialogComponent', () => {
     const subscribe = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subscribe.request.body).toEqual({
       url: 'https://example.com/feed',
-      title: 'Feed',
       tagIds: [2],
     });
     subscribe.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
@@ -293,7 +315,6 @@ describe('AddFeedDialogComponent', () => {
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subTestRequest.request.body).toEqual({
       url: 'https://f/rss',
-      title: 'RSS',
       tagIds: [1],
     });
     subTestRequest.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
@@ -367,7 +388,7 @@ describe('AddFeedDialogComponent', () => {
 
     (rssCard.querySelector('.subscribe') as HTMLButtonElement).click();
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(subTestRequest.request.body).toEqual({ url: 'https://f/rss', title: 'RSS' });
+    expect(subTestRequest.request.body).toEqual({ url: 'https://f/rss' });
     subTestRequest.flush({ subscription: { id: 3 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 3 });
   });
@@ -857,7 +878,6 @@ describe('AddFeedDialogComponent', () => {
     const subscribe = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subscribe.request.body).toEqual({
       url: 'https://bsky.app/profile/rusty-17.bsky.social',
-      title: 'Rusty',
     });
     subscribe.flush(
       {
@@ -955,7 +975,6 @@ describe('AddFeedDialogComponent', () => {
     const request = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(request.request.body).toEqual({
       url: 'https://dropped.example/feed',
-      title: 'Dropped',
       tagIds: [2],
     });
     request.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });

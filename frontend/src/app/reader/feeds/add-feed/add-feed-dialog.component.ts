@@ -149,7 +149,7 @@ export class AddFeedDialogComponent implements OnInit {
         url: candidate.url,
         format: candidate.storedFormat,
         tagIds: [...this.checked()],
-        title: candidate.title ?? undefined,
+        title: candidate.storedFormat ? (candidate.title ?? undefined) : undefined,
       })
       .subscribe({
         next: (response) => this.ref.close(response.subscription),
