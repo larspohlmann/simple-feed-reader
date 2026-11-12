@@ -113,7 +113,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 $unresolved[] = $label . ' subscribe 422';
                 continue;
             }
-            self::assertSame(201, $created->getStatusCode(), $label . ' concrete feed URL should subscribe (201)');
+            self::assertSame(
+                Response::HTTP_CREATED,
+                $created->getStatusCode(),
+                $label . ' concrete feed URL should subscribe (201)',
+            );
 
             $subscription = $created->toArray()['subscription'] ?? null;
             self::assertIsArray($subscription, 'a 201 must carry the created subscription');
@@ -226,7 +230,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             // (a) Force it unread: EntryState rows outlive the subscription, so an earlier run may have left it read.
             $unreadResponse = $this->patchState($token, $entryId, ['isHidden' => false]);
-            self::assertSame(200, $unreadResponse->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $unreadResponse->getStatusCode());
             $unreadState = $unreadResponse->toArray()['state'] ?? null;
             self::assertIsArray($unreadState);
             self::assertFalse($unreadState['isHidden'] ?? null, 'PATCH isHidden=false clears the read flag');
@@ -238,7 +242,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             // (b) Mark it READ → it drops out of the unread view.
             $readResponse = $this->patchState($token, $entryId, ['isHidden' => true]);
-            self::assertSame(200, $readResponse->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $readResponse->getStatusCode());
             $readState = $readResponse->toArray()['state'] ?? null;
             self::assertIsArray($readState);
             self::assertTrue($readState['isHidden'] ?? null, 'PATCH isHidden=true sets the read flag');
@@ -263,7 +267,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 'scope' => 'all',
                 'until' => (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM),
             ], $token);
-            self::assertSame(204, $markRead->getStatusCode());
+            self::assertSame(Response::HTTP_NO_CONTENT, $markRead->getStatusCode());
             self::assertSame(
                 [],
                 $this->entryIds($token, '/api/entries?view=unread'),
@@ -275,7 +279,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $export = $this->http->request('GET', '/api/opml/export', [
                 'headers' => ['Authorization' => 'Bearer ' . $token],
             ]);
-            self::assertSame(200, $export->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $export->getStatusCode());
 
             $opml = $export->getContent();
             self::assertStringContainsString('xmlUrl=', $opml, 'export should list the subscribed feed');
@@ -284,7 +288,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'text/x-opml'],
                 'body' => $opml,
             ]);
-            self::assertSame(200, $reimport->getStatusCode());
+            self::assertSame(Response::HTTP_OK, $reimport->getStatusCode());
             self::assertGreaterThanOrEqual(
                 1,
                 $reimport->toArray()['alreadySubscribed'] ?? 0,
@@ -321,7 +325,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
         for ($attempt = 0; $attempt < 6; ++$attempt) {
             $response = $this->postJson('/api/refresh', [], $token);
-            self::assertSame(200, $response->getStatusCode(), 'refresh always answers 200');
+            self::assertSame(Response::HTTP_OK, $response->getStatusCode(), 'refresh always answers 200');
 
             $report = $response->toArray();
             self::assertNotSame(
@@ -428,7 +432,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             'headers' => ['Authorization' => 'Bearer ' . $token],
         ]);
 
-        self::assertSame(204, $response->getStatusCode(), 'deleting a subscription should return 204');
+        self::assertSame(
+            Response::HTTP_NO_CONTENT,
+            $response->getStatusCode(),
+            'deleting a subscription should return 204',
+        );
     }
 
     /**
