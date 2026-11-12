@@ -14,6 +14,7 @@ import { ScopedMarkReadTarget } from './query/mark-read-target';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import { CommentsResponse } from './entry-comment';
 import {
+  DiscoverResult,
   EntriesPage,
   EntryQuery,
   EntryStatePatch,
@@ -75,6 +76,10 @@ export class ReaderApi {
     if (tagIds && tagIds.length > 0) body.tagIds = tagIds;
     if (title) body.title = title;
     return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, body);
+  }
+
+  discoverFeeds(url: string): Observable<DiscoverResult> {
+    return this.http.post<DiscoverResult>(`${this.base}/api/feeds/discover`, { url });
   }
 
   /** A single entry by id, full body included — lets a deep link open an entry

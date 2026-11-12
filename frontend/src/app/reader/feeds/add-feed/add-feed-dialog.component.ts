@@ -15,7 +15,13 @@ import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.
 import { parseProblem } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
-import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../../models';
+import {
+  FeedCandidate,
+  FeedPreview,
+  NoPreviewReason,
+  ScrapeFailureReason,
+  SubscriptionDto,
+} from '../../models';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
 type PreviewState =
@@ -31,6 +37,11 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
   ['too_large', 'failTooLarge'],
 ]);
 
+const NO_PREVIEW_TEXT_KEYS = new Map<NoPreviewReason, string>([
+  ['hidden_profile', 'noPreviewHiddenProfile'],
+  ['connect_bluesky_account', 'noPreviewConnectBluesky'],
+]);
+
 /** Formats whose candidate URL is the source itself: the backend stores it as offered. */
 const VERBATIM_FORMATS: ReadonlySet<string> = new Set(['scraped', 'wp-json', 'mixcloud-api']);
 
@@ -39,7 +50,16 @@ const FORMAT_LABELS = new Map<string, string>([
   ['atom', 'Atom'],
   ['wp-json', 'WordPress'],
   ['mixcloud-api', 'Mixcloud'],
+  ['bluesky-api', 'Bluesky'],
 ]);
+
+function inlinePreviews(candidates: FeedCandidate[]): Record<string, PreviewState> {
+  const previews: Record<string, PreviewState> = {};
+  for (const candidate of candidates) {
+    if (candidate.preview) previews[candidate.url] = { status: 'ok', preview: candidate.preview };
+  }
+  return previews;
+}
 
 /** Opens the dialog with `url` filled in, waiting for the user's tags and Add. */
 export interface AddFeedDialogData {
@@ -84,6 +104,7 @@ export class AddFeedDialogComponent implements OnInit {
   readonly checked = signal<Set<number>>(new Set());
   /** The one candidate card currently showing its preview rows, by URL. */
   readonly expanded = signal<string | null>(null);
+  readonly subscribing = signal(false);
 
   constructor() {
     // A scrape failure is about the URL as typed; editing it starts over.
@@ -150,15 +171,35 @@ export class AddFeedDialogComponent implements OnInit {
     return this.i18n.translate(`dialog.addFeed.${key}`);
   }
 
+  noPreviewText(reason: NoPreviewReason): string {
+    const key = NO_PREVIEW_TEXT_KEYS.get(reason) ?? 'noPreviewGeneric';
+    return this.i18n.translate(`dialog.addFeed.${key}`);
+  }
+
   submit(): void {
     if (this.form.invalid) return;
-    this.subscribe(this.form.getRawValue().url);
+    this.discover(this.form.getRawValue().url);
   }
 
   pick(candidate: FeedCandidate): void {
     const format = this.storedFormat(candidate);
     const passesTitle = format !== undefined && format !== 'scraped';
-    this.subscribe(candidate.url, format, passesTitle ? (candidate.title ?? undefined) : undefined);
+    this.subscribing.set(true);
+    this.error.set(null);
+    this.api
+      .subscribe({
+        url: candidate.url,
+        format,
+        tagIds: [...this.checked()],
+        title: passesTitle ? (candidate.title ?? undefined) : undefined,
+      })
+      .subscribe({
+        next: (response) => this.ref.close(response.subscription),
+        error: (error: HttpErrorResponse) => {
+          this.subscribing.set(false);
+          this.showError(error);
+        },
+      });
   }
 
   /** Expands or collapses a candidate's preview rows; expanding fetches the
@@ -176,42 +217,44 @@ export class AddFeedDialogComponent implements OnInit {
     return VERBATIM_FORMATS.has(candidate.format) ? candidate.format : undefined;
   }
 
-  private subscribe(url: string, format?: string, title?: string): void {
+  private discover(url: string): void {
     this.loading.set(true);
     this.error.set(null);
     this.searched.set(false);
     this.failureReason.set(null);
-    // Start every attempt visually clean — a previous search's candidate cards
-    // must not linger above a new result, least of all above a scrape-failure
-    // warning, where offering subscribe would contradict it.
+    // Start every search visually clean — a previous search's cards must not
+    // linger above a new result, least of all above a scrape-failure warning.
     this.candidates.set([]);
     this.previews.set({});
-    this.api.subscribe({ url, format, tagIds: [...this.checked()], title }).subscribe({
+    this.expanded.set(null);
+    this.api.discoverFeeds(url).subscribe({
       next: (response) => {
         this.loading.set(false);
-        if ('subscription' in response) this.ref.close(response.subscription);
-        else if (response.scrapeFailureReason) {
+        if (response.scrapeFailureReason) {
           this.failureReason.set(response.scrapeFailureReason);
-          this.searched.set(false);
-        } else {
-          this.candidates.set(response.candidates);
-          this.searched.set(true);
-          this.previews.set({});
-          this.expanded.set(null);
-          // Open the first candidate immediately so a preview is always in view
-          // — discovery orders native feeds first, so the leading card is the
-          // recommended one. The rest stay collapsed, fetching lazily.
-          if (response.candidates.length > 0) {
-            this.toggle(response.candidates[0]);
-          }
+          return;
         }
+        this.showCandidates(response.candidates);
       },
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
-        const problem = parseProblem(error);
-        this.error.set(problem.errors?.['url']?.[0] ?? problem.detail ?? problem.title);
+        this.showError(error);
       },
     });
+  }
+
+  /** Opens the first card so a preview is always in view: discovery orders native feeds first. */
+  private showCandidates(candidates: FeedCandidate[]): void {
+    this.previews.set(inlinePreviews(candidates));
+    this.candidates.set(candidates);
+    this.searched.set(true);
+    const first = candidates[0];
+    if (first && !first.noPreviewReason) this.toggle(first);
+  }
+
+  private showError(error: HttpErrorResponse): void {
+    const problem = parseProblem(error);
+    this.error.set(problem.errors?.['url']?.[0] ?? problem.detail ?? problem.title);
   }
 
   /** Fetches a candidate's preview once, the first time it is expanded — a

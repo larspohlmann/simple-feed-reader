@@ -330,13 +330,17 @@ export interface RefreshReport {
   pruned: number;
 }
 
-/** A candidate feed returned by POST /subscriptions when the URL was an HTML page. */
+export type NoPreviewReason = 'hidden_profile' | 'connect_bluesky_account' | (string & {});
+
+/** A feed offered by POST /feeds/discover. */
 export interface FeedCandidate {
   url: string;
   title: string | null;
-  /** The feed's syntax: 'rss' or 'atom' today; a future HTML-scraper source
-   *  will add its own value, so this stays an open string. */
+  /** 'rss', 'atom' or 'feed', else a source format such as 'scraped' or 'bluesky-api'; an open set. */
   format: string;
+  /** Discovery already read this feed, so the card needs no preview request. */
+  preview?: FeedPreview;
+  noPreviewReason?: NoPreviewReason;
 }
 
 export interface FeedPreviewItem {
@@ -367,11 +371,15 @@ export interface FeedPreview {
 export type ScrapeFailureReason =
   'blocked' | 'throttled' | 'unreachable' | 'not_scrapable' | 'too_large' | (string & {});
 
-/** POST /subscriptions returns either the created subscription or a candidate
- *  list; an empty list may carry the reason the scraper fallback gave up. */
-export type SubscribeResult =
-  | { subscription: SubscriptionDto }
-  | { candidates: FeedCandidate[]; scrapeFailureReason?: ScrapeFailureReason };
+/** POST /feeds/discover; an empty list may carry the reason the scraper fallback gave up. */
+export interface DiscoverResult {
+  candidates: FeedCandidate[];
+  scrapeFailureReason?: ScrapeFailureReason;
+}
+
+export interface SubscribeResult {
+  subscription: SubscriptionDto;
+}
 
 export type EntryView =
   | 'all'

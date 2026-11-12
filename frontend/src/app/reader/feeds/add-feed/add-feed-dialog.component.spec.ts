@@ -11,6 +11,31 @@ import { makeTag } from '../../testing/tag.factory';
 import { makeSubscription } from '../../testing/subscription.factory';
 
 describe('AddFeedDialogComponent', () => {
+  const RSS_PREVIEW = {
+    title: 'RSS Feed',
+    itemCount: 1,
+    content: 'full',
+    hasImages: false,
+    items: [
+      {
+        title: 'Inline headline',
+        url: 'https://f/rss/1',
+        publishedAt: null,
+        author: null,
+        summary: 'snip',
+        imageUrl: null,
+        imageWidth: null,
+        imageHeight: null,
+      },
+    ],
+  };
+
+  function subscribeButton(fixture: { nativeElement: unknown }): HTMLButtonElement {
+    return (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '.card .subscribe',
+    )!;
+  }
+
   let ctrl: HttpTestingController;
   const close = jest.fn();
   let dialogData: AddFeedDialogData | undefined;
@@ -47,14 +72,66 @@ describe('AddFeedDialogComponent', () => {
     return fixture;
   }
 
-  it('closes with the created subscription', () => {
+  it('subscribes the picked card and closes with the created subscription', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://example.com/feed' });
     fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+    });
+    fixture.detectChanges();
+    expect(close).not.toHaveBeenCalled();
+
+    subscribeButton(fixture).click();
     ctrl
       .expectOne('https://api.test/api/subscriptions')
       .flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 9 });
+  });
+
+  it("shows a discovered feed's inline preview without asking for one", () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+    });
+    fixture.detectChanges();
+
+    ctrl.expectNone((request) => request.url.endsWith('/api/feeds/preview'));
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.textContent).toContain('Inline headline');
+    expect(card.querySelector('.count')?.textContent).toContain('1 items');
+  });
+
+  it('keeps the cards and shows the refusal in the field when a card cannot be subscribed', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://f/rss' });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss', preview: RSS_PREVIEW }],
+    });
+    fixture.detectChanges();
+
+    subscribeButton(fixture).click();
+    fixture.detectChanges();
+    expect(subscribeButton(fixture).disabled).toBe(true);
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(
+      {
+        type: 'not_a_feed',
+        title: 'Not a feed',
+        status: 422,
+        detail:
+          'No feed could be read at that address. POST it to /api/feeds/discover for the feeds it offers.',
+      },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.error()).toContain('No feed could be read');
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.card').length).toBe(1);
+    expect(subscribeButton(fixture).disabled).toBe(false);
+    expect(close).not.toHaveBeenCalled();
   });
 
   it('links to the feed directory and closes on the way there', () => {
@@ -72,7 +149,7 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith();
   });
 
-  it('reports that a search is running while the subscribe is in flight', () => {
+  it('reports that a search is running while discover is in flight', () => {
     // Discovery can spend seconds probing a site that hides its feed, so the
     // dialog has to say something is happening — a disabled button does not.
     const fixture = create();
@@ -85,7 +162,7 @@ describe('AddFeedDialogComponent', () => {
     expect(element.querySelector('.searching app-spinner')).toBeTruthy();
 
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [], scrapeFailureReason: 'blocked' });
     fixture.detectChanges();
     expect(element.querySelector('.searching')).toBeNull();
@@ -99,7 +176,7 @@ describe('AddFeedDialogComponent', () => {
     ).toContain('Apple Podcasts');
   });
 
-  it('renders the tag picker and sends the checked tag ids on submit', () => {
+  it('discovers with the address alone and subscribes the card with the checked tags', () => {
     const fixture = create();
     expect((fixture.nativeElement as HTMLElement).querySelector('app-tag-picker')).not.toBeNull();
 
@@ -107,9 +184,19 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://example.com/feed' });
     fixture.componentInstance.submit();
 
-    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(testRequest.request.body).toEqual({ url: 'https://example.com/feed', tagIds: [2] });
-    testRequest.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
+    const discover = ctrl.expectOne('https://api.test/api/feeds/discover');
+    expect(discover.request.body).toEqual({ url: 'https://example.com/feed' });
+    discover.flush({
+      candidates: [
+        { url: 'https://example.com/feed', title: 'Feed', format: 'rss', preview: RSS_PREVIEW },
+      ],
+    });
+    fixture.detectChanges();
+
+    subscribeButton(fixture).click();
+    const subscribe = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subscribe.request.body).toEqual({ url: 'https://example.com/feed', tagIds: [2] });
+    subscribe.flush({ subscription: { id: 9 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 9 });
   });
 
@@ -121,7 +208,7 @@ describe('AddFeedDialogComponent', () => {
     // The first POST resolves to a SINGLE candidate, which auto-expands and
     // previews — tags are not applied yet, they ride along on the follow-up pick.
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
     ctrl
       .expectOne((request) => request.url.endsWith('/api/feeds/preview'))
@@ -142,7 +229,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://example.com' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }],
     });
     fixture.detectChanges();
@@ -214,7 +301,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://example.com' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [
         { url: 'https://f/rss', title: 'RSS', format: 'rss' },
         { url: 'https://f/atom', title: 'ATOM', format: 'atom' },
@@ -299,7 +386,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://page.example/' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
     });
     fixture.detectChanges();
@@ -332,7 +419,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://www.mixcloud.com/johndigweed/' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [
         {
           url: 'https://api.mixcloud.com/johndigweed/cloudcasts/',
@@ -379,7 +466,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://wp.example/' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [
         { url: 'https://wp.example/wp-json/wp/v2/posts', title: 'WP', format: 'wp-json' },
       ],
@@ -416,7 +503,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://page.example/' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
     });
     fixture.detectChanges();
@@ -435,7 +522,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://blocked.example' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [], scrapeFailureReason: 'blocked' });
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
@@ -453,7 +540,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://busy.example' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [], scrapeFailureReason: 'throttled' });
     fixture.detectChanges();
 
@@ -467,7 +554,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://podcast.example/feed' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [], scrapeFailureReason: 'too_large' });
     fixture.detectChanges();
 
@@ -483,7 +570,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://weird.example' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [], scrapeFailureReason: 'quantum_flux' });
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
@@ -498,7 +585,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://blocked.example' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [], scrapeFailureReason: 'blocked' });
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('.warn')).toBeTruthy();
@@ -516,7 +603,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://has-feeds.example' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
     ctrl
       .expectOne((request) => request.url.endsWith('/api/feeds/preview'))
@@ -531,7 +618,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://blocked.example' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [], scrapeFailureReason: 'blocked' });
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
@@ -544,7 +631,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://page.example/' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
       candidates: [{ url: 'https://page.example/', title: 'Page', format: 'scraped' }],
     });
     fixture.detectChanges();
@@ -572,7 +659,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.form.setValue({ url: 'https://f.example/' });
     fixture.componentInstance.submit();
     ctrl
-      .expectOne('https://api.test/api/subscriptions')
+      .expectOne('https://api.test/api/feeds/discover')
       .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
     fixture.detectChanges();
 
@@ -593,7 +680,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://example.com' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({ candidates: [] });
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({ candidates: [] });
     fixture.detectChanges();
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('.fields > .hint')!.textContent,
@@ -608,7 +695,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'https://example.com' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({ candidates: [] });
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({ candidates: [] });
     fixture.detectChanges();
 
     const text = (fixture.nativeElement as HTMLElement).textContent!.toLowerCase();
@@ -620,7 +707,7 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({ url: 'not-a-url' });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush(
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush(
       {
         type: 'validation_error',
         title: 'x',
@@ -633,13 +720,36 @@ describe('AddFeedDialogComponent', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
-  it('tells the user how to subscribe a Bluesky profile hidden from logged-out readers', () => {
+  it('offers a Bluesky profile hidden from logged-out readers without a preview, and says why', () => {
     const fixture = create();
     fixture.componentInstance.form.setValue({
       url: 'https://bsky.app/profile/rusty-17.bsky.social',
     });
     fixture.componentInstance.submit();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush(
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [
+        {
+          url: 'https://bsky.app/profile/rusty-17.bsky.social',
+          title: 'Rusty',
+          format: 'bluesky-api',
+          noPreviewReason: 'hidden_profile',
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    ctrl.expectNone((request) => request.url.endsWith('/api/feeds/preview'));
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('Bluesky');
+    expect(card.querySelector('.no-preview')?.textContent).toContain('logged-in Bluesky users');
+    expect(card.querySelector('.preview-toggle')).toBeNull();
+
+    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    const subscribe = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(subscribe.request.body).toEqual({
+      url: 'https://bsky.app/profile/rusty-17.bsky.social',
+    });
+    subscribe.flush(
       {
         type: 'bluesky_profile_hidden',
         title: 'Profile hidden from logged-out readers',
@@ -655,6 +765,38 @@ describe('AddFeedDialogComponent', () => {
       (fixture.nativeElement as HTMLElement).querySelector('app-field .error')?.textContent,
     ).toContain('Connect a Bluesky account in Settings → Social Media');
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it('tells the user up front to connect a Bluesky account for a hidden profile', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({
+      url: 'https://bsky.app/profile/rusty-17.bsky.social',
+    });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/feeds/discover').flush({
+      candidates: [
+        {
+          url: 'https://bsky.app/profile/rusty-17.bsky.social',
+          title: 'Rusty',
+          format: 'bluesky-api',
+          noPreviewReason: 'connect_bluesky_account',
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    ctrl.expectNone((request) => request.url.endsWith('/api/feeds/preview'));
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
+    expect(card.querySelector('.no-preview')?.textContent).toContain(
+      'Connect a Bluesky account in Settings → Social Media',
+    );
+    expect(card.querySelector('.preview-toggle')).toBeNull();
+  });
+
+  it('words a no-preview reason it does not know generically', () => {
+    expect(create().componentInstance.noPreviewText('quantum_flux')).toBe(
+      'No preview is available for this feed.',
+    );
   });
 
   it('suggests the tags of the newest subscription', () => {
@@ -679,14 +821,27 @@ describe('AddFeedDialogComponent', () => {
     const fixture = create();
 
     expect(fixture.componentInstance.form.getRawValue().url).toBe('https://dropped.example/');
-    ctrl.expectNone('https://api.test/api/subscriptions');
+    ctrl.expectNone('https://api.test/api/feeds/discover');
 
     fixture.componentInstance.toggleTag(2);
     fixture.componentInstance.submit();
+    const discover = ctrl.expectOne('https://api.test/api/feeds/discover');
+    expect(discover.request.body).toEqual({ url: 'https://dropped.example/' });
+    discover.flush({
+      candidates: [
+        {
+          url: 'https://dropped.example/feed',
+          title: 'Dropped',
+          format: 'rss',
+          preview: RSS_PREVIEW,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    subscribeButton(fixture).click();
     const request = ctrl.expectOne('https://api.test/api/subscriptions');
-    expect(request.request.body).toEqual(
-      expect.objectContaining({ url: 'https://dropped.example/', tagIds: [2] }),
-    );
+    expect(request.request.body).toEqual({ url: 'https://dropped.example/feed', tagIds: [2] });
     request.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 4 });
   });

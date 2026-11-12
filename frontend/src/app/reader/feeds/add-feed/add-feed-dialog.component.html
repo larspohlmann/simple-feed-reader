@@ -40,19 +40,23 @@
                     'dialog.addFeed.items' | transloco: { count: p.itemCount }
                   }}</span>
                 }
-                <button
-                  type="button"
-                  class="preview-toggle"
-                  (click)="toggle(c)"
-                  [attr.aria-expanded]="expanded() === c.url"
-                  [attr.aria-controls]="'preview-' + $index"
-                >
-                  {{
-                    (expanded() === c.url ? 'dialog.addFeed.hidePreview' : 'dialog.addFeed.preview')
-                      | transloco
-                  }}
-                  <span class="chev" aria-hidden="true"></span>
-                </button>
+                @if (!c.noPreviewReason) {
+                  <button
+                    type="button"
+                    class="preview-toggle"
+                    (click)="toggle(c)"
+                    [attr.aria-expanded]="expanded() === c.url"
+                    [attr.aria-controls]="'preview-' + $index"
+                  >
+                    {{
+                      (expanded() === c.url
+                        ? 'dialog.addFeed.hidePreview'
+                        : 'dialog.addFeed.preview'
+                      ) | transloco
+                    }}
+                    <span class="chev" aria-hidden="true"></span>
+                  </button>
+                }
               </div>
               <div class="badges">
                 <span class="badge format">{{ formatLabel(c.format) }}</span>
@@ -71,6 +75,9 @@
               </div>
               @if (c.format === 'scraped') {
                 <p class="muted scraped-hint">{{ 'dialog.addFeed.scrapedHint' | transloco }}</p>
+              }
+              @if (c.noPreviewReason; as reason) {
+                <p class="muted no-preview">{{ noPreviewText(reason) }}</p>
               }
               @if (expanded() === c.url) {
                 <div [id]="'preview-' + $index">
@@ -97,7 +104,12 @@
                   }
                 </div>
               }
-              <button type="button" class="subscribe primary" (click)="pick(c)">
+              <button
+                type="button"
+                class="subscribe primary"
+                [disabled]="subscribing()"
+                (click)="pick(c)"
+              >
                 {{ 'dialog.addFeed.subscribe' | transloco }}
               </button>
             </li>
