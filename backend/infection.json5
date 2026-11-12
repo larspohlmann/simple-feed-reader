@@ -94,11 +94,13 @@
     },
     phpUnit: {
         configDir: '.',
+        // Infection otherwise finds it through `composer config bin-dir`, whose stdout an old global Composer pollutes
+        // with a PHP 8.5 deprecation, and falls through to whatever phpunit is first on PATH.
+        customPath: 'vendor/bin/phpunit',
     },
-    // A mutant that loops forever has to be cut off, and the cut-off has to sit
-    // far enough above a healthy test that a slow runner cannot trip it: a
-    // mutant runs only the tests that cover it, seconds at most.
-    timeout: 30,
+    // Also the skip bar: a mutant whose covering tests' JUnit times sum past it is skipped, not run. ParaTest's times
+    // run ~1.2x serial; at 30 that skipped 47 of 102 mutants against serial's 5, at 45 the same 5 (#2188).
+    timeout: 45,
     // The gate runs against changed files only (see composer infection:diff), so
     // this is the bar for code a branch touches, not for the whole tree. A full
     // sweep scores lower — raise this as the tree catches up, never lower it.

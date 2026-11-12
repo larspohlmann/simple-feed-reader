@@ -236,6 +236,12 @@ jobs:
       - name: Fetch the base branch
         run: git fetch --no-tags origin '${{ github.event.pull_request.base.ref }}'
 
+      # Not Infection's own serial initial run: Symfony 8.1 collects cycles at every
+      # kernel shutdown, and each pass walks the whole coverage map (#2188); a
+      # ParaTest worker's map is small. A red suite fails here instead.
+      - name: Collect coverage
+        run: composer infection:coverage
+
       # Escaped mutants come back as PR annotations on the offending line, so a
       # gap is visible where the code is rather than only in the job log.
       #
@@ -252,6 +258,8 @@ jobs:
           --logger-github
           --no-progress
           --ignore-msi-with-no-mutations
+          --coverage=var/infection-coverage
+          --skip-initial-tests
 
   frontend-static:
     name: Frontend (static)
