@@ -204,6 +204,7 @@ app-tag-picker {
   gap: var(--space-1);
   margin-right: auto;
   align-self: center;
+
   // A zero basis: flex-wrap breaks lines on basis sizes, so Cancel and Preview stay on the
   // links' row and the links wrap instead.
   flex: 1 1 0;
