@@ -70,8 +70,8 @@ the data treats those fields as nullable.
   […], "domains": [ … ] }`. A domain is `[host, rank|null, avgArticleLength|null, languageIndexes[],
   groups[], summary|null]`: one tuple per host, with category and language indexes
   pointing into the file's own `categories` and `languages`, so a file is self-contained. Each domain
-  belongs to exactly one country, so no domain is duplicated. Largest: United States, 4,682 domains,
-  325 KB gzipped; median 2.5 KB.
+  belongs to exactly one country, so no domain is duplicated. Largest: United States, 5,641 domains,
+  399 KB gzipped; median 2.8 KB.
 - `index.json` — `{ "countries": [ { "code", "name", "sites": n, "languages": { "<code>": n } } ],
   "languages": { "<code>": n } }`, where each `n` counts sites (channels and podcasts together). Enough to
   drive the scope picker with counts and to know which country files hold a language, without opening any
@@ -90,10 +90,10 @@ fails if any name stays unmapped or two names map to one code. Files are named b
 ### Snapshot script
 
 `backend/resources/feed-directory/snapshot.php` is a standalone PHP CLI script, run by hand when someone
-decides to update the data: it downloads the YAML, `ABOUT.txt` and `LICENSE.txt`, parses the YAML with `symfony/yaml`,
-writes the per-country files and `index.json`, and rewrites `SOURCE`. It is not wired into deploys, CI,
-the worker or the console; the result is reviewed and committed like any other change. It runs once to
-produce the first snapshot.
+decides to update the data: it downloads the YAML, `ABOUT.txt` and `LICENSE.txt`, parses the YAML with
+`symfony/yaml`, writes the per-country files and `index.json`, and rewrites `SOURCE`. It is not wired into
+deploys, CI, the worker or the console; the result is reviewed and committed like any other change. It runs
+once to produce the first snapshot.
 
 ### Identity
 
