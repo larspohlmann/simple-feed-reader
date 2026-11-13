@@ -1,10 +1,12 @@
 import { Dialog } from '@angular/cdk/dialog';
-import { CdkFixedSizeVirtualScroll } from '@angular/cdk/scrolling';
-import { By } from '@angular/platform-browser';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
+import {
+  restoreIntersectionObserver,
+  stubIntersectionObserver,
+} from '../../../testing/intersection-observer-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
@@ -20,7 +22,6 @@ import { FeedDirectorySectionComponent } from './feed-directory-section.componen
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectoryScope } from '../../core/preferences/feed-directory-scope';
 import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
-import { FEED_DIRECTORY_ROW_HEIGHT } from './row/feed-directory-row.component';
 import { FeedDirectoryScopeDialogComponent } from './scope-dialog/feed-directory-scope-dialog.component';
 
 const DE: FeedDirectoryCountryFile = {
@@ -56,6 +57,19 @@ const INDEX: FeedDirectoryIndex = {
   ],
   languages: { de: 3, en: 2 },
 };
+const manySites = (count: number): FeedDirectoryCountryFile => ({
+  country: 'DE',
+  categories: ['News'],
+  languages: ['de'],
+  domains: Array.from({ length: count }, (_unused, index) => [
+    `site${index}.de`,
+    index + 1,
+    1000,
+    [0],
+    [[0, 0, [`https://site${index}.de/feed`]]],
+    null,
+  ]),
+});
 const NO_SCOPE: FeedDirectoryScope = { countries: [], languages: [] };
 
 describe('FeedDirectorySectionComponent', () => {
@@ -410,26 +424,49 @@ describe('FeedDirectorySectionComponent', () => {
     expect(hosts()).toEqual(['heise.de', 'zeit.de']);
   });
 
-  it('scrolls by one row height, and sizes the rows by it, for each breakpoint', async () => {
-    await render({ countries: ['DE'], languages: ['de'] });
-    const viewport = (): HTMLElement => element().querySelector('cdk-virtual-scroll-viewport')!;
-    const itemSize = (): number =>
-      fixture.debugElement
-        .query(By.directive(CdkFixedSizeVirtualScroll))
-        .injector.get(CdkFixedSizeVirtualScroll).itemSize;
+  describe('batches', () => {
+    let watcher: ReturnType<typeof stubIntersectionObserver>;
+    const sentinel = (): HTMLElement | null => element().querySelector('[data-test="more"]');
 
-    expect(itemSize()).toBe(FEED_DIRECTORY_ROW_HEIGHT.wide);
-    expect(viewport().style.getPropertyValue('--row-h')).toBe(
-      `${FEED_DIRECTORY_ROW_HEIGHT.wide}px`,
-    );
+    async function renderSites(count: number): Promise<void> {
+      watcher = stubIntersectionObserver();
+      await render(NO_SCOPE);
+      country.mockReturnValue(of(manySites(count)));
+      scope.set({ countries: ['DE'], languages: ['de'] });
+      await settle();
+    }
 
-    isPhone.set(true);
-    await settle();
+    afterEach(restoreIntersectionObserver);
 
-    expect(itemSize()).toBe(FEED_DIRECTORY_ROW_HEIGHT.phone);
-    expect(viewport().style.getPropertyValue('--row-h')).toBe(
-      `${FEED_DIRECTORY_ROW_HEIGHT.phone}px`,
-    );
+    it('adds the next batch when the end of the list comes into view', async () => {
+      await renderSites(150);
+      expect(hosts().length).toBe(100);
+      expect(watcher.observed).toContain(sentinel());
+
+      watcher.report(sentinel()!, true);
+      await settle();
+
+      expect(hosts().length).toBe(150);
+      expect(sentinel()).toBeNull();
+    });
+
+    it('watches the end of the list again after each batch, so a sentinel left in view keeps loading', async () => {
+      await renderSites(250);
+      const watched = sentinel()!;
+
+      watcher.report(watched, true);
+      await settle();
+
+      expect(watcher.observed.filter((target) => target === sentinel()).length).toBe(2);
+    });
+
+    it('stops watching when the page goes away', async () => {
+      await renderSites(150);
+
+      fixture.destroy();
+
+      expect(watcher.disconnect).toHaveBeenCalled();
+    });
   });
 
   it('carries the attribution of the directory data', async () => {

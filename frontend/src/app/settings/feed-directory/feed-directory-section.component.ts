@@ -1,17 +1,14 @@
 import { Dialog } from '@angular/cdk/dialog';
 import {
-  CdkFixedSizeVirtualScroll,
-  CdkVirtualForOf,
-  CdkVirtualScrollViewport,
-  CdkVirtualScrollableWindow,
-} from '@angular/cdk/scrolling';
-import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  ElementRef,
   computed,
   effect,
   inject,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -26,14 +23,9 @@ import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmente
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
-import { LayoutService } from '../../reader/layout.service';
+import { prefetchMargin } from '../../reader/list/paging';
 import { FeedDirectoryNames } from './feed-directory-names';
-import {
-  FeedDirectoryLength,
-  FeedDirectoryMode,
-  FeedDirectoryRow,
-  FeedDirectorySort,
-} from './feed-directory-rows';
+import { FeedDirectoryLength, FeedDirectoryMode, FeedDirectorySort } from './feed-directory-rows';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectorySubscriber } from './feed-directory-subscriber';
@@ -41,10 +33,7 @@ import {
   FeedDirectoryFilterPillComponent,
   FeedDirectoryFilterPillOption,
 } from './filter-pill/feed-directory-filter-pill.component';
-import {
-  FEED_DIRECTORY_ROW_HEIGHT,
-  FeedDirectoryRowComponent,
-} from './row/feed-directory-row.component';
+import { FeedDirectoryRowComponent } from './row/feed-directory-row.component';
 import { FeedDirectoryScopeDialogComponent } from './scope-dialog/feed-directory-scope-dialog.component';
 import { FeedDirectoryScopePickerComponent } from './scope-picker/feed-directory-scope-picker.component';
 
@@ -58,10 +47,6 @@ const SEARCH_DEBOUNCE_MS = 150;
   selector: 'app-feed-directory-section',
   imports: [
     ButtonComponent,
-    CdkFixedSizeVirtualScroll,
-    CdkVirtualForOf,
-    CdkVirtualScrollViewport,
-    CdkVirtualScrollableWindow,
     ErrorBannerComponent,
     FeedDirectoryFilterPillComponent,
     FeedDirectoryRowComponent,
@@ -84,18 +69,15 @@ export class FeedDirectorySectionComponent {
   protected readonly names = inject(FeedDirectoryNames);
   protected readonly subscriber = inject(FeedDirectorySubscriber);
   private readonly dialog = inject(Dialog);
-  private readonly layout = inject(LayoutService);
   private readonly scopeToLoad = computed(
     () => (this.scopes.hasScope() ? this.scopes.scope() : null),
     { equal: sameScope },
   );
 
-  protected readonly rowHeight = computed(() =>
-    this.layout.isPhone() ? FEED_DIRECTORY_ROW_HEIGHT.phone : FEED_DIRECTORY_ROW_HEIGHT.wide,
-  );
   protected readonly modes = MODES;
-  protected readonly byHost = (_index: number, row: FeedDirectoryRow): string => row.host;
   private readonly typedQuery = new Subject<string>();
+  private readonly more = viewChild<ElementRef<HTMLElement>>('more');
+  private moreWatcher?: IntersectionObserver;
 
   protected readonly countryNames = computed(() =>
     this.scopes.scope().countries.map((code) => this.names.country(code)),
@@ -162,6 +144,11 @@ export class FeedDirectorySectionComponent {
     this.typedQuery
       .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed())
       .subscribe((query) => this.store.query.set(query));
+    effect(() => {
+      this.store.shownRows();
+      this.watchMore(this.more()?.nativeElement);
+    });
+    inject(DestroyRef).onDestroy(() => this.moreWatcher?.disconnect());
   }
 
   protected search(event: Event): void {
@@ -170,6 +157,18 @@ export class FeedDirectorySectionComponent {
 
   protected chooseCountry(code: string): void {
     this.store.country.set(code === ALL_COUNTRIES ? null : code);
+  }
+
+  private watchMore(sentinel: HTMLElement | undefined): void {
+    this.moreWatcher?.disconnect();
+    if (!sentinel) return;
+    this.moreWatcher = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) this.store.showMore();
+      },
+      { rootMargin: prefetchMargin(window.innerHeight) },
+    );
+    this.moreWatcher.observe(sentinel);
   }
 
   protected changeScope(): void {

@@ -252,3 +252,36 @@ test("a row's category pill narrows the filter to that category", async ({ page 
   await pill.click();
   await expect(rows).toHaveCount(3);
 });
+
+test('the list adds a batch at its end and shows every description in full', async ({ page }) => {
+  const longSummary = 'A site whose description runs long. '.repeat(12).trim();
+  const manySites: FeedDirectoryCountryFile = {
+    ...GERMANY,
+    domains: Array.from({ length: 150 }, (_unused, index) => [
+      `site${index}.fixtures.invalid`,
+      index + 1,
+      800,
+      [0],
+      [[0, 0, [`https://site${index}.fixtures.invalid/feed.xml`]]],
+      index === 0 ? longSummary : `Site ${index}`,
+    ]),
+  };
+  await stubFeedDirectory(page);
+  await page.route('**/api/feed-directory/countries/DE', (route) =>
+    route.fulfill({ json: manySites }),
+  );
+  await openDirectory(page);
+
+  const rows = page.locator('app-feed-directory-row');
+  await expect(rows).toHaveCount(100);
+
+  const summary = rows.first().locator('.summary');
+  await expect(summary).toHaveText(longSummary);
+  expect(await summary.evaluate((node) => node.scrollHeight <= node.clientHeight)).toBe(true);
+  expect((await summary.boundingBox())!.height).toBeGreaterThan(
+    (await rows.nth(1).locator('.summary').boundingBox())!.height * 2,
+  );
+
+  await rows.last().scrollIntoViewIfNeeded();
+  await expect(rows).toHaveCount(150);
+});

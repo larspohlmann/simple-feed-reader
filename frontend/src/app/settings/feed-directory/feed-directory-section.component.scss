@@ -97,7 +97,7 @@ app-segmented-choice {
   overflow: hidden;
 }
 
-.viewport app-feed-directory-row + app-feed-directory-row {
+.list app-feed-directory-row + app-feed-directory-row {
   border-top: 1px solid var(--border);
 }
 

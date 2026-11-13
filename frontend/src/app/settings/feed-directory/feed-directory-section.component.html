@@ -144,24 +144,21 @@
           @if (store.rows().length === 0) {
             <p class="state empty">{{ 'settings.feedDirectory.noMatches' | transloco }}</p>
           } @else {
-            <cdk-virtual-scroll-viewport
-              scrollWindow
-              class="viewport"
-              [itemSize]="rowHeight()"
-              [minBufferPx]="rowHeight() * 4"
-              [maxBufferPx]="rowHeight() * 8"
-              [style.--row-h.px]="rowHeight()"
-            >
-              <app-feed-directory-row
-                *cdkVirtualFor="let row of store.rows(); trackBy: byHost"
-                [row]="row"
-                [mode]="store.mode()"
-                [categories]="store.categories()"
-                (subscribe)="subscriber.open($event)"
-                (edit)="subscriber.choose($event)"
-                (focusCategory)="store.focusCategory($event)"
-              />
-            </cdk-virtual-scroll-viewport>
+            <div class="list">
+              @for (row of store.shownRows(); track row.host) {
+                <app-feed-directory-row
+                  [row]="row"
+                  [mode]="store.mode()"
+                  [categories]="store.categories()"
+                  (subscribe)="subscriber.open($event)"
+                  (edit)="subscriber.choose($event)"
+                  (focusCategory)="store.focusCategory($event)"
+                />
+              }
+            </div>
+            @if (store.hasMore()) {
+              <div class="more" data-test="more" #more></div>
+            }
           }
         }
       }
