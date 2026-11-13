@@ -587,6 +587,49 @@ final class TrendingStoriesTest extends DbTestCase
         ));
     }
 
+    public function testAFeedWhoseOnlyWindowEntryTheReaderHidIsNotActive(): void
+    {
+        [$hidden, $visible] = $this->articleFeeds('hidden', 'visible');
+        $this->fixtures->subscribe($this->reader, $hidden, $visible);
+        $hiddenEntry = $this->fixtures->entry($hidden, 'Hidden', '2031-05-14 08:00:00');
+        $this->fixtures->entry($visible, 'Visible', '2031-05-14 09:00:00');
+        $this->fixtures->flush();
+        $this->hideFor($this->reader, $hiddenEntry);
+
+        self::assertSame(1, $this->activeFeedCountOf($this->reader));
+    }
+
+    public function testAFeedWhoseOnlyWindowEntryAnotherReaderHidIsStillActive(): void
+    {
+        $feed = $this->fixtures->feed('shared');
+        $this->fixtures->subscribe($this->reader, $feed);
+        $entry = $this->fixtures->entry($feed, 'Shared', '2031-05-14 08:00:00');
+        $this->fixtures->flush();
+        $this->hideFor($this->user('other-reader@example.com'), $entry);
+
+        self::assertSame(1, $this->activeFeedCountOf($this->reader));
+    }
+
+    public function testAFeedWithOneHiddenAndOneVisibleWindowEntryIsActive(): void
+    {
+        $feed = $this->fixtures->feed('mixed');
+        $this->fixtures->subscribe($this->reader, $feed);
+        $hiddenEntry = $this->fixtures->entry($feed, 'Hidden', '2031-05-14 08:00:00');
+        $this->fixtures->entry($feed, 'Visible', '2031-05-14 09:00:00');
+        $this->fixtures->flush();
+        $this->hideFor($this->reader, $hiddenEntry);
+
+        self::assertSame(1, $this->activeFeedCountOf($this->reader));
+    }
+
+    private function activeFeedCountOf(User $user): int
+    {
+        return (new TrendingEntryRepository($this->entityManager))->activeFeedCount(
+            $user->requireId(),
+            new \DateTimeImmutable('2031-05-14 00:00:00'),
+        );
+    }
+
     /** Each new feed posts once at $effectiveDate; the clock stands at 2031-05-14 12:00, so a day reaches 05-13 12:00. */
     private function followFeedsPostingAt(int $count, string $effectiveDate): void
     {
