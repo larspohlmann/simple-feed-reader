@@ -76,3 +76,9 @@ test('renders the real CHANGELOG.md', () => {
   assert.equal(page.match(/class="highlights"/g).length, highlightCount);
   assert.doesNotMatch(page, /\{\{releases\}\}/);
 });
+
+test('the homepage footer links the changelog page', () => {
+  const homepage = read('../../../docs/homepage/index.html');
+  assert.match(homepage, /<a href="changelog\.html">Changelog<\/a>/);
+  assert.doesNotMatch(homepage, /blob\/develop\/CHANGELOG\.md/);
+});
