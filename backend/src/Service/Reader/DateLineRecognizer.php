@@ -12,7 +12,7 @@ use App\Service\Reader\Model\ParseOffsetUnit;
 final class DateLineRecognizer
 {
     private const int DATE_LINE_MAX_CHARS = 48;
-    private const array DATE_LINE_LOCALES = ['de', 'en_US', 'en_GB'];
+    private const array DATE_LINE_LOCALES = ['de', 'en_US', 'en_GB', 'fr', 'es'];
     private const array DATE_LINE_STYLES = [
         \IntlDateFormatter::FULL,
         \IntlDateFormatter::LONG,
@@ -29,8 +29,8 @@ final class DateLineRecognizer
     }
 
     /**
-     * A stand-alone publication date. ICU supplies the German and English forms,
-     * so none is hand-listed; strict full-string parsing with a length cap and a
+     * A stand-alone publication date. ICU supplies the forms, so none is
+     * hand-listed; strict full-string parsing with a length cap and a
      * required digit keep a bare month, a lone year or a sentence out.
      */
     public function isDateLine(string $text): bool
