@@ -192,7 +192,7 @@ app-tag-picker {
   bottom: var(--space-3);
   z-index: 1;
   box-shadow: var(--panel-shadow);
-  align-self: flex-start;
+  align-self: flex-end;
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--accent);
   border-radius: var(--radius);
