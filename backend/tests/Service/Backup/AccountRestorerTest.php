@@ -20,7 +20,6 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
-use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SubscriptionSet;
 use App\Exception\ValidationException;
@@ -457,7 +456,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->entityManager->persist(new NetworkExclusion(
             $this->reload($source),
             SocialNetwork::Mastodon,
-            NetworkExclusionSurface::ForYou,
+            InclusionSurface::ForYou,
         ));
         $this->entityManager->flush();
 
@@ -470,7 +469,7 @@ final class AccountRestorerTest extends DbTestCase
     {
         $user = $this->userFactory->create('for-you-networks-missing@example.com');
         $this->entityManager->persist(
-            new NetworkExclusion($user, SocialNetwork::Bluesky, NetworkExclusionSurface::ForYou),
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::ForYou),
         );
         $this->entityManager->flush();
 
@@ -489,7 +488,7 @@ final class AccountRestorerTest extends DbTestCase
 
         self::assertSame(
             [SocialNetwork::Mastodon],
-            $this->excludedNetworksOf($target, NetworkExclusionSurface::AllItems),
+            $this->excludedNetworksOf($target, InclusionSurface::AllItems),
         );
         self::assertSame([SocialNetwork::Bluesky], $this->forYouExcludedNetworksOf($target));
     }
@@ -504,7 +503,7 @@ final class AccountRestorerTest extends DbTestCase
 
         self::assertSame(
             [SocialNetwork::Mastodon],
-            $this->excludedNetworksOf($target, NetworkExclusionSurface::Trending),
+            $this->excludedNetworksOf($target, InclusionSurface::Trending),
         );
     }
 
@@ -512,13 +511,13 @@ final class AccountRestorerTest extends DbTestCase
     {
         $user = $this->userFactory->create('all-items-networks-missing@example.com');
         $this->entityManager->persist(
-            new NetworkExclusion($user, SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems),
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::AllItems),
         );
         $this->entityManager->flush();
 
         $this->restorer()->start($this->reload($user), $this->foundationGzip(), 'REPLACE');
 
-        self::assertSame([], $this->excludedNetworksOf($user, NetworkExclusionSurface::AllItems));
+        self::assertSame([], $this->excludedNetworksOf($user, InclusionSurface::AllItems));
     }
 
     public function testAnUnknownExcludedForYouNetworkInTheFileIsDropped(): void
@@ -541,11 +540,11 @@ final class AccountRestorerTest extends DbTestCase
     /** @return list<SocialNetwork> */
     private function forYouExcludedNetworksOf(User $user): array
     {
-        return $this->excludedNetworksOf($user, NetworkExclusionSurface::ForYou);
+        return $this->excludedNetworksOf($user, InclusionSurface::ForYou);
     }
 
     /** @return list<SocialNetwork> */
-    private function excludedNetworksOf(User $user, NetworkExclusionSurface $surface): array
+    private function excludedNetworksOf(User $user, InclusionSurface $surface): array
     {
         $this->entityManager->clear();
         $exclusions = self::getContainer()->get(NetworkExclusionRepository::class);

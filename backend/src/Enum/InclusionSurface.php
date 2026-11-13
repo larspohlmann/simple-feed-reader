@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Enum;
 
-enum InclusionSurface
+enum InclusionSurface: string
 {
-    case AllItems;
-    case ForYou;
-    case SavedSearches;
-    case Trending;
+    case AllItems = 'all-items';
+    case ForYou = 'for-you';
+    case SavedSearches = 'saved-searches';
+    case Trending = 'trending';
+
+    /** Saved searches let networks in through SavedSearchNetworkInclusion instead. */
+    public function hasNetworkExclusions(): bool
+    {
+        return $this !== self::SavedSearches;
+    }
 
     public function switchField(): string
     {

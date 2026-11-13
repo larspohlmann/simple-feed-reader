@@ -10,6 +10,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\Migrations\AbstractMigration;
 use DoctrineMigrations\Version20261102130000;
 use DoctrineMigrations\Version20261113100000;
+use DoctrineMigrations\Version20261113130000;
 use Psr\Log\NullLogger;
 
 /**
@@ -30,6 +31,7 @@ final class NetworkExclusionMigrationTest extends DbTestCase
         // Migration classes are deliberately excluded from Composer's autoloader (doctrine_migrations.yaml).
         require_once dirname(__DIR__, 2) . '/migrations/Version20261102130000.php';
         require_once dirname(__DIR__, 2) . '/migrations/Version20261113100000.php';
+        require_once dirname(__DIR__, 2) . '/migrations/Version20261113130000.php';
         $this->userId = $this->user('network-exclusion-migration@example.test')->requireId();
         $this->setBackToBeforeTheMove();
     }
@@ -74,6 +76,31 @@ final class NetworkExclusionMigrationTest extends DbTestCase
         );
         self::assertFalse($this->connection()->createSchemaManager()->tablesExist(['network_exclusion']));
         $this->runUp(new Version20261113100000($this->connection(), new NullLogger()));
+    }
+
+    public function testTheSurfacesTakeTheirUrlSlugsAndGiveThemBack(): void
+    {
+        $this->runUp(new Version20261113100000($this->connection(), new NullLogger()));
+        $this->connection()->executeStatement(
+            "INSERT INTO network_exclusion (user_id, network, surface) VALUES (?, 'bluesky', 'for_you'),"
+            . " (?, 'mastodon', 'all_items'), (?, 'bluesky', 'trending')",
+            [$this->userId, $this->userId, $this->userId],
+        );
+
+        $this->runUp(new Version20261113130000($this->connection(), new NullLogger()));
+        self::assertSame(['for-you', 'all-items', 'trending'], $this->storedSurfaces());
+
+        $this->runDown(new Version20261113130000($this->connection(), new NullLogger()));
+        self::assertSame(['for_you', 'all_items', 'trending'], $this->storedSurfaces());
+    }
+
+    /** @return list<mixed> */
+    private function storedSurfaces(): array
+    {
+        return $this->connection()->fetchFirstColumn(
+            'SELECT surface FROM network_exclusion WHERE user_id = ? ORDER BY id',
+            [$this->userId],
+        );
     }
 
     private function setBackToBeforeTheMove(): void

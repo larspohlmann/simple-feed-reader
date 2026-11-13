@@ -6,7 +6,7 @@ namespace App\Service\Reading;
 
 use App\Entity\NetworkExclusion;
 use App\Entity\User;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkExclusionRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,7 +19,7 @@ final readonly class NetworkExclusions
     ) {
     }
 
-    public function exclude(User $user, SocialNetwork $network, NetworkExclusionSurface $surface): void
+    public function exclude(User $user, SocialNetwork $network, InclusionSurface $surface): void
     {
         if (null !== $this->exclusions->findOneFor($user->requireId(), $network, $surface)) {
             return;
@@ -28,7 +28,7 @@ final readonly class NetworkExclusions
         $this->entityManager->flush();
     }
 
-    public function include(User $user, SocialNetwork $network, NetworkExclusionSurface $surface): void
+    public function include(User $user, SocialNetwork $network, InclusionSurface $surface): void
     {
         $exclusion = $this->exclusions->findOneFor($user->requireId(), $network, $surface);
         if (null === $exclusion) {

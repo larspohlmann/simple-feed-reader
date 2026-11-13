@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkExclusionRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -30,10 +30,10 @@ final class NetworkExclusion
     #[ORM\Column(length: 16, enumType: SocialNetwork::class)]
     private SocialNetwork $network;
 
-    #[ORM\Column(length: 16, enumType: NetworkExclusionSurface::class)]
-    private NetworkExclusionSurface $surface;
+    #[ORM\Column(length: 16, enumType: InclusionSurface::class)]
+    private InclusionSurface $surface;
 
-    public function __construct(User $user, SocialNetwork $network, NetworkExclusionSurface $surface)
+    public function __construct(User $user, SocialNetwork $network, InclusionSurface $surface)
     {
         $this->user = $user;
         $this->network = $network;
@@ -55,7 +55,7 @@ final class NetworkExclusion
         return $this->network;
     }
 
-    public function getSurface(): NetworkExclusionSurface
+    public function getSurface(): InclusionSurface
     {
         return $this->surface;
     }

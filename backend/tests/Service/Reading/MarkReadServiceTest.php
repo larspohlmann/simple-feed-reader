@@ -12,7 +12,7 @@ use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
@@ -358,7 +358,7 @@ final class MarkReadServiceTest extends DbTestCase
         $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
         $mastodon = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
         $this->entityManager->persist(
-            new NetworkExclusion($user, SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems),
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::AllItems),
         );
         $this->entityManager->flush();
 

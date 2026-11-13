@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\NetworkExclusion;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -19,7 +19,7 @@ final class NetworkExclusionRepository extends ServiceEntityRepository
     }
 
     /** @return list<SocialNetwork> */
-    public function excludedNetworks(int $userId, NetworkExclusionSurface $surface): array
+    public function excludedNetworks(int $userId, InclusionSurface $surface): array
     {
         /** @var list<string> $networks */
         $networks = $this->createQueryBuilder('exclusion')
@@ -35,7 +35,7 @@ final class NetworkExclusionRepository extends ServiceEntityRepository
         return array_map(SocialNetwork::from(...), $networks);
     }
 
-    public function findOneFor(int $userId, SocialNetwork $network, NetworkExclusionSurface $surface): ?NetworkExclusion
+    public function findOneFor(int $userId, SocialNetwork $network, InclusionSurface $surface): ?NetworkExclusion
     {
         return $this->findOneBy(['user' => $userId, 'network' => $network, 'surface' => $surface]);
     }

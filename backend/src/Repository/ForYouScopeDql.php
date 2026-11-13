@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\InclusionSurface;
-use App\Enum\NetworkExclusionSurface;
 use Doctrine\ORM\QueryBuilder;
 
 /** A feed counts for For you while it is switched in, and so is its network and every tag it carries. */
@@ -15,7 +14,7 @@ final class ForYouScopeDql
     public static function restrict(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->andWhere(\sprintf('%s.inclusions.forYou = true', $aliases->subscription))
-            ->andWhere(NetworkExclusionDql::notExcluded($aliases->entry, NetworkExclusionSurface::ForYou))
+            ->andWhere(NetworkExclusionDql::notExcluded($aliases->entry, InclusionSurface::ForYou))
             ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::ForYou));
     }
 

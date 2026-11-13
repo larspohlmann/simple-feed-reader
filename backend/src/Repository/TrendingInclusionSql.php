@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Tag;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 
 /**
  * The native-SQL twin of the DQL inclusion rule, for Trending's DBAL reads: a subscription counts while it is switched
@@ -30,7 +30,7 @@ final class TrendingInclusionSql
             . ' ON %1$s_network.network = %1$s_feed.network AND %1$s_network.user_id = %1$s.user_id'
             . ' AND %1$s_network.surface = \'%2$s\' WHERE %1$s_feed.id = %1$s.feed_id)',
             $subscription,
-            NetworkExclusionSurface::Trending->value,
+            InclusionSurface::Trending->value,
         );
     }
 

@@ -6,7 +6,7 @@ namespace App\Tests\Service\Reading;
 
 use App\Entity\NetworkExclusion;
 use App\Entity\User;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkExclusionRepository;
 use App\Service\Reading\NetworkExclusions;
@@ -26,28 +26,28 @@ final class NetworkExclusionsTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    /** @return iterable<string, array{NetworkExclusionSurface}> */
+    /** @return iterable<string, array{InclusionSurface}> */
     public static function surfaces(): iterable
     {
-        yield 'for you' => [NetworkExclusionSurface::ForYou];
-        yield 'all items' => [NetworkExclusionSurface::AllItems];
+        yield 'for you' => [InclusionSurface::ForYou];
+        yield 'all items' => [InclusionSurface::AllItems];
     }
 
-    /** @return iterable<string, array{NetworkExclusionSurface, NetworkExclusionSurface}> */
+    /** @return iterable<string, array{InclusionSurface, InclusionSurface}> */
     public static function surfaceAndTheOther(): iterable
     {
-        yield 'for you' => [NetworkExclusionSurface::ForYou, NetworkExclusionSurface::AllItems];
-        yield 'all items' => [NetworkExclusionSurface::AllItems, NetworkExclusionSurface::ForYou];
+        yield 'for you' => [InclusionSurface::ForYou, InclusionSurface::AllItems];
+        yield 'all items' => [InclusionSurface::AllItems, InclusionSurface::ForYou];
     }
 
     #[DataProvider('surfaces')]
-    public function testEveryNetworkStartsIncluded(NetworkExclusionSurface $surface): void
+    public function testEveryNetworkStartsIncluded(InclusionSurface $surface): void
     {
         self::assertSame([], $this->excludedFrom($surface));
     }
 
     #[DataProvider('surfaces')]
-    public function testExcludingTwiceStoresOneRowAndIncludingRemovesIt(NetworkExclusionSurface $surface): void
+    public function testExcludingTwiceStoresOneRowAndIncludingRemovesIt(InclusionSurface $surface): void
     {
         $this->networks()->exclude($this->user, SocialNetwork::Bluesky, $surface);
         $this->networks()->exclude($this->user, SocialNetwork::Bluesky, $surface);
@@ -60,12 +60,12 @@ final class NetworkExclusionsTest extends DbTestCase
 
     public function testExcludedNetworksAreListedInNetworkOrder(): void
     {
-        $this->networks()->exclude($this->user, SocialNetwork::Mastodon, NetworkExclusionSurface::ForYou);
-        $this->networks()->exclude($this->user, SocialNetwork::Bluesky, NetworkExclusionSurface::ForYou);
+        $this->networks()->exclude($this->user, SocialNetwork::Mastodon, InclusionSurface::ForYou);
+        $this->networks()->exclude($this->user, SocialNetwork::Bluesky, InclusionSurface::ForYou);
 
         self::assertSame(
             [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
-            $this->excludedFrom(NetworkExclusionSurface::ForYou),
+            $this->excludedFrom(InclusionSurface::ForYou),
         );
     }
 
@@ -74,18 +74,18 @@ final class NetworkExclusionsTest extends DbTestCase
         $other = new User('other-network-exclusions@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($other);
         $this->entityManager->flush();
-        $this->networks()->exclude($other, SocialNetwork::Bluesky, NetworkExclusionSurface::ForYou);
-        $this->networks()->exclude($this->user, SocialNetwork::Mastodon, NetworkExclusionSurface::ForYou);
+        $this->networks()->exclude($other, SocialNetwork::Bluesky, InclusionSurface::ForYou);
+        $this->networks()->exclude($this->user, SocialNetwork::Mastodon, InclusionSurface::ForYou);
 
-        self::assertSame([SocialNetwork::Mastodon], $this->excludedFrom(NetworkExclusionSurface::ForYou));
+        self::assertSame([SocialNetwork::Mastodon], $this->excludedFrom(InclusionSurface::ForYou));
         self::assertNull($this->forYouExclusionOf(SocialNetwork::Bluesky));
         self::assertNotNull($this->forYouExclusionOf(SocialNetwork::Mastodon));
     }
 
     #[DataProvider('surfaceAndTheOther')]
     public function testTheOtherSurfacesExclusionNeitherCountsNorIsRemoved(
-        NetworkExclusionSurface $surface,
-        NetworkExclusionSurface $other,
+        InclusionSurface $surface,
+        InclusionSurface $other,
     ): void {
         $this->entityManager->persist(new NetworkExclusion($this->user, SocialNetwork::Bluesky, $other));
         $this->entityManager->flush();
@@ -99,14 +99,14 @@ final class NetworkExclusionsTest extends DbTestCase
     }
 
     /** @return list<SocialNetwork> */
-    private function excludedFrom(NetworkExclusionSurface $surface): array
+    private function excludedFrom(InclusionSurface $surface): array
     {
         return $this->exclusions()->excludedNetworks($this->user->requireId(), $surface);
     }
 
     private function forYouExclusionOf(SocialNetwork $network): ?NetworkExclusion
     {
-        return $this->exclusions()->findOneFor($this->user->requireId(), $network, NetworkExclusionSurface::ForYou);
+        return $this->exclusions()->findOneFor($this->user->requireId(), $network, InclusionSurface::ForYou);
     }
 
     private function networks(): NetworkExclusions

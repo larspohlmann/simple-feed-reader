@@ -13,7 +13,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SocialNetwork;
 use App\Repository\ForYouFeedQuery;
@@ -92,7 +92,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
         $other = new User('other@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($other);
         $this->entityManager->persist(
-            new NetworkExclusion($other, SocialNetwork::Bluesky, NetworkExclusionSurface::ForYou),
+            new NetworkExclusion($other, SocialNetwork::Bluesky, InclusionSurface::ForYou),
         );
         $post = $this->recommended(
             $this->subscribedFeed('https://bsky.app/profile/alice.bsky.social/rss', SocialNetwork::Bluesky),
@@ -104,7 +104,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
 
     public function testANetworkExcludedFromAllItemsStaysInForYou(): void
     {
-        $this->excludeFrom(SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems);
+        $this->excludeFrom(SocialNetwork::Bluesky, InclusionSurface::AllItems);
         $post = $this->recommended(
             $this->subscribedFeed('https://bsky.app/profile/alice.bsky.social/rss', SocialNetwork::Bluesky),
             'post',
@@ -261,10 +261,10 @@ final class ForYouExclusionReadsTest extends DbTestCase
 
     private function exclude(SocialNetwork $network): void
     {
-        $this->excludeFrom($network, NetworkExclusionSurface::ForYou);
+        $this->excludeFrom($network, InclusionSurface::ForYou);
     }
 
-    private function excludeFrom(SocialNetwork $network, NetworkExclusionSurface $surface): void
+    private function excludeFrom(SocialNetwork $network, InclusionSurface $surface): void
     {
         $this->entityManager->persist(new NetworkExclusion($this->user, $network, $surface));
         $this->entityManager->flush();

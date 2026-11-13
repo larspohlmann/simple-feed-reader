@@ -6,13 +6,13 @@ namespace App\Repository;
 
 use App\Entity\Feed;
 use App\Entity\NetworkExclusion;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 
 /** Holds back a feed whose network the user has switched out of a surface. */
 final class NetworkExclusionDql
 {
     /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
-    public static function notExcluded(string $feedOwner, NetworkExclusionSurface $surface): string
+    public static function notExcluded(string $feedOwner, InclusionSurface $surface): string
     {
         $feed = 'excludedFeed' . ucfirst($feedOwner);
         $exclusion = 'networkExclusion' . ucfirst($feedOwner);

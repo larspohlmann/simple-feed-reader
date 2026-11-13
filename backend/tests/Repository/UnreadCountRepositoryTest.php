@@ -13,7 +13,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\FeedGroup;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\UnreadCountRepository;
@@ -153,7 +153,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         [, $blogFeed] = $this->subscribedFeed($user, 'https://example.com/blog.xml');
         $this->unreadEntry($blueskyFeed, 'post', null);
         $this->unreadEntry($blogFeed, 'article', null);
-        $this->excludeBlueskyFrom($user, NetworkExclusionSurface::AllItems);
+        $this->excludeBlueskyFrom($user, InclusionSurface::AllItems);
 
         self::assertSame(1, $this->allItems($user));
         self::assertSame(1, $this->perNetwork($user)[SocialNetwork::Bluesky->value] ?? 0);
@@ -188,7 +188,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $user = $this->user();
         [, $blueskyFeed] = $this->subscribedFeed($user, 'https://bsky.app/profile/alice.bsky.social/rss');
         $this->unreadEntry($blueskyFeed, 'post', null);
-        $this->excludeBlueskyFrom($user, NetworkExclusionSurface::ForYou);
+        $this->excludeBlueskyFrom($user, InclusionSurface::ForYou);
 
         self::assertSame(1, $this->allItems($user));
     }
@@ -399,7 +399,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
         );
     }
 
-    private function excludeBlueskyFrom(User $user, NetworkExclusionSurface $surface): void
+    private function excludeBlueskyFrom(User $user, InclusionSurface $surface): void
     {
         $this->entityManager->persist(new NetworkExclusion($user, SocialNetwork::Bluesky, $surface));
         $this->entityManager->flush();

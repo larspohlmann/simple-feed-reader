@@ -28,8 +28,8 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
-use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Url\UrlNormalizer;
@@ -69,13 +69,13 @@ final readonly class FullyPopulatedAccount
         $this->entityManager->persist($this->savedSearchFor($user));
         $this->entityManager->persist(new SavedSearchNetworkInclusion($user, SocialNetwork::Mastodon));
         $this->entityManager->persist(
-            new NetworkExclusion($user, SocialNetwork::Bluesky, NetworkExclusionSurface::ForYou),
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::ForYou),
         );
         $this->entityManager->persist(
-            new NetworkExclusion($user, SocialNetwork::Mastodon, NetworkExclusionSurface::AllItems),
+            new NetworkExclusion($user, SocialNetwork::Mastodon, InclusionSurface::AllItems),
         );
         $this->entityManager->persist(
-            new NetworkExclusion($user, SocialNetwork::Mastodon, NetworkExclusionSurface::Trending),
+            new NetworkExclusion($user, SocialNetwork::Mastodon, InclusionSurface::Trending),
         );
 
         $feed = $this->feedFor($email);

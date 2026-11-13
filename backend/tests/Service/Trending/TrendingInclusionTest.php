@@ -11,7 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\TrendingStory;
 use App\Entity\User;
-use App\Enum\NetworkExclusionSurface;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
@@ -167,7 +167,7 @@ final class TrendingInclusionTest extends DbTestCase
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
 
         $this->entityManager->persist(
-            new NetworkExclusion($this->reader, SocialNetwork::Bluesky, NetworkExclusionSurface::Trending),
+            new NetworkExclusion($this->reader, SocialNetwork::Bluesky, InclusionSurface::Trending),
         );
         $this->fixtures->flush();
 
@@ -181,7 +181,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
         $this->storyOf([$alpha, $beta, $social]);
         $this->entityManager->persist(
-            new NetworkExclusion($this->reader, SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems),
+            new NetworkExclusion($this->reader, SocialNetwork::Bluesky, InclusionSurface::AllItems),
         );
         $this->fixtures->flush();
 

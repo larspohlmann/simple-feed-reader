@@ -14,8 +14,8 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\EntryView;
 use App\Enum\FeedGroup;
+use App\Enum\InclusionSurface;
 use App\Enum\ListOrder;
-use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Pagination\EntryCursor;
 use App\Repository\DateOrderedPage;
@@ -646,7 +646,7 @@ final class EntryListTest extends DbTestCase
         );
         $this->entryIn($profile, 'network-only', '2026-07-06T00:00:00Z');
         $this->entityManager->persist(
-            new NetworkExclusion($this->user, SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems),
+            new NetworkExclusion($this->user, SocialNetwork::Bluesky, InclusionSurface::AllItems),
         );
         $this->entityManager->flush();
 

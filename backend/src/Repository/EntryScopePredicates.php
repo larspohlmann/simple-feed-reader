@@ -8,7 +8,6 @@ use App\Entity\Feed;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Enum\EntryView;
 use App\Enum\InclusionSurface;
-use App\Enum\NetworkExclusionSurface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -61,14 +60,14 @@ final readonly class EntryScopePredicates
     public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->andWhere(\sprintf('%s.inclusions.allItems = true', $aliases->subscription))
-            ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, NetworkExclusionSurface::AllItems))
+            ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, InclusionSurface::AllItems))
             ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::AllItems));
     }
 
     public function inTrending(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->andWhere(\sprintf('%s.inclusions.trending = true', $aliases->subscription))
-            ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, NetworkExclusionSurface::Trending))
+            ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, InclusionSurface::Trending))
             ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::Trending));
     }
 
