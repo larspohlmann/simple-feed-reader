@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Enum;
+namespace App\Http;
+
+use App\Enum\NetworkExclusionSurface;
 
 enum ExclusionSurfaceSlug: string
 {

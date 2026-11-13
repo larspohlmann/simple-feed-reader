@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Enum\ExclusionSurfaceSlug;
 use App\Enum\SocialNetwork;
+use App\Http\ExclusionSurfaceSlug;
 use App\Repository\NetworkExclusionRepository;
 use App\Service\Reading\NetworkExclusions;
 use Symfony\Component\HttpFoundation\JsonResponse;
