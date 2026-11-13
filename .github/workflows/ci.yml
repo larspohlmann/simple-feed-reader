@@ -334,8 +334,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Announce script tests
-        run: node --test "scripts/test/announce/*.test.mjs"
+      - name: Node script tests
+        run: node --test "scripts/test/announce/*.test.mjs" "scripts/test/homepage-changelog/*.test.mjs"
 
       # The Strato deploy probes a public route with an invalid bearer token to
       # prove Apache forwards Authorization. The status diagnosis controls
