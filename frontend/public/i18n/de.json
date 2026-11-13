@@ -2,7 +2,9 @@
   "lang": {
     "label": "Sprache",
     "en": "Englisch",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "fr": "Französisch",
+    "es": "Spanisch"
   },
   "settings": {
     "title": "Einstellungen",
