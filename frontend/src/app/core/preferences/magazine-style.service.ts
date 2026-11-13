@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { CurrentUser } from '../auth/auth.service';
 import { MAGAZINE_STYLE_KEY, MagazineStyle, asMagazineStyle } from './magazine-style';
-import { MAGAZINE_STYLE_WRITER } from './magazine-style-writer';
+import { PREFERENCES_WRITER } from './preferences-writer';
 
 /**
  * The account is the record; `localStorage` is a paint cache. It answers the
@@ -10,7 +10,7 @@ import { MAGAZINE_STYLE_WRITER } from './magazine-style-writer';
  */
 @Injectable({ providedIn: 'root' })
 export class MagazineStyleService {
-  private readonly writer = inject(MAGAZINE_STYLE_WRITER);
+  private readonly writer = inject(PREFERENCES_WRITER);
 
   readonly style = signal<MagazineStyle>(this.cached());
 
@@ -22,7 +22,7 @@ export class MagazineStyleService {
     this.cache(style);
     this.saveFailed.set(false);
 
-    this.writer.write(style).subscribe((ok) => {
+    this.writer.write({ magazineStyle: style }).subscribe((ok) => {
       if (!ok) this.saveFailed.set(true);
     });
   }

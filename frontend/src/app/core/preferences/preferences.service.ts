@@ -55,7 +55,7 @@ export class PreferencesService {
     this.scrapeFallbackEnabled.set(enabled);
     this.saveFailed.set(false);
 
-    this.writer.write(enabled).subscribe((ok) => {
+    this.writer.write({ scrapeFallbackEnabled: enabled }).subscribe((ok) => {
       if (!ok) this.saveFailed.set(true);
     });
   }
@@ -64,7 +64,7 @@ export class PreferencesService {
     this.applyTrending(enabled);
     this.trendingSaveFailed.set(false);
 
-    this.writer.writeTrending(enabled).subscribe((ok) => {
+    this.writer.write({ trendingEnabled: enabled }).subscribe((ok) => {
       if (!ok) this.trendingSaveFailed.set(true);
     });
   }

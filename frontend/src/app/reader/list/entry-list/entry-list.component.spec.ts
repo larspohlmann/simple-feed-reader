@@ -19,7 +19,7 @@ import { SourceGroupComponent } from '../magazine/source-group.component';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { HandednessService } from '../../../core/preferences/handedness.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
-import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
+import { PREFERENCES_WRITER } from '../../../core/preferences/preferences-writer';
 import { LayoutService } from '../../layout.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
@@ -91,7 +91,7 @@ function mount(
       { provide: ListScrollMemory, useValue: memory },
       { provide: CatalogAvailability, useValue: catalog },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
-      { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
+      { provide: PREFERENCES_WRITER, useValue: { write: () => of(true) } },
       { provide: ScrollHosts, useClass: ElementBackedScrollHosts },
       ...providers,
     ],
