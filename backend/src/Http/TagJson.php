@@ -11,7 +11,7 @@ final class TagJson
     /**
      * @return array{
      *   id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null,
-     *   includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool
+     *   includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool, includeInTrending: bool
      * }
      */
     public static function one(Tag $tag): array
@@ -26,6 +26,7 @@ final class TagJson
             'includeInAllItems' => $tag->isIncludeInAllItems(),
             'includeInForYou' => $tag->isIncludeInForYou(),
             'includeInSavedSearches' => $tag->isIncludeInSavedSearches(),
+            'includeInTrending' => $tag->isIncludeInTrending(),
         ];
     }
 }

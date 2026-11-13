@@ -73,6 +73,9 @@ final readonly class FullyPopulatedAccount
         $this->entityManager->persist(
             new NetworkExclusion($user, SocialNetwork::Mastodon, NetworkExclusionSurface::AllItems),
         );
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Mastodon, NetworkExclusionSurface::Trending),
+        );
 
         $feed = $this->feedFor($email);
         $this->entityManager->persist($feed);
@@ -126,6 +129,7 @@ final readonly class FullyPopulatedAccount
         $tag->setIncludeInAllItems(false);
         $tag->setIncludeInForYou(false);
         $tag->setIncludeInSavedSearches(false);
+        $tag->setIncludeInTrending(false);
 
         return $tag;
     }
@@ -152,6 +156,7 @@ final readonly class FullyPopulatedAccount
         $subscription->setIncludeInAllItems(false);
         $subscription->setIncludeInForYou(false);
         $subscription->setIncludeInSavedSearches(false);
+        $subscription->setIncludeInTrending(false);
         $subscription->addTag($tag, 5);
 
         return $subscription;

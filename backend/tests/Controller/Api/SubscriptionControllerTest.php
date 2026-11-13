@@ -591,6 +591,36 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertTrue($body['subscription']['includeInForYou']);
     }
 
+    public function testPatchSwitchesTheFeedOutOfTrendingAndLeavesTheOtherSurfaces(): void
+    {
+        $client = self::createClient();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+
+        $user = $this->factory()->create('trending-flag@example.com');
+        $feed = new Feed('https://trending-flag.example.com/rss');
+        $entityManager->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $entityManager->persist($subscription);
+        $entityManager->flush();
+
+        $client->request(
+            'PATCH',
+            '/api/subscriptions/' . $subscription->getId(),
+            server: $this->bearerFor($user) + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                ['customTitle' => null, 'tagIds' => [], 'includeInTrending' => false],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscription']);
+        self::assertFalse($body['subscription']['includeInTrending']);
+        self::assertTrue($body['subscription']['includeInAllItems']);
+    }
+
     public function testOmittingAFlagLeavesItUnchanged(): void
     {
         $client = self::createClient();

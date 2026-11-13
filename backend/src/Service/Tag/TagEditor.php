@@ -77,6 +77,7 @@ final readonly class TagEditor
         $tag->setIncludeInAllItems($inclusions->includeInAllItems ?? $tag->isIncludeInAllItems());
         $tag->setIncludeInForYou($inclusions->includeInForYou ?? $tag->isIncludeInForYou());
         $tag->setIncludeInSavedSearches($inclusions->includeInSavedSearches ?? $tag->isIncludeInSavedSearches());
+        $tag->setIncludeInTrending($inclusions->includeInTrending ?? $tag->isIncludeInTrending());
     }
 
     private function deleteHeld(Tag $tag): void

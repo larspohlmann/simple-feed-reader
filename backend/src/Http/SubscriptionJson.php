@@ -70,7 +70,7 @@ final class SubscriptionJson
      *     id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null
      *   }>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
-     *   includeInSavedSearches: bool,
+     *   includeInSavedSearches: bool, includeInTrending: bool,
      *   social: array{network: string, accountId: int|null, kind: string, query?: string}|null
      * }
      */
@@ -111,6 +111,7 @@ final class SubscriptionJson
             'includeInAllItems' => $subscription->isIncludeInAllItems(),
             'includeInForYou' => $subscription->isIncludeInForYou(),
             'includeInSavedSearches' => $subscription->isIncludeInSavedSearches(),
+            'includeInTrending' => $subscription->isIncludeInTrending(),
             'social' => self::social($feed),
         ];
     }

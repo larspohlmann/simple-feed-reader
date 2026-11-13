@@ -228,8 +228,8 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * Every copy of the given articles this caller subscribes to, hidden or shown — the outlets beyond a Trending
-     * story that ran the same article.
+     * Every copy of the given articles this caller subscribes to in Trending, hidden or shown — the outlets beyond a
+     * Trending story that ran the same article.
      *
      * @param list<string> $urlHashes
      *
@@ -241,10 +241,11 @@ final class EntryListRepository extends ServiceEntityRepository
             return [];
         }
 
-        $query = $this->projection->rowQueryBuilder($userId)
+        $qb = $this->projection->rowQueryBuilder($userId)
             ->andWhere('e.location.urlHash IN (:urlHashes)')
-            ->setParameter('urlHashes', $urlHashes)
-            ->getQuery();
+            ->setParameter('urlHashes', $urlHashes);
+        $this->scope->inTrending($qb, EntryAliases::primary());
+        $query = $qb->getQuery();
         EntryPlanHintWalker::apply($query, EntryPlanHint::DuplicateLookup);
 
         /** @var list<array<array-key, mixed>> $rows */

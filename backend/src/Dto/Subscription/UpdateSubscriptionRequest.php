@@ -19,6 +19,7 @@ final readonly class UpdateSubscriptionRequest
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
+        public ?bool $includeInTrending = null,
     ) {
     }
 
@@ -31,6 +32,7 @@ final readonly class UpdateSubscriptionRequest
                 includeInAllItems: $this->includeInAllItems,
                 includeInForYou: $this->includeInForYou,
                 includeInSavedSearches: $this->includeInSavedSearches,
+                includeInTrending: $this->includeInTrending,
             ),
         );
     }

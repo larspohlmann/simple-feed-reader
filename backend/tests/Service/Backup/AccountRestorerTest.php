@@ -493,6 +493,20 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame([SocialNetwork::Bluesky], $this->forYouExcludedNetworksOf($target));
     }
 
+    public function testTheExcludedTrendingNetworksSurviveTheRestoreRoundTrip(): void
+    {
+        $source = $this->fullyPopulatedAccount()->create('trending-networks-source@example.com');
+        $foundation = $this->backupOf($source);
+        $target = $this->userFactory->create('trending-networks-target@example.com');
+
+        $this->restorer()->start($this->reload($target), $foundation, 'REPLACE');
+
+        self::assertSame(
+            [SocialNetwork::Mastodon],
+            $this->excludedNetworksOf($target, NetworkExclusionSurface::Trending),
+        );
+    }
+
     public function testAnAccountLineWithoutAllItemsExclusionsRestoresWithEveryNetworkIncluded(): void
     {
         $user = $this->userFactory->create('all-items-networks-missing@example.com');

@@ -23,6 +23,7 @@ final class SubscriptionSettingsTest extends TestCase
         $previous->setIncludeInAllItems(false);
         $previous->setIncludeInForYou(false);
         $previous->setIncludeInSavedSearches(false);
+        $previous->setIncludeInTrending(false);
         $previous->setMarkedReadUntil(new \DateTimeImmutable('2026-10-10 00:00:00'));
         $previous->addTag(new Tag($user, 'People'), 3);
         $next = new Subscription($user, new Feed('social:bluesky:1:author:did:plc:rusty'), $now);
@@ -34,6 +35,7 @@ final class SubscriptionSettingsTest extends TestCase
         self::assertFalse($next->isIncludeInAllItems());
         self::assertFalse($next->isIncludeInForYou());
         self::assertFalse($next->isIncludeInSavedSearches());
+        self::assertFalse($next->isIncludeInTrending());
         self::assertSame('2026-10-10', $next->getMarkedReadUntil()?->format('Y-m-d'));
         self::assertSame(
             [['People', 3]],

@@ -132,6 +132,26 @@ final class SubscriptionBulkTest extends ApiTestCase
         self::assertTrue($body['subscriptions'][0]['includeInForYou']);
     }
 
+    public function testSwitchesTheFeedsOutOfTrending(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-endpoint-trending@example.com');
+        $subscription = $this->makeSubscription($user, 'https://trending.example/feed.xml');
+        $this->entityManager()->flush();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => [$subscription->requireId()],
+            'includeInTrending' => false,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['subscriptions']);
+        self::assertIsArray($body['subscriptions'][0]);
+        self::assertFalse($body['subscriptions'][0]['includeInTrending']);
+        self::assertTrue($body['subscriptions'][0]['includeInAllItems']);
+    }
+
     public function testRejectsAForeignSubscriptionAndWritesNothing(): void
     {
         $client = self::createClient();

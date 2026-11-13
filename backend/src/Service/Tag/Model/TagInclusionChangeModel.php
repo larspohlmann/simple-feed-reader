@@ -11,6 +11,7 @@ final readonly class TagInclusionChangeModel
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
+        public ?bool $includeInTrending = null,
     ) {
     }
 }

@@ -9,4 +9,5 @@ enum InclusionSurface
     case AllItems;
     case ForYou;
     case SavedSearches;
+    case Trending;
 }

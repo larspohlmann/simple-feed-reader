@@ -57,6 +57,7 @@ final readonly class AccountLine
                 savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
                 forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
                 allItemsExcludedNetworks: self::networks($line, 'allItemsExcludedNetworks'),
+                trendingExcludedNetworks: self::networks($line, 'trendingExcludedNetworks'),
             ),
         );
     }
@@ -97,6 +98,7 @@ final readonly class AccountLine
             'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->networks->savedSearchIncludedNetworks),
             'forYouExcludedNetworks' => SocialNetwork::valuesOf($this->networks->forYouExcludedNetworks),
             'allItemsExcludedNetworks' => SocialNetwork::valuesOf($this->networks->allItemsExcludedNetworks),
+            'trendingExcludedNetworks' => SocialNetwork::valuesOf($this->networks->trendingExcludedNetworks),
         ]);
     }
 

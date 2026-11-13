@@ -53,6 +53,9 @@ final class Tag implements PositionedInterface
     #[ORM\Column(name: 'include_in_saved_searches', options: ['default' => true])]
     private bool $includeInSavedSearches = true;
 
+    #[ORM\Column(name: 'include_in_trending', options: ['default' => true])]
+    private bool $includeInTrending = true;
+
     public function __construct(User $user, string $name)
     {
         $this->user = $user;
@@ -147,5 +150,15 @@ final class Tag implements PositionedInterface
     public function setIncludeInSavedSearches(bool $includeInSavedSearches): void
     {
         $this->includeInSavedSearches = $includeInSavedSearches;
+    }
+
+    public function isIncludeInTrending(): bool
+    {
+        return $this->includeInTrending;
+    }
+
+    public function setIncludeInTrending(bool $includeInTrending): void
+    {
+        $this->includeInTrending = $includeInTrending;
     }
 }

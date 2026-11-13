@@ -65,6 +65,9 @@ final class Subscription implements PositionedInterface
     #[ORM\Column(name: 'include_in_saved_searches', options: ['default' => true])]
     private bool $includeInSavedSearches = true;
 
+    #[ORM\Column(name: 'include_in_trending', options: ['default' => true])]
+    private bool $includeInTrending = true;
+
     public function __construct(User $user, Feed $feed, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
@@ -153,6 +156,16 @@ final class Subscription implements PositionedInterface
         $this->includeInSavedSearches = $includeInSavedSearches;
     }
 
+    public function isIncludeInTrending(): bool
+    {
+        return $this->includeInTrending;
+    }
+
+    public function setIncludeInTrending(bool $includeInTrending): void
+    {
+        $this->includeInTrending = $includeInTrending;
+    }
+
     /**
      * The tags on this subscription, ordered by their per-tag position.
      *
@@ -198,6 +211,7 @@ final class Subscription implements PositionedInterface
         $this->includeInAllItems = $previous->includeInAllItems;
         $this->includeInForYou = $previous->includeInForYou;
         $this->includeInSavedSearches = $previous->includeInSavedSearches;
+        $this->includeInTrending = $previous->includeInTrending;
         $this->markedReadUntil = $previous->markedReadUntil;
         foreach ($previous->getSubscriptionTags() as $subscriptionTag) {
             $this->addTag($subscriptionTag->getTag(), $subscriptionTag->getPosition());

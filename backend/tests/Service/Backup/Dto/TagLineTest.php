@@ -41,6 +41,7 @@ final class TagLineTest extends TestCase
         self::assertTrue($line->includeInAllItems);
         self::assertTrue($line->includeInForYou);
         self::assertTrue($line->includeInSavedSearches);
+        self::assertTrue($line->includeInTrending);
     }
 
     public function testALineBuiltWithoutSwitchesIsIncludedEverywhere(): void
@@ -50,6 +51,7 @@ final class TagLineTest extends TestCase
         self::assertTrue($line->includeInAllItems);
         self::assertTrue($line->includeInForYou);
         self::assertTrue($line->includeInSavedSearches);
+        self::assertTrue($line->includeInTrending);
     }
 
     public function testItReadsTheSwitchesTheLineStates(): void
@@ -57,11 +59,13 @@ final class TagLineTest extends TestCase
         $line = TagLine::fromLine([
             'kind' => 'tag', 'name' => 'Noise', 'color' => null, 'icon' => null, 'position' => 0,
             'includeInAllItems' => false, 'includeInForYou' => true, 'includeInSavedSearches' => false,
+            'includeInTrending' => false,
         ]);
 
         self::assertFalse($line->includeInAllItems);
         self::assertTrue($line->includeInForYou);
         self::assertFalse($line->includeInSavedSearches);
+        self::assertFalse($line->includeInTrending);
     }
 
     public function testItWritesTheTagsSwitches(): void
@@ -69,10 +73,12 @@ final class TagLineTest extends TestCase
         $tag = new Tag(BackupLineRecords::user(), 'Noise');
         $tag->setIncludeInAllItems(false);
         $tag->setIncludeInSavedSearches(false);
+        $tag->setIncludeInTrending(false);
 
         self::assertSame(
             '{"kind":"tag","name":"Noise","color":null,"icon":null,"position":0,"parent":null,'
-            . '"includeInAllItems":false,"includeInForYou":true,"includeInSavedSearches":false}',
+            . '"includeInAllItems":false,"includeInForYou":true,"includeInSavedSearches":false,'
+            . '"includeInTrending":false}',
             TagLine::of($tag)->toBackupLine(),
         );
     }
@@ -88,7 +94,7 @@ final class TagLineTest extends TestCase
 
         self::assertSame(
             '{"kind":"tag","name":"Long reads","color":"#123456","icon":"flask","position":2,"parent":"Reading",'
-            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true}',
+            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true,"includeInTrending":true}',
             TagLine::of($tag)->toBackupLine(),
         );
     }
@@ -97,7 +103,7 @@ final class TagLineTest extends TestCase
     {
         self::assertSame(
             '{"kind":"tag","name":"Reading","color":null,"icon":null,"position":0,"parent":null,'
-            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true}',
+            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true,"includeInTrending":true}',
             TagLine::of(new Tag(BackupLineRecords::user(), 'Reading'))->toBackupLine(),
         );
     }

@@ -28,6 +28,7 @@ final readonly class SubscriptionLine
         public bool $includeInAllItems,
         public bool $includeInForYou,
         public bool $includeInSavedSearches,
+        public bool $includeInTrending,
     ) {
     }
 
@@ -46,6 +47,7 @@ final readonly class SubscriptionLine
             includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
             includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
             includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
+            includeInTrending: LineFieldWithDefault::bool($line, 'includeInTrending', true),
         );
     }
 
@@ -63,6 +65,7 @@ final readonly class SubscriptionLine
             includeInAllItems: $subscription->isIncludeInAllItems(),
             includeInForYou: $subscription->isIncludeInForYou(),
             includeInSavedSearches: $subscription->isIncludeInSavedSearches(),
+            includeInTrending: $subscription->isIncludeInTrending(),
         );
     }
 
@@ -82,6 +85,7 @@ final readonly class SubscriptionLine
             'includeInAllItems' => $this->includeInAllItems,
             'includeInForYou' => $this->includeInForYou,
             'includeInSavedSearches' => $this->includeInSavedSearches,
+            'includeInTrending' => $this->includeInTrending,
         ]);
     }
 

@@ -11,6 +11,7 @@ final readonly class InclusionChangeModel
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
+        public ?bool $includeInTrending = null,
     ) {
     }
 }

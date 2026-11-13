@@ -192,6 +192,24 @@ final class AccountLineTest extends TestCase
         self::assertSame([], $line->networks->allItemsExcludedNetworks);
     }
 
+    public function testATrendingExcludedNetworkListedTwiceIsExcludedOnce(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'trendingExcludedNetworks' => ['mastodon', 'mastodon'],
+        ]);
+
+        self::assertSame([SocialNetwork::Mastodon], $line->networks->trendingExcludedNetworks);
+    }
+
+    public function testALineWithoutTrendingExclusionsExcludesNoNetwork(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame([], $line->networks->trendingExcludedNetworks);
+    }
+
     public function testANonStringMagazineStyleIsRefused(): void
     {
         $this->expectException(InvalidBackupException::class);
@@ -215,6 +233,7 @@ final class AccountLineTest extends TestCase
             [SocialNetwork::Bluesky],
             [SocialNetwork::Mastodon],
             [SocialNetwork::Bluesky],
+            [SocialNetwork::Mastodon],
         );
 
         self::assertSame(
@@ -223,7 +242,8 @@ final class AccountLineTest extends TestCase
             . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"savedSearchIncludedNetworks":["bluesky"],'
             . '"forYouExcludedNetworks":["mastodon"],'
-            . '"allItemsExcludedNetworks":["bluesky"]}',
+            . '"allItemsExcludedNetworks":["bluesky"],'
+            . '"trendingExcludedNetworks":["mastodon"]}',
             AccountLine::of($user, $settings, $networks)->toBackupLine(),
         );
     }

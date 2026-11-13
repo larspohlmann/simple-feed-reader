@@ -34,11 +34,12 @@ final readonly class TrendingEntryRepository
         } while (\count($rows) === self::CHUNK_ROWS);
     }
 
-    /** How many of the feeds the user follows have an entry dated at or after $since. */
+    /** How many of the feeds the user follows in Trending have an entry dated at or after $since. */
     public function activeFeedCount(int $userId, \DateTimeImmutable $since): int
     {
         $activeFeeds = $this->entityManager->getConnection()->fetchOne(
             'SELECT COUNT(*) FROM subscription followed WHERE followed.user_id = :user'
+            . ' AND ' . TrendingInclusionSql::includes('followed')
             . ' AND EXISTS (SELECT 1 FROM entry recent'
             . ' WHERE recent.feed_id = followed.feed_id AND recent.effective_date >= :since)',
             ['user' => $userId, 'since' => $since->format('Y-m-d H:i:s')],

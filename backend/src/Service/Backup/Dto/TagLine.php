@@ -24,6 +24,7 @@ final readonly class TagLine
         public bool $includeInAllItems = true,
         public bool $includeInForYou = true,
         public bool $includeInSavedSearches = true,
+        public bool $includeInTrending = true,
     ) {
     }
 
@@ -41,6 +42,7 @@ final readonly class TagLine
             includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
             includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
             includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
+            includeInTrending: LineFieldWithDefault::bool($line, 'includeInTrending', true),
         );
     }
 
@@ -55,6 +57,7 @@ final readonly class TagLine
             includeInAllItems: $tag->isIncludeInAllItems(),
             includeInForYou: $tag->isIncludeInForYou(),
             includeInSavedSearches: $tag->isIncludeInSavedSearches(),
+            includeInTrending: $tag->isIncludeInTrending(),
         );
     }
 
@@ -70,6 +73,7 @@ final readonly class TagLine
             'includeInAllItems' => $this->includeInAllItems,
             'includeInForYou' => $this->includeInForYou,
             'includeInSavedSearches' => $this->includeInSavedSearches,
+            'includeInTrending' => $this->includeInTrending,
         ]);
     }
 }

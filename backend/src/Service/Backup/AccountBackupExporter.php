@@ -115,6 +115,7 @@ final readonly class AccountBackupExporter
             $this->includedNetworks->includedNetworksFor($userId),
             $this->excludedNetworks->excludedNetworks($userId, NetworkExclusionSurface::ForYou),
             $this->excludedNetworks->excludedNetworks($userId, NetworkExclusionSurface::AllItems),
+            $this->excludedNetworks->excludedNetworks($userId, NetworkExclusionSurface::Trending),
         );
     }
 

@@ -8,4 +8,5 @@ enum NetworkExclusionSurface: string
 {
     case AllItems = 'all_items';
     case ForYou = 'for_you';
+    case Trending = 'trending';
 }

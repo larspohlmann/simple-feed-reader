@@ -30,6 +30,7 @@ final readonly class RestoredFoundationFactory
         $tag->setIncludeInAllItems($line->includeInAllItems);
         $tag->setIncludeInForYou($line->includeInForYou);
         $tag->setIncludeInSavedSearches($line->includeInSavedSearches);
+        $tag->setIncludeInTrending($line->includeInTrending);
 
         return $tag;
     }
@@ -55,6 +56,7 @@ final readonly class RestoredFoundationFactory
         $subscription->setIncludeInAllItems($line->includeInAllItems);
         $subscription->setIncludeInForYou($line->includeInForYou);
         $subscription->setIncludeInSavedSearches($line->includeInSavedSearches);
+        $subscription->setIncludeInTrending($line->includeInTrending);
 
         return $subscription;
     }

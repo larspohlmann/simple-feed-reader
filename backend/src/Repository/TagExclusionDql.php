@@ -41,6 +41,7 @@ final class TagExclusionDql
             InclusionSurface::AllItems => 'includeInAllItems',
             InclusionSurface::ForYou => 'includeInForYou',
             InclusionSurface::SavedSearches => 'includeInSavedSearches',
+            InclusionSurface::Trending => 'includeInTrending',
         };
     }
 

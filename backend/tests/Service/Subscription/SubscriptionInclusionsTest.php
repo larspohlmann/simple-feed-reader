@@ -17,11 +17,12 @@ final class SubscriptionInclusionsTest extends TestCase
     {
         $subscription = $this->subscription();
 
-        (new SubscriptionInclusions())->apply($subscription, new InclusionChangeModel(false, true, false));
+        (new SubscriptionInclusions())->apply($subscription, new InclusionChangeModel(false, true, false, false));
 
         self::assertFalse($subscription->isIncludeInAllItems());
         self::assertTrue($subscription->isIncludeInForYou());
         self::assertFalse($subscription->isIncludeInSavedSearches());
+        self::assertFalse($subscription->isIncludeInTrending());
     }
 
     public function testANullFlagLeavesItsFieldAlone(): void
@@ -30,12 +31,14 @@ final class SubscriptionInclusionsTest extends TestCase
         $subscription->setIncludeInAllItems(false);
         $subscription->setIncludeInForYou(false);
         $subscription->setIncludeInSavedSearches(false);
+        $subscription->setIncludeInTrending(false);
 
         (new SubscriptionInclusions())->apply($subscription, new InclusionChangeModel());
 
         self::assertFalse($subscription->isIncludeInAllItems());
         self::assertFalse($subscription->isIncludeInForYou());
         self::assertFalse($subscription->isIncludeInSavedSearches());
+        self::assertFalse($subscription->isIncludeInTrending());
     }
 
     public function testOnlyTheCarriedFlagChanges(): void
@@ -47,6 +50,7 @@ final class SubscriptionInclusionsTest extends TestCase
         self::assertTrue($subscription->isIncludeInAllItems());
         self::assertFalse($subscription->isIncludeInForYou());
         self::assertTrue($subscription->isIncludeInSavedSearches());
+        self::assertTrue($subscription->isIncludeInTrending());
     }
 
     private function subscription(): Subscription

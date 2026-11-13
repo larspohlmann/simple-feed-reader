@@ -38,6 +38,7 @@ final class RestoredFoundationFactoryTest extends TestCase
                 includeInAllItems: false,
                 includeInForYou: true,
                 includeInSavedSearches: false,
+                includeInTrending: false,
             ),
             null,
         );
@@ -45,6 +46,7 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertFalse($tag->isIncludeInAllItems());
         self::assertTrue($tag->isIncludeInForYou());
         self::assertFalse($tag->isIncludeInSavedSearches());
+        self::assertFalse($tag->isIncludeInTrending());
     }
 
     public function testATagIsRestoredUnderTheParentItNames(): void
@@ -96,6 +98,7 @@ final class RestoredFoundationFactoryTest extends TestCase
                 includeInAllItems: false,
                 includeInForYou: false,
                 includeInSavedSearches: false,
+                includeInTrending: false,
             ),
         );
 
@@ -106,6 +109,7 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertFalse($subscription->isIncludeInAllItems());
         self::assertFalse($subscription->isIncludeInForYou());
         self::assertFalse($subscription->isIncludeInSavedSearches());
+        self::assertFalse($subscription->isIncludeInTrending());
     }
 
     private function factory(): RestoredFoundationFactory

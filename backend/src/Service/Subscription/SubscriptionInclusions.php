@@ -20,5 +20,8 @@ final readonly class SubscriptionInclusions
         if (null !== $change->includeInSavedSearches) {
             $subscription->setIncludeInSavedSearches($change->includeInSavedSearches);
         }
+        if (null !== $change->includeInTrending) {
+            $subscription->setIncludeInTrending($change->includeInTrending);
+        }
     }
 }

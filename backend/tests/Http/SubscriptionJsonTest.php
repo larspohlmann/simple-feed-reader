@@ -204,6 +204,7 @@ final class SubscriptionJsonTest extends TestCase
                 'includeInAllItems' => true,
                 'includeInForYou' => true,
                 'includeInSavedSearches' => true,
+                'includeInTrending' => true,
             ]],
             $shape['tags'],
         );
@@ -223,6 +224,17 @@ final class SubscriptionJsonTest extends TestCase
         self::assertFalse($shape['includeInAllItems']);
         self::assertTrue($shape['includeInForYou']);
         self::assertTrue($shape['includeInSavedSearches']);
+        self::assertTrue($shape['includeInTrending']);
+    }
+
+    public function testSerialisesASubscriptionExcludedFromTrending(): void
+    {
+        $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
+        $user = new User('u@example.com', $now);
+        $subscription = new Subscription($user, new Feed('https://example.com/feed.xml'), $now);
+        $subscription->setIncludeInTrending(false);
+
+        self::assertFalse(SubscriptionJson::one($subscription)['includeInTrending']);
     }
 
     public function testSerialisesASubscriptionExcludedFromSavedSearches(): void

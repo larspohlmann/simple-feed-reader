@@ -116,6 +116,7 @@ final class RestoreLoadPass
         }
         $this->loadExclusions($networks->forYouExcludedNetworks, NetworkExclusionSurface::ForYou);
         $this->loadExclusions($networks->allItemsExcludedNetworks, NetworkExclusionSurface::AllItems);
+        $this->loadExclusions($networks->trendingExcludedNetworks, NetworkExclusionSurface::Trending);
     }
 
     /** @param list<SocialNetwork> $networks */
