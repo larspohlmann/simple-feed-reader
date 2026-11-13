@@ -232,6 +232,21 @@ describe('OrganiseFeedRowComponent', () => {
     },
   );
 
+  it('steps focus to the next switch on ArrowDown in the fine-pointer popover', async () => {
+    await render();
+    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
+    fixture.detectChanges();
+    const menu = fixture.debugElement.query(By.css('[role="menu"]')).nativeElement as HTMLElement;
+    const items = [
+      ...menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]'),
+    ];
+    items[0].focus();
+
+    items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+    expect(document.activeElement).toBe(items[1]);
+  });
+
   it('emits unsubscribe from the fine-pointer popover', async () => {
     await render();
     const unsubscribed = jest.fn();

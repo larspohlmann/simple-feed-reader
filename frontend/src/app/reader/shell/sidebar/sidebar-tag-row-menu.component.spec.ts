@@ -106,4 +106,16 @@ describe('SidebarTagRowMenuComponent', () => {
     expect(setTagInclusion).toHaveBeenCalledWith(tagOf(1, null), 'forYou', false);
     expect(TestBed.inject(SidebarRowActions).menuFor()).toBe('tag-1');
   });
+
+  it('steps focus to the next item on ArrowDown', () => {
+    const pop = openMenuFor(tagOf(1, null)).querySelector<HTMLElement>('[role="menu"]')!;
+    const items = [
+      ...pop.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]'),
+    ];
+    items[1].focus();
+
+    items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+    expect(document.activeElement).toBe(items[2]);
+  });
 });

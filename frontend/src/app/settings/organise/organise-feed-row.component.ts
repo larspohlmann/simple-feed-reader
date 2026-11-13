@@ -19,6 +19,7 @@ import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.direc
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { FeedRefreshTimesComponent } from './health/feed-refresh-times.component';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { stepMenu } from '../../shared/menu-keys';
 import {
   ACTION_SHEET_DIVIDER,
   ActionSheetCheck,
@@ -83,6 +84,7 @@ export class OrganiseFeedRowComponent {
   readonly unsubscribe = output<void>();
 
   protected readonly feedFlags = FEED_FLAG_TOGGLES;
+  protected readonly step = stepMenu;
 
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);

@@ -23,6 +23,7 @@ import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.com
 import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
+import { stepMenu } from '../../shared/menu-keys';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { OrganiseStore, OrganiseGroup, GroupKey } from './organise.store';
@@ -118,6 +119,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly failingCount = computed(() => this.subs.unhealthy().length - this.deadCount());
   protected readonly tagFilterOpen = signal(false);
   protected readonly visibilityOpen = signal(false);
+  protected readonly step = stepMenu;
 
   /** Commands, not toggles: a toggle over a mixed selection has no
    *  correct starting position (see the bulk bar's own comment in the

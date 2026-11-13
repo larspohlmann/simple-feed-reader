@@ -95,7 +95,7 @@
           <app-icon name="more_horiz" size="sm" />
         </button>
         @if (menuOpen()) {
-          <div class="pop" role="menu">
+          <div class="pop" role="menu" (keydown)="step($event)">
             @for (flag of feedFlags; track flag.surface) {
               <app-menu-checkbox
                 [attr.data-test]="flag.dataTest"
