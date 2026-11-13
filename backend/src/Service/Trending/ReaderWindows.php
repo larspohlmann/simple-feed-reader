@@ -13,7 +13,7 @@ use App\Service\Trending\Model\ReaderWindowModel;
 
 /**
  * Cuts a window to one reader: the threshold from how many of their feeds posted within it, relaxed until five
- * stories show (D38, #2202), and the stories they are shown in a shorter window, which this one leaves out (D41).
+ * stories show (D38), and the stories they are shown in a shorter window, which this one leaves out (D41).
  */
 final readonly class ReaderWindows
 {
@@ -26,11 +26,9 @@ final readonly class ReaderWindows
 
     public function of(int $userId, TrendingWindow $window): ReaderWindowModel
     {
-        $atMultipleSources = $this->atMultipleSources($userId, $window);
+        [$reader] = $this->cut($userId, $window);
 
-        return $atMultipleSources->withMinimumOutlets(
-            $this->relaxedMinimum($atMultipleSources, $this->widestStories($atMultipleSources)),
-        );
+        return $reader;
     }
 
     /**
@@ -41,30 +39,23 @@ final readonly class ReaderWindows
      */
     public function shownStories(int $userId, TrendingWindow $window): array
     {
-        $atMultipleSources = $this->atMultipleSources($userId, $window);
-        $widest = $this->widestStories($atMultipleSources);
-        $minimum = $this->relaxedMinimum($atMultipleSources, $widest);
+        [$reader, $widest] = $this->cut($userId, $window);
 
         return array_values(array_filter(
             $widest,
-            static fn (RankedStoryModel $story): bool => $story->outletCount >= $minimum,
+            static fn (RankedStoryModel $story): bool => $story->outletCount >= $reader->minimumOutlets,
         ));
     }
 
-    private function atMultipleSources(int $userId, TrendingWindow $window): ReaderWindowModel
+    /** @return array{ReaderWindowModel, list<RankedStoryModel>} */
+    private function cut(int $userId, TrendingWindow $window): array
     {
-        return new ReaderWindowModel(
-            $userId,
-            $window,
-            TrendingWindow::MULTIPLE_SOURCES,
-            $this->storyIdsLeftOutOf($userId, $window),
-        );
-    }
+        $leftOut = $this->storyIdsLeftOutOf($userId, $window);
+        $atMultipleSources = new ReaderWindowModel($userId, $window, TrendingWindow::MULTIPLE_SOURCES, $leftOut);
+        $widest = $this->stories->rankedForUser($atMultipleSources, TrendingStories::MAX_STORIES);
+        $minimum = $this->relaxedMinimum($atMultipleSources, $widest);
 
-    /** @return list<RankedStoryModel> */
-    private function widestStories(ReaderWindowModel $atMultipleSources): array
-    {
-        return $this->stories->rankedForUser($atMultipleSources, TrendingStories::MAX_STORIES);
+        return [new ReaderWindowModel($userId, $window, $minimum, $leftOut), $widest];
     }
 
     /**
@@ -75,13 +66,16 @@ final readonly class ReaderWindows
      */
     private function relaxedMinimum(ReaderWindowModel $atMultipleSources, array $widest): int
     {
+        $lastWorthShowing = $widest[TrendingWindow::STORIES_WORTH_SHOWING - 1] ?? null;
+        if ($lastWorthShowing === null) {
+            return TrendingWindow::MULTIPLE_SOURCES;
+        }
         $window = $atMultipleSources->window;
         $since = $window->startBefore($this->clock->now());
-        $lastWorthShowing = $widest[TrendingWindow::STORIES_WORTH_SHOWING - 1] ?? null;
 
         return min(
             $window->minimumOutletsFor($this->windowEntries->activeFeedCount($atMultipleSources->userId, $since)),
-            $lastWorthShowing->outletCount ?? TrendingWindow::MULTIPLE_SOURCES,
+            $lastWorthShowing->outletCount,
         );
     }
 
