@@ -24,6 +24,8 @@ import { feedDirectoryUrl } from './feed-directory-url';
 import { FeedDirectoryScopeService } from './feed-directory-scope.service';
 import { FeedDirectoryCountryFile, FeedDirectoryIndex } from './feed-directory.models';
 
+export const FEED_DIRECTORY_BATCH = 100;
+
 @Injectable()
 export class FeedDirectoryStore implements OnDestroy {
   private readonly api = inject(FeedDirectoryApi);
@@ -77,6 +79,18 @@ export class FeedDirectoryStore implements OnDestroy {
       sort: this.sort(),
     }),
   );
+  private readonly resultSet = computed(() => ({
+    loaded: this.loaded(),
+    criteria: this.criteria(),
+    country: this.country(),
+    sort: this.sort(),
+  }));
+  private readonly limit = linkedSignal({
+    source: this.resultSet,
+    computation: () => FEED_DIRECTORY_BATCH,
+  });
+  readonly shownRows = computed(() => this.rows().slice(0, this.limit()));
+  readonly hasMore = computed(() => this.rows().length > this.limit());
   readonly countryCounts = computed(() => countByCountry(this.loaded(), this.criteria()));
   readonly total = computed(
     () => this.loaded().filter((row) => row.byMode[this.mode()].feedCount > 0).length,
@@ -130,6 +144,10 @@ export class FeedDirectoryStore implements OnDestroy {
 
   subscriptionFor(feedUrl: string): SubscriptionDto | null {
     return this.subscriptionsByUrl().get(feedDirectoryUrl(feedUrl)) ?? null;
+  }
+
+  showMore(): void {
+    this.limit.update((limit) => limit + FEED_DIRECTORY_BATCH);
   }
 
   toggleCategory(name: string): void {
