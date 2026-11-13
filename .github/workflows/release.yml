@@ -1,5 +1,6 @@
 # Publishes a GitHub Release when a plain vX.Y.Z tag is pushed on main, writes
-# the release notes back into CHANGELOG.md, pushes the release's php and web
+# the release notes back into CHANGELOG.md, redeploys the project homepage so
+# its changelog page shows the release, pushes the release's php and web
 # images to GHCR, and announces its highlights on Bluesky, Mastodon and LinkedIn.
 #
 # Like the Strato deploy, a tag push proves nothing on its own: it can name any
@@ -39,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.repository == 'larspohlmann/simple-feed-reader'
+    outputs:
+      develop_sha: ${{ steps.develop.outputs.sha }}
 
     steps:
       # fetch-depth: 0 populates origin/main (guard 1) and all tags (previous-tag
@@ -188,6 +191,7 @@ jobs:
       # ancestor of develop, so --ff-only would still refuse: same content is
       # not same history.
       - name: Carry the changelog commit onto develop
+        id: develop
         if: steps.previous.outputs.previous != ''
         run: |
           set -euo pipefail
@@ -208,7 +212,21 @@ jobs:
             exit 1
           fi
           git push origin HEAD:develop
+          echo "sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
           echo "==> develop now contains the ${GITHUB_REF_NAME} changelog commit"
+
+  # The exact commit the step above pushed, not develop's tip when the deploy
+  # runs, so the page matches the changelog this release wrote.
+  homepage:
+    name: Homepage
+    needs: release
+    if: needs.release.outputs.develop_sha != ''
+    uses: ./.github/workflows/deploy-homepage.yml
+    with:
+      ref: ${{ needs.release.outputs.develop_sha }}
+    secrets: inherit
+    permissions:
+      contents: read
 
   # The php and web images the Docker production path pulls for this release
   # (#1752). After `release`, so they inherit its two guards. Each architecture

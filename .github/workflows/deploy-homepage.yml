@@ -14,6 +14,11 @@
 # The page references docs/screenshots through a symlink, so the screenshots
 # have one source in the repository. The staging copy below dereferences it;
 # the page goes out with whatever screenshots develop carries at that moment.
+# changelog.html is generated from CHANGELOG.md the same way, at staging time.
+#
+# release.yml calls this workflow with the develop commit that carries the new
+# changelog: its push to develop is made with GITHUB_TOKEN, which starts no
+# workflow, so the push trigger below never sees a release.
 name: Deploy homepage
 
 on:
@@ -22,8 +27,17 @@ on:
     paths:
       - 'docs/homepage/**'
       - 'docs/screenshots/**'
+      - 'CHANGELOG.md'
+      - 'scripts/homepage-changelog.mjs'
+      - 'scripts/homepage-changelog/**'
       - '.github/workflows/deploy-homepage.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to deploy the homepage from
+        type: string
+        required: true
 
 # One deploy at a time, and never cancel an rsync in progress: a run killed
 # halfway leaves the site half old, half new until the next one completes.
@@ -52,7 +66,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
 
       # `cp -RL` follows the screenshots symlink, so the staged folder is a plain
       # tree rsync can mirror. The README documents the deployment; it is not
@@ -62,7 +81,9 @@ jobs:
           set -euo pipefail
           cp -RL docs/homepage site
           rm -f site/README.md
+          node scripts/homepage-changelog.mjs CHANGELOG.md site/changelog.html
           test -f site/index.html
+          test -f site/changelog.html
           test -d site/screenshots
           echo "==> staged $(find site -type f | wc -l) files"
 
