@@ -445,9 +445,10 @@ app-loading-overlay {
   }
 }
 
+/* A landscape phone keeps the pair, which still fits; only the column would ride up. */
 @container entry-list (height < #{bp.$container-list-corner-cluster}) {
   @media (pointer: coarse) {
-    .corner-cluster {
+    .corner-cluster .corner-actions {
       display: none;
     }
   }

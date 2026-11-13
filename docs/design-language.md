@@ -1899,9 +1899,9 @@ the list's sidebar, the article's back).
   bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
   pointer ignores it.
 - The discs are their tone at 40% over a frost, so the rows show through.
-- On touch the list hides the cluster below `18rem` of list height
-  (`$container-list-corner-cluster`), where the stack would ride over the header;
-  with a fine pointer the limit stays `13rem`.
+- On touch the list drops the column below `18rem` of list height
+  (`$container-list-corner-cluster`), where it would ride over the header, and keeps
+  the pair (a landscape phone); below `13rem` the whole cluster hides, as with a mouse.
 
 ### Overlay
 

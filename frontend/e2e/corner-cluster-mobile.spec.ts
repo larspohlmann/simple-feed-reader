@@ -155,11 +155,14 @@ test.describe('The corner cluster on a touch tablet (#2203)', () => {
 test.describe('The corner cluster on a short phone list (#2203)', () => {
   test.use({ viewport: { width: 375, height: 260 }, isMobile: true, hasTouch: true });
 
-  test('hides the stack where it would ride over the header', async ({ page }) => {
+  test('drops the column where it would ride over the header, keeping the pair', async ({
+    page,
+  }) => {
     await signInAs(page, 'right');
     await openScrolledList(page);
 
     await expect(page.locator(MARK_ALL)).toBeHidden();
+    expect(await discAt(page, '.corner-sidebar')).toMatchObject({ right: EDGE, bottom: EDGE });
   });
 });
 
