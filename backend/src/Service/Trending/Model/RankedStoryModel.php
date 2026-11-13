@@ -20,4 +20,14 @@ final readonly class RankedStoryModel
     {
         return array_map(static fn (self $story): int => $story->storyId, $stories);
     }
+
+    /**
+     * @param list<self> $stories
+     *
+     * @return list<int>
+     */
+    public static function outletCountsOf(array $stories): array
+    {
+        return array_map(static fn (self $story): int => $story->outletCount, $stories);
+    }
 }

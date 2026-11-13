@@ -96,7 +96,7 @@ final class SubscriptionTrendingCountsTest extends ApiTestCase
         $this->story($fixtures, TrendingWindow::Day, \array_slice($feeds, 0, 3));
         $this->story($fixtures, TrendingWindow::Day, \array_slice($feeds, 1, 3));
         $opened = $this->story($fixtures, TrendingWindow::Day, \array_slice($feeds, 2, 3));
-        $this->story($fixtures, TrendingWindow::Day, \array_slice($feeds, 0, 2));
+        $this->story($fixtures, TrendingWindow::Day, \array_slice($feeds, 0, 1));
         $this->story($fixtures, TrendingWindow::Week, $feeds);
         $this->markViewed($user, $opened);
     }

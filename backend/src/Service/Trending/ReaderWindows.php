@@ -12,8 +12,8 @@ use App\Service\Trending\Model\RankedStoryModel;
 use App\Service\Trending\Model\ReaderWindowModel;
 
 /**
- * Cuts a window to one reader: the threshold from how many of their feeds posted within it (D38), and the stories
- * they are shown in a shorter window, which this one leaves out (D41).
+ * Cuts a window to one reader: the threshold from how many of their feeds posted within it, relaxed until five
+ * stories show (D38, #2202), and the stories they are shown in a shorter window, which this one leaves out (D41).
  */
 final readonly class ReaderWindows
 {
@@ -26,14 +26,19 @@ final readonly class ReaderWindows
 
     public function of(int $userId, TrendingWindow $window): ReaderWindowModel
     {
-        $since = $window->startBefore($this->clock->now());
-
-        return new ReaderWindowModel(
+        $atMultipleSources = new ReaderWindowModel(
             $userId,
             $window,
-            $window->minimumOutletsFor($this->windowEntries->activeFeedCount($userId, $since)),
+            TrendingWindow::MULTIPLE_SOURCES,
             $this->storyIdsLeftOutOf($userId, $window),
         );
+
+        return $atMultipleSources->withMinimumOutlets($window->minimumOutletsShowingFiveStories(
+            $this->windowEntries->activeFeedCount($userId, $window->startBefore($this->clock->now())),
+            RankedStoryModel::outletCountsOf(
+                $this->stories->rankedForUser($atMultipleSources, TrendingWindow::STORIES_WORTH_SHOWING),
+            ),
+        ));
     }
 
     /** @return list<int> */

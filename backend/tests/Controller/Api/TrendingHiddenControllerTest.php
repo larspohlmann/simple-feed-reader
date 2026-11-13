@@ -100,7 +100,7 @@ final class TrendingHiddenControllerTest extends ApiTestCase
     public function testAStoryTooFewOfTheReadersFeedsCoverIsNotFoundAndHidesNothing(): void
     {
         $reader = $this->signIn($this->client, 'trending-hide-narrow@example.com');
-        $story = $this->story(\array_slice($this->followedFeeds($reader), 0, 2));
+        $story = $this->story(\array_slice($this->followedFeeds($reader), 0, 1));
 
         $this->hide('day', $story[0]);
 
