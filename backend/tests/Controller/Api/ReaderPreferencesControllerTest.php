@@ -303,19 +303,19 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         self::assertSame(Handedness::Left, $stored->getHandedness());
     }
 
-    /** @return iterable<string, array{string}> */
+    /** @return iterable<string, array{string, string}> */
     public static function retiredSettingRoutes(): iterable
     {
-        yield 'magazine style' => ['/api/me/magazine-style'];
-        yield 'trending' => ['/api/me/trending'];
-        yield 'handedness' => ['/api/me/handedness'];
+        yield 'magazine style' => ['/api/me/magazine-style', 'retired-magazine-style@example.test'];
+        yield 'trending' => ['/api/me/trending', 'retired-trending@example.test'];
+        yield 'handedness' => ['/api/me/handedness', 'retired-handedness@example.test'];
     }
 
     #[DataProvider('retiredSettingRoutes')]
-    public function testTheRetiredSettingRoutesAreGone(string $path): void
+    public function testTheRetiredSettingRoutesAreGone(string $path, string $email): void
     {
         $client = self::createClient();
-        $this->signIn($client, 'retired' . md5($path) . '@example.test');
+        $this->signIn($client, $email);
 
         $client->request(
             'PATCH',
