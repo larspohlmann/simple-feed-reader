@@ -8,14 +8,7 @@
   <span class="lead favicon-slot" [class.hidden-feed]="excluded()">
     <app-tag-glyph [name]="glyph()" [color]="glyphColor()" [size]="glyphSize()" />
     @if (excluded()) {
-      <span
-        class="feed-exclusion-marker"
-        role="img"
-        [attr.aria-label]="exclusionTitle()"
-        [title]="exclusionTitle()"
-      >
-        <app-icon name="visibility_off" size="text" />
-      </span>
+      <app-feed-exclusion-marker [surfaces]="excludedSurfaces()" />
     }
   </span>
   <span class="name">{{ label() }}</span>

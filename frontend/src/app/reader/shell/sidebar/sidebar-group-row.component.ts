@@ -1,17 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { TranslocoService } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SelectionParams } from '../../query/query';
 import { TagInclusion } from '../../models';
-import { exclusionTitle, ownExcludedSurfaces } from '../../feed-exclusions';
-import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
+import { ownExcludedSurfaces } from '../../feed-exclusions';
+import { FeedExclusionMarkerComponent } from './feed-exclusion-marker.component';
 
 /** A tag-style group header: a link to the group's combined list, an optional projected subtag pill and menu, and the expand chevron. */
 @Component({
   selector: 'app-sidebar-group-row',
-  imports: [RouterLink, IconComponent, TagGlyphComponent],
+  imports: [RouterLink, IconComponent, TagGlyphComponent, FeedExclusionMarkerComponent],
   templateUrl: './sidebar-group-row.component.html',
   styleUrl: './sidebar-group-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,16 +30,9 @@ export class SidebarGroupRowComponent {
   readonly inclusion = input<TagInclusion | null>(null);
   readonly toggled = output();
 
-  private readonly i18n = inject(TranslocoService);
-  private readonly dictionary = inject(ActiveDictionary);
-
-  private readonly excludedSurfaces = computed(() => {
+  protected readonly excludedSurfaces = computed(() => {
     const inclusion = this.inclusion();
     return inclusion === null ? [] : ownExcludedSurfaces(inclusion);
   });
   protected readonly excluded = computed(() => this.excludedSurfaces().length > 0);
-  protected readonly exclusionTitle = computed(() => {
-    this.dictionary.loaded();
-    return exclusionTitle(this.i18n, this.excludedSurfaces());
-  });
 }

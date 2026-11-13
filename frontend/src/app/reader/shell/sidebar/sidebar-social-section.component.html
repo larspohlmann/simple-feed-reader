@@ -143,14 +143,7 @@
   <span class="favicon-slot" [class.hidden-feed]="networkExcluded()">
     <app-network-logo [network]="current.network" />
     @if (networkExcluded()) {
-      <span
-        class="feed-exclusion-marker"
-        role="img"
-        [attr.aria-label]="networkExclusionTitle()"
-        [title]="networkExclusionTitle()"
-      >
-        <app-icon name="visibility_off" size="text" />
-      </span>
+      <app-feed-exclusion-marker [surfaces]="networkExcludedSurfaces()" />
     }
   </span>
 </ng-template>

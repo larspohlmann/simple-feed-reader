@@ -1258,6 +1258,27 @@ checkbox outside a menu.
 
 ---
 
+### `<app-feed-exclusion-marker>`
+
+The eye badge on a hidden row's lead (see *Hidden-feed favicon*): `role="img"`,
+titled and labelled with `exclusionTitle()` for the surfaces it is given. It lives
+in `reader/shell/sidebar/`, not `shared/`, because it knows the reader's surface
+keys. The host carries `.feed-exclusion-marker`, which `row.hidden-feed-mark`
+positions on the lead's corner.
+
+| Input | Type | Default |
+|---|---|---|
+| `surfaces` | `readonly ExclusionSurface[]` (required) | — |
+
+```html
+<app-feed-exclusion-marker [surfaces]="markerSurfaces()" />
+```
+
+**Not for:** the Organise row's inline `visibility_off` glyph, which trails the
+title instead of riding a lead.
+
+---
+
 ### `<app-spinner>`
 
 The RSS mark, animating, as the app's loading indicator. Used for a fetch whose
@@ -1679,9 +1700,7 @@ A feed hidden from All items, For you, saved searches or Trending (#688, #2202) 
 <span class="favicon-slot" [class.hidden-feed]="excluded()">
   <app-favicon [url]="subscription().faviconUrl" [avatarUrl]="avatarUrl()" />
   @if (excluded()) {
-    <span class="feed-exclusion-marker" role="img" [attr.aria-label]="markerTitle()" [title]="markerTitle()">
-      <app-icon name="visibility_off" size="text" />
-    </span>
+    <app-feed-exclusion-marker [surfaces]="markerSurfaces()" />
   }
 </span>
 ```

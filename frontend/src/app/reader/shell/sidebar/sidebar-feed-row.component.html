@@ -67,14 +67,7 @@
   <span class="favicon-slot" [class.hidden-feed]="excluded()">
     <app-favicon [url]="subscription().faviconUrl" [avatarUrl]="avatarUrl()" />
     @if (excluded()) {
-      <span
-        class="feed-exclusion-marker"
-        role="img"
-        [attr.aria-label]="markerTitle()"
-        [title]="markerTitle()"
-      >
-        <app-icon name="visibility_off" size="text" />
-      </span>
+      <app-feed-exclusion-marker [surfaces]="markerSurfaces()" />
     }
   </span>
 </ng-template>
