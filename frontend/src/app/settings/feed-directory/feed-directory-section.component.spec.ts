@@ -7,6 +7,7 @@ import {
   restoreIntersectionObserver,
   stubIntersectionObserver,
 } from '../../../testing/intersection-observer-testing';
+import { manySitesFile } from '../../../testing/feed-directory-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dialog.component';
 import { LayoutService } from '../../reader/layout.service';
@@ -57,24 +58,10 @@ const INDEX: FeedDirectoryIndex = {
   ],
   languages: { de: 3, en: 2 },
 };
-const manySites = (count: number): FeedDirectoryCountryFile => ({
-  country: 'DE',
-  categories: ['News'],
-  languages: ['de'],
-  domains: Array.from({ length: count }, (_unused, index) => [
-    `site${index}.de`,
-    index + 1,
-    1000,
-    [0],
-    [[0, 0, [`https://site${index}.de/feed`]]],
-    null,
-  ]),
-});
 const NO_SCOPE: FeedDirectoryScope = { countries: [], languages: [] };
 
 describe('FeedDirectorySectionComponent', () => {
   const scope = signal<FeedDirectoryScope>(NO_SCOPE);
-  const isPhone = signal(false);
   const accountState = signal<FeedDirectoryAccountState>('ready');
   let retryAccount: jest.Mock;
   let country: jest.Mock<Observable<FeedDirectoryCountryFile>, [string]>;
@@ -88,7 +75,6 @@ describe('FeedDirectorySectionComponent', () => {
 
   async function render(initial: FeedDirectoryScope): Promise<HTMLElement> {
     scope.set(initial);
-    isPhone.set(false);
     accountState.set('ready');
     retryAccount = jest.fn();
     country = jest.fn((code: string) => of(code === 'DE' ? DE : AT));
@@ -120,7 +106,7 @@ describe('FeedDirectorySectionComponent', () => {
         },
         { provide: Dialog, useValue: { open: dialogOpen } },
         { provide: ManageActions, useValue: { editSubscription: jest.fn() } },
-        { provide: LayoutService, useValue: { isPhone, isCoarse: signal(false) } },
+        { provide: LayoutService, useValue: { isPhone: signal(false), isCoarse: signal(false) } },
         {
           provide: SubscriptionsStore,
           useValue: {
@@ -431,7 +417,7 @@ describe('FeedDirectorySectionComponent', () => {
     async function renderSites(count: number): Promise<void> {
       watcher = stubIntersectionObserver();
       await render(NO_SCOPE);
-      country.mockReturnValue(of(manySites(count)));
+      country.mockReturnValue(of(manySitesFile(count)));
       scope.set({ countries: ['DE'], languages: ['de'] });
       await settle();
     }

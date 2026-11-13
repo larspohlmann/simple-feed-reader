@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
+import { manySitesFile } from '../../../testing/feed-directory-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { FeedDirectoryApi } from './feed-directory-api';
 import { FeedDirectoryNames } from './feed-directory-names';
@@ -40,19 +41,6 @@ const DE: FeedDirectoryCountryFile = {
     ],
     ['b.de', null, null, [0], [[1, 0, ['https://b.de/feed']]], null],
   ],
-};
-const MANY: FeedDirectoryCountryFile = {
-  country: 'DE',
-  categories: ['News'],
-  languages: ['de'],
-  domains: Array.from({ length: 250 }, (_unused, index) => [
-    `site${index}.de`,
-    index + 1,
-    1000,
-    [0],
-    [[0, 0, [`https://site${index}.de/feed`]]],
-    null,
-  ]),
 };
 const AT: FeedDirectoryCountryFile = {
   country: 'AT',
@@ -444,7 +432,7 @@ describe('FeedDirectoryStore', () => {
   describe('batches', () => {
     beforeEach(() => {
       scope.set({ countries: ['DE'], languages: ['de'] });
-      country.mockReturnValue(of(MANY));
+      country.mockReturnValue(of(manySitesFile(250)));
       loadedStore();
     });
 

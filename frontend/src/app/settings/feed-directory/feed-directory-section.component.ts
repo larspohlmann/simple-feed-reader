@@ -77,7 +77,15 @@ export class FeedDirectorySectionComponent {
   protected readonly modes = MODES;
   private readonly typedQuery = new Subject<string>();
   private readonly more = viewChild<ElementRef<HTMLElement>>('more');
-  private moreWatcher?: IntersectionObserver;
+  private readonly moreWatcher =
+    typeof IntersectionObserver === 'undefined'
+      ? null
+      : new IntersectionObserver(
+          (entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) this.store.showMore();
+          },
+          { rootMargin: prefetchMargin(window.innerHeight) },
+        );
 
   protected readonly countryNames = computed(() =>
     this.scopes.scope().countries.map((code) => this.names.country(code)),
@@ -145,6 +153,7 @@ export class FeedDirectorySectionComponent {
       .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed())
       .subscribe((query) => this.store.query.set(query));
     effect(() => {
+      // Observing again after each batch makes a sentinel that stayed in view report again.
       this.store.shownRows();
       this.watchMore(this.more()?.nativeElement);
     });
@@ -165,14 +174,7 @@ export class FeedDirectorySectionComponent {
 
   private watchMore(sentinel: HTMLElement | undefined): void {
     this.moreWatcher?.disconnect();
-    if (!sentinel) return;
-    this.moreWatcher = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) this.store.showMore();
-      },
-      { rootMargin: prefetchMargin(window.innerHeight) },
-    );
-    this.moreWatcher.observe(sentinel);
+    if (sentinel) this.moreWatcher?.observe(sentinel);
   }
 }
 
