@@ -82,3 +82,8 @@ test('the homepage footer links the changelog page', () => {
   assert.match(homepage, /<a href="changelog\.html">Changelog<\/a>/);
   assert.doesNotMatch(homepage, /blob\/develop\/CHANGELOG\.md/);
 });
+
+test('a highlight line that starts with an issue number stays in the highlights', () => {
+  const [release] = parseReleases('## [v1.0.0] - 2026-01-01\n\n### Highlights\n\n**Tabs.** Fixed in\n#2203 and more.\n\n## What\'s Changed\n* a\n');
+  assert.equal(release.highlights.trim(), '**Tabs.** Fixed in\n#2203 and more.');
+});

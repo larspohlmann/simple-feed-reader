@@ -3,7 +3,7 @@ import { escapeHtml, renderBlocks } from './markdown.mjs';
 const RELEASES_URL = 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/';
 const PLACEHOLDER = '{{releases}}';
 const RELEASE_HEADER = /^## \[(v[^\]]+)\] - (\d{4}-\d{2}-\d{2})[^\n]*\n?/gm;
-const HIGHLIGHTS = /^### Highlights[^\n]*\n([\s\S]*?)(?=^#|(?![\s\S]))/m;
+const HIGHLIGHTS = /^### Highlights[^\n]*\n([\s\S]*?)(?=^#{1,6} |(?![\s\S]))/m;
 const DISPLAY_DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 function splitHighlights(body) {

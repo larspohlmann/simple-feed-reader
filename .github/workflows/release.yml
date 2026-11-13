@@ -215,8 +215,8 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
           echo "==> develop now contains the ${GITHUB_REF_NAME} changelog commit"
 
-  # The exact commit the step above pushed, not develop's tip at deploy time:
-  # the homepage must not go out with work develop gained after the release.
+  # The exact commit the step above pushed, not develop's tip when the deploy
+  # runs, so the page matches the changelog this release wrote.
   homepage:
     name: Homepage
     needs: release
