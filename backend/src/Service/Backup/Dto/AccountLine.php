@@ -21,9 +21,7 @@ use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
 final readonly class AccountLine
 {
     /**
-     * @param list<SocialNetwork> $savedSearchIncludedNetworks
-     * @param list<SocialNetwork> $forYouExcludedNetworks
-     * @param list<string>        $hiddenShareTargets
+     * @param list<string> $hiddenShareTargets
      */
     public function __construct(
         public string $locale,
@@ -34,8 +32,7 @@ final readonly class AccountLine
         public bool $rememberShares,
         public bool $trendingEnabled,
         public FeedDirectoryScopeModel $feedDirectoryScope,
-        public array $savedSearchIncludedNetworks,
-        public array $forYouExcludedNetworks,
+        public AccountNetworkSwitchesModel $networks,
     ) {
     }
 
@@ -56,8 +53,11 @@ final readonly class AccountLine
             rememberShares: LineFieldWithDefault::bool($line, 'rememberShares', true),
             trendingEnabled: LineFieldWithDefault::bool($line, 'trendingEnabled', true),
             feedDirectoryScope: self::feedDirectoryScope(LineField::objectOrNull($line, 'feedDirectoryScope') ?? []),
-            savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
-            forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
+            networks: new AccountNetworkSwitchesModel(
+                savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
+                forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
+                allItemsExcludedNetworks: self::networks($line, 'allItemsExcludedNetworks'),
+            ),
         );
     }
 
@@ -75,8 +75,7 @@ final readonly class AccountLine
                 $settings->feedDirectoryScope->getCountries(),
                 $settings->feedDirectoryScope->getLanguages(),
             ),
-            savedSearchIncludedNetworks: $networks->savedSearchIncludedNetworks,
-            forYouExcludedNetworks: $networks->forYouExcludedNetworks,
+            networks: $networks,
         );
     }
 
@@ -95,8 +94,9 @@ final readonly class AccountLine
                 'countries' => $this->feedDirectoryScope->countries,
                 'languages' => $this->feedDirectoryScope->languages,
             ],
-            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->savedSearchIncludedNetworks),
-            'forYouExcludedNetworks' => SocialNetwork::valuesOf($this->forYouExcludedNetworks),
+            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->networks->savedSearchIncludedNetworks),
+            'forYouExcludedNetworks' => SocialNetwork::valuesOf($this->networks->forYouExcludedNetworks),
+            'allItemsExcludedNetworks' => SocialNetwork::valuesOf($this->networks->allItemsExcludedNetworks),
         ]);
     }
 

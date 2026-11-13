@@ -7,8 +7,9 @@ namespace App\Service\Backup;
 use App\Entity\SavedSearch;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\SubscriptionSet;
-use App\Repository\ForYouNetworkExclusionRepository;
+use App\Repository\NetworkExclusionRepository;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
@@ -45,7 +46,7 @@ final readonly class AccountBackupExporter
         private TagRepository $tags,
         private SavedSearchRepository $savedSearches,
         private SavedSearchNetworkInclusionRepository $includedNetworks,
-        private ForYouNetworkExclusionRepository $forYouExcludedNetworks,
+        private NetworkExclusionRepository $excludedNetworks,
         private SubscriptionRepository $subscriptions,
         private BackupPartWalkFactory $walkFactory,
         private ClockInterface $clock,
@@ -112,7 +113,8 @@ final readonly class AccountBackupExporter
     {
         return new AccountNetworkSwitchesModel(
             $this->includedNetworks->includedNetworksFor($userId),
-            $this->forYouExcludedNetworks->excludedNetworksFor($userId),
+            $this->excludedNetworks->excludedNetworks($userId, NetworkExclusionSurface::ForYou),
+            $this->excludedNetworks->excludedNetworks($userId, NetworkExclusionSurface::AllItems),
         );
     }
 

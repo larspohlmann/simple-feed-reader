@@ -9,8 +9,8 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
-use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCard;
+use App\Entity\NetworkExclusion;
 use App\Entity\ReadingSettings;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
@@ -57,7 +57,10 @@ final class BackupFieldDeclarations
             'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',
         ],
         SavedSearchNetworkInclusion::class => ['network' => 'savedSearchIncludedNetworks'],
-        ForYouNetworkExclusion::class => ['network' => 'forYouExcludedNetworks'],
+        NetworkExclusion::class => [
+            'network' => ['forYouExcludedNetworks', 'allItemsExcludedNetworks'],
+            'surface' => ['forYouExcludedNetworks', 'allItemsExcludedNetworks'],
+        ],
         Feed::class => [
             'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',
             'description' => 'description', 'faviconUrl' => 'faviconUrl',
@@ -139,7 +142,7 @@ final class BackupFieldDeclarations
         Tag::class => BackupSchema::KIND_TAG,
         SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
         SavedSearchNetworkInclusion::class => BackupSchema::KIND_ACCOUNT,
-        ForYouNetworkExclusion::class => BackupSchema::KIND_ACCOUNT,
+        NetworkExclusion::class => BackupSchema::KIND_ACCOUNT,
         Feed::class => BackupSchema::KIND_FEED,
         Subscription::class => BackupSchema::KIND_SUBSCRIPTION,
         SubscriptionTag::class => BackupSchema::KIND_SUBSCRIPTION,

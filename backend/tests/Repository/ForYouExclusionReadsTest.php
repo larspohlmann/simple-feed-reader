@@ -6,11 +6,12 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\ForYouNetworkExclusion;
+use App\Entity\NetworkExclusion;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SocialNetwork;
 use App\Repository\ForYouFeedQuery;
@@ -88,7 +89,20 @@ final class ForYouExclusionReadsTest extends DbTestCase
     {
         $other = new User('other@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($other);
-        $this->entityManager->persist(new ForYouNetworkExclusion($other, SocialNetwork::Bluesky));
+        $this->entityManager->persist(
+            new NetworkExclusion($other, SocialNetwork::Bluesky, NetworkExclusionSurface::ForYou),
+        );
+        $post = $this->recommended(
+            $this->subscribedFeed('https://bsky.app/profile/alice.bsky.social/rss', SocialNetwork::Bluesky),
+            'post',
+        );
+
+        $this->assertSeenInListAndPool([$this->kept->requireId(), $post->requireId()]);
+    }
+
+    public function testANetworkExcludedFromAllItemsStaysInForYou(): void
+    {
+        $this->excludeFrom(SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems);
         $post = $this->recommended(
             $this->subscribedFeed('https://bsky.app/profile/alice.bsky.social/rss', SocialNetwork::Bluesky),
             'post',
@@ -185,7 +199,12 @@ final class ForYouExclusionReadsTest extends DbTestCase
 
     private function exclude(SocialNetwork $network): void
     {
-        $this->entityManager->persist(new ForYouNetworkExclusion($this->user, $network));
+        $this->excludeFrom($network, NetworkExclusionSurface::ForYou);
+    }
+
+    private function excludeFrom(SocialNetwork $network, NetworkExclusionSurface $surface): void
+    {
+        $this->entityManager->persist(new NetworkExclusion($this->user, $network, $surface));
         $this->entityManager->flush();
     }
 

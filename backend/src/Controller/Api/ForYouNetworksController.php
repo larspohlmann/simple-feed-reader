@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
-use App\Repository\ForYouNetworkExclusionRepository;
+use App\Repository\NetworkExclusionRepository;
 use App\Service\Recommendation\Feed\ForYouNetworks;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class ForYouNetworksController
 {
     public function __construct(
-        private ForYouNetworkExclusionRepository $excludedNetworks,
+        private NetworkExclusionRepository $excludedNetworks,
         private ForYouNetworks $networks,
     ) {
     }
@@ -27,7 +28,7 @@ final readonly class ForYouNetworksController
     {
         return new JsonResponse([
             'excludedNetworks' => SocialNetwork::valuesOf(
-                $this->excludedNetworks->excludedNetworksFor($user->requireId()),
+                $this->excludedNetworks->excludedNetworks($user->requireId(), NetworkExclusionSurface::ForYou),
             ),
         ]);
     }

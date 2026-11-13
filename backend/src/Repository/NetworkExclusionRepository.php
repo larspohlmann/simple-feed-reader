@@ -4,27 +4,30 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\ForYouNetworkExclusion;
+use App\Entity\NetworkExclusion;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/** @extends ServiceEntityRepository<ForYouNetworkExclusion> */
-final class ForYouNetworkExclusionRepository extends ServiceEntityRepository
+/** @extends ServiceEntityRepository<NetworkExclusion> */
+final class NetworkExclusionRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, ForYouNetworkExclusion::class);
+        parent::__construct($registry, NetworkExclusion::class);
     }
 
     /** @return list<SocialNetwork> */
-    public function excludedNetworksFor(int $userId): array
+    public function excludedNetworks(int $userId, NetworkExclusionSurface $surface): array
     {
         /** @var list<string> $networks */
         $networks = $this->createQueryBuilder('exclusion')
             ->select('exclusion.network')
             ->andWhere('exclusion.user = :user')
+            ->andWhere('exclusion.surface = :surface')
             ->setParameter('user', $userId)
+            ->setParameter('surface', $surface)
             ->orderBy('exclusion.network', 'ASC')
             ->getQuery()
             ->getSingleColumnResult();
@@ -32,8 +35,8 @@ final class ForYouNetworkExclusionRepository extends ServiceEntityRepository
         return array_map(SocialNetwork::from(...), $networks);
     }
 
-    public function findOneFor(int $userId, SocialNetwork $network): ?ForYouNetworkExclusion
+    public function findOneFor(int $userId, SocialNetwork $network, NetworkExclusionSurface $surface): ?NetworkExclusion
     {
-        return $this->findOneBy(['user' => $userId, 'network' => $network]);
+        return $this->findOneBy(['user' => $userId, 'network' => $network, 'surface' => $surface]);
     }
 }

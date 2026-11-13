@@ -13,11 +13,11 @@ use App\Entity\EntryOrigin;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouNetworkExclusion;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\NetworkExclusion;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Entity\SavedEntryOrigin;
@@ -28,6 +28,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\MagazineStyle;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Url\UrlNormalizer;
@@ -66,7 +67,12 @@ final readonly class FullyPopulatedAccount
 
         $this->entityManager->persist($this->savedSearchFor($user));
         $this->entityManager->persist(new SavedSearchNetworkInclusion($user, SocialNetwork::Mastodon));
-        $this->entityManager->persist(new ForYouNetworkExclusion($user, SocialNetwork::Bluesky));
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Bluesky, NetworkExclusionSurface::ForYou),
+        );
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Mastodon, NetworkExclusionSurface::AllItems),
+        );
 
         $feed = $this->feedFor($email);
         $this->entityManager->persist($feed);

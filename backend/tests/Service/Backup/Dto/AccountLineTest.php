@@ -151,7 +151,10 @@ final class AccountLineTest extends TestCase
             'savedSearchIncludedNetworks' => ['bluesky', 'bluesky', 'mastodon'],
         ]);
 
-        self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Mastodon], $line->savedSearchIncludedNetworks);
+        self::assertSame(
+            [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
+            $line->networks->savedSearchIncludedNetworks,
+        );
     }
 
     public function testAForYouExcludedNetworkListedTwiceIsExcludedOnce(): void
@@ -162,7 +165,31 @@ final class AccountLineTest extends TestCase
             'forYouExcludedNetworks' => ['mastodon', 'mastodon', 'bluesky'],
         ]);
 
-        self::assertSame([SocialNetwork::Mastodon, SocialNetwork::Bluesky], $line->forYouExcludedNetworks);
+        self::assertSame(
+            [SocialNetwork::Mastodon, SocialNetwork::Bluesky],
+            $line->networks->forYouExcludedNetworks,
+        );
+    }
+
+    public function testAnAllItemsExcludedNetworkListedTwiceIsExcludedOnce(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'allItemsExcludedNetworks' => ['bluesky', 'bluesky', 'mastodon'],
+        ]);
+
+        self::assertSame(
+            [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
+            $line->networks->allItemsExcludedNetworks,
+        );
+    }
+
+    public function testALineWithoutAllItemsExclusionsExcludesNoNetwork(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame([], $line->networks->allItemsExcludedNetworks);
     }
 
     public function testANonStringMagazineStyleIsRefused(): void
@@ -184,14 +211,19 @@ final class AccountLineTest extends TestCase
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
         $settings->sharing->setRememberingShares(false);
         $settings->feedDirectoryScope->change(['DE'], ['de']);
-        $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [SocialNetwork::Mastodon]);
+        $networks = new AccountNetworkSwitchesModel(
+            [SocialNetwork::Bluesky],
+            [SocialNetwork::Mastodon],
+            [SocialNetwork::Bluesky],
+        );
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
             . '"sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],"rememberShares":false,'
             . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"savedSearchIncludedNetworks":["bluesky"],'
-            . '"forYouExcludedNetworks":["mastodon"]}',
+            . '"forYouExcludedNetworks":["mastodon"],'
+            . '"allItemsExcludedNetworks":["bluesky"]}',
             AccountLine::of($user, $settings, $networks)->toBackupLine(),
         );
     }
