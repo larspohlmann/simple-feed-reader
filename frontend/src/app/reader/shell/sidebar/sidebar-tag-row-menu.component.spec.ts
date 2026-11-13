@@ -12,6 +12,7 @@ import { TagsStore } from '../../state/tags.store';
 import { tagsStoreStub } from '../../testing/tags-store.stub';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
+import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
 const tagOf = (id: number, parentId: number | null): TagDto => ({
   id,
@@ -20,6 +21,7 @@ const tagOf = (id: number, parentId: number | null): TagDto => ({
   icon: null,
   position: 0,
   parentId,
+  ...INCLUDED_EVERYWHERE,
 });
 
 function openMenuFor(target: TagDto): HTMLElement {

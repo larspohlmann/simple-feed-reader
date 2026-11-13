@@ -2,12 +2,27 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
-import { TagDto } from '../models';
+import { TagDto, TagInclusion } from '../models';
 import { TagHierarchy } from './tag-hierarchy';
 
 /** Position order, name as a stable tiebreak; a position orders a tag among its siblings only. */
 export function compareTagPositions(left: TagDto, right: TagDto): number {
   return left.position - right.position || left.name.localeCompare(right.name);
+}
+
+/** Stands in for a tag the list has not loaded yet, until the reload brings the real one. */
+export function placeholderTag(id: number): TagDto {
+  return {
+    id,
+    name: '',
+    color: null,
+    icon: null,
+    position: 0,
+    parentId: null,
+    includeInAllItems: true,
+    includeInForYou: true,
+    includeInSavedSearches: true,
+  };
 }
 
 /** The complete tag list from GET /api/tags — including tags with zero feeds,
@@ -24,6 +39,13 @@ export class TagsStore {
 
   add(tag: TagDto): void {
     this.tags.update((tags) => [...tags, tag].sort(compareTagPositions));
+  }
+
+  /** Optimistically switch one tag in or out of a surface; the caller reconciles with the server. */
+  patchInclusion(tagId: number, inclusion: Partial<TagInclusion>): void {
+    this.tags.update((tags) =>
+      tags.map((tag) => (tag.id === tagId ? { ...tag, ...inclusion } : tag)),
+    );
   }
 
   load(): void {

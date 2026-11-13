@@ -68,6 +68,7 @@ import {
 } from '../../../testing/resize-observer-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
+import { INCLUDED_EVERYWHERE } from '../testing/tag.factory';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -248,6 +249,9 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
       .expectOne('https://api.test/api/for-you/excluded-networks')
+      .flush({ excludedNetworks: [] });
+    ctrl
+      .expectOne('https://api.test/api/all-items/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -1705,9 +1709,13 @@ describe('ReaderShellComponent', () => {
       const forYouNetworksReloads = ctrl.match(
         (request) => request.url === 'https://api.test/api/for-you/excluded-networks',
       );
+      const allItemsNetworksReloads = ctrl.match(
+        (request) => request.url === 'https://api.test/api/all-items/excluded-networks',
+      );
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
       expect(forYouNetworksReloads.length).toBe(1);
+      expect(allItemsNetworksReloads.length).toBe(1);
       expect(subscriptionsReloads.length).toBe(1);
       expect(savedSearchesReloads.length).toBe(1);
 
@@ -1717,6 +1725,7 @@ describe('ReaderShellComponent', () => {
       subscriptionsReloads[0].flush(subscriptionsBody);
       savedSearchesReloads[0].flush({ savedSearches: [] });
       forYouNetworksReloads[0].flush({ excludedNetworks: [] });
+      allItemsNetworksReloads[0].flush({ excludedNetworks: [] });
       ctrl.verify();
     });
   });
@@ -1900,7 +1909,15 @@ describe('ReaderShellComponent', () => {
     // The header's glyph and its edit action both read the tag out of the
     // tree, so the tag has to exist there for either to appear.
     TestBed.inject(TagsStore).tags.set([
-      { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+      {
+        id: 3,
+        name: 'Tech',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
     ]);
     qp.next(convertToParamMap({ tag: '3' }));
     fixture.detectChanges();

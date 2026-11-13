@@ -25,6 +25,7 @@ import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
+import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
 
 /** The real store derives `unhealthy`/`unhealthyCount` from `subscriptions`;
  *  the mock reproduces that so the health group renders off the same signal
@@ -42,7 +43,15 @@ function makeSubscriptionsStoreMock(initialSubscriptions: SubscriptionDto[]) {
   };
 }
 
-const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const TECH: TagDto = {
+  id: 2,
+  name: 'Tech',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+  ...INCLUDED_EVERYWHERE,
+};
 const WORLD: TagDto = {
   id: 4,
   name: 'World',
@@ -50,8 +59,17 @@ const WORLD: TagDto = {
   icon: null,
   position: 1,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 };
-const ART: TagDto = { id: 6, name: 'Art', color: null, icon: null, position: 2, parentId: null };
+const ART: TagDto = {
+  id: 6,
+  name: 'Art',
+  color: null,
+  icon: null,
+  position: 2,
+  parentId: null,
+  ...INCLUDED_EVERYWHERE,
+};
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
   makeSubscription({
@@ -67,6 +85,7 @@ const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
       icon: null,
       position: index,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     })),
   });
 
@@ -396,6 +415,7 @@ describe('OrganiseSectionComponent', () => {
       icon: null,
       position: 1,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     };
     localStorage.clear();
     resetActionSpies();
@@ -444,6 +464,7 @@ describe('OrganiseSectionComponent', () => {
       icon: null,
       position: 1,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     };
     const subscriptionsWithNews = [...SUBS.slice(0, 1), feed(11, 'heise', [NEWS.id]), SUBS[2]];
     localStorage.clear();
@@ -529,6 +550,7 @@ describe('OrganiseSectionComponent', () => {
       icon: null,
       position: 0,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     };
     const LOCAL: TagDto = {
       id: 21,
@@ -537,6 +559,7 @@ describe('OrganiseSectionComponent', () => {
       icon: null,
       position: 0,
       parentId: 20,
+      ...INCLUDED_EVERYWHERE,
     };
     const TREE_SUBS = [feed(30, 'news-feed', [NEWS.id]), feed(31, 'local-feed', [LOCAL.id])];
 
@@ -790,6 +813,7 @@ describe('OrganiseSectionComponent', () => {
         icon: null,
         position: 0,
         parentId: null,
+        ...INCLUDED_EVERYWHERE,
       };
       const LONG_READS: TagDto = {
         id: 8,
@@ -798,6 +822,7 @@ describe('OrganiseSectionComponent', () => {
         icon: null,
         position: 0,
         parentId: 7,
+        ...INCLUDED_EVERYWHERE,
       };
       const ESSAYS: TagDto = {
         id: 9,
@@ -806,6 +831,7 @@ describe('OrganiseSectionComponent', () => {
         icon: null,
         position: 1,
         parentId: 7,
+        ...INCLUDED_EVERYWHERE,
       };
       const TECH_AFTER_READING: TagDto = { ...TECH, position: 1 };
       // Panels: 0 Reading, 1 Long reads, 2 Essays, 3 Tech, 4 untagged; headers at 0, 100, 200, 300 below the tree top.

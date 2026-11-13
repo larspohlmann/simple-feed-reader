@@ -2,25 +2,16 @@ import { test, expect, Page } from '@playwright/test';
 import { aSubscription } from '../src/testing/subscription-testing';
 import { signInAsAdmin } from './support/auth';
 import { subscriptionsJson } from './support/reader';
+import { makeTag } from '../src/app/reader/testing/tag.factory';
 
-const TAGS = [
-  { id: 1, name: 'Nachrichten', color: null, icon: null, position: 0, parentId: null },
-  { id: 2, name: 'Tech', color: null, icon: null, position: 1, parentId: null },
-];
+const TAGS = [makeTag(1, 'Nachrichten', { position: 0 }), makeTag(2, 'Tech', { position: 1 })];
 
 function feed(id: number, title: string, tagIds: number[]) {
   return aSubscription({
     id,
     title,
     position: id,
-    tags: tagIds.map((tagId, index) => ({
-      id: tagId,
-      name: TAGS.find((t) => t.id === tagId)!.name,
-      color: null,
-      icon: null,
-      position: index,
-      parentId: null,
-    })),
+    tags: tagIds.map((tagId, index) => ({ ...TAGS.find((t) => t.id === tagId)!, position: index })),
   });
 }
 

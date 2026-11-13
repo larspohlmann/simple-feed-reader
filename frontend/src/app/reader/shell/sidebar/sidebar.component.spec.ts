@@ -30,6 +30,7 @@ import { By } from '@angular/platform-browser';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SHARING_EVERYTHING } from '../../../core/preferences/sharing';
+import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
 const manageActions = {
   editSubscription: jest.fn(),
@@ -205,7 +206,15 @@ function mount(
 }
 
 const tagNodeFixture: TagNode = {
-  tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+  tag: {
+    id: 40,
+    name: 'Tech',
+    color: null,
+    icon: null,
+    position: 0,
+    parentId: null,
+    ...INCLUDED_EVERYWHERE,
+  },
   subscriptions: [sub(1, 3)],
   children: [],
   unreadCount: 3,
@@ -349,7 +358,15 @@ describe('SidebarComponent', () => {
 
   it('renders tags with summed counts and reveals subs when expanded', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+      tag: {
+        id: 20,
+        name: 'Tech',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [sub(1, 3), sub(2, 6)],
       children: [],
       unreadCount: 9,
@@ -368,7 +385,15 @@ describe('SidebarComponent', () => {
 
   it('renders the tag icon (tinted with its colour) when set, else the colour dot', () => {
     const withIcon: TagNode = {
-      tag: { id: 20, name: 'World', color: '#c08a3e', icon: 'public', position: 0, parentId: null },
+      tag: {
+        id: 20,
+        name: 'World',
+        color: '#c08a3e',
+        icon: 'public',
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [],
       children: [],
       unreadCount: 0,
@@ -376,7 +401,15 @@ describe('SidebarComponent', () => {
       descendantCount: 0,
     };
     const withoutIcon: TagNode = {
-      tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1, parentId: null },
+      tag: {
+        id: 21,
+        name: 'Plain',
+        color: null,
+        icon: null,
+        position: 1,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [],
       children: [],
       unreadCount: 0,
@@ -398,7 +431,15 @@ describe('SidebarComponent', () => {
 
   it('calls editTag / deleteTag when a tag row menu action is used', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+      tag: {
+        id: 20,
+        name: 'Tech',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [],
       children: [],
       unreadCount: 0,
@@ -429,7 +470,15 @@ describe('SidebarComponent', () => {
 
   describe('Create tag here', () => {
     const child: TagNode = {
-      tag: { id: 21, name: 'Long reads', color: null, icon: null, position: 0, parentId: 20 },
+      tag: {
+        id: 21,
+        name: 'Long reads',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: 20,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [],
       children: [],
       unreadCount: 0,
@@ -437,7 +486,15 @@ describe('SidebarComponent', () => {
       descendantCount: 0,
     };
     const root: TagNode = {
-      tag: { id: 20, name: 'Reading', color: null, icon: null, position: 0, parentId: null },
+      tag: {
+        id: 20,
+        name: 'Reading',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [],
       children: [child],
       unreadCount: 0,
@@ -496,7 +553,15 @@ describe('SidebarComponent', () => {
     const fixture = mount({
       tagTree: [
         {
-          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+          tag: {
+            id: 20,
+            name: 'Tech',
+            color: null,
+            icon: null,
+            position: 0,
+            parentId: null,
+            ...INCLUDED_EVERYWHERE,
+          },
           subscriptions: [],
           children: [],
           unreadCount: 0,
@@ -521,7 +586,15 @@ describe('SidebarComponent', () => {
     const fixture = mount({
       tagTree: [
         {
-          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+          tag: {
+            id: 20,
+            name: 'Tech',
+            color: null,
+            icon: null,
+            position: 0,
+            parentId: null,
+            ...INCLUDED_EVERYWHERE,
+          },
           subscriptions: [shared],
           children: [],
           unreadCount: 0,
@@ -529,7 +602,15 @@ describe('SidebarComponent', () => {
           descendantCount: 0,
         },
         {
-          tag: { id: 21, name: 'News', color: null, icon: null, position: 0, parentId: null },
+          tag: {
+            id: 21,
+            name: 'News',
+            color: null,
+            icon: null,
+            position: 0,
+            parentId: null,
+            ...INCLUDED_EVERYWHERE,
+          },
           subscriptions: [shared],
           children: [],
           unreadCount: 0,
@@ -561,6 +642,7 @@ describe('SidebarComponent', () => {
       icon: null,
       position: 0,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     });
     const withTags = (subscription: SubscriptionDto, tags: TagDto[]): SubscriptionDto => ({
       ...subscription,
@@ -644,7 +726,15 @@ describe('SidebarComponent', () => {
       subscriptions: SubscriptionDto[] = [],
       parentId: number | null = null,
     ): TagNode => ({
-      tag: { id, name: `t${id}`, color: null, icon: null, position: 0, parentId },
+      tag: {
+        id,
+        name: `t${id}`,
+        color: null,
+        icon: null,
+        position: 0,
+        parentId,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions,
       children: [],
       unreadCount: 0,
@@ -934,7 +1024,15 @@ describe('SidebarComponent', () => {
   it('shows both exclusion toggles in the tagged feed row menu', () => {
     const subscription = sub(1, 0);
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+      tag: {
+        id: 20,
+        name: 'Tech',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [subscription],
       children: [],
       unreadCount: 0,
@@ -1045,7 +1143,15 @@ describe('SidebarComponent', () => {
     afterEach(() => localStorage.clear());
 
     const tagNode = (id: number, parentId: number | null, children: TagNode[] = []): TagNode => ({
-      tag: { id, name: `t${id}`, color: null, icon: null, position: 0, parentId },
+      tag: {
+        id,
+        name: `t${id}`,
+        color: null,
+        icon: null,
+        position: 0,
+        parentId,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [],
       children,
       unreadCount: 0,
@@ -1109,6 +1215,7 @@ describe('SidebarComponent', () => {
       icon: null,
       position,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     });
     const child = (id: number, parentId: number, position: number): TagDto => ({
       ...root(id, position),
@@ -1476,7 +1583,15 @@ describe('SidebarComponent', () => {
 
     it('places the chevron in the same right-edge column as a tag chevron', () => {
       const node: TagNode = {
-        tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+        tag: {
+          id: 30,
+          name: 'Tech',
+          color: null,
+          icon: null,
+          position: 0,
+          parentId: null,
+          ...INCLUDED_EVERYWHERE,
+        },
         subscriptions: [],
         children: [],
         unreadCount: 0,
@@ -2205,7 +2320,15 @@ describe('for-you row', () => {
 });
 
 describe('organise mode', () => {
-  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
+  const tag: TagDto = {
+    id: 1,
+    name: 'News',
+    color: null,
+    icon: null,
+    position: 0,
+    parentId: null,
+    ...INCLUDED_EVERYWHERE,
+  };
   const tree: TagNode[] = [
     {
       tag,
@@ -2725,7 +2848,15 @@ describe('organise mode', () => {
       ],
     };
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+      tag: {
+        id: 20,
+        name: 'Tech',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
       subscriptions: [],
       children: [],
       unreadCount: 0,

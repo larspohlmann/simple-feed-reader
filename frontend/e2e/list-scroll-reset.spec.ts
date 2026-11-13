@@ -2,18 +2,12 @@ import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 import { entryWire, oneFeedJson } from './support/reader';
 import { pageScrollY } from './support/scroll';
+import { makeTag } from '../src/app/reader/testing/tag.factory';
 
 /** How far down the list the spec scrolls before switching lists. */
 const SCROLLED_TO = 900;
 
-const TAG = {
-  id: 7001,
-  name: 'Scroll fixture',
-  color: null,
-  icon: null,
-  position: 0,
-  parentId: null,
-};
+const TAG = makeTag(7001, 'Scroll fixture', { position: 0 });
 
 /** The two lists under test, each named by the sidebar link that opens it and by
  *  a row title only that list holds — the switch is only complete once the

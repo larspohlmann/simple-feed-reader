@@ -34,7 +34,6 @@ import {
   FeedGroupCounts,
   buildTagTree,
   tagNodesById,
-  sumEntries,
   taggedSubscriptions,
   totalEntryCount,
   untaggedSubscriptions,
@@ -107,7 +106,6 @@ export class SubscriptionsStore {
   );
   readonly totalUnread = computed(() => this.unreadTotals().allItems);
   readonly forYouUnread = computed(() => this.unreadTotals().forYou);
-  readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
   readonly unhealthyCount = computed(() => this.unhealthy().length);
 

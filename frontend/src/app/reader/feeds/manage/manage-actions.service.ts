@@ -5,7 +5,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
 import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { TagsStore } from '../../state/tags.store';
+import { TagsStore, placeholderTag } from '../../state/tags.store';
 import { RefreshService } from '../../state/refresh.service';
 import { EntriesStore } from '../../state/entries.store';
 import { MoveFeedToTag, RefreshReport, SubscriptionDto, SubscriptionTagDto } from '../../models';
@@ -95,14 +95,7 @@ export class ManageActions {
 
   private tagShape(tagId: number): SubscriptionTagDto {
     const tag = this.tags.tags().find((candidate) => candidate.id === tagId);
-    return {
-      id: tagId,
-      name: tag?.name ?? '',
-      color: tag?.color ?? null,
-      icon: tag?.icon ?? null,
-      position: 0,
-      parentId: tag?.parentId ?? null,
-    };
+    return { ...(tag ?? placeholderTag(tagId)), position: 0 };
   }
 
   /** Flip whether this feed contributes to the "All items" list. Optimistic:

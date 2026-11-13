@@ -16,6 +16,7 @@ import { tagsStoreStub } from '../../testing/tags-store.stub';
 import { TagDto } from '../../models';
 import { ACTION_SHEET_DIVIDER } from '../../../shared/action-sheet/action-sheet.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
+import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
 describe('SidebarRowActions', () => {
   it("titles an unrenamed Home's feed sheet with the Home's label", () => {
@@ -230,6 +231,7 @@ describe('SidebarRowActions', () => {
       icon: null,
       position,
       parentId,
+      ...INCLUDED_EVERYWHERE,
     });
     const sheetOpen = jest.fn();
     const reorderTags = jest.fn();

@@ -1,4 +1,5 @@
 import { SubscriptionDto, TagDto } from '../models';
+import { VisibilitySwitches, isVisibleIn } from './visibility';
 
 export interface TagNode {
   tag: TagDto;
@@ -186,14 +187,7 @@ function embeddedTagsByName(subscriptions: SubscriptionDto[]): TagDto[] {
   for (const subscription of subscriptions) {
     for (const tag of subscription.tags) {
       if (!byId.has(tag.id)) {
-        byId.set(tag.id, {
-          id: tag.id,
-          name: tag.name,
-          color: tag.color,
-          icon: tag.icon,
-          position: 0,
-          parentId: tag.parentId,
-        });
+        byId.set(tag.id, { ...tag, position: 0 });
       }
     }
   }
@@ -210,12 +204,14 @@ export function untaggedSubscriptions(subscriptions: SubscriptionDto[]): Subscri
     .sort((left, right) => left.position - right.position);
 }
 
-/** All-items list total: a feed excluded from All items (`includeInAllItems:
- *  false`) contributes nothing. */
-export function sumEntries(subscriptions: SubscriptionDto[]): number {
+/** All-items list total: a feed All items leaves out, by its own flag, a tag or its network, contributes nothing. */
+export function sumEntries(
+  subscriptions: readonly SubscriptionDto[],
+  switches: VisibilitySwitches,
+): number {
   return subscriptions.reduce(
     (total, subscription) =>
-      subscription.includeInAllItems ? total + subscription.entryCount : total,
+      isVisibleIn(subscription, 'allItems', switches) ? total + subscription.entryCount : total,
     0,
   );
 }

@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { presetLocalStorage } from './support/auth';
+import { makeTag } from '../src/app/reader/testing/tag.factory';
 import {
   entryDetailJson,
   entryWire,
@@ -11,7 +12,7 @@ import {
 const DESKTOP = { width: 1280, height: 900 };
 const ENTRY = entryWire({ id: 1, title: 'Text size fixture entry' });
 const BODY = '<h2>Section</h2><p>Body text of the fixture article.</p>';
-const TAG = { id: 1, name: 'Fixture tag', color: null, icon: null, position: 0, parentId: null };
+const TAG = makeTag(1, 'Fixture tag', { position: 0 });
 
 const SCALED = {
   rowTitle: 'app-entry-row .title',

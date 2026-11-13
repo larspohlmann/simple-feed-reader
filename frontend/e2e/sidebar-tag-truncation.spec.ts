@@ -2,6 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 import { aSubscription } from '../src/testing/subscription-testing';
 import { signInAsAdmin } from './support/auth';
 import { subscriptionsJson } from './support/reader';
+import { makeTag } from '../src/app/reader/testing/tag.factory';
 
 // Above the 720px breakpoint, so the sidebar is an in-flow fixed-width column rather
 // than the mobile drawer — that fixed width is what the row has to fit into.
@@ -11,10 +12,7 @@ const DESKTOP = { width: 1280, height: 900 };
 const LONG_TAG = 'Wissenschaft und Forschung International';
 const SHORT_TAG = 'Science';
 
-const TAGS = [
-  { id: 1, name: LONG_TAG, color: null, icon: null, position: 0, parentId: null },
-  { id: 2, name: SHORT_TAG, color: null, icon: null, position: 1, parentId: null },
-];
+const TAGS = [makeTag(1, LONG_TAG, { position: 0 }), makeTag(2, SHORT_TAG, { position: 1 })];
 
 function subscription(id: number, title: string, tagId: number) {
   return aSubscription({

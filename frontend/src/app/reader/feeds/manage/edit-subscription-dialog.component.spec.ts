@@ -11,6 +11,7 @@ import {
 } from './edit-subscription-dialog.component';
 import { SubscriptionDto } from '../../models';
 import { SubscriptionRows } from '../../state/subscription-rows';
+import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
 const sub: SubscriptionDto = {
   id: 5,
@@ -32,7 +33,17 @@ const sub: SubscriptionDto = {
   consecutiveFailures: 0,
   lastErrorMessage: null,
   position: 0,
-  tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0, parentId: null }],
+  tags: [
+    {
+      id: 1,
+      name: 'Tech',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: null,
+      ...INCLUDED_EVERYWHERE,
+    },
+  ],
   unreadCount: 3,
   entryCount: 0,
   includeInAllItems: true,
@@ -153,7 +164,17 @@ describe('EditSubscriptionDialogComponent', () => {
         ...sub,
         id: 6,
         createdAt: '2026-01-01T00:00:00Z',
-        tags: [{ id: 2, name: 'News', color: null, icon: null, position: 1, parentId: null }],
+        tags: [
+          {
+            id: 2,
+            name: 'News',
+            color: null,
+            icon: null,
+            position: 1,
+            parentId: null,
+            ...INCLUDED_EVERYWHERE,
+          },
+        ],
       },
     ]);
     fixture.componentInstance.toggle(1);

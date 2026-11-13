@@ -14,13 +14,24 @@ import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { formatLongDateTime } from '../../reader/format';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
+import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
 
 const SUBSCRIPTION = makeSubscription({
   id: 7,
   feedId: 7,
   title: 'heise online',
   feedUrl: 'https://heise.example/rss',
-  tags: [{ id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null }],
+  tags: [
+    {
+      id: 2,
+      name: 'Tech',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: null,
+      ...INCLUDED_EVERYWHERE,
+    },
+  ],
 });
 
 describe('OrganiseFeedRowComponent', () => {

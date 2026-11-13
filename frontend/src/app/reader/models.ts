@@ -29,7 +29,14 @@ export interface SavedSearchMembershipDto {
   term: string;
 }
 
-export interface TagDto {
+/** Whether a tag lets its feeds into each surface; switching one off overrides the feeds' own flags. */
+export interface TagInclusion {
+  includeInAllItems: boolean;
+  includeInForYou: boolean;
+  includeInSavedSearches: boolean;
+}
+
+export interface TagDto extends TagInclusion {
   id: number;
   name: string;
   color: string | null;
@@ -398,6 +405,9 @@ export interface TagInput {
   icon: string | null;
   parentId: number | null;
 }
+
+/** Body for PATCH /api/tags/{id}: the whole `TagInput`, and only the inclusion flags that change. */
+export type TagUpdate = TagInput & Partial<TagInclusion>;
 
 /** Body for PATCH /api/subscriptions/{id}. Replaces the whole tag set. Omitted
  *  flags leave the server's current value unchanged. */

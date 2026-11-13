@@ -6,6 +6,7 @@ import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { API_BASE_URL } from '../../../core/api';
 import { TagFormDialogComponent, TagFormData } from './tag-form-dialog.component';
 import { TagDto } from '../../models';
+import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
 describe('TagFormDialogComponent', () => {
   const close = jest.fn();
@@ -20,6 +21,7 @@ describe('TagFormDialogComponent', () => {
     icon: null,
     position: 0,
     parentId,
+    ...INCLUDED_EVERYWHERE,
   });
 
   function mount(data: TagFormData, tags: TagDto[] = []) {
@@ -91,6 +93,7 @@ describe('TagFormDialogComponent', () => {
         icon: 'label',
         position: 0,
         parentId: null,
+        ...INCLUDED_EVERYWHERE,
       }),
     );
     const component = fixture.componentInstance;

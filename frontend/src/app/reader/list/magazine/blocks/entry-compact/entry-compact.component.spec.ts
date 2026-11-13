@@ -10,6 +10,7 @@ import {
 } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { INCLUDED_EVERYWHERE } from '../../../../testing/tag.factory';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -29,6 +30,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   icon: null,
   position: 0,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 
 const entry = anEntry({

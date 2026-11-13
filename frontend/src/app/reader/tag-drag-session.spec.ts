@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { TagsStore } from './state/tags.store';
 import { TagDto } from './models';
 import { TagDragSession, measureTagLayout } from './tag-drag-session';
+import { INCLUDED_EVERYWHERE } from './testing/tag.factory';
 
 const tag = (id: number, position: number): TagDto => ({
   id,
@@ -11,6 +12,7 @@ const tag = (id: number, position: number): TagDto => ({
   icon: null,
   position,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 const tagA = tag(1, 0);
 const tagB = tag(2, 1);

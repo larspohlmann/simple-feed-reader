@@ -17,6 +17,7 @@ import { makeSubscription } from '../../testing/subscription.factory';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import { TranslocoService } from '@jsverse/transloco';
+import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
 const BASE = 'https://api.test';
 
@@ -27,7 +28,15 @@ const sub: SubscriptionDto = makeSubscription({
   feedUrl: 'u',
   createdAt: 'x',
 });
-const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const tag: TagDto = {
+  id: 3,
+  name: 'Tech',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+  ...INCLUDED_EVERYWHERE,
+};
 
 describe('ManageActions', () => {
   let service: ManageActions;
@@ -201,6 +210,7 @@ describe('ManageActions', () => {
       icon: null,
       position: 1,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     };
     tags.tags.set([tag, news]);
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };

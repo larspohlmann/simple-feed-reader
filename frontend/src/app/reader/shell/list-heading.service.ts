@@ -5,6 +5,8 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
+import { sumEntries } from '../state/subscription-derivations';
 import { ReadingLayoutService } from '../reading-layout.service';
 import {
   BySelectionKind,
@@ -37,6 +39,11 @@ export class ListHeading {
   private readonly layout = inject(ReadingLayoutService);
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
+  private readonly visibilitySwitches = inject(VisibilitySwitchesStore);
+
+  private readonly allItemsEntries = computed(() =>
+    sumEntries(this.subscriptions.subscriptions(), this.visibilitySwitches.switches()),
+  );
 
   readonly activeSavedSearchId = computed(() =>
     selectedSavedSearchIdOf(this.routeState.selection()),
@@ -163,7 +170,7 @@ export class ListHeading {
 
   private readonly countByKind: BySelectionKind<TitleCount> = {
     all: (selection) =>
-      bySwitch(selection, this.subscriptions.totalUnread(), this.subscriptions.totalEntries()),
+      bySwitch(selection, this.subscriptions.totalUnread(), this.allItemsEntries()),
     tag: (selection) => {
       const node = this.selectedTagNode();
       return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);

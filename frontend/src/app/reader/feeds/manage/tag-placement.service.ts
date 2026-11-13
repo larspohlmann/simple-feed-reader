@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { switchMap } from 'rxjs';
 import { ReaderApi } from '../../reader-api';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { TagsStore, compareTagPositions } from '../../state/tags.store';
+import { TagsStore, compareTagPositions, placeholderTag } from '../../state/tags.store';
 import { TagDto, TagInput } from '../../models';
 import { TagDrop } from '../../tag-drop';
 import { reloadAfter } from './reload-after';
@@ -51,7 +51,7 @@ export class TagPlacement {
 function positioned(current: readonly TagDto[], tagIds: readonly number[]): TagDto[] {
   const byId = new Map(current.map((tag) => [tag.id, tag]));
   return tagIds.map((id, index) => ({
-    ...(byId.get(id) ?? { id, name: '', color: null, icon: null, parentId: null }),
+    ...(byId.get(id) ?? placeholderTag(id)),
     position: index,
   }));
 }

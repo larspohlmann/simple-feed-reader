@@ -9,6 +9,7 @@ import { holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -28,6 +29,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   icon: null,
   position: 0,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 
 const entryAt = (id: number): EntryDto =>
