@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**French and Spanish.** The app and its emails now also come in French and
+Spanish. Change the language in Settings → Preferences.
+
+**Choose what shows where.** Feeds, tags and networks have checkboxes for All
+items, For You, saved searches and Trending. Settings → Visibility shows them
+all in one table.
+
+**Buttons in thumb reach.** On a phone or tablet, the floating buttons sit
+together in one bottom corner, on the side you choose in Settings → Preferences.
+
 ## [v1.9.3] - 2026-11-12
 
 ### Highlights
