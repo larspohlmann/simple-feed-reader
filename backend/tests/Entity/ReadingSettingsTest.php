@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\ReadingSettings;
 use App\Entity\User;
+use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
@@ -37,6 +38,20 @@ final class ReadingSettingsTest extends TestCase
         $settings->setMagazineStyle(MagazineStyle::Airy);
 
         self::assertSame(MagazineStyle::Airy, $settings->getMagazineStyle());
+    }
+
+    public function testANewAccountIsRightHanded(): void
+    {
+        self::assertSame(Handedness::Right, UnsavedUserSettings::reading()->getHandedness());
+    }
+
+    public function testTheHandednessKeepsWhatItIsGiven(): void
+    {
+        $settings = UnsavedUserSettings::reading();
+
+        $settings->setHandedness(Handedness::Left);
+
+        self::assertSame(Handedness::Left, $settings->getHandedness());
     }
 
     public function testTrendingKeepsWhatItIsGiven(): void
