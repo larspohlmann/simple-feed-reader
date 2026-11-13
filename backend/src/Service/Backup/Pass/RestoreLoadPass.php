@@ -11,7 +11,6 @@ use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
-use App\Enum\SocialNetwork;
 use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\FeedLine;
@@ -114,16 +113,10 @@ final class RestoreLoadPass
         foreach ($networks->savedSearchIncludedNetworks as $network) {
             $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, $network));
         }
-        $this->loadExclusions($networks->forYouExcludedNetworks, InclusionSurface::ForYou);
-        $this->loadExclusions($networks->allItemsExcludedNetworks, InclusionSurface::AllItems);
-        $this->loadExclusions($networks->trendingExcludedNetworks, InclusionSurface::Trending);
-    }
-
-    /** @param list<SocialNetwork> $networks */
-    private function loadExclusions(array $networks, InclusionSurface $surface): void
-    {
-        foreach ($networks as $network) {
-            $this->entityManager->persist(new NetworkExclusion($this->user, $network, $surface));
+        foreach (InclusionSurface::cases() as $surface) {
+            foreach ($networks->excludedFrom($surface) as $network) {
+                $this->entityManager->persist(new NetworkExclusion($this->user, $network, $surface));
+            }
         }
     }
 

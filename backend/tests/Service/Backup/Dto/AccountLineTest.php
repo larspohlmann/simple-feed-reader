@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\AccountLine;
@@ -167,7 +168,7 @@ final class AccountLineTest extends TestCase
 
         self::assertSame(
             [SocialNetwork::Mastodon, SocialNetwork::Bluesky],
-            $line->networks->forYouExcludedNetworks,
+            $line->networks->excludedFrom(InclusionSurface::ForYou),
         );
     }
 
@@ -181,7 +182,7 @@ final class AccountLineTest extends TestCase
 
         self::assertSame(
             [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
-            $line->networks->allItemsExcludedNetworks,
+            $line->networks->excludedFrom(InclusionSurface::AllItems),
         );
     }
 
@@ -189,7 +190,7 @@ final class AccountLineTest extends TestCase
     {
         $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
 
-        self::assertSame([], $line->networks->allItemsExcludedNetworks);
+        self::assertSame([], $line->networks->excludedFrom(InclusionSurface::AllItems));
     }
 
     public function testATrendingExcludedNetworkListedTwiceIsExcludedOnce(): void
@@ -200,14 +201,14 @@ final class AccountLineTest extends TestCase
             'trendingExcludedNetworks' => ['mastodon', 'mastodon'],
         ]);
 
-        self::assertSame([SocialNetwork::Mastodon], $line->networks->trendingExcludedNetworks);
+        self::assertSame([SocialNetwork::Mastodon], $line->networks->excludedFrom(InclusionSurface::Trending));
     }
 
     public function testALineWithoutTrendingExclusionsExcludesNoNetwork(): void
     {
         $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
 
-        self::assertSame([], $line->networks->trendingExcludedNetworks);
+        self::assertSame([], $line->networks->excludedFrom(InclusionSurface::Trending));
     }
 
     public function testANonStringMagazineStyleIsRefused(): void
@@ -229,12 +230,11 @@ final class AccountLineTest extends TestCase
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
         $settings->sharing->setRememberingShares(false);
         $settings->feedDirectoryScope->change(['DE'], ['de']);
-        $networks = new AccountNetworkSwitchesModel(
-            [SocialNetwork::Bluesky],
-            [SocialNetwork::Mastodon],
-            [SocialNetwork::Bluesky],
-            [SocialNetwork::Mastodon],
-        );
+        $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [
+            InclusionSurface::AllItems->value => [SocialNetwork::Bluesky],
+            InclusionSurface::ForYou->value => [SocialNetwork::Mastodon],
+            InclusionSurface::Trending->value => [SocialNetwork::Mastodon],
+        ]);
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'

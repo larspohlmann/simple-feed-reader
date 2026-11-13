@@ -35,6 +35,25 @@ final class NetworkExclusionRepository extends ServiceEntityRepository
         return array_map(SocialNetwork::from(...), $networks);
     }
 
+    /** @return array<string, list<SocialNetwork>> by InclusionSurface value */
+    public function excludedNetworksBySurface(int $userId): array
+    {
+        /** @var list<NetworkExclusion> $exclusions */
+        $exclusions = $this->createQueryBuilder('exclusion')
+            ->andWhere('exclusion.user = :user')
+            ->setParameter('user', $userId)
+            ->orderBy('exclusion.network', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $bySurface = [];
+        foreach ($exclusions as $exclusion) {
+            $bySurface[$exclusion->getSurface()->value][] = $exclusion->getNetwork();
+        }
+
+        return $bySurface;
+    }
+
     public function findOneFor(int $userId, SocialNetwork $network, InclusionSurface $surface): ?NetworkExclusion
     {
         return $this->findOneBy(['user' => $userId, 'network' => $network, 'surface' => $surface]);

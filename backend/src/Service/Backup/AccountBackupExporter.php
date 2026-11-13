@@ -7,7 +7,6 @@ namespace App\Service\Backup;
 use App\Entity\SavedSearch;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Enum\InclusionSurface;
 use App\Enum\SubscriptionSet;
 use App\Repository\NetworkExclusionRepository;
 use App\Repository\SavedSearchNetworkInclusionRepository;
@@ -113,9 +112,7 @@ final readonly class AccountBackupExporter
     {
         return new AccountNetworkSwitchesModel(
             $this->includedNetworks->includedNetworksFor($userId),
-            $this->excludedNetworks->excludedNetworks($userId, InclusionSurface::ForYou),
-            $this->excludedNetworks->excludedNetworks($userId, InclusionSurface::AllItems),
-            $this->excludedNetworks->excludedNetworks($userId, InclusionSurface::Trending),
+            $this->excludedNetworks->excludedNetworksBySurface($userId),
         );
     }
 
