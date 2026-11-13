@@ -17,23 +17,22 @@
   <span class="label">{{ name() }}</span>
 </div>
 @for (cell of cells(); track cell.surface) {
-  <label
-    class="cell"
-    [class.inherited]="cell.inheritedFrom.length > 0"
-    [attr.title]="
-      cell.inheritedFrom.length > 0
-        ? ('settings.visibility.excludedBy' | transloco: { causes: cell.inheritedFrom.join(', ') })
-        : null
-    "
-  >
+  @let reason =
+    cell.inheritedFrom.length > 0
+      ? ('settings.visibility.excludedBy' | transloco: { causes: cell.inheritedFrom.join(', ') })
+      : null;
+  @let reasonId = id + '-' + cell.surface;
+  <label class="cell" [class.inherited]="reason !== null" [attr.title]="reason">
     <input
       type="checkbox"
       [checked]="cell.checked"
       [attr.aria-label]="name() + ': ' + (surfaceLabelKeys[cell.surface] | transloco)"
+      [attr.aria-describedby]="reason === null ? null : reasonId"
       (change)="toggled.emit(cell.surface)"
     />
-    @if (cell.inheritedFrom.length > 0) {
+    @if (reason !== null) {
       <app-icon class="inherited-mark" name="visibility_off" size="xs" />
+      <span class="sr-only" [id]="reasonId">{{ reason }}</span>
     }
   </label>
 }

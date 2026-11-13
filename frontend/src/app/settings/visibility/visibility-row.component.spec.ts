@@ -49,6 +49,17 @@ describe('VisibilityRowComponent', () => {
     expect(cells[1].getAttribute('title')).toBeNull();
   });
 
+  it('describes an inherited box by its causes to assistive tech', () => {
+    const { element, boxes } = render();
+    const describedBy = boxes[0].getAttribute('aria-describedby');
+
+    expect(describedBy).not.toBeNull();
+    expect(element.querySelector(`#${describedBy}`)?.textContent?.trim()).toBe(
+      'Excluded by Bluesky, Tag A',
+    );
+    expect(boxes[1].getAttribute('aria-describedby')).toBeNull();
+  });
+
   it('never disables a box, an inherited one included', () => {
     const { boxes } = render();
 

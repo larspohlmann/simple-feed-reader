@@ -3,6 +3,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { ExclusionSurface, SURFACE_LABEL_KEYS } from '../../reader/feed-exclusions';
 import { IconComponent } from '../../shared/icon/icon.component';
 
+let nextId = 0;
+
 /** One box of the matrix: the row's own switch, and what above it keeps the row out regardless. */
 export interface VisibilityCell {
   readonly surface: ExclusionSurface;
@@ -30,4 +32,5 @@ export class VisibilityRowComponent {
   readonly expandToggled = output<void>();
 
   protected readonly surfaceLabelKeys = SURFACE_LABEL_KEYS;
+  protected readonly id = `visibility-row-${nextId++}`;
 }
