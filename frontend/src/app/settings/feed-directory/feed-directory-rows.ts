@@ -191,13 +191,25 @@ function comparator(
   switch (filter.sort) {
     case 'az':
       return (left, right) => left.host.localeCompare(right.host);
-    case 'feeds':
-      return (left, right) =>
-        right.byMode[filter.mode].feedCount - left.byMode[filter.mode].feedCount ||
-        byTop(left, right);
+    case 'feeds': {
+      const shownCount = shownCounter(filter);
+      return (left, right) => shownCount(right) - shownCount(left) || byTop(left, right);
+    }
     default:
       return byTop;
   }
+}
+
+function shownCounter(filter: FeedDirectoryFilter): (row: FeedDirectoryRow) => number {
+  if (!filter.categories.size) return (row) => row.byMode[filter.mode].feedCount;
+  const counts = new Map<FeedDirectoryRow, number>();
+  return (row) => {
+    const known = counts.get(row);
+    if (known !== undefined) return known;
+    const count = shownFeeds(row, filter.mode, filter.categories).length;
+    counts.set(row, count);
+    return count;
+  };
 }
 
 export function filterRows(

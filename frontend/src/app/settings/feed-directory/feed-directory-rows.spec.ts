@@ -101,6 +101,24 @@ describe('feed directory rows', () => {
       ]);
     });
 
+    it('ranks Most feeds by the feeds the chosen categories leave', () => {
+      const sports = [feed('https://b.de/1', 'Sport'), feed('https://b.de/2', 'Sport')];
+      const sportSite: FeedDirectoryRow = {
+        ...site,
+        host: 'b.de',
+        feeds: sports,
+        byMode: modeSummaries(sports),
+      };
+
+      const ranked = filterRows([site, sportSite], {
+        ...ALL,
+        categories: new Set(['Sport']),
+        sort: 'feeds',
+      });
+
+      expect(ranked.map((row) => row.host)).toEqual(['b.de', site.host]);
+    });
+
     it('keeps the mode before the categories', () => {
       expect(shownFeeds(site, 'podcasts', new Set(['World']))).toEqual([]);
       expect(urls(shownFeeds(site, 'podcasts', new Set(['Sport'])))).toEqual([
