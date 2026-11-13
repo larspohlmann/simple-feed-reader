@@ -13,12 +13,7 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SubscriptionDto, TagDto } from '../../models';
-import {
-  ExclusionSurface,
-  flipFeedFlag,
-  isIncludedIn,
-  surfaceChecks,
-} from '../../feed-exclusions';
+import { ExclusionSurface, flipFeedFlag, isIncludedIn, surfaceChecks } from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
 import { NetworkSurfaceSwitches } from '../../state/network-surface-switches.service';
 import { SocialSection } from '../../state/social-sections';

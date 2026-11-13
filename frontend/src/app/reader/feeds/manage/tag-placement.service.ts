@@ -16,9 +16,7 @@ export class TagPlacement {
   private readonly tags = inject(TagsStore);
 
   reorder(tagIds: readonly number[]): void {
-    this.tags.tags.update((current) =>
-      placed(current, positioned(this.tags.tagsById(), tagIds)),
-    );
+    this.tags.tags.update((current) => placed(current, positioned(this.tags.tagsById(), tagIds)));
     reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());
   }
 

@@ -60,7 +60,9 @@ export const SURFACE_DESCRIPTORS: readonly SurfaceDescriptor[] = [
   },
 ];
 
-export function bySurface<T>(pick: (descriptor: SurfaceDescriptor) => T): Record<ExclusionSurface, T> {
+export function bySurface<T>(
+  pick: (descriptor: SurfaceDescriptor) => T,
+): Record<ExclusionSurface, T> {
   return Object.fromEntries(
     SURFACE_DESCRIPTORS.map((descriptor) => [descriptor.surface, pick(descriptor)]),
   ) as Record<ExclusionSurface, T>;
