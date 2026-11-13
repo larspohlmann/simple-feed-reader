@@ -70,14 +70,7 @@
   ]
 }
 </script>
-<script>
-(function () {
-  try {
-    var choice = localStorage.getItem('sfr.homepage.theme');
-    if (choice === 'light' || choice === 'dark') document.documentElement.setAttribute('data-theme', choice);
-  } catch (error) {}
-})();
-</script>
+<script src="theme-init.js"></script>
 <link rel="stylesheet" href="base.css">
 <style>
 /* hero */

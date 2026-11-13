@@ -12,14 +12,7 @@
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f4">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161616">
 <link rel="canonical" href="https://lars-pohlmann.de/simplefeedreader/changelog.html">
-<script>
-(function () {
-  try {
-    var choice = localStorage.getItem('sfr.homepage.theme');
-    if (choice === 'light' || choice === 'dark') document.documentElement.setAttribute('data-theme', choice);
-  } catch (error) {}
-})();
-</script>
+<script src="theme-init.js"></script>
 <link rel="stylesheet" href="base.css">
 <style>
 main.wrap{max-width:760px;padding-top:var(--space-7);padding-bottom:var(--space-8)}

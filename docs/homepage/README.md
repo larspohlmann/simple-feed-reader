@@ -35,7 +35,7 @@ writes the scene start times into the page's scene list
 (`scripts/homepage-changelog/page.html`). Each release shows its highlights,
 with the full list of changes folded away and the version linked to its GitHub
 Release; `[Unreleased]` is left out. `index.html` and the changelog page share
-`base.css` and `theme.js`.
+`base.css`, `theme-init.js` and `theme.js`.
 
 To preview it, generate it into this folder (the file is gitignored) and open
 it from the checkout:
@@ -60,8 +60,9 @@ push to `develop` that touches `docs/homepage/`, `docs/screenshots/`,
 `CHANGELOG.md` or the changelog generator, on demand from the Actions tab, and
 at the end of every release: `release.yml` calls it with the `develop` commit
 that carries the release's changelog. The release has to call it, because its
-own push to `develop` uses `GITHUB_TOKEN` and so starts no workflow. It is the maintainer's personal deployment, like
-`deploy/strato/`; nothing else in the repository depends on it.
+own push to `develop` uses `GITHUB_TOKEN` and so starts no workflow. It is the
+maintainer's personal deployment, like `deploy/strato/`; nothing else in the
+repository depends on it.
 
 It reaches the host the way the app deploy does and needs no secrets of its
 own: `STRATO_SSH_HOST`, `STRATO_SSH_USER`, `STRATO_SSH_KEY` and
