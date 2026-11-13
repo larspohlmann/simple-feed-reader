@@ -11,7 +11,7 @@
   /* A mild frost, not a full-glass panel: the button keeps its tone
      (--corner-button-tone, the accent by default). */
   background: var(--corner-button-tone, var(--accent));
-  background: color-mix(in srgb, var(--corner-button-tone, var(--accent)) 40%, transparent);
+  background: color-mix(in srgb, var(--corner-button-tone, var(--accent)) 35%, transparent);
   backdrop-filter: blur(12px) saturate(1.4);
   color: var(--on-accent);
   cursor: pointer;
