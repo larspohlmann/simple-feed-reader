@@ -576,13 +576,17 @@ final class TrendingStoriesTest extends DbTestCase
 
     public function testFeedsThatPostedOnlyBeforeTheWindowAreNotActive(): void
     {
-        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
-        $story = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        $story = $this->storyOf('2031-05-14 11:00:00', \array_slice($feeds, 0, 3));
+        for ($hour = 0; $hour < 5; ++$hour) {
+            $this->storyOf(\sprintf('2031-05-14 %02d:30:00', $hour + 5), $feeds);
+        }
 
-        $this->followFeedsPostingAt(98, '2031-05-13 11:59:59');
+        $this->followFeedsPostingAt(97, '2031-05-13 11:59:59');
 
-        self::assertSame([$story->requireId()], $this->rankedDayStoryIdsOf($this->reader));
+        self::assertSame(3, $this->minimumOutletsOf(TrendingWindow::Day));
+        self::assertContains($story->requireId(), $this->rankedDayStoryIdsOf($this->reader));
     }
 
     public function testTheActiveFeedsAreTheReadersFeedsWithAnEntryInTheWindowEachCountedOnce(): void
