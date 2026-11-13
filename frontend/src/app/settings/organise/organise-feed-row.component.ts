@@ -20,6 +20,11 @@ import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.direc
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { FeedRefreshTimesComponent } from './health/feed-refresh-times.component';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import {
+  ACTION_SHEET_DIVIDER,
+  ActionSheetCheck,
+} from '../../shared/action-sheet/action-sheet.component';
+import { MenuCheckboxComponent } from '../../shared/menu-checkbox/menu-checkbox.component';
 import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
@@ -27,7 +32,6 @@ import {
   ExclusionSurface,
   FEED_FLAG_TOGGLES,
   FeedFlagToggle,
-  feedFlagLabelKey,
   ownExcludedSurfaces,
 } from '../../reader/feed-exclusions';
 
@@ -48,6 +52,7 @@ import {
     DismissOnOutsideDirective,
     IconButtonDirective,
     FeedRefreshTimesComponent,
+    MenuCheckboxComponent,
   ],
   templateUrl: './organise-feed-row.component.html',
   styleUrl: './organise-feed-row.component.scss',
@@ -87,7 +92,6 @@ export class OrganiseFeedRowComponent {
     savedSearches: this.toggleSavedSearches,
   };
   protected readonly feedFlags = FEED_FLAG_TOGGLES;
-  protected readonly feedFlagLabelKey = feedFlagLabelKey;
 
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
@@ -123,16 +127,14 @@ export class OrganiseFeedRowComponent {
   /** Coarse pointers get the action sheet the sidebar already uses; a hover
    *  popover has nothing to hover. */
   protected openSheet(): void {
-    const sub = this.subscription();
     this.sheet
       .open({
         title: this.subscription().title,
         actions: [
           { id: 'edit', label: this.i18n.translate('reader.editFeed') },
-          ...FEED_FLAG_TOGGLES.map((toggle) => ({
-            id: toggle.surface,
-            label: this.i18n.translate(feedFlagLabelKey(toggle, sub)),
-          })),
+          ACTION_SHEET_DIVIDER,
+          ...this.flagChecks(),
+          ACTION_SHEET_DIVIDER,
           { id: 'unsubscribe', label: this.i18n.translate('reader.unsubscribe'), danger: true },
         ],
       })
@@ -141,9 +143,16 @@ export class OrganiseFeedRowComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.edit.emit();
-        const toggle = FEED_FLAG_TOGGLES.find(({ surface }) => surface === choice);
-        if (toggle) this.toggleFlag(toggle);
         if (choice === 'unsubscribe') this.unsubscribe.emit();
       });
+  }
+
+  private flagChecks(): ActionSheetCheck[] {
+    return FEED_FLAG_TOGGLES.map((toggle) => ({
+      id: toggle.surface,
+      label: this.i18n.translate(toggle.includeKey),
+      checked: computed(() => toggle.isIncluded(this.subscription())),
+      toggle: () => this.toggleFlag(toggle),
+    }));
   }
 }

@@ -97,14 +97,14 @@
         @if (menuOpen()) {
           <div class="pop" role="menu">
             @for (flag of feedFlags; track flag.surface) {
-              <button
-                role="menuitem"
+              <app-menu-checkbox
                 [attr.data-test]="flag.dataTest"
-                (click)="toggleFlag(flag); closeMenu()"
-              >
-                {{ feedFlagLabelKey(flag, subscription()) | transloco }}
-              </button>
+                [label]="flag.includeKey | transloco"
+                [checked]="flag.isIncluded(subscription())"
+                (toggled)="toggleFlag(flag)"
+              />
             }
+            <hr />
             <button
               role="menuitem"
               class="danger"

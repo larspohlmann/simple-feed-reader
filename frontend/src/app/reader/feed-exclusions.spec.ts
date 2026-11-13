@@ -5,7 +5,6 @@ import {
   FEED_FLAG_TOGGLES,
   exclusionTitle,
   ownExcludedSurfaces,
-  feedFlagLabelKey,
   flipFeedFlag,
 } from './feed-exclusions';
 import { ManageActions } from './feeds/manage/manage-actions.service';
@@ -62,19 +61,6 @@ describe('FEED_FLAG_TOGGLES', () => {
       'forYou',
       'savedSearches',
     ]);
-  });
-
-  it('offers to exclude an included feed and to include an excluded one', () => {
-    const [allItems, forYou, savedSearches] = FEED_FLAG_TOGGLES;
-    const feed = makeSubscription({
-      includeInAllItems: true,
-      includeInForYou: false,
-      includeInSavedSearches: true,
-    });
-
-    expect(feedFlagLabelKey(allItems, feed)).toBe('reader.excludeFromAllItems');
-    expect(feedFlagLabelKey(forYou, feed)).toBe('reader.includeInForYou');
-    expect(feedFlagLabelKey(savedSearches, feed)).toBe('reader.excludeFromSavedSearches');
   });
 
   it('flips each flag through its own ManageActions setter', () => {
