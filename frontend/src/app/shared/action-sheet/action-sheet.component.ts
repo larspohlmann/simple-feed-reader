@@ -1,9 +1,17 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  Signal,
+  viewChild,
+} from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../icon/icon.component';
 import { IconButtonDirective } from '../icon-button/icon-button.directive';
 import { MaskedLogoComponent } from '../masked-logo/masked-logo.component';
+import { MenuCheckboxComponent } from '../menu-checkbox/menu-checkbox.component';
 import { stepMenuFocus } from '../menu-keys';
 
 export interface ActionSheetLogo {
@@ -30,7 +38,15 @@ export type ActionSheetDivider = typeof ACTION_SHEET_DIVIDER;
 export interface ActionSheetNote {
   readonly note: string;
 }
-export type ActionSheetItem = ActionSheetAction | ActionSheetDivider | ActionSheetNote;
+/** A switch that flips in place and leaves the sheet open; `label` arrives already translated. */
+export interface ActionSheetCheck {
+  readonly id: string;
+  readonly label: string;
+  readonly checked: Signal<boolean>;
+  readonly toggle: () => void;
+}
+export type ActionSheetItem =
+  ActionSheetAction | ActionSheetCheck | ActionSheetDivider | ActionSheetNote;
 
 /** What the sheet shows: the row it acts on, and that row's actions. */
 export interface ActionSheetData {
@@ -40,7 +56,13 @@ export interface ActionSheetData {
 
 @Component({
   selector: 'app-action-sheet',
-  imports: [TranslocoPipe, IconComponent, IconButtonDirective, MaskedLogoComponent],
+  imports: [
+    TranslocoPipe,
+    IconComponent,
+    IconButtonDirective,
+    MaskedLogoComponent,
+    MenuCheckboxComponent,
+  ],
   templateUrl: './action-sheet.component.html',
   styleUrl: './action-sheet.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,6 +89,10 @@ export class ActionSheetComponent {
 
   protected isNote(item: ActionSheetItem): item is ActionSheetNote {
     return 'note' in item;
+  }
+
+  protected isCheck(item: ActionSheetItem): item is ActionSheetCheck {
+    return 'toggle' in item;
   }
 
   onKeydown(event: KeyboardEvent): void {

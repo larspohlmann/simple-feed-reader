@@ -1,4 +1,4 @@
-import { ApplicationRef } from '@angular/core';
+import { ApplicationRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
@@ -153,6 +153,42 @@ describe('ActionSheet', () => {
     expect(document.activeElement).toBe(items()[0]);
     key('ArrowUp'); // wraps back
     expect(document.activeElement).toBe(items()[1]);
+  });
+  describe('check items', () => {
+    const checkData = (checked = signal(true), toggle = jest.fn()): ActionSheetData => ({
+      title: 'News',
+      actions: [
+        { id: 'edit', label: 'Edit tag' },
+        { id: 'in-all', label: 'Show in All items', checked, toggle },
+      ],
+    });
+
+    const checkbox = () => container.querySelector<HTMLInputElement>('[role=menuitemcheckbox]')!;
+
+    it('toggles without closing the sheet and follows its signal', () => {
+      const checked = signal(true);
+      const toggle = jest.fn(() => checked.update((value) => !value));
+      const closed = jest.fn();
+      open(checkData(checked, toggle)).subscribe(closed);
+      expect(checkbox().checked).toBe(true);
+
+      checkbox().click();
+      TestBed.inject(ApplicationRef).tick();
+
+      expect(toggle).toHaveBeenCalledTimes(1);
+      expect(closed).not.toHaveBeenCalled();
+      expect(checkbox().checked).toBe(false);
+      expect(checkbox().getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('moves ArrowDown focus from an action onto the checkbox', () => {
+      open(checkData()).subscribe();
+      items()[0].focus();
+
+      items()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+      expect(document.activeElement).toBe(checkbox());
+    });
   });
 });
 

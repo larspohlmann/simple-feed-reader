@@ -1,0 +1,32 @@
+:host {
+  display: block;
+}
+
+.menu-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--row-pad-y) var(--row-pad-x);
+  border-radius: calc(var(--radius) - var(--space-0));
+  color: var(--text-primary);
+  font-size: var(--fs-dense);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.menu-check:focus-within {
+  background: var(--surface-0);
+}
+
+@media (hover: hover) {
+  .menu-check:hover {
+    background: var(--surface-0);
+  }
+}
+
+@media (pointer: coarse) {
+  .menu-check {
+    min-height: var(--tap-target);
+  }
+}

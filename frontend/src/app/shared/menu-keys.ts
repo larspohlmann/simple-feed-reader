@@ -19,7 +19,9 @@ export function stepMenuFocus(event: KeyboardEvent, container: Element): void {
   const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
   if (step === 0) return;
   event.preventDefault();
-  const items = Array.from(container.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+  const items = Array.from(
+    container.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]'),
+  );
   if (items.length === 0) return;
   const active = items.indexOf(document.activeElement as HTMLElement);
   // From outside the items, ArrowDown enters at the first, ArrowUp at the last.
