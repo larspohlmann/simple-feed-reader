@@ -23,6 +23,13 @@ export const SETTINGS_SECTIONS = [
     wide: true,
   },
   {
+    path: 'visibility',
+    icon: 'visibility',
+    labelKey: 'settings.visibility.title',
+    group: 'general',
+    wide: true,
+  },
+  {
     path: 'feed-directory',
     icon: 'travel_explore',
     labelKey: 'settings.feedDirectory.title',

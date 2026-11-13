@@ -1,0 +1,76 @@
+@use '../../theme/breakpoints' as bp;
+
+// Read by every row and the header, so the columns line up without a table.
+.matrix {
+  --visibility-cell-w: var(--tap-target);
+  --visibility-columns: minmax(0, 1fr) repeat(3, var(--visibility-cell-w));
+}
+
+@media (width > bp.$bp-sm) {
+  .matrix {
+    --visibility-cell-w: calc(var(--tap-target) * 2.5);
+  }
+}
+
+.tools,
+.state {
+  display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.filter {
+  --field-rim-base: var(--border-strong);
+
+  width: 100%;
+  font-size: var(--fs-sm);
+}
+
+// Sticks under the settings bar while the long feed group scrolls past.
+.head {
+  position: sticky;
+  top: var(--bar-h);
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--visibility-columns);
+  align-items: end;
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--border);
+  background: var(--surface-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.head-name {
+  padding-inline: var(--row-pad-x);
+}
+
+.head-surface {
+  padding-inline: var(--space-0);
+  text-align: center;
+  overflow-wrap: normal;
+  hyphens: auto;
+}
+
+.group-head {
+  margin: 0;
+  padding: var(--space-4) var(--row-pad-x) var(--space-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+app-visibility-row.subtag {
+  --visibility-indent: var(--space-5);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--row-pad-comfy-y) var(--row-pad-x);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}

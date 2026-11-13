@@ -61,7 +61,8 @@ function excludingTags(
     .map((tag) => ({ kind: 'tag', tag }));
 }
 
-function withAncestors(tag: TagDto, byId: ReadonlyMap<number, TagDto>): TagDto[] {
+/** The tag first, then its parent, its parent's parent and so on. */
+export function withAncestors(tag: TagDto, byId: ReadonlyMap<number, TagDto>): TagDto[] {
   const chain = [tag];
   let parent = tag.parentId === null ? undefined : byId.get(tag.parentId);
   while (parent !== undefined && !chain.includes(parent)) {

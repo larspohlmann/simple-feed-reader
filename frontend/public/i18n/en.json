@@ -816,6 +816,18 @@
       "hideFromSavedSearches": "Hide from saved searches",
       "clear": "Clear"
     },
+    "visibility": {
+      "title": "Visibility",
+      "intro": "Where each network, tag and feed shows up. A greyed box is on, but something above it keeps the feed out.",
+      "networks": "Networks",
+      "tags": "Tags",
+      "feeds": "Feeds",
+      "name": "Name",
+      "filterPlaceholder": "Filter feeds",
+      "excludedBy": "Excluded by {{causes}}",
+      "noFeedMatches": "No feed matches “{{term}}”.",
+      "loading": "Loading visibility…"
+    },
     "feedDirectory": {
       "browse": "Browse feed directory",
       "title": "Feed directory",

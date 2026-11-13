@@ -1,0 +1,58 @@
+// The matrix's column template; the section's header row reads the same one.
+:host {
+  display: grid;
+  grid-template-columns: var(--visibility-columns);
+  align-items: center;
+  border-top: 1px solid var(--border);
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin-left: var(--visibility-indent, 0);
+  padding: var(--row-pad-y) var(--row-pad-x);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.icon:empty {
+  display: none;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-0);
+  min-height: var(--tap-target);
+  cursor: pointer;
+}
+
+.cell input {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cell.inherited input {
+  accent-color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.inherited-mark {
+  color: var(--text-muted);
+}

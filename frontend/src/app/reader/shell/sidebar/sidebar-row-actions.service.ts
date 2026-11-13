@@ -20,21 +20,12 @@ import {
   flipFeedFlag,
 } from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
-import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
-import { ForYouNetworksStore } from '../../state/for-you-networks.store';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
+import { NetworkSurfaceSwitches } from '../../state/network-surface-switches.service';
 import { SocialSection } from '../../state/social-sections';
 import { siblingIdsOf } from '../../state/subscription-derivations';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import { INCLUSION_FLAG } from '../../state/visibility';
-
-interface NetworkSurfaceSwitch {
-  readonly surface: ExclusionSurface;
-  readonly isExcluded: (network: SocialSection['network']) => boolean;
-  readonly toggle: (network: SocialSection['network']) => void;
-  readonly labelKey: string;
-}
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
  *  on the sidebar, so all rows share one open menu and a late sheet choice dies
@@ -46,34 +37,11 @@ export class SidebarRowActions {
   private readonly sheet = inject(ActionSheet);
   private readonly transloco = inject(TranslocoService);
   private readonly picker = inject(SocialFeedsPicker);
-  private readonly savedSearches = inject(SavedSearchesStore);
-  private readonly forYouNetworks = inject(ForYouNetworksStore);
-  private readonly allItemsNetworks = inject(AllItemsNetworksStore);
   private readonly tags = inject(TagsStore);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** In title order: the network marker names its surfaces in this order. */
-  private readonly networkSurfaceSwitches: readonly NetworkSurfaceSwitch[] = [
-    {
-      surface: 'allItems',
-      isExcluded: (network) => this.allItemsNetworks.excludedNetworks().has(network),
-      toggle: (network) => this.allItemsNetworks.toggleNetwork(network),
-      labelKey: 'reader.includeInAllItems',
-    },
-    {
-      surface: 'forYou',
-      isExcluded: (network) => this.forYouNetworks.excludedNetworks().has(network),
-      toggle: (network) => this.forYouNetworks.toggleNetwork(network),
-      labelKey: 'reader.includeInForYou',
-    },
-    {
-      surface: 'savedSearches',
-      isExcluded: (network) => !this.savedSearches.includedNetworks().has(network),
-      toggle: (network) => this.savedSearches.toggleNetwork(network),
-      labelKey: 'reader.includeInSavedSearches',
-    },
-  ];
+  private readonly networkSurfaceSwitches = inject(NetworkSurfaceSwitches).all;
 
   readonly menuFor = signal<string | null>(null);
 

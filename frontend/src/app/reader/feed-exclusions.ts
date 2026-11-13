@@ -4,7 +4,7 @@ import type { ManageActions } from './feeds/manage/manage-actions.service';
 
 export type ExclusionSurface = 'allItems' | 'forYou' | 'savedSearches';
 
-const SURFACE_LABEL_KEYS: Readonly<Record<ExclusionSurface, string>> = {
+export const SURFACE_LABEL_KEYS: Readonly<Record<ExclusionSurface, string>> = {
   allItems: 'reader.allItems',
   forYou: 'reader.forYou',
   savedSearches: 'reader.savedSearches',

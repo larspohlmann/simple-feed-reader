@@ -816,6 +816,18 @@
       "hideFromSavedSearches": "Aus gespeicherten Suchen ausblenden",
       "clear": "Zurücksetzen"
     },
+    "visibility": {
+      "title": "Sichtbarkeit",
+      "intro": "Wo jedes Netzwerk, jeder Tag und jeder Feed erscheint. Ein ausgegrautes Kästchen ist an, aber etwas darüber hält den Feed draußen.",
+      "networks": "Netzwerke",
+      "tags": "Tags",
+      "feeds": "Feeds",
+      "name": "Name",
+      "filterPlaceholder": "Feeds filtern",
+      "excludedBy": "Ausgeschlossen durch {{causes}}",
+      "noFeedMatches": "Kein Feed passt zu „{{term}}“.",
+      "loading": "Sichtbarkeit wird geladen …"
+    },
     "feedDirectory": {
       "browse": "Feed-Verzeichnis durchsuchen",
       "title": "Feed-Verzeichnis",

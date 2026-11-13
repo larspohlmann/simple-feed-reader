@@ -1,0 +1,82 @@
+<app-settings-stack>
+  <app-settings-group
+    icon="visibility"
+    [title]="'settings.visibility.title' | transloco"
+    [caption]="'settings.visibility.intro' | transloco"
+  >
+    <div class="tools">
+      <input
+        class="filter"
+        type="search"
+        data-test="feed-filter"
+        [value]="feedFilter()"
+        [attr.placeholder]="'settings.visibility.filterPlaceholder' | transloco"
+        [attr.aria-label]="'settings.visibility.filterPlaceholder' | transloco"
+        (input)="feedFilter.set($any($event.target).value)"
+      />
+    </div>
+
+    @if (loading()) {
+      <app-skeleton class="state" [label]="'settings.visibility.loading' | transloco" [rows]="6" />
+    } @else {
+      <div class="matrix">
+        <div class="head" aria-hidden="true">
+          <span class="head-name">{{ 'settings.visibility.name' | transloco }}</span>
+          @for (surface of surfaces; track surface) {
+            <span class="head-surface">{{ surfaceLabelKeys[surface] | transloco }}</span>
+          }
+        </div>
+
+        @if (networkRows().length > 0) {
+          <section data-test="networks">
+            <h3 class="group-head">{{ 'settings.visibility.networks' | transloco }}</h3>
+            @for (row of networkRows(); track row.network) {
+              <app-visibility-row
+                [name]="row.name"
+                [cells]="row.cells"
+                (toggled)="toggleNetwork(row.network, $event)"
+              >
+                <app-network-logo [network]="row.network" />
+              </app-visibility-row>
+            }
+          </section>
+        }
+
+        @if (tagRows().length > 0) {
+          <section data-test="tags">
+            <h3 class="group-head">{{ 'settings.visibility.tags' | transloco }}</h3>
+            @for (row of tagRows(); track row.tag.id) {
+              <app-visibility-row
+                [class.subtag]="row.isSubtag"
+                [name]="row.tag.name"
+                [cells]="row.cells"
+                (toggled)="toggleTag(row.tag, $event)"
+              >
+                <app-tag-glyph [name]="row.tag.icon" [color]="row.tag.color" size="xs" />
+              </app-visibility-row>
+            }
+          </section>
+        }
+
+        <section data-test="feeds">
+          <h3 class="group-head">{{ 'settings.visibility.feeds' | transloco }}</h3>
+          @for (row of feedRows(); track row.subscription.id) {
+            <app-visibility-row
+              [name]="row.subscription.title"
+              [cells]="row.cells"
+              (toggled)="toggleFeed(row.subscription, $event)"
+            >
+              <app-favicon [url]="row.subscription.faviconUrl" />
+            </app-visibility-row>
+          } @empty {
+            @if (feedFilter()) {
+              <p class="empty" data-test="no-feed-matches">
+                {{ 'settings.visibility.noFeedMatches' | transloco: { term: feedFilter() } }}
+              </p>
+            }
+          }
+        </section>
+      </div>
+    }
+  </app-settings-group>
+</app-settings-stack>
