@@ -67,7 +67,8 @@ final class SubscriptionJson
      *   consecutiveFailures: int, lastErrorMessage: string|null,
      *   position: int,
      *   tags: list<array{
-     *     id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null
+     *     id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null,
+     *     includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool, includeInTrending: bool
      *   }>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
      *   includeInSavedSearches: bool, includeInTrending: bool,

@@ -66,7 +66,6 @@ final readonly class EntryScopePredicates
             ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::AllItems));
     }
 
-    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
     public function inTrending(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->andWhere(\sprintf('%s.includeInTrending = true', $aliases->subscription))
