@@ -82,7 +82,7 @@ final readonly class EntryScopePredicates
             $aliases->entry,
             SavedSearchNetworkInclusion::class,
             $inclusion,
-        ));
+        ))->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::SavedSearches));
     }
 
     public function applySearch(QueryBuilder $qb, EntryAliases $aliases, EntrySearchQuery $query): void

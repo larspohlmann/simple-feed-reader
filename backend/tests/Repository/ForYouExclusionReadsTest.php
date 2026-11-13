@@ -10,6 +10,7 @@ use App\Entity\NetworkExclusion;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\NetworkExclusionSurface;
 use App\Enum\RecommendationEngineKind;
@@ -131,6 +132,46 @@ final class ForYouExclusionReadsTest extends DbTestCase
         );
     }
 
+    public function testATagSwitchedOutOfForYouTakesItsFeedsAndTheOnesBelowItOutOfEveryRead(): void
+    {
+        $switchedOff = $this->tag('off');
+        $switchedOff->setIncludeInForYou(false);
+        $below = $this->tag('below');
+        $below->setParent($switchedOff);
+        $included = $this->tag('on');
+        $this->taggedRecommendation('https://off.example.com/feed.xml', 'off', [$switchedOff]);
+        $this->taggedRecommendation('https://below.example.com/feed.xml', 'below', [$below]);
+        $this->taggedRecommendation('https://both.example.com/feed.xml', 'both', [$switchedOff, $included]);
+
+        $this->assertOnlyTheKeptEntryIsSeen();
+    }
+
+    public function testATagSwitchedOutOfAllItemsOnlyStaysInForYou(): void
+    {
+        $tag = $this->tag('quiet');
+        $tag->setIncludeInAllItems(false);
+        $post = $this->taggedRecommendation('https://quiet.example.com/feed.xml', 'post', [$tag]);
+
+        $this->assertSeenInListAndPool([$this->kept->requireId(), $post->requireId()]);
+    }
+
+    public function testAnExcludedTagsLowestIdCopyDoesNotHideTheIncludedOneFromThePool(): void
+    {
+        $switchedOff = $this->tag('off');
+        $switchedOff->setIncludeInForYou(false);
+        $this->taggedRecommendation('https://off.example.com/feed.xml', 'original', [$switchedOff], urlHash: 'same');
+        $copy = $this->recommended($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
+
+        self::assertEqualsCanonicalizing(
+            [$this->kept->getId(), $copy->getId()],
+            $this->entryIds($this->candidates()->newestPool(
+                $this->user->requireId(),
+                new \DateTimeImmutable('2026-01-01T00:00:00Z'),
+                50,
+            )),
+        );
+    }
+
     /** @param list<int> $ids */
     private function assertSeenInListAndPool(array $ids): void
     {
@@ -187,6 +228,26 @@ final class ForYouExclusionReadsTest extends DbTestCase
         self::assertSame($network, $feed->getNetwork(), 'the URL classifies the feed on flush');
 
         return $feed;
+    }
+
+    /** @param list<Tag> $tags */
+    private function taggedRecommendation(string $url, string $guid, array $tags, ?string $urlHash = null): Entry
+    {
+        $feed = $this->subscribedFeed($url);
+        $subscription = $this->subscriptionOf($feed);
+        foreach ($tags as $tag) {
+            $subscription->addTag($tag);
+        }
+
+        return $this->recommended($feed, $guid, $urlHash);
+    }
+
+    private function tag(string $name): Tag
+    {
+        $tag = new Tag($this->user, $name);
+        $this->entityManager->persist($tag);
+
+        return $tag;
     }
 
     private function subscriptionOf(Feed $feed): Subscription
