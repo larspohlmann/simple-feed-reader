@@ -93,7 +93,7 @@ describe('FeedDirectoryRowComponent', () => {
 
   it('presses the pill of the only category the filter shows', () => {
     const element = render(ROW);
-    fixture.componentRef.setInput('focusedCategory', 'Science & Technology');
+    fixture.componentRef.setInput('categories', new Set(['Science & Technology']));
     fixture.detectChanges();
 
     const pills = element.querySelectorAll<HTMLButtonElement>('button.chip');

@@ -4,7 +4,7 @@ import { ButtonComponent } from '../../../shared/button/button.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { LayoutService } from '../../../reader/layout.service';
 import { FeedDirectoryNames } from '../feed-directory-names';
-import { FeedDirectoryMode, FeedDirectoryRow, feedsIn, shownFeeds } from '../feed-directory-rows';
+import { FeedDirectoryMode, FeedDirectoryRow, shownFeeds } from '../feed-directory-rows';
 
 export const FEED_DIRECTORY_ROW_HEIGHT = { wide: 132, phone: 140 } as const;
 
@@ -24,7 +24,6 @@ export class FeedDirectoryRowComponent {
   readonly row = input.required<FeedDirectoryRow>();
   readonly mode = input.required<FeedDirectoryMode>();
   readonly subscribe = output<FeedDirectorySubscribeRequest>();
-  readonly focusedCategory = input<string | null>(null);
   readonly categories = input<ReadonlySet<string>>(new Set());
   readonly edit = output<string>();
   readonly focusCategory = output<string>();
@@ -40,8 +39,11 @@ export class FeedDirectoryRowComponent {
     () => this.feeds().filter((feed) => feed.subscribed).length,
   );
   protected readonly pillCategories = computed(() => [
-    ...new Set(feedsIn(this.row(), this.mode()).map((feed) => feed.category)),
+    ...this.row().byMode[this.mode()].categoryCounts.keys(),
   ]);
+  protected readonly focusedCategory = computed(() =>
+    this.categories().size === 1 ? [...this.categories()][0] : null,
+  );
   protected readonly languageNames = computed(() =>
     this.row()
       .languages.map((code) => this.names.language(code))

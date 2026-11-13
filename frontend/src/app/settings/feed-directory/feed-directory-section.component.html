@@ -156,7 +156,6 @@
                 *cdkVirtualFor="let row of store.rows(); trackBy: byHost"
                 [row]="row"
                 [mode]="store.mode()"
-                [focusedCategory]="store.onlyCategory()"
                 [categories]="store.categories()"
                 (subscribe)="subscriber.open($event)"
                 (edit)="subscriber.choose($event)"

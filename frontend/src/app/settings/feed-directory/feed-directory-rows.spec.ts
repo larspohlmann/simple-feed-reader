@@ -206,9 +206,12 @@ describe('feed directory rows', () => {
     const zeit = rows[0];
     expect(zeit.byMode.channels).toEqual({
       feedCount: 1,
-      categories: new Set(['Politics & Society']),
+      categoryCounts: new Map([['Politics & Society', 1]]),
     });
-    expect(zeit.byMode.podcasts).toEqual({ feedCount: 1, categories: new Set(['Sports']) });
+    expect(zeit.byMode.podcasts).toEqual({
+      feedCount: 1,
+      categoryCounts: new Map([['Sports', 1]]),
+    });
   });
 
   describe('withSubscriptions', () => {

@@ -14,7 +14,7 @@ export interface FeedDirectoryFeed {
 
 export interface FeedDirectoryModeSummary {
   readonly feedCount: number;
-  readonly categories: ReadonlySet<string>;
+  readonly categoryCounts: ReadonlyMap<string, number>;
 }
 
 export interface FeedDirectoryRow {
@@ -106,7 +106,11 @@ export function modeSummaries(
 ): Record<FeedDirectoryMode, FeedDirectoryModeSummary> {
   const summaryOf = (podcast: boolean): FeedDirectoryModeSummary => {
     const members = feeds.filter((feed) => feed.podcast === podcast);
-    return { feedCount: members.length, categories: new Set(members.map((feed) => feed.category)) };
+    const categoryCounts = new Map<string, number>();
+    for (const { category } of members) {
+      categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
+    }
+    return { feedCount: members.length, categoryCounts };
   };
   return { channels: summaryOf(false), podcasts: summaryOf(true) };
 }
@@ -159,8 +163,10 @@ export function shownFeeds(
   mode: FeedDirectoryMode,
   categories: ReadonlySet<string>,
 ): FeedDirectoryFeed[] {
-  const feeds = feedsIn(row, mode);
-  return categories.size ? feeds.filter((feed) => categories.has(feed.category)) : feeds;
+  const podcast = mode === 'podcasts';
+  return row.feeds.filter(
+    (feed) => feed.podcast === podcast && (!categories.size || categories.has(feed.category)),
+  );
 }
 
 function matcher(criteria: FeedDirectoryCriteria): (row: FeedDirectoryRow) => boolean {
@@ -169,7 +175,7 @@ function matcher(criteria: FeedDirectoryCriteria): (row: FeedDirectoryRow) => bo
   return (row) => {
     const summary = row.byMode[criteria.mode];
     if (summary.feedCount === 0) return false;
-    if (categories.length && !categories.some((category) => summary.categories.has(category)))
+    if (categories.length && !categories.some((category) => summary.categoryCounts.has(category)))
       return false;
     if (criteria.lengths.size && (row.length === null || !criteria.lengths.has(row.length)))
       return false;
@@ -191,25 +197,20 @@ function comparator(
   switch (filter.sort) {
     case 'az':
       return (left, right) => left.host.localeCompare(right.host);
-    case 'feeds': {
-      const shownCount = shownCounter(filter);
-      return (left, right) => shownCount(right) - shownCount(left) || byTop(left, right);
-    }
+    case 'feeds':
+      return (left, right) =>
+        shownCount(right, filter) - shownCount(left, filter) || byTop(left, right);
     default:
       return byTop;
   }
 }
 
-function shownCounter(filter: FeedDirectoryFilter): (row: FeedDirectoryRow) => number {
-  if (!filter.categories.size) return (row) => row.byMode[filter.mode].feedCount;
-  const counts = new Map<FeedDirectoryRow, number>();
-  return (row) => {
-    const known = counts.get(row);
-    if (known !== undefined) return known;
-    const count = shownFeeds(row, filter.mode, filter.categories).length;
-    counts.set(row, count);
-    return count;
-  };
+function shownCount(row: FeedDirectoryRow, criteria: FeedDirectoryCriteria): number {
+  const summary = row.byMode[criteria.mode];
+  if (!criteria.categories.size) return summary.feedCount;
+  let count = 0;
+  for (const category of criteria.categories) count += summary.categoryCounts.get(category) ?? 0;
+  return count;
 }
 
 export function filterRows(

@@ -83,7 +83,11 @@ export class FeedDirectoryStore implements OnDestroy {
   );
   readonly categoryOptions = computed(
     () =>
-      [...new Set(this.loaded().flatMap((row) => [...row.byMode[this.mode()].categories]))].sort(),
+      [
+        ...new Set(
+          this.loaded().flatMap((row) => [...row.byMode[this.mode()].categoryCounts.keys()]),
+        ),
+      ].sort(),
     { equal: sameIds },
   );
   readonly categories = linkedSignal<readonly string[], ReadonlySet<string>>({
