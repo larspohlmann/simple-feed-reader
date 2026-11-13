@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Account;
 
+use App\Entity\ReadingSettingsChange;
 use App\Entity\User;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
@@ -39,9 +40,9 @@ final readonly class AccountPreferencesWriter
         $this->entityManager->flush();
     }
 
-    public function changeScrapeFallback(User $user, bool $scrapeFallbackEnabled): void
+    public function changeReadingSettings(User $user, ReadingSettingsChange $change): void
     {
-        $this->readingSettings->forUser($user)->setScrapeFallbackEnabled($scrapeFallbackEnabled);
+        $this->readingSettings->forUser($user)->apply($change);
         $this->entityManager->flush();
     }
 

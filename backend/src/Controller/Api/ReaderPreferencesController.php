@@ -12,6 +12,7 @@ use App\Dto\Me\UpdateSharingRequest;
 use App\Dto\Me\UpdateTrendingRequest;
 use App\Entity\User;
 use App\Http\MeProfileJson;
+use App\Http\PartialPatchPayload;
 use App\Service\Account\AccountPreferencesWriter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -26,16 +27,13 @@ final readonly class ReaderPreferencesController
     ) {
     }
 
-    /**
-     * Split from the locale PATCH: folding them would force every preference write to resend the language, or
-     * cost the locale its 422-on-unsupported-value guarantee.
-     */
+    /** Sharing, digest, feed-directory scope and locale keep their own routes: each has validation of its own. */
     #[Route('/api/me/preferences', name: 'api_me_update_preferences', methods: ['PATCH'])]
     public function updatePreferences(
         #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdatePreferencesRequest $request,
+        #[MapRequestPayload(serializationContext: PartialPatchPayload::CONTEXT)] UpdatePreferencesRequest $request,
     ): JsonResponse {
-        $this->preferences->changeScrapeFallback($user, $request->scrapeFallbackEnabled);
+        $this->preferences->changeReadingSettings($user, $request->toChange());
 
         return new JsonResponse($this->profile->of($user));
     }

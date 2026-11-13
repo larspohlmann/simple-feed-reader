@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Account;
 
+use App\Entity\ReadingSettingsChange;
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
 use App\Enum\Handedness;
@@ -33,15 +34,20 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertSame(SupportedLocale::GERMAN, $this->reload($user)->getLocale());
     }
 
-    public function testChangeScrapeFallbackPersists(): void
+    public function testChangeReadingSettingsPersistsTheGivenOnes(): void
     {
-        $user = $this->user('prefs-scrape@example.com');
-        $wanted = !StoredUserSettings::reading($this->entityManager, $user)->isScrapeFallbackEnabled();
+        $user = $this->user('prefs-reading@example.com');
 
-        $this->writer()->changeScrapeFallback($user, $wanted);
+        $this->writer()->changeReadingSettings(
+            $user,
+            new ReadingSettingsChange(scrapeFallbackEnabled: true, handedness: Handedness::Left),
+        );
 
         $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
-        self::assertSame($wanted, $reloaded->isScrapeFallbackEnabled());
+        self::assertTrue($reloaded->isScrapeFallbackEnabled());
+        self::assertSame(Handedness::Left, $reloaded->getHandedness());
+        self::assertSame(MagazineStyle::Boxed, $reloaded->getMagazineStyle());
+        self::assertTrue($reloaded->isTrendingEnabled());
     }
 
     public function testChangeMagazineStylePersists(): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\ReadingSettings;
+use App\Entity\ReadingSettingsChange;
 use App\Entity\User;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
@@ -61,6 +62,30 @@ final class ReadingSettingsTest extends TestCase
         $settings->setTrendingEnabled(false);
 
         self::assertFalse($settings->isTrendingEnabled());
+    }
+
+    public function testApplyChangesOnlyTheGivenSettings(): void
+    {
+        $settings = UnsavedUserSettings::reading();
+
+        $settings->apply(new ReadingSettingsChange(magazineStyle: MagazineStyle::Airy, handedness: Handedness::Left));
+
+        self::assertSame(MagazineStyle::Airy, $settings->getMagazineStyle());
+        self::assertSame(Handedness::Left, $settings->getHandedness());
+        self::assertFalse($settings->isScrapeFallbackEnabled());
+        self::assertTrue($settings->isTrendingEnabled());
+    }
+
+    public function testApplyWithNothingGivenKeepsEverything(): void
+    {
+        $settings = UnsavedUserSettings::reading();
+
+        $settings->apply(new ReadingSettingsChange());
+
+        self::assertFalse($settings->isScrapeFallbackEnabled());
+        self::assertSame(MagazineStyle::Boxed, $settings->getMagazineStyle());
+        self::assertSame(Handedness::Right, $settings->getHandedness());
+        self::assertTrue($settings->isTrendingEnabled());
     }
 
     public function testItBelongsToTheUserItWasBuiltWith(): void
