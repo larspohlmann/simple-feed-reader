@@ -83,6 +83,11 @@ function pack(pieces, limit) {
   return posts;
 }
 
+export function buildPost({ tag, releaseUrl, highlights }) {
+  const list = highlights.map((highlight) => `• ${highlight}`).join('\n');
+  return `simple-feed-reader ${tag} is out. #rss #rssreader\n\nHighlights:\n${list}\n\nFull release notes: ${releaseUrl}`;
+}
+
 export function buildThread({ tag, releaseUrl, highlights, limit }) {
   return [
     `simple-feed-reader ${tag} is out. The highlights follow in this thread. #rss #rssreader\n\n${HOMEPAGE_URL}`,
