@@ -1,8 +1,9 @@
 import en from '../../../../public/i18n/en.json';
 import de from '../../../../public/i18n/de.json';
 import es from '../../../../public/i18n/es.json';
+import fr from '../../../../public/i18n/fr.json';
 
-const dictionaries: Record<string, unknown> = { en, de, es };
+const dictionaries: Record<string, unknown> = { en, de, fr, es };
 
 /**
  * A key missing from one dictionary fails no build or lint -- it renders the
