@@ -158,6 +158,30 @@ final class UnreadCountRepositoryTest extends DbTestCase
         self::assertSame(1, $this->perNetwork($user)[SocialNetwork::Bluesky->value] ?? 0);
     }
 
+    public function testAllItemsSkipsFeedsATagSwitchesOutOfAllItems(): void
+    {
+        $user = $this->user();
+        $switchedOff = $this->tag($user, 'off');
+        $switchedOff->setIncludeInAllItems(false);
+        $below = $this->childTag($user, 'below', $switchedOff);
+        $included = $this->tag($user, 'on');
+        [$offTagged, $offFeed] = $this->subscribedFeed($user, 'https://example.com/off.xml');
+        $offTagged->addTag($switchedOff);
+        $offTagged->addTag($included);
+        [$belowTagged, $belowFeed] = $this->subscribedFeed($user, 'https://example.com/below.xml');
+        $belowTagged->addTag($below);
+        [$onTagged, $onFeed] = $this->subscribedFeed($user, 'https://example.com/on.xml');
+        $onTagged->addTag($included);
+        [, $untaggedFeed] = $this->subscribedFeed($user, 'https://example.com/untagged.xml');
+        $this->unreadEntry($offFeed, 'off', null);
+        $this->unreadEntry($belowFeed, 'below', null);
+        $this->unreadEntry($onFeed, 'on', null);
+        $this->unreadEntry($untaggedFeed, 'untagged', null);
+
+        self::assertSame(2, $this->allItems($user));
+        self::assertSame(2, $this->perTag($user)[$switchedOff->requireId()] ?? 0);
+    }
+
     public function testAForYouSwitchLeavesAllItemsCounting(): void
     {
         $user = $this->user();

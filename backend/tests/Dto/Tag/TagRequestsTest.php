@@ -29,4 +29,21 @@ final class TagRequestsTest extends TestCase
             get_object_vars($details),
         );
     }
+
+    public function testAnUpdateRequestCarriesTheSwitchesItNames(): void
+    {
+        $request = new UpdateTagRequest(
+            'Tech',
+            null,
+            null,
+            null,
+            includeInAllItems: false,
+            includeInSavedSearches: true,
+        );
+
+        self::assertSame(
+            ['includeInAllItems' => false, 'includeInForYou' => null, 'includeInSavedSearches' => true],
+            get_object_vars($request->toInclusions()),
+        );
+    }
 }

@@ -201,6 +201,9 @@ final class SubscriptionJsonTest extends TestCase
                 'icon' => null,
                 'position' => 0,
                 'parentId' => null,
+                'includeInAllItems' => true,
+                'includeInForYou' => true,
+                'includeInSavedSearches' => true,
             ]],
             $shape['tags'],
         );

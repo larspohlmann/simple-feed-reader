@@ -26,6 +26,27 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertSame(4, $tag->getPosition());
     }
 
+    public function testATagIsRestoredWithItsSwitches(): void
+    {
+        $tag = $this->factory()->tag(
+            $this->user(),
+            new TagLine(
+                name: 'Noise',
+                color: null,
+                icon: null,
+                position: 0,
+                includeInAllItems: false,
+                includeInForYou: true,
+                includeInSavedSearches: false,
+            ),
+            null,
+        );
+
+        self::assertFalse($tag->isIncludeInAllItems());
+        self::assertTrue($tag->isIncludeInForYou());
+        self::assertFalse($tag->isIncludeInSavedSearches());
+    }
+
     public function testATagIsRestoredUnderTheParentItNames(): void
     {
         $user = $this->user();

@@ -13,6 +13,7 @@ use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Factory\TagFactory;
 use App\Service\Tag\Model\TagDetailsModel;
+use App\Service\Tag\Model\TagInclusionChangeModel;
 use App\Service\Tag\Pass\TagTree;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -33,9 +34,9 @@ final readonly class TagEditor
         return $this->structureLock->hold($user, fn (): Tag => $this->createHeld($user, $details));
     }
 
-    public function update(Tag $tag, TagDetailsModel $details): void
+    public function update(Tag $tag, TagDetailsModel $details, TagInclusionChangeModel $inclusions): void
     {
-        $this->structureLock->hold($tag->getUser(), fn () => $this->updateHeld($tag, $details));
+        $this->structureLock->hold($tag->getUser(), fn () => $this->updateHeld($tag, $details, $inclusions));
     }
 
     public function delete(Tag $tag): void
@@ -57,7 +58,7 @@ final readonly class TagEditor
         return $tag;
     }
 
-    private function updateHeld(Tag $tag, TagDetailsModel $details): void
+    private function updateHeld(Tag $tag, TagDetailsModel $details, TagInclusionChangeModel $inclusions): void
     {
         if ($this->tags->existsForUserAndName($tag->getUser()->requireId(), $details->name, $tag->requireId())) {
             throw new TagNameTakenException();
@@ -67,7 +68,15 @@ final readonly class TagEditor
         $tag->setName($details->name);
         $tag->setColor($details->color);
         $tag->setIcon($details->icon);
+        self::switchInclusions($tag, $inclusions);
         $this->entityManager->flush();
+    }
+
+    private static function switchInclusions(Tag $tag, TagInclusionChangeModel $inclusions): void
+    {
+        $tag->setIncludeInAllItems($inclusions->includeInAllItems ?? $tag->isIncludeInAllItems());
+        $tag->setIncludeInForYou($inclusions->includeInForYou ?? $tag->isIncludeInForYou());
+        $tag->setIncludeInSavedSearches($inclusions->includeInSavedSearches ?? $tag->isIncludeInSavedSearches());
     }
 
     private function deleteHeld(Tag $tag): void

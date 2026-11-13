@@ -27,6 +27,9 @@ final readonly class RestoredFoundationFactory
         $details = new TagDetailsModel($line->name, $line->color, $line->icon);
         $tag = $this->tagFactory->create($user, $details, $line->position);
         $tag->setParent($parent);
+        $tag->setIncludeInAllItems($line->includeInAllItems);
+        $tag->setIncludeInForYou($line->includeInForYou);
+        $tag->setIncludeInSavedSearches($line->includeInSavedSearches);
 
         return $tag;
     }

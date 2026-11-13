@@ -44,6 +44,15 @@ final class Tag implements PositionedInterface
     #[ORM\JoinColumn(name: 'parent_id', nullable: true, onDelete: 'SET NULL')]
     private ?Tag $parent = null;
 
+    #[ORM\Column(name: 'include_in_all_items', options: ['default' => true])]
+    private bool $includeInAllItems = true;
+
+    #[ORM\Column(name: 'include_in_for_you', options: ['default' => true])]
+    private bool $includeInForYou = true;
+
+    #[ORM\Column(name: 'include_in_saved_searches', options: ['default' => true])]
+    private bool $includeInSavedSearches = true;
+
     public function __construct(User $user, string $name)
     {
         $this->user = $user;
@@ -108,5 +117,35 @@ final class Tag implements PositionedInterface
     public function setParent(?Tag $parent): void
     {
         $this->parent = $parent;
+    }
+
+    public function isIncludeInAllItems(): bool
+    {
+        return $this->includeInAllItems;
+    }
+
+    public function setIncludeInAllItems(bool $includeInAllItems): void
+    {
+        $this->includeInAllItems = $includeInAllItems;
+    }
+
+    public function isIncludeInForYou(): bool
+    {
+        return $this->includeInForYou;
+    }
+
+    public function setIncludeInForYou(bool $includeInForYou): void
+    {
+        $this->includeInForYou = $includeInForYou;
+    }
+
+    public function isIncludeInSavedSearches(): bool
+    {
+        return $this->includeInSavedSearches;
+    }
+
+    public function setIncludeInSavedSearches(bool $includeInSavedSearches): void
+    {
+        $this->includeInSavedSearches = $includeInSavedSearches;
     }
 }

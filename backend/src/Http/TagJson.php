@@ -10,7 +10,8 @@ final class TagJson
 {
     /**
      * @return array{
-     *   id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null
+     *   id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null,
+     *   includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool
      * }
      */
     public static function one(Tag $tag): array
@@ -22,6 +23,9 @@ final class TagJson
             'icon' => $tag->getIcon(),
             'position' => $tag->getPosition(),
             'parentId' => $tag->getParent()?->getId(),
+            'includeInAllItems' => $tag->isIncludeInAllItems(),
+            'includeInForYou' => $tag->isIncludeInForYou(),
+            'includeInSavedSearches' => $tag->isIncludeInSavedSearches(),
         ];
     }
 }

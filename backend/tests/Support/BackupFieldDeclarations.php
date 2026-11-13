@@ -52,6 +52,8 @@ final class BackupFieldDeclarations
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
+            'includeInAllItems' => 'includeInAllItems', 'includeInForYou' => 'includeInForYou',
+            'includeInSavedSearches' => 'includeInSavedSearches',
         ],
         SavedSearch::class => [
             'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',

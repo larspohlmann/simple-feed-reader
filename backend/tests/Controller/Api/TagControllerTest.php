@@ -249,6 +249,37 @@ final class TagControllerTest extends ApiTestCase
         self::assertSame([null, $parentId], array_column($list['tags'], 'parentId'));
     }
 
+    public function testAnUpdateSwitchesTheTagOutOfAllItemsAndLeavesTheOtherSurfaces(): void
+    {
+        $client = self::createClient();
+        $headers = $this->jsonBearerFor($this->factory()->create('tag-inclusion@example.com'));
+        $created = $this->createTagBody($client, $headers, ['name' => 'Noise']);
+        self::assertIsInt($created['id']);
+        self::assertTrue($created['includeInAllItems']);
+        self::assertTrue($created['includeInForYou']);
+        self::assertTrue($created['includeInSavedSearches']);
+
+        $client->request(
+            'PATCH',
+            '/api/tags/' . $created['id'],
+            server: $headers,
+            content: json_encode(
+                ['name' => 'Noise', 'color' => null, 'icon' => null, 'parentId' => null, 'includeInAllItems' => false],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $client->request('GET', '/api/tags', server: $headers);
+        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($list);
+        self::assertIsArray($list['tags']);
+        self::assertIsArray($list['tags'][0]);
+        self::assertFalse($list['tags'][0]['includeInAllItems']);
+        self::assertTrue($list['tags'][0]['includeInForYou']);
+        self::assertTrue($list['tags'][0]['includeInSavedSearches']);
+    }
+
     /**
      * @param array<string, string> $headers
      * @param array<string, mixed>  $body

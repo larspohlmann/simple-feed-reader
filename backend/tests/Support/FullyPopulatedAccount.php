@@ -123,6 +123,9 @@ final readonly class FullyPopulatedAccount
         $tag->setIcon('bookmark');
         $tag->setPosition(2);
         $tag->setParent($parent);
+        $tag->setIncludeInAllItems(false);
+        $tag->setIncludeInForYou(false);
+        $tag->setIncludeInSavedSearches(false);
 
         return $tag;
     }

@@ -374,6 +374,50 @@ final class MarkReadServiceTest extends DbTestCase
         );
     }
 
+    public function testAllScopeSkipsFeedsATagSwitchesOutOfAllItems(): void
+    {
+        [$user, $plain] = $this->seed();
+        $switchedOff = new Tag($user, 'off');
+        $switchedOff->setIncludeInAllItems(false);
+        $below = new Tag($user, 'below');
+        $below->setParent($switchedOff);
+        $included = new Tag($user, 'on');
+        $this->entityManager->persist($switchedOff);
+        $this->entityManager->persist($below);
+        $this->entityManager->persist($included);
+        $offTagged = $this->subscriptionTagged($user, 'https://off.example.com/f.xml', [$switchedOff, $included]);
+        $belowTagged = $this->subscriptionTagged($user, 'https://below.example.com/f.xml', [$below]);
+        $onTagged = $this->subscriptionTagged($user, 'https://on.example.com/f.xml', [$included]);
+
+        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
+        $this->entityManager->clear();
+
+        self::assertSame(
+            [
+                $offTagged->requireId() => null,
+                $belowTagged->requireId() => null,
+                $onTagged->requireId() => '2026-07-25T00:00:00+00:00',
+                $plain->requireId() => '2026-07-25T00:00:00+00:00',
+            ],
+            $this->watermarksOf([$offTagged, $belowTagged, $onTagged, $plain]),
+        );
+    }
+
+    /** @param list<Tag> $tags */
+    private function subscriptionTagged(User $user, string $feedUrl, array $tags): Subscription
+    {
+        $feed = new Feed($feedUrl);
+        $this->entityManager->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        foreach ($tags as $tag) {
+            $subscription->addTag($tag);
+        }
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
+
+        return $subscription;
+    }
+
     /**
      * @param list<Subscription> $subscriptions
      *

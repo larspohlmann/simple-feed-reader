@@ -32,6 +32,51 @@ final class TagLineTest extends TestCase
         self::assertSame('Reading', $line->parent);
     }
 
+    public function testALineWithoutSwitchesReadsAsIncludedEverywhere(): void
+    {
+        $line = TagLine::fromLine(
+            ['kind' => 'tag', 'name' => 'Reading', 'color' => null, 'icon' => null, 'position' => 0],
+        );
+
+        self::assertTrue($line->includeInAllItems);
+        self::assertTrue($line->includeInForYou);
+        self::assertTrue($line->includeInSavedSearches);
+    }
+
+    public function testALineBuiltWithoutSwitchesIsIncludedEverywhere(): void
+    {
+        $line = new TagLine('Reading', null, null, 0);
+
+        self::assertTrue($line->includeInAllItems);
+        self::assertTrue($line->includeInForYou);
+        self::assertTrue($line->includeInSavedSearches);
+    }
+
+    public function testItReadsTheSwitchesTheLineStates(): void
+    {
+        $line = TagLine::fromLine([
+            'kind' => 'tag', 'name' => 'Noise', 'color' => null, 'icon' => null, 'position' => 0,
+            'includeInAllItems' => false, 'includeInForYou' => true, 'includeInSavedSearches' => false,
+        ]);
+
+        self::assertFalse($line->includeInAllItems);
+        self::assertTrue($line->includeInForYou);
+        self::assertFalse($line->includeInSavedSearches);
+    }
+
+    public function testItWritesTheTagsSwitches(): void
+    {
+        $tag = new Tag(BackupLineRecords::user(), 'Noise');
+        $tag->setIncludeInAllItems(false);
+        $tag->setIncludeInSavedSearches(false);
+
+        self::assertSame(
+            '{"kind":"tag","name":"Noise","color":null,"icon":null,"position":0,"parent":null,'
+            . '"includeInAllItems":false,"includeInForYou":true,"includeInSavedSearches":false}',
+            TagLine::of($tag)->toBackupLine(),
+        );
+    }
+
     public function testItWritesAChildTagNamingItsParent(): void
     {
         $user = BackupLineRecords::user();
@@ -42,7 +87,8 @@ final class TagLineTest extends TestCase
         $tag->setParent(new Tag($user, 'Reading'));
 
         self::assertSame(
-            '{"kind":"tag","name":"Long reads","color":"#123456","icon":"flask","position":2,"parent":"Reading"}',
+            '{"kind":"tag","name":"Long reads","color":"#123456","icon":"flask","position":2,"parent":"Reading",'
+            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true}',
             TagLine::of($tag)->toBackupLine(),
         );
     }
@@ -50,7 +96,8 @@ final class TagLineTest extends TestCase
     public function testItWritesARootTagWithANullParent(): void
     {
         self::assertSame(
-            '{"kind":"tag","name":"Reading","color":null,"icon":null,"position":0,"parent":null}',
+            '{"kind":"tag","name":"Reading","color":null,"icon":null,"position":0,"parent":null,'
+            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true}',
             TagLine::of(new Tag(BackupLineRecords::user(), 'Reading'))->toBackupLine(),
         );
     }
