@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup\Factory;
 
 use App\Entity\Feed;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
@@ -43,10 +44,10 @@ final class RestoredFoundationFactoryTest extends TestCase
             null,
         );
 
-        self::assertFalse($tag->isIncludeInAllItems());
-        self::assertTrue($tag->isIncludeInForYou());
-        self::assertFalse($tag->isIncludeInSavedSearches());
-        self::assertFalse($tag->isIncludeInTrending());
+        self::assertFalse($tag->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($tag->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($tag->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($tag->isIncludedIn(InclusionSurface::Trending));
     }
 
     public function testATagIsRestoredUnderTheParentItNames(): void
@@ -106,10 +107,10 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertSame(3, $subscription->getPosition());
         self::assertSame($readUntil, $subscription->getMarkedReadUntil());
         self::assertSame($createdAt, $subscription->getCreatedAt());
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou());
-        self::assertFalse($subscription->isIncludeInSavedSearches());
-        self::assertFalse($subscription->isIncludeInTrending());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::Trending));
     }
 
     private function factory(): RestoredFoundationFactory

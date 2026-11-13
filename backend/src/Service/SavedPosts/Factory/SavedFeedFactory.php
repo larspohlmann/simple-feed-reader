@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\SavedPosts\Factory;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
@@ -34,8 +35,7 @@ final readonly class SavedFeedFactory
     {
         $subscription = new Subscription($user, $feed, $this->clock->now());
         $subscription->setPosition($position);
-        $subscription->setIncludeInAllItems(false);
-        $subscription->setIncludeInForYou(false);
+        $subscription->changeInclusions(new InclusionChange(allItems: false, forYou: false));
 
         return $subscription;
     }

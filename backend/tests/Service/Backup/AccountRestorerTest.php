@@ -19,6 +19,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SubscriptionSet;
@@ -798,6 +799,9 @@ final class AccountRestorerTest extends DbTestCase
      */
     private function getterValue(object $entity, string $field): mixed
     {
+        if (($entity instanceof Tag || $entity instanceof Subscription) && str_starts_with($field, 'inclusions.')) {
+            return $entity->isIncludedIn($this->surfaceSwitchedBy(substr($field, \strlen('inclusions.'))));
+        }
         $pascal = implode('', array_map(ucfirst(...), explode('.', $field)));
         foreach ([lcfirst($pascal), 'get' . $pascal, 'is' . $pascal, 'has' . $pascal] as $method) {
             if (method_exists($entity, $method)) {
@@ -813,6 +817,17 @@ final class AccountRestorerTest extends DbTestCase
             $field,
             self::class,
         ));
+    }
+
+    private function surfaceSwitchedBy(string $switchField): InclusionSurface
+    {
+        foreach (InclusionSurface::cases() as $surface) {
+            if ($surface->switchField() === $switchField) {
+                return $surface;
+            }
+        }
+
+        throw new \LogicException(sprintf('No surface is switched by "%s".', $switchField));
     }
 
     /** @return array<string, int> tag name => position on the subscription */

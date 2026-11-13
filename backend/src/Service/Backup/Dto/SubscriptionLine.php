@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Enum\InclusionSurface;
 use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
@@ -62,10 +63,10 @@ final readonly class SubscriptionLine
             markedReadUntil: $subscription->getMarkedReadUntil(),
             createdAt: $subscription->getCreatedAt(),
             tags: array_map(SubscriptionTagReference::of(...), $subscription->getSubscriptionTags()),
-            includeInAllItems: $subscription->isIncludeInAllItems(),
-            includeInForYou: $subscription->isIncludeInForYou(),
-            includeInSavedSearches: $subscription->isIncludeInSavedSearches(),
-            includeInTrending: $subscription->isIncludeInTrending(),
+            includeInAllItems: $subscription->isIncludedIn(InclusionSurface::AllItems),
+            includeInForYou: $subscription->isIncludedIn(InclusionSurface::ForYou),
+            includeInSavedSearches: $subscription->isIncludedIn(InclusionSurface::SavedSearches),
+            includeInTrending: $subscription->isIncludedIn(InclusionSurface::Trending),
         );
     }
 

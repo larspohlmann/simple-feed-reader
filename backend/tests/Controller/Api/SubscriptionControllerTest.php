@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -631,7 +632,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         $feed = new Feed('https://flagkeeper.example.com/rss');
         $entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $subscription->setIncludeInForYou(false);
+        $subscription->changeInclusions(new InclusionChange(forYou: false));
         $entityManager->persist($subscription);
         $entityManager->flush();
 

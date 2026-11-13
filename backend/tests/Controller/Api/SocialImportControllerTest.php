@@ -9,6 +9,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialFeedKind;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -478,8 +479,8 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertSame('https://mastodon.example/explore', $feed->getSiteUrl());
         $subscription = $this->entityManager()->getRepository(Subscription::class)->findOneBy(['feed' => $feed]);
         self::assertNotNull($subscription);
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
     }
 
     public function testASearchIsSubscribedAsAPrivateFeedNamedByItsQuery(): void
@@ -502,8 +503,8 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertSame('https://bsky.app/search?q=rss%20reader', $feed->getSiteUrl());
         $subscription = $this->entityManager()->getRepository(Subscription::class)->findOneBy(['feed' => $feed]);
         self::assertNotNull($subscription);
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
         $socialFeed = $this->entityManager()->getRepository(SocialFeed::class)->findOneBy(['feed' => $feed]);
         self::assertNotNull($socialFeed);
         self::assertSame(SocialFeedKind::Search, $socialFeed->getKind());

@@ -14,7 +14,7 @@ final class ForYouScopeDql
     /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
     public static function restrict(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(\sprintf('%s.includeInForYou = true', $aliases->subscription))
+        $qb->andWhere(\sprintf('%s.inclusions.forYou = true', $aliases->subscription))
             ->andWhere(NetworkExclusionDql::notExcluded($aliases->entry, NetworkExclusionSurface::ForYou))
             ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::ForYou));
     }

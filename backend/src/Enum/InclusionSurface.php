@@ -10,4 +10,14 @@ enum InclusionSurface
     case ForYou;
     case SavedSearches;
     case Trending;
+
+    public function switchField(): string
+    {
+        return match ($this) {
+            self::AllItems => 'allItems',
+            self::ForYou => 'forYou',
+            self::SavedSearches => 'savedSearches',
+            self::Trending => 'trending',
+        };
+    }
 }

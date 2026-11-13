@@ -13,6 +13,7 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\SyncStamp;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\PrivateFeedSyncReason;
 use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialAccountStatus;
@@ -89,8 +90,8 @@ final class PrivateFeedSyncTest extends DbTestCase
         self::assertEquals(new PrivateFeedSyncOutcomeModel(added: 1), $outcome);
         $subscription = $this->onlySubscription();
         self::assertSame($this->artUrl(), $subscription->getFeed()->getUrl());
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
         self::assertCount(0, $subscription->getTags());
         self::assertSame(['custom_feed:' . self::ART], $this->knownKeys());
         self::assertSame([['custom_feed', self::ART, 'Art', PrivateFeedSyncReason::Saved]], $this->changes());

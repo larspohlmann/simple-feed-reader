@@ -6,6 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
@@ -80,7 +81,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
     public function testTheFeedSwitchStillAppliesWhileItsNetworkIsIncluded(): void
     {
         $feed = $this->subscribedFeed('https://bsky.app/profile/bob.bsky.social/rss', SocialNetwork::Bluesky);
-        $this->subscriptionOf($feed)->setIncludeInForYou(false);
+        $this->subscriptionOf($feed)->changeInclusions(new InclusionChange(forYou: false));
         $this->recommended($feed, 'post');
 
         $this->assertOnlyTheKeptEntryIsSeen();
@@ -135,7 +136,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
     public function testATagSwitchedOutOfForYouTakesItsFeedsAndTheOnesBelowItOutOfEveryRead(): void
     {
         $switchedOff = $this->tag('off');
-        $switchedOff->setIncludeInForYou(false);
+        $switchedOff->changeInclusions(new InclusionChange(forYou: false));
         $below = $this->tag('below');
         $below->setParent($switchedOff);
         $included = $this->tag('on');
@@ -149,7 +150,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
     public function testATagSwitchedOutOfAllItemsOnlyStaysInForYou(): void
     {
         $tag = $this->tag('quiet');
-        $tag->setIncludeInAllItems(false);
+        $tag->changeInclusions(new InclusionChange(allItems: false));
         $post = $this->taggedRecommendation('https://quiet.example.com/feed.xml', 'post', [$tag]);
 
         $this->assertSeenInListAndPool([$this->kept->requireId(), $post->requireId()]);
@@ -158,7 +159,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
     public function testAnExcludedTagsLowestIdCopyDoesNotHideTheIncludedOneFromThePool(): void
     {
         $switchedOff = $this->tag('off');
-        $switchedOff->setIncludeInForYou(false);
+        $switchedOff->changeInclusions(new InclusionChange(forYou: false));
         $this->taggedRecommendation('https://off.example.com/feed.xml', 'original', [$switchedOff], urlHash: 'same');
         $copy = $this->recommended($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
 

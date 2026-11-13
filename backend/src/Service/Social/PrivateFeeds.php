@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
@@ -129,8 +130,7 @@ final readonly class PrivateFeeds
             $privateFeed->name,
         );
         $followsOnePerson = $privateFeed->kind->followsOnePerson();
-        $subscription->setIncludeInAllItems($followsOnePerson);
-        $subscription->setIncludeInForYou($followsOnePerson);
+        $subscription->changeInclusions(new InclusionChange(allItems: $followsOnePerson, forYou: $followsOnePerson));
         $feed = $subscription->getFeed();
         $feed->setSiteUrl(PrivateFeedSite::of($account, $privateFeed));
         $this->recordSocialFeed($account, $feed, $privateFeed);

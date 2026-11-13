@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reading;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -198,7 +199,7 @@ final class MarkReadServiceTest extends DbTestCase
         $feed = new Feed('https://example.com/excluded.xml');
         $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $subscription->setIncludeInAllItems(false);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
         $this->entityManager->persist($subscription);
 
         $publishedAt = new \DateTimeImmutable('2026-07-05T00:00:00Z');
@@ -323,7 +324,7 @@ final class MarkReadServiceTest extends DbTestCase
         [$user, $plain] = $this->seed();
         $fixtures = new NetworkFeedSubscriptions($this->entityManager);
         $home = $fixtures->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
-        $home->setIncludeInAllItems(false);
+        $home->changeInclusions(new InclusionChange(allItems: false));
         $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
         $mastodon = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
         $stranger = new User('network-stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -378,7 +379,7 @@ final class MarkReadServiceTest extends DbTestCase
     {
         [$user, $plain] = $this->seed();
         $switchedOff = new Tag($user, 'off');
-        $switchedOff->setIncludeInAllItems(false);
+        $switchedOff->changeInclusions(new InclusionChange(allItems: false));
         $below = new Tag($user, 'below');
         $below->setParent($switchedOff);
         $included = new Tag($user, 'on');

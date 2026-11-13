@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup\Dto;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Tag;
 use App\Enum\SourceFormat;
 use App\Service\Backup\Dto\SubscriptionLine;
@@ -21,8 +22,8 @@ final class SubscriptionLineTest extends TestCase
         $subscription->setCustomTitle('Mine');
         $subscription->setPosition(3);
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-08-01T02:00:00+02:00'));
-        $subscription->setIncludeInForYou(false);
-        $subscription->setIncludeInTrending(false);
+        $subscription->changeInclusions(new InclusionChange(forYou: false));
+        $subscription->changeInclusions(new InclusionChange(trending: false));
         $subscription->addTag(new Tag($user, 'Reading'), 1);
         $subscription->addTag(new Tag($user, 'Science'), 0);
         $exported = new ExportedSubscriptionModel($subscription, 'https://one.example/rss', SourceFormat::XML);

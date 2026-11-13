@@ -44,10 +44,10 @@ final class TagRequestsTest extends TestCase
 
         self::assertSame(
             [
-                'includeInAllItems' => false,
-                'includeInForYou' => null,
-                'includeInSavedSearches' => true,
-                'includeInTrending' => false,
+                'allItems' => false,
+                'forYou' => null,
+                'savedSearches' => true,
+                'trending' => false,
             ],
             get_object_vars($request->toInclusions()),
         );

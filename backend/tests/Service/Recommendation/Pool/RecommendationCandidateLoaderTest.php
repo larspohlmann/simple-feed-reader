@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Recommendation\Pool\Model\CandidatePoolRequestModel;
@@ -441,7 +442,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             $excludedFeed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $excludedSubscription->setIncludeInForYou(false);
+        $excludedSubscription->changeInclusions(new InclusionChange(forYou: false));
         $this->entityManager->persist($excludedSubscription);
         $this->entityManager->flush();
 

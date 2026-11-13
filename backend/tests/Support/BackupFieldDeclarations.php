@@ -52,8 +52,8 @@ final class BackupFieldDeclarations
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
-            'includeInAllItems' => 'includeInAllItems', 'includeInForYou' => 'includeInForYou',
-            'includeInSavedSearches' => 'includeInSavedSearches', 'includeInTrending' => 'includeInTrending',
+            'inclusions.allItems' => 'includeInAllItems', 'inclusions.forYou' => 'includeInForYou',
+            'inclusions.savedSearches' => 'includeInSavedSearches', 'inclusions.trending' => 'includeInTrending',
         ],
         SavedSearch::class => [
             'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',
@@ -76,10 +76,10 @@ final class BackupFieldDeclarations
             'markedReadUntil' => 'markedReadUntil',
             'createdAt' => 'createdAt',
             'subscriptionTags' => 'tags',
-            'includeInAllItems' => 'includeInAllItems',
-            'includeInForYou' => 'includeInForYou',
-            'includeInSavedSearches' => 'includeInSavedSearches',
-            'includeInTrending' => 'includeInTrending',
+            'inclusions.allItems' => 'includeInAllItems',
+            'inclusions.forYou' => 'includeInForYou',
+            'inclusions.savedSearches' => 'includeInSavedSearches',
+            'inclusions.trending' => 'includeInTrending',
         ],
         SubscriptionTag::class => [
             'tag' => 'tags.name',

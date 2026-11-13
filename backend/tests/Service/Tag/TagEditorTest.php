@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Service\Tag;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Repository\TagRepository;
 use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Model\TagDetailsModel;
-use App\Service\Tag\Model\TagInclusionChangeModel;
 use App\Service\Tag\TagEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
@@ -95,40 +96,40 @@ final class TagEditorTest extends DbTestCase
     public function testUpdateSetsEachSwitchItNames(): void
     {
         $tag = $this->editor()->create($this->user('tag-switcher@example.com'), new TagDetailsModel('Noise'));
-        $tag->setIncludeInForYou(false);
+        $tag->changeInclusions(new InclusionChange(forYou: false));
 
         $this->editor()->update(
             $tag,
             new TagDetailsModel('Noise'),
-            new TagInclusionChangeModel(
-                includeInAllItems: false,
-                includeInForYou: true,
-                includeInSavedSearches: false,
-                includeInTrending: false,
+            new InclusionChange(
+                allItems: false,
+                forYou: true,
+                savedSearches: false,
+                trending: false,
             ),
         );
 
         $reloaded = $this->reload($tag);
-        self::assertFalse($reloaded->isIncludeInAllItems());
-        self::assertTrue($reloaded->isIncludeInForYou());
-        self::assertFalse($reloaded->isIncludeInSavedSearches());
-        self::assertFalse($reloaded->isIncludeInTrending());
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($reloaded->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::Trending));
     }
 
     public function testUpdateWithoutSwitchesKeepsThemAsTheyAre(): void
     {
         $tag = $this->editor()->create($this->user('tag-keeper@example.com'), new TagDetailsModel('Noise'));
-        $tag->setIncludeInAllItems(false);
-        $tag->setIncludeInSavedSearches(false);
-        $tag->setIncludeInTrending(false);
+        $tag->changeInclusions(new InclusionChange(allItems: false));
+        $tag->changeInclusions(new InclusionChange(savedSearches: false));
+        $tag->changeInclusions(new InclusionChange(trending: false));
 
         $this->updateDetails($tag, new TagDetailsModel('Noise'));
 
         $reloaded = $this->reload($tag);
-        self::assertFalse($reloaded->isIncludeInAllItems());
-        self::assertTrue($reloaded->isIncludeInForYou());
-        self::assertFalse($reloaded->isIncludeInSavedSearches());
-        self::assertFalse($reloaded->isIncludeInTrending());
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($reloaded->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::Trending));
     }
 
     public function testUpdateRefusesAnotherTagsName(): void
@@ -460,6 +461,6 @@ final class TagEditorTest extends DbTestCase
 
     private function updateDetails(Tag $tag, TagDetailsModel $details): void
     {
-        $this->editor()->update($tag, $details, new TagInclusionChangeModel());
+        $this->editor()->update($tag, $details, new InclusionChange());
     }
 }

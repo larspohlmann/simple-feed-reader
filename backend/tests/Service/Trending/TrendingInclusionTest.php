@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Trending;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -51,7 +52,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->storyOf($feeds);
         $this->fixtures->flush();
         foreach ($feeds as $feed) {
-            $this->subscriptionTo($feed)->setIncludeInTrending(false);
+            $this->subscriptionTo($feed)->changeInclusions(new InclusionChange(trending: false));
         }
         $this->fixtures->flush();
 
@@ -65,7 +66,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
         $story = $this->storyOf([$alpha, $beta, $gamma, $delta]);
         $this->fixtures->flush();
-        $this->subscriptionTo($alpha)->setIncludeInTrending(false);
+        $this->subscriptionTo($alpha)->changeInclusions(new InclusionChange(trending: false));
         $this->fixtures->flush();
 
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
@@ -83,7 +84,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->flush();
         self::assertSame([2], self::outletCountsOf($this->rankedDay()));
 
-        $this->subscriptionTo($feeds[0])->setIncludeInTrending(false);
+        $this->subscriptionTo($feeds[0])->changeInclusions(new InclusionChange(trending: false));
         $this->fixtures->flush();
 
         self::assertSame([], $this->rankedDay());
@@ -96,7 +97,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->entry($feeds[0], 'Alpha', '2031-05-14 08:00:00');
         $this->fixtures->entry($feeds[1], 'Beta', '2031-05-14 09:00:00');
         $this->fixtures->flush();
-        $this->subscriptionTo($feeds[0])->setIncludeInTrending(false);
+        $this->subscriptionTo($feeds[0])->changeInclusions(new InclusionChange(trending: false));
         $this->fixtures->flush();
 
         self::assertSame(1, (new TrendingEntryRepository($this->entityManager))->activeFeedCount(
@@ -118,7 +119,7 @@ final class TrendingInclusionTest extends DbTestCase
             $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 09:00:00'),
             $this->fixtures->entry($delta, 'Delta', '2031-05-14 10:00:00'),
         );
-        $this->subscriptionTo($alpha)->setIncludeInTrending(false);
+        $this->subscriptionTo($alpha)->changeInclusions(new InclusionChange(trending: false));
         $this->fixtures->flush();
 
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
@@ -127,7 +128,7 @@ final class TrendingInclusionTest extends DbTestCase
     public function testATagSwitchedOutOfTrendingTakesItsFeedsOut(): void
     {
         $tag = $this->tag('Noise');
-        $tag->setIncludeInTrending(false);
+        $tag->changeInclusions(new InclusionChange(trending: false));
 
         $this->assertTheTaggedFeedIsNoSource($tag);
     }
@@ -135,7 +136,7 @@ final class TrendingInclusionTest extends DbTestCase
     public function testASubtagUnderAParentSwitchedOutOfTrendingTakesItsFeedsOut(): void
     {
         $parent = $this->tag('Noise');
-        $parent->setIncludeInTrending(false);
+        $parent->changeInclusions(new InclusionChange(trending: false));
         $child = $this->tag('Louder');
         $child->setParent($parent);
 
@@ -145,9 +146,9 @@ final class TrendingInclusionTest extends DbTestCase
     public function testATagSwitchedOutOfAnotherSurfaceLeavesTrendingAlone(): void
     {
         $tag = $this->tag('Quiet');
-        $tag->setIncludeInAllItems(false);
-        $tag->setIncludeInForYou(false);
-        $tag->setIncludeInSavedSearches(false);
+        $tag->changeInclusions(new InclusionChange(allItems: false));
+        $tag->changeInclusions(new InclusionChange(forYou: false));
+        $tag->changeInclusions(new InclusionChange(savedSearches: false));
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
         $this->storyOf([$alpha, $beta, $gamma, $delta]);
@@ -200,7 +201,7 @@ final class TrendingInclusionTest extends DbTestCase
             $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 09:00:00'),
             $this->fixtures->entry($delta, 'Delta', '2031-05-14 10:00:00'),
         );
-        $this->subscriptionTo($alpha)->setIncludeInTrending(false);
+        $this->subscriptionTo($alpha)->changeInclusions(new InclusionChange(trending: false));
         $this->fixtures->flush();
 
         $this->expectException(TrendingStoryNotFoundException::class);
@@ -221,7 +222,7 @@ final class TrendingInclusionTest extends DbTestCase
         $gammaEntry = $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 07:00:00');
         $this->fixtures->article($delta, 'Lead elsewhere', '2031-05-14 08:00:00', $url);
         $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $lead, $betaEntry, $gammaEntry);
-        $this->subscriptionTo($delta)->setIncludeInTrending(false);
+        $this->subscriptionTo($delta)->changeInclusions(new InclusionChange(trending: false));
         $this->fixtures->flush();
 
         $stories = $this->storiesOfTheDay();

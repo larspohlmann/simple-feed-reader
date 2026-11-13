@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Entity\Tag;
+use App\Enum\InclusionSurface;
 use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
@@ -54,10 +55,10 @@ final readonly class TagLine
             icon: $tag->getIcon(),
             position: $tag->getPosition(),
             parent: $tag->getParent()?->getName(),
-            includeInAllItems: $tag->isIncludeInAllItems(),
-            includeInForYou: $tag->isIncludeInForYou(),
-            includeInSavedSearches: $tag->isIncludeInSavedSearches(),
-            includeInTrending: $tag->isIncludeInTrending(),
+            includeInAllItems: $tag->isIncludedIn(InclusionSurface::AllItems),
+            includeInForYou: $tag->isIncludedIn(InclusionSurface::ForYou),
+            includeInSavedSearches: $tag->isIncludedIn(InclusionSurface::SavedSearches),
+            includeInTrending: $tag->isIncludedIn(InclusionSurface::Trending),
         );
     }
 

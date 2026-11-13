@@ -18,10 +18,10 @@ final class BulkUpdateSubscriptionsRequestTest extends TestCase
         self::assertSame([4], $change->removeTagIds);
         self::assertSame(
             [
-                'includeInAllItems' => true,
-                'includeInForYou' => false,
-                'includeInSavedSearches' => false,
-                'includeInTrending' => false,
+                'allItems' => true,
+                'forYou' => false,
+                'savedSearches' => false,
+                'trending' => false,
             ],
             get_object_vars($change->inclusions),
         );

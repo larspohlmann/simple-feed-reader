@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -619,7 +620,7 @@ final class EntryListTest extends DbTestCase
     public function testANetworkListsOnlyItsFeedsExcludedOnesIncluded(): void
     {
         [$profile, $profileSubscription] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);
-        $profileSubscription->setIncludeInAllItems(false);
+        $profileSubscription->changeInclusions(new InclusionChange(allItems: false));
         [$mastodon] = $this->secondSubscription(NetworkFeedSubscriptions::MASTODON_PROFILE);
         $this->entityManager->flush();
         $this->entry('plain', '2026-07-05T00:00:00Z');
@@ -664,7 +665,7 @@ final class EntryListTest extends DbTestCase
     public function testATagSwitchedOutOfAllItemsTakesEveryFeedBelowItOutButStaysInItsOwnView(): void
     {
         $switchedOff = $this->tagNamed('off');
-        $switchedOff->setIncludeInAllItems(false);
+        $switchedOff->changeInclusions(new InclusionChange(allItems: false));
         $included = $this->tagNamed('on');
         $below = $this->tagNamed('below');
         $below->setParent($switchedOff);
@@ -838,7 +839,7 @@ final class EntryListTest extends DbTestCase
             $excludedFeed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $excludedSubscription->setIncludeInAllItems(false);
+        $excludedSubscription->changeInclusions(new InclusionChange(allItems: false));
         $tag = new Tag($this->user, 'news');
         $this->entityManager->persist($tag);
         $excludedSubscription->addTag($tag);
@@ -1236,7 +1237,7 @@ final class EntryListTest extends DbTestCase
     public function testAFeedExcludedFromAllItemsDoesNotCountTowardTheScope(ListOrder $order): void
     {
         [$excludedFeed, $excluded] = $this->secondSubscription('https://excluded.example.com/feed.xml');
-        $excluded->setIncludeInAllItems(false);
+        $excluded->changeInclusions(new InclusionChange(allItems: false));
         $this->entityManager->flush();
         foreach (range(10, 14) as $day) {
             $this->entryIn($excludedFeed, 'excluded-' . $day, $this->dayToward($order, $day));

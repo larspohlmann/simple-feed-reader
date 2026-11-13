@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Entity\InclusionChange;
 use App\Entity\Tag;
 use App\Service\Backup\Dto\TagLine;
 use App\Tests\Support\BackupLineRecords;
@@ -71,9 +72,9 @@ final class TagLineTest extends TestCase
     public function testItWritesTheTagsSwitches(): void
     {
         $tag = new Tag(BackupLineRecords::user(), 'Noise');
-        $tag->setIncludeInAllItems(false);
-        $tag->setIncludeInSavedSearches(false);
-        $tag->setIncludeInTrending(false);
+        $tag->changeInclusions(new InclusionChange(allItems: false));
+        $tag->changeInclusions(new InclusionChange(savedSearches: false));
+        $tag->changeInclusions(new InclusionChange(trending: false));
 
         self::assertSame(
             '{"kind":"tag","name":"Noise","color":null,"icon":null,"position":0,"parent":null,'

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\Exception\RecordNotFoundException;
@@ -43,7 +44,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $owner = $this->userFactory()->create('all-items-owner@example.com');
         $included = $this->subscriptionToFeed($owner, 'https://example.com/included.xml');
         $hidden = $this->subscriptionToFeed($owner, 'https://example.com/hidden.xml');
-        $hidden->setIncludeInAllItems(false);
+        $hidden->changeInclusions(new InclusionChange(allItems: false));
         $alsoIncluded = $this->subscriptionToFeed($owner, 'https://example.com/also-included.xml');
         $this->subscriptionToFeed(
             $this->userFactory()->create('all-items-other@example.com'),

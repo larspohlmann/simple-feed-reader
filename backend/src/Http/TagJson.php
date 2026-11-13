@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\Tag;
+use App\Enum\InclusionSurface;
 
 final class TagJson
 {
@@ -23,10 +24,10 @@ final class TagJson
             'icon' => $tag->getIcon(),
             'position' => $tag->getPosition(),
             'parentId' => $tag->getParent()?->getId(),
-            'includeInAllItems' => $tag->isIncludeInAllItems(),
-            'includeInForYou' => $tag->isIncludeInForYou(),
-            'includeInSavedSearches' => $tag->isIncludeInSavedSearches(),
-            'includeInTrending' => $tag->isIncludeInTrending(),
+            'includeInAllItems' => $tag->isIncludedIn(InclusionSurface::AllItems),
+            'includeInForYou' => $tag->isIncludedIn(InclusionSurface::ForYou),
+            'includeInSavedSearches' => $tag->isIncludedIn(InclusionSurface::SavedSearches),
+            'includeInTrending' => $tag->isIncludedIn(InclusionSurface::Trending),
         ];
     }
 }

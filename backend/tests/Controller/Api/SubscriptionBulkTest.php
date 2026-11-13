@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\QueryRecorder;
@@ -199,7 +200,10 @@ final class SubscriptionBulkTest extends ApiTestCase
         $reloaded = $this->entityManager()->getRepository(Subscription::class)->find($ourId);
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertCount(0, $reloaded->getTags(), 'A rejected bulk request must write no tag.');
-        self::assertTrue($reloaded->isIncludeInAllItems(), 'A rejected bulk request must write no flag.');
+        self::assertTrue(
+            $reloaded->isIncludedIn(InclusionSurface::AllItems),
+            'A rejected bulk request must write no flag.',
+        );
     }
 
     public function testRejectsMoreIdsThanTheHardCeiling(): void

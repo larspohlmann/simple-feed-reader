@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Subscription;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Service\Subscription\Model\FeedMoveModel;
-use App\Service\Subscription\Model\InclusionChangeModel;
 use App\Service\Subscription\Model\SubscriptionChangeModel;
 use App\Service\Subscription\SubscriptionEditor;
 use App\Tests\DbTestCase;
@@ -47,33 +48,33 @@ final class SubscriptionEditorTest extends DbTestCase
     {
         $user = $this->user('flags-keep@example.com');
         $subscription = $this->subscription($user, 'https://flags-keep.editor.example.com/rss');
-        $subscription->setIncludeInAllItems(false);
-        $subscription->setIncludeInForYou(false);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
+        $subscription->changeInclusions(new InclusionChange(forYou: false));
         $this->entityManager->flush();
 
         $this->editor()->update($subscription, new SubscriptionChangeModel(null));
 
         $reloaded = $this->reload($subscription);
-        self::assertFalse($reloaded->isIncludeInAllItems());
-        self::assertFalse($reloaded->isIncludeInForYou());
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::ForYou));
     }
 
     public function testUpdateAppliesFlagsTheChangeCarries(): void
     {
         $user = $this->user('flags-set@example.com');
         $subscription = $this->subscription($user, 'https://flags-set.editor.example.com/rss');
-        $subscription->setIncludeInAllItems(true);
-        $subscription->setIncludeInForYou(true);
+        $subscription->changeInclusions(new InclusionChange(allItems: true));
+        $subscription->changeInclusions(new InclusionChange(forYou: true));
         $this->entityManager->flush();
 
         $this->editor()->update(
             $subscription,
-            new SubscriptionChangeModel(null, [], new InclusionChangeModel(false, false)),
+            new SubscriptionChangeModel(null, [], new InclusionChange(false, false)),
         );
 
         $reloaded = $this->reload($subscription);
-        self::assertFalse($reloaded->isIncludeInAllItems());
-        self::assertFalse($reloaded->isIncludeInForYou());
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::ForYou));
     }
 
     public function testUpdateExcludesTheFeedFromSavedSearchesAndANullFlagLeavesItAlone(): void
@@ -83,12 +84,12 @@ final class SubscriptionEditorTest extends DbTestCase
 
         $this->editor()->update(
             $subscription,
-            new SubscriptionChangeModel(inclusions: new InclusionChangeModel(includeInSavedSearches: false)),
+            new SubscriptionChangeModel(inclusions: new InclusionChange(savedSearches: false)),
         );
-        self::assertFalse($this->reload($subscription)->isIncludeInSavedSearches());
+        self::assertFalse($this->reload($subscription)->isIncludedIn(InclusionSurface::SavedSearches));
 
         $this->editor()->update($subscription, new SubscriptionChangeModel());
-        self::assertFalse($this->reload($subscription)->isIncludeInSavedSearches());
+        self::assertFalse($this->reload($subscription)->isIncludedIn(InclusionSurface::SavedSearches));
     }
 
     public function testUpdateSyncsTheRequestedTags(): void

@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionDisplayTitle;
@@ -109,10 +110,10 @@ final class SubscriptionJson
             'tags' => $tags,
             'unreadCount' => $unreadCount,
             'entryCount' => $entryCount,
-            'includeInAllItems' => $subscription->isIncludeInAllItems(),
-            'includeInForYou' => $subscription->isIncludeInForYou(),
-            'includeInSavedSearches' => $subscription->isIncludeInSavedSearches(),
-            'includeInTrending' => $subscription->isIncludeInTrending(),
+            'includeInAllItems' => $subscription->isIncludedIn(InclusionSurface::AllItems),
+            'includeInForYou' => $subscription->isIncludedIn(InclusionSurface::ForYou),
+            'includeInSavedSearches' => $subscription->isIncludedIn(InclusionSurface::SavedSearches),
+            'includeInTrending' => $subscription->isIncludedIn(InclusionSurface::Trending),
             'social' => self::social($feed),
         ];
     }

@@ -17,9 +17,9 @@ final class TagExclusionDql
         $lineage = $subscriptionAlias . 'ExcludingTag';
         $switchedOff = array_map(
             static fn (int $level): string => \sprintf(
-                '%s.%s = false',
+                '%s.inclusions.%s = false',
                 TagLineageDql::alias($lineage, $level),
-                self::switchOf($surface),
+                $surface->switchField(),
             ),
             range(0, Tag::MAX_DEPTH),
         );
@@ -33,16 +33,6 @@ final class TagExclusionDql
             $subscriptionAlias,
             implode(' OR ', $switchedOff),
         );
-    }
-
-    private static function switchOf(InclusionSurface $surface): string
-    {
-        return match ($surface) {
-            InclusionSurface::AllItems => 'includeInAllItems',
-            InclusionSurface::ForYou => 'includeInForYou',
-            InclusionSurface::SavedSearches => 'includeInSavedSearches',
-            InclusionSurface::Trending => 'includeInTrending',
-        };
     }
 
     private function __construct()

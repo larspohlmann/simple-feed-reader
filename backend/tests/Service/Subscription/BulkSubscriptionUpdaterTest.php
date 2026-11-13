@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Subscription;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Exception\InvalidSelectionException;
 use App\Service\Subscription\BulkSubscriptionUpdater;
 use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
-use App\Service\Subscription\Model\InclusionChangeModel;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -160,19 +161,19 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
     {
         $user = $this->user('bulk-flags@example.com');
         $subscription = $this->subscription($user, 'https://flags.example/feed.xml');
-        $subscription->setIncludeInForYou(false);
+        $subscription->changeInclusions(new InclusionChange(forYou: false));
         $this->entityManager->flush();
 
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$subscription->requireId()],
-                inclusions: new InclusionChangeModel(includeInAllItems: false),
+                inclusions: new InclusionChange(allItems: false),
             ),
             $user->requireId(),
         );
 
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou(), 'A null flag must not be written.');
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou), 'A null flag must not be written.');
     }
 
     /**
@@ -183,24 +184,24 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
     {
         $user = $this->user('bulk-flags-own-field@example.com');
         $subscription = $this->subscription($user, 'https://flags-own-field.example/feed.xml');
-        $subscription->setIncludeInAllItems(false);
-        $subscription->setIncludeInForYou(true);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
+        $subscription->changeInclusions(new InclusionChange(forYou: true));
         $this->entityManager->flush();
 
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$subscription->requireId()],
-                inclusions: new InclusionChangeModel(includeInAllItems: true, includeInForYou: false),
+                inclusions: new InclusionChange(allItems: true, forYou: false),
             ),
             $user->requireId(),
         );
 
         self::assertTrue(
-            $subscription->isIncludeInAllItems(),
+            $subscription->isIncludedIn(InclusionSurface::AllItems),
             'includeInAllItems must take the includeInAllItems value.',
         );
         self::assertFalse(
-            $subscription->isIncludeInForYou(),
+            $subscription->isIncludedIn(InclusionSurface::ForYou),
             'includeInForYou must take the includeInForYou value, not includeInAllItems.',
         );
     }
@@ -215,13 +216,13 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$first->requireId(), $second->requireId()],
-                inclusions: new InclusionChangeModel(includeInSavedSearches: false),
+                inclusions: new InclusionChange(savedSearches: false),
             ),
             $user->requireId(),
         );
 
-        self::assertFalse($first->isIncludeInSavedSearches());
-        self::assertFalse($second->isIncludeInSavedSearches());
+        self::assertFalse($first->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($second->isIncludedIn(InclusionSurface::SavedSearches));
     }
 
     public function testRejectsATagNamedInBothAddAndRemove(): void

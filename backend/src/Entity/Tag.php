@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\InclusionSurface;
 use App\Repository\TagRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -44,22 +45,14 @@ final class Tag implements PositionedInterface
     #[ORM\JoinColumn(name: 'parent_id', nullable: true, onDelete: 'SET NULL')]
     private ?Tag $parent = null;
 
-    #[ORM\Column(name: 'include_in_all_items', options: ['default' => true])]
-    private bool $includeInAllItems = true;
-
-    #[ORM\Column(name: 'include_in_for_you', options: ['default' => true])]
-    private bool $includeInForYou = true;
-
-    #[ORM\Column(name: 'include_in_saved_searches', options: ['default' => true])]
-    private bool $includeInSavedSearches = true;
-
-    #[ORM\Column(name: 'include_in_trending', options: ['default' => true])]
-    private bool $includeInTrending = true;
+    #[ORM\Embedded(class: InclusionSwitches::class, columnPrefix: 'include_in_')]
+    private InclusionSwitches $inclusions;
 
     public function __construct(User $user, string $name)
     {
         $this->user = $user;
         $this->name = $name;
+        $this->inclusions = new InclusionSwitches();
     }
 
     public function getId(): ?int
@@ -122,43 +115,13 @@ final class Tag implements PositionedInterface
         $this->parent = $parent;
     }
 
-    public function isIncludeInAllItems(): bool
+    public function isIncludedIn(InclusionSurface $surface): bool
     {
-        return $this->includeInAllItems;
+        return $this->inclusions->isIncludedIn($surface);
     }
 
-    public function setIncludeInAllItems(bool $includeInAllItems): void
+    public function changeInclusions(InclusionChange $change): void
     {
-        $this->includeInAllItems = $includeInAllItems;
-    }
-
-    public function isIncludeInForYou(): bool
-    {
-        return $this->includeInForYou;
-    }
-
-    public function setIncludeInForYou(bool $includeInForYou): void
-    {
-        $this->includeInForYou = $includeInForYou;
-    }
-
-    public function isIncludeInSavedSearches(): bool
-    {
-        return $this->includeInSavedSearches;
-    }
-
-    public function setIncludeInSavedSearches(bool $includeInSavedSearches): void
-    {
-        $this->includeInSavedSearches = $includeInSavedSearches;
-    }
-
-    public function isIncludeInTrending(): bool
-    {
-        return $this->includeInTrending;
-    }
-
-    public function setIncludeInTrending(bool $includeInTrending): void
-    {
-        $this->includeInTrending = $includeInTrending;
+        $this->inclusions = $this->inclusions->changedBy($change);
     }
 }

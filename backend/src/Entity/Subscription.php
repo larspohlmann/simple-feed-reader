@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\InclusionSurface;
 use App\Repository\SubscriptionRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -54,19 +55,8 @@ final class Subscription implements PositionedInterface
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
 
-    /** Whether this feed appears in "All items" and its unread badge. */
-    #[ORM\Column(name: 'include_in_all_items', options: ['default' => true])]
-    private bool $includeInAllItems = true;
-
-    /** Whether this feed feeds the "For You" recommendation pool. */
-    #[ORM\Column(name: 'include_in_for_you', options: ['default' => true])]
-    private bool $includeInForYou = true;
-
-    #[ORM\Column(name: 'include_in_saved_searches', options: ['default' => true])]
-    private bool $includeInSavedSearches = true;
-
-    #[ORM\Column(name: 'include_in_trending', options: ['default' => true])]
-    private bool $includeInTrending = true;
+    #[ORM\Embedded(class: InclusionSwitches::class, columnPrefix: 'include_in_')]
+    private InclusionSwitches $inclusions;
 
     public function __construct(User $user, Feed $feed, \DateTimeImmutable $createdAt)
     {
@@ -74,6 +64,7 @@ final class Subscription implements PositionedInterface
         $this->feed = $feed;
         $this->createdAt = $createdAt;
         $this->subscriptionTags = new ArrayCollection();
+        $this->inclusions = new InclusionSwitches();
     }
 
     public function getId(): ?int
@@ -126,44 +117,14 @@ final class Subscription implements PositionedInterface
         $this->position = $position;
     }
 
-    public function isIncludeInAllItems(): bool
+    public function isIncludedIn(InclusionSurface $surface): bool
     {
-        return $this->includeInAllItems;
+        return $this->inclusions->isIncludedIn($surface);
     }
 
-    public function setIncludeInAllItems(bool $includeInAllItems): void
+    public function changeInclusions(InclusionChange $change): void
     {
-        $this->includeInAllItems = $includeInAllItems;
-    }
-
-    public function isIncludeInForYou(): bool
-    {
-        return $this->includeInForYou;
-    }
-
-    public function setIncludeInForYou(bool $includeInForYou): void
-    {
-        $this->includeInForYou = $includeInForYou;
-    }
-
-    public function isIncludeInSavedSearches(): bool
-    {
-        return $this->includeInSavedSearches;
-    }
-
-    public function setIncludeInSavedSearches(bool $includeInSavedSearches): void
-    {
-        $this->includeInSavedSearches = $includeInSavedSearches;
-    }
-
-    public function isIncludeInTrending(): bool
-    {
-        return $this->includeInTrending;
-    }
-
-    public function setIncludeInTrending(bool $includeInTrending): void
-    {
-        $this->includeInTrending = $includeInTrending;
+        $this->inclusions = $this->inclusions->changedBy($change);
     }
 
     /**
@@ -208,10 +169,7 @@ final class Subscription implements PositionedInterface
     {
         $this->customTitle = $previous->customTitle;
         $this->position = $previous->position;
-        $this->includeInAllItems = $previous->includeInAllItems;
-        $this->includeInForYou = $previous->includeInForYou;
-        $this->includeInSavedSearches = $previous->includeInSavedSearches;
-        $this->includeInTrending = $previous->includeInTrending;
+        $this->inclusions = $previous->inclusions;
         $this->markedReadUntil = $previous->markedReadUntil;
         foreach ($previous->getSubscriptionTags() as $subscriptionTag) {
             $this->addTag($subscriptionTag->getTag(), $subscriptionTag->getPosition());

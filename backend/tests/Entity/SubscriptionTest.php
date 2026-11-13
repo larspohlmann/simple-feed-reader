@@ -7,9 +7,11 @@ namespace App\Tests\Entity;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Tests\DbTestCase;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
@@ -167,17 +169,17 @@ final class SubscriptionTest extends DbTestCase
     {
         $subscription = new Subscription($this->makeUser(), $this->makeFeed(), new \DateTimeImmutable());
 
-        self::assertTrue($subscription->isIncludeInAllItems());
-        self::assertTrue($subscription->isIncludeInForYou());
+        self::assertTrue($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($subscription->isIncludedIn(InclusionSurface::ForYou));
     }
 
     public function testExclusionFlagsCanBeToggled(): void
     {
         $subscription = new Subscription($this->makeUser(), $this->makeFeed(), new \DateTimeImmutable());
-        $subscription->setIncludeInAllItems(false);
-        $subscription->setIncludeInForYou(false);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
+        $subscription->changeInclusions(new InclusionChange(forYou: false));
 
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
     }
 }

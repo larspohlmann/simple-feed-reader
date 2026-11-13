@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -28,7 +29,7 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
             NetworkFeedSubscriptions::blueskyHome(1),
             SourceFormat::BLUESKY_API,
         );
-        $home->setIncludeInAllItems(false);
+        $home->changeInclusions(new InclusionChange(allItems: false));
         $profile = $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
         $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
         $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::PLAIN);

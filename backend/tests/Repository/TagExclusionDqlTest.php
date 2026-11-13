@@ -14,9 +14,9 @@ final class TagExclusionDqlTest extends TestCase
     /** @return iterable<string, array{InclusionSurface, string}> */
     public static function surfaces(): iterable
     {
-        yield 'All items' => [InclusionSurface::AllItems, 'includeInAllItems'];
-        yield 'For You' => [InclusionSurface::ForYou, 'includeInForYou'];
-        yield 'saved searches' => [InclusionSurface::SavedSearches, 'includeInSavedSearches'];
+        yield 'All items' => [InclusionSurface::AllItems, 'inclusions.allItems'];
+        yield 'For You' => [InclusionSurface::ForYou, 'inclusions.forYou'];
+        yield 'saved searches' => [InclusionSurface::SavedSearches, 'inclusions.savedSearches'];
     }
 
     #[DataProvider('surfaces')]
@@ -41,9 +41,9 @@ final class TagExclusionDqlTest extends TestCase
             . ' LEFT JOIN collapsedExcludingTag0.parent collapsedExcludingTag1'
             . ' LEFT JOIN collapsedExcludingTag1.parent collapsedExcludingTag2'
             . ' WHERE collapsedExclusionJoin.subscription = collapsed'
-            . ' AND (collapsedExcludingTag0.includeInAllItems = false'
-            . ' OR collapsedExcludingTag1.includeInAllItems = false'
-            . ' OR collapsedExcludingTag2.includeInAllItems = false))',
+            . ' AND (collapsedExcludingTag0.inclusions.allItems = false'
+            . ' OR collapsedExcludingTag1.inclusions.allItems = false'
+            . ' OR collapsedExcludingTag2.inclusions.allItems = false))',
             TagExclusionDql::notExcluded('collapsed', InclusionSurface::AllItems),
         );
     }

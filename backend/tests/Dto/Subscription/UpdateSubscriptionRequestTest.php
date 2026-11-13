@@ -17,10 +17,10 @@ final class UpdateSubscriptionRequestTest extends TestCase
         self::assertSame([7, 8], $change->tagIds);
         self::assertSame(
             [
-                'includeInAllItems' => false,
-                'includeInForYou' => true,
-                'includeInSavedSearches' => false,
-                'includeInTrending' => false,
+                'allItems' => false,
+                'forYou' => true,
+                'savedSearches' => false,
+                'trending' => false,
             ],
             get_object_vars($change->inclusions),
         );

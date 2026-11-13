@@ -6,6 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\SavedSearchNetworkInclusion;
@@ -41,7 +42,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     public function testAFeedSwitchedOffIsInNoRead(): void
     {
         $feed = $this->subscribedFeed('https://off.example.com/feed.xml');
-        $this->subscriptionOf($feed)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($feed)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->memberOf($feed, 'off');
 
         $this->assertOnlyTheKeptEntryIsSeen();
@@ -75,7 +76,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     {
         $this->include(SocialNetwork::Bluesky);
         $feed = $this->subscribedFeed('https://bsky.app/profile/bob.bsky.social/rss', SocialNetwork::Bluesky);
-        $this->subscriptionOf($feed)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($feed)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->memberOf($feed, 'post');
 
         $this->assertOnlyTheKeptEntryIsSeen();
@@ -95,7 +96,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     public function testAnExcludedLowestIdCopyDoesNotHideTheIncludedOne(): void
     {
         $offFeed = $this->subscribedFeed('https://off.example.com/feed.xml');
-        $this->subscriptionOf($offFeed)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($offFeed)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->memberOf($offFeed, 'original', urlHash: 'same');
         $copy = $this->memberOf($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
 
@@ -117,7 +118,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     public function testATagSwitchedOutOfSavedSearchesTakesItsFeedsAndTheOnesBelowItOutOfEveryRead(): void
     {
         $switchedOff = $this->tag('off');
-        $switchedOff->setIncludeInSavedSearches(false);
+        $switchedOff->changeInclusions(new InclusionChange(savedSearches: false));
         $below = $this->tag('below');
         $below->setParent($switchedOff);
         $included = $this->tag('on');
@@ -131,7 +132,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     public function testAnExcludedTagsLowestIdCopyDoesNotHideTheIncludedOne(): void
     {
         $switchedOff = $this->tag('off');
-        $switchedOff->setIncludeInSavedSearches(false);
+        $switchedOff->changeInclusions(new InclusionChange(savedSearches: false));
         $this->taggedMember('https://off.example.com/feed.xml', 'original', [$switchedOff], urlHash: 'same');
         $copy = $this->memberOf($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
 

@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -137,7 +138,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
     {
         $user = $this->user();
         [$excluded, $excludedFeed] = $this->subscribedFeed($user, 'https://example.com/excluded.xml');
-        $excluded->setIncludeInAllItems(false);
+        $excluded->changeInclusions(new InclusionChange(allItems: false));
         [, $includedFeed] = $this->subscribedFeed($user, 'https://example.com/included.xml');
         $this->unreadEntry($excludedFeed, 'excluded-copy', 'shared-hash');
         $this->unreadEntry($includedFeed, 'included-copy', 'shared-hash');
@@ -162,7 +163,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
     {
         $user = $this->user();
         $switchedOff = $this->tag($user, 'off');
-        $switchedOff->setIncludeInAllItems(false);
+        $switchedOff->changeInclusions(new InclusionChange(allItems: false));
         $below = $this->childTag($user, 'below', $switchedOff);
         $included = $this->tag($user, 'on');
         [$offTagged, $offFeed] = $this->subscribedFeed($user, 'https://example.com/off.xml');
@@ -387,7 +388,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
     {
         $user = $this->user();
         [$hidden, $hiddenFeed] = $this->subscribedFeed($user, 'https://example.com/hidden.xml');
-        $hidden->setIncludeInAllItems(false);
+        $hidden->changeInclusions(new InclusionChange(allItems: false));
         [, $homeFeed] = $this->subscribedFeed($user, 'social:bluesky:1:home', SourceFormat::BLUESKY_API);
         $this->unreadEntry($hiddenFeed, 'hidden', null);
         $this->unreadEntry($homeFeed, 'home', null);

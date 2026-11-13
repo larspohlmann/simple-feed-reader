@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription\Model;
 
+use App\Entity\InclusionChange;
+
 /** One tag and flag change across many feeds. */
 final readonly class BulkSubscriptionChangeModel
 {
@@ -16,7 +18,7 @@ final readonly class BulkSubscriptionChangeModel
         public array $subscriptionIds = [],
         public array $addTagIds = [],
         public array $removeTagIds = [],
-        public InclusionChangeModel $inclusions = new InclusionChangeModel(),
+        public InclusionChange $inclusions = new InclusionChange(),
     ) {
     }
 }

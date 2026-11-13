@@ -15,6 +15,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
+use App\Entity\InclusionChange;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\NetworkExclusion;
@@ -126,10 +127,10 @@ final readonly class FullyPopulatedAccount
         $tag->setIcon('bookmark');
         $tag->setPosition(2);
         $tag->setParent($parent);
-        $tag->setIncludeInAllItems(false);
-        $tag->setIncludeInForYou(false);
-        $tag->setIncludeInSavedSearches(false);
-        $tag->setIncludeInTrending(false);
+        $tag->changeInclusions(new InclusionChange(allItems: false));
+        $tag->changeInclusions(new InclusionChange(forYou: false));
+        $tag->changeInclusions(new InclusionChange(savedSearches: false));
+        $tag->changeInclusions(new InclusionChange(trending: false));
 
         return $tag;
     }
@@ -153,10 +154,10 @@ final readonly class FullyPopulatedAccount
         $subscription->setCustomTitle('My populated feed');
         $subscription->setPosition(3);
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T10:00:00Z'));
-        $subscription->setIncludeInAllItems(false);
-        $subscription->setIncludeInForYou(false);
-        $subscription->setIncludeInSavedSearches(false);
-        $subscription->setIncludeInTrending(false);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
+        $subscription->changeInclusions(new InclusionChange(forYou: false));
+        $subscription->changeInclusions(new InclusionChange(savedSearches: false));
+        $subscription->changeInclusions(new InclusionChange(trending: false));
         $subscription->addTag($tag, 5);
 
         return $subscription;

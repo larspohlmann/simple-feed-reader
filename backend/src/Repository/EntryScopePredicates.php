@@ -60,14 +60,14 @@ final readonly class EntryScopePredicates
     /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
     public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription))
+        $qb->andWhere(\sprintf('%s.inclusions.allItems = true', $aliases->subscription))
             ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, NetworkExclusionSurface::AllItems))
             ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::AllItems));
     }
 
     public function inTrending(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(\sprintf('%s.includeInTrending = true', $aliases->subscription))
+        $qb->andWhere(\sprintf('%s.inclusions.trending = true', $aliases->subscription))
             ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, NetworkExclusionSurface::Trending))
             ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::Trending));
     }
@@ -79,7 +79,7 @@ final readonly class EntryScopePredicates
         $inclusion = 'networkInclusion' . ucfirst($aliases->entry);
 
         $qb->andWhere(\sprintf(
-            '%1$s.includeInSavedSearches = true AND EXISTS (SELECT 1 FROM %2$s %3$s WHERE %3$s = %4$s.feed AND '
+            '%1$s.inclusions.savedSearches = true AND EXISTS (SELECT 1 FROM %2$s %3$s WHERE %3$s = %4$s.feed AND '
             . '(%3$s.network IS NULL OR EXISTS (SELECT 1 FROM %5$s %6$s WHERE %6$s.user = :user '
             . 'AND %6$s.network = %3$s.network)))',
             $aliases->subscription,

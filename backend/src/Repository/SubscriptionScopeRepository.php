@@ -82,7 +82,7 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
         /** @var list<Subscription> $rows */
         $rows = $this->createQueryBuilder('s')
             ->andWhere('s.user = :user')->setParameter('user', $userId)
-            ->andWhere('s.includeInAllItems = true')
+            ->andWhere('s.inclusions.allItems = true')
             ->andWhere(NetworkExclusionDql::notExcluded('s', NetworkExclusionSurface::AllItems))
             ->andWhere(TagExclusionDql::notExcluded('s', InclusionSurface::AllItems))
             ->orderBy('s.id', 'ASC')
