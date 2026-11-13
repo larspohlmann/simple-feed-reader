@@ -17,10 +17,10 @@ digest:
     subject: 'Du nouveau dans vos flux : %count% articles'
     intro: "Voici les nouveaux articles correspondant à vos recherches enregistrées, regroupés par recherche."
     group_heading: '%term% (%count%)'
-    more: '+ plus → %url%'
+    more: 'Voir plus → %url%'
     footer: 'Gérez votre récapitulatif dans Paramètres → E-mail.'
     header: '%date% · %count% nouveaux articles'
     open_reader: 'Ouvrir dans le lecteur'
     manage_html: 'Gérez votre récapitulatif dans %link%.'
     manage_link_label: 'Paramètres → E-mail'
-    more_link: '+%count% de plus dans « %term% »'
+    more_link: '+%count% autres dans « %term% »'

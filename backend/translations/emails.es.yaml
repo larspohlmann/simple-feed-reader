@@ -17,7 +17,7 @@ digest:
     subject: 'Novedades en tus feeds: %count% entradas'
     intro: "Estas son las entradas nuevas que coinciden con tus búsquedas guardadas, agrupadas por búsqueda."
     group_heading: '%term% (%count%)'
-    more: '+ más → %url%'
+    more: 'Ver más → %url%'
     footer: 'Gestiona tu resumen en Configuración → Correo electrónico.'
     header: '%date% · %count% entradas nuevas'
     open_reader: 'Abrir en el lector'
