@@ -14,7 +14,7 @@ export interface FeedDirectoryFeed {
 
 export interface FeedDirectoryModeSummary {
   readonly feedCount: number;
-  readonly categories: ReadonlySet<string>;
+  readonly categoryCounts: ReadonlyMap<string, number>;
 }
 
 export interface FeedDirectoryRow {
@@ -106,7 +106,11 @@ export function modeSummaries(
 ): Record<FeedDirectoryMode, FeedDirectoryModeSummary> {
   const summaryOf = (podcast: boolean): FeedDirectoryModeSummary => {
     const members = feeds.filter((feed) => feed.podcast === podcast);
-    return { feedCount: members.length, categories: new Set(members.map((feed) => feed.category)) };
+    const categoryCounts = new Map<string, number>();
+    for (const { category } of members) {
+      categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
+    }
+    return { feedCount: members.length, categoryCounts };
   };
   return { channels: summaryOf(false), podcasts: summaryOf(true) };
 }
@@ -154,13 +158,24 @@ export function feedsIn(row: FeedDirectoryRow, mode: FeedDirectoryMode): FeedDir
   return row.feeds.filter((feed) => feed.podcast === (mode === 'podcasts'));
 }
 
+export function shownFeeds(
+  row: FeedDirectoryRow,
+  mode: FeedDirectoryMode,
+  categories: ReadonlySet<string>,
+): FeedDirectoryFeed[] {
+  const podcast = mode === 'podcasts';
+  return row.feeds.filter(
+    (feed) => feed.podcast === podcast && (!categories.size || categories.has(feed.category)),
+  );
+}
+
 function matcher(criteria: FeedDirectoryCriteria): (row: FeedDirectoryRow) => boolean {
   const query = criteria.query.toLowerCase();
   const categories = [...criteria.categories];
   return (row) => {
     const summary = row.byMode[criteria.mode];
     if (summary.feedCount === 0) return false;
-    if (categories.length && !categories.some((category) => summary.categories.has(category)))
+    if (categories.length && !categories.some((category) => summary.categoryCounts.has(category)))
       return false;
     if (criteria.lengths.size && (row.length === null || !criteria.lengths.has(row.length)))
       return false;
@@ -184,11 +199,18 @@ function comparator(
       return (left, right) => left.host.localeCompare(right.host);
     case 'feeds':
       return (left, right) =>
-        right.byMode[filter.mode].feedCount - left.byMode[filter.mode].feedCount ||
-        byTop(left, right);
+        shownCount(right, filter) - shownCount(left, filter) || byTop(left, right);
     default:
       return byTop;
   }
+}
+
+function shownCount(row: FeedDirectoryRow, criteria: FeedDirectoryCriteria): number {
+  const summary = row.byMode[criteria.mode];
+  if (!criteria.categories.size) return summary.feedCount;
+  let count = 0;
+  for (const category of criteria.categories) count += summary.categoryCounts.get(category) ?? 0;
+  return count;
 }
 
 export function filterRows(

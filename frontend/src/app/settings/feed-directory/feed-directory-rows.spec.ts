@@ -3,13 +3,16 @@ import { feedDirectoryUrl } from './feed-directory-url';
 import {
   FeedDirectoryCriteria,
   FeedDirectoryFilter,
+  FeedDirectoryFeed,
   FeedDirectoryRow,
   countByCountry,
   feedsIn,
   filterRows,
   lengthOf,
   prepareRows,
+  modeSummaries,
   sameLookup,
+  shownFeeds,
   subscribedLookup,
   withSubscriptions,
 } from './feed-directory-rows';
@@ -64,6 +67,64 @@ describe('feed directory rows', () => {
       'https://www.zeit.de/politik/index',
     ]);
     expect(feedsIn(zeit, 'podcasts').map((feed) => feed.url)).toEqual(['https://zeit.de/podcast']);
+  });
+
+  describe('shownFeeds', () => {
+    const feed = (url: string, category: string, podcast = false): FeedDirectoryFeed => ({
+      url,
+      category,
+      podcast,
+      subscribed: false,
+    });
+    const feeds = [
+      feed('https://a.de/world', 'World'),
+      feed('https://a.de/sport', 'Sport'),
+      feed('https://a.de/world/europe', 'World'),
+      feed('https://a.de/podcast', 'Sport', true),
+    ];
+    const site: FeedDirectoryRow = { ...rows[0], feeds, byMode: modeSummaries(feeds) };
+    const urls = (shown: readonly FeedDirectoryFeed[]): string[] => shown.map((one) => one.url);
+
+    it('shows every feed of the mode while no category is chosen', () => {
+      expect(shownFeeds(site, 'channels', new Set())).toEqual(feedsIn(site, 'channels'));
+    });
+
+    it("shows only the feeds of the chosen categories, in the site's order", () => {
+      expect(urls(shownFeeds(site, 'channels', new Set(['World'])))).toEqual([
+        'https://a.de/world',
+        'https://a.de/world/europe',
+      ]);
+      expect(urls(shownFeeds(site, 'channels', new Set(['World', 'Sport'])))).toEqual([
+        'https://a.de/world',
+        'https://a.de/sport',
+        'https://a.de/world/europe',
+      ]);
+    });
+
+    it('ranks Most feeds by the feeds the chosen categories leave', () => {
+      const sports = [feed('https://b.de/1', 'Sport'), feed('https://b.de/2', 'Sport')];
+      const sportSite: FeedDirectoryRow = {
+        ...site,
+        host: 'b.de',
+        feeds: sports,
+        byMode: modeSummaries(sports),
+      };
+
+      const ranked = filterRows([site, sportSite], {
+        ...ALL,
+        categories: new Set(['Sport']),
+        sort: 'feeds',
+      });
+
+      expect(ranked.map((row) => row.host)).toEqual(['b.de', site.host]);
+    });
+
+    it('keeps the mode before the categories', () => {
+      expect(shownFeeds(site, 'podcasts', new Set(['World']))).toEqual([]);
+      expect(urls(shownFeeds(site, 'podcasts', new Set(['Sport'])))).toEqual([
+        'https://a.de/podcast',
+      ]);
+    });
   });
 
   it('buckets lengths like InfoBubble', () => {
@@ -145,9 +206,12 @@ describe('feed directory rows', () => {
     const zeit = rows[0];
     expect(zeit.byMode.channels).toEqual({
       feedCount: 1,
-      categories: new Set(['Politics & Society']),
+      categoryCounts: new Map([['Politics & Society', 1]]),
     });
-    expect(zeit.byMode.podcasts).toEqual({ feedCount: 1, categories: new Set(['Sports']) });
+    expect(zeit.byMode.podcasts).toEqual({
+      feedCount: 1,
+      categoryCounts: new Map([['Sports', 1]]),
+    });
   });
 
   describe('withSubscriptions', () => {

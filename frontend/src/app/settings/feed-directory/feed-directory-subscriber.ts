@@ -17,7 +17,7 @@ import { ActionSheetItem } from '../../shared/action-sheet/action-sheet.componen
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { MENU_VIEWPORT_MARGIN, TOOLBAR_MENU_POSITIONS } from '../../shared/menu-keys';
 import { feedGroups, feedPath } from './feed-directory-feed-groups';
-import { FeedDirectoryFeed, feedsIn } from './feed-directory-rows';
+import { FeedDirectoryFeed, shownFeeds } from './feed-directory-rows';
 import { FeedDirectoryStore } from './feed-directory.store';
 import { FeedDirectoryFeedsPopoverComponent } from './feeds-popover/feed-directory-feeds-popover.component';
 import { FeedDirectorySubscribeRequest } from './row/feed-directory-row.component';
@@ -36,7 +36,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
   private popover: OverlayRef | null = null;
 
   open(request: FeedDirectorySubscribeRequest): void {
-    const feeds = feedsIn(request.row, this.store.mode());
+    const feeds = shownFeeds(request.row, this.store.mode(), this.store.categories());
     if (feeds.length === 1) {
       this.subscribeTo(feeds[0].url);
     } else if (this.layout.isCoarse()) {
