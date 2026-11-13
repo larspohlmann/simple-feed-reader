@@ -14,12 +14,19 @@
         [attr.aria-label]="'settings.visibility.filterPlaceholder' | transloco"
         (input)="feedFilter.set($any($event.target).value)"
       />
+      <app-button size="sm" data-test="expand-toggle" (click)="toggleExpandAll()">
+        <app-icon [name]="allExpanded() ? 'unfold_less' : 'unfold_more'" size="sm" />
+        {{
+          (allExpanded() ? 'settings.visibility.collapseAll' : 'settings.visibility.expandAll')
+            | transloco
+        }}
+      </app-button>
     </div>
 
     @if (loading()) {
       <app-skeleton class="state" [label]="'settings.visibility.loading' | transloco" [rows]="6" />
     } @else {
-      <div class="matrix">
+      <div class="matrix" [style.--visibility-surface-count]="surfaces.length">
         <div class="head" aria-hidden="true">
           <span class="head-name">{{ 'settings.visibility.name' | transloco }}</span>
           @for (surface of surfaces; track surface) {
@@ -27,55 +34,42 @@
           }
         </div>
 
-        @if (networkRows().length > 0) {
-          <section data-test="networks">
-            <h3 class="group-head">{{ 'settings.visibility.networks' | transloco }}</h3>
-            @for (row of networkRows(); track row.network) {
-              <app-visibility-row
-                [name]="row.name"
-                [cells]="row.cells"
-                (toggled)="toggleNetwork(row.network, $event)"
-              >
-                <app-network-logo [network]="row.network" />
-              </app-visibility-row>
+        @for (row of rows(); track row.line.key) {
+          <app-visibility-row
+            [attr.data-test]="'row-' + row.line.key"
+            [name]="row.name"
+            [cells]="row.cells"
+            [depth]="row.line.depth"
+            [expanded]="row.line.hasChildren ? isExpanded(row.line) : undefined"
+            (toggled)="toggle(row.line.target, $event)"
+            (expandToggled)="toggleExpanded(row.line)"
+          >
+            @switch (row.line.target.kind) {
+              @case ('tag') {
+                <app-tag-glyph
+                  [name]="row.line.target.tag.icon"
+                  [color]="row.line.target.tag.color"
+                  size="xs"
+                />
+              }
+              @case ('network') {
+                <app-network-logo [network]="row.line.target.network" />
+              }
+              @case ('feed') {
+                <app-favicon [url]="row.line.target.subscription.faviconUrl" />
+              }
+              @case ('untagged') {
+                <app-icon name="label_off" size="xs" />
+              }
             }
-          </section>
-        }
-
-        @if (tagRows().length > 0) {
-          <section data-test="tags">
-            <h3 class="group-head">{{ 'settings.visibility.tags' | transloco }}</h3>
-            @for (row of tagRows(); track row.tag.id) {
-              <app-visibility-row
-                [class.subtag]="row.isSubtag"
-                [name]="row.tag.name"
-                [cells]="row.cells"
-                (toggled)="toggleTag(row.tag, $event)"
-              >
-                <app-tag-glyph [name]="row.tag.icon" [color]="row.tag.color" size="xs" />
-              </app-visibility-row>
-            }
-          </section>
-        }
-
-        <section data-test="feeds">
-          <h3 class="group-head">{{ 'settings.visibility.feeds' | transloco }}</h3>
-          @for (row of feedRows(); track row.subscription.id) {
-            <app-visibility-row
-              [name]="row.subscription.title"
-              [cells]="row.cells"
-              (toggled)="toggleFeed(row.subscription, $event)"
-            >
-              <app-favicon [url]="row.subscription.faviconUrl" />
-            </app-visibility-row>
-          } @empty {
-            @if (feedFilter()) {
-              <p class="empty" data-test="no-feed-matches">
-                {{ 'settings.visibility.noFeedMatches' | transloco: { term: feedFilter() } }}
-              </p>
-            }
+          </app-visibility-row>
+        } @empty {
+          @if (filtering()) {
+            <p class="empty" data-test="no-feed-matches">
+              {{ 'settings.visibility.noFeedMatches' | transloco: { term: feedFilter() } }}
+            </p>
           }
-        </section>
+        }
       </div>
     }
   </app-settings-group>

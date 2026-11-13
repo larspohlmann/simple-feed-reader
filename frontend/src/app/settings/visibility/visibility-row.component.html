@@ -1,4 +1,18 @@
 <div class="name" [title]="name()">
+  @if (expanded() === undefined) {
+    <span class="chevron" aria-hidden="true"></span>
+  } @else {
+    <button
+      type="button"
+      class="chevron expand"
+      data-test="expand"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-label]="name()"
+      (click)="expandToggled.emit()"
+    >
+      <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+    </button>
+  }
   <span class="icon"><ng-content /></span>
   <span class="label">{{ name() }}</span>
 </div>

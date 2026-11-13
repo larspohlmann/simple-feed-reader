@@ -9,6 +9,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { SocialNetworkName } from '../../core/social-network';
+import { toggled } from '../../core/toggled-set';
 import {
   ExclusionSurface,
   FEED_FLAG_TOGGLES,
@@ -22,7 +23,7 @@ import { AllItemsNetworksStore } from '../../reader/state/all-items-networks.sto
 import { ForYouNetworksStore } from '../../reader/state/for-you-networks.store';
 import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
-import { tagsInTreeOrder } from '../../reader/state/subscription-derivations';
+import { buildTagTree } from '../../reader/state/subscription-derivations';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import {
@@ -32,34 +33,26 @@ import {
   withAncestors,
 } from '../../reader/state/visibility';
 import { VisibilitySwitchesStore } from '../../reader/state/visibility-switches.store';
+import { ButtonComponent } from '../../shared/button/button.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { NetworkLogoComponent } from '../../shared/network-logo/network-logo.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { VisibilityCell, VisibilityRowComponent } from './visibility-row.component';
+import { VisibilityLine, VisibilityTarget, visibilityLines } from './visibility-tree';
 
-interface NetworkRow {
-  readonly network: SocialNetworkName;
+interface VisibilityRow {
+  readonly line: VisibilityLine;
   readonly name: string;
-  readonly cells: readonly VisibilityCell[];
-}
-
-interface TagRow {
-  readonly tag: TagDto;
-  readonly isSubtag: boolean;
-  readonly cells: readonly VisibilityCell[];
-}
-
-interface FeedRow {
-  readonly subscription: SubscriptionDto;
   readonly cells: readonly VisibilityCell[];
 }
 
 const SURFACES: readonly ExclusionSurface[] = FEED_FLAG_TOGGLES.map(({ surface }) => surface);
 
-/** Every inclusion switch in one matrix: each box is its row's own switch and saves on tick. */
+/** Every inclusion switch in one tree-shaped matrix: each box is its row's own switch and saves on tick. */
 @Component({
   selector: 'app-visibility-section',
   imports: [
@@ -67,7 +60,9 @@ const SURFACES: readonly ExclusionSurface[] = FEED_FLAG_TOGGLES.map(({ surface }
     SettingsStackComponent,
     SettingsGroupComponent,
     SkeletonComponent,
+    ButtonComponent,
     FaviconComponent,
+    IconComponent,
     NetworkLogoComponent,
     TagGlyphComponent,
     VisibilityRowComponent,
@@ -93,38 +88,36 @@ export class VisibilitySectionComponent implements OnInit {
   protected readonly surfaceLabelKeys = SURFACE_LABEL_KEYS;
   protected readonly loading = this.subscriptions.loading;
   protected readonly feedFilter = signal('');
+  private readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
 
-  protected readonly networkRows = computed<NetworkRow[]>(() => {
-    this.language();
-    return this.subscriptions.socialSections().map(({ network }) => ({
-      network,
-      name: this.networkName(network),
-      cells: this.networkSwitches.map((networkSwitch) => ({
-        surface: networkSwitch.surface,
-        checked: !networkSwitch.isExcluded(network),
-        inheritedFrom: [],
-      })),
-    }));
-  });
-
-  protected readonly tagRows = computed<TagRow[]>(() => {
-    const tags = this.tags.tags();
-    const byId = new Map(tags.map((tag) => [tag.id, tag]));
-    return tagsInTreeOrder(tags).map((tag) => ({
-      tag,
-      isSubtag: tag.parentId !== null,
-      cells: SURFACES.map((surface) => tagCell(tag, surface, withAncestors(tag, byId).slice(1))),
-    }));
-  });
-
-  protected readonly feedRows = computed<FeedRow[]>(() => {
-    this.language();
+  private readonly lines = computed(() => {
+    const subscriptions = this.subscriptions.subscriptions();
     const term = this.feedFilter().trim().toLocaleLowerCase();
-    return this.subscriptions
-      .subscriptions()
-      .filter((subscription) => subscription.title.toLocaleLowerCase().includes(term))
-      .sort((left, right) => left.title.localeCompare(right.title))
-      .map((subscription) => ({ subscription, cells: this.feedCells(subscription) }));
+    return visibilityLines(
+      buildTagTree(subscriptions, this.tags.tags()),
+      subscriptions,
+      term === '' ? null : (subscription) => subscription.title.toLocaleLowerCase().includes(term),
+    );
+  });
+
+  protected readonly filtering = computed(() => this.feedFilter().trim() !== '');
+
+  private readonly parentKeys = computed(() =>
+    this.lines()
+      .filter((line) => line.hasChildren)
+      .map((line) => line.key),
+  );
+
+  protected readonly allExpanded = computed(() => {
+    const expanded = this.expandedKeys();
+    return this.parentKeys().every((key) => expanded.has(key));
+  });
+
+  protected readonly rows = computed<VisibilityRow[]>(() => {
+    this.language();
+    return this.lines()
+      .filter((line) => line.ancestorKeys.every((key) => this.isExpandedKey(key)))
+      .map((line) => ({ line, name: this.nameOf(line.target), cells: this.cellsOf(line.target) }));
   });
 
   ngOnInit(): void {
@@ -135,19 +128,97 @@ export class VisibilitySectionComponent implements OnInit {
     this.forYouNetworks.load();
   }
 
-  protected toggleNetwork(network: SocialNetworkName, surface: ExclusionSurface): void {
+  protected isExpanded(line: VisibilityLine): boolean {
+    return this.isExpandedKey(line.key);
+  }
+
+  protected toggleExpanded(line: VisibilityLine): void {
+    this.expandedKeys.update((expanded) => toggled(expanded, line.key));
+  }
+
+  protected toggleExpandAll(): void {
+    this.expandedKeys.set(new Set(this.allExpanded() ? [] : this.parentKeys()));
+  }
+
+  /** A filter opens every branch it keeps; clearing it brings back the reader's own choice. */
+  private isExpandedKey(key: string): boolean {
+    return this.filtering() || this.expandedKeys().has(key);
+  }
+
+  protected toggle(target: VisibilityTarget, surface: ExclusionSurface): void {
+    switch (target.kind) {
+      case 'network':
+        return this.toggleNetwork(target.network, surface);
+      case 'tag':
+        return this.tagActions.setTagInclusion(
+          target.tag,
+          surface,
+          !target.tag[INCLUSION_FLAG[surface]],
+        );
+      case 'feed':
+        return this.toggleFeed(target.subscription, surface);
+      case 'untagged':
+        return;
+    }
+  }
+
+  private toggleNetwork(network: SocialNetworkName, surface: ExclusionSurface): void {
     this.networkSwitches
       .find((networkSwitch) => networkSwitch.surface === surface)
       ?.toggle(network);
   }
 
-  protected toggleTag(tag: TagDto, surface: ExclusionSurface): void {
-    this.tagActions.setTagInclusion(tag, surface, !tag[INCLUSION_FLAG[surface]]);
-  }
-
-  protected toggleFeed(subscription: SubscriptionDto, surface: ExclusionSurface): void {
+  private toggleFeed(subscription: SubscriptionDto, surface: ExclusionSurface): void {
     const toggle = FEED_FLAG_TOGGLES.find((candidate) => candidate.surface === surface);
     if (toggle !== undefined) flipFeedFlag(this.manage, toggle, subscription);
+  }
+
+  private nameOf(target: VisibilityTarget): string {
+    switch (target.kind) {
+      case 'network':
+        return this.networkName(target.network);
+      case 'tag':
+        return target.tag.name;
+      case 'feed':
+        return target.subscription.title;
+      case 'untagged':
+        return this.transloco.translate('settings.organise.untagged');
+    }
+  }
+
+  private cellsOf(target: VisibilityTarget): VisibilityCell[] {
+    switch (target.kind) {
+      case 'network':
+        return this.networkCells(target.network);
+      case 'tag':
+        return this.tagCells(target.tag);
+      case 'feed':
+        return this.feedCells(target.subscription);
+      case 'untagged':
+        return [];
+    }
+  }
+
+  private networkCells(network: SocialNetworkName): VisibilityCell[] {
+    return this.networkSwitches.map((networkSwitch) => ({
+      surface: networkSwitch.surface,
+      checked: !networkSwitch.isExcluded(network),
+      inheritedFrom: [],
+    }));
+  }
+
+  /** A subtag inherits only an ancestor's switch; its own off box needs no second reason. */
+  private tagCells(tag: TagDto): VisibilityCell[] {
+    const byId = new Map(this.tags.tags().map((known) => [known.id, known]));
+    const ancestors = withAncestors(tag, byId).slice(1);
+    return SURFACES.map((surface) => {
+      const flag = INCLUSION_FLAG[surface];
+      const checked = tag[flag];
+      const inheritedFrom = checked
+        ? ancestors.filter((ancestor) => !ancestor[flag]).map(({ name }) => name)
+        : [];
+      return { surface, checked, inheritedFrom };
+    });
   }
 
   private feedCells(subscription: SubscriptionDto): VisibilityCell[] {
@@ -166,18 +237,4 @@ export class VisibilitySectionComponent implements OnInit {
   private networkName(network: SocialNetworkName): string {
     return this.transloco.translate(`settings.social.${network}`);
   }
-}
-
-/** A subtag inherits only an ancestor's switch; its own off box needs no second reason. */
-function tagCell(
-  tag: TagDto,
-  surface: ExclusionSurface,
-  ancestors: readonly TagDto[],
-): VisibilityCell {
-  const flag = INCLUSION_FLAG[surface];
-  const checked = tag[flag];
-  const inheritedFrom = checked
-    ? ancestors.filter((ancestor) => !ancestor[flag]).map(({ name }) => name)
-    : [];
-  return { surface, checked, inheritedFrom };
 }

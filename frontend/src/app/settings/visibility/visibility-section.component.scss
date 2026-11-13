@@ -3,26 +3,40 @@
 // Read by every row and the header, so the columns line up without a table.
 .matrix {
   --visibility-cell-w: var(--tap-target);
-  --visibility-columns: minmax(0, 1fr) repeat(3, var(--visibility-cell-w));
+  --visibility-indent-step: var(--space-3);
+  --visibility-columns: minmax(0, 1fr)
+    repeat(var(--visibility-surface-count), var(--visibility-cell-w));
 }
 
 @media (width > bp.$bp-sm) {
   .matrix {
     --visibility-cell-w: calc(var(--tap-target) * 2.5);
+    --visibility-indent-step: var(--space-5);
   }
 }
 
-.tools,
 .state {
   display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 .filter {
   --field-rim-base: var(--border-strong);
 
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--fs-sm);
+}
+
+app-button {
+  flex: none;
 }
 
 // Sticks under the settings bar while the long feed group scrolls past.
@@ -50,21 +64,6 @@
   text-align: center;
   overflow-wrap: normal;
   hyphens: auto;
-}
-
-.group-head {
-  margin: 0;
-  padding: var(--space-4) var(--row-pad-x) var(--space-2);
-  border-top: 1px solid var(--border);
-  font-size: var(--fs-xs);
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-app-visibility-row.subtag {
-  --visibility-indent: var(--space-5);
 }
 
 .empty {

@@ -9,11 +9,12 @@ const CELLS: readonly VisibilityCell[] = [
   { surface: 'savedSearches', checked: true, inheritedFrom: [] },
 ];
 
-function render() {
+function render(expanded?: boolean) {
   TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
   const fixture = TestBed.createComponent(VisibilityRowComponent);
   fixture.componentRef.setInput('name', 'heise');
   fixture.componentRef.setInput('cells', CELLS);
+  fixture.componentRef.setInput('expanded', expanded);
   fixture.detectChanges();
   const element = fixture.nativeElement as HTMLElement;
   const boxes = [...element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
@@ -62,5 +63,23 @@ describe('VisibilityRowComponent', () => {
     boxes[0].click();
 
     expect(toggled).toEqual(['allItems']);
+  });
+
+  it('shows no chevron on a row with nothing beneath it', () => {
+    const { element } = render();
+
+    expect(element.querySelector('[data-test="expand"]')).toBeNull();
+  });
+
+  it('reports a tap on the chevron of a parent row', () => {
+    const { fixture, element } = render(true);
+    let toggles = 0;
+    fixture.componentInstance.expandToggled.subscribe(() => toggles++);
+    const chevron = element.querySelector<HTMLButtonElement>('[data-test="expand"]')!;
+
+    chevron.click();
+
+    expect(chevron.getAttribute('aria-expanded')).toBe('true');
+    expect(toggles).toBe(1);
   });
 });

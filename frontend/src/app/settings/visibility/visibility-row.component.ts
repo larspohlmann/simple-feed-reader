@@ -14,6 +14,7 @@ export interface VisibilityCell {
 /** A named row of the Visibility matrix; its icon projects in front of the name. */
 @Component({
   selector: 'app-visibility-row',
+  host: { '[style.--visibility-depth]': 'depth()' },
   imports: [TranslocoPipe, IconComponent],
   templateUrl: './visibility-row.component.html',
   styleUrl: './visibility-row.component.scss',
@@ -22,7 +23,11 @@ export interface VisibilityCell {
 export class VisibilityRowComponent {
   readonly name = input.required<string>();
   readonly cells = input.required<readonly VisibilityCell[]>();
+  readonly depth = input(0);
+  /** Left unset on a row with nothing beneath it, which then shows no chevron. */
+  readonly expanded = input<boolean>();
   readonly toggled = output<ExclusionSurface>();
+  readonly expandToggled = output<void>();
 
   protected readonly surfaceLabelKeys = SURFACE_LABEL_KEYS;
 }

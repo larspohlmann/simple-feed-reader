@@ -819,10 +819,9 @@
     "visibility": {
       "title": "Visibility",
       "intro": "Where each network, tag and feed shows up. A greyed box is on, but something above it keeps the feed out.",
-      "networks": "Networks",
-      "tags": "Tags",
-      "feeds": "Feeds",
       "name": "Name",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
       "filterPlaceholder": "Filter feeds",
       "excludedBy": "Excluded by {{causes}}",
       "noFeedMatches": "No feed matches “{{term}}”.",

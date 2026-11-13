@@ -819,10 +819,9 @@
     "visibility": {
       "title": "Sichtbarkeit",
       "intro": "Wo jedes Netzwerk, jeder Tag und jeder Feed erscheint. Ein ausgegrautes Kästchen ist an, aber etwas darüber hält den Feed draußen.",
-      "networks": "Netzwerke",
-      "tags": "Tags",
-      "feeds": "Feeds",
       "name": "Name",
+      "expandAll": "Alle aufklappen",
+      "collapseAll": "Alle zuklappen",
       "filterPlaceholder": "Feeds filtern",
       "excludedBy": "Ausgeschlossen durch {{causes}}",
       "noFeedMatches": "Kein Feed passt zu „{{term}}“.",
