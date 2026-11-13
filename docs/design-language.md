@@ -1895,13 +1895,15 @@ the list's sidebar, the article's back).
   the actions in a column over the pair's outer disc, `--space-2` inside a group,
   `--space-5` between the column and the pair. The list's column reads mark all read,
   mark above as read; the article's favourite, save, share.
-- **Fixed slots on touch:** a disc never moves when another comes or goes. The pair's
-  row is held while empty, and the list's column keeps a row for mark above as read, so
-  mark all read sits at its final height from the first frame.
+- **Always there:** the list shows back to top and mark above as read whenever it has
+  entries, not only once scrolled (at the top both are harmless no-ops). On touch every
+  disc keeps a fixed slot — the pair's row is held while empty, the list's column keeps
+  mark above as read's row — so none moves when another comes or goes.
 - **Handedness** (Settings → Preferences, per account): right puts the stack in the
   bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
   pointer ignores it.
-- The discs are their tone at 35% over a frost, so the rows show through.
+- Every disc is the same grey (`--text-muted`) at 35% over a frost, so the rows show
+  through; only an active toggle (favourite or save when on) takes the accent.
 - On touch the list drops the column below `18rem` of list height
   (`$container-list-corner-cluster`), where it would ride over the header, and keeps
   the pair (a landscape phone); below `13rem` the whole cluster hides, as with a mouse.

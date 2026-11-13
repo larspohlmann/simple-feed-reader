@@ -9,9 +9,9 @@
   border-radius: 50%;
 
   /* A mild frost, not a full-glass panel: the button keeps its tone
-     (--corner-button-tone, the accent by default). */
-  background: var(--corner-button-tone, var(--accent));
-  background: color-mix(in srgb, var(--corner-button-tone, var(--accent)) 35%, transparent);
+     (--corner-button-tone, grey by default; an active toggle takes the accent). */
+  background: var(--corner-button-tone, var(--text-muted));
+  background: color-mix(in srgb, var(--corner-button-tone, var(--text-muted)) 35%, transparent);
   backdrop-filter: blur(12px) saturate(1.4);
   color: var(--on-accent);
   cursor: pointer;
@@ -44,8 +44,8 @@
 @mixin corner-circle-toggle {
   @include corner-circle-button;
 
-  &:not(.on) {
-    --corner-button-tone: var(--text-muted);
+  &.on {
+    --corner-button-tone: var(--accent);
   }
 
   /* Matches the global flag-toggle selectors, which would otherwise recolour the glyph. */

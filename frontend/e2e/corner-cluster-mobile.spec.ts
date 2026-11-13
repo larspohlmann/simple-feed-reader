@@ -157,6 +157,28 @@ test.describe('The corner cluster on a phone (#2203)', () => {
     await expect(page.locator(favourite)).toHaveClass(/\bon\b/);
   });
 
+  test('paints every disc the same grey; an active toggle keeps the accent', async ({ page }) => {
+    await signInAs(page, 'right');
+    await openScrolledArticle(page);
+    const tone = (selector: string) =>
+      page.locator(selector).evaluate((element) => getComputedStyle(element).backgroundColor);
+    const favourite = '.corner-flag >> nth=1';
+    const grey = await tone('.corner-back');
+
+    for (const disc of [
+      'app-article-layer app-to-top-button button',
+      '.corner-share',
+      '.corner-flag >> nth=0',
+      favourite,
+    ]) {
+      expect(await tone(disc)).toBe(grey);
+    }
+
+    await page.locator(favourite).tap();
+    await expect(page.locator(favourite)).toHaveClass(/\bon\b/);
+    expect(await tone(favourite)).not.toBe(grey);
+  });
+
   test('mirrors the article discs for a left-handed account', async ({ page }) => {
     await signInAs(page, 'left');
     await openScrolledArticle(page);
