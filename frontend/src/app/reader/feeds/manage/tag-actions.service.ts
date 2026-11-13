@@ -74,7 +74,7 @@ export class TagActions {
 
   /** Switch a tag in or out of a surface at once. The PATCH replaces name, colour, icon and parent, so it resends the live tag, never the caller's snapshot. */
   setTagInclusion(tag: TagDto, surface: ExclusionSurface, included: boolean): void {
-    const live = this.tags.tags().find((listed) => listed.id === tag.id) ?? tag;
+    const live = this.tags.byId(tag.id) ?? tag;
     const inclusion = { [INCLUSION_FLAG[surface]]: included };
     this.tags.patchInclusion(tag.id, inclusion);
     const body: TagUpdate = {

@@ -14,6 +14,7 @@ import { buildSocialSections } from '../../reader/state/social-sections';
 import { NO_UNREAD_TOTALS } from '../../reader/state/unread-totals';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { tagsStoreStub } from '../../reader/testing/tags-store.stub';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { makeTag } from '../../reader/testing/tag.factory';
 import { VisibilitySectionComponent } from './visibility-section.component';
@@ -97,7 +98,10 @@ describe('VisibilitySectionComponent', () => {
             ),
           },
         },
-        { provide: TagsStore, useValue: { tags, loading: signal(false), load: jest.fn() } },
+        {
+          provide: TagsStore,
+          useValue: { ...tagsStoreStub(tags), loading: signal(false), load: jest.fn() },
+        },
       ],
     });
     fixture = TestBed.createComponent(VisibilitySectionComponent);

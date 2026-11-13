@@ -1,4 +1,5 @@
 import { SubscriptionDto, TagDto } from '../models';
+import { tagsById, withAncestors } from './tag-ancestry';
 import { VisibilitySwitches, isVisibleIn } from './visibility';
 
 export interface TagNode {
@@ -104,13 +105,14 @@ export function tagsInTreeOrder(tags: TagDto[]): TagDto[] {
 
 /** A nested tag reads with its ancestors, so a pill never shows a bare child out of context. */
 export function tagLabel(tag: TagDto, tags: readonly TagDto[]): string {
-  return tagPath(tag, new Map(tags.map((candidate) => [candidate.id, candidate]))).join(' / ');
+  return tagPath(tag, tagsById(tags)).join(' / ');
 }
 
 /** The names from the top-most known ancestor down to the tag. */
 export function tagPath(tag: TagDto, byId: ReadonlyMap<number, TagDto>): string[] {
-  const parent = tag.parentId === null ? undefined : byId.get(tag.parentId);
-  return parent === undefined ? [tag.name] : [...tagPath(parent, byId), tag.name];
+  return withAncestors(tag, byId)
+    .map(({ name }) => name)
+    .reverse();
 }
 
 export const SUGGESTED_TAG_LIMIT = 4;

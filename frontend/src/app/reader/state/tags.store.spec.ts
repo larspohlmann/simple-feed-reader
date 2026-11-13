@@ -59,6 +59,12 @@ describe('TagsStore', () => {
     expect(store.loading()).toBe(false);
   });
 
+  it('finds a listed tag by id, and nothing for an unknown one', () => {
+    store.tags.set([tag(1, 'Zeta'), tag(2, 'Alpha')]);
+    expect(store.byId(2)?.name).toBe('Alpha');
+    expect(store.byId(3)).toBeUndefined();
+  });
+
   it('adds a tag in position order', () => {
     store.tags.set([
       { ...tag(1, 'Alpha'), position: 0 },

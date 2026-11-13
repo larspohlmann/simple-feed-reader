@@ -131,7 +131,7 @@ export class SidebarRowActions {
   }
 
   private liveTag(tag: TagDto): TagDto {
-    return this.tags.tags().find(({ id }) => id === tag.id) ?? tag;
+    return this.tags.byId(tag.id) ?? tag;
   }
 
   private createHereActions(tag: TagDto): ActionSheetAction[] {

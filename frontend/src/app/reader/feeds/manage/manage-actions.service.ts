@@ -94,8 +94,7 @@ export class ManageActions {
   }
 
   private tagShape(tagId: number): SubscriptionTagDto {
-    const tag = this.tags.tags().find((candidate) => candidate.id === tagId);
-    return { ...(tag ?? placeholderTag(tagId)), position: 0 };
+    return { ...(this.tags.byId(tagId) ?? placeholderTag(tagId)), position: 0 };
   }
 
   /** Flip whether this feed contributes to the "All items" list. Optimistic:

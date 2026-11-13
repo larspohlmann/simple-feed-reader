@@ -3,6 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagDto, TagInclusion } from '../models';
+import { tagsById } from './tag-ancestry';
 import { TagHierarchy } from './tag-hierarchy';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
@@ -33,8 +34,13 @@ export class TagsStore {
 
   readonly tags = signal<TagDto[]>([]);
   readonly hierarchy = computed(() => new TagHierarchy(this.tags()));
+  readonly tagsById = computed(() => tagsById(this.tags()));
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
+
+  byId(tagId: number): TagDto | undefined {
+    return this.tagsById().get(tagId);
+  }
 
   add(tag: TagDto): void {
     this.tags.update((tags) => [...tags, tag].sort(compareTagPositions));

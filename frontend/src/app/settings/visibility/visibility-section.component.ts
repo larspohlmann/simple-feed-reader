@@ -25,12 +25,8 @@ import { NETWORK_FEED_KIND_DESCRIPTORS } from '../../reader/state/social-section
 import { buildTagTree } from '../../reader/state/subscription-derivations';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
-import {
-  ExclusionCause,
-  INCLUSION_FLAG,
-  inheritedExclusions,
-  withAncestors,
-} from '../../reader/state/visibility';
+import { withAncestors } from '../../reader/state/tag-ancestry';
+import { ExclusionCause, INCLUSION_FLAG, inheritedExclusions } from '../../reader/state/visibility';
 import { VisibilitySwitchesStore } from '../../reader/state/visibility-switches.store';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
@@ -228,8 +224,7 @@ export class VisibilitySectionComponent implements OnInit {
 
   /** A subtag inherits only an ancestor's switch; its own off box needs no second reason. */
   private tagCells(tag: TagDto): VisibilityCell[] {
-    const byId = new Map(this.tags.tags().map((known) => [known.id, known]));
-    const ancestors = withAncestors(tag, byId).slice(1);
+    const ancestors = withAncestors(tag, this.tags.tagsById()).slice(1);
     return SURFACES.map((surface) => {
       const flag = INCLUSION_FLAG[surface];
       const checked = tag[flag];
