@@ -23,6 +23,7 @@ import {
   BACK_TO_TOP_AFTER_PX,
   ToTopButtonComponent,
 } from '../../../shared/to-top-button/to-top-button.component';
+import { HandednessService } from '../../../core/preferences/handedness.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
 import { ArticleGestures } from './article-gestures.service';
@@ -71,6 +72,7 @@ export class ArticleLayerComponent {
   });
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
+  protected readonly leftHanded = inject(HandednessService).leftHanded;
   readonly leaving = this.gestures.leaving;
 
   /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */

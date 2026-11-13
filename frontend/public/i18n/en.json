@@ -36,6 +36,13 @@
       "boxed": "Boxed",
       "airy": "Airy"
     },
+    "handedness": "Handedness",
+    "handednessHint": "Which corner the floating buttons sit in on a touch screen.",
+    "handednessSaveFailed": "The handedness could not be saved to your account.",
+    "handednessOption": {
+      "right": "Right-handed",
+      "left": "Left-handed"
+    },
     "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",

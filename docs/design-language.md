@@ -54,7 +54,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--control-h` | `40px` | the height of a button, input or select |
 | `--bar-h` | `56px` | **fallback** for the floating app bar's height; also the wide list toolbar band's height (#1749) |
 | `--tap-target` | `44px` | the documented minimum touch target |
-| `--corner-button-size` | `36px` | the floating corner buttons' disc (back to top, the list's mark-read pair); on a coarse pointer the hit area stays `--tap-target` (#1912) |
+| `--corner-button-size` | `36px` | the disc of every button in the corner cluster (below); on a coarse pointer the hit area stays `--tap-target` (#1912) |
 | `--focus-ring` | `1px solid` accent at 60%; `none` on a coarse pointer | the `outline` of every `:focus-visible` rule (#1723) |
 | `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
@@ -1882,6 +1882,31 @@ padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar
 ```
 
 One value (`--bar-gap`) tunes the gap everywhere.
+
+### Corner cluster (#2203)
+
+The list and the article float their discs in one `.corner-cluster`
+(`circle.corner-cluster` in `_corner-circle-button.scss`): the actions
+(`.corner-actions`) and the pair (`.end-corner`: back to top, then the outer disc —
+the list's sidebar, the article's back).
+
+- **Fine pointer:** the actions sit bottom-left, the pair bottom-right.
+- **Coarse pointer:** everything stacks in one bottom corner, within thumb reach:
+  the actions in a column over the pair's outer disc, `--space-2` inside a group,
+  `--space-5` between the column and the pair. The list's column reads mark all read,
+  mark above as read; the article's favourite, save, share.
+- **Always there:** the list shows back to top and mark above as read whenever it has
+  entries, not only once scrolled (at the top both are harmless no-ops). On touch the
+  list's column keeps a row for each mark-read disc, so mark all read sits at one height
+  in every list, also where mark above as read is not offered (Trending).
+- **Handedness** (Settings → Preferences, per account): right puts the stack in the
+  bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
+  pointer ignores it.
+- Every disc is the same grey (`--text-muted`) at 35% over a frost, so the rows show
+  through; only an active toggle (favourite or save when on) takes the accent.
+- On touch the list drops the column below `18rem` of list height
+  (`$container-list-corner-cluster`), where it would ride over the header, and keeps
+  the pair (a landscape phone); below `13rem` the whole cluster hides, as with a mouse.
 
 ### Overlay
 

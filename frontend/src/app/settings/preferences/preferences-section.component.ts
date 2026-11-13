@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LANGS } from '../../core/i18n/language';
+import { HANDEDNESS } from '../../core/preferences/handedness';
+import { HandednessService } from '../../core/preferences/handedness.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { MAGAZINE_STYLES } from '../../core/preferences/magazine-style';
 import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
@@ -37,6 +39,8 @@ export class PreferencesSectionComponent {
   readonly preferences = inject(PreferencesService);
   readonly readingFocus = inject(ReadingFocusService);
   readonly listAutoplay = inject(ListAutoplayService);
+  readonly handedness = inject(HandednessService);
   readonly languages = LANGS;
   readonly magazineStyles = MAGAZINE_STYLES;
+  readonly handednessOptions = HANDEDNESS;
 }

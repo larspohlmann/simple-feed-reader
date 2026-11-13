@@ -68,6 +68,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
             [
                 'scrapeFallbackEnabled' => true,
                 'magazineStyle' => 'boxed',
+                'handedness' => 'right',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
                 'feedDirectoryScope' => ['countries' => [], 'languages' => []],

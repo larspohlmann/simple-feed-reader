@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Repository\ReadingSettingsRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -21,6 +22,9 @@ final class ReadingSettings
 
     #[ORM\Column(length: 10, enumType: MagazineStyle::class, options: ['default' => 'boxed'])]
     private MagazineStyle $magazineStyle = MagazineStyle::Boxed;
+
+    #[ORM\Column(length: 5, enumType: Handedness::class, options: ['default' => 'right'])]
+    private Handedness $handedness = Handedness::Right;
 
     #[ORM\Column(options: ['default' => true])]
     private bool $trendingEnabled = true;
@@ -43,6 +47,16 @@ final class ReadingSettings
     public function setMagazineStyle(MagazineStyle $magazineStyle): void
     {
         $this->magazineStyle = $magazineStyle;
+    }
+
+    public function getHandedness(): Handedness
+    {
+        return $this->handedness;
+    }
+
+    public function setHandedness(Handedness $handedness): void
+    {
+        $this->handedness = $handedness;
     }
 
     public function isTrendingEnabled(): bool

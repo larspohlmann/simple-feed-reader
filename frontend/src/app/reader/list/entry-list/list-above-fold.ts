@@ -12,11 +12,6 @@ export interface ListAboveFoldOptions {
 export class ListAboveFold {
   constructor(private readonly options: ListAboveFoldOptions) {}
 
-  hasEntryAbove(scroller: ScrollHost): boolean {
-    const first = scroller.content.querySelector('[data-entry-id]');
-    return !!first && first.getBoundingClientRect().bottom <= this.foldTop(scroller);
-  }
-
   entryIds(): number[] {
     const scroller = this.options.scroller();
     if (!scroller) return [];

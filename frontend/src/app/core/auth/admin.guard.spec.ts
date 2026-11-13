@@ -27,6 +27,7 @@ const admin: CurrentUser = {
     },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
+    handedness: 'right',
     sharing: SHARING_EVERYTHING,
     trendingEnabled: true,
   },

@@ -33,6 +33,7 @@ import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
 import { prefetchMargin } from '../paging';
+import { HandednessService } from '../../../core/preferences/handedness.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { withHiddenDuplicates } from './above-fold';
 import { ListAboveFold } from './list-above-fold';
@@ -200,6 +201,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly autoplay = inject(ListAutoplayCoordinator);
   private readonly magazineStyle = inject(MagazineStyleService);
+  protected readonly leftHanded = inject(HandednessService).leftHanded;
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly nearViewport = inject(NearViewportMedia);
@@ -334,7 +336,6 @@ export class EntryListComponent implements OnDestroy {
     loading: this.loading,
     layout: this.layout,
     reduceMotion: this.reduceMotion,
-    aboveFold: (scroller) => this.aboveFold.hasEntryAbove(scroller),
     onReloaded: () => this.content.clearHidden(),
   });
 
@@ -385,8 +386,6 @@ export class EntryListComponent implements OnDestroy {
    */
   scrollToTop(): void {
     if (!this.scrolling.scrollToTop()) return;
-    // Land focus on the title, not wherever the button was — an unmounted button
-    // drops focus to <body>.
     this.header()?.focusTitle();
   }
 

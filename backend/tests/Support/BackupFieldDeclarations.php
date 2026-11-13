@@ -44,6 +44,7 @@ final class BackupFieldDeclarations
         ReadingSettings::class => [
             'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
             'magazineStyle' => 'magazineStyle',
+            'handedness' => 'handedness',
             'trendingEnabled' => 'trendingEnabled',
         ],
         FeedDirectoryScope::class => [

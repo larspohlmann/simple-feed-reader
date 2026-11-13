@@ -166,6 +166,7 @@ final class MeControllerTest extends ApiTestCase
             [
                 'scrapeFallbackEnabled' => false,
                 'magazineStyle' => 'boxed',
+                'handedness' => 'right',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
                 'feedDirectoryScope' => ['countries' => [], 'languages' => []],
@@ -192,6 +193,7 @@ final class MeControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         $this->patch($client, '/api/me/preferences', ['scrapeFallbackEnabled' => true]);
         $this->patch($client, '/api/me/magazine-style', ['magazineStyle' => 'airy']);
+        $this->patch($client, '/api/me/handedness', ['handedness' => 'left']);
         $this->patch($client, '/api/me/trending', ['trendingEnabled' => false]);
         $this->patch($client, '/api/me/feed-directory-scope', ['countries' => ['DE'], 'languages' => ['de']]);
         $this->patch(
@@ -204,8 +206,9 @@ final class MeControllerTest extends ApiTestCase
             '/api/me/digest',
             ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
         );
-        $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","passkeyOfferAnswered":true,'
-            . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
+        $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","handedness":"left",'
+            . '"passkeyOfferAnswered":true,"trendingEnabled":false,'
+            . '"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'
             . '"digest":{"enabled":true,"cadence":"weekly","format":"text","sendHour":9,"weekday":3,"timezone":"UTC"}}';
         self::assertSame($expected, json_encode($this->payload($client)['preferences'], \JSON_THROW_ON_ERROR));

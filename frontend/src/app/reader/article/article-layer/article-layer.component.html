@@ -38,26 +38,28 @@
     </div>
   </div>
   <div class="chrome-foot">
-    <div class="corner-actions">
-      <ng-content select="[articleCorner]" />
+    <div class="corner-cluster" [class.left-handed]="leftHanded()">
+      <div class="corner-actions">
+        <ng-content select="[articleCorner]" />
+      </div>
+      @if (!leaving()) {
+        <div class="end-corner">
+          @if (showToTop()) {
+            <app-to-top-button (activate)="toTop.emit()" />
+          }
+          <button
+            class="corner-back"
+            type="button"
+            [attr.aria-label]="backLabel()"
+            (click)="onBackButton()"
+          >
+            <app-icon name="arrow_back" size="dense" />
+          </button>
+        </div>
+      }
     </div>
     <div class="dock">
       <ng-content select="[articleDock]" />
     </div>
-    @if (!leaving()) {
-      <div class="end-corner">
-        @if (showToTop()) {
-          <app-to-top-button (activate)="toTop.emit()" />
-        }
-        <button
-          class="corner-back"
-          type="button"
-          [attr.aria-label]="backLabel()"
-          (click)="onBackButton()"
-        >
-          <app-icon name="arrow_back" size="dense" />
-        </button>
-      </div>
-    }
   </div>
 </div>

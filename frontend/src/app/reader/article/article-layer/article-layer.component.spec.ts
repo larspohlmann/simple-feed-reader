@@ -1,3 +1,4 @@
+import { HandednessService } from '../../../core/preferences/handedness.service';
 import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -111,6 +112,21 @@ describe('ArticleLayerComponent', () => {
   it('projects the corner slot into the corner actions, outside the scroller (#1914)', () => {
     expect(element.querySelector('.corner-actions .corner-probe')).not.toBeNull();
     expect(element.querySelector('.scroller .corner-probe')).toBeNull();
+  });
+
+  it('gathers the corner actions and the pair in one cluster, the dock outside it (#2203)', () => {
+    expect(element.querySelector('.corner-cluster .corner-actions .corner-probe')).not.toBeNull();
+    expect(element.querySelector('.corner-cluster .end-corner .corner-back')).not.toBeNull();
+    expect(element.querySelector('.corner-cluster .dock')).toBeNull();
+  });
+
+  it('mirrors the cluster for a left-handed account (#2203)', () => {
+    expect(element.querySelector('.corner-cluster')!.classList).not.toContain('left-handed');
+
+    TestBed.inject(HandednessService).set('left');
+    fixture.detectChanges();
+
+    expect(element.querySelector('.corner-cluster')!.classList).toContain('left-handed');
   });
 
   it('projects the dock slot over the pane, outside the scroller', () => {

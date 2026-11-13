@@ -9,7 +9,6 @@ import {
   untracked,
 } from '@angular/core';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
-import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
 import { LayoutService } from '../../layout.service';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
@@ -27,14 +26,12 @@ export interface ListScrollStateOptions {
   readonly loading: Signal<boolean>;
   readonly layout: Signal<ReadingLayout>;
   readonly reduceMotion: boolean;
-  /** Whether an entry is fully scrolled past the fold of this scroller. */
-  readonly aboveFold: (scroller: ScrollHost) => boolean;
   /** A fresh load finished and its rows are on screen. */
   readonly onReloaded: () => void;
 }
 
-/** The list scroller's state: the collapsing header, the corner buttons, the
- *  remembered offset and its restore. Built in a field initializer, so its
+/** The list scroller's state: the collapsing header, the remembered offset and
+ *  its restore. Built in a field initializer, so its
  *  effects are created there. */
 export class ListScrollState {
   private readonly screen = inject(LayoutService);
@@ -48,16 +45,8 @@ export class ListScrollState {
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
 
-  /** Drives the corner back-to-top button; set from the scroll handler. */
-  readonly showToTop = signal(false);
-
-  /** Whether at least one entry is fully scrolled past the fold — gates the
-   *  lower-left button so it never offers a no-op. Set cheaply from the scroll
-   *  handler; the click-time collection does the real, full-list work. */
-  readonly hasAboveFold = signal(false);
-
   // A new selection, a resize past the wide breakpoint, or a list<->magazine
-  // layout toggle each make the collapsed/showToTop state (and lastScrollTop)
+  // layout toggle each make the collapsed state (and lastScrollTop)
   // stale, so reset them together.
   private readonly _resetCollapse = effect(() => {
     this.options.selection();
@@ -143,10 +132,6 @@ export class ListScrollState {
       }),
     );
     this.lastScrollTop = top;
-    const pastTop = top > BACK_TO_TOP_AFTER_PX;
-    this.showToTop.set(pastTop);
-    const scroller = this.options.scroller();
-    this.hasAboveFold.set(pastTop && !!scroller && this.options.aboveFold(scroller));
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.options.selection(), top);
@@ -169,7 +154,7 @@ export class ListScrollState {
     this.collapsed.set(false);
     // `lastScrollTop` deliberately keeps its pre-jump value — zeroing it would
     // read the smooth scroll's first event as a large scroll down and re-collapse
-    // the bar. `showToTop` is likewise left to the scroll events (matches article).
+    // the bar.
     // Best-effort restore point in case a reload lands before the animation
     // finishes: `onScroll` overwrites this every frame, so it's a floor for
     // the reduced-motion/interrupted cases, not a guarantee 0 gets remembered.
@@ -177,11 +162,9 @@ export class ListScrollState {
     return true;
   }
 
-  /** Land at the top at once, with the bar expanded and the corner buttons gone. */
+  /** Land at the top at once, with the bar expanded. */
   landAtTop(): void {
     this.collapsed.set(false);
-    this.showToTop.set(false);
-    this.hasAboveFold.set(false);
     const scroller = this.options.scroller();
     if (!scroller) return;
     this.scroll.save(this.options.selection(), 0);
@@ -217,8 +200,6 @@ export class ListScrollState {
 
   private resetToTop(): void {
     this.collapsed.set(false);
-    this.showToTop.set(false);
-    this.hasAboveFold.set(false);
     this.lastScrollTop = 0;
   }
 

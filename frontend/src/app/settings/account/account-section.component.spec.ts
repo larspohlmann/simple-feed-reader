@@ -30,6 +30,7 @@ const user: CurrentUser = {
     },
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
+    handedness: 'right',
     sharing: SHARING_EVERYTHING,
     trendingEnabled: true,
   },
