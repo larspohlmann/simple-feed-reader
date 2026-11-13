@@ -7,6 +7,7 @@ import { ExclusionSurface } from '../feed-exclusions';
 import { NetworkExclusionSurface, NetworkExclusionsApi } from '../network-exclusions-api';
 import { EntriesStore } from './entries.store';
 import { sameMembers } from './same-members';
+import { countsAreStale } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
 
 /** A surface's stored network switches, whatever default its store keeps. */
@@ -34,12 +35,21 @@ export class NetworkExclusionsStore implements NetworkSwitchStore {
     equal: sameMembers,
   });
   readonly excludedNetworks = this.stored.asReadonly();
+  private lastLoadedAt = 0;
 
   constructor(private readonly surface: NetworkExcludingSurface) {
-    onIdentityChange(() => this.stored.set(new Set()));
+    onIdentityChange(() => {
+      this.stored.set(new Set());
+      this.lastLoadedAt = 0;
+    });
+  }
+
+  loadIfStale(): void {
+    if (countsAreStale(this.lastLoadedAt)) this.load();
   }
 
   load(): void {
+    this.lastLoadedAt = Date.now();
     this.api
       .excludedNetworks(ENDPOINT_SURFACE[this.surface])
       .pipe(catchError(() => EMPTY))

@@ -32,7 +32,7 @@ const TAZ = makeSubscription({ id: 12, title: 'taz' });
 function networkStore(excluded: SocialNetworkName[] = []) {
   return {
     excludedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set(excluded)),
-    load: jest.fn(),
+    loadIfStale: jest.fn(),
     toggleNetwork: jest.fn(),
   };
 }
@@ -47,7 +47,7 @@ describe('VisibilitySectionComponent', () => {
   let trendingNetworks: ReturnType<typeof networkStore>;
   let savedSearches: {
     excludedNetworks: ReturnType<typeof signal<ReadonlySet<SocialNetworkName>>>;
-    load: jest.Mock;
+    reloadIfStale: jest.Mock;
     toggleNetwork: jest.Mock;
   };
 
@@ -70,7 +70,7 @@ describe('VisibilitySectionComponent', () => {
     trendingNetworks = networkStore(options.excludedFromTrending);
     savedSearches = {
       excludedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set(['mastodon'])),
-      load: jest.fn(),
+      reloadIfStale: jest.fn(),
       toggleNetwork: jest.fn(),
     };
     TestBed.configureTestingModule({
@@ -92,7 +92,7 @@ describe('VisibilitySectionComponent', () => {
           useValue: {
             subscriptions,
             loading: signal(false),
-            load: jest.fn(),
+            loadIfStale: jest.fn(),
             socialSections: computed(() =>
               buildSocialSections(subscriptions(), [], NO_UNREAD_TOTALS),
             ),
@@ -100,7 +100,7 @@ describe('VisibilitySectionComponent', () => {
         },
         {
           provide: TagsStore,
-          useValue: { ...tagsStoreStub(tags), loading: signal(false), load: jest.fn() },
+          useValue: { ...tagsStoreStub(tags), loading: signal(false), loadIfStale: jest.fn() },
         },
       ],
     });
@@ -135,15 +135,15 @@ describe('VisibilitySectionComponent', () => {
     fixture.detectChanges();
   };
 
-  it('loads every store the matrix reads', () => {
+  it('loads every store the matrix reads, unless it is fresh', () => {
     setUp();
 
-    expect(allItemsNetworks.load).toHaveBeenCalled();
-    expect(forYouNetworks.load).toHaveBeenCalled();
-    expect(trendingNetworks.load).toHaveBeenCalled();
-    expect(savedSearches.load).toHaveBeenCalled();
-    expect(TestBed.inject(TagsStore).load).toHaveBeenCalled();
-    expect(TestBed.inject(SubscriptionsStore).load).toHaveBeenCalled();
+    expect(allItemsNetworks.loadIfStale).toHaveBeenCalled();
+    expect(forYouNetworks.loadIfStale).toHaveBeenCalled();
+    expect(trendingNetworks.loadIfStale).toHaveBeenCalled();
+    expect(savedSearches.reloadIfStale).toHaveBeenCalled();
+    expect(TestBed.inject(TagsStore).loadIfStale).toHaveBeenCalled();
+    expect(TestBed.inject(SubscriptionsStore).loadIfStale).toHaveBeenCalled();
   });
 
   it('shows tags with their subtags and feeds, then networks with theirs, then the untagged', () => {

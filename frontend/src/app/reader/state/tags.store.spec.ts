@@ -3,6 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
 import { TagsStore } from './tags.store';
+import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
+import { TokenStore } from '../../core/auth/token.store';
 import { TagDto } from '../models';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
@@ -45,6 +47,27 @@ describe('TagsStore', () => {
     ctrl
       .expectOne('https://api.test/api/tags')
       .flush({ tags: [tag(1, 'Reading'), { ...tag(2, 'Long reads'), parentId: 1 }] });
+  });
+
+  it('loads at most once per freshness window, and afresh for the next user', () => {
+    jest.useFakeTimers({ now: new Date('2026-11-13T12:00:00Z') });
+
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    store.loadIfStale();
+    ctrl.expectNone('https://api.test/api/tags');
+
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+
+    const tokens = TestBed.inject(TokenStore);
+    tokens.set('user-b.jwt');
+    TestBed.tick();
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    tokens.clear();
+    jest.useRealTimers();
   });
 
   it('records a Problem on error', () => {

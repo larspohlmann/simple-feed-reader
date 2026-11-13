@@ -5,6 +5,8 @@ import { ReaderApi } from '../reader-api';
 import { TagDto, TagInclusion } from '../models';
 import { tagsById } from './tag-ancestry';
 import { TagHierarchy } from './tag-hierarchy';
+import { countsAreStale } from './sidebar-freshness';
+import { onIdentityChange } from '../../core/auth/session-identity';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 /** Position order, name as a stable tiebreak; a position orders a tag among its siblings only. */
@@ -37,6 +39,11 @@ export class TagsStore {
   readonly tagsById = computed(() => tagsById(this.tags()));
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
+  private lastLoadedAt = 0;
+
+  constructor() {
+    onIdentityChange(() => (this.lastLoadedAt = 0));
+  }
 
   byId(tagId: number): TagDto | undefined {
     return this.tagsById().get(tagId);
@@ -53,7 +60,12 @@ export class TagsStore {
     );
   }
 
+  loadIfStale(): void {
+    if (countsAreStale(this.lastLoadedAt)) this.load();
+  }
+
   load(): void {
+    this.lastLoadedAt = Date.now();
     this.loading.set(true);
     this.error.set(null);
     this.api.tags().subscribe({

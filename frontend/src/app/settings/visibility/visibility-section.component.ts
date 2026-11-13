@@ -23,7 +23,7 @@ import { SubscriptionDto, TagDto } from '../../reader/models';
 import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { NETWORK_FEED_KIND_DESCRIPTORS } from '../../reader/state/social-sections';
-import { buildTagTree } from '../../reader/state/subscription-derivations';
+import { buildTagTree, titleMatcher } from '../../reader/state/subscription-derivations';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { withAncestors } from '../../reader/state/tag-ancestry';
@@ -97,19 +97,19 @@ export class VisibilitySectionComponent implements OnInit {
     };
   });
 
-  private readonly lines = computed(() => {
-    const term = this.feedFilter().trim().toLocaleLowerCase();
-    return visibilityLines(
-      this.sources(),
-      term === '' ? null : (subscription) => subscription.title.toLocaleLowerCase().includes(term),
-    );
-  });
+  private readonly allLines = computed(() => visibilityLines(this.sources(), null));
 
-  protected readonly filtering = computed(() => this.feedFilter().trim() !== '');
+  private readonly matchesTitle = computed(() => titleMatcher(this.feedFilter()));
+  protected readonly filtering = computed(() => this.matchesTitle() !== null);
+
+  private readonly lines = computed(() => {
+    const matches = this.matchesTitle();
+    return matches === null ? this.allLines() : visibilityLines(this.sources(), matches);
+  });
 
   /** From the whole tree: a filter must not narrow what Expand all records. */
   private readonly parentKeys = computed(() =>
-    visibilityLines(this.sources(), null)
+    this.allLines()
       .filter((line) => line.hasChildren)
       .map((line) => line.key),
   );
@@ -123,18 +123,27 @@ export class VisibilitySectionComponent implements OnInit {
     return this.parentKeys().every((key) => expanded.has(key));
   });
 
-  protected readonly rows = computed<VisibilityRow[]>(() => {
+  /** Every line's name and boxes, whatever is expanded: opening a branch recomputes none of them. */
+  private readonly namedLines = computed<VisibilityRow[]>(() => {
     this.language();
-    return this.lines()
-      .filter((line) => line.ancestorKeys.every((key) => this.isExpandedKey(key)))
-      .map((line) => ({ line, name: this.nameOf(line.target), cells: this.cellsOf(line.target) }));
+    return this.lines().map((line) => ({
+      line,
+      name: this.nameOf(line.target),
+      cells: this.cellsOf(line.target),
+    }));
   });
 
+  protected readonly rows = computed(() =>
+    this.namedLines().filter(({ line }) =>
+      line.ancestorKeys.every((key) => this.isExpandedKey(key)),
+    ),
+  );
+
   ngOnInit(): void {
-    this.tags.load();
-    this.subscriptions.load();
-    this.savedSearches.load();
-    this.networkSurfaceSwitches.loadExclusions();
+    this.tags.loadIfStale();
+    this.subscriptions.loadIfStale();
+    this.savedSearches.reloadIfStale();
+    this.networkSurfaceSwitches.loadExclusionsIfStale();
   }
 
   protected isExpanded(line: VisibilityLine): boolean {

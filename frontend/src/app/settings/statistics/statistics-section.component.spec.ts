@@ -118,8 +118,8 @@ describe('StatisticsSectionComponent', () => {
             favoritesCount: signal(store.favoritesCount ?? 0),
           },
         },
-        { provide: TagsStore, useValue: { load: loadTags } },
-        { provide: NetworkSurfaceSwitches, useValue: { loadExclusions } },
+        { provide: TagsStore, useValue: { loadIfStale: loadTags } },
+        { provide: NetworkSurfaceSwitches, useValue: { loadExclusionsIfStale: loadExclusions } },
         {
           provide: VisibilitySwitchesStore,
           useValue: { switches: signal(switchesOf(store.tags ?? [])) },
@@ -154,7 +154,7 @@ describe('StatisticsSectionComponent', () => {
     expect(loadIfStale).toHaveBeenCalled();
   });
 
-  it('loads the tag and network switches the unread tile reads', () => {
+  it('loads the tag and network switches the unread tile reads, unless they are fresh', () => {
     mount();
     expect(loadTags).toHaveBeenCalled();
     expect(loadExclusions).toHaveBeenCalled();

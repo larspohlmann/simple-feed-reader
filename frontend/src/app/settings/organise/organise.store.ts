@@ -2,6 +2,7 @@ import { Injectable, Signal, computed, effect, inject, signal, untracked } from 
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import {
   tagsInTreeOrder,
+  titleMatcher,
   untaggedSubscriptions,
 } from '../../reader/state/subscription-derivations';
 import { TagHierarchy } from '../../reader/state/tag-hierarchy';
@@ -114,11 +115,11 @@ export class OrganiseStore {
   );
 
   readonly filteredSubscriptions = computed<SubscriptionDto[]>(() => {
-    const term = this.titleFilter().trim().toLocaleLowerCase();
+    const matchesTitle = titleMatcher(this.titleFilter());
     const tagKeys = this.tagFilter();
 
     return this.subs.subscriptions().filter((subscription) => {
-      if (term !== '' && !subscription.title.toLocaleLowerCase().includes(term)) return false;
+      if (matchesTitle !== null && !matchesTitle(subscription)) return false;
       if (tagKeys.size === 0) return true;
       if (tagKeys.has('untagged') && subscription.tags.length === 0) return true;
       return subscription.tags.some((tag) => tagKeys.has(tag.id));

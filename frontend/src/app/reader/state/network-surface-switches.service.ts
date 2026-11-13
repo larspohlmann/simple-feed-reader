@@ -34,4 +34,8 @@ export class NetworkSurfaceSwitches {
   loadExclusions(): void {
     Object.values(this.excludingStores).forEach((store) => store.load());
   }
+
+  loadExclusionsIfStale(): void {
+    Object.values(this.excludingStores).forEach((store) => store.loadIfStale());
+  }
 }

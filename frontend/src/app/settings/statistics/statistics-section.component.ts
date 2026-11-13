@@ -188,8 +188,8 @@ export class StatisticsSectionComponent implements OnInit {
 
   ngOnInit(): void {
     this.subscriptions.loadIfStale();
-    this.tags.load();
-    this.networkSwitches.loadExclusions();
+    this.tags.loadIfStale();
+    this.networkSwitches.loadExclusionsIfStale();
     this.api
       .readingActivity()
       .pipe(takeUntilDestroyed(this.destroyRef))

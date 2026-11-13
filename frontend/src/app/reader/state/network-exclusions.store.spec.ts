@@ -8,6 +8,7 @@ import {
 } from './network-exclusions.store';
 import { SubscriptionsStore } from './subscriptions.store';
 import { EntriesStore } from './entries.store';
+import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 
 describe.each<{ store: NetworkExcludingSurface; surface: NetworkExclusionSurface }>([
   { store: 'allItems', surface: 'all-items' },
@@ -38,6 +39,21 @@ describe.each<{ store: NetworkExcludingSurface; surface: NetworkExclusionSurface
 
     expect(excludedNetworks).toHaveBeenCalledWith(surface);
     expect([...store.excludedNetworks()]).toEqual(['bluesky']);
+  });
+
+  it('loads at most once per freshness window', () => {
+    jest.useFakeTimers({ now: new Date('2026-11-13T12:00:00Z') });
+    const excludedNetworks = jest.fn(() => of({ excludedNetworks: [] }));
+    const store = setup({ excludedNetworks });
+
+    store.loadIfStale();
+    store.loadIfStale();
+    expect(excludedNetworks).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    store.loadIfStale();
+    expect(excludedNetworks).toHaveBeenCalledTimes(2);
+    jest.useRealTimers();
   });
 
   it('excludes an included network at once, then reloads', () => {

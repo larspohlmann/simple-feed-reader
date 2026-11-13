@@ -115,6 +115,13 @@ export function tagPath(tag: TagDto, byId: ReadonlyMap<number, TagDto>): string[
     .reverse();
 }
 
+/** A typed title filter as a test, case-insensitive; null while the filter is blank. */
+export function titleMatcher(filter: string): ((subscription: SubscriptionDto) => boolean) | null {
+  const term = filter.trim().toLocaleLowerCase();
+  if (term === '') return null;
+  return (subscription) => subscription.title.toLocaleLowerCase().includes(term);
+}
+
 export const SUGGESTED_TAG_LIMIT = 4;
 
 /** The tags of the most recently added subscriptions, newest first, minus the ones already picked. */
