@@ -1,6 +1,7 @@
 import { TranslocoTestingModule, TranslocoTestingOptions } from '@jsverse/transloco';
 import en from '../../public/i18n/en.json';
 import de from '../../public/i18n/de.json';
+import { LANGS } from '../app/core/i18n/language';
 
 /**
  * Drop-in Transloco provider for component specs. Loads the real shipped
@@ -11,7 +12,7 @@ export function provideTranslocoTesting(options: TranslocoTestingOptions = {}) {
   return TranslocoTestingModule.forRoot({
     langs: { en, de },
     translocoConfig: {
-      availableLangs: ['en', 'de'],
+      availableLangs: [...LANGS],
       defaultLang: 'en',
       reRenderOnLangChange: true,
     },

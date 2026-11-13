@@ -337,6 +337,9 @@ jobs:
       - name: Announce script tests
         run: node --test "scripts/test/announce/*.test.mjs"
 
+      - name: Dictionary cache rule test
+        run: node --test "scripts/test/strato/*.test.mjs"
+
       # The Strato deploy probes a public route with an invalid bearer token to
       # prove Apache forwards Authorization. The status diagnosis controls
       # whether a healthy release is accepted, retried, or reported as broken.

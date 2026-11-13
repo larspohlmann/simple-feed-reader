@@ -57,9 +57,9 @@ Options +FollowSymLinks
     # them with ?v=<release> (#141), so every release is a URL no cache has
     # already held -- the same guarantee the hashed bundles get from their
     # names. Long caching then takes the one boot-critical fetch off the
-    # network on a mobile resume-reload (#280). Scoped to the two dictionary
+    # network on a mobile resume-reload (#280). Scoped to the dictionary
     # files, not *.json, so nothing else is accidentally pinned for a year.
-    <FilesMatch "^(en|de)\.json$">
+    <FilesMatch "^(en|de|fr|es)\.json$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
 </IfModule>
