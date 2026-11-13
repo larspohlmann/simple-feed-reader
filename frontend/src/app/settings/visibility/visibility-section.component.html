@@ -14,13 +14,15 @@
         [attr.aria-label]="'settings.visibility.filterPlaceholder' | transloco"
         (input)="feedFilter.set($any($event.target).value)"
       />
-      <app-button size="sm" data-test="expand-toggle" (click)="toggleExpandAll()">
-        <app-icon [name]="allExpanded() ? 'unfold_less' : 'unfold_more'" size="sm" />
-        {{
-          (allExpanded() ? 'settings.visibility.collapseAll' : 'settings.visibility.expandAll')
-            | transloco
-        }}
-      </app-button>
+      @if (showsExpandToggle()) {
+        <app-button size="sm" data-test="expand-toggle" (click)="toggleExpandAll()">
+          <app-icon [name]="allExpanded() ? 'unfold_less' : 'unfold_more'" size="sm" />
+          {{
+            (allExpanded() ? 'settings.visibility.collapseAll' : 'settings.visibility.expandAll')
+              | transloco
+          }}
+        </app-button>
+      }
     </div>
 
     @if (loading()) {

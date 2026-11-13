@@ -90,22 +90,30 @@ export class VisibilitySectionComponent implements OnInit {
   protected readonly feedFilter = signal('');
   private readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
 
+  private readonly tagTree = computed(() =>
+    buildTagTree(this.subscriptions.subscriptions(), this.tags.tags()),
+  );
+
   private readonly lines = computed(() => {
-    const subscriptions = this.subscriptions.subscriptions();
     const term = this.feedFilter().trim().toLocaleLowerCase();
     return visibilityLines(
-      buildTagTree(subscriptions, this.tags.tags()),
-      subscriptions,
+      this.tagTree(),
+      this.subscriptions.subscriptions(),
       term === '' ? null : (subscription) => subscription.title.toLocaleLowerCase().includes(term),
     );
   });
 
   protected readonly filtering = computed(() => this.feedFilter().trim() !== '');
 
+  /** From the whole tree: a filter must not narrow what Expand all records. */
   private readonly parentKeys = computed(() =>
-    this.lines()
+    visibilityLines(this.tagTree(), this.subscriptions.subscriptions(), null)
       .filter((line) => line.hasChildren)
       .map((line) => line.key),
+  );
+
+  protected readonly showsExpandToggle = computed(
+    () => !this.filtering() && this.parentKeys().length > 0,
   );
 
   protected readonly allExpanded = computed(() => {

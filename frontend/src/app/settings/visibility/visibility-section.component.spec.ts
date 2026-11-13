@@ -48,9 +48,15 @@ describe('VisibilitySectionComponent', () => {
     toggleNetwork: jest.Mock;
   };
 
-  function setUp(options: { excludedFromAllItems?: SocialNetworkName[] } = {}): void {
-    const subscriptions = signal<SubscriptionDto[]>([TAZ, SKEET, HEISE]);
-    const tags = signal<TagDto[]>([NEWS, LOCAL, TECH]);
+  function setUp(
+    options: {
+      excludedFromAllItems?: SocialNetworkName[];
+      subscriptions?: SubscriptionDto[];
+      tags?: TagDto[];
+    } = {},
+  ): void {
+    const subscriptions = signal<SubscriptionDto[]>(options.subscriptions ?? [TAZ, SKEET, HEISE]);
+    const tags = signal<TagDto[]>(options.tags ?? [NEWS, LOCAL, TECH]);
     manage = {
       setIncludeInAllItems: jest.fn(),
       setIncludeInForYou: jest.fn(),
@@ -299,6 +305,27 @@ describe('VisibilitySectionComponent', () => {
     filterBy('');
 
     expect(rowKeys()).toEqual(['tag:1', 'tag:3', 'network:bluesky', 'untagged']);
+  });
+
+  it('hides Expand all while a filter is set, and keeps the reader’s own collapse state', () => {
+    setUp();
+    row('tag:1').querySelector<HTMLButtonElement>('[data-test="expand"]')!.click();
+    fixture.detectChanges();
+
+    filterBy('heise');
+
+    expect(element.querySelector('[data-test="expand-toggle"]')).toBeNull();
+
+    filterBy('');
+
+    expect(rowKeys()).toEqual(['tag:1', 'tag:2', 'tag:3', 'network:bluesky', 'untagged']);
+    expect(expandToggle().textContent).toContain('Expand all');
+  });
+
+  it('offers no Expand all when nothing has rows beneath it', () => {
+    setUp({ subscriptions: [], tags: [] });
+
+    expect(element.querySelector('[data-test="expand-toggle"]')).toBeNull();
   });
 
   it('says so when the filter leaves no feed', () => {
