@@ -36,7 +36,7 @@ final readonly class EntryScopePredicates
             NetworkScopeDql::restrict($qb, $aliases->networkFeed, $query->networkScope);
         }
         if ($query->hidesExcludedFeeds()) {
-            $this->inAllItems($qb, $aliases);
+            InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::AllItems);
         }
         $this->applyView($qb, $aliases, $query->view);
     }
@@ -56,38 +56,22 @@ final readonly class EntryScopePredicates
             ->setParameter('subscriptionIds', $subscriptionIds);
     }
 
-    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
-    public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void
-    {
-        $qb->andWhere(\sprintf('%s.inclusions.allItems = true', $aliases->subscription))
-            ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, InclusionSurface::AllItems))
-            ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::AllItems));
-    }
-
-    public function inTrending(QueryBuilder $qb, EntryAliases $aliases): void
-    {
-        $qb->andWhere(\sprintf('%s.inclusions.trending = true', $aliases->subscription))
-            ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, InclusionSurface::Trending))
-            ->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::Trending));
-    }
-
-    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
     public function inSavedSearches(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $feed = 'searchFeed' . ucfirst($aliases->entry);
         $inclusion = 'networkInclusion' . ucfirst($aliases->entry);
 
+        InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::SavedSearches);
         $qb->andWhere(\sprintf(
-            '%1$s.inclusions.savedSearches = true AND EXISTS (SELECT 1 FROM %2$s %3$s WHERE %3$s = %4$s.feed AND '
-            . '(%3$s.network IS NULL OR EXISTS (SELECT 1 FROM %5$s %6$s WHERE %6$s.user = :user '
-            . 'AND %6$s.network = %3$s.network)))',
-            $aliases->subscription,
+            'EXISTS (SELECT 1 FROM %1$s %2$s WHERE %2$s = %3$s.feed AND '
+            . '(%2$s.network IS NULL OR EXISTS (SELECT 1 FROM %4$s %5$s WHERE %5$s.user = :user '
+            . 'AND %5$s.network = %2$s.network)))',
             Feed::class,
             $feed,
             $aliases->entry,
             SavedSearchNetworkInclusion::class,
             $inclusion,
-        ))->andWhere(TagExclusionDql::notExcluded($aliases->subscription, InclusionSurface::SavedSearches));
+        ));
     }
 
     public function applySearch(QueryBuilder $qb, EntryAliases $aliases, EntrySearchQuery $query): void

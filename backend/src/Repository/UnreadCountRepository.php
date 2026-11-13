@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Enum\FeedGroup;
+use App\Enum\InclusionSurface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
@@ -97,7 +98,7 @@ final readonly class UnreadCountRepository
     public function allItems(int $userId, array $perSubscription): int
     {
         $qb = $this->userSubscriptions($userId)->select('s.id');
-        $this->scope->inAllItems($qb, EntryAliases::primary());
+        InclusionScopeDql::restrict($qb, EntryAliases::primary()->subscription, InclusionSurface::AllItems);
         /** @var list<int> $ids */
         $ids = $qb->getQuery()->getSingleColumnResult();
 

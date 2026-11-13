@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Enum\InclusionSurface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -54,7 +55,7 @@ final readonly class RecommendationCandidateRepository
         $qb = $this->candidateQueryBuilder($userId)
             ->andWhere('e.id IN (:ids)')
             ->setParameter('ids', $entryIds);
-        ForYouScopeDql::restrict($qb, EntryAliases::primary());
+        InclusionScopeDql::restrict($qb, EntryAliases::primary()->subscription, InclusionSurface::ForYou);
 
         return $this->titledEntries($qb);
     }
@@ -70,7 +71,7 @@ final readonly class RecommendationCandidateRepository
             ->select('COUNT(e.id) AS total', 'MIN(e.effectiveDate) AS oldest', 'MAX(e.effectiveDate) AS newest')
             ->andWhere('e.id IN (:ids)')
             ->setParameter('ids', $entryIds);
-        ForYouScopeDql::restrict($qb, EntryAliases::primary());
+        InclusionScopeDql::restrict($qb, EntryAliases::primary()->subscription, InclusionSurface::ForYou);
 
         /** @var array{total: int, oldest: ?string, newest: ?string} $row */
         $row = $qb->getQuery()->getSingleResult();
@@ -81,7 +82,7 @@ final readonly class RecommendationCandidateRepository
     /** Shared by the outer query and the collapse semi-join, so the two cannot drift apart. */
     private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
     {
-        ForYouScopeDql::restrict($inner, $aliases);
+        InclusionScopeDql::restrict($inner, $aliases->subscription, InclusionSurface::ForYou);
         $inner->andWhere(\sprintf(
             '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
             . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'

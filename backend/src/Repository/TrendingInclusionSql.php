@@ -13,11 +13,14 @@ use App\Enum\InclusionSurface;
  */
 final class TrendingInclusionSql
 {
+    private const InclusionSurface SURFACE = InclusionSurface::Trending;
+
     public static function includes(string $subscription): string
     {
         return \sprintf(
-            '(%1$s.include_in_trending = 1 AND %2$s AND %3$s)',
+            '(%1$s.%2$s = 1 AND %3$s AND %4$s)',
             $subscription,
+            self::SURFACE->switchColumn(),
             self::networkIncluded($subscription),
             self::noTagSwitchedOut($subscription),
         );
@@ -30,21 +33,21 @@ final class TrendingInclusionSql
             . ' ON %1$s_network.network = %1$s_feed.network AND %1$s_network.user_id = %1$s.user_id'
             . ' AND %1$s_network.surface = \'%2$s\' WHERE %1$s_feed.id = %1$s.feed_id)',
             $subscription,
-            InclusionSurface::Trending->value,
+            self::SURFACE->value,
         );
     }
 
     private static function noTagSwitchedOut(string $subscription): string
     {
         $ancestorJoins = '';
-        $switchedOff = [self::tagAlias($subscription, 0) . '.include_in_trending = 0'];
+        $switchedOff = [self::switchedOff(self::tagAlias($subscription, 0))];
         foreach (range(1, Tag::MAX_DEPTH) as $level) {
             $ancestorJoins .= \sprintf(
                 ' LEFT JOIN tag %1$s ON %1$s.id = %2$s.parent_id',
                 self::tagAlias($subscription, $level),
                 self::tagAlias($subscription, $level - 1),
             );
-            $switchedOff[] = self::tagAlias($subscription, $level) . '.include_in_trending = 0';
+            $switchedOff[] = self::switchedOff(self::tagAlias($subscription, $level));
         }
 
         return \sprintf(
@@ -55,6 +58,11 @@ final class TrendingInclusionSql
             $ancestorJoins,
             implode(' OR ', $switchedOff),
         );
+    }
+
+    private static function switchedOff(string $tag): string
+    {
+        return \sprintf('%s.%s = 0', $tag, self::SURFACE->switchColumn());
     }
 
     private static function tagAlias(string $subscription, int $level): string

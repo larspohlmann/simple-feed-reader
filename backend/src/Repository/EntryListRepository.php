@@ -8,6 +8,7 @@ use App\Doctrine\EntryPlanHint;
 use App\Doctrine\EntryPlanHintWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
+use App\Enum\InclusionSurface;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -244,7 +245,7 @@ final class EntryListRepository extends ServiceEntityRepository
         $qb = $this->projection->rowQueryBuilder($userId)
             ->andWhere('e.location.urlHash IN (:urlHashes)')
             ->setParameter('urlHashes', $urlHashes);
-        $this->scope->inTrending($qb, EntryAliases::primary());
+        InclusionScopeDql::restrict($qb, EntryAliases::primary()->subscription, InclusionSurface::Trending);
         $query = $qb->getQuery();
         EntryPlanHintWalker::apply($query, EntryPlanHint::DuplicateLookup);
 

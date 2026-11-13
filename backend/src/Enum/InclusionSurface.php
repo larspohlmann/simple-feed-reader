@@ -26,4 +26,9 @@ enum InclusionSurface: string
             self::Trending => 'trending',
         };
     }
+
+    public function switchColumn(): string
+    {
+        return 'include_in_' . str_replace('-', '_', $this->value);
+    }
 }

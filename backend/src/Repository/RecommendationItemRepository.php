@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\RunStatus;
 use App\Pagination\RecommendationCursor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -136,7 +137,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->andWhere($this->notDedupedByNewerRunDql())
             ->setParameter('user', $userId)
             ->setParameter('completed', RunStatus::Completed);
-        ForYouScopeDql::restrict($qb, EntryAliases::primary());
+        InclusionScopeDql::restrict($qb, EntryAliases::primary()->subscription, InclusionSurface::ForYou);
 
         return $qb;
     }

@@ -78,15 +78,12 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
     /** @return list<Subscription> */
     public function findIncludedInAllItemsForUser(int $userId): array
     {
-        /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
+        $qb = $this->createQueryBuilder('s')
             ->andWhere('s.user = :user')->setParameter('user', $userId)
-            ->andWhere('s.inclusions.allItems = true')
-            ->andWhere(NetworkExclusionDql::notExcluded('s', InclusionSurface::AllItems))
-            ->andWhere(TagExclusionDql::notExcluded('s', InclusionSurface::AllItems))
-            ->orderBy('s.id', 'ASC')
-            ->getQuery()
-            ->getResult();
+            ->orderBy('s.id', 'ASC');
+        InclusionScopeDql::restrict($qb, 's', InclusionSurface::AllItems);
+        /** @var list<Subscription> $rows */
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
     }
