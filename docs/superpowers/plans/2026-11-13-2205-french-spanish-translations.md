@@ -202,8 +202,9 @@ In `testBuildsOneFormatterPerLocaleAndStyleAndReusesItOnEveryLaterCall`, `9` bec
 
 **Files:**
 - Modify: `README.md:82`, `docs/features.md:152` ("English, German, French and Spanish")
+- Modify: `docs/homepage/index.html:49,285` (`"inLanguage": ["en", "de", "fr", "es"]`; the hero meta row's `English &amp; German` becomes `English, German, French &amp; Spanish`)
 
-- [ ] **Step 1:** Update both lines.
+- [ ] **Step 1:** Update the README and features lines and both homepage places. Open `docs/homepage/index.html` in a browser at 1280 px and 375 px: the meta row must still wrap cleanly.
 - [ ] **Step 2: Live check on `http://localhost:4200`** (Docker stack up; `verify-containers-are-current` first). In French, then Spanish, at 1280 px and 375 px: settings → Preferences (the four-option language picker must fit its row), the reader list in magazine layout, the sidebar, an open article, the feed directory, Organise, login and register. Record every label that wraps, clips or overflows; shorten the translation, never the layout. Check relative times ("il y a 5 min", "hace 5 min") and a long date render localised. Reload with `sfr.lang` removed and the browser language set to `fr-CA` — boots French.
 - [ ] **Step 3:** Request `i18n/fr.json` and `i18n/es.json` through the Docker stack — 200, JSON.
 - [ ] **Step 4: Gates.** Frontend: `docker compose exec -T frontend npm run check`. Backend, in parallel: `composer check`, `composer md`, `php bin/phpunit`, `docker compose exec php composer test:parallel`, then `composer infection:diff`. Scan today's dev log.
