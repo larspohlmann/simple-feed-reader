@@ -48,10 +48,15 @@
                 {{ action.label }}
               </button>
             }
-            @for (action of rows.networkSurfaceActions(current); track action.id) {
-              <button role="menuitem" (click)="rows.toggleNetworkSurface(current, action.id)">
-                {{ action.label }}
-              </button>
+            @if (current.networkAccounts.length) {
+              <hr />
+            }
+            @for (check of surfaceChecks(); track check.id) {
+              <app-menu-checkbox
+                [label]="check.label"
+                [checked]="check.checked()"
+                (toggled)="check.toggle()"
+              />
             }
           </ng-template>
         </app-sidebar-row-menu>

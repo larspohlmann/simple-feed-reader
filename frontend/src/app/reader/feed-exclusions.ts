@@ -1,5 +1,5 @@
 import { TranslocoService } from '@jsverse/transloco';
-import { SubscriptionDto } from './models';
+import { SubscriptionDto, TagInclusion } from './models';
 import type { ManageActions } from './feeds/manage/manage-actions.service';
 
 export type ExclusionSurface = 'allItems' | 'forYou' | 'savedSearches';
@@ -61,12 +61,12 @@ export function flipFeedFlag(
   toggle.set(manage, subscription, !toggle.isIncluded(subscription));
 }
 
-/** The surfaces the feed's own switches leave it out of. */
-export function ownExcludedSurfaces(subscription: SubscriptionDto): ExclusionSurface[] {
+/** The surfaces a feed's or a tag's own switches leave it out of. */
+export function ownExcludedSurfaces(inclusion: TagInclusion): ExclusionSurface[] {
   const surfaces: ExclusionSurface[] = [];
-  if (!subscription.includeInAllItems) surfaces.push('allItems');
-  if (!subscription.includeInForYou) surfaces.push('forYou');
-  if (!subscription.includeInSavedSearches) surfaces.push('savedSearches');
+  if (!inclusion.includeInAllItems) surfaces.push('allItems');
+  if (!inclusion.includeInForYou) surfaces.push('forYou');
+  if (!inclusion.includeInSavedSearches) surfaces.push('savedSearches');
   return surfaces;
 }
 

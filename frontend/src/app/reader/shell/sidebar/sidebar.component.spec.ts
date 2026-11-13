@@ -12,6 +12,7 @@ import { RecommendationsService } from '../../state/recommendations.service';
 import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
+import { SidebarRowActions } from './sidebar-row-actions.service';
 import { TagNode, countDescendants, flattenTagTree } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 import { SocialSection, socialFeedGroup } from '../../state/social-sections';
@@ -23,7 +24,11 @@ import { provideAccountIdentity } from '../../../../testing/account-identity-tes
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
-import { ACTION_SHEET_DIVIDER } from '../../../shared/action-sheet/action-sheet.component';
+import {
+  ACTION_SHEET_DIVIDER,
+  ActionSheetCheck,
+  ActionSheetData,
+} from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
@@ -980,48 +985,62 @@ describe('SidebarComponent', () => {
     expect(unsub).toHaveBeenCalledWith(subscription);
   });
 
-  it('shows both exclusion toggles in the untagged feed row menu and emits', () => {
+  const popoverItems = (pop: Element) =>
+    [...pop.children].map((item) => (item.tagName === 'HR' ? '<hr>' : item.textContent?.trim()));
+
+  it('lists the three switches as checkboxes in the untagged feed row menu', () => {
+    const fixture = mount({ untagged: [{ ...sub(1, 0), includeInForYou: false }] });
+    const element = fixture.nativeElement as HTMLElement;
+
+    (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const pop = element.querySelector('.feedrow .pop')!;
+
+    expect(popoverItems(pop)).toEqual([
+      'Edit feed',
+      '<hr>',
+      'Show in All items',
+      'Show in For You',
+      'Show in saved searches',
+      '<hr>',
+      'Unsubscribe',
+    ]);
+    expect(
+      [...pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')].map(
+        (box) => box.checked,
+      ),
+    ).toEqual([true, false, true]);
+  });
+
+  it('keeps the feed row menu open once a tick has patched and re-rendered the row', () => {
     const subscription = sub(1, 0);
     const fixture = mount({ untagged: [subscription] });
     const element = fixture.nativeElement as HTMLElement;
-    const toggleAllItems = jest.fn();
-    const toggleForYou = jest.fn();
-    manageActions.setIncludeInAllItems.mockImplementation((sub: SubscriptionDto) =>
-      toggleAllItems(sub),
+    manageActions.setIncludeInForYou.mockImplementation(
+      (patched: SubscriptionDto, included: boolean) =>
+        fixture.componentRef.setInput('untagged', [{ ...patched, includeInForYou: included }]),
     );
-    manageActions.setIncludeInForYou.mockImplementation((sub: SubscriptionDto) =>
-      toggleForYou(sub),
-    );
-
     (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
-    const labels = [...element.querySelectorAll('.feedrow .pop [role="menuitem"]')].map((item) =>
-      item.textContent?.trim(),
+    const rows = fixture.debugElement.injector.get(SidebarRowActions);
+    const menuKey = rows.menuFor();
+
+    element
+      .querySelectorAll<HTMLInputElement>('.feedrow .pop [role="menuitemcheckbox"]')[1]
+      .click();
+    fixture.detectChanges();
+
+    expect(manageActions.setIncludeInForYou).toHaveBeenCalledWith(subscription, false);
+    expect(rows.menuFor()).toBe(menuKey);
+    const boxes = element.querySelectorAll<HTMLInputElement>(
+      '.feedrow .pop [role="menuitemcheckbox"]',
     );
-    expect(labels).toEqual([
-      'Edit feed',
-      'Exclude from All items',
-      'Exclude from For You',
-      'Exclude from saved searches',
-      'Unsubscribe',
-    ]);
-
-    (
-      element.querySelector('.feedrow .pop [role="menuitem"]:nth-of-type(2)') as HTMLButtonElement
-    ).click();
-    fixture.detectChanges();
-    expect(toggleAllItems).toHaveBeenCalledWith(subscription);
-    expect(element.querySelector('.feedrow .pop')).toBeNull();
-
-    (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    (
-      element.querySelector('.feedrow .pop [role="menuitem"]:nth-of-type(3)') as HTMLButtonElement
-    ).click();
-    expect(toggleForYou).toHaveBeenCalledWith(subscription);
+    expect(boxes).toHaveLength(3);
+    expect(boxes[1].checked).toBe(false);
+    expect(element.querySelector('.feedrow .feed-exclusion-marker')).not.toBeNull();
   });
 
-  it('shows both exclusion toggles in the tagged feed row menu', () => {
+  it('lists the three switches in the tagged feed row menu and switches the feed', () => {
     const subscription = sub(1, 0);
     const node: TagNode = {
       tag: {
@@ -1044,43 +1063,21 @@ describe('SidebarComponent', () => {
     (element.querySelector('.tag .chevzone') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    const toggleAllItems = jest.fn();
-    const toggleForYou = jest.fn();
-    manageActions.setIncludeInAllItems.mockImplementation((sub: SubscriptionDto) =>
-      toggleAllItems(sub),
-    );
-    manageActions.setIncludeInForYou.mockImplementation((sub: SubscriptionDto) =>
-      toggleForYou(sub),
-    );
-
     (element.querySelector('.tagfeeds .nav + .rowmenu .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
-    const labels = [
-      ...element.querySelectorAll('.tagfeeds .nav + .rowmenu .pop [role="menuitem"]'),
-    ].map((item) => item.textContent?.trim());
-    expect(labels).toEqual([
+    const pop = element.querySelector('.tagfeeds .nav + .rowmenu .pop')!;
+    expect(popoverItems(pop)).toEqual([
       'Edit feed',
-      'Exclude from All items',
-      'Exclude from For You',
-      'Exclude from saved searches',
+      '<hr>',
+      'Show in All items',
+      'Show in For You',
+      'Show in saved searches',
+      '<hr>',
       'Unsubscribe',
     ]);
 
-    (
-      element.querySelector(
-        '.tagfeeds .nav + .rowmenu .pop [role="menuitem"]:nth-of-type(2)',
-      ) as HTMLButtonElement
-    ).click();
-    expect(toggleAllItems).toHaveBeenCalledWith(subscription);
-
-    (element.querySelector('.tagfeeds .nav + .rowmenu .dots') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    (
-      element.querySelector(
-        '.tagfeeds .nav + .rowmenu .pop [role="menuitem"]:nth-of-type(3)',
-      ) as HTMLButtonElement
-    ).click();
-    expect(toggleForYou).toHaveBeenCalledWith(subscription);
+    pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')[0].click();
+    expect(manageActions.setIncludeInAllItems).toHaveBeenCalledWith(subscription, false);
   });
 
   it('marks the selected subscription’s row host current', () => {
@@ -1130,6 +1127,32 @@ describe('SidebarComponent', () => {
       '.feedrow .feed-exclusion-marker',
     );
     expect(marker?.getAttribute('title')).toBe('Hidden from Saved searches');
+  });
+
+  it('greys a tag switched out of For You and badges it with the eye', () => {
+    const offTag: TagNode = {
+      ...tagNodeFixture,
+      tag: { ...tagNodeFixture.tag, includeInForYou: false },
+    };
+    const row = (mount({ tagTree: [offTag] }).nativeElement as HTMLElement).querySelector(
+      '.tag app-sidebar-group-row',
+    )!;
+    const slot = row.querySelector('.lead')!;
+    const marker = slot.querySelector('.feed-exclusion-marker')!;
+
+    expect(slot.classList).toContain('hidden-feed');
+    expect(marker.textContent).toContain('visibility_off');
+    expect(marker.getAttribute('title')).toBe('Hidden from For you');
+    expect(marker.getAttribute('aria-label')).toBe('Hidden from For you');
+  });
+
+  it('leaves a tag that is in every surface unmarked', () => {
+    const row = (mount({ tagTree: [tagNodeFixture] }).nativeElement as HTMLElement).querySelector(
+      '.tag app-sidebar-group-row',
+    )!;
+
+    expect(row.querySelector('.lead')!.classList).not.toContain('hidden-feed');
+    expect(row.querySelector('.feed-exclusion-marker')).toBeNull();
   });
 
   it('renders no exclusion marker when every switch is on', () => {
@@ -2583,13 +2606,17 @@ describe('organise mode', () => {
         { id: 'moveUp', label: 'Move up', symbol: 'arrow_upward', disabled: true },
         { id: 'moveDown', label: 'Move down', symbol: 'arrow_downward', disabled: true },
         ACTION_SHEET_DIVIDER,
+        expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
+        expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+        expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+        ACTION_SHEET_DIVIDER,
         { id: 'delete', label: 'Delete tag', symbol: 'delete', danger: true },
       ],
     });
     expect(deleted).toHaveBeenCalledWith(tag);
   });
 
-  it('the feed dots offer edit, the two exclusion toggles, and unsubscribe', () => {
+  it('the feed dots offer edit, the three switches, and unsubscribe', () => {
     const fixture = mount({
       coarse: true,
       organising: true,
@@ -2604,52 +2631,39 @@ describe('organise mode', () => {
       title: 's9',
       actions: [
         { id: 'edit', label: 'Edit feed' },
-        { id: 'allItems', label: 'Exclude from All items' },
-        { id: 'forYou', label: 'Exclude from For You' },
-        { id: 'savedSearches', label: 'Exclude from saved searches' },
+        ACTION_SHEET_DIVIDER,
+        expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
+        expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+        expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+        ACTION_SHEET_DIVIDER,
         { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
       ],
     });
     expect(edited).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
   });
 
-  it('routes the feed sheet toggle choices to toggleAllItems / toggleForYou and only those', () => {
-    const fixture = mount({
-      coarse: true,
-      organising: true,
-      untagged: [sub(9)],
-      sheetChoice: 'allItems',
-    });
-    const toggleAllItems = jest.fn();
-    const toggleForYou = jest.fn();
-    const unsubscribed = jest.fn();
-    manageActions.setIncludeInAllItems.mockImplementation((sub: SubscriptionDto) =>
-      toggleAllItems(sub),
-    );
-    manageActions.setIncludeInForYou.mockImplementation((sub: SubscriptionDto) =>
-      toggleForYou(sub),
-    );
-    manageActions.unsubscribe.mockImplementation(unsubscribed);
+  it('routes each feed sheet switch to its own setter and nothing else', () => {
+    const fixture = mount({ coarse: true, organising: true, untagged: [sub(9)] });
     fixture.nativeElement.querySelector('.feedrow .dots').click();
-    expect(toggleAllItems).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
-    expect(toggleForYou).not.toHaveBeenCalled();
-    expect(unsubscribed).not.toHaveBeenCalled();
-  });
+    const checks = (
+      (TestBed.inject(ActionSheet).open as jest.Mock).mock.calls[0][0] as ActionSheetData
+    ).actions.filter((item): item is ActionSheetCheck => 'toggle' in item);
 
-  it('routes the saved-searches sheet choice to setIncludeInSavedSearches', () => {
-    const fixture = mount({
-      coarse: true,
-      organising: true,
-      untagged: [sub(9)],
-      sheetChoice: 'savedSearches',
-    });
-    const toggled = jest.fn();
-    manageActions.setIncludeInSavedSearches.mockImplementation((sub: SubscriptionDto) =>
-      toggled(sub),
+    checks.forEach((check) => check.toggle());
+
+    expect(manageActions.setIncludeInAllItems).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 9 }),
+      false,
     );
-    fixture.nativeElement.querySelector('.feedrow .dots').click();
-    expect(toggled).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
-    expect(manageActions.setIncludeInAllItems).not.toHaveBeenCalled();
+    expect(manageActions.setIncludeInForYou).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 9 }),
+      false,
+    );
+    expect(manageActions.setIncludeInSavedSearches).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 9 }),
+      false,
+    );
+    expect(manageActions.unsubscribe).not.toHaveBeenCalled();
   });
 
   it('routes the tag edit choice to editTag and only that', () => {

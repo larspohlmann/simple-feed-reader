@@ -1,10 +1,12 @@
 import { moveItemInArray } from '@angular/cdk/drag-drop';
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import {
   ACTION_SHEET_DIVIDER,
   ActionSheetAction,
+  ActionSheetCheck,
+  ActionSheetItem,
 } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -15,24 +17,23 @@ import {
   ExclusionSurface,
   FEED_FLAG_TOGGLES,
   FeedFlagToggle,
-  feedFlagLabelKey,
   flipFeedFlag,
 } from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
+import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
 import { ForYouNetworksStore } from '../../state/for-you-networks.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { siblingIdsOf } from '../../state/subscription-derivations';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
-
-const TITLE_ORDER: readonly ExclusionSurface[] = ['forYou', 'savedSearches'];
+import { INCLUSION_FLAG } from '../../state/visibility';
 
 interface NetworkSurfaceSwitch {
   readonly surface: ExclusionSurface;
   readonly isExcluded: (network: SocialSection['network']) => boolean;
   readonly toggle: (network: SocialSection['network']) => void;
-  readonly excludeKey: string;
-  readonly includeKey: string;
+  readonly labelKey: string;
 }
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
@@ -47,23 +48,30 @@ export class SidebarRowActions {
   private readonly picker = inject(SocialFeedsPicker);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly forYouNetworks = inject(ForYouNetworksStore);
+  private readonly allItemsNetworks = inject(AllItemsNetworksStore);
   private readonly tags = inject(TagsStore);
+  private readonly subscriptions = inject(SubscriptionsStore);
   private readonly destroyRef = inject(DestroyRef);
 
+  /** In title order: the network marker names its surfaces in this order. */
   private readonly networkSurfaceSwitches: readonly NetworkSurfaceSwitch[] = [
     {
-      surface: 'savedSearches',
-      isExcluded: (network) => !this.savedSearches.includedNetworks().has(network),
-      toggle: (network) => this.savedSearches.toggleNetwork(network),
-      excludeKey: 'reader.excludeNetworkFromSavedSearches',
-      includeKey: 'reader.includeNetworkInSavedSearches',
+      surface: 'allItems',
+      isExcluded: (network) => this.allItemsNetworks.excludedNetworks().has(network),
+      toggle: (network) => this.allItemsNetworks.toggleNetwork(network),
+      labelKey: 'reader.includeInAllItems',
     },
     {
       surface: 'forYou',
       isExcluded: (network) => this.forYouNetworks.excludedNetworks().has(network),
       toggle: (network) => this.forYouNetworks.toggleNetwork(network),
-      excludeKey: 'reader.excludeFromForYou',
-      includeKey: 'reader.includeInForYou',
+      labelKey: 'reader.includeInForYou',
+    },
+    {
+      surface: 'savedSearches',
+      isExcluded: (network) => !this.savedSearches.includedNetworks().has(network),
+      toggle: (network) => this.savedSearches.toggleNetwork(network),
+      labelKey: 'reader.includeInSavedSearches',
     },
   ];
 
@@ -106,6 +114,8 @@ export class SidebarRowActions {
             disabled: index < 0 || index === siblingIds.length - 1,
           },
           ACTION_SHEET_DIVIDER,
+          ...this.tagSurfaceChecks(tag),
+          ACTION_SHEET_DIVIDER,
           {
             id: 'delete',
             label: this.transloco.translate('reader.deleteTag'),
@@ -139,6 +149,23 @@ export class SidebarRowActions {
       });
   }
 
+  /** The tag's three switches, for its sheet and its menu alike; each reads the live tag. */
+  tagSurfaceChecks(tag: TagDto): ActionSheetCheck[] {
+    return FEED_FLAG_TOGGLES.map(({ surface, includeKey }) => {
+      const checked = computed(() => this.liveTag(tag)[INCLUSION_FLAG[surface]]);
+      return {
+        id: surface,
+        label: this.transloco.translate(includeKey),
+        checked,
+        toggle: () => this.tagActions.setTagInclusion(tag, surface, !checked()),
+      };
+    });
+  }
+
+  private liveTag(tag: TagDto): TagDto {
+    return this.tags.tags().find(({ id }) => id === tag.id) ?? tag;
+  }
+
   private createHereActions(tag: TagDto): ActionSheetAction[] {
     if (!this.canCreateTagUnder(tag)) return [];
     return [
@@ -163,10 +190,9 @@ export class SidebarRowActions {
         title: subscription.title,
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editFeed') },
-          ...FEED_FLAG_TOGGLES.map((toggle) => ({
-            id: toggle.surface,
-            label: this.transloco.translate(feedFlagLabelKey(toggle, subscription)),
-          })),
+          ACTION_SHEET_DIVIDER,
+          ...this.feedFlagChecks(subscription),
+          ACTION_SHEET_DIVIDER,
           {
             id: 'unsubscribe',
             label: this.transloco.translate('reader.unsubscribe'),
@@ -177,63 +203,65 @@ export class SidebarRowActions {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.manage.editSubscription(subscription);
-        const toggle = FEED_FLAG_TOGGLES.find(({ surface }) => surface === choice);
-        if (toggle) flipFeedFlag(this.manage, toggle, subscription);
         if (choice === 'unsubscribe') this.manage.unsubscribe(subscription);
       });
   }
 
-  /** ⋯ on a network head (coarse): one item per account of the network. */
+  private feedFlagChecks(subscription: SubscriptionDto): ActionSheetCheck[] {
+    return FEED_FLAG_TOGGLES.map((toggle) => ({
+      id: toggle.surface,
+      label: this.transloco.translate(toggle.includeKey),
+      checked: computed(() => toggle.isIncluded(this.liveSubscription(subscription))),
+      toggle: () => this.toggleFeedFlag(toggle, subscription),
+    }));
+  }
+
+  /** The row the menu opened on may predate a tick that has since patched the store. */
+  private liveSubscription(subscription: SubscriptionDto): SubscriptionDto {
+    return (
+      this.subscriptions.subscriptions().find(({ id }) => id === subscription.id) ?? subscription
+    );
+  }
+
+  /** ⋯ on a network head (coarse): one item per account of the network, then its switches. */
   openSocialSheet(section: SocialSection): void {
     this.sheet
       .open({
         title: this.transloco.translate(`settings.social.${section.network}`),
-        actions: [...this.socialAccountActions(section), ...this.networkSurfaceActions(section)],
+        actions: this.socialSheetItems(section),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        const surfaceSwitch = this.switchFor(choice);
-        if (surfaceSwitch) {
-          surfaceSwitch.toggle(section.network);
-          this.closeMenu();
-          return;
-        }
         const account = section.networkAccounts.find(({ id }) => String(id) === choice);
         if (account) this.manageSocialFeeds(account);
       });
   }
 
-  /** The network head's surface items (saved searches, For you), for its sheet and its menu alike. */
-  networkSurfaceActions(section: SocialSection): ActionSheetAction[] {
+  private socialSheetItems(section: SocialSection): ActionSheetItem[] {
+    const accounts = this.socialAccountActions(section);
+    const divider = accounts.length > 0 ? [ACTION_SHEET_DIVIDER] : [];
+    return [...accounts, ...divider, ...this.networkSurfaceChecks(section)];
+  }
+
+  /** The network head's switches, for its sheet and its menu alike. */
+  networkSurfaceChecks(section: SocialSection): ActionSheetCheck[] {
+    const network = section.network;
     return this.networkSurfaceSwitches.map((surfaceSwitch) => ({
       id: surfaceSwitch.surface,
-      label: this.transloco.translate(
-        surfaceSwitch.isExcluded(section.network)
-          ? surfaceSwitch.includeKey
-          : surfaceSwitch.excludeKey,
-      ),
+      label: this.transloco.translate(surfaceSwitch.labelKey),
+      checked: computed(() => !surfaceSwitch.isExcluded(network)),
+      toggle: () => surfaceSwitch.toggle(network),
     }));
-  }
-
-  toggleNetworkSurface(section: SocialSection, surface: string): void {
-    this.switchFor(surface)?.toggle(section.network);
-    this.closeMenu();
-  }
-
-  private switchFor(surface: string | undefined): NetworkSurfaceSwitch | undefined {
-    return this.networkSurfaceSwitches.find((surfaceSwitch) => surfaceSwitch.surface === surface);
   }
 
   networkExcludedSurfaces(network: SocialSection['network']): ExclusionSurface[] {
     return this.networkSurfaceSwitches
       .filter((surfaceSwitch) => surfaceSwitch.isExcluded(network))
-      .map(({ surface }) => surface)
-      .sort((left, right) => TITLE_ORDER.indexOf(left) - TITLE_ORDER.indexOf(right));
+      .map(({ surface }) => surface);
   }
 
   toggleFeedFlag(toggle: FeedFlagToggle, subscription: SubscriptionDto): void {
-    flipFeedFlag(this.manage, toggle, subscription);
-    this.closeMenu();
+    flipFeedFlag(this.manage, toggle, this.liveSubscription(subscription));
   }
 
   socialAccountActions(section: SocialSection): ActionSheetAction[] {

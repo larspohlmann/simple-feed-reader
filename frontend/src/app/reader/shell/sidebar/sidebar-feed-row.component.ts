@@ -7,18 +7,14 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
-import {
-  FEED_FLAG_TOGGLES,
-  ownExcludedSurfaces,
-  exclusionTitle,
-  feedFlagLabelKey,
-} from '../../feed-exclusions';
+import { FEED_FLAG_TOGGLES, ownExcludedSurfaces, exclusionTitle } from '../../feed-exclusions';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
+import { MenuCheckboxComponent } from '../../../shared/menu-checkbox/menu-checkbox.component';
 
 /** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
  *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
@@ -32,6 +28,7 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
     IconComponent,
     FaviconComponent,
     SidebarRowMenuComponent,
+    MenuCheckboxComponent,
   ],
   templateUrl: './sidebar-feed-row.component.html',
   styleUrl: './sidebar-feed-row.component.scss',
@@ -41,7 +38,6 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 export class SidebarFeedRowComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly feedFlags = FEED_FLAG_TOGGLES;
-  protected readonly feedFlagLabelKey = feedFlagLabelKey;
   protected readonly manage = inject(ManageActions);
   protected readonly screen = inject(LayoutService);
   protected readonly rows = inject(SidebarRowActions);

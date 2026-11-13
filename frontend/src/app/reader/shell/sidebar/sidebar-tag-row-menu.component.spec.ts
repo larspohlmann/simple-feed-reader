@@ -4,7 +4,9 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
+import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
 import { ForYouNetworksStore } from '../../state/for-you-networks.store';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { LayoutService } from '../../layout.service';
 import { TagDto } from '../../models';
@@ -24,6 +26,8 @@ const tagOf = (id: number, parentId: number | null): TagDto => ({
   ...INCLUDED_EVERYWHERE,
 });
 
+const setTagInclusion = jest.fn();
+
 function openMenuFor(target: TagDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [provideTranslocoTesting()],
@@ -32,9 +36,11 @@ function openMenuFor(target: TagDto): HTMLElement {
       { provide: ActionSheet, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
       { provide: ForYouNetworksStore, useValue: {} },
+      { provide: AllItemsNetworksStore, useValue: {} },
+      { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
       { provide: LayoutService, useValue: { isCoarse: signal(false) } },
       { provide: ManageActions, useValue: {} },
-      { provide: TagActions, useValue: {} },
+      { provide: TagActions, useValue: { setTagInclusion } },
       {
         provide: TagsStore,
         useValue: tagsStoreStub(signal([tagOf(1, null), tagOf(2, 1), tagOf(3, 2)])),
@@ -63,5 +69,38 @@ describe('SidebarTagRowMenuComponent', () => {
 
   it('offers no Create tag here on a grandchild', () => {
     expect(itemTexts(openMenuFor(tagOf(3, 2)))).not.toContain('Create tag here');
+  });
+
+  it('lists the three switches as checkboxes between the actions and Delete', () => {
+    const pop = openMenuFor(tagOf(1, null)).querySelector('.pop')!;
+    const items = [...pop.children].map((item) =>
+      item.tagName === 'HR' ? '<hr>' : item.textContent?.trim(),
+    );
+
+    expect(items).toEqual([
+      'Edit tag',
+      'Create tag here',
+      '<hr>',
+      'Show in All items',
+      'Show in For You',
+      'Show in saved searches',
+      '<hr>',
+      'Delete tag',
+    ]);
+    expect(
+      [...pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')].map(
+        (box) => box.checked,
+      ),
+    ).toEqual([true, true, true]);
+  });
+
+  it('switches the tag from a checkbox and keeps the menu open', () => {
+    setTagInclusion.mockClear();
+    const host = openMenuFor(tagOf(1, null));
+
+    host.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')[1].click();
+
+    expect(setTagInclusion).toHaveBeenCalledWith(tagOf(1, null), 'forYou', false);
+    expect(TestBed.inject(SidebarRowActions).menuFor()).toBe('tag-1');
   });
 });

@@ -19,6 +19,7 @@ import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
+import { MenuCheckboxComponent } from '../../../shared/menu-checkbox/menu-checkbox.component';
 
 const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.collapsed`;
 const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): string =>
@@ -36,6 +37,7 @@ const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): s
     SidebarRowMenuComponent,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,
+    MenuCheckboxComponent,
   ],
   templateUrl: './sidebar-social-section.component.html',
   styleUrl: './sidebar-social-section.component.scss',
@@ -86,6 +88,10 @@ export class SidebarSocialSectionComponent {
   });
 
   protected readonly menuKey = computed(() => `social-${this.section().network}`);
+  protected readonly surfaceChecks = computed(() => {
+    this.dictionary.loaded();
+    return this.rows.networkSurfaceChecks(this.section());
+  });
 
   protected toggle(): void {
     this.collapsible.toggle();

@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { Subject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { SocialNetworkName } from '../../../core/social-network';
+import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
 import { ForYouNetworksStore } from '../../state/for-you-networks.store';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
@@ -13,8 +15,13 @@ import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker
 import { socialFeedGroup, SocialSection } from '../../state/social-sections';
 import { TagsStore } from '../../state/tags.store';
 import { tagsStoreStub } from '../../testing/tags-store.stub';
-import { TagDto } from '../../models';
-import { ACTION_SHEET_DIVIDER } from '../../../shared/action-sheet/action-sheet.component';
+import { SubscriptionDto, TagDto } from '../../models';
+import {
+  ACTION_SHEET_DIVIDER,
+  ActionSheetCheck,
+  ActionSheetData,
+} from '../../../shared/action-sheet/action-sheet.component';
+import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
 
@@ -30,12 +37,101 @@ describe('SidebarRowActions', () => {
         { provide: TagActions, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: ForYouNetworksStore, useValue: {} },
+        { provide: AllItemsNetworksStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
         { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
       ],
     });
     TestBed.inject(SidebarRowActions).openFeedSheet(heldUnrenamedHome(1));
 
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ title: 'Home@bsky' }));
+  });
+
+  describe('the feed sheet', () => {
+    const feed = makeSubscription({ id: 5, title: 'Feed five' });
+    const subscriptions = signal<SubscriptionDto[]>([feed]);
+    const setIncludeInForYou = jest.fn((subscription: SubscriptionDto, included: boolean) =>
+      subscriptions.update((current) =>
+        current.map((listed) =>
+          listed.id === subscription.id ? { ...listed, includeInForYou: included } : listed,
+        ),
+      ),
+    );
+    const sheetOpen = jest.fn();
+
+    beforeEach(() => {
+      subscriptions.set([feed]);
+      setIncludeInForYou.mockClear();
+      sheetOpen.mockReset();
+      TestBed.configureTestingModule({
+        imports: [provideTranslocoTesting()],
+        providers: [
+          SidebarRowActions,
+          { provide: ActionSheet, useValue: { open: sheetOpen } },
+          { provide: ManageActions, useValue: { setIncludeInForYou } },
+          { provide: TagActions, useValue: {} },
+          { provide: SavedSearchesStore, useValue: {} },
+          { provide: ForYouNetworksStore, useValue: {} },
+          { provide: AllItemsNetworksStore, useValue: {} },
+          { provide: SubscriptionsStore, useValue: { subscriptions } },
+          { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
+        ],
+      });
+    });
+
+    const checksOf = (data: ActionSheetData): ActionSheetCheck[] =>
+      data.actions.filter((item): item is ActionSheetCheck => 'toggle' in item);
+
+    const openedChecks = (): ActionSheetCheck[] => {
+      sheetOpen.mockReturnValue(new Subject<string | undefined>());
+      TestBed.inject(SidebarRowActions).openFeedSheet(feed);
+      return checksOf(sheetOpen.mock.calls[0][0]);
+    };
+
+    it('offers edit, the three switches between dividers, and unsubscribe', () => {
+      openedChecks();
+
+      expect(sheetOpen).toHaveBeenCalledWith({
+        title: 'Feed five',
+        actions: [
+          { id: 'edit', label: 'Edit feed' },
+          ACTION_SHEET_DIVIDER,
+          expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
+          expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+          expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+          ACTION_SHEET_DIVIDER,
+          { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
+        ],
+      });
+    });
+
+    it('flips from the live subscription, so a second tick undoes the first', () => {
+      const forYou = openedChecks().find(({ id }) => id === 'forYou')!;
+
+      forYou.toggle();
+      expect(forYou.checked()).toBe(false);
+      forYou.toggle();
+
+      expect(setIncludeInForYou.mock.calls.map(([, included]) => included)).toEqual([false, true]);
+      expect(forYou.checked()).toBe(true);
+    });
+
+    it('keeps the sheet open while it switches', () => {
+      const closed = new Subject<string | undefined>();
+      const choices = jest.fn();
+      closed.subscribe({ next: choices, complete: choices });
+      sheetOpen.mockReturnValue(closed);
+      const rows = TestBed.inject(SidebarRowActions);
+      rows.menuFor.set('sub-5');
+      rows.openFeedSheet(feed);
+
+      checksOf(sheetOpen.mock.calls[0][0])
+        .find(({ id }) => id === 'forYou')!
+        .toggle();
+
+      expect(choices).not.toHaveBeenCalled();
+      expect(rows.menuFor()).toBe('sub-5');
+    });
   });
 
   describe('social accounts', () => {
@@ -51,9 +147,6 @@ describe('SidebarRowActions', () => {
       handle: '@old.bsky.social',
       status: 'needs_reconnect' as const,
     };
-    const savedSearchesAction = (rows: SidebarRowActions) =>
-      rows.networkSurfaceActions(sectionOf([]))[0];
-    const forYouAction = (rows: SidebarRowActions) => rows.networkSurfaceActions(sectionOf([]))[1];
     const sectionOf = (networkAccounts: SocialSection['networkAccounts']): SocialSection => ({
       network: 'bluesky',
       accounts: [],
@@ -70,9 +163,13 @@ describe('SidebarRowActions', () => {
     const toggleNetwork = jest.fn();
     const excludedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set());
     const forYouToggle = jest.fn();
+    const allItemsExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
+    const allItemsToggle = jest.fn();
 
     beforeEach(() => {
       forYouToggle.mockClear();
+      allItemsToggle.mockClear();
+      allItemsExcluded.set(new Set());
       excludedNetworks.set(new Set());
       sheetOpen.mockClear();
       pickerOpen.mockClear();
@@ -94,6 +191,11 @@ describe('SidebarRowActions', () => {
             provide: ForYouNetworksStore,
             useValue: { excludedNetworks, toggleNetwork: forYouToggle },
           },
+          {
+            provide: AllItemsNetworksStore,
+            useValue: { excludedNetworks: allItemsExcluded, toggleNetwork: allItemsToggle },
+          },
+          { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
           { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
         ],
       });
@@ -114,7 +216,9 @@ describe('SidebarRowActions', () => {
       ]);
     });
 
-    it('offers each account on the network sheet and opens the picked one', () => {
+    const checksOf = (rows: SidebarRowActions) => rows.networkSurfaceChecks(sectionOf([]));
+
+    it('offers each account on the network sheet, then its three switches, and opens the picked one', () => {
       TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([bob, reconnect]));
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -122,94 +226,73 @@ describe('SidebarRowActions', () => {
         actions: [
           { id: '9', label: 'Manage feeds of @bob.bsky.social', disabled: false },
           { id: '4', label: 'Reconnect @old.bsky.social in settings', disabled: true },
-          { id: 'savedSearches', label: 'Include in saved searches' },
-          { id: 'forYou', label: 'Exclude from For You' },
+          ACTION_SHEET_DIVIDER,
+          expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
+          expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+          expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
         ],
       });
       expect(pickerOpen).toHaveBeenCalledWith(bob);
     });
 
-    it('switches the network in saved searches from the sheet', () => {
-      sheetOpen.mockReturnValueOnce(of('savedSearches'));
-
-      TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([]));
-
-      expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
-      expect(pickerOpen).not.toHaveBeenCalled();
-    });
-
-    it('switches the network from its menu item and closes the menu', () => {
-      const rows = TestBed.inject(SidebarRowActions);
-      rows.menuFor.set('social-bluesky');
-
-      rows.toggleNetworkSurface(sectionOf([]), 'savedSearches');
-
-      expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
-      expect(rows.menuFor()).toBeNull();
-    });
-
-    it('labels the network item by whether the network is included', () => {
-      const rows = TestBed.inject(SidebarRowActions);
-      expect(savedSearchesAction(rows)).toEqual({
-        id: 'savedSearches',
-        label: 'Include in saved searches',
-      });
-
-      includedNetworks.set(new Set(['bluesky']));
-
-      expect(savedSearchesAction(rows).label).toBe('Exclude from saved searches');
-    });
-
-    it('offers to exclude an included network and excludes it on that choice', () => {
-      includedNetworks.set(new Set(['bluesky']));
-      sheetOpen.mockReturnValueOnce(of('savedSearches'));
-
+    it('opens the network sheet of a network without accounts on its switches alone', () => {
       TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([]));
 
       expect(sheetOpen).toHaveBeenCalledWith(
         expect.objectContaining({
           actions: [
-            { id: 'savedSearches', label: 'Exclude from saved searches' },
-            { id: 'forYou', label: 'Exclude from For You' },
+            expect.objectContaining({ id: 'allItems' }),
+            expect.objectContaining({ id: 'forYou' }),
+            expect.objectContaining({ id: 'savedSearches' }),
           ],
         }),
       );
-      expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
     });
 
-    it('labels the network For you item by whether the network is excluded', () => {
-      const rows = TestBed.inject(SidebarRowActions);
-      expect(forYouAction(rows)).toEqual({
-        id: 'forYou',
-        label: 'Exclude from For You',
-      });
+    it('gives a network three checks, All items, For You and saved searches, that follow the stores', () => {
+      const [allItems, forYou, savedSearches] = checksOf(TestBed.inject(SidebarRowActions));
 
+      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
+        true,
+        true,
+        false,
+      ]);
+
+      allItemsExcluded.set(new Set(['bluesky']));
       excludedNetworks.set(new Set(['bluesky']));
+      includedNetworks.set(new Set(['bluesky']));
 
-      expect(forYouAction(rows).label).toBe('Show in For You');
+      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
+        false,
+        false,
+        true,
+      ]);
     });
 
-    it('toggles the network in For you and closes the menu', () => {
+    it('switches the network in each surface from its check and keeps the menu open', () => {
       const rows = TestBed.inject(SidebarRowActions);
       rows.menuFor.set('social-bluesky');
+      const [allItems, forYou, savedSearches] = checksOf(rows);
 
-      rows.toggleNetworkSurface(sectionOf([]), 'forYou');
+      allItems.toggle();
+      forYou.toggle();
+      savedSearches.toggle();
 
+      expect(allItemsToggle).toHaveBeenCalledWith('bluesky');
       expect(forYouToggle).toHaveBeenCalledWith('bluesky');
-      expect(rows.menuFor()).toBeNull();
+      expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
+      expect(rows.menuFor()).toBe('social-bluesky');
     });
 
-    it('the network sheet offers For you after saved searches and acts on it', () => {
-      sheetOpen.mockReturnValueOnce(of('forYou'));
+    it('names every surface that leaves the network out, in title order', () => {
+      allItemsExcluded.set(new Set(['bluesky']));
+      excludedNetworks.set(new Set(['bluesky']));
 
-      TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([]));
-
-      expect(sheetOpen).toHaveBeenCalledWith(
-        expect.objectContaining({
-          actions: expect.arrayContaining([expect.objectContaining({ id: 'forYou' })]),
-        }),
-      );
-      expect(forYouToggle).toHaveBeenCalledWith('bluesky');
+      expect(TestBed.inject(SidebarRowActions).networkExcludedSurfaces('bluesky')).toEqual([
+        'allItems',
+        'forYou',
+        'savedSearches',
+      ]);
     });
 
     it('closes the open menu when it opens the picker', () => {
@@ -238,10 +321,13 @@ describe('SidebarRowActions', () => {
     const editTag = jest.fn();
     const deleteTag = jest.fn();
     const createTag = jest.fn();
+    const setTagInclusion = jest.fn();
     const tags = signal<TagDto[]>([]);
 
     beforeEach(() => {
-      [sheetOpen, reorderTags, editTag, deleteTag, createTag].forEach((spy) => spy.mockReset());
+      [sheetOpen, reorderTags, editTag, deleteTag, createTag, setTagInclusion].forEach((spy) =>
+        spy.mockReset(),
+      );
       sheetOpen.mockReturnValue(of(undefined));
       tags.set([tag(1, 0), tag(2, 1), tag(3, 2), tag(11, 0, 1), tag(12, 1, 1)]);
       TestBed.configureTestingModule({
@@ -250,9 +336,14 @@ describe('SidebarRowActions', () => {
           SidebarRowActions,
           { provide: ActionSheet, useValue: { open: sheetOpen } },
           { provide: ManageActions, useValue: {} },
-          { provide: TagActions, useValue: { reorderTags, editTag, deleteTag, createTag } },
+          {
+            provide: TagActions,
+            useValue: { reorderTags, editTag, deleteTag, createTag, setTagInclusion },
+          },
           { provide: SavedSearchesStore, useValue: {} },
           { provide: ForYouNetworksStore, useValue: {} },
+          { provide: AllItemsNetworksStore, useValue: {} },
+          { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
           { provide: TagsStore, useValue: tagsStoreStub(tags) },
         ],
       });
@@ -263,7 +354,7 @@ describe('SidebarRowActions', () => {
       return sheetOpen.mock.calls[0][0].actions as { id?: string; disabled?: boolean }[];
     };
 
-    it('offers edit, create here, move up, move down and, after a divider, delete', () => {
+    it('offers edit, create here, the moves, the three switches and, after a divider, delete', () => {
       TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -274,9 +365,50 @@ describe('SidebarRowActions', () => {
           { id: 'moveUp', label: 'Move up', symbol: 'arrow_upward', disabled: false },
           { id: 'moveDown', label: 'Move down', symbol: 'arrow_downward', disabled: false },
           ACTION_SHEET_DIVIDER,
+          expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
+          expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+          expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+          ACTION_SHEET_DIVIDER,
           { id: 'delete', label: 'Delete tag', symbol: 'delete', danger: true },
         ],
       });
+    });
+
+    it('gives a tag three checks that follow the live tag in TagsStore', () => {
+      const [allItems, forYou, savedSearches] = TestBed.inject(SidebarRowActions).tagSurfaceChecks(
+        tag(2, 1),
+      );
+
+      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
+        true,
+        true,
+        true,
+      ]);
+
+      tags.update((current) =>
+        current.map((listed) => (listed.id === 2 ? { ...listed, includeInForYou: false } : listed)),
+      );
+
+      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
+        true,
+        false,
+        true,
+      ]);
+    });
+
+    it('switches the tag from its check against the live tag, keeping the menu open', () => {
+      const rows = TestBed.inject(SidebarRowActions);
+      rows.menuFor.set('tag-2');
+      const stale = tag(2, 1);
+      const forYou = rows.tagSurfaceChecks(stale)[1];
+      tags.update((current) =>
+        current.map((listed) => (listed.id === 2 ? { ...listed, includeInForYou: false } : listed)),
+      );
+
+      forYou.toggle();
+
+      expect(setTagInclusion).toHaveBeenCalledWith(stale, 'forYou', true);
+      expect(rows.menuFor()).toBe('tag-2');
     });
 
     it('disables Move up on the first sibling', () => {

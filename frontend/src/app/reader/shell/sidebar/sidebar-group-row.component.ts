@@ -1,8 +1,12 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { RouterLink } from '@angular/router';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SelectionParams } from '../../query/query';
+import { TagInclusion } from '../../models';
+import { exclusionTitle, ownExcludedSurfaces } from '../../feed-exclusions';
+import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 
 /** A tag-style group header: a link to the group's combined list, an optional projected subtag pill and menu, and the expand chevron. */
 @Component({
@@ -23,5 +27,20 @@ export class SidebarGroupRowComponent {
   readonly count = input(0);
   readonly active = input(false);
   readonly expanded = input(false);
+  /** A tag's own switches; a row without them carries no exclusion marker. */
+  readonly inclusion = input<TagInclusion | null>(null);
   readonly toggled = output();
+
+  private readonly i18n = inject(TranslocoService);
+  private readonly dictionary = inject(ActiveDictionary);
+
+  private readonly excludedSurfaces = computed(() => {
+    const inclusion = this.inclusion();
+    return inclusion === null ? [] : ownExcludedSurfaces(inclusion);
+  });
+  protected readonly excluded = computed(() => this.excludedSurfaces().length > 0);
+  protected readonly exclusionTitle = computed(() => {
+    this.dictionary.loaded();
+    return exclusionTitle(this.i18n, this.excludedSurfaces());
+  });
 }
