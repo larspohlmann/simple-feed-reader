@@ -57,6 +57,8 @@ final class DateLineRecognizerTest extends TestCase
         self::assertFalse($this->recognizer->isDateLine('En 2026, tout a changé'));
         self::assertFalse($this->recognizer->isDateLine('13 novembre 2026 à Paris'));
         self::assertFalse($this->recognizer->isDateLine('noviembre'));
+        self::assertFalse($this->recognizer->isDateLine('13 novembre'));
+        self::assertFalse($this->recognizer->isDateLine('2 de mayo'));
     }
 
     public function testDateLineIsAnchoredForTheNumericForm(): void

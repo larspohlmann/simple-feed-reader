@@ -2,6 +2,7 @@ import en from '../../../../public/i18n/en.json';
 import de from '../../../../public/i18n/de.json';
 import es from '../../../../public/i18n/es.json';
 import fr from '../../../../public/i18n/fr.json';
+import { LANGS } from './language';
 
 const dictionaries: Record<string, unknown> = { en, de, fr, es };
 
@@ -54,17 +55,18 @@ describe('i18n dictionaries', () => {
     expect(blank).toEqual([]);
   });
 
-  it('use only placeholders the English string has', () => {
-    const invented = translations.flatMap(([lang, dictionary]) =>
+  it('keep exactly the placeholders of the English string', () => {
+    const names = (value: unknown): string => [...new Set(placeholders(value))].sort().join();
+    const differing = translations.flatMap(([lang, dictionary]) =>
       [...flatten(dictionary)]
-        .filter(([key, value]) => {
-          const allowed = placeholders(english.get(key));
-
-          return placeholders(value).some((name) => !allowed.includes(name));
-        })
+        .filter(([key, value]) => names(value) !== names(english.get(key)))
         .map(([key, value]) => `${lang}:${key} ${String(value)}`),
     );
 
-    expect(invented).toEqual([]);
+    expect(differing).toEqual([]);
+  });
+
+  it('cover every language the app offers', () => {
+    expect(Object.keys(dictionaries)).toEqual([...LANGS]);
   });
 });
