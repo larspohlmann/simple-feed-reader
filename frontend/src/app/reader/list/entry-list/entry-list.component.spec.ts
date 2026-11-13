@@ -1630,14 +1630,6 @@ describe('EntryListComponent', () => {
       expect(zones).toEqual([false]);
     });
 
-    it('still drive the back-to-top state the template reads', () => {
-      const fixture = mount();
-
-      fakeScroller(fixture, 900).dispatchEvent(new Event('scroll'));
-
-      expect(fixture.componentInstance.scrolling.showToTop()).toBe(true);
-    });
-
     it('request the reading-focus frame outside the Angular zone', () => {
       const requestedInZone: boolean[] = [];
       const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => {
@@ -1784,20 +1776,6 @@ describe('EntryListComponent', () => {
       return { scrollTo };
     }
 
-    it('shows the button only once the list is scrolled well down', () => {
-      const fixture = mount();
-      const element = fixture.nativeElement as HTMLElement;
-      expect(element.querySelector('app-to-top-button')).toBeNull();
-
-      fixture.componentInstance.scrolling.onScroll(900);
-      fixture.detectChanges();
-      expect(element.querySelector('app-to-top-button')).not.toBeNull();
-
-      fixture.componentInstance.scrolling.onScroll(100);
-      fixture.detectChanges();
-      expect(element.querySelector('app-to-top-button')).toBeNull();
-    });
-
     it('renders the corner slot right of the button (#1997)', () => {
       const tb = topBlockTemplate();
       const fixture = mount({ cornerTrailing: tb });
@@ -1808,14 +1786,6 @@ describe('EntryListComponent', () => {
 
       const marker = element.querySelector('.end-corner .top-marker')!;
       expect(marker.parentElement!.previousElementSibling!.tagName).toBe('APP-TO-TOP-BUTTON');
-    });
-
-    it('shows the corner slot without the button (#1945)', () => {
-      const fixture = mount({ cornerTrailing: topBlockTemplate() });
-      const element = fixture.nativeElement as HTMLElement;
-
-      expect(element.querySelector('app-to-top-button')).toBeNull();
-      expect(element.querySelector('.end-corner .top-marker')).not.toBeNull();
     });
 
     it('keeps the corner slot when marking all read empties an unread view (#1945)', () => {
@@ -1859,8 +1829,7 @@ describe('EntryListComponent', () => {
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
     });
 
-    // #98: the button unmounts once showToTop flips false, which would otherwise
-    // drop keyboard focus to <body> and strand a keyboard/screen-reader user.
+    // #98: a keyboard or screen-reader user lands on the title along with the jump.
     it('moves focus to the list title instead of dropping it to the body', () => {
       const fixture = mount();
       stubScroller(fixture);
@@ -1888,19 +1857,6 @@ describe('EntryListComponent', () => {
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
     });
 
-    it('hides the button again when the selection changes', () => {
-      const fixture = mount();
-      fixture.componentInstance.scrolling.onScroll(900);
-      fixture.detectChanges();
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
-      ).not.toBeNull();
-
-      select(fixture, { kind: 'tag', id: 3, unread: true });
-      fixture.detectChanges();
-      expect(fixture.componentInstance.scrolling.showToTop()).toBe(false);
-    });
-
     it('keeps the bar expanded as the smooth scroll travels back up', () => {
       const fixture = mount();
       stubScroller(fixture);
@@ -1926,13 +1882,19 @@ describe('EntryListComponent', () => {
 
     it('holds the mark-read column before the pair, so the column reads top to bottom', () => {
       const fixture = mount();
-      fixture.componentInstance.scrolling.showToTop.set(true);
       fixture.detectChanges();
 
       expect([...cluster(fixture).children].map((child) => child.className)).toEqual([
         'corner-actions',
         'end-corner',
       ]);
+    });
+
+    it('shows back to top and mark above read before any scroll', () => {
+      const element = mount().nativeElement as HTMLElement;
+
+      expect(element.querySelector('.corner-cluster app-to-top-button')).not.toBeNull();
+      expect(element.querySelector('.corner-cluster .mark-above')).not.toBeNull();
     });
 
     it('is right-handed until the account says otherwise', () => {
@@ -1954,11 +1916,8 @@ describe('EntryListComponent', () => {
         '.corner-actions .mark-all',
       );
 
-    it('shows before any scroll, without Mark above read (#1991)', () => {
-      const fixture = mount();
-
-      expect(markAll(fixture)).not.toBeNull();
-      expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+    it('shows before any scroll (#1991)', () => {
+      expect(markAll(mount())).not.toBeNull();
     });
 
     it('is absent from an empty list (#1991)', () => {
@@ -1967,8 +1926,6 @@ describe('EntryListComponent', () => {
 
     it('sits left of Mark above read', () => {
       const fixture = mount();
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
       const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll(
@@ -2068,32 +2025,9 @@ describe('EntryListComponent', () => {
       expect(emitted).toEqual([]);
     });
 
-    it('shows the button only once scrolled down and an entry sits above the fold', () => {
-      const fixture = mount();
-      const element = fixture.nativeElement as HTMLElement;
-      expect(element.querySelector('.mark-above')).toBeNull();
-
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.detectChanges();
-      expect(element.querySelector('.mark-above')).toBeNull();
-
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
-      fixture.detectChanges();
-      expect(element.querySelector('.mark-above')).not.toBeNull();
-    });
-
-    it('hides the button once scrolled back up, even with entries above the fold', () => {
-      const fixture = mount();
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
-      fixture.detectChanges();
-      expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
-    });
-
     it('hides both buttons once the list empties to the caught-up state (#1322)', () => {
       const fixture = mount();
       const element = fixture.nativeElement as HTMLElement;
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
       expect(element.querySelector('app-to-top-button')).not.toBeNull();
       expect(element.querySelector('.mark-above')).not.toBeNull();
@@ -2108,8 +2042,6 @@ describe('EntryListComponent', () => {
     it('emits the collected ids when the rendered button is clicked', () => {
       const fixture = mount();
       stubGeometry(fixture, [measuredEntry('7', 40)]);
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
       const emitted: number[][] = [];
@@ -2172,47 +2104,10 @@ describe('EntryListComponent', () => {
 
     it('labels the button with the playlist_add_check icon', () => {
       const fixture = mount();
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
       const button = (fixture.nativeElement as HTMLElement).querySelector('.mark-above')!;
       expect(button.querySelector('app-icon[name="playlist_add_check"]')).not.toBeNull();
-    });
-
-    it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
-      const fixture = mount();
-      stubGeometry(fixture, [measuredEntry('1', 40)]);
-
-      fixture.componentInstance.scrolling.onScroll(900);
-
-      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(true);
-    });
-
-    it('leaves hasAboveFold false below the back-to-top threshold, without measuring', () => {
-      const fixture = mount();
-      stubGeometry(fixture, [measuredEntry('1', 40)]);
-
-      fixture.componentInstance.scrolling.onScroll(100);
-
-      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
-    });
-
-    it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
-      const fixture = mount();
-      stubGeometry(fixture, [measuredEntry('1', 150)]);
-
-      fixture.componentInstance.scrolling.onScroll(900);
-
-      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
-    });
-
-    it('resets hasAboveFold when the selection changes', () => {
-      const fixture = mount();
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
-      select(fixture, { kind: 'tag', id: 3, unread: true });
-      fixture.detectChanges();
-      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
   });
 
@@ -2637,17 +2532,6 @@ describe('EntryListComponent', () => {
       expect(scroller.scrollTop).toBe(0);
     });
 
-    it('lowers both corner buttons: nothing is above the fold once the boundary is at the top', () => {
-      const fixture = mount({ entries: [entry(1), entry(2)] });
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
-
-      fixture.componentInstance.hideAboveMarked([1]);
-
-      expect(fixture.componentInstance.scrolling.showToTop()).toBe(false);
-      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
-    });
-
     it('drops the divider of a run whose blocks are all hidden (magazine)', () => {
       const fixture = mount({
         entries: [
@@ -2936,8 +2820,6 @@ describe('EntryListComponent', () => {
 
     it('offers no mark-above-read, even scrolled', () => {
       const fixture = mount({ selection: trending(), canMarkAllRead: false });
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
       expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();

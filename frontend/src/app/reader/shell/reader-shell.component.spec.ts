@@ -598,14 +598,10 @@ describe('ReaderShellComponent', () => {
         expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(false);
       });
 
-      it('stays while the to-top button is gone, as after mark all read (#1945)', () => {
+      it('shows before any scroll (#1945)', () => {
         screen.isNarrow.set(true);
-        const fixture = boot();
 
-        expect(
-          (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
-        ).toBeNull();
-        expect(cornerButton(fixture)).not.toBeNull();
+        expect(cornerButton(boot())).not.toBeNull();
       });
 
       it('is absent on a wide layout while the sidebar shows', () => {

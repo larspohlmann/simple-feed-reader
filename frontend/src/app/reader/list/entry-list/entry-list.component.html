@@ -200,9 +200,8 @@
   <app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
 
   @let hasEntries = content.visibleEntryCount() > 0;
-  @let toTopShown = scrolling.showToTop() && hasEntries;
   @let markAllShown = canMarkAllRead() && hasEntries;
-  @let markAboveShown = toTopShown && scrolling.hasAboveFold() && marksAboveFold();
+  @let markAboveShown = hasEntries && marksAboveFold();
   <div class="corner-cluster" [class.left-handed]="leftHanded()">
     @if (markAllShown || markAboveShown) {
       <div class="corner-actions">
@@ -231,7 +230,7 @@
       </div>
     }
     <div class="end-corner">
-      @if (toTopShown) {
+      @if (hasEntries) {
         <app-to-top-button (activate)="scrollToTop()" />
       }
       @if (cornerTrailing(); as trailing) {
