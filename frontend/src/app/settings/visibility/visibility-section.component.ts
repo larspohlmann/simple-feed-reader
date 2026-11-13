@@ -11,8 +11,10 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { SocialNetworkName } from '../../core/social-network';
 import { toggled } from '../../core/toggled-set';
 import {
+  EXCLUSION_SURFACES,
   ExclusionSurface,
   FEED_FLAG_TOGGLES,
+  INCLUSION_FLAG,
   SURFACE_LABEL_KEYS,
   flipFeedFlag,
 } from '../../reader/feed-exclusions';
@@ -26,7 +28,7 @@ import { buildTagTree } from '../../reader/state/subscription-derivations';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { withAncestors } from '../../reader/state/tag-ancestry';
-import { ExclusionCause, INCLUSION_FLAG, inheritedExclusions } from '../../reader/state/visibility';
+import { ExclusionCause, inheritedExclusions } from '../../reader/state/visibility';
 import { VisibilitySwitchesStore } from '../../reader/state/visibility-switches.store';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
@@ -49,8 +51,6 @@ interface VisibilityRow {
   readonly name: string;
   readonly cells: readonly VisibilityCell[];
 }
-
-const SURFACES: readonly ExclusionSurface[] = FEED_FLAG_TOGGLES.map(({ surface }) => surface);
 
 /** Every inclusion switch in one tree-shaped matrix: each box is its row's own switch and saves on tick. */
 @Component({
@@ -83,7 +83,7 @@ export class VisibilitySectionComponent implements OnInit {
   private readonly transloco = inject(TranslocoService);
   private readonly language = toSignal(this.transloco.langChanges$);
 
-  protected readonly surfaces = SURFACES;
+  protected readonly surfaces = EXCLUSION_SURFACES;
   protected readonly surfaceLabelKeys = SURFACE_LABEL_KEYS;
   protected readonly feedKindDescriptors = NETWORK_FEED_KIND_DESCRIPTORS;
   protected readonly loading = this.subscriptions.loading;
@@ -225,7 +225,7 @@ export class VisibilitySectionComponent implements OnInit {
   /** A subtag inherits only an ancestor's switch; its own off box needs no second reason. */
   private tagCells(tag: TagDto): VisibilityCell[] {
     const ancestors = withAncestors(tag, this.tags.tagsById()).slice(1);
-    return SURFACES.map((surface) => {
+    return EXCLUSION_SURFACES.map((surface) => {
       const flag = INCLUSION_FLAG[surface];
       const checked = tag[flag];
       const inheritedFrom = checked
@@ -237,7 +237,7 @@ export class VisibilitySectionComponent implements OnInit {
 
   private feedCells(subscription: SubscriptionDto): VisibilityCell[] {
     const switches = this.visibilitySwitches();
-    return SURFACES.map((surface) => {
+    return EXCLUSION_SURFACES.map((surface) => {
       const checked = subscription[INCLUSION_FLAG[surface]];
       const causes = checked ? inheritedExclusions(subscription, surface, switches) : [];
       return { surface, checked, inheritedFrom: causes.map((cause) => this.causeName(cause)) };

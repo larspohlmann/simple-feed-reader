@@ -1,6 +1,6 @@
 import { SocialNetworkName } from '../../core/social-network';
-import { ExclusionSurface } from '../feed-exclusions';
-import { SubscriptionDto, TagDto, TagInclusion } from '../models';
+import { ExclusionSurface, INCLUSION_FLAG } from '../feed-exclusions';
+import { SubscriptionDto, TagDto } from '../models';
 import { tagsById, withAncestors } from './tag-ancestry';
 
 /** What, besides its own flag, keeps a feed out of a surface. */
@@ -12,13 +12,6 @@ export interface VisibilitySwitches {
   readonly tags: readonly TagDto[];
   readonly excludedNetworks: Readonly<Record<ExclusionSurface, ReadonlySet<SocialNetworkName>>>;
 }
-
-export const INCLUSION_FLAG: Readonly<Record<ExclusionSurface, keyof TagInclusion>> = {
-  allItems: 'includeInAllItems',
-  forYou: 'includeInForYou',
-  savedSearches: 'includeInSavedSearches',
-  trending: 'includeInTrending',
-};
 
 /** The network first, then each carried tag followed by its ancestors, every switched-off one once. */
 export function inheritedExclusions(

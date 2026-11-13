@@ -17,6 +17,7 @@ import {
   ExclusionSurface,
   FEED_FLAG_TOGGLES,
   FeedFlagToggle,
+  INCLUSION_FLAG,
   flipFeedFlag,
 } from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
@@ -25,7 +26,6 @@ import { SocialSection } from '../../state/social-sections';
 import { siblingIdsOf } from '../../state/subscription-derivations';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
-import { INCLUSION_FLAG } from '../../state/visibility';
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
  *  on the sidebar, so all rows share one open menu and a late sheet choice dies
