@@ -94,4 +94,14 @@ final class ReadingSettingsTest extends TestCase
 
         self::assertSame($user, new ReadingSettings($user)->getUser());
     }
+
+    public function testAChangeNamingNothingIsEmpty(): void
+    {
+        self::assertTrue((new ReadingSettingsChange())->isEmpty());
+    }
+
+    public function testAChangeNamingASettingIsNotEmpty(): void
+    {
+        self::assertFalse((new ReadingSettingsChange(handedness: Handedness::Left))->isEmpty());
+    }
 }

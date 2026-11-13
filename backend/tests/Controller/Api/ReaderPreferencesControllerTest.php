@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
-use App\Enum\Handedness;
-use App\Enum\MagazineStyle;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StoredUserSettings;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -15,13 +13,12 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class ReaderPreferencesControllerTest extends ApiTestCase
 {
-    private function trendingEnabled(KernelBrowser $client): mixed
-    {
-        $preferences = $this->payload($client)['preferences'];
-        self::assertIsArray($preferences);
-
-        return $preferences['trendingEnabled'];
-    }
+    private const array READING_DEFAULTS = [
+        'scrapeFallbackEnabled' => false,
+        'magazineStyle' => 'boxed',
+        'handedness' => 'right',
+        'trendingEnabled' => true,
+    ];
 
     private function patchScope(KernelBrowser $client, string $body): void
     {
@@ -74,12 +71,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $user = $this->factory()->create('prefs-enable@example.com');
         $this->authenticate($client, $user);
 
-        $client->request(
-            'PATCH',
-            '/api/me/preferences',
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['scrapeFallbackEnabled' => true], \JSON_THROW_ON_ERROR),
-        );
+        $this->patchPreferences($client, '{"scrapeFallbackEnabled":true}');
 
         self::assertResponseIsSuccessful();
         self::assertSame(
@@ -109,29 +101,6 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         self::assertTrue(StoredUserSettings::reading($this->entityManager(), $reloaded)->isScrapeFallbackEnabled());
     }
 
-    public function testANonBooleanPreferenceIsRejected(): void
-    {
-        $client = self::createClient();
-        $user = $this->factory()->create('prefs-invalid@example.com');
-        StoredUserSettings::reading($this->entityManager(), $user)->setScrapeFallbackEnabled(true);
-        $this->entityManager()->flush();
-        $this->authenticate($client, $user);
-
-        $client->request(
-            'PATCH',
-            '/api/me/preferences',
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['scrapeFallbackEnabled' => 'yes'], \JSON_THROW_ON_ERROR),
-        );
-
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-
-        $this->entityManager()->clear();
-        $unchanged = $this->users()->find($user->getId());
-        self::assertInstanceOf(User::class, $unchanged);
-        self::assertTrue(StoredUserSettings::reading($this->entityManager(), $unchanged)->isScrapeFallbackEnabled());
-    }
-
     /** @return iterable<string, array{string, mixed}> */
     public static function readingSettingChangedAlone(): iterable
     {
@@ -146,17 +115,10 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->signIn($client, 'prefs-alone-' . $key . '@example.test');
-        $defaults = [
-            'scrapeFallbackEnabled' => false,
-            'magazineStyle' => 'boxed',
-            'handedness' => 'right',
-            'trendingEnabled' => true,
-        ];
-
         $this->patchPreferences($client, json_encode([$key => $value], \JSON_THROW_ON_ERROR));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(array_replace($defaults, [$key => $value]), $this->readingSettings($client));
+        self::assertSame(array_replace(self::READING_DEFAULTS, [$key => $value]), $this->readingSettings($client));
     }
 
     public function testTwoSettingsChangeInOneWrite(): void
@@ -168,12 +130,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            [
-                'scrapeFallbackEnabled' => false,
-                'magazineStyle' => 'boxed',
-                'handedness' => 'left',
-                'trendingEnabled' => false,
-            ],
+            array_replace(self::READING_DEFAULTS, ['handedness' => 'left', 'trendingEnabled' => false]),
             $this->readingSettings($client),
         );
     }
@@ -209,25 +166,25 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         self::assertSame('right', $this->readingSettings($client)['handedness']);
     }
 
-    public function testAnUnknownValueIsRejected(): void
+    /** @return iterable<string, array{string}> */
+    public static function rejectedReadingSettingBodies(): iterable
     {
-        $client = self::createClient();
-        $this->signIn($client, 'prefs-unknown-value@example.test');
-
-        $this->patchPreferences($client, '{"magazineStyle":"cards"}');
-
-        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        yield 'a string for scrape fallback' => ['{"scrapeFallbackEnabled":"yes"}'];
+        yield 'a string for trending' => ['{"trendingEnabled":"false"}'];
+        yield 'an unknown magazine style' => ['{"magazineStyle":"cards"}'];
+        yield 'an unknown handedness' => ['{"handedness":"both"}'];
     }
 
-    public function testABooleanAsAStringIsRejected(): void
+    #[DataProvider('rejectedReadingSettingBodies')]
+    public function testAnInvalidValueIsRejectedAndNothingChanges(string $body): void
     {
         $client = self::createClient();
-        $this->signIn($client, 'prefs-string-bool@example.test');
+        $this->signIn($client, 'prefs-invalid-value-' . md5($body) . '@example.test');
 
-        $this->patchPreferences($client, '{"trendingEnabled":"false"}');
+        $this->patchPreferences($client, $body);
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertTrue($this->readingSettings($client)['trendingEnabled']);
+        self::assertSame(self::READING_DEFAULTS, $this->readingSettings($client));
     }
 
     public function testASignedOutPreferencesWriteIsRejected(): void
@@ -244,26 +201,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $client = self::createClient();
         $this->signIn($client, 'trending-by-default@example.test');
 
-        $client->request('GET', '/api/me');
-
-        self::assertResponseIsSuccessful();
-        self::assertTrue($this->trendingEnabled($client));
-    }
-
-    public function testSwitchingTrendingOffPersistsIt(): void
-    {
-        $client = self::createClient();
-        $this->signIn($client, 'no-trending@example.test');
-
-        $this->patchPreferences($client, '{"trendingEnabled":false}');
-
-        self::assertResponseIsSuccessful();
-        self::assertFalse($this->trendingEnabled($client));
-
-        $this->entityManager()->clear();
-        $reloaded = $this->users()->findOneBy(['email' => 'no-trending@example.test']);
-        self::assertNotNull($reloaded);
-        self::assertFalse(StoredUserSettings::reading($this->entityManager(), $reloaded)->isTrendingEnabled());
+        self::assertTrue($this->readingSettings($client)['trendingEnabled']);
     }
 
     public function testSwitchingTrendingBackOnPersistsIt(): void
@@ -275,32 +213,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $this->patchPreferences($client, '{"trendingEnabled":true}');
 
         self::assertResponseIsSuccessful();
-        self::assertTrue($this->trendingEnabled($client));
-    }
-
-    public function testAnUnknownHandednessIsRejected(): void
-    {
-        $client = self::createClient();
-        $this->signIn($client, 'ambidextrous@example.test');
-
-        $this->patchPreferences($client, '{"handedness":"both"}');
-
-        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
-    }
-
-    public function testChangingTheStyleAndHandednessPersistsThem(): void
-    {
-        $client = self::createClient();
-        $this->signIn($client, 'airy-left@example.test');
-
-        $this->patchPreferences($client, '{"magazineStyle":"airy","handedness":"left"}');
-
-        $this->entityManager()->clear();
-        $reloaded = $this->users()->findOneBy(['email' => 'airy-left@example.test']);
-        self::assertNotNull($reloaded);
-        $stored = StoredUserSettings::reading($this->entityManager(), $reloaded);
-        self::assertSame(MagazineStyle::Airy, $stored->getMagazineStyle());
-        self::assertSame(Handedness::Left, $stored->getHandedness());
+        self::assertTrue($this->readingSettings($client)['trendingEnabled']);
     }
 
     /** @return iterable<string, array{string, string}> */

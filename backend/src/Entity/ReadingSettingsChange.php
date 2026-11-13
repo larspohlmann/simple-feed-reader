@@ -17,4 +17,12 @@ final readonly class ReadingSettingsChange
         public ?bool $trendingEnabled = null,
     ) {
     }
+
+    public function isEmpty(): bool
+    {
+        return null === $this->scrapeFallbackEnabled
+            && null === $this->magazineStyle
+            && null === $this->handedness
+            && null === $this->trendingEnabled;
+    }
 }

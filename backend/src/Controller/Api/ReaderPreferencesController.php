@@ -35,7 +35,6 @@ final readonly class ReaderPreferencesController
         return new JsonResponse($this->profile->of($user));
     }
 
-    /** Its own PATCH for the reason updatePreferences() gives. */
     #[Route('/api/me/sharing', name: 'api_me_update_sharing', methods: ['PATCH'])]
     public function updateSharing(
         #[CurrentUser] User $user,
@@ -46,7 +45,6 @@ final readonly class ReaderPreferencesController
         return new JsonResponse($this->profile->of($user));
     }
 
-    /** Its own PATCH for the reason updatePreferences() gives. */
     #[Route('/api/me/feed-directory-scope', name: 'api_me_update_feed_directory_scope', methods: ['PATCH'])]
     public function updateFeedDirectoryScope(
         #[CurrentUser] User $user,

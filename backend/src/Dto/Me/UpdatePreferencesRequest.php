@@ -22,10 +22,7 @@ final readonly class UpdatePreferencesRequest
     #[Assert\IsTrue(message: 'Name at least one setting to change.')]
     public function hasSettingToChange(): bool
     {
-        return null !== $this->scrapeFallbackEnabled
-            || null !== $this->magazineStyle
-            || null !== $this->handedness
-            || null !== $this->trendingEnabled;
+        return !$this->toChange()->isEmpty();
     }
 
     public function toChange(): ReadingSettingsChange
