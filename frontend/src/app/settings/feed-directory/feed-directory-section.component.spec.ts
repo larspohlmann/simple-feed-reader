@@ -288,7 +288,7 @@ describe('FeedDirectorySectionComponent', () => {
     await settle();
 
     expect(text(page.querySelector('.empty'))).toBe('No sites match these filters.');
-    expect(page.querySelector('cdk-virtual-scroll-viewport')).toBeNull();
+    expect(page.querySelector('app-feed-directory-row')).toBeNull();
   });
 
   it('switches between channels and podcasts', async () => {

@@ -159,6 +159,10 @@ export class FeedDirectorySectionComponent {
     this.store.country.set(code === ALL_COUNTRIES ? null : code);
   }
 
+  protected changeScope(): void {
+    this.dialog.open(FeedDirectoryScopeDialogComponent, { panelClass: 'app-dialog' });
+  }
+
   private watchMore(sentinel: HTMLElement | undefined): void {
     this.moreWatcher?.disconnect();
     if (!sentinel) return;
@@ -169,10 +173,6 @@ export class FeedDirectorySectionComponent {
       { rootMargin: prefetchMargin(window.innerHeight) },
     );
     this.moreWatcher.observe(sentinel);
-  }
-
-  protected changeScope(): void {
-    this.dialog.open(FeedDirectoryScopeDialogComponent, { panelClass: 'app-dialog' });
   }
 }
 
