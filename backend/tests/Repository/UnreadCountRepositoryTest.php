@@ -298,8 +298,6 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($homeFeed, 'home-2', null);
         $this->unreadEntry($profileFeed, 'profile-1', null);
 
-        $repository = $this->repository();
-
         self::assertSame(1, $this->perNetworkProfiles($user)[SocialNetwork::Bluesky->value] ?? 0);
         self::assertSame(3, $this->perNetwork($user)[SocialNetwork::Bluesky->value] ?? 0);
     }
