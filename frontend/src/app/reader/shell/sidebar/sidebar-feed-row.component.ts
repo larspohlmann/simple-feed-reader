@@ -21,13 +21,13 @@ import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { MenuCheckboxComponent } from '../../../shared/menu-checkbox/menu-checkbox.component';
 
-/** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
- *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
 const PRIVATE_FEED_MARKED_SURFACES: ReadonlySet<ExclusionSurface> = new Set([
   'savedSearches',
   'trending',
 ]);
 
+/** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
+ *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
 @Component({
   selector: 'app-sidebar-feed-row',
   imports: [

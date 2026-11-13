@@ -117,7 +117,7 @@ export class SidebarRowActions {
       });
   }
 
-  /** The tag's three switches, for its sheet and its menu alike; each reads the live tag. */
+  /** The tag's surface switches, for its sheet and its menu alike; each reads the live tag. */
   tagSurfaceChecks(tag: TagDto): ActionSheetCheck[] {
     return FEED_FLAG_TOGGLES.map(({ surface, includeKey }) => {
       const checked = computed(() => this.liveTag(tag)[INCLUSION_FLAG[surface]]);
