@@ -190,6 +190,40 @@
 - [ ] **Step 2:** `docker compose exec -T frontend npm test -- src/app/settings` → FAIL. **Step 3:** Implement. **Step 4:** → PASS.
 - [ ] **Step 5: Commit** `feat(#2202): Settings → Visibility shows every inclusion switch in one matrix`
 
+### Task 11: Trending as a fourth surface — backend
+
+Lars (2026-11-13): "Add trending to the matrix and menus." Trending is a fourth surface, with the same three switch levels (feed, tag, network). It is included by default at every level, and exclusion wins.
+
+**Files:**
+- Modify: `Enum` `InclusionSurface` (`Trending`) and `NetworkExclusionSurface` (`Trending = 'trending'`).
+- Modify: `Entity/Subscription.php` (`include_in_trending`, default true) and `Entity/Tag.php` (same).
+- Modify: the subscription inclusion model, single PATCH, bulk PATCH, `SubscriptionJson`, `TagJson`, tag PATCH, backup lines and their declarations.
+- Create: migration `Version20261113120000.php`.
+- Create: `Controller/Api/TrendingNetworksController.php` (`/api/trending/excluded-networks`, same shape as All items).
+- Modify: the per-reader Trending SQL in `Repository/TrendingStoryRepository.php`, plus anything else that counts the reader's Trending stories (the unopened badge in `TrendingStories`). Every `JOIN subscription … AND user_id = :user` that decides what the reader sees or counts gains "this subscription is in Trending".
+- Create: a native-SQL fragment in `src/Repository`, because these queries are DBAL, not DQL. It encodes the same rule as the DQL helpers: own flag, then network not excluded, then no tag on the lineage switched off. Keep the rule in one place per query language and name it after its job.
+- The build-time grouping (`TrendingGrouping::stories`, raw feed counts) stays unchanged. Only read time filters, as #2056 settled.
+
+- [ ] **Step 1: Failing tests.**
+  - A story whose only sources are excluded feeds is not shown and not counted in the badge.
+  - The excluded feed's source no longer counts toward `outlet_count` or the coverage threshold.
+  - An excluded earlier copy no longer suppresses the included later copy (`NO_EARLIER_COPY`).
+  - Tag off, subtag under an off parent, and network off each exclude the feed.
+  - The PATCH, bulk, tag and network endpoints round-trip, and the backup keeps the flags.
+- [ ] **Step 2:** → FAIL. **Step 3:** Implement. **Step 4:** Full SQLite and MySQL suites, cs, stan and md all pass. Migrate from empty and validate the schema, then apply the migration to the live Docker DB.
+- [ ] **Step 5: Commit** `feat(#2202): switch feeds, tags and networks out of Trending`
+
+### Task 12: Trending in the menus and the matrix — frontend
+
+- `ExclusionSurface` gains `'trending'`.
+- `FEED_FLAG_TOGGLES` gains a fourth entry with `includeKey` `reader.includeInTrending` ("Show in Trending" / "In Trends anzeigen"; check `de.json` for the existing Trending term). `SubscriptionDto`, `TagDto` and the factories gain `includeInTrending`.
+- Add `TrendingNetworksStore` on `NetworkExclusionsStore` with surface `'trending'`, loaded with the others.
+- `VisibilitySwitches` gains the Trending set, and `visibility.ts` handles the surface.
+- The sidebar network/tag/feed menus and sheets, the Organise row and the Visibility matrix all render from the surface lists, so each gains the fourth checkbox and column. Check the 375px matrix with 4 columns.
+- `exclusionTitle` and the surface labels gain Trending.
+- After a switch, reload the Trending list and badge if they are open or counted.
+- [ ] Failing specs for each: four checks in each menu, four columns, the store round trip, and visibility causes for Trending. Then implement, `npm run check`, and commit `feat(#2202): Trending in the inclusion menus and the matrix`.
+
 ### Task 10: Dead keys, gates, live check
 
 - [ ] **Step 1:** Delete `reader.excludeFromAllItems`, `excludeFromForYou`, `excludeFromSavedSearches`, `includeNetworkInSavedSearches` and `excludeNetworkFromSavedSearches` from `en.json`/`de.json`, after `grep` shows no reference.
