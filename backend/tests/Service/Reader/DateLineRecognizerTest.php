@@ -46,8 +46,10 @@ final class DateLineRecognizerTest extends TestCase
         self::assertTrue($this->recognizer->isDateLine('13 novembre 2026'));
         self::assertTrue($this->recognizer->isDateLine('vendredi 13 novembre 2026'));
         self::assertTrue($this->recognizer->isDateLine('1 août 2026'));
+        self::assertTrue($this->recognizer->isDateLine('13 nov. 2026'));
         self::assertTrue($this->recognizer->isDateLine('13 de noviembre de 2026'));
         self::assertTrue($this->recognizer->isDateLine('viernes, 13 de noviembre de 2026'));
+        self::assertTrue($this->recognizer->isDateLine('1 ago 2026'));
     }
 
     public function testDateLineRejectsFrenchAndSpanishSentences(): void
