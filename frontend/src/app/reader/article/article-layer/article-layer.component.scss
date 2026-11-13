@@ -72,9 +72,7 @@
 
 .mini,
 .bar,
-.corner-actions,
-.dock,
-.end-corner {
+.dock {
   pointer-events: auto;
 }
 
@@ -102,13 +100,10 @@
   color: var(--accent);
 }
 
-/* The corner buttons, pinned to the pane's corners, so they sit clear of the audio player. */
-.corner-actions {
-  @include circle.corner-anchor(left, 20);
-}
-
-.end-corner {
-  @include circle.corner-anchor(right, 20);
+/* Pinned to the pane, so the discs sit clear of the audio player. In the DOM the actions
+   run share, save, favourite; stacked on touch they read favourite, save, share. */
+.corner-cluster {
+  @include circle.corner-cluster(20, column-reverse);
 }
 
 /* A selection's bar, across the pane's foot and over the corner discs while it lasts. */

@@ -33,6 +33,7 @@ import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
 import { prefetchMargin } from '../paging';
+import { HandednessService } from '../../../core/preferences/handedness.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { withHiddenDuplicates } from './above-fold';
 import { ListAboveFold } from './list-above-fold';
@@ -200,6 +201,8 @@ export class EntryListComponent implements OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly autoplay = inject(ListAutoplayCoordinator);
   private readonly magazineStyle = inject(MagazineStyleService);
+  private readonly handedness = inject(HandednessService);
+  protected readonly leftHanded = computed(() => this.handedness.hand() === 'left');
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly nearViewport = inject(NearViewportMedia);

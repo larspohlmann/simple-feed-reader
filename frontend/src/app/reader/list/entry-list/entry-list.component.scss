@@ -423,23 +423,12 @@ app-loading-overlay {
 
 /* Anchored to the tail frame, so in split view they stay in the list column; the
    frame sits below `.article-overlay`'s z-index: 5, which covers them under an article. */
-.corner-actions {
-  @include circle.corner-anchor(left, 4);
+.corner-cluster {
+  @include circle.corner-cluster(4);
 }
 
-/* The slot can show without the to-top disc, so only its children take taps. */
-.end-corner {
-  @include circle.corner-anchor(right, 4);
-
-  pointer-events: none;
-
-  > * {
-    pointer-events: auto;
-  }
-}
-
-/* The filler comes from another component's template, out of reach of the rule
-   above; it inherits the taps from this list-owned box instead (#1952). */
+/* The filler comes from another component's template; it inherits the taps from the
+   list-owned group around it (#1952). */
 .corner-trailing {
   display: contents;
 }
@@ -451,8 +440,15 @@ app-loading-overlay {
 /* An open playlist can squeeze the list to a strip; there the corner buttons
    would ride up over the list header, and the player wins. */
 @container entry-list (height < #{bp.$container-list-corner-buttons}) {
-  .end-corner,
-  .corner-actions {
+  .corner-cluster {
     display: none;
+  }
+}
+
+@container entry-list (height < #{bp.$container-list-corner-cluster}) {
+  @media (pointer: coarse) {
+    .corner-cluster {
+      display: none;
+    }
   }
 }

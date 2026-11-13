@@ -54,7 +54,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--control-h` | `40px` | the height of a button, input or select |
 | `--bar-h` | `56px` | **fallback** for the floating app bar's height; also the wide list toolbar band's height (#1749) |
 | `--tap-target` | `44px` | the documented minimum touch target |
-| `--corner-button-size` | `36px` | the floating corner buttons' disc (back to top, the list's mark-read pair); on a coarse pointer the hit area stays `--tap-target` (#1912) |
+| `--corner-button-size` | `36px` | the disc of every button in the corner cluster (below); on a coarse pointer the hit area stays `--tap-target` (#1912) |
 | `--focus-ring` | `1px solid` accent at 60%; `none` on a coarse pointer | the `outline` of every `:focus-visible` rule (#1723) |
 | `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
@@ -1882,6 +1882,26 @@ padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar
 ```
 
 One value (`--bar-gap`) tunes the gap everywhere.
+
+### Corner cluster (#2203)
+
+The list and the article float their discs in one `.corner-cluster`
+(`circle.corner-cluster` in `_corner-circle-button.scss`): the actions
+(`.corner-actions`) and the pair (`.end-corner`: back to top, then the outer disc —
+the list's sidebar, the article's back).
+
+- **Fine pointer:** the actions sit bottom-left, the pair bottom-right.
+- **Coarse pointer:** everything stacks in one bottom corner, within thumb reach:
+  the actions in a column over the pair's outer disc, `--space-2` inside a group,
+  `--space-5` between the column and the pair. The list's column reads mark all read,
+  mark above as read; the article's favourite, save, share.
+- **Handedness** (Settings → Preferences, per account): right puts the stack in the
+  bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
+  pointer ignores it.
+- The discs are their tone at 40% over a frost, so the rows show through.
+- On touch the list hides the cluster below `18rem` of list height
+  (`$container-list-corner-cluster`), where the stack would ride over the header;
+  with a fine pointer the limit stays `13rem`.
 
 ### Overlay
 

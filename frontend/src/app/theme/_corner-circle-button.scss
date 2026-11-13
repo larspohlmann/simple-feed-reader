@@ -9,11 +9,9 @@
   border-radius: 50%;
 
   /* A mild frost, not a full-glass panel: the button keeps its tone
-     (--corner-button-tone, the accent by default), so it can only thin so far.
-     65% is where the tone still looks like itself while the blur gives a
-     gentle frost behind rows. */
+     (--corner-button-tone, the accent by default) at 40%, where the rows show through. */
   background: var(--corner-button-tone, var(--accent));
-  background: color-mix(in srgb, var(--corner-button-tone, var(--accent)) 65%, transparent);
+  background: color-mix(in srgb, var(--corner-button-tone, var(--accent)) 40%, transparent);
   backdrop-filter: blur(12px) saturate(1.4);
   color: var(--on-accent);
   cursor: pointer;
@@ -66,4 +64,51 @@
   z-index: $layer;
   display: flex;
   gap: var(--space-2);
+}
+
+/* The actions and the pair: on a fine pointer the actions take the bottom-left corner and the
+   pair the bottom-right; on touch all of it stacks in the hand's corner (#2203). */
+@mixin corner-cluster($layer, $actions-flow: column) {
+  display: contents;
+  pointer-events: none;
+
+  .corner-actions,
+  .end-corner {
+    pointer-events: auto;
+  }
+
+  .corner-actions {
+    @include corner-anchor(left, $layer);
+  }
+
+  .end-corner {
+    @include corner-anchor(right, $layer);
+  }
+
+  @media (pointer: coarse) {
+    @include corner-anchor(right, $layer);
+
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-5);
+
+    .corner-actions,
+    .end-corner {
+      position: static;
+    }
+
+    .corner-actions {
+      flex-direction: $actions-flow;
+    }
+
+    &.left-handed {
+      right: auto;
+      left: var(--space-5);
+      align-items: flex-start;
+
+      .end-corner {
+        flex-direction: row-reverse;
+      }
+    }
+  }
 }

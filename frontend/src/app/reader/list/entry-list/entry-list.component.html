@@ -201,43 +201,44 @@
 
   @let hasEntries = content.visibleEntryCount() > 0;
   @let toTopShown = scrolling.showToTop() && hasEntries;
-  @if (toTopShown || cornerTrailing()) {
-    <div class="end-corner">
-      @if (toTopShown) {
-        <app-to-top-button (activate)="scrollToTop()" />
-      }
-      @if (cornerTrailing(); as trailing) {
-        <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
-      }
-    </div>
-  }
-
   @let markAllShown = canMarkAllRead() && hasEntries;
   @let markAboveShown = toTopShown && scrolling.hasAboveFold() && marksAboveFold();
-  @if (markAllShown || markAboveShown) {
-    <div class="corner-actions">
-      @if (markAllShown) {
-        <button
-          type="button"
-          class="mark-all"
-          (click)="markAllRead.emit()"
-          [attr.aria-label]="'reader.markAllRead' | transloco"
-          [attr.title]="'reader.markAllRead' | transloco"
-        >
-          <app-icon name="done_all" size="dense" />
-        </button>
-      }
-      @if (markAboveShown) {
-        <button
-          type="button"
-          class="mark-above"
-          (click)="onMarkAboveRead()"
-          [attr.aria-label]="'reader.markAboveRead' | transloco"
-          [attr.title]="'reader.markAboveRead' | transloco"
-        >
-          <app-icon name="playlist_add_check" size="dense" />
-        </button>
-      }
-    </div>
-  }
+  <div class="corner-cluster" [class.left-handed]="leftHanded()">
+    @if (markAllShown || markAboveShown) {
+      <div class="corner-actions">
+        @if (markAllShown) {
+          <button
+            type="button"
+            class="mark-all"
+            (click)="markAllRead.emit()"
+            [attr.aria-label]="'reader.markAllRead' | transloco"
+            [attr.title]="'reader.markAllRead' | transloco"
+          >
+            <app-icon name="done_all" size="dense" />
+          </button>
+        }
+        @if (markAboveShown) {
+          <button
+            type="button"
+            class="mark-above"
+            (click)="onMarkAboveRead()"
+            [attr.aria-label]="'reader.markAboveRead' | transloco"
+            [attr.title]="'reader.markAboveRead' | transloco"
+          >
+            <app-icon name="playlist_add_check" size="dense" />
+          </button>
+        }
+      </div>
+    }
+    @if (toTopShown || cornerTrailing()) {
+      <div class="end-corner">
+        @if (toTopShown) {
+          <app-to-top-button (activate)="scrollToTop()" />
+        }
+        @if (cornerTrailing(); as trailing) {
+          <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
+        }
+      </div>
+    }
+  </div>
 </div>

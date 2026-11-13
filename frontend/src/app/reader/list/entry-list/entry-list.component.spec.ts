@@ -17,6 +17,7 @@ import { makeSubscription } from '../../testing/subscription.factory';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { SourceGroupComponent } from '../magazine/source-group.component';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
+import { HandednessService } from '../../../core/preferences/handedness.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
 import { LayoutService } from '../../layout.service';
@@ -1916,6 +1917,34 @@ describe('EntryListComponent', () => {
       memory.save.mockClear();
       expect(() => fixture.componentInstance.scrollToTop()).not.toThrow();
       expect(memory.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the corner cluster (#2203)', () => {
+    const cluster = (fixture: ReturnType<typeof mount>) =>
+      (fixture.nativeElement as HTMLElement).querySelector('.corner-cluster')!;
+
+    it('holds the mark-read column before the pair, so the column reads top to bottom', () => {
+      const fixture = mount();
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.detectChanges();
+
+      expect([...cluster(fixture).children].map((child) => child.className)).toEqual([
+        'corner-actions',
+        'end-corner',
+      ]);
+    });
+
+    it('is right-handed until the account says otherwise', () => {
+      expect(cluster(mount()).classList).not.toContain('left-handed');
+    });
+
+    it('mirrors to the left for a left-handed account', () => {
+      const fixture = mount();
+      TestBed.inject(HandednessService).set('left');
+      fixture.detectChanges();
+
+      expect(cluster(fixture).classList).toContain('left-handed');
     });
   });
 
