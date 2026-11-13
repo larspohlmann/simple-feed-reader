@@ -19,6 +19,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { formatLongDateTime } from '../../reader/format';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
+import { FEED_FLAG_TOGGLES } from '../../reader/feed-exclusions';
 
 const SUBSCRIPTION = makeSubscription({
   id: 7,
@@ -212,59 +213,24 @@ describe('OrganiseFeedRowComponent', () => {
     expect(sheetOpen).not.toHaveBeenCalled();
   });
 
-  it('emits toggleAllItems from the fine-pointer popover and keeps it open', async () => {
-    await render();
-    const toggled = jest.fn();
-    fixture.componentInstance.toggleAllItems.subscribe(toggled);
+  it.each(FEED_FLAG_TOGGLES)(
+    'emits the $surface switch from the fine-pointer popover and keeps it open',
+    async (toggle) => {
+      await render();
+      const toggled = jest.fn();
+      fixture.componentInstance.flagToggled.subscribe(toggled);
 
-    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
-    fixture.detectChanges();
-    fixture.debugElement
-      .query(By.css('[data-test="toggle-all-items"] input'))
-      .nativeElement.click();
-    fixture.detectChanges();
+      fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
+      fixture.detectChanges();
+      fixture.debugElement
+        .query(By.css(`[data-test="${toggle.dataTest}"] input`))
+        .nativeElement.click();
+      fixture.detectChanges();
 
-    expect(toggled).toHaveBeenCalled();
-    expect(fixture.debugElement.query(By.css('.pop'))).not.toBeNull();
-  });
-
-  it('emits toggleForYou from the fine-pointer popover', async () => {
-    await render();
-    const toggled = jest.fn();
-    fixture.componentInstance.toggleForYou.subscribe(toggled);
-
-    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
-    fixture.detectChanges();
-    fixture.debugElement.query(By.css('[data-test="toggle-for-you"] input')).nativeElement.click();
-
-    expect(toggled).toHaveBeenCalled();
-  });
-
-  it('emits toggleSavedSearches from the fine-pointer popover', async () => {
-    await render();
-    const toggled = jest.fn();
-    fixture.componentInstance.toggleSavedSearches.subscribe(toggled);
-
-    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
-    fixture.detectChanges();
-    fixture.debugElement
-      .query(By.css('[data-test="toggle-saved-searches"] input'))
-      .nativeElement.click();
-
-    expect(toggled).toHaveBeenCalled();
-  });
-
-  it('emits toggleTrending from the fine-pointer popover', async () => {
-    await render();
-    const toggled = jest.fn();
-    fixture.componentInstance.toggleTrending.subscribe(toggled);
-
-    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
-    fixture.detectChanges();
-    fixture.debugElement.query(By.css('[data-test="toggle-trending"] input')).nativeElement.click();
-
-    expect(toggled).toHaveBeenCalled();
-  });
+      expect(toggled).toHaveBeenCalledWith(toggle);
+      expect(fixture.debugElement.query(By.css('.pop'))).not.toBeNull();
+    },
+  );
 
   it('emits unsubscribe from the fine-pointer popover', async () => {
     await render();
@@ -323,7 +289,7 @@ describe('OrganiseFeedRowComponent', () => {
     coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: true });
     coarse.detectChanges();
     const toggled = jest.fn();
-    coarse.componentInstance.toggleForYou.subscribe(toggled);
+    coarse.componentInstance.flagToggled.subscribe(toggled);
 
     coarse.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
     const checks = (
@@ -336,6 +302,6 @@ describe('OrganiseFeedRowComponent', () => {
     coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: false });
     expect(forYou?.checked()).toBe(false);
     forYou?.toggle();
-    expect(toggled).toHaveBeenCalled();
+    expect(toggled).toHaveBeenCalledWith(expect.objectContaining({ surface: 'forYou' }));
   });
 });

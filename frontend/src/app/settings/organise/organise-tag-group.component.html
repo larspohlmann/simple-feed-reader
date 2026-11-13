@@ -122,10 +122,7 @@
             (moveUp)="moveFeed(s, -1)"
             (moveDown)="moveFeed(s, 1)"
             (edit)="manage.editSubscription(s)"
-            (toggleAllItems)="manage.setIncludeInAllItems(s, !s.includeInAllItems)"
-            (toggleForYou)="manage.setIncludeInForYou(s, !s.includeInForYou)"
-            (toggleSavedSearches)="manage.setIncludeInSavedSearches(s, !s.includeInSavedSearches)"
-            (toggleTrending)="manage.setIncludeInTrending(s, !s.includeInTrending)"
+            (flagToggled)="flipFlag($event, s)"
             (unsubscribe)="manage.unsubscribe(s)"
           />
         </div>

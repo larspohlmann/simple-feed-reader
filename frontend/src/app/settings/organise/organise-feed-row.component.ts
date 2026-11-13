@@ -6,7 +6,6 @@ import {
   inject,
   input,
   output,
-  OutputEmitterRef,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -29,7 +28,6 @@ import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
 import {
-  ExclusionSurface,
   FEED_FLAG_TOGGLES,
   FeedFlagToggle,
   ownExcludedSurfaces,
@@ -81,18 +79,9 @@ export class OrganiseFeedRowComponent {
   readonly moveUp = output<void>();
   readonly moveDown = output<void>();
   readonly edit = output<void>();
-  readonly toggleAllItems = output<void>();
-  readonly toggleForYou = output<void>();
-  readonly toggleSavedSearches = output<void>();
-  readonly toggleTrending = output<void>();
+  readonly flagToggled = output<FeedFlagToggle>();
   readonly unsubscribe = output<void>();
 
-  private readonly flagToggled: Readonly<Record<ExclusionSurface, OutputEmitterRef<void>>> = {
-    allItems: this.toggleAllItems,
-    forYou: this.toggleForYou,
-    savedSearches: this.toggleSavedSearches,
-    trending: this.toggleTrending,
-  };
   protected readonly feedFlags = FEED_FLAG_TOGGLES;
 
   protected readonly screen = inject(LayoutService);
@@ -115,7 +104,7 @@ export class OrganiseFeedRowComponent {
   );
 
   protected toggleFlag(toggle: FeedFlagToggle): void {
-    this.flagToggled[toggle.surface].emit();
+    this.flagToggled.emit(toggle);
   }
 
   protected toggleMenu(): void {

@@ -49,6 +49,7 @@ import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, TagDto } from '../../reader/models';
+import { FeedFlagToggle, flipFeedFlag } from '../../reader/feed-exclusions';
 import { SubscriptionFlags } from '../../reader/subscription-bulk';
 import { TagDragSession } from '../../reader/tag-drag-session';
 import { TagDropMark } from '../../reader/tag-drop';
@@ -148,6 +149,10 @@ export class OrganiseSectionComponent implements OnInit {
     this.tags.load();
     this.subs.load();
     this.savedSearches.load();
+  }
+
+  protected flipFlag(toggle: FeedFlagToggle, subscription: SubscriptionDto): void {
+    flipFeedFlag(this.manage, toggle, subscription);
   }
 
   /** Retry one unhealthy feed. `ManageActions` does the refresh, the quiet

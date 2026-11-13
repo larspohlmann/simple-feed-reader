@@ -20,6 +20,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
+import { FEED_FLAG_TOGGLES } from '../../reader/feed-exclusions';
 
 const TECH: TagDto = {
   id: 2,
@@ -109,6 +110,7 @@ describe('OrganiseTagGroupComponent', () => {
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
     setIncludeInSavedSearches: jest.fn(),
+    setIncludeInTrending: jest.fn(),
     unsubscribe: jest.fn(),
   };
 
@@ -203,6 +205,17 @@ describe('OrganiseTagGroupComponent', () => {
       .componentInstance.moveDown.emit();
 
     expect(manage.reorderTagFeeds).toHaveBeenCalledWith(GROUP.tag!.id, [SUB_B.id, SUB_A.id]);
+  });
+
+  it('flips the switch a feed row reports', async () => {
+    const { manage } = await render(GROUP);
+    const trending = FEED_FLAG_TOGGLES.find(({ surface }) => surface === 'trending')!;
+
+    fixture.debugElement
+      .queryAll(By.css('app-organise-feed-row'))[0]
+      .componentInstance.flagToggled.emit(trending);
+
+    expect(manage.setIncludeInTrending).toHaveBeenCalledWith(SUB_A, !SUB_A.includeInTrending);
   });
 
   it('reorders the untagged list when the group is the untagged bucket', async () => {

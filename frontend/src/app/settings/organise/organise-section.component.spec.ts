@@ -26,6 +26,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
+import { FEED_FLAG_TOGGLES } from '../../reader/feed-exclusions';
 
 /** The real store derives `unhealthy`/`unhealthyCount` from `subscriptions`;
  *  the mock reproduces that so the health group renders off the same signal
@@ -104,6 +105,7 @@ describe('OrganiseSectionComponent', () => {
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
     setIncludeInSavedSearches: jest.fn(),
+    setIncludeInTrending: jest.fn(),
     unsubscribe: jest.fn(),
     retryFeed: jest.fn(),
     moveFeedToTag: jest.fn(),
@@ -204,6 +206,22 @@ describe('OrganiseSectionComponent', () => {
       .queryAll(By.css('[data-test="sort"] option'))
       .map((option) => (option.nativeElement as HTMLOptionElement).value);
     expect(values).toEqual(['title', 'added', 'checked', 'updated', 'due']);
+  });
+
+  it('flips the switch a list row reports', async () => {
+    const store = await render();
+    store.view.set('list');
+    fixture.detectChanges();
+    const row = fixture.debugElement.query(By.css('app-organise-feed-row'));
+    const trending = FEED_FLAG_TOGGLES.find(({ surface }) => surface === 'trending')!;
+
+    row.componentInstance.flagToggled.emit(trending);
+
+    const subscription = row.componentInstance.subscription();
+    expect(manage.setIncludeInTrending).toHaveBeenCalledWith(
+      subscription,
+      !subscription.includeInTrending,
+    );
   });
 
   it('flips the sort direction when the direction toggle is pressed', async () => {
