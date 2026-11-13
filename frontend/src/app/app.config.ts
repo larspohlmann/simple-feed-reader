@@ -26,6 +26,7 @@ import { startNavigationWatchdog } from './core/errors/navigation-watchdog';
 import { DIGEST_WRITER } from './core/preferences/digest-writer';
 import { HttpDigestWriter } from './core/preferences/http-digest-writer';
 import { HttpLocaleWriter } from './core/i18n/http-locale-writer';
+import { HttpHandednessWriter } from './core/preferences/http-handedness-writer';
 import { HttpMagazineStyleWriter } from './core/preferences/http-magazine-style-writer';
 import { HttpSharingWriter } from './core/preferences/http-sharing-writer';
 import { HttpPreferencesWriter } from './core/preferences/http-preferences-writer';
@@ -34,6 +35,7 @@ import { TranslatedTitleStrategy } from './core/i18n/translated-title.strategy';
 import { FALLBACK_LANG, LANGS } from './core/i18n/language';
 import { LanguageService } from './core/i18n/language.service';
 import { LOCALE_WRITER } from './core/i18n/locale-writer';
+import { HANDEDNESS_WRITER } from './core/preferences/handedness-writer';
 import { MAGAZINE_STYLE_WRITER } from './core/preferences/magazine-style-writer';
 import { SHARING_WRITER } from './core/preferences/sharing-writer';
 import { PREFERENCES_WRITER } from './core/preferences/preferences-writer';
@@ -77,6 +79,7 @@ export const appConfig: ApplicationConfig = {
     // same reason LOCALE_WRITER does; the running app overrides it here too.
     { provide: PREFERENCES_WRITER, useExisting: HttpPreferencesWriter },
     { provide: MAGAZINE_STYLE_WRITER, useExisting: HttpMagazineStyleWriter },
+    { provide: HANDEDNESS_WRITER, useExisting: HttpHandednessWriter },
     { provide: SHARING_WRITER, useExisting: HttpSharingWriter },
     // DIGEST_WRITER defaults to a no-op (see digest-writer.ts) for the same
     // reason LOCALE_WRITER does; the running app overrides it here too.

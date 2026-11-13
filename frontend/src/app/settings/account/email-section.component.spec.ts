@@ -53,6 +53,7 @@ function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
       },
       passkeyOfferAnswered: true,
       magazineStyle: 'boxed',
+      handedness: 'right',
       sharing: SHARING_EVERYTHING,
       trendingEnabled: true,
     },
