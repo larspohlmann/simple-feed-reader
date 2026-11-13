@@ -26,35 +26,71 @@ final readonly class ReaderWindows
 
     public function of(int $userId, TrendingWindow $window): ReaderWindowModel
     {
-        $atMultipleSources = new ReaderWindowModel(
+        $atMultipleSources = $this->atMultipleSources($userId, $window);
+
+        return $atMultipleSources->withMinimumOutlets(
+            $this->relaxedMinimum($atMultipleSources, $this->widestStories($atMultipleSources)),
+        );
+    }
+
+    /**
+     * The stories the reader is shown: those ranked at MULTIPLE_SOURCES that reach the relaxed minimum, a prefix of
+     * that ranking since it runs widest first.
+     *
+     * @return list<RankedStoryModel>
+     */
+    public function shownStories(int $userId, TrendingWindow $window): array
+    {
+        $atMultipleSources = $this->atMultipleSources($userId, $window);
+        $widest = $this->widestStories($atMultipleSources);
+        $minimum = $this->relaxedMinimum($atMultipleSources, $widest);
+
+        return array_values(array_filter(
+            $widest,
+            static fn (RankedStoryModel $story): bool => $story->outletCount >= $minimum,
+        ));
+    }
+
+    private function atMultipleSources(int $userId, TrendingWindow $window): ReaderWindowModel
+    {
+        return new ReaderWindowModel(
             $userId,
             $window,
             TrendingWindow::MULTIPLE_SOURCES,
             $this->storyIdsLeftOutOf($userId, $window),
         );
+    }
 
-        return $atMultipleSources->withMinimumOutlets($window->minimumOutletsShowingFiveStories(
-            $this->windowEntries->activeFeedCount($userId, $window->startBefore($this->clock->now())),
-            RankedStoryModel::outletCountsOf(
-                $this->stories->rankedForUser($atMultipleSources, TrendingWindow::STORIES_WORTH_SHOWING),
-            ),
-        ));
+    /** @return list<RankedStoryModel> */
+    private function widestStories(ReaderWindowModel $atMultipleSources): array
+    {
+        return $this->stories->rankedForUser($atMultipleSources, TrendingStories::MAX_STORIES);
+    }
+
+    /**
+     * The preferred minimum, lowered to the outlets of the last of the widest stories worth showing when fewer would
+     * show at it, or to MULTIPLE_SOURCES when not even that many show at all.
+     *
+     * @param list<RankedStoryModel> $widest
+     */
+    private function relaxedMinimum(ReaderWindowModel $atMultipleSources, array $widest): int
+    {
+        $window = $atMultipleSources->window;
+        $since = $window->startBefore($this->clock->now());
+        $lastWorthShowing = $widest[TrendingWindow::STORIES_WORTH_SHOWING - 1] ?? null;
+
+        return min(
+            $window->minimumOutletsFor($this->windowEntries->activeFeedCount($atMultipleSources->userId, $since)),
+            $lastWorthShowing->outletCount ?? TrendingWindow::MULTIPLE_SOURCES,
+        );
     }
 
     /** @return list<int> */
     private function storyIdsLeftOutOf(int $userId, TrendingWindow $window): array
     {
         return array_merge([], ...array_map(
-            fn (TrendingWindow $shorter): array => $this->shownStoryIds($userId, $shorter),
+            fn (TrendingWindow $shorter): array => RankedStoryModel::storyIdsOf($this->shownStories($userId, $shorter)),
             $window->leavesOutTheStoriesOf(),
         ));
-    }
-
-    /** @return list<int> */
-    private function shownStoryIds(int $userId, TrendingWindow $window): array
-    {
-        return RankedStoryModel::storyIdsOf(
-            $this->stories->rankedForUser($this->of($userId, $window), TrendingStories::MAX_STORIES),
-        );
     }
 }

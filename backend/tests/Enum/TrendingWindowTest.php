@@ -49,27 +49,6 @@ final class TrendingWindowTest extends TestCase
         yield '2.5 percent of 222' => [TrendingWindow::Week, 222, 6];
     }
 
-    /** @param list<int> $widestOutletCounts */
-    #[DataProvider('relaxedMinimums')]
-    public function testTheMinimumRelaxesToTheFifthWidestStoryButNeverBelowTwoSources(
-        TrendingWindow $window,
-        int $activeFeeds,
-        array $widestOutletCounts,
-        int $minimum,
-    ): void {
-        self::assertSame($minimum, $window->minimumOutletsShowingFiveStories($activeFeeds, $widestOutletCounts));
-    }
-
-    /** @return iterable<string, array{TrendingWindow, int, list<int>, int}> */
-    public static function relaxedMinimums(): iterable
-    {
-        yield 'five stories at the preferred minimum keep it' => [TrendingWindow::Day, 0, [9, 7, 4, 3, 3], 3];
-        yield 'the fifth widest story sets the minimum' => [TrendingWindow::Week, 0, [5, 4, 4, 3, 3], 3];
-        yield 'the share of the active feeds is preferred' => [TrendingWindow::Day, 101, [6, 5, 5, 4, 4], 4];
-        yield 'fewer than five stories relax to two sources' => [TrendingWindow::Week, 0, [6, 5, 5, 4], 2];
-        yield 'no story relaxes to two sources' => [TrendingWindow::Day, 0, [], 2];
-    }
-
     public function testTheWeekLeavesOutTheDaysStoriesAndTheDayLeavesOutNone(): void
     {
         self::assertSame([TrendingWindow::Day], TrendingWindow::Week->leavesOutTheStoriesOf());

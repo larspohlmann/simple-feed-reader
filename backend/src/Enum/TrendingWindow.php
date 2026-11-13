@@ -93,20 +93,6 @@ enum TrendingWindow: string
         };
     }
 
-    /**
-     * The preferred minimum, lowered to the fifth widest story's outlets when fewer than five would show at it, or to
-     * MULTIPLE_SOURCES when not even five show at that (D38).
-     *
-     * @param list<int> $widestOutletCounts the widest stories shown at MULTIPLE_SOURCES, widest first
-     */
-    public function minimumOutletsShowingFiveStories(int $activeFeeds, array $widestOutletCounts): int
-    {
-        return min(
-            $this->minimumOutletsFor($activeFeeds),
-            $widestOutletCounts[self::STORIES_WORTH_SHOWING - 1] ?? self::MULTIPLE_SOURCES,
-        );
-    }
-
     /** The preferred minimum: the floor, or this window's share of the reader's active feeds when that is more. */
     public function minimumOutletsFor(int $activeFeeds): int
     {

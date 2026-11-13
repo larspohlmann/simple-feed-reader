@@ -162,7 +162,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         $ranked = $this->rankedDay();
         self::assertSame([$covered->requireId()], RankedStoryModel::storyIdsOf($ranked));
-        self::assertSame([4], RankedStoryModel::outletCountsOf($ranked));
+        self::assertSame([4], self::outletCountsOf($ranked));
     }
 
     public function testTheRankingIsCutAtTheLimit(): void
@@ -175,7 +175,7 @@ final class TrendingStoriesTest extends DbTestCase
         $ranked = $this->rankedDay(1);
 
         self::assertSame([$wider->requireId()], RankedStoryModel::storyIdsOf($ranked));
-        self::assertSame([4], RankedStoryModel::outletCountsOf($ranked));
+        self::assertSame([4], self::outletCountsOf($ranked));
     }
 
     public function testTheListAndItsBadgeStopAtFifteenStories(): void
@@ -279,7 +279,7 @@ final class TrendingStoriesTest extends DbTestCase
             RankedStoryModel::storyIdsOf($ranked),
             'the newer story is narrower once its syndicated copy is counted once',
         );
-        self::assertSame([4, 3], RankedStoryModel::outletCountsOf($ranked));
+        self::assertSame([4, 3], self::outletCountsOf($ranked));
     }
 
     public function testTheSameArticleInTwoFeedsIsNotTwoArticleFeeds(): void
@@ -323,7 +323,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         $ranked = $this->rankedDay();
 
-        self::assertSame([4], RankedStoryModel::outletCountsOf($ranked));
+        self::assertSame([4], self::outletCountsOf($ranked));
     }
 
     public function testAnEarlierCopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void
@@ -343,7 +343,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         $ranked = $this->rankedDay();
 
-        self::assertSame([3], RankedStoryModel::outletCountsOf($ranked));
+        self::assertSame([3], self::outletCountsOf($ranked));
     }
 
     public function testACopyOfTheLeadFromAFeedOutsideTheStoryShowsOnTheCardButIsNoSource(): void
@@ -795,6 +795,16 @@ final class TrendingStoriesTest extends DbTestCase
             $this->dayOf(($user ?? $this->reader)->requireId()),
             $limit,
         );
+    }
+
+    /**
+     * @param list<RankedStoryModel> $ranked
+     *
+     * @return list<int>
+     */
+    private static function outletCountsOf(array $ranked): array
+    {
+        return array_map(static fn (RankedStoryModel $story): int => $story->outletCount, $ranked);
     }
 
     /** @return list<int> */

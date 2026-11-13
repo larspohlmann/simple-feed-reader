@@ -68,7 +68,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->subscriptionTo($alpha)->setIncludeInTrending(false);
         $this->fixtures->flush();
 
-        self::assertSame([3], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
         self::assertCount(3, $this->storyRepository()->articleEntryIdsByStory(
             $this->reader->requireId(),
             [$story->requireId()],
@@ -81,7 +81,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->subscribe($this->reader, ...$feeds);
         $this->storyOf($feeds);
         $this->fixtures->flush();
-        self::assertSame([2], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([2], self::outletCountsOf($this->rankedDay()));
 
         $this->subscriptionTo($feeds[0])->setIncludeInTrending(false);
         $this->fixtures->flush();
@@ -121,7 +121,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->subscriptionTo($alpha)->setIncludeInTrending(false);
         $this->fixtures->flush();
 
-        self::assertSame([3], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
     }
 
     public function testATagSwitchedOutOfTrendingTakesItsFeedsOut(): void
@@ -154,7 +154,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->subscriptionTo($alpha)->addTag($tag);
         $this->fixtures->flush();
 
-        self::assertSame([4], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([4], self::outletCountsOf($this->rankedDay()));
     }
 
     public function testANetworkSwitchedOutOfTrendingTakesItsFeedsOut(): void
@@ -163,14 +163,14 @@ final class TrendingInclusionTest extends DbTestCase
         $social = $this->fixtures->feed('ann', SocialNetwork::Bluesky);
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
         $this->storyOf([$alpha, $beta, $social]);
-        self::assertSame([3], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
 
         $this->entityManager->persist(
             new NetworkExclusion($this->reader, SocialNetwork::Bluesky, NetworkExclusionSurface::Trending),
         );
         $this->fixtures->flush();
 
-        self::assertSame([2], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([2], self::outletCountsOf($this->rankedDay()));
     }
 
     public function testANetworkSwitchedOutOfAnotherSurfaceLeavesTrendingAlone(): void
@@ -184,7 +184,7 @@ final class TrendingInclusionTest extends DbTestCase
         );
         $this->fixtures->flush();
 
-        self::assertSame([3], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
     }
 
     public function testAnEntryOfASwitchedOutFeedHoldsNoStoryTheReaderCanHide(): void
@@ -240,7 +240,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->subscriptionTo($alpha)->addTag($tag);
         $this->fixtures->flush();
 
-        self::assertSame([3], RankedStoryModel::outletCountsOf($this->rankedDay()));
+        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
     }
 
     private function tag(string $name): Tag
@@ -272,6 +272,16 @@ final class TrendingInclusionTest extends DbTestCase
             $this->readerWindows()->of($this->reader->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
         );
+    }
+
+    /**
+     * @param list<RankedStoryModel> $ranked
+     *
+     * @return list<int>
+     */
+    private static function outletCountsOf(array $ranked): array
+    {
+        return array_map(static fn (RankedStoryModel $story): int => $story->outletCount, $ranked);
     }
 
     /** @return list<TrendingStoryCardModel> */
