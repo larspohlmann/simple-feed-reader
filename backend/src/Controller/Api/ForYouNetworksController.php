@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkExclusionRepository;
-use App\Service\Recommendation\Feed\ForYouNetworks;
+use App\Service\Reading\NetworkExclusions;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -19,7 +19,7 @@ final readonly class ForYouNetworksController
 {
     public function __construct(
         private NetworkExclusionRepository $excludedNetworks,
-        private ForYouNetworks $networks,
+        private NetworkExclusions $networks,
     ) {
     }
 
@@ -36,7 +36,7 @@ final readonly class ForYouNetworksController
     #[Route('/{network}', name: 'api_for_you_exclude_network', methods: ['PUT'])]
     public function excludeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse
     {
-        $this->networks->exclude($user, $network);
+        $this->networks->exclude($user, $network, NetworkExclusionSurface::ForYou);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -44,7 +44,7 @@ final readonly class ForYouNetworksController
     #[Route('/{network}', name: 'api_for_you_include_network', methods: ['DELETE'])]
     public function includeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse
     {
-        $this->networks->include($user, $network);
+        $this->networks->include($user, $network, NetworkExclusionSurface::ForYou);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

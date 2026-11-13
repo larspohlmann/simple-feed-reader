@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Subscription;
 use App\Enum\FeedGroup;
+use App\Enum\NetworkExclusionSurface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -79,8 +80,9 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
     {
         /** @var list<Subscription> $rows */
         $rows = $this->createQueryBuilder('s')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->andWhere('s.user = :user')->setParameter('user', $userId)
             ->andWhere('s.includeInAllItems = true')
+            ->andWhere(NetworkExclusionDql::notExcluded('s', NetworkExclusionSurface::AllItems))
             ->orderBy('s.id', 'ASC')
             ->getQuery()
             ->getResult();

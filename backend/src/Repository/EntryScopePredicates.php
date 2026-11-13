@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Feed;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Enum\EntryView;
+use App\Enum\NetworkExclusionSurface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -56,9 +57,11 @@ final readonly class EntryScopePredicates
             ->setParameter('subscriptionIds', $subscriptionIds);
     }
 
+    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
     public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
+        $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription))
+            ->andWhere(NetworkExclusionDql::notExcluded($aliases->subscription, NetworkExclusionSurface::AllItems));
     }
 
     /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */

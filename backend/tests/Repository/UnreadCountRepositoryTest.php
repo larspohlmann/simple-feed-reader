@@ -7,10 +7,12 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\FeedGroup;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\UnreadCountRepository;
@@ -139,6 +141,29 @@ final class UnreadCountRepositoryTest extends DbTestCase
         [, $includedFeed] = $this->subscribedFeed($user, 'https://example.com/included.xml');
         $this->unreadEntry($excludedFeed, 'excluded-copy', 'shared-hash');
         $this->unreadEntry($includedFeed, 'included-copy', 'shared-hash');
+
+        self::assertSame(1, $this->allItems($user));
+    }
+
+    public function testAllItemsSkipsANetworkSwitchedOutOfAllItems(): void
+    {
+        $user = $this->user();
+        [, $blueskyFeed] = $this->subscribedFeed($user, 'https://bsky.app/profile/alice.bsky.social/rss');
+        [, $blogFeed] = $this->subscribedFeed($user, 'https://example.com/blog.xml');
+        $this->unreadEntry($blueskyFeed, 'post', null);
+        $this->unreadEntry($blogFeed, 'article', null);
+        $this->excludeBlueskyFrom($user, NetworkExclusionSurface::AllItems);
+
+        self::assertSame(1, $this->allItems($user));
+        self::assertSame(1, $this->perNetwork($user)[SocialNetwork::Bluesky->value] ?? 0);
+    }
+
+    public function testAForYouSwitchLeavesAllItemsCounting(): void
+    {
+        $user = $this->user();
+        [, $blueskyFeed] = $this->subscribedFeed($user, 'https://bsky.app/profile/alice.bsky.social/rss');
+        $this->unreadEntry($blueskyFeed, 'post', null);
+        $this->excludeBlueskyFrom($user, NetworkExclusionSurface::ForYou);
 
         self::assertSame(1, $this->allItems($user));
     }
@@ -347,6 +372,12 @@ final class UnreadCountRepositoryTest extends DbTestCase
             [FeedGroup::Tags->value => 0, FeedGroup::Feeds->value => 1],
             $this->perFeedGroup($user),
         );
+    }
+
+    private function excludeBlueskyFrom(User $user, NetworkExclusionSurface $surface): void
+    {
+        $this->entityManager->persist(new NetworkExclusion($user, SocialNetwork::Bluesky, $surface));
+        $this->entityManager->flush();
     }
 
     /** @return array<int, int> */

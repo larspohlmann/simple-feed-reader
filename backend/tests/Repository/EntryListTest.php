@@ -7,12 +7,14 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\EntryView;
 use App\Enum\FeedGroup;
 use App\Enum\ListOrder;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Pagination\EntryCursor;
 use App\Repository\DateOrderedPage;
@@ -609,6 +611,34 @@ final class EntryListTest extends DbTestCase
         );
 
         self::assertSame(['bluesky'], $this->guids($rows));
+    }
+
+    public function testANetworkSwitchedOutOfAllItemsLeavesAllButStaysInItsOwnView(): void
+    {
+        [$profile] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $at = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $this->entityManager->persist(
+            new Entry($this->feed, 'plain-copy', 'https://example.com/copy', 'Plain copy', $at, $at, 'shared-url-hash'),
+        );
+        $this->entityManager->persist(
+            new Entry($profile, 'network-copy', 'https://bsky.app/copy', 'Network copy', $at, $at, 'shared-url-hash'),
+        );
+        $this->entryIn($profile, 'network-only', '2026-07-06T00:00:00Z');
+        $this->entityManager->persist(
+            new NetworkExclusion($this->user, SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems),
+        );
+        $this->entityManager->flush();
+
+        $all = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
+        $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $network = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), networkScope: NetworkScope::whole(SocialNetwork::Bluesky)),
+        );
+
+        self::assertSame(['plain-copy'], $this->guids($all));
+        self::assertSame([], $all[0]->duplicates);
+        self::assertSame(['plain-copy'], $this->guids($unread));
+        self::assertSame(['network-only', 'network-copy'], $this->guids($network));
     }
 
     public function testANetworkWithoutFeedsListsNothing(): void

@@ -7,9 +7,11 @@ namespace App\Tests\Service\Reading;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\NetworkExclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
@@ -345,6 +347,30 @@ final class MarkReadServiceTest extends DbTestCase
                 $foreign->requireId() => null,
             ],
             $this->watermarksOf([$home, $profile, $mastodon, $plain, $foreign]),
+        );
+    }
+
+    public function testAllScopeSkipsANetworkSwitchedOutOfAllItems(): void
+    {
+        [$user, $plain] = $this->seed();
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager);
+        $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $mastodon = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Bluesky, NetworkExclusionSurface::AllItems),
+        );
+        $this->entityManager->flush();
+
+        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
+        $this->entityManager->clear();
+
+        self::assertSame(
+            [
+                $profile->requireId() => null,
+                $mastodon->requireId() => '2026-07-25T00:00:00+00:00',
+                $plain->requireId() => '2026-07-25T00:00:00+00:00',
+            ],
+            $this->watermarksOf([$profile, $mastodon, $plain]),
         );
     }
 
