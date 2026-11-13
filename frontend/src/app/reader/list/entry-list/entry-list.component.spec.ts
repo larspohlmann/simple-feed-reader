@@ -1968,7 +1968,6 @@ describe('EntryListComponent', () => {
       fold: { scrollerTop?: number; headerBottom?: number } = {},
     ): void {
       const content = {
-        querySelector: () => entries[0] ?? null,
         querySelectorAll: () => entries as unknown as NodeListOf<Element>,
       } as unknown as HTMLElement;
       const scroller = (
@@ -2818,7 +2817,7 @@ describe('EntryListComponent', () => {
       expect((fixture.nativeElement as HTMLElement).querySelector('app-source-group')).toBeNull();
     });
 
-    it('offers no mark-above-read, even scrolled', () => {
+    it('offers no mark-above-read', () => {
       const fixture = mount({ selection: trending(), canMarkAllRead: false });
       fixture.detectChanges();
 

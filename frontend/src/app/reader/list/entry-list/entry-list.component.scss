@@ -427,7 +427,7 @@ app-loading-overlay {
   @include circle.corner-cluster(4);
 }
 
-/* On touch each mark-read disc has its own row, so mark all read never moves (#2203). */
+/* On touch each mark-read disc has its own row, so mark all read sits at one height in every list (#2203). */
 @media (pointer: coarse) {
   .corner-cluster .corner-actions {
     display: grid;

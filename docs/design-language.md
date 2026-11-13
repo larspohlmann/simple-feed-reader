@@ -1896,9 +1896,9 @@ the list's sidebar, the article's back).
   `--space-5` between the column and the pair. The list's column reads mark all read,
   mark above as read; the article's favourite, save, share.
 - **Always there:** the list shows back to top and mark above as read whenever it has
-  entries, not only once scrolled (at the top both are harmless no-ops). On touch every
-  disc keeps a fixed slot — the pair's row is held while empty, the list's column keeps
-  mark above as read's row — so none moves when another comes or goes.
+  entries, not only once scrolled (at the top both are harmless no-ops). On touch the
+  list's column keeps a row for each mark-read disc, so mark all read sits at one height
+  in every list, also where mark above as read is not offered (Trending).
 - **Handedness** (Settings → Preferences, per account): right puts the stack in the
   bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
   pointer ignores it.
