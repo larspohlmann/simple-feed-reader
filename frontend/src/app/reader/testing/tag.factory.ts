@@ -1,11 +1,7 @@
-import { TagDto, TagInclusion } from '../models';
+import { TagDto } from '../models';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
-/** A tag's default: in every surface. */
-export const INCLUDED_EVERYWHERE: TagInclusion = {
-  includeInAllItems: true,
-  includeInForYou: true,
-  includeInSavedSearches: true,
-};
+export { INCLUDED_EVERYWHERE };
 
 /** A plain `TagDto` for specs: a root tag positioned by its id unless `partial` says otherwise. */
 export function makeTag(id: number, name: string, partial: Partial<TagDto> = {}): TagDto {

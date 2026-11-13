@@ -4,6 +4,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagDto, TagInclusion } from '../models';
 import { TagHierarchy } from './tag-hierarchy';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 /** Position order, name as a stable tiebreak; a position orders a tag among its siblings only. */
 export function compareTagPositions(left: TagDto, right: TagDto): number {
@@ -19,9 +20,7 @@ export function placeholderTag(id: number): TagDto {
     icon: null,
     position: 0,
     parentId: null,
-    includeInAllItems: true,
-    includeInForYou: true,
-    includeInSavedSearches: true,
+    ...INCLUDED_EVERYWHERE,
   };
 }
 

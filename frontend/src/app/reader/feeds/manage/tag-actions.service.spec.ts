@@ -77,6 +77,27 @@ describe('TagActions', () => {
       testRequest.flush({ tag: { ...subtag, includeInForYou: false } });
     });
 
+    it('resends the live tag, not the snapshot the caller holds', () => {
+      jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+      jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+      const renamed = { ...subtag, name: 'Longreads', parentId: null };
+      TestBed.inject(TagsStore).tags.set([tag, renamed]);
+
+      service.setTagInclusion(subtag, 'allItems', false);
+
+      const testRequest = http.expectOne('https://api.test/api/tags/5');
+      expect(testRequest.request.body).toEqual({
+        name: 'Longreads',
+        color: '#123456',
+        icon: 'book',
+        parentId: null,
+        includeInAllItems: false,
+      });
+      testRequest.flush({ tag: renamed });
+    });
+
     it('reloads tags and feeds once the write lands', () => {
       const tagSpy = jest
         .spyOn(TestBed.inject(TagsStore), 'load')

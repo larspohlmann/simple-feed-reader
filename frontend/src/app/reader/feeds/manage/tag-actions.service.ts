@@ -72,15 +72,16 @@ export class TagActions {
     this.tagPlacement.move(tag, drop);
   }
 
-  /** Switch a tag in or out of a surface at once; the PATCH resends the tag and only the changed flag. */
+  /** Switch a tag in or out of a surface at once. The PATCH replaces name, colour, icon and parent, so it resends the live tag, never the caller's snapshot. */
   setTagInclusion(tag: TagDto, surface: ExclusionSurface, included: boolean): void {
+    const live = this.tags.tags().find((listed) => listed.id === tag.id) ?? tag;
     const inclusion = { [INCLUSION_FLAG[surface]]: included };
     this.tags.patchInclusion(tag.id, inclusion);
     const body: TagUpdate = {
-      name: tag.name,
-      color: tag.color,
-      icon: tag.icon,
-      parentId: tag.parentId,
+      name: live.name,
+      color: live.color,
+      icon: live.icon,
+      parentId: live.parentId,
       ...inclusion,
     };
     reloadAfter(this.api.updateTag(tag.id, body), () => {
