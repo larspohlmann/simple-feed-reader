@@ -1,24 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const readRepoFile = (relativePath) =>
-  readFileSync(fileURLToPath(new URL(`../../../${relativePath}`, import.meta.url)), 'utf8');
+const repoPath = (relativePath) => fileURLToPath(new URL(`../../../${relativePath}`, import.meta.url));
 
-function shippedLanguages() {
-  const declaration = readRepoFile('frontend/src/app/core/i18n/language.ts').match(
-    /export const LANGS[^=]*=\s*\[([^\]]*)\]/,
+function shippedDictionaries() {
+  return readdirSync(repoPath('frontend/public/i18n'))
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => file.slice(0, -'.json'.length))
+    .sort();
+}
+
+function cachedDictionaries() {
+  const rule = readFileSync(repoPath('deploy/strato/.htaccess'), 'utf8').match(
+    /<FilesMatch "\^\(([a-z|]+)\)\\\.json\$">/,
   );
-  assert.ok(declaration, 'language.ts no longer declares LANGS as an array literal');
-  return [...declaration[1].matchAll(/'([^']+)'/g)].map((quoted) => quoted[1]);
+  assert.ok(rule, '.htaccess no longer has a FilesMatch rule of the form ^(en|de)\\.json$');
+  return rule[1].split('|').sort();
 }
 
-function dictionaryPatterns() {
-  const patterns = [...readRepoFile('deploy/strato/.htaccess').matchAll(/<FilesMatch "([^"]*\\\.json\$)">/g)];
-  return patterns.map((found) => found[1]);
-}
-
-test('the Strato cache rule names exactly the languages the UI ships', () => {
-  assert.deepEqual(dictionaryPatterns(), [`^(${shippedLanguages().join('|')})\\.json$`]);
+test('the Strato cache rule names exactly the dictionaries the UI ships', () => {
+  assert.deepEqual(cachedDictionaries(), shippedDictionaries());
 });

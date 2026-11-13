@@ -5,9 +5,8 @@
  *  express "everything under i18n/" without directives Apache rejects in that
  *  context (#280).
  */
-export type Lang = 'en' | 'de' | 'fr' | 'es';
-
-export const LANGS: readonly Lang[] = ['en', 'de', 'fr', 'es'];
+export const LANGS = ['en', 'de', 'fr', 'es'] as const;
+export type Lang = (typeof LANGS)[number];
 export const LANG_KEY = 'sfr.lang';
 
 /**

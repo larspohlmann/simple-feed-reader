@@ -11,35 +11,33 @@ const dictionaries: Record<string, unknown> = { en, de, fr, es };
  * raw key on screen, in the one language nobody testing the change looks at.
  * Comparing every language against English is the only thing that catches it.
  */
-const flatten = (node: unknown, prefix = ''): Map<string, unknown> => {
+const flatten = (node: unknown, prefix = ''): [string, unknown][] => {
   if (typeof node !== 'object' || node === null) {
-    return new Map([[prefix, node]]);
+    return [[prefix, node]];
   }
 
-  return new Map(
-    Object.entries(node).flatMap(([key, value]) => [
-      ...flatten(value, prefix ? `${prefix}.${key}` : key),
-    ]),
+  return Object.entries(node).flatMap(([key, value]) =>
+    flatten(value, prefix ? `${prefix}.${key}` : key),
   );
 };
 
-const placeholders = (value: unknown): string[] =>
-  typeof value === 'string'
-    ? [...value.matchAll(/\{\{\s*([^}\s]+)\s*\}\}/g)].map((match) => match[1])
-    : [];
+const placeholderNames = (value: unknown): string =>
+  [...new Set([...String(value).matchAll(/\{\{\s*([^}\s]+)\s*\}\}/g)].map((match) => match[1]))]
+    .sort()
+    .join();
 
 const translations = Object.entries(dictionaries).filter(([lang]) => lang !== 'en');
-const english = flatten(en);
+const english = new Map(flatten(en));
 
 describe('i18n dictionaries', () => {
   it('define the same keys in every language', () => {
     const mismatched = translations.flatMap(([lang, dictionary]) => {
-      const keys = flatten(dictionary);
+      const keys = new Set(flatten(dictionary).map(([key]) => key));
 
       return [
-        ...[...keys.keys()].filter((key) => !english.has(key)).map((key) => `${lang}:${key}`),
-        ...[...english.keys()].filter((key) => !keys.has(key)).map((key) => `${lang}:${key}`),
-      ];
+        ...[...keys].filter((key) => !english.has(key)),
+        ...[...english.keys()].filter((key) => !keys.has(key)),
+      ].map((key) => `${lang}:${key}`);
     });
 
     expect(mismatched).toEqual([]);
@@ -47,7 +45,7 @@ describe('i18n dictionaries', () => {
 
   it('leave no value empty', () => {
     const blank = Object.entries(dictionaries).flatMap(([lang, dictionary]) =>
-      [...flatten(dictionary)]
+      flatten(dictionary)
         .filter(([, value]) => typeof value !== 'string' || value.trim() === '')
         .map(([key]) => `${lang}:${key}`),
     );
@@ -56,10 +54,9 @@ describe('i18n dictionaries', () => {
   });
 
   it('keep exactly the placeholders of the English string', () => {
-    const names = (value: unknown): string => [...new Set(placeholders(value))].sort().join();
     const differing = translations.flatMap(([lang, dictionary]) =>
-      [...flatten(dictionary)]
-        .filter(([key, value]) => names(value) !== names(english.get(key)))
+      flatten(dictionary)
+        .filter(([key, value]) => placeholderNames(value) !== placeholderNames(english.get(key)))
         .map(([key, value]) => `${lang}:${key} ${String(value)}`),
     );
 

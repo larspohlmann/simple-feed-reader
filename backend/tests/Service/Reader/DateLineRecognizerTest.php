@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 final class DateLineRecognizerTest extends TestCase
 {
+    private const int LOCALES_TIMES_STYLES = 5 * 3;
+
     private DateLineRecognizer $recognizer;
 
     protected function setUp(): void
@@ -91,7 +93,7 @@ final class DateLineRecognizerTest extends TestCase
         $recognizer->isDateLine('Hamburg 1');
         $recognizer->isDateLine('Hamburg 2');
 
-        self::assertCount(15, $formatters->built());
+        self::assertCount(self::LOCALES_TIMES_STYLES, $formatters->built());
         self::assertSame($formatters->built(), array_values(array_unique($formatters->built())));
     }
 
@@ -112,7 +114,7 @@ final class DateLineRecognizerTest extends TestCase
 
         (new DateLineRecognizer($formatters))->isDateLine(str_repeat('a', 47) . '1');
 
-        self::assertCount(15, $formatters->built());
+        self::assertCount(self::LOCALES_TIMES_STYLES, $formatters->built());
     }
 
     public function testCountsTheCapInCharactersNotBytes(): void
@@ -121,6 +123,6 @@ final class DateLineRecognizerTest extends TestCase
 
         (new DateLineRecognizer($formatters))->isDateLine(str_repeat('ä', 40) . '1');
 
-        self::assertCount(15, $formatters->built());
+        self::assertCount(self::LOCALES_TIMES_STYLES, $formatters->built());
     }
 }

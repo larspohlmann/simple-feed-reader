@@ -11,7 +11,7 @@ use Symfony\Component\Yaml\Yaml;
 
 final class EmailCataloguesTest extends TestCase
 {
-    private const string LINK_PLACEHOLDER_PATTERN = '/%(?:link|review_url)%/';
+    private const string LINK_PLACEHOLDER = '%(?:link|review_url)%';
 
     /** @return iterable<string, array{string}> */
     public static function translatedLocales(): iterable
@@ -54,12 +54,19 @@ final class EmailCataloguesTest extends TestCase
                 continue;
             }
 
-            foreach (explode("\n", $message) as $line) {
-                if (1 === preg_match(self::LINK_PLACEHOLDER_PATTERN, $line)) {
-                    self::assertMatchesRegularExpression('/^%(?:link|review_url)%$/', $line, "{$locale}: {$key}");
-                }
+            foreach (self::linesCarryingALink($message) as $line) {
+                self::assertMatchesRegularExpression('/^' . self::LINK_PLACEHOLDER . '$/', $line, "{$locale}: {$key}");
             }
         }
+    }
+
+    /** @return list<string> */
+    private static function linesCarryingALink(string $message): array
+    {
+        return array_values(array_filter(
+            explode("\n", $message),
+            static fn (string $line): bool => 1 === preg_match('/' . self::LINK_PLACEHOLDER . '/', $line),
+        ));
     }
 
     /** @return array<string, string> */

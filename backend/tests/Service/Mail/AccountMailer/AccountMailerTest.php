@@ -112,6 +112,7 @@ final class AccountMailerTest extends TestCase
     /** @return iterable<string, array{string, string}> */
     public static function verificationSubjects(): iterable
     {
+        yield 'German' => ['de', 'Bestätige deine E-Mail-Adresse'];
         yield 'French' => ['fr', 'Confirmez votre adresse e-mail'];
         yield 'Spanish' => ['es', 'Confirma tu dirección de correo electrónico'];
     }
@@ -129,7 +130,6 @@ final class AccountMailerTest extends TestCase
         $this->mailer->sendVerification($this->user('de'), 'tok');
 
         $email = $this->sent[0];
-        self::assertSame('Bestätige deine E-Mail-Adresse', $email->getSubject());
         self::assertStringContainsString('Willkommen bei Simple Feed Reader.', (string) $email->getTextBody());
         // The link still lands on the same frontend route regardless of language.
         self::assertStringContainsString(
