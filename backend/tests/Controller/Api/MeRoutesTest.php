@@ -33,6 +33,11 @@ final class MeRoutesTest extends ApiTestCase
             '/api/me/magazine-style',
             ReaderPreferencesController::class . '::updateMagazineStyle',
         ],
+        'api_me_update_handedness' => [
+            'PATCH',
+            '/api/me/handedness',
+            ReaderPreferencesController::class . '::updateHandedness',
+        ],
         'api_me_update_sharing' => [
             'PATCH',
             '/api/me/sharing',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Me\UpdateFeedDirectoryScopeRequest;
+use App\Dto\Me\UpdateHandednessRequest;
 use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Dto\Me\UpdateSharingRequest;
@@ -46,6 +47,17 @@ final readonly class ReaderPreferencesController
         #[MapRequestPayload] UpdateMagazineStyleRequest $request,
     ): JsonResponse {
         $this->preferences->changeMagazineStyle($user, $request->magazineStyle);
+
+        return new JsonResponse($this->profile->of($user));
+    }
+
+    /** Its own PATCH for the reason updatePreferences() gives. */
+    #[Route('/api/me/handedness', name: 'api_me_update_handedness', methods: ['PATCH'])]
+    public function updateHandedness(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdateHandednessRequest $request,
+    ): JsonResponse {
+        $this->preferences->changeHandedness($user, $request->handedness);
 
         return new JsonResponse($this->profile->of($user));
     }

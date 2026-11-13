@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Account;
 
 use App\Entity\User;
+use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Repository\DigestSettingsRepository;
 use App\Repository\FeedDirectoryScopeRepository;
@@ -47,6 +48,12 @@ final readonly class AccountPreferencesWriter
     public function changeMagazineStyle(User $user, MagazineStyle $magazineStyle): void
     {
         $this->readingSettings->forUser($user)->setMagazineStyle($magazineStyle);
+        $this->entityManager->flush();
+    }
+
+    public function changeHandedness(User $user, Handedness $handedness): void
+    {
+        $this->readingSettings->forUser($user)->setHandedness($handedness);
         $this->entityManager->flush();
     }
 

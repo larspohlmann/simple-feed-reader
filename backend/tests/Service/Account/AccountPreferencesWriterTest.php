@@ -6,6 +6,7 @@ namespace App\Tests\Service\Account;
 
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
+use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
@@ -54,6 +55,19 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
         self::assertSame($wanted, $reloaded->getMagazineStyle());
+    }
+
+    public function testChangeHandednessPersists(): void
+    {
+        $user = $this->user('prefs-handedness@example.com');
+        $wanted = Handedness::Left === StoredUserSettings::reading($this->entityManager, $user)->getHandedness()
+            ? Handedness::Right
+            : Handedness::Left;
+
+        $this->writer()->changeHandedness($user, $wanted);
+
+        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
+        self::assertSame($wanted, $reloaded->getHandedness());
     }
 
     public function testChangeSharingPersistsAllThreeValues(): void
