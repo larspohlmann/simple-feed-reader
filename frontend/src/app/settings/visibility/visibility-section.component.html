@@ -60,6 +60,9 @@
               @case ('feed') {
                 <app-favicon [url]="row.line.target.subscription.faviconUrl" />
               }
+              @case ('feedKind') {
+                <app-icon [name]="feedKindDescriptors[row.line.target.feedKind].glyph" size="xs" />
+              }
               @case ('untagged') {
                 <app-icon name="label_off" size="xs" />
               }

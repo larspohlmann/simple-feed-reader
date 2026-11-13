@@ -23,6 +23,7 @@ import { AllItemsNetworksStore } from '../../reader/state/all-items-networks.sto
 import { ForYouNetworksStore } from '../../reader/state/for-you-networks.store';
 import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
+import { NETWORK_FEED_KIND_DESCRIPTORS } from '../../reader/state/social-sections';
 import { buildTagTree } from '../../reader/state/subscription-derivations';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -42,7 +43,12 @@ import { SettingsStackComponent } from '../../shared/settings/stack/settings-sta
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { VisibilityCell, VisibilityRowComponent } from './visibility-row.component';
-import { VisibilityLine, VisibilityTarget, visibilityLines } from './visibility-tree';
+import {
+  VisibilityLine,
+  VisibilitySources,
+  VisibilityTarget,
+  visibilityLines,
+} from './visibility-tree';
 
 interface VisibilityRow {
   readonly line: VisibilityLine;
@@ -86,19 +92,24 @@ export class VisibilitySectionComponent implements OnInit {
 
   protected readonly surfaces = SURFACES;
   protected readonly surfaceLabelKeys = SURFACE_LABEL_KEYS;
+  protected readonly feedKindDescriptors = NETWORK_FEED_KIND_DESCRIPTORS;
   protected readonly loading = this.subscriptions.loading;
   protected readonly feedFilter = signal('');
   private readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
 
-  private readonly tagTree = computed(() =>
-    buildTagTree(this.subscriptions.subscriptions(), this.tags.tags()),
-  );
+  private readonly sources = computed<VisibilitySources>(() => {
+    const subscriptions = this.subscriptions.subscriptions();
+    return {
+      tagTree: buildTagTree(subscriptions, this.tags.tags()),
+      socialSections: this.subscriptions.socialSections(),
+      subscriptions,
+    };
+  });
 
   private readonly lines = computed(() => {
     const term = this.feedFilter().trim().toLocaleLowerCase();
     return visibilityLines(
-      this.tagTree(),
-      this.subscriptions.subscriptions(),
+      this.sources(),
       term === '' ? null : (subscription) => subscription.title.toLocaleLowerCase().includes(term),
     );
   });
@@ -107,7 +118,7 @@ export class VisibilitySectionComponent implements OnInit {
 
   /** From the whole tree: a filter must not narrow what Expand all records. */
   private readonly parentKeys = computed(() =>
-    visibilityLines(this.tagTree(), this.subscriptions.subscriptions(), null)
+    visibilityLines(this.sources(), null)
       .filter((line) => line.hasChildren)
       .map((line) => line.key),
   );
@@ -165,6 +176,7 @@ export class VisibilitySectionComponent implements OnInit {
         );
       case 'feed':
         return this.toggleFeed(target.subscription, surface);
+      case 'feedKind':
       case 'untagged':
         return;
     }
@@ -189,6 +201,8 @@ export class VisibilitySectionComponent implements OnInit {
         return target.tag.name;
       case 'feed':
         return target.subscription.title;
+      case 'feedKind':
+        return this.transloco.translate(NETWORK_FEED_KIND_DESCRIPTORS[target.feedKind].labelKey);
       case 'untagged':
         return this.transloco.translate('settings.organise.untagged');
     }
@@ -202,6 +216,7 @@ export class VisibilitySectionComponent implements OnInit {
         return this.tagCells(target.tag);
       case 'feed':
         return this.feedCells(target.subscription);
+      case 'feedKind':
       case 'untagged':
         return [];
     }

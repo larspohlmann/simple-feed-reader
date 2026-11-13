@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { SocialNetworkName } from '../../core/social-network';
 import { FEED_FLAG_TOGGLES } from '../../reader/feed-exclusions';
@@ -9,6 +9,8 @@ import { SubscriptionDto, TagDto } from '../../reader/models';
 import { AllItemsNetworksStore } from '../../reader/state/all-items-networks.store';
 import { ForYouNetworksStore } from '../../reader/state/for-you-networks.store';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
+import { buildSocialSections } from '../../reader/state/social-sections';
+import { NO_UNREAD_TOTALS } from '../../reader/state/unread-totals';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
@@ -84,6 +86,9 @@ describe('VisibilitySectionComponent', () => {
             subscriptions,
             loading: signal(false),
             load: jest.fn(),
+            socialSections: computed(() =>
+              buildSocialSections(subscriptions(), [], NO_UNREAD_TOTALS),
+            ),
           },
         },
         { provide: TagsStore, useValue: { tags, loading: signal(false), load: jest.fn() } },
@@ -141,7 +146,8 @@ describe('VisibilitySectionComponent', () => {
       'tag:3',
       'tag:3/feed:11',
       'network:bluesky',
-      'network:bluesky/feed:10',
+      'network:bluesky/kind:profile',
+      'network:bluesky/kind:profile/feed:10',
       'untagged',
       'untagged/feed:12',
     ]);
@@ -164,10 +170,14 @@ describe('VisibilitySectionComponent', () => {
     setUp();
     expandAll();
 
-    const depths = ['tag:1', 'tag:2', 'tag:2/feed:11', 'network:bluesky/feed:10'].map((key) =>
-      row(key).style.getPropertyValue('--visibility-depth'),
-    );
-    expect(depths).toEqual(['0', '1', '2', '1']);
+    const depths = [
+      'tag:1',
+      'tag:2',
+      'tag:2/feed:11',
+      'network:bluesky/kind:profile',
+      'network:bluesky/kind:profile/feed:10',
+    ].map((key) => row(key).style.getPropertyValue('--visibility-depth'));
+    expect(depths).toEqual(['0', '1', '2', '1', '2']);
   });
 
   it('shows a tag switched off For You unchecked, and dims its subtag naming the parent', () => {
@@ -186,9 +196,11 @@ describe('VisibilitySectionComponent', () => {
     setUp({ excludedFromAllItems: ['bluesky'] });
     expandAll();
 
-    expect(box('network:bluesky/feed:10', 'All items').checked).toBe(true);
-    expect(cellOf('network:bluesky/feed:10', 'All items').classList).toContain('inherited');
-    expect(cellOf('network:bluesky/feed:10', 'All items').getAttribute('title')).toBe(
+    expect(box('network:bluesky/kind:profile/feed:10', 'All items').checked).toBe(true);
+    expect(cellOf('network:bluesky/kind:profile/feed:10', 'All items').classList).toContain(
+      'inherited',
+    );
+    expect(cellOf('network:bluesky/kind:profile/feed:10', 'All items').getAttribute('title')).toBe(
       'Excluded by Bluesky',
     );
     expect(box('network:bluesky', 'All items').checked).toBe(false);
@@ -231,7 +243,7 @@ describe('VisibilitySectionComponent', () => {
     setUp({ excludedFromAllItems: ['bluesky'] });
     expandAll();
 
-    const dimmed = box('network:bluesky/feed:10', 'All items');
+    const dimmed = box('network:bluesky/kind:profile/feed:10', 'All items');
     expect(dimmed.disabled).toBe(false);
     dimmed.click();
 
@@ -250,7 +262,7 @@ describe('VisibilitySectionComponent', () => {
 
     expandAll();
 
-    expect(rowKeys()).toHaveLength(9);
+    expect(rowKeys()).toHaveLength(10);
     expect(expandToggle().textContent).toContain('Collapse all');
 
     expandAll();
@@ -270,6 +282,39 @@ describe('VisibilitySectionComponent', () => {
     expect(rowKeys()).toEqual(['tag:1', 'tag:2', 'tag:3', 'network:bluesky', 'untagged']);
   });
 
+  it('opens a network onto its feed kinds, and a kind onto its feeds', () => {
+    setUp();
+    const expandRow = (key: string): void => {
+      row(key).querySelector<HTMLButtonElement>('[data-test="expand"]')!.click();
+      fixture.detectChanges();
+    };
+
+    expandRow('network:bluesky');
+
+    expect(rowKeys()).toContain('network:bluesky/kind:profile');
+    expect(rowKeys()).not.toContain('network:bluesky/kind:profile/feed:10');
+    expect(row('network:bluesky/kind:profile').querySelector('.label')!.textContent!.trim()).toBe(
+      'Feeds',
+    );
+    expect(row('network:bluesky/kind:profile').querySelectorAll('input')).toHaveLength(0);
+
+    expandRow('network:bluesky/kind:profile');
+
+    expect(rowKeys()).toContain('network:bluesky/kind:profile/feed:10');
+  });
+
+  it('shows a matching network feed through its collapsed kind', () => {
+    setUp();
+
+    filterBy('alice');
+
+    expect(rowKeys()).toEqual([
+      'network:bluesky',
+      'network:bluesky/kind:profile',
+      'network:bluesky/kind:profile/feed:10',
+    ]);
+  });
+
   it('collapses a parent’s descendants only', () => {
     setUp();
     expandAll();
@@ -282,7 +327,8 @@ describe('VisibilitySectionComponent', () => {
       'tag:3',
       'tag:3/feed:11',
       'network:bluesky',
-      'network:bluesky/feed:10',
+      'network:bluesky/kind:profile',
+      'network:bluesky/kind:profile/feed:10',
       'untagged',
       'untagged/feed:12',
     ]);

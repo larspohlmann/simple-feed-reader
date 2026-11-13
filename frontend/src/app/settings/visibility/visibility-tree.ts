@@ -1,11 +1,16 @@
-import { SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
+import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import { SubscriptionDto, TagDto } from '../../reader/models';
-import { networkOf } from '../../reader/state/social-sections';
+import {
+  NETWORK_FEED_KINDS_IN_ORDER,
+  SocialSection,
+  networkOf,
+} from '../../reader/state/social-sections';
 import { TagNode, untaggedSubscriptions } from '../../reader/state/subscription-derivations';
 
 export type VisibilityTarget =
   | { readonly kind: 'tag'; readonly tag: TagDto }
   | { readonly kind: 'network'; readonly network: SocialNetworkName }
+  | { readonly kind: 'feedKind'; readonly feedKind: NetworkFeedKind }
   | { readonly kind: 'untagged' }
   | { readonly kind: 'feed'; readonly subscription: SubscriptionDto };
 
@@ -20,21 +25,27 @@ export interface VisibilityLine {
   readonly hasChildren: boolean;
 }
 
+/** What the tree is drawn from, as the sidebar already derives it. */
+export interface VisibilitySources {
+  readonly tagTree: readonly TagNode[];
+  readonly socialSections: readonly SocialSection[];
+  readonly subscriptions: readonly SubscriptionDto[];
+}
+
 interface VisibilityNode {
   readonly key: string;
   readonly target: VisibilityTarget;
   readonly children: readonly VisibilityNode[];
 }
 
-/** Tags with their subtags and feeds, then each network with its feeds, then the feeds in neither. */
+/** Tags with their subtags and feeds, then each network as the sidebar shows it, then the feeds in neither. */
 export function visibilityLines(
-  tagTree: readonly TagNode[],
-  subscriptions: readonly SubscriptionDto[],
+  { tagTree, socialSections, subscriptions }: VisibilitySources,
   feedFilter: ((subscription: SubscriptionDto) => boolean) | null,
 ): VisibilityLine[] {
   const nodes = [
     ...tagTree.map(tagNode),
-    ...networkNodes(subscriptions),
+    ...socialSections.map(networkNode).filter((node) => node.children.length > 0),
     ...untaggedNodes(subscriptions),
   ];
   const kept = feedFilter === null ? nodes : pruned(nodes, feedFilter);
@@ -53,18 +64,35 @@ function tagNode(node: TagNode): VisibilityNode {
   };
 }
 
-function networkNodes(subscriptions: readonly SubscriptionDto[]): VisibilityNode[] {
-  return SOCIAL_NETWORKS.map((network) => {
-    const key = `network:${network}`;
-    const feeds = subscriptions
-      .filter((subscription) => networkOf(subscription) === network)
-      .sort((left, right) => left.title.localeCompare(right.title));
-    return {
-      key,
-      target: { kind: 'network', network } as const,
-      children: feeds.map((subscription) => feedNode(key, subscription)),
-    };
-  }).filter((node) => node.children.length > 0);
+/** The account feeds, then one head per feed kind that holds any, then the saved feed. */
+function networkNode(section: SocialSection): VisibilityNode {
+  const key = `network:${section.network}`;
+  const accountFeeds = section.accounts.flatMap((account) => account.subscriptions);
+  const kinds = NETWORK_FEED_KINDS_IN_ORDER.filter(
+    (feedKind) => section.groups[feedKind].subscriptions.length > 0,
+  ).map((feedKind) => feedKindNode(key, feedKind, section.groups[feedKind].subscriptions));
+  return {
+    key,
+    target: { kind: 'network', network: section.network },
+    children: [
+      ...accountFeeds.map((subscription) => feedNode(key, subscription)),
+      ...kinds,
+      ...(section.saved === null ? [] : [feedNode(key, section.saved)]),
+    ],
+  };
+}
+
+function feedKindNode(
+  networkKey: string,
+  feedKind: NetworkFeedKind,
+  subscriptions: readonly SubscriptionDto[],
+): VisibilityNode {
+  const key = `${networkKey}/kind:${feedKind}`;
+  return {
+    key,
+    target: { kind: 'feedKind', feedKind },
+    children: subscriptions.map((subscription) => feedNode(key, subscription)),
+  };
 }
 
 function untaggedNodes(subscriptions: readonly SubscriptionDto[]): VisibilityNode[] {
