@@ -1,7 +1,7 @@
 # Publishes a GitHub Release when a plain vX.Y.Z tag is pushed on main, writes
 # the release notes back into CHANGELOG.md, redeploys the project homepage so
 # its changelog page shows the release, pushes the release's php and web
-# images to GHCR, and announces its highlights on Bluesky and Mastodon.
+# images to GHCR, and announces its highlights on Bluesky, Mastodon and LinkedIn.
 #
 # Like the Strato deploy, a tag push proves nothing on its own: it can name any
 # commit, and CI does not run on tags. Two guard steps supply what the trigger

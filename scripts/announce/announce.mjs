@@ -1,6 +1,7 @@
 import { BLUESKY_LIMIT, DEFAULT_BLUESKY_SERVICE, postBlueskyThread } from './bluesky.mjs';
+import { postLinkedIn } from './linkedin.mjs';
 import { MASTODON_LIMIT, postMastodonThread } from './mastodon.mjs';
-import { buildThread, extractHighlights, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, HOMEPAGE_URL } from './thread.mjs';
+import { buildPost, buildThread, extractHighlights, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, HOMEPAGE_URL } from './thread.mjs';
 
 export async function announce({ tag, releaseUrl, releaseBody, cardImage, env, fetch, log, dryRun }) {
   const highlights = extractHighlights(releaseBody);
@@ -10,9 +11,9 @@ export async function announce({ tag, releaseUrl, releaseBody, cardImage, env, f
   }
   let failures = 0;
   for (const network of networks({ cardImage, env, fetch })) {
-    const posts = buildThread({ tag, releaseUrl, highlights, limit: network.limit });
+    const posts = network.compose({ tag, releaseUrl, highlights });
     if (dryRun) {
-      log(`--- ${network.name} (${posts.length} posts)`);
+      log(`--- ${network.name} (${posts.length} ${posts.length === 1 ? 'post' : 'posts'})`);
       posts.forEach((post, index) => log(`[${index + 1}] ${post}`));
       continue;
     }
@@ -31,24 +32,31 @@ export async function announce({ tag, releaseUrl, releaseBody, cardImage, env, f
 }
 
 function networks({ cardImage, env, fetch }) {
+  const card = { uri: HOMEPAGE_URL, title: HOMEPAGE_TITLE, description: HOMEPAGE_DESCRIPTION, thumb: cardImage };
   return [
     {
       name: 'Mastodon',
-      limit: MASTODON_LIMIT,
+      compose: (release) => buildThread({ ...release, limit: MASTODON_LIMIT }),
       configured: Boolean(env.MASTODON_INSTANCE && env.MASTODON_TOKEN),
       post: (posts) => postMastodonThread(posts, { instance: env.MASTODON_INSTANCE, token: env.MASTODON_TOKEN, fetch }),
     },
     {
       name: 'Bluesky',
-      limit: BLUESKY_LIMIT,
+      compose: (release) => buildThread({ ...release, limit: BLUESKY_LIMIT }),
       configured: Boolean(env.BLUESKY_HANDLE && env.BLUESKY_APP_PASSWORD),
       post: (posts) => postBlueskyThread(posts, {
         service: env.BLUESKY_SERVICE || DEFAULT_BLUESKY_SERVICE,
         handle: env.BLUESKY_HANDLE,
         appPassword: env.BLUESKY_APP_PASSWORD,
-        card: { uri: HOMEPAGE_URL, title: HOMEPAGE_TITLE, description: HOMEPAGE_DESCRIPTION, thumb: cardImage },
+        card,
         fetch,
       }),
+    },
+    {
+      name: 'LinkedIn',
+      compose: (release) => [buildPost(release)],
+      configured: Boolean(env.LINKEDIN_TOKEN && env.LINKEDIN_AUTHOR),
+      post: ([commentary]) => postLinkedIn(commentary, { token: env.LINKEDIN_TOKEN, author: env.LINKEDIN_AUTHOR, card, fetch }),
     },
   ];
 }

@@ -41,6 +41,8 @@ jobs:
           BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_SERVICE: ${{ secrets.BLUESKY_SERVICE }}
+          LINKEDIN_TOKEN: ${{ secrets.LINKEDIN_TOKEN }}
+          LINKEDIN_AUTHOR: ${{ secrets.LINKEDIN_AUTHOR }}
         run: |
           set -euo pipefail
           if [ -n "${TAG}" ] && ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then

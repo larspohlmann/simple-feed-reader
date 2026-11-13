@@ -6,6 +6,8 @@ const releaseBody = '### Highlights\n\n**One.** First.\n\n## What\'s Changed\n';
 const base = { tag: 'v1.9.0', releaseUrl: 'https://example.org/release', releaseBody, cardImage: null, dryRun: false };
 const mastodonEnv = { MASTODON_INSTANCE: 'https://m.example', MASTODON_TOKEN: 't' };
 const blueskyEnv = { BLUESKY_HANDLE: 'h', BLUESKY_APP_PASSWORD: 'p' };
+const linkedInEnv = { LINKEDIN_TOKEN: 'l', LINKEDIN_AUTHOR: 'urn:li:person:abc' };
+const allEnv = { ...mastodonEnv, ...blueskyEnv, ...linkedInEnv };
 
 function recorder() {
   const lines = [];
@@ -19,6 +21,9 @@ function respondingFetch({ failingHost = null } = {}) {
     if (failingHost !== null && url.startsWith(failingHost)) {
       return new Response('{"error":"down"}', { status: 503 });
     }
+    if (url === 'https://api.linkedin.com/rest/posts') {
+      return new Response(null, { status: 201, headers: { 'x-restli-id': 'urn:li:share:1' } });
+    }
     const payload = url.includes('createSession')
       ? { accessJwt: 'jwt', did: 'did:plc:x' }
       : { id: '1', url: 'https://m.example/@l/1', uri: 'at://did:plc:x/app.bsky.feed.post/r', cid: 'c' };
@@ -31,7 +36,7 @@ test('a release without highlights posts nothing and succeeds', async () => {
   const { lines, log } = recorder();
   const { fetch, urls } = respondingFetch();
 
-  const code = await announce({ ...base, releaseBody: '## What\'s Changed\n', env: { ...mastodonEnv, ...blueskyEnv }, fetch, log });
+  const code = await announce({ ...base, releaseBody: '## What\'s Changed\n', env: allEnv, fetch, log });
 
   assert.equal(code, 0);
   assert.deepEqual(urls, []);
@@ -42,12 +47,13 @@ test('posts to every configured network', async () => {
   const { log } = recorder();
   const { fetch, urls } = respondingFetch();
 
-  const code = await announce({ ...base, env: { ...mastodonEnv, ...blueskyEnv }, fetch, log });
+  const code = await announce({ ...base, env: allEnv, fetch, log });
 
   assert.equal(code, 0);
   assert.equal(urls.filter((url) => url.endsWith('/api/v1/statuses')).length, 3);
   assert.equal(urls.filter((url) => url.endsWith('.createRecord')).length, 3);
   assert.ok(urls.includes('https://bsky.social/xrpc/com.atproto.server.createSession'));
+  assert.equal(urls.filter((url) => url === 'https://api.linkedin.com/rest/posts').length, 1);
 });
 
 test('a network without secrets is skipped with a warning', async () => {
@@ -58,6 +64,7 @@ test('a network without secrets is skipped with a warning', async () => {
 
   assert.equal(code, 0);
   assert.ok(lines.includes('::warning::Bluesky secrets are not set; skipping.'));
+  assert.ok(lines.includes('::warning::LinkedIn secrets are not set; skipping.'));
   assert.ok(urls.every((url) => url.startsWith('https://m.example')));
 });
 
@@ -65,14 +72,14 @@ test('a failing network fails the run but the other still posts', async () => {
   const { lines, log } = recorder();
   const { fetch, urls } = respondingFetch({ failingHost: 'https://m.example' });
 
-  const code = await announce({ ...base, env: { ...mastodonEnv, ...blueskyEnv }, fetch, log });
+  const code = await announce({ ...base, env: allEnv, fetch, log });
 
   assert.equal(code, 1);
   assert.ok(lines.some((line) => line.startsWith('::error::Mastodon: Mastodon refused post 1: HTTP 503')));
   assert.equal(urls.filter((url) => url.endsWith('.createRecord')).length, 3);
 });
 
-test('a dry run prints both threads and calls nothing', async () => {
+test('a dry run prints every network\'s posts and calls nothing', async () => {
   const { lines, log } = recorder();
   const { fetch, urls } = respondingFetch();
 
@@ -85,5 +92,11 @@ test('a dry run prints both threads and calls nothing', async () => {
     '[2] One. First.',
     '[3] Full release notes: https://example.org/release',
   ];
-  assert.deepEqual(lines, ['--- Mastodon (3 posts)', ...thread, '--- Bluesky (3 posts)', ...thread]);
+  const linkedInPost = '[1] simple-feed-reader v1.9.0 is out. #rss #rssreader\n\nHighlights:\n• One. First.\n\n'
+    + 'Full release notes: https://example.org/release';
+  assert.deepEqual(lines, [
+    '--- Mastodon (3 posts)', ...thread,
+    '--- Bluesky (3 posts)', ...thread,
+    '--- LinkedIn (1 post)', linkedInPost,
+  ]);
 });

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildThread, extractHighlights, graphemeLength, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, splitToFit } from '../../announce/thread.mjs';
+import { buildPost, buildThread, extractHighlights, graphemeLength, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, splitToFit } from '../../announce/thread.mjs';
 
 const homepage = readFileSync(new URL('../../../docs/homepage/index.html', import.meta.url), 'utf8');
 
@@ -82,4 +82,18 @@ test('buildThread leads with the homepage and tags, and closes with the release 
     'Two. Second.',
     'Full release notes: https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0',
   ]);
+});
+
+test('buildPost lists the highlights between the tags and the release notes', () => {
+  const post = buildPost({
+    tag: 'v1.9.0',
+    releaseUrl: 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0',
+    highlights: ['One. First.', 'Two. Second.'],
+  });
+  assert.equal(
+    post,
+    'simple-feed-reader v1.9.0 is out. #rss #rssreader\n\n'
+      + 'Highlights:\n• One. First.\n• Two. Second.\n\n'
+      + 'Full release notes: https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0',
+  );
 });

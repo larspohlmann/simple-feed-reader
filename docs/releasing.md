@@ -14,7 +14,8 @@ which:
   `…/simple-feed-reader-web:vX.Y.Z`, each for `linux/amd64` and `linux/arm64`
   (see [Release images](#release-images)),
 - once the images are tagged, posts the release's highlights as a thread to
-  Bluesky and Mastodon (see [Announcements](#announcements)),
+  Bluesky and Mastodon and as a single post to LinkedIn (see
+  [Announcements](#announcements)),
 - for every release after the first, writes the generated release notes into
   [CHANGELOG.md](../CHANGELOG.md) and commits that to `main` as
   `github-actions[bot]`,
@@ -72,6 +73,10 @@ to each configured network:
   Bluesky's 300 or Mastodon's 500 characters.
 - a closing reply that links the GitHub Release.
 
+LinkedIn has no reply chains, so it gets one post from Lars's personal profile:
+the tags, the highlights as a list and the GitHub Release link, under a homepage
+card with the share image.
+
 A release without highlights posts nothing.
 
 Repository secrets (a network whose secrets are missing is skipped with a warning):
@@ -83,10 +88,41 @@ Repository secrets (a network whose secrets are missing is skipped with a warnin
 | `BLUESKY_HANDLE` | e.g. `lars.bsky.social` |
 | `BLUESKY_APP_PASSWORD` | Settings → Privacy and security → App passwords |
 | `BLUESKY_SERVICE` | optional; your PDS if not `https://bsky.social` |
+| `LINKEDIN_TOKEN` | member access token with `openid profile w_member_social`; expires after 60 days, see below |
+| `LINKEDIN_AUTHOR` | `urn:li:person:<sub>`, where `sub` comes from `/v2/userinfo` |
 
 ```bash
 gh secret set MASTODON_TOKEN
 ```
+
+### LinkedIn token
+
+The token comes from a developer app at
+[linkedin.com/developers/apps](https://www.linkedin.com/developers/apps). LinkedIn
+requires the app to be linked to a Company Page; the posts still come from the
+personal profile. The app needs the products **Share on LinkedIn** and
+**Sign In with LinkedIn using OpenID Connect**.
+
+LinkedIn issues no refresh token to this kind of app, so the token expires after
+60 days. An expired token fails only the LinkedIn leg (`HTTP 401`); Bluesky and
+Mastodon still post. To renew it, open the
+[token generator](https://www.linkedin.com/developers/tools/oauth/token-generator),
+pick the app, tick `openid`, `profile` and `w_member_social`, sign in, and store
+the new token:
+
+```bash
+gh secret set LINKEDIN_TOKEN
+```
+
+The author URN does not change. To look it up again:
+
+```bash
+curl -s -H "Authorization: Bearer $LINKEDIN_TOKEN" https://api.linkedin.com/v2/userinfo | jq -r '"urn:li:person:" + .sub'
+```
+
+When LinkedIn answers `HTTP 426`, the API version pinned in
+`scripts/announce/linkedin.mjs` has been retired (about a year after release):
+raise it to a [current one](https://learn.microsoft.com/en-us/linkedin/marketing/versioning).
 
 Preview a thread locally without posting:
 
@@ -104,7 +140,8 @@ gh workflow run announce-release.yml
 ```
 
 Re-running within an hour is safe on Mastodon, which returns the posts it
-already has. Bluesky always posts again, so delete the duplicate thread there.
+already has. Bluesky and LinkedIn always post again, so delete the duplicates
+there.
 
 ## Steps
 
