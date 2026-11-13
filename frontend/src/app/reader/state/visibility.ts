@@ -16,6 +16,7 @@ export const INCLUSION_FLAG: Readonly<Record<ExclusionSurface, keyof TagInclusio
   allItems: 'includeInAllItems',
   forYou: 'includeInForYou',
   savedSearches: 'includeInSavedSearches',
+  trending: 'includeInTrending',
 };
 
 /** The network first, then each carried tag followed by its ancestors, every switched-off one once. */

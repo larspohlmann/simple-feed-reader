@@ -25,6 +25,16 @@ describe('NetworkExclusionsApi', () => {
 
   it.each<{ call: () => Observable<unknown>; method: string; url: string }>([
     {
+      call: () => api.excludedNetworks('trending'),
+      method: 'GET',
+      url: 'https://api.test/api/trending/excluded-networks',
+    },
+    {
+      call: () => api.exclude('trending', 'bluesky'),
+      method: 'PUT',
+      url: 'https://api.test/api/trending/excluded-networks/bluesky',
+    },
+    {
       call: () => api.excludedNetworks('all-items'),
       method: 'GET',
       url: 'https://api.test/api/all-items/excluded-networks',

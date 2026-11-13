@@ -54,9 +54,7 @@ import { TagDragSession } from '../../reader/tag-drag-session';
 import { TagDropMark } from '../../reader/tag-drop';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
- *  value, and the i18n key for its label. A readonly literal array so the
- *  template renders the four commands from one loop instead of four
- *  near-identical buttons. */
+ *  value, and the i18n key for its label. */
 interface VisibilityMenuItem {
   readonly flag: keyof SubscriptionFlags;
   readonly value: boolean;
@@ -138,6 +136,8 @@ export class OrganiseSectionComponent implements OnInit {
       value: false,
       labelKey: 'settings.organise.hideFromSavedSearches',
     },
+    { flag: 'includeInTrending', value: true, labelKey: 'settings.organise.showInTrending' },
+    { flag: 'includeInTrending', value: false, labelKey: 'settings.organise.hideFromTrending' },
   ];
 
   protected toggleTagFilter(key: GroupKey): void {

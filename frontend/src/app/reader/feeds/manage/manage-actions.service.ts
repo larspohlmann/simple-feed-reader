@@ -52,7 +52,7 @@ export class ManageActions {
         return;
       }
       if (!updated) return;
-      this.subscriptionReload.afterWrite(savedSearchFlagChange(subscription, updated));
+      this.subscriptionReload.afterWrite(reloadingFlagChanges(subscription, updated));
       if (searchQueryOf(updated) !== searchQueryOf(subscription)) this.requeried(subscription);
     });
   }
@@ -113,6 +113,11 @@ export class ManageActions {
   /** Flip whether this feed's entries count in saved searches. Optimistic like the others. */
   setIncludeInSavedSearches(subscription: SubscriptionDto, value: boolean): void {
     this.patchFlags(subscription, { includeInSavedSearches: value });
+  }
+
+  /** Flip whether this feed's shares count in Trending. Optimistic like the others. */
+  setIncludeInTrending(subscription: SubscriptionDto, value: boolean): void {
+    this.patchFlags(subscription, { includeInTrending: value });
   }
 
   /** The backend PATCH clears customTitle/tagIds when they are omitted, so
@@ -221,10 +226,16 @@ function searchQueryOf(subscription: SubscriptionDto): string | null {
   return isSearchFeed(subscription) ? subscription.social.query : null;
 }
 
-function savedSearchFlagChange(
+function reloadingFlagChanges(
   before: SubscriptionDto,
   after: SubscriptionDto,
-): Pick<SubscriptionFlags, 'includeInSavedSearches'> {
-  if (after.includeInSavedSearches === before.includeInSavedSearches) return {};
-  return { includeInSavedSearches: after.includeInSavedSearches };
+): Pick<SubscriptionFlags, 'includeInSavedSearches' | 'includeInTrending'> {
+  return {
+    ...(after.includeInSavedSearches === before.includeInSavedSearches
+      ? {}
+      : { includeInSavedSearches: after.includeInSavedSearches }),
+    ...(after.includeInTrending === before.includeInTrending
+      ? {}
+      : { includeInTrending: after.includeInTrending }),
+  };
 }

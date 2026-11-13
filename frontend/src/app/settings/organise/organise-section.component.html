@@ -229,7 +229,7 @@
         <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('remove')">
           {{ 'settings.organise.removeTag' | transloco }}
         </app-button>
-        <!-- Four commands, not two toggles: a toggle over a mixed selection has no
+        <!-- Commands, not toggles: a toggle over a mixed selection has no
            correct starting position. They sit behind one menu so the bar stays
            narrow enough to hold every action on one line. -->
         <div
@@ -321,6 +321,7 @@
           (toggleAllItems)="manage.setIncludeInAllItems(s, !s.includeInAllItems)"
           (toggleForYou)="manage.setIncludeInForYou(s, !s.includeInForYou)"
           (toggleSavedSearches)="manage.setIncludeInSavedSearches(s, !s.includeInSavedSearches)"
+          (toggleTrending)="manage.setIncludeInTrending(s, !s.includeInTrending)"
           (unsubscribe)="manage.unsubscribe(s)"
         />
       }

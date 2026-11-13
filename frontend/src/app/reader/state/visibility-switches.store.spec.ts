@@ -7,6 +7,7 @@ import { AllItemsNetworksStore } from './all-items-networks.store';
 import { ForYouNetworksStore } from './for-you-networks.store';
 import { SavedSearchesStore } from './saved-searches.store';
 import { TagsStore } from './tags.store';
+import { TrendingNetworksStore } from './trending-networks.store';
 import { VisibilitySwitchesStore } from './visibility-switches.store';
 
 describe('VisibilitySwitchesStore', () => {
@@ -14,6 +15,7 @@ describe('VisibilitySwitchesStore', () => {
   const allItemsExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
   const forYouExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
   const savedSearchesIncluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
+  const trendingExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
 
   function setup(): VisibilitySwitchesStore {
     TestBed.configureTestingModule({
@@ -22,6 +24,7 @@ describe('VisibilitySwitchesStore', () => {
         { provide: AllItemsNetworksStore, useValue: { excludedNetworks: allItemsExcluded } },
         { provide: ForYouNetworksStore, useValue: { excludedNetworks: forYouExcluded } },
         { provide: SavedSearchesStore, useValue: { includedNetworks: savedSearchesIncluded } },
+        { provide: TrendingNetworksStore, useValue: { excludedNetworks: trendingExcluded } },
       ],
     });
     return TestBed.inject(VisibilitySwitchesStore);
@@ -32,6 +35,7 @@ describe('VisibilitySwitchesStore', () => {
     allItemsExcluded.set(new Set(['bluesky']));
     forYouExcluded.set(new Set(['mastodon']));
     savedSearchesIncluded.set(new Set(['bluesky', 'mastodon']));
+    trendingExcluded.set(new Set(['bluesky', 'mastodon']));
 
     const switches = setup().switches();
 
@@ -39,6 +43,7 @@ describe('VisibilitySwitchesStore', () => {
     expect([...switches.excludedNetworks.allItems]).toEqual(['bluesky']);
     expect([...switches.excludedNetworks.forYou]).toEqual(['mastodon']);
     expect(switches.excludedNetworks.savedSearches.size).toBe(0);
+    expect([...switches.excludedNetworks.trending]).toEqual(['bluesky', 'mastodon']);
   });
 
   it('counts a network out of saved searches unless it is included', () => {

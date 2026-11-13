@@ -6,6 +6,7 @@ import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
 import { ForYouNetworksStore } from '../../state/for-you-networks.store';
+import { TrendingNetworksStore } from '../../state/trending-networks.store';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { LayoutService } from '../../layout.service';
@@ -37,6 +38,7 @@ function openMenuFor(target: TagDto): HTMLElement {
       { provide: SavedSearchesStore, useValue: {} },
       { provide: ForYouNetworksStore, useValue: {} },
       { provide: AllItemsNetworksStore, useValue: {} },
+      { provide: TrendingNetworksStore, useValue: {} },
       { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
       { provide: LayoutService, useValue: { isCoarse: signal(false) } },
       { provide: ManageActions, useValue: {} },
@@ -71,7 +73,7 @@ describe('SidebarTagRowMenuComponent', () => {
     expect(itemTexts(openMenuFor(tagOf(3, 2)))).not.toContain('Create tag here');
   });
 
-  it('lists the three switches as checkboxes between the actions and Delete', () => {
+  it('lists the four switches as checkboxes between the actions and Delete', () => {
     const pop = openMenuFor(tagOf(1, null)).querySelector('.pop')!;
     const items = [...pop.children].map((item) =>
       item.tagName === 'HR' ? '<hr>' : item.textContent?.trim(),
@@ -84,6 +86,7 @@ describe('SidebarTagRowMenuComponent', () => {
       'Show in All items',
       'Show in For You',
       'Show in saved searches',
+      'Show in Trending',
       '<hr>',
       'Delete tag',
     ]);
@@ -91,7 +94,7 @@ describe('SidebarTagRowMenuComponent', () => {
       [...pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')].map(
         (box) => box.checked,
       ),
-    ).toEqual([true, true, true]);
+    ).toEqual([true, true, true, true]);
   });
 
   it('switches the tag from a checkbox and keeps the menu open', () => {

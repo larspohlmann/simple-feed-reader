@@ -265,12 +265,13 @@ describe('SidebarSocialSectionComponent', () => {
     expect(handles).toEqual(['@work.bsky.social']);
   });
 
-  it('marks a private feed only for saved searches, not for the surfaces it is out of by design', () => {
+  it('marks a private feed only for saved searches and Trending, not for the surfaces it is out of by design', () => {
     const excluded = (id: number) =>
       feed(id, 'list', {
         includeInAllItems: false,
         includeInForYou: false,
         includeInSavedSearches: false,
+        includeInTrending: false,
       });
     const section: SocialSection = {
       network: 'bluesky',
@@ -286,7 +287,7 @@ describe('SidebarSocialSectionComponent', () => {
     const marker = element(mount(section)).querySelector(
       'app-sidebar-feed-row .feed-exclusion-marker',
     );
-    expect(marker?.getAttribute('title')).toBe('Hidden from Saved searches');
+    expect(marker?.getAttribute('title')).toBe('Hidden from Saved searches, Trending');
   });
 
   it('lists the saved feed as a row of its own after the accounts', () => {

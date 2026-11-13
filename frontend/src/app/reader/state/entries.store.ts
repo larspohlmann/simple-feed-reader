@@ -123,6 +123,11 @@ export class EntriesStore {
     if (query !== null) this.load(query);
   }
 
+  /** Loads the list again only while it shows Trending, for a switch that changed what Trending counts. */
+  reloadTrending(): void {
+    if (this.query()?.view === 'trending') this.reload();
+  }
+
   /** Runs `mutation$` with the loading cue raised from the call, not from its
    *  response — so a bulk mark-read shows the wait at once. `reload` refreshes
    *  the list on success (which lowers the cue); a failed mutation lowers it. */

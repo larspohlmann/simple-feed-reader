@@ -20,9 +20,10 @@ describe('ownExcludedSurfaces', () => {
       includeInAllItems: false,
       includeInForYou: false,
       includeInSavedSearches: false,
+      includeInTrending: false,
     });
 
-    expect(ownExcludedSurfaces(feed)).toEqual(['allItems', 'forYou', 'savedSearches']);
+    expect(ownExcludedSurfaces(feed)).toEqual(['allItems', 'forYou', 'savedSearches', 'trending']);
   });
 
   it('ignores the network a social feed belongs to', () => {
@@ -40,44 +41,59 @@ describe('exclusionTitle', () => {
   it('names the surfaces the feed is hidden from', () => {
     const i18n = TestBed.inject(TranslocoService);
 
-    expect(exclusionTitle(i18n, ['allItems', 'savedSearches'])).toBe(
-      'Hidden from All items, Saved searches',
+    expect(exclusionTitle(i18n, ['allItems', 'savedSearches', 'trending'])).toBe(
+      'Hidden from All items, Saved searches, Trending',
     );
   });
 });
 
 describe('FEED_FLAG_TOGGLES', () => {
   const manage = (): jest.Mocked<
-    Pick<ManageActions, 'setIncludeInAllItems' | 'setIncludeInForYou' | 'setIncludeInSavedSearches'>
+    Pick<
+      ManageActions,
+      | 'setIncludeInAllItems'
+      | 'setIncludeInForYou'
+      | 'setIncludeInSavedSearches'
+      | 'setIncludeInTrending'
+    >
   > => ({
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
     setIncludeInSavedSearches: jest.fn(),
+    setIncludeInTrending: jest.fn(),
   });
 
-  it('lists All items, For you and saved searches, in menu order', () => {
+  it('lists All items, For you, saved searches and Trending, in menu order', () => {
     expect(FEED_FLAG_TOGGLES.map((toggle) => toggle.surface)).toEqual([
       'allItems',
       'forYou',
       'savedSearches',
+      'trending',
     ]);
   });
 
+  it('labels the Trending switch', () => {
+    expect(FEED_FLAG_TOGGLES[3].includeKey).toBe('reader.includeInTrending');
+  });
+
   it('flips each flag through its own ManageActions setter', () => {
-    const [allItems, forYou, savedSearches] = FEED_FLAG_TOGGLES;
+    const [allItems, forYou, savedSearches, trending] = FEED_FLAG_TOGGLES;
     const feed = makeSubscription({
       includeInAllItems: true,
       includeInForYou: false,
       includeInSavedSearches: true,
+      includeInTrending: false,
     });
     const actions = manage();
 
     flipFeedFlag(actions as unknown as ManageActions, allItems, feed);
     flipFeedFlag(actions as unknown as ManageActions, forYou, feed);
     flipFeedFlag(actions as unknown as ManageActions, savedSearches, feed);
+    flipFeedFlag(actions as unknown as ManageActions, trending, feed);
 
     expect(actions.setIncludeInAllItems).toHaveBeenCalledWith(feed, false);
     expect(actions.setIncludeInForYou).toHaveBeenCalledWith(feed, true);
     expect(actions.setIncludeInSavedSearches).toHaveBeenCalledWith(feed, false);
+    expect(actions.setIncludeInTrending).toHaveBeenCalledWith(feed, true);
   });
 });

@@ -84,12 +84,14 @@ export class OrganiseFeedRowComponent {
   readonly toggleAllItems = output<void>();
   readonly toggleForYou = output<void>();
   readonly toggleSavedSearches = output<void>();
+  readonly toggleTrending = output<void>();
   readonly unsubscribe = output<void>();
 
   private readonly flagToggled: Readonly<Record<ExclusionSurface, OutputEmitterRef<void>>> = {
     allItems: this.toggleAllItems,
     forYou: this.toggleForYou,
     savedSearches: this.toggleSavedSearches,
+    trending: this.toggleTrending,
   };
   protected readonly feedFlags = FEED_FLAG_TOGGLES;
 

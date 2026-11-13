@@ -83,6 +83,24 @@ describe('ManageActions', () => {
     expect(savedSearchesLoad).toHaveBeenCalled();
   });
 
+  it('reloads the Trending list after an edit that switched the Trending flag, and only then', () => {
+    jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+      .mockImplementation(() => undefined);
+    const reloadTrending = jest
+      .spyOn(TestBed.inject(EntriesStore), 'reloadTrending')
+      .mockImplementation(() => undefined);
+
+    closed = sub;
+    service.editSubscription(sub);
+    expect(reloadTrending).not.toHaveBeenCalled();
+
+    closed = { ...sub, includeInTrending: !sub.includeInTrending };
+    service.editSubscription(sub);
+    expect(reloadTrending).toHaveBeenCalledTimes(1);
+    expect(savedSearchesLoad).not.toHaveBeenCalled();
+  });
+
   it('refreshes a search whose query the edit changed, and only then', () => {
     const search = makeSubscription({
       id: 9,
@@ -290,6 +308,27 @@ describe('ManageActions', () => {
     testRequest.flush({ subscription: { ...tagged, includeInSavedSearches: false } });
     expect(subscriptionsLoad).toHaveBeenCalled();
     expect(savedSearchesLoad).toHaveBeenCalled();
+  });
+
+  it('setIncludeInTrending: PATCHes the flag, then reloads subscriptions and the Trending list', () => {
+    const tagged: SubscriptionDto = { ...sub, tags: [tag] };
+    const store = TestBed.inject(SubscriptionsStore);
+    store.storedSubscriptions.set([tagged]);
+    jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
+    const reloadTrending = jest
+      .spyOn(TestBed.inject(EntriesStore), 'reloadTrending')
+      .mockImplementation(() => undefined);
+    service.setIncludeInTrending(tagged, false);
+    expect(store.subscriptions().find((x) => x.id === 5)!.includeInTrending).toBe(false);
+    const testRequest = http.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.body).toEqual({
+      customTitle: tagged.customTitle,
+      tagIds: [3],
+      includeInTrending: false,
+    });
+    testRequest.flush({ subscription: { ...tagged, includeInTrending: false } });
+    expect(reloadTrending).toHaveBeenCalledTimes(1);
+    expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
   it('reorderUntagged: PATCHes /api/subscriptions/reorder then reloads subs', () => {

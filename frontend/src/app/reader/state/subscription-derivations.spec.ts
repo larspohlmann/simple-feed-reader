@@ -63,6 +63,7 @@ describe('sumEntries', () => {
       allItems: new Set(allItemsExcluded),
       forYou: new Set(),
       savedSearches: new Set(),
+      trending: new Set(),
     },
   });
   const plain = makeSubscription({ id: 1, entryCount: 5 });

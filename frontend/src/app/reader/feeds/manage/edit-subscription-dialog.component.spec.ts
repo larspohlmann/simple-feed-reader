@@ -49,6 +49,7 @@ const sub: SubscriptionDto = {
   includeInAllItems: true,
   includeInForYou: true,
   includeInSavedSearches: true,
+  includeInTrending: true,
   social: null,
 };
 
@@ -200,6 +201,7 @@ describe('EditSubscriptionDialogComponent', () => {
       includeInAllItems: true,
       includeInForYou: true,
       includeInSavedSearches: true,
+      includeInTrending: true,
     });
     testRequest.flush({ subscription: { ...sub, customTitle: 'My Heise' } });
     expect(close).toHaveBeenCalled();
@@ -216,6 +218,7 @@ describe('EditSubscriptionDialogComponent', () => {
       includeInAllItems: true,
       includeInForYou: true,
       includeInSavedSearches: true,
+      includeInTrending: true,
     });
     testRequest.flush({ subscription: sub });
   });
@@ -225,6 +228,7 @@ describe('EditSubscriptionDialogComponent', () => {
       ...sub,
       includeInAllItems: false,
       includeInSavedSearches: false,
+      includeInTrending: false,
     };
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -250,10 +254,13 @@ describe('EditSubscriptionDialogComponent', () => {
     );
     expect(allItemsSwitch!.checked).toBe(false);
     expect(forYouSwitch!.checked).toBe(true);
+    const trendingSwitch = element.querySelector<HTMLInputElement>('#edit-feed-trending');
     expect(savedSearchesSwitch!.checked).toBe(false);
+    expect(trendingSwitch!.checked).toBe(false);
 
     forYouSwitch!.click();
     savedSearchesSwitch!.click();
+    trendingSwitch!.click();
     fixture.detectChanges();
     fixture.componentInstance.submit();
 
@@ -264,6 +271,7 @@ describe('EditSubscriptionDialogComponent', () => {
       includeInAllItems: false,
       includeInForYou: false,
       includeInSavedSearches: true,
+      includeInTrending: true,
     });
     testRequest.flush({ subscription: excludedFromAllItems });
   });

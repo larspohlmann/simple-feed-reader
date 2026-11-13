@@ -7,7 +7,12 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
-import { FEED_FLAG_TOGGLES, ownExcludedSurfaces, exclusionTitle } from '../../feed-exclusions';
+import {
+  ExclusionSurface,
+  FEED_FLAG_TOGGLES,
+  ownExcludedSurfaces,
+  exclusionTitle,
+} from '../../feed-exclusions';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -18,6 +23,11 @@ import { MenuCheckboxComponent } from '../../../shared/menu-checkbox/menu-checkb
 
 /** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
  *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
+const PRIVATE_FEED_MARKED_SURFACES: ReadonlySet<ExclusionSurface> = new Set([
+  'savedSearches',
+  'trending',
+]);
+
 @Component({
   selector: 'app-sidebar-feed-row',
   imports: [
@@ -55,10 +65,12 @@ export class SidebarFeedRowComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly dictionary = inject(ActiveDictionary);
 
-  /** A private feed is out of All items and For you by design, so only its saved-search state is news. */
+  /** A private feed is out of All items and For you by design, so only its saved-search and Trending state is news. */
   protected readonly markerSurfaces = computed(() => {
     const surfaces = ownExcludedSurfaces(this.subscription());
-    return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
+    return this.isPrivate()
+      ? surfaces.filter((surface) => PRIVATE_FEED_MARKED_SURFACES.has(surface))
+      : surfaces;
   });
   protected readonly markerTitle = computed(() => {
     this.dictionary.loaded();

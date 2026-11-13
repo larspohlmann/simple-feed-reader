@@ -5,4 +5,5 @@ export const INCLUDED_EVERYWHERE: Readonly<TagInclusion> = {
   includeInAllItems: true,
   includeInForYou: true,
   includeInSavedSearches: true,
+  includeInTrending: true,
 };

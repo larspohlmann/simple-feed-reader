@@ -38,7 +38,12 @@ export abstract class NetworkExclusionsStore {
       : this.api.exclude(this.surface, network);
     write.pipe(catchError(() => of(undefined))).subscribe(() => {
       this.load();
-      this.subscriptions.reloadCountsQuietly();
+      this.refreshSurface();
     });
+  }
+
+  /** Re-learns what a landed switch changes: the badges, and for a surface with its own list, that list. */
+  protected refreshSurface(): void {
+    this.subscriptions.reloadCountsQuietly();
   }
 }

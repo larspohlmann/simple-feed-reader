@@ -10,6 +10,7 @@ const tech = makeTag(3, 'Tech');
 function switchesWith(
   tags: readonly TagDto[],
   allItemsExcluded: readonly ('bluesky' | 'mastodon')[] = [],
+  trendingExcluded: readonly ('bluesky' | 'mastodon')[] = [],
 ): VisibilitySwitches {
   return {
     tags,
@@ -17,6 +18,7 @@ function switchesWith(
       allItems: new Set(allItemsExcluded),
       forYou: new Set(),
       savedSearches: new Set(),
+      trending: new Set(trendingExcluded),
     },
   };
 }
@@ -85,6 +87,21 @@ describe('inheritedExclusions', () => {
     );
 
     expect(causes).toEqual([{ kind: 'tag', tag: switchedOff }]);
+  });
+
+  it('names the network and a tag that keep a feed out of Trending', () => {
+    const off = { ...tech, includeInTrending: false };
+
+    const causes = inheritedExclusions(
+      blueskyProfile({ tags: [tech] }),
+      'trending',
+      switchesWith([off], [], ['bluesky']),
+    );
+
+    expect(causes).toEqual([
+      { kind: 'network', network: 'bluesky' },
+      { kind: 'tag', tag: off },
+    ]);
   });
 
   it('ignores a switch that is off for another surface', () => {

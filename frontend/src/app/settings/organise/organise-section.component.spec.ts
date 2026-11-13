@@ -378,7 +378,7 @@ describe('OrganiseSectionComponent', () => {
     expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10, 11], { includeInAllItems: false });
   });
 
-  it('offers six visibility commands, the saved-search ones setting their own flag', async () => {
+  it('offers eight visibility commands, the saved-search and Trending ones setting their own flag', async () => {
     const { component, bulkActions } = await renderWithMocks();
     component.store.toggleFeed(10);
     fixture.detectChanges();
@@ -394,9 +394,15 @@ describe('OrganiseSectionComponent', () => {
       'Hide from For you',
       'Show in saved searches',
       'Hide from saved searches',
+      'Show in Trending',
+      'Hide from Trending',
     ]);
 
-    items[5].nativeElement.click();
+    items[7].nativeElement.click();
+    expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10], { includeInTrending: false });
+    root.query(By.css('[data-test="visibility"]')).nativeElement.click();
+    fixture.detectChanges();
+    root.queryAll(By.css('.pop [role="menuitem"]'))[5].nativeElement.click();
     expect(bulkActions.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: false });
     root.query(By.css('[data-test="visibility"]')).nativeElement.click();
     fixture.detectChanges();

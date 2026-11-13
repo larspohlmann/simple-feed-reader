@@ -299,7 +299,12 @@ function headingWith(
 
 const NO_SWITCHES: VisibilitySwitches = {
   tags: [],
-  excludedNetworks: { allItems: new Set(), forYou: new Set(), savedSearches: new Set() },
+  excludedNetworks: {
+    allItems: new Set(),
+    forYou: new Set(),
+    savedSearches: new Set(),
+    trending: new Set(),
+  },
 };
 
 describe('ListHeading for All items', () => {

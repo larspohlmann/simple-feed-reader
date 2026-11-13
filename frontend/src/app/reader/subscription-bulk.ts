@@ -4,6 +4,7 @@ export interface SubscriptionFlags {
   includeInAllItems?: boolean;
   includeInForYou?: boolean;
   includeInSavedSearches?: boolean;
+  includeInTrending?: boolean;
 }
 
 /** One bulk change across many feeds. At most one tag is added and at most one

@@ -814,6 +814,8 @@
       "hideFromForYou": "Aus Für dich ausblenden",
       "showInSavedSearches": "In gespeicherten Suchen anzeigen",
       "hideFromSavedSearches": "Aus gespeicherten Suchen ausblenden",
+      "showInTrending": "In „Im Trend“ anzeigen",
+      "hideFromTrending": "Aus „Im Trend“ ausblenden",
       "clear": "Zurücksetzen"
     },
     "visibility": {
@@ -1024,6 +1026,7 @@
       "showInAllItems": "In Alle Einträge anzeigen",
       "showInForYou": "In Für dich anzeigen",
       "showInSavedSearches": "In gespeicherten Suchen anzeigen",
+      "showInTrending": "In „Im Trend“ anzeigen",
       "saving": "Wird gespeichert…",
       "save": "Speichern"
     }
@@ -1420,6 +1423,7 @@
     "includeNetworkInSavedSearches": "In gespeicherte Suchen aufnehmen",
     "excludeNetworkFromSavedSearches": "Aus gespeicherten Suchen ausschließen",
     "includeInSavedSearches": "In gespeicherten Suchen anzeigen",
+    "includeInTrending": "In „Im Trend“ anzeigen",
     "excludedFrom": "Ausgeblendet aus {{surfaces}}",
     "dropToRemoveTags": "Hier ablegen, um Tags zu entfernen",
     "unread": "nur ungelesene",

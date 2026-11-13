@@ -814,6 +814,8 @@
       "hideFromForYou": "Hide from For you",
       "showInSavedSearches": "Show in saved searches",
       "hideFromSavedSearches": "Hide from saved searches",
+      "showInTrending": "Show in Trending",
+      "hideFromTrending": "Hide from Trending",
       "clear": "Clear"
     },
     "visibility": {
@@ -1024,6 +1026,7 @@
       "showInAllItems": "Show in All items",
       "showInForYou": "Show in For You",
       "showInSavedSearches": "Show in saved searches",
+      "showInTrending": "Show in Trending",
       "saving": "Saving…",
       "save": "Save"
     }
@@ -1420,6 +1423,7 @@
     "includeNetworkInSavedSearches": "Include in saved searches",
     "excludeNetworkFromSavedSearches": "Exclude from saved searches",
     "includeInSavedSearches": "Show in saved searches",
+    "includeInTrending": "Show in Trending",
     "excludedFrom": "Hidden from {{surfaces}}",
     "dropToRemoveTags": "Drop here to remove tags",
     "unread": "only unread",

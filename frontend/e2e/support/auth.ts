@@ -39,6 +39,9 @@ export async function stubAuthToken(page: Page): Promise<void> {
   await page.route('**/api/all-items/excluded-networks', (route) =>
     route.fulfill({ json: { excludedNetworks: [] } }),
   );
+  await page.route('**/api/trending/excluded-networks', (route) =>
+    route.fulfill({ json: { excludedNetworks: [] } }),
+  );
   // Carries a `userId` claim: without one, the reader holds its first list load for `/api/me`.
   await page.addInitScript(() =>
     localStorage.setItem('sfr.jwt', 'eyJhbGciOiJub25lIn0.eyJ1c2VySWQiOjF9.stub-signature'),

@@ -2,12 +2,13 @@ import { TranslocoService } from '@jsverse/transloco';
 import { SubscriptionDto, TagInclusion } from './models';
 import type { ManageActions } from './feeds/manage/manage-actions.service';
 
-export type ExclusionSurface = 'allItems' | 'forYou' | 'savedSearches';
+export type ExclusionSurface = 'allItems' | 'forYou' | 'savedSearches' | 'trending';
 
 export const SURFACE_LABEL_KEYS: Readonly<Record<ExclusionSurface, string>> = {
   allItems: 'reader.allItems',
   forYou: 'reader.forYou',
   savedSearches: 'reader.savedSearches',
+  trending: 'reader.trending',
 };
 
 /** One per-feed inclusion switch, as every feed menu and sheet offers it. */
@@ -42,6 +43,13 @@ export const FEED_FLAG_TOGGLES: readonly FeedFlagToggle[] = [
     set: (manage, subscription, included) =>
       manage.setIncludeInSavedSearches(subscription, included),
   },
+  {
+    surface: 'trending',
+    dataTest: 'toggle-trending',
+    includeKey: 'reader.includeInTrending',
+    isIncluded: (subscription) => subscription.includeInTrending,
+    set: (manage, subscription, included) => manage.setIncludeInTrending(subscription, included),
+  },
 ];
 
 export function flipFeedFlag(
@@ -58,6 +66,7 @@ export function ownExcludedSurfaces(inclusion: TagInclusion): ExclusionSurface[]
   if (!inclusion.includeInAllItems) surfaces.push('allItems');
   if (!inclusion.includeInForYou) surfaces.push('forYou');
   if (!inclusion.includeInSavedSearches) surfaces.push('savedSearches');
+  if (!inclusion.includeInTrending) surfaces.push('trending');
   return surfaces;
 }
 

@@ -19,8 +19,6 @@ import {
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
-import { AllItemsNetworksStore } from '../../reader/state/all-items-networks.store';
-import { ForYouNetworksStore } from '../../reader/state/for-you-networks.store';
 import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { NETWORK_FEED_KIND_DESCRIPTORS } from '../../reader/state/social-sections';
@@ -81,9 +79,8 @@ export class VisibilitySectionComponent implements OnInit {
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
-  private readonly allItemsNetworks = inject(AllItemsNetworksStore);
-  private readonly forYouNetworks = inject(ForYouNetworksStore);
-  private readonly networkSwitches = inject(NetworkSurfaceSwitches).all;
+  private readonly networkSurfaceSwitches = inject(NetworkSurfaceSwitches);
+  private readonly networkSwitches = this.networkSurfaceSwitches.all;
   private readonly visibilitySwitches = inject(VisibilitySwitchesStore).switches;
   private readonly manage = inject(ManageActions);
   private readonly tagActions = inject(TagActions);
@@ -143,8 +140,7 @@ export class VisibilitySectionComponent implements OnInit {
     this.tags.load();
     this.subscriptions.load();
     this.savedSearches.load();
-    this.allItemsNetworks.load();
-    this.forYouNetworks.load();
+    this.networkSurfaceSwitches.loadExclusions();
   }
 
   protected isExpanded(line: VisibilityLine): boolean {

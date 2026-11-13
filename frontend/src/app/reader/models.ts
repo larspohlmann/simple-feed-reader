@@ -34,6 +34,7 @@ export interface TagInclusion {
   includeInAllItems: boolean;
   includeInForYou: boolean;
   includeInSavedSearches: boolean;
+  includeInTrending: boolean;
 }
 
 export interface TagDto extends TagInclusion {
@@ -143,6 +144,8 @@ export interface SubscriptionDto {
   includeInForYou: boolean;
   /** False excludes this feed's entries from saved-search matches and counts. */
   includeInSavedSearches: boolean;
+  /** False keeps this feed's shares out of Trending. */
+  includeInTrending: boolean;
   /** Set for a private timeline, list or custom feed of a connected account (#1599); null for any other feed. */
   social: SocialFeedRefDto | null;
 }
@@ -417,6 +420,7 @@ export interface SubscriptionUpdate {
   includeInAllItems?: boolean;
   includeInForYou?: boolean;
   includeInSavedSearches?: boolean;
+  includeInTrending?: boolean;
 }
 
 /** A drag of one feed between the sidebar's lists: out of `fromTagId` and into

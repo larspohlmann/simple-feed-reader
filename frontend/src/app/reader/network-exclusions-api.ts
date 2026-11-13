@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../core/api';
 import { SocialNetworkName } from '../core/social-network';
 
 /** The surfaces a whole network can be switched out of, as their endpoints name them. */
-export type NetworkExclusionSurface = 'all-items' | 'for-you';
+export type NetworkExclusionSurface = 'all-items' | 'for-you' | 'trending';
 
 /** The stored "keep this network out" switches, one endpoint family per surface. */
 @Injectable({ providedIn: 'root' })

@@ -4,6 +4,7 @@ import { ExclusionSurface } from '../feed-exclusions';
 import { AllItemsNetworksStore } from './all-items-networks.store';
 import { ForYouNetworksStore } from './for-you-networks.store';
 import { SavedSearchesStore } from './saved-searches.store';
+import { TrendingNetworksStore } from './trending-networks.store';
 
 export interface NetworkSurfaceSwitch {
   readonly surface: ExclusionSurface;
@@ -12,12 +13,13 @@ export interface NetworkSurfaceSwitch {
   readonly labelKey: string;
 }
 
-/** A network's three surface switches over their stores, whatever default each store keeps. */
+/** A network's surface switches over their stores, whatever default each store keeps. */
 @Injectable({ providedIn: 'root' })
 export class NetworkSurfaceSwitches {
   private readonly allItemsNetworks = inject(AllItemsNetworksStore);
   private readonly forYouNetworks = inject(ForYouNetworksStore);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly trendingNetworks = inject(TrendingNetworksStore);
 
   /** In title order: the network marker names its surfaces in this order. */
   readonly all: readonly NetworkSurfaceSwitch[] = [
@@ -39,5 +41,18 @@ export class NetworkSurfaceSwitches {
       toggle: (network) => this.savedSearches.toggleNetwork(network),
       labelKey: 'reader.includeInSavedSearches',
     },
+    {
+      surface: 'trending',
+      isExcluded: (network) => this.trendingNetworks.excludedNetworks().has(network),
+      toggle: (network) => this.trendingNetworks.toggleNetwork(network),
+      labelKey: 'reader.includeInTrending',
+    },
   ];
+
+  /** Learns each surface's excluded networks; saved searches learn theirs with the searches. */
+  loadExclusions(): void {
+    this.allItemsNetworks.load();
+    this.forYouNetworks.load();
+    this.trendingNetworks.load();
+  }
 }

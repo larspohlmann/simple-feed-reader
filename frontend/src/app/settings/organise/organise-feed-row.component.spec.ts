@@ -254,6 +254,18 @@ describe('OrganiseFeedRowComponent', () => {
     expect(toggled).toHaveBeenCalled();
   });
 
+  it('emits toggleTrending from the fine-pointer popover', async () => {
+    await render();
+    const toggled = jest.fn();
+    fixture.componentInstance.toggleTrending.subscribe(toggled);
+
+    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
+    fixture.detectChanges();
+    fixture.debugElement.query(By.css('[data-test="toggle-trending"] input')).nativeElement.click();
+
+    expect(toggled).toHaveBeenCalled();
+  });
+
   it('emits unsubscribe from the fine-pointer popover', async () => {
     await render();
     const unsubscribed = jest.fn();
@@ -319,7 +331,7 @@ describe('OrganiseFeedRowComponent', () => {
     )[0].actions.filter((item): item is ActionSheetCheck => 'checked' in item);
     const forYou = checks.find(({ id }) => id === 'forYou');
 
-    expect(checks.map(({ id }) => id)).toEqual(['allItems', 'forYou', 'savedSearches']);
+    expect(checks.map(({ id }) => id)).toEqual(['allItems', 'forYou', 'savedSearches', 'trending']);
     expect(forYou?.checked()).toBe(true);
     coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: false });
     expect(forYou?.checked()).toBe(false);

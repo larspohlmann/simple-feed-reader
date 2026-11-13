@@ -137,6 +137,7 @@ describe('ReaderShellComponent', () => {
         includeInAllItems: true,
         includeInForYou: true,
         includeInSavedSearches: true,
+        includeInTrending: true,
       },
     ],
     socialAccounts: [],
@@ -252,6 +253,9 @@ describe('ReaderShellComponent', () => {
       .flush({ excludedNetworks: [] });
     ctrl
       .expectOne('https://api.test/api/all-items/excluded-networks')
+      .flush({ excludedNetworks: [] });
+    ctrl
+      .expectOne('https://api.test/api/trending/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -1715,7 +1719,11 @@ describe('ReaderShellComponent', () => {
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
       expect(forYouNetworksReloads.length).toBe(1);
+      const trendingNetworksReloads = ctrl.match(
+        (request) => request.url === 'https://api.test/api/trending/excluded-networks',
+      );
       expect(allItemsNetworksReloads.length).toBe(1);
+      expect(trendingNetworksReloads.length).toBe(1);
       expect(subscriptionsReloads.length).toBe(1);
       expect(savedSearchesReloads.length).toBe(1);
 
@@ -1726,6 +1734,7 @@ describe('ReaderShellComponent', () => {
       savedSearchesReloads[0].flush({ savedSearches: [] });
       forYouNetworksReloads[0].flush({ excludedNetworks: [] });
       allItemsNetworksReloads[0].flush({ excludedNetworks: [] });
+      trendingNetworksReloads[0].flush({ excludedNetworks: [] });
       ctrl.verify();
     });
   });

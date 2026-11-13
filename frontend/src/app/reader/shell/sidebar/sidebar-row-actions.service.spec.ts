@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { SocialNetworkName } from '../../../core/social-network';
 import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
 import { ForYouNetworksStore } from '../../state/for-you-networks.store';
+import { TrendingNetworksStore } from '../../state/trending-networks.store';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -38,6 +39,7 @@ describe('SidebarRowActions', () => {
         { provide: SavedSearchesStore, useValue: {} },
         { provide: ForYouNetworksStore, useValue: {} },
         { provide: AllItemsNetworksStore, useValue: {} },
+        { provide: TrendingNetworksStore, useValue: {} },
         { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
         { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
       ],
@@ -73,6 +75,8 @@ describe('SidebarRowActions', () => {
           { provide: SavedSearchesStore, useValue: {} },
           { provide: ForYouNetworksStore, useValue: {} },
           { provide: AllItemsNetworksStore, useValue: {} },
+          { provide: TrendingNetworksStore, useValue: {} },
+          { provide: TrendingNetworksStore, useValue: {} },
           { provide: SubscriptionsStore, useValue: { subscriptions } },
           { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
         ],
@@ -88,7 +92,7 @@ describe('SidebarRowActions', () => {
       return checksOf(sheetOpen.mock.calls[0][0]);
     };
 
-    it('offers edit, the three switches between dividers, and unsubscribe', () => {
+    it('offers edit, the four switches between dividers, and unsubscribe', () => {
       openedChecks();
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -99,6 +103,7 @@ describe('SidebarRowActions', () => {
           expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
           expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
           expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+          expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
           ACTION_SHEET_DIVIDER,
           { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
         ],
@@ -165,10 +170,14 @@ describe('SidebarRowActions', () => {
     const forYouToggle = jest.fn();
     const allItemsExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
     const allItemsToggle = jest.fn();
+    const trendingExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
+    const trendingToggle = jest.fn();
 
     beforeEach(() => {
       forYouToggle.mockClear();
       allItemsToggle.mockClear();
+      trendingToggle.mockClear();
+      trendingExcluded.set(new Set());
       allItemsExcluded.set(new Set());
       excludedNetworks.set(new Set());
       sheetOpen.mockClear();
@@ -195,6 +204,10 @@ describe('SidebarRowActions', () => {
             provide: AllItemsNetworksStore,
             useValue: { excludedNetworks: allItemsExcluded, toggleNetwork: allItemsToggle },
           },
+          {
+            provide: TrendingNetworksStore,
+            useValue: { excludedNetworks: trendingExcluded, toggleNetwork: trendingToggle },
+          },
           { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
           { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
         ],
@@ -218,7 +231,7 @@ describe('SidebarRowActions', () => {
 
     const checksOf = (rows: SidebarRowActions) => rows.networkSurfaceChecks(sectionOf([]));
 
-    it('offers each account on the network sheet, then its three switches, and opens the picked one', () => {
+    it('offers each account on the network sheet, then its four switches, and opens the picked one', () => {
       TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([bob, reconnect]));
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -230,6 +243,7 @@ describe('SidebarRowActions', () => {
           expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
           expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
           expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+          expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ],
       });
       expect(pickerOpen).toHaveBeenCalledWith(bob);
@@ -244,40 +258,36 @@ describe('SidebarRowActions', () => {
             expect.objectContaining({ id: 'allItems' }),
             expect.objectContaining({ id: 'forYou' }),
             expect.objectContaining({ id: 'savedSearches' }),
+            expect.objectContaining({ id: 'trending' }),
           ],
         }),
       );
     });
 
-    it('gives a network three checks, All items, For You and saved searches, that follow the stores', () => {
-      const [allItems, forYou, savedSearches] = checksOf(TestBed.inject(SidebarRowActions));
+    it('gives a network four checks, All items, For You, saved searches and Trending, that follow the stores', () => {
+      const checks = checksOf(TestBed.inject(SidebarRowActions));
 
-      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
-        true,
-        true,
-        false,
-      ]);
+      expect(checks.map((check) => check.checked())).toEqual([true, true, false, true]);
 
       allItemsExcluded.set(new Set(['bluesky']));
       excludedNetworks.set(new Set(['bluesky']));
       includedNetworks.set(new Set(['bluesky']));
+      trendingExcluded.set(new Set(['bluesky']));
 
-      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
-        false,
-        false,
-        true,
-      ]);
+      expect(checks.map((check) => check.checked())).toEqual([false, false, true, false]);
     });
 
     it('switches the network in each surface from its check and keeps the menu open', () => {
       const rows = TestBed.inject(SidebarRowActions);
       rows.menuFor.set('social-bluesky');
-      const [allItems, forYou, savedSearches] = checksOf(rows);
+      const [allItems, forYou, savedSearches, trending] = checksOf(rows);
 
       allItems.toggle();
       forYou.toggle();
       savedSearches.toggle();
+      trending.toggle();
 
+      expect(trendingToggle).toHaveBeenCalledWith('bluesky');
       expect(allItemsToggle).toHaveBeenCalledWith('bluesky');
       expect(forYouToggle).toHaveBeenCalledWith('bluesky');
       expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
@@ -287,11 +297,13 @@ describe('SidebarRowActions', () => {
     it('names every surface that leaves the network out, in title order', () => {
       allItemsExcluded.set(new Set(['bluesky']));
       excludedNetworks.set(new Set(['bluesky']));
+      trendingExcluded.set(new Set(['bluesky']));
 
       expect(TestBed.inject(SidebarRowActions).networkExcludedSurfaces('bluesky')).toEqual([
         'allItems',
         'forYou',
         'savedSearches',
+        'trending',
       ]);
     });
 
@@ -343,6 +355,8 @@ describe('SidebarRowActions', () => {
           { provide: SavedSearchesStore, useValue: {} },
           { provide: ForYouNetworksStore, useValue: {} },
           { provide: AllItemsNetworksStore, useValue: {} },
+          { provide: TrendingNetworksStore, useValue: {} },
+          { provide: TrendingNetworksStore, useValue: {} },
           { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
           { provide: TagsStore, useValue: tagsStoreStub(tags) },
         ],
@@ -354,7 +368,7 @@ describe('SidebarRowActions', () => {
       return sheetOpen.mock.calls[0][0].actions as { id?: string; disabled?: boolean }[];
     };
 
-    it('offers edit, create here, the moves, the three switches and, after a divider, delete', () => {
+    it('offers edit, create here, the moves, the four switches and, after a divider, delete', () => {
       TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -368,32 +382,27 @@ describe('SidebarRowActions', () => {
           expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
           expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
           expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+          expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
           ACTION_SHEET_DIVIDER,
           { id: 'delete', label: 'Delete tag', symbol: 'delete', danger: true },
         ],
       });
     });
 
-    it('gives a tag three checks that follow the live tag in TagsStore', () => {
-      const [allItems, forYou, savedSearches] = TestBed.inject(SidebarRowActions).tagSurfaceChecks(
-        tag(2, 1),
-      );
+    it('gives a tag four checks that follow the live tag in TagsStore', () => {
+      const checks = TestBed.inject(SidebarRowActions).tagSurfaceChecks(tag(2, 1));
 
-      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
-        true,
-        true,
-        true,
-      ]);
+      expect(checks.map((check) => check.checked())).toEqual([true, true, true, true]);
 
       tags.update((current) =>
-        current.map((listed) => (listed.id === 2 ? { ...listed, includeInForYou: false } : listed)),
+        current.map((listed) =>
+          listed.id === 2
+            ? { ...listed, includeInForYou: false, includeInTrending: false }
+            : listed,
+        ),
       );
 
-      expect([allItems.checked(), forYou.checked(), savedSearches.checked()]).toEqual([
-        true,
-        false,
-        true,
-      ]);
+      expect(checks.map((check) => check.checked())).toEqual([true, false, true, false]);
     });
 
     it('switches the tag from its check against the live tag, keeping the menu open', () => {

@@ -2,7 +2,8 @@
 
 // Read by every row and the header, so the columns line up without a table.
 .matrix {
-  --visibility-cell-w: var(--tap-target);
+  // Wide enough for "Trending": Chromium never hyphenates a capitalised English word.
+  --visibility-cell-w: calc(var(--tap-target) * 1.2);
   --visibility-indent-step: var(--space-3);
   --visibility-columns: minmax(0, 1fr)
     repeat(var(--visibility-surface-count), var(--visibility-cell-w));

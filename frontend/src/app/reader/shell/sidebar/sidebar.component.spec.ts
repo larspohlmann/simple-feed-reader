@@ -43,6 +43,7 @@ const manageActions = {
   setIncludeInAllItems: jest.fn(),
   setIncludeInForYou: jest.fn(),
   setIncludeInSavedSearches: jest.fn(),
+  setIncludeInTrending: jest.fn(),
   moveFeedToTag: jest.fn(),
   reorderUntagged: jest.fn(),
   reorderTagFeeds: jest.fn(),
@@ -117,6 +118,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   includeInAllItems: true,
   includeInForYou: true,
   includeInSavedSearches: true,
+  includeInTrending: true,
   social: null,
 });
 
@@ -988,7 +990,7 @@ describe('SidebarComponent', () => {
   const popoverItems = (pop: Element) =>
     [...pop.children].map((item) => (item.tagName === 'HR' ? '<hr>' : item.textContent?.trim()));
 
-  it('lists the three switches as checkboxes in the untagged feed row menu', () => {
+  it('lists the four switches as checkboxes in the untagged feed row menu', () => {
     const fixture = mount({ untagged: [{ ...sub(1, 0), includeInForYou: false }] });
     const element = fixture.nativeElement as HTMLElement;
 
@@ -1002,6 +1004,7 @@ describe('SidebarComponent', () => {
       'Show in All items',
       'Show in For You',
       'Show in saved searches',
+      'Show in Trending',
       '<hr>',
       'Unsubscribe',
     ]);
@@ -1009,7 +1012,7 @@ describe('SidebarComponent', () => {
       [...pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')].map(
         (box) => box.checked,
       ),
-    ).toEqual([true, false, true]);
+    ).toEqual([true, false, true, true]);
   });
 
   it('keeps the feed row menu open once a tick has patched and re-rendered the row', () => {
@@ -1035,12 +1038,12 @@ describe('SidebarComponent', () => {
     const boxes = element.querySelectorAll<HTMLInputElement>(
       '.feedrow .pop [role="menuitemcheckbox"]',
     );
-    expect(boxes).toHaveLength(3);
+    expect(boxes).toHaveLength(4);
     expect(boxes[1].checked).toBe(false);
     expect(element.querySelector('.feedrow .feed-exclusion-marker')).not.toBeNull();
   });
 
-  it('lists the three switches in the tagged feed row menu and switches the feed', () => {
+  it('lists the four switches in the tagged feed row menu and switches the feed', () => {
     const subscription = sub(1, 0);
     const node: TagNode = {
       tag: {
@@ -1072,6 +1075,7 @@ describe('SidebarComponent', () => {
       'Show in All items',
       'Show in For You',
       'Show in saved searches',
+      'Show in Trending',
       '<hr>',
       'Unsubscribe',
     ]);
@@ -2609,6 +2613,7 @@ describe('organise mode', () => {
         expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
         expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
         expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+        expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ACTION_SHEET_DIVIDER,
         { id: 'delete', label: 'Delete tag', symbol: 'delete', danger: true },
       ],
@@ -2616,7 +2621,7 @@ describe('organise mode', () => {
     expect(deleted).toHaveBeenCalledWith(tag);
   });
 
-  it('the feed dots offer edit, the three switches, and unsubscribe', () => {
+  it('the feed dots offer edit, the four switches, and unsubscribe', () => {
     const fixture = mount({
       coarse: true,
       organising: true,
@@ -2635,6 +2640,7 @@ describe('organise mode', () => {
         expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
         expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
         expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
+        expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ACTION_SHEET_DIVIDER,
         { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
       ],
@@ -2660,6 +2666,10 @@ describe('organise mode', () => {
       false,
     );
     expect(manageActions.setIncludeInSavedSearches).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 9 }),
+      false,
+    );
+    expect(manageActions.setIncludeInTrending).toHaveBeenCalledWith(
       expect.objectContaining({ id: 9 }),
       false,
     );

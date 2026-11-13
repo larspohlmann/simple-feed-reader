@@ -4,6 +4,7 @@ import { AllItemsNetworksStore } from './all-items-networks.store';
 import { ForYouNetworksStore } from './for-you-networks.store';
 import { SavedSearchesStore } from './saved-searches.store';
 import { TagsStore } from './tags.store';
+import { TrendingNetworksStore } from './trending-networks.store';
 import { VisibilitySwitches } from './visibility';
 
 /** The stored switches `isVisibleIn` reads, gathered live from their stores. */
@@ -13,6 +14,7 @@ export class VisibilitySwitchesStore {
   private readonly allItemsNetworks = inject(AllItemsNetworksStore);
   private readonly forYouNetworks = inject(ForYouNetworksStore);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly trendingNetworks = inject(TrendingNetworksStore);
 
   readonly switches = computed<VisibilitySwitches>(() => {
     const savedSearchNetworks = this.savedSearches.includedNetworks();
@@ -24,6 +26,7 @@ export class VisibilitySwitchesStore {
         savedSearches: new Set(
           SOCIAL_NETWORKS.filter((network) => !savedSearchNetworks.has(network)),
         ),
+        trending: this.trendingNetworks.excludedNetworks(),
       },
     };
   });

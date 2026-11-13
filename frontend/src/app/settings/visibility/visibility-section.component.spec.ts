@@ -9,6 +9,7 @@ import { SubscriptionDto, TagDto } from '../../reader/models';
 import { AllItemsNetworksStore } from '../../reader/state/all-items-networks.store';
 import { ForYouNetworksStore } from '../../reader/state/for-you-networks.store';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
+import { TrendingNetworksStore } from '../../reader/state/trending-networks.store';
 import { buildSocialSections } from '../../reader/state/social-sections';
 import { NO_UNREAD_TOTALS } from '../../reader/state/unread-totals';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
@@ -44,6 +45,7 @@ describe('VisibilitySectionComponent', () => {
   let tagActions: { setTagInclusion: jest.Mock };
   let allItemsNetworks: ReturnType<typeof networkStore>;
   let forYouNetworks: ReturnType<typeof networkStore>;
+  let trendingNetworks: ReturnType<typeof networkStore>;
   let savedSearches: {
     includedNetworks: ReturnType<typeof signal<ReadonlySet<SocialNetworkName>>>;
     load: jest.Mock;
@@ -53,6 +55,7 @@ describe('VisibilitySectionComponent', () => {
   function setUp(
     options: {
       excludedFromAllItems?: SocialNetworkName[];
+      excludedFromTrending?: SocialNetworkName[];
       subscriptions?: SubscriptionDto[];
       tags?: TagDto[];
     } = {},
@@ -63,10 +66,12 @@ describe('VisibilitySectionComponent', () => {
       setIncludeInAllItems: jest.fn(),
       setIncludeInForYou: jest.fn(),
       setIncludeInSavedSearches: jest.fn(),
+      setIncludeInTrending: jest.fn(),
     };
     tagActions = { setTagInclusion: jest.fn() };
     allItemsNetworks = networkStore(options.excludedFromAllItems);
     forYouNetworks = networkStore();
+    trendingNetworks = networkStore(options.excludedFromTrending);
     savedSearches = {
       includedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set(['bluesky'])),
       load: jest.fn(),
@@ -79,6 +84,7 @@ describe('VisibilitySectionComponent', () => {
         { provide: TagActions, useValue: tagActions },
         { provide: AllItemsNetworksStore, useValue: allItemsNetworks },
         { provide: ForYouNetworksStore, useValue: forYouNetworks },
+        { provide: TrendingNetworksStore, useValue: trendingNetworks },
         { provide: SavedSearchesStore, useValue: savedSearches },
         {
           provide: SubscriptionsStore,
@@ -130,6 +136,7 @@ describe('VisibilitySectionComponent', () => {
 
     expect(allItemsNetworks.load).toHaveBeenCalled();
     expect(forYouNetworks.load).toHaveBeenCalled();
+    expect(trendingNetworks.load).toHaveBeenCalled();
     expect(savedSearches.load).toHaveBeenCalled();
     expect(TestBed.inject(TagsStore).load).toHaveBeenCalled();
     expect(TestBed.inject(SubscriptionsStore).load).toHaveBeenCalled();
@@ -161,7 +168,7 @@ describe('VisibilitySectionComponent', () => {
     const heads = [...element.querySelectorAll('.head-surface')].map((head) =>
       head.textContent!.trim(),
     );
-    expect(heads).toEqual(['All items', 'For you', 'Saved searches']);
+    expect(heads).toEqual(['All items', 'For you', 'Saved searches', 'Trending']);
     expect(heads).toHaveLength(FEED_FLAG_TOGGLES.length);
     expect(row('tag:3/feed:11').querySelectorAll('input')).toHaveLength(FEED_FLAG_TOGGLES.length);
   });
@@ -227,6 +234,32 @@ describe('VisibilitySectionComponent', () => {
     expect(forYouNetworks.toggleNetwork).toHaveBeenCalledWith('bluesky');
     expect(savedSearches.toggleNetwork).toHaveBeenCalledWith('bluesky');
     expect(allItemsNetworks.toggleNetwork).not.toHaveBeenCalled();
+  });
+
+  it('writes a Trending tick through the Trending switches of the network, tag and feed', () => {
+    setUp();
+    expandAll();
+
+    box('network:bluesky', 'Trending').click();
+    box('tag:3', 'Trending').click();
+    box('tag:3/feed:11', 'Trending').click();
+
+    expect(trendingNetworks.toggleNetwork).toHaveBeenCalledWith('bluesky');
+    expect(tagActions.setTagInclusion).toHaveBeenCalledWith(TECH, 'trending', false);
+    expect(manage['setIncludeInTrending']).toHaveBeenCalledWith(HEISE, false);
+  });
+
+  it('dims a Bluesky feed in the Trending column while Bluesky is out of Trending', () => {
+    setUp({ excludedFromTrending: ['bluesky'] });
+    expandAll();
+
+    expect(box('network:bluesky', 'Trending').checked).toBe(false);
+    expect(cellOf('network:bluesky/kind:profile/feed:10', 'Trending').classList).toContain(
+      'inherited',
+    );
+    expect(cellOf('network:bluesky/kind:profile/feed:10', 'All items').classList).not.toContain(
+      'inherited',
+    );
   });
 
   it('writes a tag tick through the tag’s own switch', () => {

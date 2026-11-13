@@ -9,6 +9,7 @@ import { TagActions } from './tag-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
+import { EntriesStore } from '../../state/entries.store';
 import { TagDrop } from '../../tag-drop';
 import { TagDto } from '../../models';
 import { makeTag } from '../../testing/tag.factory';
@@ -126,6 +127,25 @@ describe('TagActions', () => {
       http.expectOne('https://api.test/api/tags/3').flush({ tag });
 
       expect(savedSearchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends the Trending flag and reloads the Trending list when that switch moves', () => {
+      jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+      jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+      const reloadTrending = jest
+        .spyOn(TestBed.inject(EntriesStore), 'reloadTrending')
+        .mockImplementation(() => undefined);
+
+      service.setTagInclusion(tag, 'trending', false);
+      const testRequest = http.expectOne('https://api.test/api/tags/3');
+      expect(testRequest.request.body).toEqual(
+        expect.objectContaining({ includeInTrending: false }),
+      );
+      testRequest.flush({ tag });
+
+      expect(reloadTrending).toHaveBeenCalledTimes(1);
     });
 
     it('reloads the tags after a failed write, which snaps the switch back', () => {
