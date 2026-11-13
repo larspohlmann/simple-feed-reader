@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.9.4] - 2026-11-13
+
 ### Highlights
 
 **French and Spanish.** The app and its emails now also come in French and
@@ -21,6 +23,22 @@ all in one table.
 
 **Buttons in thumb reach.** On a phone or tablet, the floating buttons sit
 together in one bottom corner, on the side you choose in Settings → Preferences.
+
+## What's Changed
+* feat(#2194): a social post's pill names its feed and opens it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2195
+* feat(#2196): directory category pills on phones; a category filter narrows a site's feed list by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2199
+* feat(#2197): the add-feed preview keeps Subscribe in view by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2198
+* feat(#2200): directory rows grow with their description by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2201
+* Inclusion switches as checkboxes, tag/network switches, Settings → Visibility, Trending in every scope by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2206
+* feat(#2203): thumb-reach corner buttons with a handedness setting by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2208
+* One partial-update PATCH for the reading settings (#2209) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2210
+* Homepage: changelog page, updated by the release pipeline (#2207) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2211
+* feat(#2204): announce release highlights on LinkedIn by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2212
+* feat(#2205): French and Spanish translations by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2213
+* docs(#2214): v1.9.4 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2215
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.9.3...v1.9.4
 
 ## [v1.9.3] - 2026-11-12
 
