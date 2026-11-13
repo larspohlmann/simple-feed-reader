@@ -31,7 +31,7 @@ use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Symfony\Component\Clock\MockClock;
 
-/** A feed switched out of Trending, by its own switch, a tag or its network, is no source of a story (#2202). */
+/** A feed switched out of Trending, by its own switch, a tag or its network, is no source of a story. */
 final class TrendingInclusionTest extends DbTestCase
 {
     private TrendingFixtures $fixtures;

@@ -9,7 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Repository\NetworkExclusionRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-/** A social network whose feeds the user keeps out of one surface; a network without a row counts (#1995, #2202). */
+/** A social network whose feeds the user keeps out of one surface; a network without a row counts. */
 #[ORM\Entity(repositoryClass: NetworkExclusionRepository::class)]
 #[ORM\Table(name: 'network_exclusion')]
 #[ORM\Index(name: 'idx_network_exclusion_user', columns: ['user_id'])]
