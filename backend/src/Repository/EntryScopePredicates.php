@@ -42,7 +42,6 @@ final readonly class EntryScopePredicates
         $this->applyView($qb, $aliases, $query->view);
     }
 
-    /** One row per tag a subscription carries, to group by the tag. */
     private function joinNetworkFeeds(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed)
