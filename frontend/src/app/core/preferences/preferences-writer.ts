@@ -1,4 +1,4 @@
-import { InjectionToken } from '@angular/core';
+import { InjectionToken, WritableSignal } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { Handedness } from './handedness';
 import { MagazineStyle } from './magazine-style';
@@ -24,3 +24,14 @@ export const PREFERENCES_WRITER = new InjectionToken<PreferencesWriter>('PREFERE
   providedIn: 'root',
   factory: (): PreferencesWriter => ({ write: () => of(true) }),
 });
+
+export function writeTracked(
+  writer: PreferencesWriter,
+  change: Partial<ReadingPreferences>,
+  failed: WritableSignal<boolean>,
+): void {
+  failed.set(false);
+  writer.write(change).subscribe((ok) => {
+    if (!ok) failed.set(true);
+  });
+}

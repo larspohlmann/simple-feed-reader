@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CurrentUser } from '../auth/auth.service';
 import { DEFAULT_HANDEDNESS, HANDEDNESS_KEY, Handedness, asHandedness } from './handedness';
-import { PREFERENCES_WRITER } from './preferences-writer';
+import { PREFERENCES_WRITER, writeTracked } from './preferences-writer';
 
 /** Which corner the floating corner buttons stack in on a touch screen; the account is the record. */
 @Injectable({ providedIn: 'root' })
@@ -16,11 +16,7 @@ export class HandednessService {
 
   set(hand: Handedness): void {
     this.cache(hand);
-    this.saveFailed.set(false);
-
-    this.writer.write({ handedness: hand }).subscribe((ok) => {
-      if (!ok) this.saveFailed.set(true);
-    });
+    writeTracked(this.writer, { handedness: hand }, this.saveFailed);
   }
 
   /** Caches only: a value just read from the account is never written straight back. */

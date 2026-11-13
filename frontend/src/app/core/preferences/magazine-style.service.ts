@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { CurrentUser } from '../auth/auth.service';
 import { MAGAZINE_STYLE_KEY, MagazineStyle, asMagazineStyle } from './magazine-style';
-import { PREFERENCES_WRITER } from './preferences-writer';
+import { PREFERENCES_WRITER, writeTracked } from './preferences-writer';
 
 /**
  * The account is the record; `localStorage` is a paint cache. It answers the
@@ -20,11 +20,7 @@ export class MagazineStyleService {
   /** Applies locally first, then writes through; a failed write is surfaced. */
   set(style: MagazineStyle): void {
     this.cache(style);
-    this.saveFailed.set(false);
-
-    this.writer.write({ magazineStyle: style }).subscribe((ok) => {
-      if (!ok) this.saveFailed.set(true);
-    });
+    writeTracked(this.writer, { magazineStyle: style }, this.saveFailed);
   }
 
   /**
