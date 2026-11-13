@@ -6,7 +6,7 @@ import { LayoutService } from '../../../reader/layout.service';
 import { FeedDirectoryNames } from '../feed-directory-names';
 import { FeedDirectoryMode, FeedDirectoryRow, feedsIn, shownFeeds } from '../feed-directory-rows';
 
-export const FEED_DIRECTORY_ROW_HEIGHT = { wide: 132, phone: 114 } as const;
+export const FEED_DIRECTORY_ROW_HEIGHT = { wide: 132, phone: 140 } as const;
 
 export interface FeedDirectorySubscribeRequest {
   readonly row: FeedDirectoryRow;

@@ -144,7 +144,10 @@
     grid-column: 1 / -1;
   }
 
-  .chips,
+  .chips {
+    grid-column: 1 / -1;
+  }
+
   .subscribed-part {
     display: none;
   }
