@@ -1895,10 +1895,15 @@ the list's sidebar, the article's back).
   the actions in a column over the pair's outer disc, `--space-2` inside a group,
   `--space-5` between the column and the pair. The list's column reads mark all read,
   mark above as read; the article's favourite, save, share.
+- **Always there:** the list shows back to top and mark above as read whenever it has
+  entries, not only once scrolled (at the top both are harmless no-ops). On touch the
+  list's column keeps a row for each mark-read disc, so mark all read sits at one height
+  in every list, also where mark above as read is not offered (Trending).
 - **Handedness** (Settings → Preferences, per account): right puts the stack in the
   bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
   pointer ignores it.
-- The discs are their tone at 40% over a frost, so the rows show through.
+- Every disc is the same grey (`--text-muted`) at 35% over a frost, so the rows show
+  through; only an active toggle (favourite or save when on) takes the accent.
 - On touch the list drops the column below `18rem` of list height
   (`$container-list-corner-cluster`), where it would ride over the header, and keeps
   the pair (a landscape phone); below `13rem` the whole cluster hides, as with a mouse.

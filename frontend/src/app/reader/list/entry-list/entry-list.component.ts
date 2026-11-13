@@ -336,7 +336,6 @@ export class EntryListComponent implements OnDestroy {
     loading: this.loading,
     layout: this.layout,
     reduceMotion: this.reduceMotion,
-    aboveFold: (scroller) => this.aboveFold.hasEntryAbove(scroller),
     onReloaded: () => this.content.clearHidden(),
   });
 
@@ -387,8 +386,6 @@ export class EntryListComponent implements OnDestroy {
    */
   scrollToTop(): void {
     if (!this.scrolling.scrollToTop()) return;
-    // Land focus on the title, not wherever the button was — an unmounted button
-    // drops focus to <body>.
     this.header()?.focusTitle();
   }
 

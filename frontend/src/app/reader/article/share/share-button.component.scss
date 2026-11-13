@@ -6,8 +6,6 @@
 }
 
 .corner-share {
-  --corner-button-tone: var(--text-muted);
-
   @include circle.corner-circle-button;
 }
 

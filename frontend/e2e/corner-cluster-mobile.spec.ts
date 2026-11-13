@@ -98,6 +98,26 @@ test.describe('The corner cluster on a phone (#2203)', () => {
     await page.screenshot({ path: test.info().outputPath('list-right-handed.png') });
   });
 
+  test('shows every list disc in its place before any scroll', async ({ page }) => {
+    await signInAs(page, 'right');
+    await page.route(
+      (url) => url.pathname === '/api/entries',
+      (route) => route.fulfill({ json: { entries: ENTRIES, nextCursor: null } }),
+    );
+    await page.goto('/?subscription=1');
+    await expect(page.getByText('Fixture entry 1', { exact: true })).toBeVisible();
+
+    expect(await discAt(page, 'app-entry-list app-to-top-button button')).toMatchObject({
+      right: EDGE + STEP,
+      bottom: EDGE,
+    });
+    expect(await discAt(page, MARK_ABOVE)).toMatchObject({ right: EDGE, bottom: ABOVE_PAIR });
+    expect(await discAt(page, MARK_ALL)).toMatchObject({
+      right: EDGE,
+      bottom: ABOVE_PAIR + STEP,
+    });
+  });
+
   test('mirrors the list discs for a left-handed account', async ({ page }) => {
     await signInAs(page, 'left');
     await openScrolledList(page);
@@ -137,6 +157,28 @@ test.describe('The corner cluster on a phone (#2203)', () => {
     await expect(page.locator(favourite)).toHaveClass(/\bon\b/);
   });
 
+  test('paints every disc the same grey; an active toggle keeps the accent', async ({ page }) => {
+    await signInAs(page, 'right');
+    await openScrolledArticle(page);
+    const tone = (selector: string) =>
+      page.locator(selector).evaluate((element) => getComputedStyle(element).backgroundColor);
+    const favourite = '.corner-flag >> nth=1';
+    const grey = await tone('.corner-back');
+
+    for (const disc of [
+      'app-article-layer app-to-top-button button',
+      '.corner-share',
+      '.corner-flag >> nth=0',
+      favourite,
+    ]) {
+      expect(await tone(disc)).toBe(grey);
+    }
+
+    await page.locator(favourite).tap();
+    await expect(page.locator(favourite)).toHaveClass(/\bon\b/);
+    expect(await tone(favourite)).not.toBe(grey);
+  });
+
   test('mirrors the article discs for a left-handed account', async ({ page }) => {
     await signInAs(page, 'left');
     await openScrolledArticle(page);
@@ -150,7 +192,7 @@ test.describe('The corner cluster on a phone (#2203)', () => {
 test.describe('The corner cluster on a touch tablet (#2203)', () => {
   test.use({ viewport: { width: 1024, height: 768 }, isMobile: true, hasTouch: true });
 
-  test('lets the column take the corner while the pair shows no disc', async ({ page }) => {
+  test('puts mark all read where it stays, sidebar column or not', async ({ page }) => {
     await signInAs(page, 'right');
     await page.route(
       (url) => url.pathname === '/api/entries',
@@ -159,8 +201,7 @@ test.describe('The corner cluster on a touch tablet (#2203)', () => {
     await page.goto('/?subscription=1');
     await expect(page.getByText('Fixture entry 1', { exact: true })).toBeVisible();
 
-    await expect(page.locator('app-entry-list .end-corner')).toHaveCount(0);
-    expect((await discAt(page, MARK_ALL)).bottom).toBe(EDGE);
+    expect((await discAt(page, MARK_ALL)).bottom).toBe(ABOVE_PAIR + STEP);
   });
 });
 

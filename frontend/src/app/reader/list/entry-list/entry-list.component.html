@@ -200,9 +200,8 @@
   <app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
 
   @let hasEntries = content.visibleEntryCount() > 0;
-  @let toTopShown = scrolling.showToTop() && hasEntries;
   @let markAllShown = canMarkAllRead() && hasEntries;
-  @let markAboveShown = toTopShown && scrolling.hasAboveFold() && marksAboveFold();
+  @let markAboveShown = hasEntries && marksAboveFold();
   <div class="corner-cluster" [class.left-handed]="leftHanded()">
     @if (markAllShown || markAboveShown) {
       <div class="corner-actions">
@@ -230,15 +229,13 @@
         }
       </div>
     }
-    @if (toTopShown || cornerTrailing()) {
-      <div class="end-corner">
-        @if (toTopShown) {
-          <app-to-top-button (activate)="scrollToTop()" />
-        }
-        @if (cornerTrailing(); as trailing) {
-          <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
-        }
-      </div>
-    }
+    <div class="end-corner">
+      @if (hasEntries) {
+        <app-to-top-button (activate)="scrollToTop()" />
+      }
+      @if (cornerTrailing(); as trailing) {
+        <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
+      }
+    </div>
   </div>
 </div>

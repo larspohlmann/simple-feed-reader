@@ -236,14 +236,12 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await expect(rows).toBeVisible();
     await settle(page);
 
-    // Well past the 500px threshold, so the corner button is showing.
     await scrollPageTo(page, 1500);
 
     const corner = page.locator('app-entry-list app-to-top-button');
     await expect(corner).toBeVisible();
     await corner.click();
     await expect.poll(() => pageScrollY(page)).toBe(0);
-    await expect(corner).toBeHidden();
 
     // And again via the empty middle of the app bar. Scrolling down retracts the
     // bar, so scroll back up a little first to bring it into reach — exactly what
