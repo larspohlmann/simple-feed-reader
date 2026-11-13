@@ -25,11 +25,23 @@ interface DiscBox {
   bottom: number;
 }
 
-/** Each disc's distance to the viewport's left, right and bottom edges, settled past its entrance. */
+/** Waits out every finite animation on the page: the discs' entrance, the article's slide-in. */
+function settled(page: Page): Promise<unknown> {
+  return page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished),
+    ),
+  );
+}
+
+/** Each disc's distance to the viewport's left, right and bottom edges. */
 async function discAt(page: Page, selector: string): Promise<DiscBox> {
   const disc = page.locator(selector);
   await expect(disc).toBeVisible();
-  await page.waitForTimeout(250);
+  await settled(page);
   return disc.evaluate((element) => {
     const box = element.getBoundingClientRect();
     return {
@@ -62,7 +74,7 @@ async function openScrolledArticle(page: Page): Promise<void> {
   await page.goto('/?subscription=1');
   await page.getByText('Fixture entry 1', { exact: true }).click();
   await expect(page.locator('app-reader-view .content p').last()).toBeAttached();
-  await page.waitForTimeout(400);
+  await settled(page);
   await scrollPageTo(page, 1200);
 }
 

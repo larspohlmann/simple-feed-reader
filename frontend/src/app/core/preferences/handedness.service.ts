@@ -1,6 +1,6 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { CurrentUser } from '../auth/auth.service';
-import { HANDEDNESS_KEY, Handedness, asHandedness } from './handedness';
+import { DEFAULT_HANDEDNESS, HANDEDNESS_KEY, Handedness, asHandedness } from './handedness';
 import { HANDEDNESS_WRITER } from './handedness-writer';
 
 /** Which corner the floating corner buttons stack in on a touch screen; the account is the record. */
@@ -10,7 +10,8 @@ export class HandednessService {
 
   readonly hand = signal<Handedness>(this.cached());
 
-  /** True when the handedness applied locally but the account write failed. */
+  readonly leftHanded = computed(() => this.hand() === 'left');
+
   readonly saveFailed = signal(false);
 
   set(hand: Handedness): void {
@@ -22,7 +23,7 @@ export class HandednessService {
     });
   }
 
-  /** Caches only, for the reason `MagazineStyleService.adopt` gives. */
+  /** Caches only: a value just read from the account is never written straight back. */
   adopt(user: CurrentUser): void {
     const hand = asHandedness(user.preferences.handedness);
     if (hand === null) return;
@@ -32,7 +33,7 @@ export class HandednessService {
   /** Cache included: the next account must not inherit this one's corner. */
   reset(): void {
     localStorage.removeItem(HANDEDNESS_KEY);
-    this.hand.set('right');
+    this.hand.set(DEFAULT_HANDEDNESS);
     this.saveFailed.set(false);
   }
 
@@ -42,6 +43,6 @@ export class HandednessService {
   }
 
   private cached(): Handedness {
-    return asHandedness(localStorage.getItem(HANDEDNESS_KEY)) ?? 'right';
+    return asHandedness(localStorage.getItem(HANDEDNESS_KEY)) ?? DEFAULT_HANDEDNESS;
   }
 }

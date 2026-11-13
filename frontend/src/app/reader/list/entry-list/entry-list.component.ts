@@ -201,8 +201,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly autoplay = inject(ListAutoplayCoordinator);
   private readonly magazineStyle = inject(MagazineStyleService);
-  private readonly handedness = inject(HandednessService);
-  protected readonly leftHanded = computed(() => this.handedness.hand() === 'left');
+  protected readonly leftHanded = inject(HandednessService).leftHanded;
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly nearViewport = inject(NearViewportMedia);

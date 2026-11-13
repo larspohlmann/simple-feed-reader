@@ -2,7 +2,6 @@ import { InjectionToken } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { Handedness } from './handedness';
 
-/** Behind a token for the reason `MAGAZINE_STYLE_WRITER` is. */
 export interface HandednessWriter {
   /** Resolves `true` on success, `false` on failure. Never errors. */
   write(hand: Handedness): Observable<boolean>;

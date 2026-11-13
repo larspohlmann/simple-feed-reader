@@ -5,7 +5,6 @@ import { API_BASE_URL } from '../api';
 import { Handedness } from './handedness';
 import { HandednessWriter } from './handedness-writer';
 
-/** Goes straight at `HttpClient` for the reason `HttpMagazineStyleWriter` does. */
 @Injectable({ providedIn: 'root' })
 export class HttpHandednessWriter implements HandednessWriter {
   private readonly http = inject(HttpClient);

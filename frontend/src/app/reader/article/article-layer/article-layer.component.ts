@@ -72,8 +72,7 @@ export class ArticleLayerComponent {
   });
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
-  private readonly handedness = inject(HandednessService);
-  protected readonly leftHanded = computed(() => this.handedness.hand() === 'left');
+  protected readonly leftHanded = inject(HandednessService).leftHanded;
   readonly leaving = this.gestures.leaving;
 
   /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */
