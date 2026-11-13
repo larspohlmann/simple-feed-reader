@@ -6,7 +6,6 @@ import {
   inject,
   input,
   output,
-  OutputEmitterRef,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -20,21 +19,29 @@ import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.direc
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { FeedRefreshTimesComponent } from './health/feed-refresh-times.component';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { stepMenu } from '../../shared/menu-keys';
+import {
+  ACTION_SHEET_DIVIDER,
+  ActionSheetCheck,
+} from '../../shared/action-sheet/action-sheet.component';
+import { MenuCheckboxComponent } from '../../shared/menu-checkbox/menu-checkbox.component';
 import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import {
   ExclusionSurface,
-  FEED_FLAG_TOGGLES,
-  FeedFlagToggle,
-  feedFlagLabelKey,
+  SURFACE_DESCRIPTORS,
+  flipFeedFlag,
+  isIncludedIn,
   ownExcludedSurfaces,
+  surfaceChecks,
 } from '../../reader/feed-exclusions';
 
 /**
- * One feed row on the Organise page. Presentational on purpose: the tree and
- * the flat list both render it, and only the parent knows what "move up" means
- * in its own context, so the row emits and never writes.
+ * One feed row on the Organise page. The tree and the flat list both render it,
+ * and only the parent knows what "move up" means in its own context, so moves
+ * are emitted; the row's own surface switches it flips itself, like a sidebar row.
  */
 @Component({
   selector: 'app-organise-feed-row',
@@ -48,6 +55,7 @@ import {
     DismissOnOutsideDirective,
     IconButtonDirective,
     FeedRefreshTimesComponent,
+    MenuCheckboxComponent,
   ],
   templateUrl: './organise-feed-row.component.html',
   styleUrl: './organise-feed-row.component.scss',
@@ -76,21 +84,14 @@ export class OrganiseFeedRowComponent {
   readonly moveUp = output<void>();
   readonly moveDown = output<void>();
   readonly edit = output<void>();
-  readonly toggleAllItems = output<void>();
-  readonly toggleForYou = output<void>();
-  readonly toggleSavedSearches = output<void>();
   readonly unsubscribe = output<void>();
 
-  private readonly flagToggled: Readonly<Record<ExclusionSurface, OutputEmitterRef<void>>> = {
-    allItems: this.toggleAllItems,
-    forYou: this.toggleForYou,
-    savedSearches: this.toggleSavedSearches,
-  };
-  protected readonly feedFlags = FEED_FLAG_TOGGLES;
-  protected readonly feedFlagLabelKey = feedFlagLabelKey;
+  protected readonly feedFlags = SURFACE_DESCRIPTORS;
+  protected readonly step = stepMenu;
 
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
+  private readonly manage = inject(ManageActions);
   private readonly i18n = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -108,8 +109,8 @@ export class OrganiseFeedRowComponent {
     selectionQueryParams({ subscription: this.subscription().id }),
   );
 
-  protected toggleFlag(toggle: FeedFlagToggle): void {
-    this.flagToggled[toggle.surface].emit();
+  protected toggleFlag(surface: ExclusionSurface): void {
+    flipFeedFlag(this.manage, surface, this.subscription());
   }
 
   protected toggleMenu(): void {
@@ -123,16 +124,14 @@ export class OrganiseFeedRowComponent {
   /** Coarse pointers get the action sheet the sidebar already uses; a hover
    *  popover has nothing to hover. */
   protected openSheet(): void {
-    const sub = this.subscription();
     this.sheet
       .open({
         title: this.subscription().title,
         actions: [
           { id: 'edit', label: this.i18n.translate('reader.editFeed') },
-          ...FEED_FLAG_TOGGLES.map((toggle) => ({
-            id: toggle.surface,
-            label: this.i18n.translate(feedFlagLabelKey(toggle, sub)),
-          })),
+          ACTION_SHEET_DIVIDER,
+          ...this.flagChecks(),
+          ACTION_SHEET_DIVIDER,
           { id: 'unsubscribe', label: this.i18n.translate('reader.unsubscribe'), danger: true },
         ],
       })
@@ -141,9 +140,14 @@ export class OrganiseFeedRowComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.edit.emit();
-        const toggle = FEED_FLAG_TOGGLES.find(({ surface }) => surface === choice);
-        if (toggle) this.toggleFlag(toggle);
         if (choice === 'unsubscribe') this.unsubscribe.emit();
       });
+  }
+
+  private flagChecks(): ActionSheetCheck[] {
+    return surfaceChecks(this.i18n, {
+      isIncluded: (surface) => isIncludedIn(this.subscription(), surface),
+      flip: (surface) => this.toggleFlag(surface),
+    });
   }
 }

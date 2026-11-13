@@ -11,7 +11,7 @@
     <app-icon name="more_horiz" size="dense" />
   </button>
   @if (open()) {
-    <div class="pop" role="menu">
+    <div class="pop" role="menu" tabindex="-1" (keydown)="step($event)">
       <ng-container [ngTemplateOutlet]="items()" />
     </div>
   }

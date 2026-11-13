@@ -87,6 +87,28 @@ describe('EntriesStore', () => {
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });
 
+  it('reloads the Trending list when Trending is the list it shows', () => {
+    store.load({ view: 'trending', window: 'day' });
+    ctrl
+      .expectOne('https://api.test/api/trending?window=day')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    store.reloadIfShowing('trending');
+
+    ctrl.expectOne('https://api.test/api/trending?window=day');
+  });
+
+  it('leaves any other list alone when asked to reload Trending', () => {
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    store.reloadIfShowing('trending');
+
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+  });
+
   it('keeps the previous entries visible while a reload is on the wire', () => {
     store.load({ view: 'unread' });
     ctrl

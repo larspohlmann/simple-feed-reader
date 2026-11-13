@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Subscription;
 use App\Enum\FeedGroup;
+use App\Enum\InclusionSurface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -77,13 +78,12 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
     /** @return list<Subscription> */
     public function findIncludedInAllItemsForUser(int $userId): array
     {
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere('s.user = :user')->setParameter('user', $userId)
+            ->orderBy('s.id', 'ASC');
+        InclusionScopeDql::restrict($qb, 's', InclusionSurface::AllItems);
         /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->andWhere('s.includeInAllItems = true')
-            ->orderBy('s.id', 'ASC')
-            ->getQuery()
-            ->getResult();
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
     }

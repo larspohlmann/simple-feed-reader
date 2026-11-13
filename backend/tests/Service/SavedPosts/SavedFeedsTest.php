@@ -7,6 +7,7 @@ namespace App\Tests\Service\SavedPosts;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
@@ -41,8 +42,8 @@ final class SavedFeedsTest extends DbTestCase
         self::assertSame(SourceFormat::SAVED, $feed->getSourceFormat());
         self::assertSame('Saved from Bluesky', $feed->getTitle());
         self::assertSame(SocialNetwork::Bluesky, $feed->getNetwork());
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
         self::assertCount(0, $subscription->getTags());
     }
 

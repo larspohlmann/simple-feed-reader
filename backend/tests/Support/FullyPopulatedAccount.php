@@ -13,11 +13,12 @@ use App\Entity\EntryOrigin;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouNetworkExclusion;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
+use App\Entity\InclusionChange;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\NetworkExclusion;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Entity\SavedEntryOrigin;
@@ -27,6 +28,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
@@ -66,7 +68,15 @@ final readonly class FullyPopulatedAccount
 
         $this->entityManager->persist($this->savedSearchFor($user));
         $this->entityManager->persist(new SavedSearchNetworkInclusion($user, SocialNetwork::Mastodon));
-        $this->entityManager->persist(new ForYouNetworkExclusion($user, SocialNetwork::Bluesky));
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::ForYou),
+        );
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Mastodon, InclusionSurface::AllItems),
+        );
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Mastodon, InclusionSurface::Trending),
+        );
 
         $feed = $this->feedFor($email);
         $this->entityManager->persist($feed);
@@ -117,6 +127,10 @@ final readonly class FullyPopulatedAccount
         $tag->setIcon('bookmark');
         $tag->setPosition(2);
         $tag->setParent($parent);
+        $tag->changeInclusions(new InclusionChange(allItems: false));
+        $tag->changeInclusions(new InclusionChange(forYou: false));
+        $tag->changeInclusions(new InclusionChange(savedSearches: false));
+        $tag->changeInclusions(new InclusionChange(trending: false));
 
         return $tag;
     }
@@ -140,9 +154,10 @@ final readonly class FullyPopulatedAccount
         $subscription->setCustomTitle('My populated feed');
         $subscription->setPosition(3);
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T10:00:00Z'));
-        $subscription->setIncludeInAllItems(false);
-        $subscription->setIncludeInForYou(false);
-        $subscription->setIncludeInSavedSearches(false);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
+        $subscription->changeInclusions(new InclusionChange(forYou: false));
+        $subscription->changeInclusions(new InclusionChange(savedSearches: false));
+        $subscription->changeInclusions(new InclusionChange(trending: false));
         $subscription->addTag($tag, 5);
 
         return $subscription;

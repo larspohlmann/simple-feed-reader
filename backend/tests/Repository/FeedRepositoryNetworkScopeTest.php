@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\SocialFeed;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
@@ -36,7 +37,7 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
             SourceFormat::BLUESKY_API,
         )->getFeed();
         $hiddenSubscription = $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::BLUESKY_PROFILE);
-        $hiddenSubscription->setIncludeInAllItems(false);
+        $hiddenSubscription->changeInclusions(new InclusionChange(allItems: false));
         $this->entityManager->flush();
         $profile = $hiddenSubscription->getFeed();
         $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::MASTODON_PROFILE);

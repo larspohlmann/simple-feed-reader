@@ -7,9 +7,12 @@ namespace App\Tests\Service\Reading;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
+use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
@@ -196,7 +199,7 @@ final class MarkReadServiceTest extends DbTestCase
         $feed = new Feed('https://example.com/excluded.xml');
         $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $subscription->setIncludeInAllItems(false);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
         $this->entityManager->persist($subscription);
 
         $publishedAt = new \DateTimeImmutable('2026-07-05T00:00:00Z');
@@ -321,7 +324,7 @@ final class MarkReadServiceTest extends DbTestCase
         [$user, $plain] = $this->seed();
         $fixtures = new NetworkFeedSubscriptions($this->entityManager);
         $home = $fixtures->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
-        $home->setIncludeInAllItems(false);
+        $home->changeInclusions(new InclusionChange(allItems: false));
         $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
         $mastodon = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
         $stranger = new User('network-stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -346,6 +349,74 @@ final class MarkReadServiceTest extends DbTestCase
             ],
             $this->watermarksOf([$home, $profile, $mastodon, $plain, $foreign]),
         );
+    }
+
+    public function testAllScopeSkipsANetworkSwitchedOutOfAllItems(): void
+    {
+        [$user, $plain] = $this->seed();
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager);
+        $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $mastodon = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::AllItems),
+        );
+        $this->entityManager->flush();
+
+        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
+        $this->entityManager->clear();
+
+        self::assertSame(
+            [
+                $profile->requireId() => null,
+                $mastodon->requireId() => '2026-07-25T00:00:00+00:00',
+                $plain->requireId() => '2026-07-25T00:00:00+00:00',
+            ],
+            $this->watermarksOf([$profile, $mastodon, $plain]),
+        );
+    }
+
+    public function testAllScopeSkipsFeedsATagSwitchesOutOfAllItems(): void
+    {
+        [$user, $plain] = $this->seed();
+        $switchedOff = new Tag($user, 'off');
+        $switchedOff->changeInclusions(new InclusionChange(allItems: false));
+        $below = new Tag($user, 'below');
+        $below->setParent($switchedOff);
+        $included = new Tag($user, 'on');
+        $this->entityManager->persist($switchedOff);
+        $this->entityManager->persist($below);
+        $this->entityManager->persist($included);
+        $offTagged = $this->subscriptionTagged($user, 'https://off.example.com/f.xml', [$switchedOff, $included]);
+        $belowTagged = $this->subscriptionTagged($user, 'https://below.example.com/f.xml', [$below]);
+        $onTagged = $this->subscriptionTagged($user, 'https://on.example.com/f.xml', [$included]);
+
+        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
+        $this->entityManager->clear();
+
+        self::assertSame(
+            [
+                $offTagged->requireId() => null,
+                $belowTagged->requireId() => null,
+                $onTagged->requireId() => '2026-07-25T00:00:00+00:00',
+                $plain->requireId() => '2026-07-25T00:00:00+00:00',
+            ],
+            $this->watermarksOf([$offTagged, $belowTagged, $onTagged, $plain]),
+        );
+    }
+
+    /** @param list<Tag> $tags */
+    private function subscriptionTagged(User $user, string $feedUrl, array $tags): Subscription
+    {
+        $feed = new Feed($feedUrl);
+        $this->entityManager->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        foreach ($tags as $tag) {
+            $subscription->addTag($tag);
+        }
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
+
+        return $subscription;
     }
 
     /**

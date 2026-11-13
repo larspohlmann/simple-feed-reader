@@ -32,6 +32,7 @@ import {
   EntryStateDto,
   TagDto,
   TagInput,
+  TagUpdate,
 } from './models';
 import { TrendingWindow } from './trending/trending.models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
@@ -251,7 +252,7 @@ export class ReaderApi {
     return this.http.post<{ tag: TagDto }>(`${this.base}/api/tags`, body);
   }
 
-  updateTag(id: number, body: TagInput): Observable<{ tag: TagDto }> {
+  updateTag(id: number, body: TagUpdate): Observable<{ tag: TagDto }> {
     return this.http.patch<{ tag: TagDto }>(`${this.base}/api/tags/${id}`, body);
   }
 
@@ -284,20 +285,6 @@ export class ReaderApi {
 
   excludeNetworkFromSavedSearches(network: SocialNetworkName): Observable<void> {
     return this.http.delete<void>(`${this.base}/api/saved-searches/included-networks/${network}`);
-  }
-
-  forYouExcludedNetworks(): Observable<{ excludedNetworks: SocialNetworkName[] }> {
-    return this.http.get<{ excludedNetworks: SocialNetworkName[] }>(
-      `${this.base}/api/for-you/excluded-networks`,
-    );
-  }
-
-  excludeNetworkFromForYou(network: SocialNetworkName): Observable<void> {
-    return this.http.put<void>(`${this.base}/api/for-you/excluded-networks/${network}`, null);
-  }
-
-  includeNetworkInForYou(network: SocialNetworkName): Observable<void> {
-    return this.http.delete<void>(`${this.base}/api/for-you/excluded-networks/${network}`);
   }
 
   createSavedSearch(body: SavedSearchDraft): Observable<{ savedSearch: SavedSearchWire }> {

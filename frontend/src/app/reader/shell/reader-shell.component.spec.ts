@@ -68,6 +68,7 @@ import {
 } from '../../../testing/resize-observer-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -136,6 +137,7 @@ describe('ReaderShellComponent', () => {
         includeInAllItems: true,
         includeInForYou: true,
         includeInSavedSearches: true,
+        includeInTrending: true,
       },
     ],
     socialAccounts: [],
@@ -248,6 +250,12 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
       .expectOne('https://api.test/api/for-you/excluded-networks')
+      .flush({ excludedNetworks: [] });
+    ctrl
+      .expectOne('https://api.test/api/all-items/excluded-networks')
+      .flush({ excludedNetworks: [] });
+    ctrl
+      .expectOne('https://api.test/api/trending/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -1676,7 +1684,7 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('one scoped refresh reloads the list once (#502)', () => {
-    it('fires exactly one entries reload and one tags reload after the run finishes', () => {
+    it('fires exactly one entries reload and one tags reload after the run finishes, and leaves the network exclusions alone', () => {
       const fixture = boot();
 
       fixture.componentInstance.refresh.refreshScoped();
@@ -1702,12 +1710,12 @@ describe('ReaderShellComponent', () => {
       const savedSearchesReloads = ctrl.match(
         (request) => request.url === 'https://api.test/api/saved-searches',
       );
-      const forYouNetworksReloads = ctrl.match(
-        (request) => request.url === 'https://api.test/api/for-you/excluded-networks',
+      const networkExclusionReloads = ctrl.match((request) =>
+        request.url.endsWith('/excluded-networks'),
       );
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
-      expect(forYouNetworksReloads.length).toBe(1);
+      expect(networkExclusionReloads).toHaveLength(0);
       expect(subscriptionsReloads.length).toBe(1);
       expect(savedSearchesReloads.length).toBe(1);
 
@@ -1716,7 +1724,6 @@ describe('ReaderShellComponent', () => {
       tagsReloads[0].flush({ tags: [] });
       subscriptionsReloads[0].flush(subscriptionsBody);
       savedSearchesReloads[0].flush({ savedSearches: [] });
-      forYouNetworksReloads[0].flush({ excludedNetworks: [] });
       ctrl.verify();
     });
   });
@@ -1900,7 +1907,15 @@ describe('ReaderShellComponent', () => {
     // The header's glyph and its edit action both read the tag out of the
     // tree, so the tag has to exist there for either to appear.
     TestBed.inject(TagsStore).tags.set([
-      { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+      {
+        id: 3,
+        name: 'Tech',
+        color: null,
+        icon: null,
+        position: 0,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
     ]);
     qp.next(convertToParamMap({ tag: '3' }));
     fixture.detectChanges();

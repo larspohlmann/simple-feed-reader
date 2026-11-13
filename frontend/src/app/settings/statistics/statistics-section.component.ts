@@ -15,6 +15,10 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { SettingsApi } from '../settings-api';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { isSocialFeed } from '../../reader/state/social-sections';
+import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
+import { TagsStore } from '../../reader/state/tags.store';
+import { isVisibleIn } from '../../reader/state/visibility';
+import { VisibilitySwitchesStore } from '../../reader/state/visibility-switches.store';
 import { ReadingActivity, ReadingDay } from '../settings.models';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
@@ -64,6 +68,9 @@ const TOP_FEEDS = 5;
 export class StatisticsSectionComponent implements OnInit {
   private readonly language = inject(LanguageService);
   private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly tags = inject(TagsStore);
+  private readonly networkSwitches = inject(NetworkSurfaceSwitches);
+  private readonly visibilitySwitches = inject(VisibilitySwitchesStore).switches;
   private readonly api = inject(SettingsApi);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -81,8 +88,9 @@ export class StatisticsSectionComponent implements OnInit {
   readonly tiles = computed<StatTile[]>(() => {
     const activity = this.activity();
     const plainFeeds = this.plainFeeds();
+    const switches = this.visibilitySwitches();
     const unread = plainFeeds
-      .filter((subscription) => subscription.includeInAllItems)
+      .filter((subscription) => isVisibleIn(subscription, 'allItems', switches))
       .reduce((sum, subscription) => sum + subscription.unreadCount, 0);
 
     return [
@@ -180,6 +188,8 @@ export class StatisticsSectionComponent implements OnInit {
 
   ngOnInit(): void {
     this.subscriptions.loadIfStale();
+    this.tags.loadIfStale();
+    this.networkSwitches.loadExclusionsIfStale();
     this.api
       .readingActivity()
       .pipe(takeUntilDestroyed(this.destroyRef))

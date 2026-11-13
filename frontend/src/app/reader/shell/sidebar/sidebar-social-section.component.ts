@@ -1,14 +1,14 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { NetworkFeedKind, SocialNetworkName } from '../../../core/social-network';
 import { PersistedToggle, persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
-import { ExclusionSurface, exclusionTitle } from '../../feed-exclusions';
+import { ExclusionSurface } from '../../feed-exclusions';
 import {
   NETWORK_FEED_KINDS_IN_ORDER,
   NETWORK_FEED_KIND_DESCRIPTORS,
@@ -19,6 +19,8 @@ import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
+import { MenuCheckboxComponent } from '../../../shared/menu-checkbox/menu-checkbox.component';
+import { FeedExclusionMarkerComponent } from './feed-exclusion-marker.component';
 
 const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.collapsed`;
 const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): string =>
@@ -36,6 +38,8 @@ const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): s
     SidebarRowMenuComponent,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,
+    MenuCheckboxComponent,
+    FeedExclusionMarkerComponent,
   ],
   templateUrl: './sidebar-social-section.component.html',
   styleUrl: './sidebar-social-section.component.scss',
@@ -47,7 +51,6 @@ export class SidebarSocialSectionComponent {
 
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
-  private readonly i18n = inject(TranslocoService);
   private readonly dictionary = inject(ActiveDictionary);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
@@ -76,16 +79,16 @@ export class SidebarSocialSectionComponent {
   protected readonly activeFeedKind = computed(() => this.selectionOnThisNetwork()?.feedKind);
   protected readonly selectionQueryParams = selectionQueryParams;
 
-  private readonly networkExcludedSurfaces = computed<ExclusionSurface[]>(() =>
+  protected readonly networkExcludedSurfaces = computed<ExclusionSurface[]>(() =>
     this.rows.networkExcludedSurfaces(this.section().network),
   );
   protected readonly networkExcluded = computed(() => this.networkExcludedSurfaces().length > 0);
-  protected readonly networkExclusionTitle = computed(() => {
-    this.dictionary.loaded();
-    return exclusionTitle(this.i18n, this.networkExcludedSurfaces());
-  });
 
   protected readonly menuKey = computed(() => `social-${this.section().network}`);
+  protected readonly surfaceChecks = computed(() => {
+    this.dictionary.loaded();
+    return this.rows.networkSurfaceChecks(this.section());
+  });
 
   protected toggle(): void {
     this.collapsible.toggle();

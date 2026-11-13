@@ -17,13 +17,13 @@ use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
-use App\Entity\ForYouNetworkExclusion;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\KnownSocialCollection;
 use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
+use App\Entity\NetworkExclusion;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
@@ -251,7 +251,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         SavedSearchNetworkInclusion::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
-        ForYouNetworkExclusion::class => [
+        NetworkExclusion::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
         Feed::class => [

@@ -93,7 +93,7 @@ final readonly class TagController
     ): JsonResponse {
         $tag = $this->tags->getOneForUser($user->requireId(), $id);
 
-        $this->editor->update($tag, $request->toDetails());
+        $this->editor->update($tag, $request->toDetails(), $request->toInclusions());
 
         return new JsonResponse(['tag' => TagJson::one($tag)]);
     }

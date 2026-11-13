@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\InclusionSurface;
 use App\Repository\TagRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -44,10 +45,14 @@ final class Tag implements PositionedInterface
     #[ORM\JoinColumn(name: 'parent_id', nullable: true, onDelete: 'SET NULL')]
     private ?Tag $parent = null;
 
+    #[ORM\Embedded(class: InclusionSwitches::class, columnPrefix: 'include_in_')]
+    private InclusionSwitches $inclusions;
+
     public function __construct(User $user, string $name)
     {
         $this->user = $user;
         $this->name = $name;
+        $this->inclusions = new InclusionSwitches();
     }
 
     public function getId(): ?int
@@ -108,5 +113,15 @@ final class Tag implements PositionedInterface
     public function setParent(?Tag $parent): void
     {
         $this->parent = $parent;
+    }
+
+    public function isIncludedIn(InclusionSurface $surface): bool
+    {
+        return $this->inclusions->isIncludedIn($surface);
+    }
+
+    public function changeInclusions(InclusionChange $change): void
+    {
+        $this->inclusions = $this->inclusions->changedBy($change);
     }
 }

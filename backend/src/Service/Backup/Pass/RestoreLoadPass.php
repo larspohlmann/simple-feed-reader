@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Backup\Pass;
 
 use App\Entity\Feed;
-use App\Entity\ForYouNetworkExclusion;
+use App\Entity\NetworkExclusion;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Service\Account\Model\AccountSettingsModel;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\FeedLine;
@@ -18,6 +19,7 @@ use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Backup\Model\RestoreResultModel;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Search\SavedSearchSlug;
@@ -103,11 +105,18 @@ final class RestoreLoadPass
             $line->feedDirectoryScope->countries,
             $line->feedDirectoryScope->languages,
         );
-        foreach ($line->savedSearchIncludedNetworks as $network) {
+        $this->loadNetworkSwitches($line->networks);
+    }
+
+    private function loadNetworkSwitches(AccountNetworkSwitchesModel $networks): void
+    {
+        foreach ($networks->savedSearchIncludedNetworks as $network) {
             $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, $network));
         }
-        foreach ($line->forYouExcludedNetworks as $network) {
-            $this->entityManager->persist(new ForYouNetworkExclusion($this->user, $network));
+        foreach (InclusionSurface::cases() as $surface) {
+            foreach ($networks->excludedFrom($surface) as $network) {
+                $this->entityManager->persist(new NetworkExclusion($this->user, $network, $surface));
+            }
         }
     }
 

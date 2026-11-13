@@ -9,8 +9,8 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
-use App\Entity\ForYouNetworkExclusion;
 use App\Entity\LinkCard;
+use App\Entity\NetworkExclusion;
 use App\Entity\ReadingSettings;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
@@ -52,12 +52,17 @@ final class BackupFieldDeclarations
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
+            'inclusions.allItems' => 'includeInAllItems', 'inclusions.forYou' => 'includeInForYou',
+            'inclusions.savedSearches' => 'includeInSavedSearches', 'inclusions.trending' => 'includeInTrending',
         ],
         SavedSearch::class => [
             'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',
         ],
         SavedSearchNetworkInclusion::class => ['network' => 'savedSearchIncludedNetworks'],
-        ForYouNetworkExclusion::class => ['network' => 'forYouExcludedNetworks'],
+        NetworkExclusion::class => [
+            'network' => ['forYouExcludedNetworks', 'allItemsExcludedNetworks', 'trendingExcludedNetworks'],
+            'surface' => ['forYouExcludedNetworks', 'allItemsExcludedNetworks', 'trendingExcludedNetworks'],
+        ],
         Feed::class => [
             'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',
             'description' => 'description', 'faviconUrl' => 'faviconUrl',
@@ -71,9 +76,10 @@ final class BackupFieldDeclarations
             'markedReadUntil' => 'markedReadUntil',
             'createdAt' => 'createdAt',
             'subscriptionTags' => 'tags',
-            'includeInAllItems' => 'includeInAllItems',
-            'includeInForYou' => 'includeInForYou',
-            'includeInSavedSearches' => 'includeInSavedSearches',
+            'inclusions.allItems' => 'includeInAllItems',
+            'inclusions.forYou' => 'includeInForYou',
+            'inclusions.savedSearches' => 'includeInSavedSearches',
+            'inclusions.trending' => 'includeInTrending',
         ],
         SubscriptionTag::class => [
             'tag' => 'tags.name',
@@ -139,7 +145,7 @@ final class BackupFieldDeclarations
         Tag::class => BackupSchema::KIND_TAG,
         SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
         SavedSearchNetworkInclusion::class => BackupSchema::KIND_ACCOUNT,
-        ForYouNetworkExclusion::class => BackupSchema::KIND_ACCOUNT,
+        NetworkExclusion::class => BackupSchema::KIND_ACCOUNT,
         Feed::class => BackupSchema::KIND_FEED,
         Subscription::class => BackupSchema::KIND_SUBSCRIPTION,
         SubscriptionTag::class => BackupSchema::KIND_SUBSCRIPTION,

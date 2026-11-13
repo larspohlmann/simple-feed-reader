@@ -47,9 +47,11 @@
         </button>
         <hr />
         @for (flag of feedFlags; track flag.surface) {
-          <button role="menuitem" (click)="rows.toggleFeedFlag(flag, feed)">
-            {{ feedFlagLabelKey(flag, feed) | transloco }}
-          </button>
+          <app-menu-checkbox
+            [label]="flag.includeKey | transloco"
+            [checked]="feed[flag.flag]"
+            (toggled)="rows.toggleFeedFlag(flag.surface, feed)"
+          />
         }
         <hr />
         <button role="menuitem" class="danger" (click)="manage.unsubscribe(feed); rows.closeMenu()">
@@ -65,14 +67,7 @@
   <span class="favicon-slot" [class.hidden-feed]="excluded()">
     <app-favicon [url]="subscription().faviconUrl" [avatarUrl]="avatarUrl()" />
     @if (excluded()) {
-      <span
-        class="feed-exclusion-marker"
-        role="img"
-        [attr.aria-label]="markerTitle()"
-        [title]="markerTitle()"
-      >
-        <app-icon name="visibility_off" size="text" />
-      </span>
+      <app-feed-exclusion-marker [surfaces]="markerSurfaces()" />
     }
   </span>
 </ng-template>

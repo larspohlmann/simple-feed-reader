@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -201,6 +202,10 @@ final class SubscriptionJsonTest extends TestCase
                 'icon' => null,
                 'position' => 0,
                 'parentId' => null,
+                'includeInAllItems' => true,
+                'includeInForYou' => true,
+                'includeInSavedSearches' => true,
+                'includeInTrending' => true,
             ]],
             $shape['tags'],
         );
@@ -212,14 +217,25 @@ final class SubscriptionJsonTest extends TestCase
         $user = new User('u@example.com', $now);
         $feed = new Feed('https://example.com/feed.xml');
         $subscription = new Subscription($user, $feed, $now);
-        $subscription->setIncludeInAllItems(false);
-        $subscription->setIncludeInForYou(true);
+        $subscription->changeInclusions(new InclusionChange(allItems: false));
+        $subscription->changeInclusions(new InclusionChange(forYou: true));
 
         $shape = SubscriptionJson::one($subscription);
 
         self::assertFalse($shape['includeInAllItems']);
         self::assertTrue($shape['includeInForYou']);
         self::assertTrue($shape['includeInSavedSearches']);
+        self::assertTrue($shape['includeInTrending']);
+    }
+
+    public function testSerialisesASubscriptionExcludedFromTrending(): void
+    {
+        $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
+        $user = new User('u@example.com', $now);
+        $subscription = new Subscription($user, new Feed('https://example.com/feed.xml'), $now);
+        $subscription->changeInclusions(new InclusionChange(trending: false));
+
+        self::assertFalse(SubscriptionJson::one($subscription)['includeInTrending']);
     }
 
     public function testSerialisesASubscriptionExcludedFromSavedSearches(): void
@@ -227,7 +243,7 @@ final class SubscriptionJsonTest extends TestCase
         $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
         $user = new User('u@example.com', $now);
         $subscription = new Subscription($user, new Feed('https://example.com/feed.xml'), $now);
-        $subscription->setIncludeInSavedSearches(false);
+        $subscription->changeInclusions(new InclusionChange(savedSearches: false));
 
         self::assertFalse(SubscriptionJson::one($subscription)['includeInSavedSearches']);
     }

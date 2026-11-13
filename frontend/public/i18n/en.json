@@ -814,7 +814,20 @@
       "hideFromForYou": "Hide from For you",
       "showInSavedSearches": "Show in saved searches",
       "hideFromSavedSearches": "Hide from saved searches",
+      "showInTrending": "Show in Trending",
+      "hideFromTrending": "Hide from Trending",
       "clear": "Clear"
+    },
+    "visibility": {
+      "title": "Visibility",
+      "intro": "Where each network, tag and feed shows up. A greyed box is on, but something above it keeps the feed out.",
+      "name": "Name",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "filterPlaceholder": "Filter feeds",
+      "excludedBy": "Excluded by {{causes}}",
+      "noFeedMatches": "No feed matches “{{term}}”.",
+      "loading": "Loading visibility…"
     },
     "feedDirectory": {
       "browse": "Browse feed directory",
@@ -1013,6 +1026,7 @@
       "showInAllItems": "Show in All items",
       "showInForYou": "Show in For You",
       "showInSavedSearches": "Show in saved searches",
+      "showInTrending": "Show in Trending",
       "saving": "Saving…",
       "save": "Save"
     }
@@ -1401,14 +1415,10 @@
     "moveTagDown": "Move down",
     "editFeed": "Edit feed",
     "unsubscribe": "Unsubscribe",
-    "excludeFromAllItems": "Exclude from All items",
     "includeInAllItems": "Show in All items",
-    "excludeFromForYou": "Exclude from For You",
     "includeInForYou": "Show in For You",
-    "excludeFromSavedSearches": "Exclude from saved searches",
-    "includeNetworkInSavedSearches": "Include in saved searches",
-    "excludeNetworkFromSavedSearches": "Exclude from saved searches",
     "includeInSavedSearches": "Show in saved searches",
+    "includeInTrending": "Show in Trending",
     "excludedFrom": "Hidden from {{surfaces}}",
     "dropToRemoveTags": "Drop here to remove tags",
     "unread": "only unread",

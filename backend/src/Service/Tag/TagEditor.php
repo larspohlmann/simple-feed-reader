@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Tag;
 
+use App\Entity\InclusionChange;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionScopeRepository;
@@ -33,9 +34,9 @@ final readonly class TagEditor
         return $this->structureLock->hold($user, fn (): Tag => $this->createHeld($user, $details));
     }
 
-    public function update(Tag $tag, TagDetailsModel $details): void
+    public function update(Tag $tag, TagDetailsModel $details, InclusionChange $inclusions): void
     {
-        $this->structureLock->hold($tag->getUser(), fn () => $this->updateHeld($tag, $details));
+        $this->structureLock->hold($tag->getUser(), fn () => $this->updateHeld($tag, $details, $inclusions));
     }
 
     public function delete(Tag $tag): void
@@ -57,7 +58,7 @@ final readonly class TagEditor
         return $tag;
     }
 
-    private function updateHeld(Tag $tag, TagDetailsModel $details): void
+    private function updateHeld(Tag $tag, TagDetailsModel $details, InclusionChange $inclusions): void
     {
         if ($this->tags->existsForUserAndName($tag->getUser()->requireId(), $details->name, $tag->requireId())) {
             throw new TagNameTakenException();
@@ -67,6 +68,7 @@ final readonly class TagEditor
         $tag->setName($details->name);
         $tag->setColor($details->color);
         $tag->setIcon($details->icon);
+        $tag->changeInclusions($inclusions);
         $this->entityManager->flush();
     }
 

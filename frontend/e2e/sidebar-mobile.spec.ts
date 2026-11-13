@@ -3,8 +3,9 @@ import { aSubscription } from '../src/testing/subscription-testing';
 import { settleAnimations } from './support/animations';
 import { signInAsAdmin } from './support/auth';
 import { subscriptionsJson } from './support/reader';
+import { makeTag } from '../src/app/reader/testing/tag.factory';
 
-const NEWS_TAG = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
+const NEWS_TAG = makeTag(1, 'News', { position: 0 });
 
 /** A stubbed sidebar: one tagged feed under News, one untagged. Stubbed rather
  *  than seeded because this measures geometry and interaction, and a fixed

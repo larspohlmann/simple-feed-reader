@@ -63,7 +63,7 @@ final readonly class TrendingStories
     /** @return list<RankedStoryModel> */
     private function ranked(int $userId, TrendingWindow $window): array
     {
-        return $this->stories->rankedForUser($this->readerWindows->of($userId, $window), self::MAX_STORIES);
+        return $this->readerWindows->shownStories($userId, $window);
     }
 
     /** @param list<RankedStoryModel> $ranked */

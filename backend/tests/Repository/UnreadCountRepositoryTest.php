@@ -7,10 +7,13 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
+use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\FeedGroup;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\UnreadCountRepository;
@@ -135,10 +138,57 @@ final class UnreadCountRepositoryTest extends DbTestCase
     {
         $user = $this->user();
         [$excluded, $excludedFeed] = $this->subscribedFeed($user, 'https://example.com/excluded.xml');
-        $excluded->setIncludeInAllItems(false);
+        $excluded->changeInclusions(new InclusionChange(allItems: false));
         [, $includedFeed] = $this->subscribedFeed($user, 'https://example.com/included.xml');
         $this->unreadEntry($excludedFeed, 'excluded-copy', 'shared-hash');
         $this->unreadEntry($includedFeed, 'included-copy', 'shared-hash');
+
+        self::assertSame(1, $this->allItems($user));
+    }
+
+    public function testAllItemsSkipsANetworkSwitchedOutOfAllItems(): void
+    {
+        $user = $this->user();
+        [, $blueskyFeed] = $this->subscribedFeed($user, 'https://bsky.app/profile/alice.bsky.social/rss');
+        [, $blogFeed] = $this->subscribedFeed($user, 'https://example.com/blog.xml');
+        $this->unreadEntry($blueskyFeed, 'post', null);
+        $this->unreadEntry($blogFeed, 'article', null);
+        $this->excludeBlueskyFrom($user, InclusionSurface::AllItems);
+
+        self::assertSame(1, $this->allItems($user));
+        self::assertSame(1, $this->perNetwork($user)[SocialNetwork::Bluesky->value] ?? 0);
+    }
+
+    public function testAllItemsSkipsFeedsATagSwitchesOutOfAllItems(): void
+    {
+        $user = $this->user();
+        $switchedOff = $this->tag($user, 'off');
+        $switchedOff->changeInclusions(new InclusionChange(allItems: false));
+        $below = $this->childTag($user, 'below', $switchedOff);
+        $included = $this->tag($user, 'on');
+        [$offTagged, $offFeed] = $this->subscribedFeed($user, 'https://example.com/off.xml');
+        $offTagged->addTag($switchedOff);
+        $offTagged->addTag($included);
+        [$belowTagged, $belowFeed] = $this->subscribedFeed($user, 'https://example.com/below.xml');
+        $belowTagged->addTag($below);
+        [$onTagged, $onFeed] = $this->subscribedFeed($user, 'https://example.com/on.xml');
+        $onTagged->addTag($included);
+        [, $untaggedFeed] = $this->subscribedFeed($user, 'https://example.com/untagged.xml');
+        $this->unreadEntry($offFeed, 'off', null);
+        $this->unreadEntry($belowFeed, 'below', null);
+        $this->unreadEntry($onFeed, 'on', null);
+        $this->unreadEntry($untaggedFeed, 'untagged', null);
+
+        self::assertSame(2, $this->allItems($user));
+        self::assertSame(2, $this->perTag($user)[$switchedOff->requireId()] ?? 0);
+    }
+
+    public function testAForYouSwitchLeavesAllItemsCounting(): void
+    {
+        $user = $this->user();
+        [, $blueskyFeed] = $this->subscribedFeed($user, 'https://bsky.app/profile/alice.bsky.social/rss');
+        $this->unreadEntry($blueskyFeed, 'post', null);
+        $this->excludeBlueskyFrom($user, InclusionSurface::ForYou);
 
         self::assertSame(1, $this->allItems($user));
     }
@@ -298,8 +348,6 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->unreadEntry($homeFeed, 'home-2', null);
         $this->unreadEntry($profileFeed, 'profile-1', null);
 
-        $repository = $this->repository();
-
         self::assertSame(1, $this->perNetworkProfiles($user)[SocialNetwork::Bluesky->value] ?? 0);
         self::assertSame(3, $this->perNetwork($user)[SocialNetwork::Bluesky->value] ?? 0);
     }
@@ -340,7 +388,7 @@ final class UnreadCountRepositoryTest extends DbTestCase
     {
         $user = $this->user();
         [$hidden, $hiddenFeed] = $this->subscribedFeed($user, 'https://example.com/hidden.xml');
-        $hidden->setIncludeInAllItems(false);
+        $hidden->changeInclusions(new InclusionChange(allItems: false));
         [, $homeFeed] = $this->subscribedFeed($user, 'social:bluesky:1:home', SourceFormat::BLUESKY_API);
         $this->unreadEntry($hiddenFeed, 'hidden', null);
         $this->unreadEntry($homeFeed, 'home', null);
@@ -349,6 +397,12 @@ final class UnreadCountRepositoryTest extends DbTestCase
             [FeedGroup::Tags->value => 0, FeedGroup::Feeds->value => 1],
             $this->perFeedGroup($user),
         );
+    }
+
+    private function excludeBlueskyFrom(User $user, InclusionSurface $surface): void
+    {
+        $this->entityManager->persist(new NetworkExclusion($user, SocialNetwork::Bluesky, $surface));
+        $this->entityManager->flush();
     }
 
     /** @return array<int, int> */

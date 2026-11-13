@@ -6,10 +6,12 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryListRow;
@@ -40,7 +42,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     public function testAFeedSwitchedOffIsInNoRead(): void
     {
         $feed = $this->subscribedFeed('https://off.example.com/feed.xml');
-        $this->subscriptionOf($feed)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($feed)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->memberOf($feed, 'off');
 
         $this->assertOnlyTheKeptEntryIsSeen();
@@ -74,7 +76,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     {
         $this->include(SocialNetwork::Bluesky);
         $feed = $this->subscribedFeed('https://bsky.app/profile/bob.bsky.social/rss', SocialNetwork::Bluesky);
-        $this->subscriptionOf($feed)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($feed)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->memberOf($feed, 'post');
 
         $this->assertOnlyTheKeptEntryIsSeen();
@@ -94,7 +96,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
     public function testAnExcludedLowestIdCopyDoesNotHideTheIncludedOne(): void
     {
         $offFeed = $this->subscribedFeed('https://off.example.com/feed.xml');
-        $this->subscriptionOf($offFeed)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($offFeed)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->memberOf($offFeed, 'original', urlHash: 'same');
         $copy = $this->memberOf($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
 
@@ -108,6 +110,30 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
             'original',
             urlHash: 'same',
         );
+        $copy = $this->memberOf($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
+
+        self::assertEqualsCanonicalizing([$this->kept->getId(), $copy->getId()], $this->listedIds());
+    }
+
+    public function testATagSwitchedOutOfSavedSearchesTakesItsFeedsAndTheOnesBelowItOutOfEveryRead(): void
+    {
+        $switchedOff = $this->tag('off');
+        $switchedOff->changeInclusions(new InclusionChange(savedSearches: false));
+        $below = $this->tag('below');
+        $below->setParent($switchedOff);
+        $included = $this->tag('on');
+        $this->taggedMember('https://off.example.com/feed.xml', 'off', [$switchedOff]);
+        $this->taggedMember('https://below.example.com/feed.xml', 'below', [$below]);
+        $this->taggedMember('https://both.example.com/feed.xml', 'both', [$switchedOff, $included]);
+
+        $this->assertOnlyTheKeptEntryIsSeen();
+    }
+
+    public function testAnExcludedTagsLowestIdCopyDoesNotHideTheIncludedOne(): void
+    {
+        $switchedOff = $this->tag('off');
+        $switchedOff->changeInclusions(new InclusionChange(savedSearches: false));
+        $this->taggedMember('https://off.example.com/feed.xml', 'original', [$switchedOff], urlHash: 'same');
         $copy = $this->memberOf($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
 
         self::assertEqualsCanonicalizing([$this->kept->getId(), $copy->getId()], $this->listedIds());
@@ -164,6 +190,26 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
         self::assertSame($network, $feed->getNetwork(), 'the URL classifies the feed on flush');
 
         return $feed;
+    }
+
+    /** @param list<Tag> $tags */
+    private function taggedMember(string $url, string $guid, array $tags, ?string $urlHash = null): Entry
+    {
+        $feed = $this->subscribedFeed($url);
+        $subscription = $this->subscriptionOf($feed);
+        foreach ($tags as $tag) {
+            $subscription->addTag($tag);
+        }
+
+        return $this->memberOf($feed, $guid, $urlHash);
+    }
+
+    private function tag(string $name): Tag
+    {
+        $tag = new Tag($this->user, $name);
+        $this->entityManager->persist($tag);
+
+        return $tag;
     }
 
     private function subscriptionOf(Feed $feed): Subscription

@@ -8,6 +8,8 @@ import { API_BASE_URL } from '../../../core/api';
 import { TagActions } from './tag-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
+import { EntriesStore } from '../../state/entries.store';
 import { TagDrop } from '../../tag-drop';
 import { TagDto } from '../../models';
 import { makeTag } from '../../testing/tag.factory';
@@ -48,6 +50,120 @@ describe('TagActions', () => {
     http.expectOne('https://api.test/api/tags/3').flush(null);
     expect(tagSpy).toHaveBeenCalled();
     expect(subSpy).toHaveBeenCalled();
+  });
+
+  describe('setTagInclusion', () => {
+    const subtag = makeTag(5, 'Long reads', { color: '#123456', icon: 'book', parentId: 3 });
+
+    it('switches the tag at once and PATCHes only the changed flag', () => {
+      jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+      jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+      const tags = TestBed.inject(TagsStore);
+      tags.tags.set([tag, subtag]);
+
+      service.setTagInclusion(subtag, 'forYou', false);
+
+      expect(tags.tags().find((listed) => listed.id === 5)?.includeInForYou).toBe(false);
+      const testRequest = http.expectOne('https://api.test/api/tags/5');
+      expect(testRequest.request.method).toBe('PATCH');
+      expect(testRequest.request.body).toEqual({
+        name: 'Long reads',
+        color: '#123456',
+        icon: 'book',
+        parentId: 3,
+        includeInForYou: false,
+      });
+      testRequest.flush({ tag: { ...subtag, includeInForYou: false } });
+    });
+
+    it('resends the live tag, not the snapshot the caller holds', () => {
+      jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+      jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+      const renamed = { ...subtag, name: 'Longreads', parentId: null };
+      TestBed.inject(TagsStore).tags.set([tag, renamed]);
+
+      service.setTagInclusion(subtag, 'allItems', false);
+
+      const testRequest = http.expectOne('https://api.test/api/tags/5');
+      expect(testRequest.request.body).toEqual({
+        name: 'Longreads',
+        color: '#123456',
+        icon: 'book',
+        parentId: null,
+        includeInAllItems: false,
+      });
+      testRequest.flush({ tag: renamed });
+    });
+
+    it('reloads tags and feeds once the write lands', () => {
+      const tagSpy = jest
+        .spyOn(TestBed.inject(TagsStore), 'load')
+        .mockImplementation(() => undefined);
+      const subSpy = jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+
+      service.setTagInclusion(tag, 'allItems', false);
+      http.expectOne('https://api.test/api/tags/3').flush({ tag });
+
+      expect(tagSpy).toHaveBeenCalledTimes(1);
+      expect(subSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads saved-search badges when the saved-search switch moves', () => {
+      jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+      jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+      const savedSearchSpy = jest
+        .spyOn(TestBed.inject(SavedSearchesStore), 'load')
+        .mockImplementation(() => undefined);
+
+      service.setTagInclusion(tag, 'savedSearches', false);
+      http.expectOne('https://api.test/api/tags/3').flush({ tag });
+
+      expect(savedSearchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends the Trending flag and reloads the Trending list when that switch moves', () => {
+      jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+      jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+      const reloadIfShowing = jest
+        .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
+        .mockImplementation(() => undefined);
+
+      service.setTagInclusion(tag, 'trending', false);
+      const testRequest = http.expectOne('https://api.test/api/tags/3');
+      expect(testRequest.request.body).toEqual(
+        expect.objectContaining({ includeInTrending: false }),
+      );
+      testRequest.flush({ tag });
+
+      expect(reloadIfShowing).toHaveBeenCalledTimes(1);
+      expect(reloadIfShowing).toHaveBeenCalledWith('trending');
+    });
+
+    it('reloads the tags after a failed write, which snaps the switch back', () => {
+      const tagSpy = jest
+        .spyOn(TestBed.inject(TagsStore), 'load')
+        .mockImplementation(() => undefined);
+      jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+        .mockImplementation(() => undefined);
+
+      service.setTagInclusion(tag, 'allItems', false);
+      http
+        .expectOne('https://api.test/api/tags/3')
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(tagSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('reorderTags: PATCHes /api/tags/reorder then reloads tags', () => {

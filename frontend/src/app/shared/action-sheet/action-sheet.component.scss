@@ -53,6 +53,12 @@ nav button {
   border-radius: var(--radius);
 }
 
+nav app-menu-checkbox {
+  --menu-check-gap: var(--space-3);
+  --menu-check-font-size: var(--fs-base);
+  --menu-check-min-height: var(--tap-target);
+}
+
 .labelled {
   display: flex;
   flex-direction: column;

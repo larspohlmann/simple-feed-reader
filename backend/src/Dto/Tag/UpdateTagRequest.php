@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Dto\Tag;
 
+use App\Entity\InclusionChange;
 use App\Service\Tag\Model\TagDetailsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/** Every field is required: a missing parentId would otherwise read as null and un-parent the tag. */
+/** Every detail is required, as a missing parentId would read as null and un-parent the tag; a missing switch stays. */
 final readonly class UpdateTagRequest
 {
     public function __construct(
@@ -22,6 +23,10 @@ final readonly class UpdateTagRequest
         public ?string $icon,
         #[Assert\Positive]
         public ?int $parentId,
+        public ?bool $includeInAllItems = null,
+        public ?bool $includeInForYou = null,
+        public ?bool $includeInSavedSearches = null,
+        public ?bool $includeInTrending = null,
     ) {
     }
 
@@ -32,6 +37,16 @@ final readonly class UpdateTagRequest
             color: $this->color,
             icon: $this->icon,
             parentId: $this->parentId,
+        );
+    }
+
+    public function toInclusions(): InclusionChange
+    {
+        return new InclusionChange(
+            allItems: $this->includeInAllItems,
+            forYou: $this->includeInForYou,
+            savedSearches: $this->includeInSavedSearches,
+            trending: $this->includeInTrending,
         );
     }
 }

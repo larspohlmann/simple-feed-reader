@@ -11,6 +11,7 @@ import {
 } from './edit-subscription-dialog.component';
 import { SubscriptionDto } from '../../models';
 import { SubscriptionRows } from '../../state/subscription-rows';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 const sub: SubscriptionDto = {
   id: 5,
@@ -32,12 +33,23 @@ const sub: SubscriptionDto = {
   consecutiveFailures: 0,
   lastErrorMessage: null,
   position: 0,
-  tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0, parentId: null }],
+  tags: [
+    {
+      id: 1,
+      name: 'Tech',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: null,
+      ...INCLUDED_EVERYWHERE,
+    },
+  ],
   unreadCount: 3,
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
   includeInSavedSearches: true,
+  includeInTrending: true,
   social: null,
 };
 
@@ -153,7 +165,17 @@ describe('EditSubscriptionDialogComponent', () => {
         ...sub,
         id: 6,
         createdAt: '2026-01-01T00:00:00Z',
-        tags: [{ id: 2, name: 'News', color: null, icon: null, position: 1, parentId: null }],
+        tags: [
+          {
+            id: 2,
+            name: 'News',
+            color: null,
+            icon: null,
+            position: 1,
+            parentId: null,
+            ...INCLUDED_EVERYWHERE,
+          },
+        ],
       },
     ]);
     fixture.componentInstance.toggle(1);
@@ -179,6 +201,7 @@ describe('EditSubscriptionDialogComponent', () => {
       includeInAllItems: true,
       includeInForYou: true,
       includeInSavedSearches: true,
+      includeInTrending: true,
     });
     testRequest.flush({ subscription: { ...sub, customTitle: 'My Heise' } });
     expect(close).toHaveBeenCalled();
@@ -195,6 +218,7 @@ describe('EditSubscriptionDialogComponent', () => {
       includeInAllItems: true,
       includeInForYou: true,
       includeInSavedSearches: true,
+      includeInTrending: true,
     });
     testRequest.flush({ subscription: sub });
   });
@@ -204,6 +228,7 @@ describe('EditSubscriptionDialogComponent', () => {
       ...sub,
       includeInAllItems: false,
       includeInSavedSearches: false,
+      includeInTrending: false,
     };
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -229,10 +254,13 @@ describe('EditSubscriptionDialogComponent', () => {
     );
     expect(allItemsSwitch!.checked).toBe(false);
     expect(forYouSwitch!.checked).toBe(true);
+    const trendingSwitch = element.querySelector<HTMLInputElement>('#edit-feed-trending');
     expect(savedSearchesSwitch!.checked).toBe(false);
+    expect(trendingSwitch!.checked).toBe(false);
 
     forYouSwitch!.click();
     savedSearchesSwitch!.click();
+    trendingSwitch!.click();
     fixture.detectChanges();
     fixture.componentInstance.submit();
 
@@ -243,6 +271,7 @@ describe('EditSubscriptionDialogComponent', () => {
       includeInAllItems: false,
       includeInForYou: false,
       includeInSavedSearches: true,
+      includeInTrending: true,
     });
     testRequest.flush({ subscription: excludedFromAllItems });
   });

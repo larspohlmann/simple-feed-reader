@@ -4,6 +4,12 @@
       <hr role="separator" />
     } @else if (isNote(item)) {
       <p class="note" role="presentation">{{ item.note }}</p>
+    } @else if (isCheck(item)) {
+      <app-menu-checkbox
+        [label]="item.label"
+        [checked]="item.checked()"
+        (toggled)="item.toggle()"
+      />
     } @else {
       <button
         role="menuitem"

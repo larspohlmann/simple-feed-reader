@@ -2,11 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import {
-  FEED_FLAG_TOGGLES,
+  SURFACE_DESCRIPTORS,
   exclusionTitle,
   ownExcludedSurfaces,
-  feedFlagLabelKey,
   flipFeedFlag,
+  surfacesIn,
 } from './feed-exclusions';
 import { ManageActions } from './feeds/manage/manage-actions.service';
 import { makeSubscription } from './testing/subscription.factory';
@@ -21,9 +21,10 @@ describe('ownExcludedSurfaces', () => {
       includeInAllItems: false,
       includeInForYou: false,
       includeInSavedSearches: false,
+      includeInTrending: false,
     });
 
-    expect(ownExcludedSurfaces(feed)).toEqual(['allItems', 'forYou', 'savedSearches']);
+    expect(ownExcludedSurfaces(feed)).toEqual(['allItems', 'forYou', 'savedSearches', 'trending']);
   });
 
   it('ignores the network a social feed belongs to', () => {
@@ -41,57 +42,53 @@ describe('exclusionTitle', () => {
   it('names the surfaces the feed is hidden from', () => {
     const i18n = TestBed.inject(TranslocoService);
 
-    expect(exclusionTitle(i18n, ['allItems', 'savedSearches'])).toBe(
-      'Hidden from All items, Saved searches',
+    expect(exclusionTitle(i18n, ['allItems', 'savedSearches', 'trending'])).toBe(
+      'Hidden from All items, Saved searches, Trending',
     );
   });
 });
 
-describe('FEED_FLAG_TOGGLES', () => {
-  const manage = (): jest.Mocked<
-    Pick<ManageActions, 'setIncludeInAllItems' | 'setIncludeInForYou' | 'setIncludeInSavedSearches'>
-  > => ({
-    setIncludeInAllItems: jest.fn(),
-    setIncludeInForYou: jest.fn(),
-    setIncludeInSavedSearches: jest.fn(),
-  });
-
-  it('lists All items, For you and saved searches, in menu order', () => {
-    expect(FEED_FLAG_TOGGLES.map((toggle) => toggle.surface)).toEqual([
+describe('SURFACE_DESCRIPTORS', () => {
+  it('lists All items, For you, saved searches and Trending, in menu order', () => {
+    expect(SURFACE_DESCRIPTORS.map((descriptor) => descriptor.surface)).toEqual([
       'allItems',
       'forYou',
       'savedSearches',
+      'trending',
     ]);
   });
 
-  it('offers to exclude an included feed and to include an excluded one', () => {
-    const [allItems, forYou, savedSearches] = FEED_FLAG_TOGGLES;
-    const feed = makeSubscription({
-      includeInAllItems: true,
-      includeInForYou: false,
-      includeInSavedSearches: true,
-    });
-
-    expect(feedFlagLabelKey(allItems, feed)).toBe('reader.excludeFromAllItems');
-    expect(feedFlagLabelKey(forYou, feed)).toBe('reader.includeInForYou');
-    expect(feedFlagLabelKey(savedSearches, feed)).toBe('reader.excludeFromSavedSearches');
+  it('labels the Trending switch', () => {
+    expect(SURFACE_DESCRIPTORS[3].includeKey).toBe('reader.includeInTrending');
   });
 
-  it('flips each flag through its own ManageActions setter', () => {
-    const [allItems, forYou, savedSearches] = FEED_FLAG_TOGGLES;
+  it('flips each flag through ManageActions.setInclusion', () => {
     const feed = makeSubscription({
       includeInAllItems: true,
       includeInForYou: false,
       includeInSavedSearches: true,
+      includeInTrending: false,
     });
-    const actions = manage();
+    const actions = { setInclusion: jest.fn() };
 
-    flipFeedFlag(actions as unknown as ManageActions, allItems, feed);
-    flipFeedFlag(actions as unknown as ManageActions, forYou, feed);
-    flipFeedFlag(actions as unknown as ManageActions, savedSearches, feed);
+    for (const { surface } of SURFACE_DESCRIPTORS) {
+      flipFeedFlag(actions as unknown as ManageActions, surface, feed);
+    }
 
-    expect(actions.setIncludeInAllItems).toHaveBeenCalledWith(feed, false);
-    expect(actions.setIncludeInForYou).toHaveBeenCalledWith(feed, true);
-    expect(actions.setIncludeInSavedSearches).toHaveBeenCalledWith(feed, false);
+    expect(actions.setInclusion.mock.calls).toEqual([
+      [feed, 'allItems', false],
+      [feed, 'forYou', true],
+      [feed, 'savedSearches', false],
+      [feed, 'trending', true],
+    ]);
+  });
+});
+
+describe('surfacesIn', () => {
+  it('names the surfaces whose flag a change carries, in title order', () => {
+    expect(surfacesIn({ includeInTrending: false, includeInAllItems: true })).toEqual([
+      'allItems',
+      'trending',
+    ]);
   });
 });

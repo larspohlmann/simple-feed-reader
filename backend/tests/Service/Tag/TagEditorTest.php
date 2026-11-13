@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Tag;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Repository\TagRepository;
 use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
@@ -83,12 +85,51 @@ final class TagEditorTest extends DbTestCase
         $user = $this->user('tag-renamer@example.com');
         $tag = $this->editor()->create($user, new TagDetailsModel('news'));
 
-        $this->editor()->update($tag, new TagDetailsModel('News', '#000000', 'label'));
+        $this->updateDetails($tag, new TagDetailsModel('News', '#000000', 'label'));
 
         $reloaded = $this->reload($tag);
         self::assertSame('News', $reloaded->getName());
         self::assertSame('#000000', $reloaded->getColor());
         self::assertSame('label', $reloaded->getIcon());
+    }
+
+    public function testUpdateSetsEachSwitchItNames(): void
+    {
+        $tag = $this->editor()->create($this->user('tag-switcher@example.com'), new TagDetailsModel('Noise'));
+        $tag->changeInclusions(new InclusionChange(forYou: false));
+
+        $this->editor()->update(
+            $tag,
+            new TagDetailsModel('Noise'),
+            new InclusionChange(
+                allItems: false,
+                forYou: true,
+                savedSearches: false,
+                trending: false,
+            ),
+        );
+
+        $reloaded = $this->reload($tag);
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($reloaded->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::Trending));
+    }
+
+    public function testUpdateWithoutSwitchesKeepsThemAsTheyAre(): void
+    {
+        $tag = $this->editor()->create($this->user('tag-keeper@example.com'), new TagDetailsModel('Noise'));
+        $tag->changeInclusions(new InclusionChange(allItems: false));
+        $tag->changeInclusions(new InclusionChange(savedSearches: false));
+        $tag->changeInclusions(new InclusionChange(trending: false));
+
+        $this->updateDetails($tag, new TagDetailsModel('Noise'));
+
+        $reloaded = $this->reload($tag);
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($reloaded->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::Trending));
     }
 
     public function testUpdateRefusesAnotherTagsName(): void
@@ -98,7 +139,7 @@ final class TagEditorTest extends DbTestCase
         $tech = $this->editor()->create($user, new TagDetailsModel('Tech'));
 
         $this->expectException(TagNameTakenException::class);
-        $this->editor()->update($tech, new TagDetailsModel('news'));
+        $this->updateDetails($tech, new TagDetailsModel('news'));
     }
 
     public function testCreateUnderAParentStoresTheParent(): void
@@ -162,7 +203,7 @@ final class TagEditorTest extends DbTestCase
         $books = $this->editor()->create($user, new TagDetailsModel('Books'));
         $novels = $this->editor()->create($user, new TagDetailsModel('Novels', parentId: $books->requireId()));
 
-        $this->editor()->update($books, new TagDetailsModel('Books', parentId: $reading->requireId()));
+        $this->updateDetails($books, new TagDetailsModel('Books', parentId: $reading->requireId()));
 
         self::assertSame($reading->requireId(), $this->reload($books)->getParent()?->getId());
         self::assertSame($books->requireId(), $this->reload($novels)->getParent()?->getId());
@@ -178,7 +219,7 @@ final class TagEditorTest extends DbTestCase
 
         $this->expectException(InvalidTagParentException::class);
         $this->expectExceptionMessage('A tag can sit at most 2 levels below the top.');
-        $this->editor()->update($books, new TagDetailsModel('Books', parentId: $longReads->requireId()));
+        $this->updateDetails($books, new TagDetailsModel('Books', parentId: $longReads->requireId()));
     }
 
     public function testUpdateRefusesAMoveUnderTheTagsOwnChild(): void
@@ -189,7 +230,7 @@ final class TagEditorTest extends DbTestCase
 
         $this->expectException(InvalidTagParentException::class);
         $this->expectExceptionMessage('A tag cannot move under one of its own child tags.');
-        $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: $longReads->requireId()));
+        $this->updateDetails($reading, new TagDetailsModel('Reading', parentId: $longReads->requireId()));
     }
 
     public function testUpdateChecksTheCommittedTreeSoTwoCrossingMovesCannotLoop(): void
@@ -201,7 +242,7 @@ final class TagEditorTest extends DbTestCase
 
         $this->expectException(InvalidTagParentException::class);
         $this->expectExceptionMessage('A tag cannot move under one of its own child tags.');
-        $this->editor()->update($tech, new TagDetailsModel('Tech', parentId: $reading->requireId()));
+        $this->updateDetails($tech, new TagDetailsModel('Tech', parentId: $reading->requireId()));
     }
 
     public function testCreateUpdateAndDeleteEachHoldTheTagStructureLock(): void
@@ -213,7 +254,7 @@ final class TagEditorTest extends DbTestCase
         $recorder->reset();
 
         $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
-        $this->editor()->update($reading, new TagDetailsModel('Read'));
+        $this->updateDetails($reading, new TagDetailsModel('Read'));
         $this->editor()->delete($reading);
 
         self::assertCount(3, $recorder->queriesMatching('for update'));
@@ -228,7 +269,7 @@ final class TagEditorTest extends DbTestCase
         self::assertInstanceOf(QueryRecorder::class, $recorder);
         $recorder->reset();
 
-        $this->editor()->update($longReads, new TagDetailsModel('Longreads', parentId: $reading->requireId()));
+        $this->updateDetails($longReads, new TagDetailsModel('Longreads', parentId: $reading->requireId()));
 
         self::assertSame([], $recorder->queriesMatching('parent_id as'));
     }
@@ -291,7 +332,7 @@ final class TagEditorTest extends DbTestCase
 
         $this->expectException(InvalidTagParentException::class);
         $this->expectExceptionMessage('A tag cannot be its own parent.');
-        $this->editor()->update($tag, new TagDetailsModel('Loop', parentId: $tag->requireId()));
+        $this->updateDetails($tag, new TagDetailsModel('Loop', parentId: $tag->requireId()));
     }
 
     public function testUpdateMovesATagUnderAParentAndBackToRoot(): void
@@ -300,10 +341,10 @@ final class TagEditorTest extends DbTestCase
         $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
         $tag = $this->editor()->create($user, new TagDetailsModel('Essays'));
 
-        $this->editor()->update($tag, new TagDetailsModel('Essays', parentId: $parent->requireId()));
+        $this->updateDetails($tag, new TagDetailsModel('Essays', parentId: $parent->requireId()));
         self::assertSame($parent->requireId(), $this->reload($tag)->getParent()?->getId());
 
-        $this->editor()->update($this->reload($tag), new TagDetailsModel('Essays'));
+        $this->updateDetails($this->reload($tag), new TagDetailsModel('Essays'));
         self::assertNull($this->reload($tag)->getParent());
     }
 
@@ -315,8 +356,8 @@ final class TagEditorTest extends DbTestCase
         $root = $this->editor()->create($user, new TagDetailsModel('Other'));
         $mover = $this->editor()->create($user, new TagDetailsModel('Poems'));
 
-        $this->editor()->update($child, new TagDetailsModel('Essays'));
-        $this->editor()->update($mover, new TagDetailsModel('Poems', parentId: $parent->requireId()));
+        $this->updateDetails($child, new TagDetailsModel('Essays'));
+        $this->updateDetails($mover, new TagDetailsModel('Poems', parentId: $parent->requireId()));
 
         self::assertGreaterThan($root->getPosition(), $this->reload($child)->getPosition());
         self::assertGreaterThan($this->reload($child)->getPosition(), $this->reload($mover)->getPosition());
@@ -330,7 +371,7 @@ final class TagEditorTest extends DbTestCase
         $this->editor()->create($user, new TagDetailsModel('Other'));
         $position = $child->getPosition();
 
-        $this->editor()->update($child, new TagDetailsModel('Long essays', parentId: $parent->requireId()));
+        $this->updateDetails($child, new TagDetailsModel('Long essays', parentId: $parent->requireId()));
 
         self::assertSame($position, $this->reload($child)->getPosition());
     }
@@ -341,7 +382,7 @@ final class TagEditorTest extends DbTestCase
         $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
         $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $parent->requireId()));
 
-        $this->editor()->update($parent, new TagDetailsModel('Books'));
+        $this->updateDetails($parent, new TagDetailsModel('Books'));
 
         self::assertSame('Books', $this->reload($parent)->getName());
     }
@@ -416,5 +457,10 @@ final class TagEditorTest extends DbTestCase
         $this->entityManager->flush();
 
         return $subscription;
+    }
+
+    private function updateDetails(Tag $tag, TagDetailsModel $details): void
+    {
+        $this->editor()->update($tag, $details, new InclusionChange());
     }
 }

@@ -9,7 +9,7 @@ use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
-use App\Entity\ForYouNetworkExclusion;
+use App\Entity\NetworkExclusion;
 use App\Entity\LinkCardContent;
 use App\Entity\ReadingSettings;
 use App\Entity\SavedSearch;
@@ -19,11 +19,12 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SubscriptionSet;
 use App\Exception\ValidationException;
 use App\Repository\FeedRepository;
-use App\Repository\ForYouNetworkExclusionRepository;
+use App\Repository\NetworkExclusionRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SubscriptionRepository;
@@ -452,7 +453,11 @@ final class AccountRestorerTest extends DbTestCase
     {
         $source = $this->fullyPopulatedAccount()->create('for-you-networks-source@example.com');
         $foundation = $this->backupOf($source);
-        $this->entityManager->persist(new ForYouNetworkExclusion($this->reload($source), SocialNetwork::Mastodon));
+        $this->entityManager->persist(new NetworkExclusion(
+            $this->reload($source),
+            SocialNetwork::Mastodon,
+            InclusionSurface::ForYou,
+        ));
         $this->entityManager->flush();
 
         $this->restorer()->start($this->reload($source), $foundation, 'REPLACE');
@@ -463,12 +468,56 @@ final class AccountRestorerTest extends DbTestCase
     public function testAnAccountLineWithoutForYouExclusionsRestoresWithEveryNetworkIncluded(): void
     {
         $user = $this->userFactory->create('for-you-networks-missing@example.com');
-        $this->entityManager->persist(new ForYouNetworkExclusion($user, SocialNetwork::Bluesky));
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::ForYou),
+        );
         $this->entityManager->flush();
 
         $this->restorer()->start($this->reload($user), $this->foundationGzip(), 'REPLACE');
 
         self::assertSame([], $this->forYouExcludedNetworksOf($user));
+    }
+
+    public function testTheExcludedAllItemsNetworksSurviveTheRestoreRoundTrip(): void
+    {
+        $source = $this->fullyPopulatedAccount()->create('all-items-networks-source@example.com');
+        $foundation = $this->backupOf($source);
+        $target = $this->userFactory->create('all-items-networks-target@example.com');
+
+        $this->restorer()->start($this->reload($target), $foundation, 'REPLACE');
+
+        self::assertSame(
+            [SocialNetwork::Mastodon],
+            $this->excludedNetworksOf($target, InclusionSurface::AllItems),
+        );
+        self::assertSame([SocialNetwork::Bluesky], $this->forYouExcludedNetworksOf($target));
+    }
+
+    public function testTheExcludedTrendingNetworksSurviveTheRestoreRoundTrip(): void
+    {
+        $source = $this->fullyPopulatedAccount()->create('trending-networks-source@example.com');
+        $foundation = $this->backupOf($source);
+        $target = $this->userFactory->create('trending-networks-target@example.com');
+
+        $this->restorer()->start($this->reload($target), $foundation, 'REPLACE');
+
+        self::assertSame(
+            [SocialNetwork::Mastodon],
+            $this->excludedNetworksOf($target, InclusionSurface::Trending),
+        );
+    }
+
+    public function testAnAccountLineWithoutAllItemsExclusionsRestoresWithEveryNetworkIncluded(): void
+    {
+        $user = $this->userFactory->create('all-items-networks-missing@example.com');
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Bluesky, InclusionSurface::AllItems),
+        );
+        $this->entityManager->flush();
+
+        $this->restorer()->start($this->reload($user), $this->foundationGzip(), 'REPLACE');
+
+        self::assertSame([], $this->excludedNetworksOf($user, InclusionSurface::AllItems));
     }
 
     public function testAnUnknownExcludedForYouNetworkInTheFileIsDropped(): void
@@ -491,11 +540,17 @@ final class AccountRestorerTest extends DbTestCase
     /** @return list<SocialNetwork> */
     private function forYouExcludedNetworksOf(User $user): array
     {
-        $this->entityManager->clear();
-        $exclusions = self::getContainer()->get(ForYouNetworkExclusionRepository::class);
-        self::assertInstanceOf(ForYouNetworkExclusionRepository::class, $exclusions);
+        return $this->excludedNetworksOf($user, InclusionSurface::ForYou);
+    }
 
-        return $exclusions->excludedNetworksFor($user->requireId());
+    /** @return list<SocialNetwork> */
+    private function excludedNetworksOf(User $user, InclusionSurface $surface): array
+    {
+        $this->entityManager->clear();
+        $exclusions = self::getContainer()->get(NetworkExclusionRepository::class);
+        self::assertInstanceOf(NetworkExclusionRepository::class, $exclusions);
+
+        return $exclusions->excludedNetworks($user->requireId(), $surface);
     }
 
     /** @return list<SocialNetwork> */
@@ -743,6 +798,9 @@ final class AccountRestorerTest extends DbTestCase
      */
     private function getterValue(object $entity, string $field): mixed
     {
+        if (($entity instanceof Tag || $entity instanceof Subscription) && str_starts_with($field, 'inclusions.')) {
+            return $entity->isIncludedIn($this->surfaceSwitchedBy(substr($field, \strlen('inclusions.'))));
+        }
         $pascal = implode('', array_map(ucfirst(...), explode('.', $field)));
         foreach ([lcfirst($pascal), 'get' . $pascal, 'is' . $pascal, 'has' . $pascal] as $method) {
             if (method_exists($entity, $method)) {
@@ -758,6 +816,17 @@ final class AccountRestorerTest extends DbTestCase
             $field,
             self::class,
         ));
+    }
+
+    private function surfaceSwitchedBy(string $switchField): InclusionSurface
+    {
+        foreach (InclusionSurface::cases() as $surface) {
+            if ($surface->switchField() === $switchField) {
+                return $surface;
+            }
+        }
+
+        throw new \LogicException(sprintf('No surface is switched by "%s".', $switchField));
     }
 
     /** @return array<string, int> tag name => position on the subscription */

@@ -2,23 +2,23 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
 import {
-  FEED_FLAG_TOGGLES,
+  SURFACE_DESCRIPTOR,
+  SURFACE_DESCRIPTORS,
   ownExcludedSurfaces,
-  exclusionTitle,
-  feedFlagLabelKey,
 } from '../../feed-exclusions';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
-import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
+import { MenuCheckboxComponent } from '../../../shared/menu-checkbox/menu-checkbox.component';
+import { FeedExclusionMarkerComponent } from './feed-exclusion-marker.component';
 
 /** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
  *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
@@ -32,6 +32,8 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
     IconComponent,
     FaviconComponent,
     SidebarRowMenuComponent,
+    MenuCheckboxComponent,
+    FeedExclusionMarkerComponent,
   ],
   templateUrl: './sidebar-feed-row.component.html',
   styleUrl: './sidebar-feed-row.component.scss',
@@ -40,8 +42,7 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 })
 export class SidebarFeedRowComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
-  protected readonly feedFlags = FEED_FLAG_TOGGLES;
-  protected readonly feedFlagLabelKey = feedFlagLabelKey;
+  protected readonly feedFlags = SURFACE_DESCRIPTORS;
   protected readonly manage = inject(ManageActions);
   protected readonly screen = inject(LayoutService);
   protected readonly rows = inject(SidebarRowActions);
@@ -56,17 +57,12 @@ export class SidebarFeedRowComponent {
   /** A private feed's exclusion is its inherent state, so it carries no marker; a profile feed is ordinary RSS. */
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
 
-  private readonly i18n = inject(TranslocoService);
-  private readonly dictionary = inject(ActiveDictionary);
-
-  /** A private feed is out of All items and For you by design, so only its saved-search state is news. */
+  /** A private feed's exclusion from a surface it is out of by design is no news. */
   protected readonly markerSurfaces = computed(() => {
     const surfaces = ownExcludedSurfaces(this.subscription());
-    return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
-  });
-  protected readonly markerTitle = computed(() => {
-    this.dictionary.loaded();
-    return exclusionTitle(this.i18n, this.markerSurfaces());
+    return this.isPrivate()
+      ? surfaces.filter((surface) => SURFACE_DESCRIPTOR[surface].privateFeedsIncluded)
+      : surfaces;
   });
   protected readonly excluded = computed(() => this.markerSurfaces().length > 0);
 

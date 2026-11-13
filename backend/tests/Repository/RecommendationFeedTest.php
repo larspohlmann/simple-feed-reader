@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
@@ -442,7 +443,7 @@ final class RecommendationFeedTest extends DbTestCase
             $excludedFeed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $excludedSubscription->setIncludeInForYou(false);
+        $excludedSubscription->changeInclusions(new InclusionChange(forYou: false));
         $this->entityManager->persist($excludedSubscription);
         $excludedCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entryB = new Entry(

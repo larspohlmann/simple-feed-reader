@@ -6,11 +6,14 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\ForYouNetworkExclusion;
+use App\Entity\InclusionChange;
+use App\Entity\NetworkExclusion;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SocialNetwork;
 use App\Repository\ForYouFeedQuery;
@@ -78,7 +81,7 @@ final class ForYouExclusionReadsTest extends DbTestCase
     public function testTheFeedSwitchStillAppliesWhileItsNetworkIsIncluded(): void
     {
         $feed = $this->subscribedFeed('https://bsky.app/profile/bob.bsky.social/rss', SocialNetwork::Bluesky);
-        $this->subscriptionOf($feed)->setIncludeInForYou(false);
+        $this->subscriptionOf($feed)->changeInclusions(new InclusionChange(forYou: false));
         $this->recommended($feed, 'post');
 
         $this->assertOnlyTheKeptEntryIsSeen();
@@ -88,7 +91,20 @@ final class ForYouExclusionReadsTest extends DbTestCase
     {
         $other = new User('other@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($other);
-        $this->entityManager->persist(new ForYouNetworkExclusion($other, SocialNetwork::Bluesky));
+        $this->entityManager->persist(
+            new NetworkExclusion($other, SocialNetwork::Bluesky, InclusionSurface::ForYou),
+        );
+        $post = $this->recommended(
+            $this->subscribedFeed('https://bsky.app/profile/alice.bsky.social/rss', SocialNetwork::Bluesky),
+            'post',
+        );
+
+        $this->assertSeenInListAndPool([$this->kept->requireId(), $post->requireId()]);
+    }
+
+    public function testANetworkExcludedFromAllItemsStaysInForYou(): void
+    {
+        $this->excludeFrom(SocialNetwork::Bluesky, InclusionSurface::AllItems);
         $post = $this->recommended(
             $this->subscribedFeed('https://bsky.app/profile/alice.bsky.social/rss', SocialNetwork::Bluesky),
             'post',
@@ -105,6 +121,46 @@ final class ForYouExclusionReadsTest extends DbTestCase
             'original',
             urlHash: 'same',
         );
+        $copy = $this->recommended($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
+
+        self::assertEqualsCanonicalizing(
+            [$this->kept->getId(), $copy->getId()],
+            $this->entryIds($this->candidates()->newestPool(
+                $this->user->requireId(),
+                new \DateTimeImmutable('2026-01-01T00:00:00Z'),
+                50,
+            )),
+        );
+    }
+
+    public function testATagSwitchedOutOfForYouTakesItsFeedsAndTheOnesBelowItOutOfEveryRead(): void
+    {
+        $switchedOff = $this->tag('off');
+        $switchedOff->changeInclusions(new InclusionChange(forYou: false));
+        $below = $this->tag('below');
+        $below->setParent($switchedOff);
+        $included = $this->tag('on');
+        $this->taggedRecommendation('https://off.example.com/feed.xml', 'off', [$switchedOff]);
+        $this->taggedRecommendation('https://below.example.com/feed.xml', 'below', [$below]);
+        $this->taggedRecommendation('https://both.example.com/feed.xml', 'both', [$switchedOff, $included]);
+
+        $this->assertOnlyTheKeptEntryIsSeen();
+    }
+
+    public function testATagSwitchedOutOfAllItemsOnlyStaysInForYou(): void
+    {
+        $tag = $this->tag('quiet');
+        $tag->changeInclusions(new InclusionChange(allItems: false));
+        $post = $this->taggedRecommendation('https://quiet.example.com/feed.xml', 'post', [$tag]);
+
+        $this->assertSeenInListAndPool([$this->kept->requireId(), $post->requireId()]);
+    }
+
+    public function testAnExcludedTagsLowestIdCopyDoesNotHideTheIncludedOneFromThePool(): void
+    {
+        $switchedOff = $this->tag('off');
+        $switchedOff->changeInclusions(new InclusionChange(forYou: false));
+        $this->taggedRecommendation('https://off.example.com/feed.xml', 'original', [$switchedOff], urlHash: 'same');
         $copy = $this->recommended($this->subscribedFeed('https://on.example.com/feed.xml'), 'copy', urlHash: 'same');
 
         self::assertEqualsCanonicalizing(
@@ -175,6 +231,26 @@ final class ForYouExclusionReadsTest extends DbTestCase
         return $feed;
     }
 
+    /** @param list<Tag> $tags */
+    private function taggedRecommendation(string $url, string $guid, array $tags, ?string $urlHash = null): Entry
+    {
+        $feed = $this->subscribedFeed($url);
+        $subscription = $this->subscriptionOf($feed);
+        foreach ($tags as $tag) {
+            $subscription->addTag($tag);
+        }
+
+        return $this->recommended($feed, $guid, $urlHash);
+    }
+
+    private function tag(string $name): Tag
+    {
+        $tag = new Tag($this->user, $name);
+        $this->entityManager->persist($tag);
+
+        return $tag;
+    }
+
     private function subscriptionOf(Feed $feed): Subscription
     {
         $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy(['feed' => $feed]);
@@ -185,7 +261,12 @@ final class ForYouExclusionReadsTest extends DbTestCase
 
     private function exclude(SocialNetwork $network): void
     {
-        $this->entityManager->persist(new ForYouNetworkExclusion($this->user, $network));
+        $this->excludeFrom($network, InclusionSurface::ForYou);
+    }
+
+    private function excludeFrom(SocialNetwork $network, InclusionSurface $surface): void
+    {
+        $this->entityManager->persist(new NetworkExclusion($this->user, $network, $surface));
         $this->entityManager->flush();
     }
 

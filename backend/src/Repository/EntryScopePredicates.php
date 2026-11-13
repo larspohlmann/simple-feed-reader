@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Feed;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Enum\EntryView;
+use App\Enum\InclusionSurface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -35,12 +36,11 @@ final readonly class EntryScopePredicates
             NetworkScopeDql::restrict($qb, $aliases->networkFeed, $query->networkScope);
         }
         if ($query->hidesExcludedFeeds()) {
-            $this->inAllItems($qb, $aliases);
+            InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::AllItems);
         }
         $this->applyView($qb, $aliases, $query->view);
     }
 
-    /** One row per tag a subscription carries, to group by the tag. */
     private function joinNetworkFeeds(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed)
@@ -56,22 +56,16 @@ final readonly class EntryScopePredicates
             ->setParameter('subscriptionIds', $subscriptionIds);
     }
 
-    public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void
-    {
-        $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
-    }
-
-    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
     public function inSavedSearches(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $feed = 'searchFeed' . ucfirst($aliases->entry);
         $inclusion = 'networkInclusion' . ucfirst($aliases->entry);
 
+        InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::SavedSearches);
         $qb->andWhere(\sprintf(
-            '%1$s.includeInSavedSearches = true AND EXISTS (SELECT 1 FROM %2$s %3$s WHERE %3$s = %4$s.feed AND '
-            . '(%3$s.network IS NULL OR EXISTS (SELECT 1 FROM %5$s %6$s WHERE %6$s.user = :user '
-            . 'AND %6$s.network = %3$s.network)))',
-            $aliases->subscription,
+            'EXISTS (SELECT 1 FROM %1$s %2$s WHERE %2$s = %3$s.feed AND '
+            . '(%2$s.network IS NULL OR EXISTS (SELECT 1 FROM %4$s %5$s WHERE %5$s.user = :user '
+            . 'AND %5$s.network = %2$s.network)))',
             Feed::class,
             $feed,
             $aliases->entry,

@@ -1,0 +1,10 @@
+<label class="menu-check"
+  ><input
+    type="checkbox"
+    role="menuitemcheckbox"
+    [checked]="checked()"
+    [attr.aria-checked]="checked()"
+    (change)="toggled.emit()"
+    (click)="$event.stopPropagation()"
+  /><span>{{ label() }}</span></label
+>

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\KnownSocialCollection;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\KnownSocialCollectionRepository;
@@ -57,8 +59,8 @@ final class PrivateFeedsTest extends DbTestCase
         self::assertSame(SourceFormat::BLUESKY_API, $feed->getSourceFormat());
         self::assertSame('Home', $feed->getTitle());
         self::assertSame('https://bsky.app/profile/did:plc:alice', $feed->getSiteUrl());
-        self::assertFalse($subscription->isIncludeInAllItems());
-        self::assertFalse($subscription->isIncludeInForYou());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
         self::assertCount(0, $subscription->getTags());
         $socialFeed = SocialFeeds::repository($this->entityManager)->findWithAccountByFeedIds([$feed->requireId()])[
             $feed->requireId()
@@ -255,8 +257,8 @@ final class PrivateFeedsTest extends DbTestCase
         self::assertSame(SourceFormat::BLUESKY_API, $feed->getSourceFormat());
         self::assertSame('Rusty', $feed->getTitle());
         self::assertSame('https://bsky.app/profile/' . BlueskyProfiles::RUSTY, $feed->getSiteUrl());
-        self::assertTrue($subscription->isIncludeInAllItems());
-        self::assertTrue($subscription->isIncludeInForYou());
+        self::assertTrue($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($subscription->isIncludedIn(InclusionSurface::ForYou));
         $tagNames = array_map(static fn (Tag $each): string => $each->getName(), $subscription->getTags()->toArray());
         self::assertSame(['People'], $tagNames);
         $socialFeed = SocialFeeds::repository($this->entityManager)
@@ -331,7 +333,7 @@ final class PrivateFeedsTest extends DbTestCase
         $previous = (new ProfileFeedSubscriptions($this->entityManager))
             ->subscribe($this->user, 'https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss');
         $previous->addTag($this->tag('People'), 0);
-        $previous->setIncludeInForYou(false);
+        $previous->changeInclusions(new InclusionChange(forYou: false));
         $this->entityManager->flush();
 
         $subscription = $this->privateFeeds()->subscribeInPlaceOf($account, self::rusty(), $previous);
@@ -339,7 +341,7 @@ final class PrivateFeedsTest extends DbTestCase
         $this->entityManager->clear();
         $reloaded = $this->entityManager->find(Subscription::class, $subscription->requireId());
         self::assertNotNull($reloaded);
-        self::assertFalse($reloaded->isIncludeInForYou());
+        self::assertFalse($reloaded->isIncludedIn(InclusionSurface::ForYou));
         $tagNames = array_map(static fn (Tag $each): string => $each->getName(), $reloaded->getTags()->toArray());
         self::assertSame(['People'], $tagNames);
     }

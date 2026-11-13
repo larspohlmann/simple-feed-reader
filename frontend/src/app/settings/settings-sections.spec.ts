@@ -23,6 +23,11 @@ describe('SETTINGS_SECTIONS', () => {
     expect(SETTINGS_SECTIONS.map((section) => section.path)).not.toContain('profile');
   });
 
+  it('lists Visibility right after Organise', () => {
+    const paths = SETTINGS_SECTIONS.map((section) => section.path);
+    expect(paths[paths.indexOf('organise') + 1]).toBe('visibility');
+  });
+
   it('rejects a path no section owns rather than titling a page with nothing', () => {
     // The parameter type keeps a caller from asking in the first place; the
     // cast is how a spec reaches the guard behind it.

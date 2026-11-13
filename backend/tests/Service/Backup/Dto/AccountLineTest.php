@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\AccountLine;
@@ -151,7 +152,10 @@ final class AccountLineTest extends TestCase
             'savedSearchIncludedNetworks' => ['bluesky', 'bluesky', 'mastodon'],
         ]);
 
-        self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Mastodon], $line->savedSearchIncludedNetworks);
+        self::assertSame(
+            [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
+            $line->networks->savedSearchIncludedNetworks,
+        );
     }
 
     public function testAForYouExcludedNetworkListedTwiceIsExcludedOnce(): void
@@ -162,7 +166,49 @@ final class AccountLineTest extends TestCase
             'forYouExcludedNetworks' => ['mastodon', 'mastodon', 'bluesky'],
         ]);
 
-        self::assertSame([SocialNetwork::Mastodon, SocialNetwork::Bluesky], $line->forYouExcludedNetworks);
+        self::assertSame(
+            [SocialNetwork::Mastodon, SocialNetwork::Bluesky],
+            $line->networks->excludedFrom(InclusionSurface::ForYou),
+        );
+    }
+
+    public function testAnAllItemsExcludedNetworkListedTwiceIsExcludedOnce(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'allItemsExcludedNetworks' => ['bluesky', 'bluesky', 'mastodon'],
+        ]);
+
+        self::assertSame(
+            [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
+            $line->networks->excludedFrom(InclusionSurface::AllItems),
+        );
+    }
+
+    public function testALineWithoutAllItemsExclusionsExcludesNoNetwork(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame([], $line->networks->excludedFrom(InclusionSurface::AllItems));
+    }
+
+    public function testATrendingExcludedNetworkListedTwiceIsExcludedOnce(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'trendingExcludedNetworks' => ['mastodon', 'mastodon'],
+        ]);
+
+        self::assertSame([SocialNetwork::Mastodon], $line->networks->excludedFrom(InclusionSurface::Trending));
+    }
+
+    public function testALineWithoutTrendingExclusionsExcludesNoNetwork(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame([], $line->networks->excludedFrom(InclusionSurface::Trending));
     }
 
     public function testANonStringMagazineStyleIsRefused(): void
@@ -184,14 +230,20 @@ final class AccountLineTest extends TestCase
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
         $settings->sharing->setRememberingShares(false);
         $settings->feedDirectoryScope->change(['DE'], ['de']);
-        $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [SocialNetwork::Mastodon]);
+        $networks = new AccountNetworkSwitchesModel([SocialNetwork::Bluesky], [
+            InclusionSurface::AllItems->value => [SocialNetwork::Bluesky],
+            InclusionSurface::ForYou->value => [SocialNetwork::Mastodon],
+            InclusionSurface::Trending->value => [SocialNetwork::Mastodon],
+        ]);
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
             . '"sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],"rememberShares":false,'
             . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"savedSearchIncludedNetworks":["bluesky"],'
-            . '"forYouExcludedNetworks":["mastodon"]}',
+            . '"forYouExcludedNetworks":["mastodon"],'
+            . '"allItemsExcludedNetworks":["bluesky"],'
+            . '"trendingExcludedNetworks":["mastodon"]}',
             AccountLine::of($user, $settings, $networks)->toBackupLine(),
         );
     }

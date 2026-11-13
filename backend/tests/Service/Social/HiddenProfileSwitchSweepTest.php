@@ -7,11 +7,13 @@ namespace App\Tests\Service\Social;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
@@ -81,7 +83,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $rss = $this->rssSubscription($user);
         $rss->setCustomTitle('Rusty, old');
         $rss->setPosition(7);
-        $rss->setIncludeInForYou(false);
+        $rss->changeInclusions(new InclusionChange(forYou: false));
         $tag = new Tag($user, 'People');
         $tag->setPosition(0);
         $this->entityManager->persist($tag);
@@ -95,8 +97,8 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $author = $this->authorSubscriptionOf($account);
         self::assertSame('Rusty, old', $author?->getCustomTitle());
         self::assertSame(7, $author->getPosition());
-        self::assertFalse($author->isIncludeInForYou());
-        self::assertTrue($author->isIncludeInAllItems());
+        self::assertFalse($author->isIncludedIn(InclusionSurface::ForYou));
+        self::assertTrue($author->isIncludedIn(InclusionSurface::AllItems));
         self::assertSame(
             ['People'],
             array_map(static fn (Tag $each): string => $each->getName(), $author->getTags()->toArray()),

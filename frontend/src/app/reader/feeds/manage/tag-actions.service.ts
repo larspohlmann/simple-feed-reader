@@ -4,7 +4,10 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
-import { TagDto } from '../../models';
+import { TagDto, TagUpdate } from '../../models';
+import { ExclusionSurface, INCLUSION_FLAG } from '../../feed-exclusions';
+import { reloadAfter } from './reload-after';
+import { SubscriptionReload } from './subscription-reload.service';
 import { TagDrop } from '../../tag-drop';
 import { TagPlacement } from './tag-placement.service';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -19,6 +22,7 @@ export class TagActions {
   private readonly api = inject(ReaderApi);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
+  private readonly subscriptionReload = inject(SubscriptionReload);
   private readonly tagPlacement = inject(TagPlacement);
   private readonly i18n = inject(TranslocoService);
 
@@ -65,6 +69,24 @@ export class TagActions {
 
   moveTag(tag: TagDto, drop: TagDrop): void {
     this.tagPlacement.move(tag, drop);
+  }
+
+  /** Switch a tag in or out of a surface at once. The PATCH replaces name, colour, icon and parent, so it resends the live tag, never the caller's snapshot. */
+  setTagInclusion(tag: TagDto, surface: ExclusionSurface, included: boolean): void {
+    const live = this.tags.byId(tag.id) ?? tag;
+    const inclusion = { [INCLUSION_FLAG[surface]]: included };
+    this.tags.patchInclusion(tag.id, inclusion);
+    const body: TagUpdate = {
+      name: live.name,
+      color: live.color,
+      icon: live.icon,
+      parentId: live.parentId,
+      ...inclusion,
+    };
+    reloadAfter(this.api.updateTag(tag.id, body), () => {
+      this.tags.load();
+      this.subscriptionReload.afterWrite([surface]);
+    });
   }
 
   private reloadAfterTagChange(): void {

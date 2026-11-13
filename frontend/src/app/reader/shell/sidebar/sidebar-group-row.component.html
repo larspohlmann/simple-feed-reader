@@ -5,8 +5,11 @@
   [queryParams]="link()"
   queryParamsHandling="merge"
 >
-  <span class="lead">
+  <span class="lead favicon-slot" [class.hidden-feed]="excluded()">
     <app-tag-glyph [name]="glyph()" [color]="glyphColor()" [size]="glyphSize()" />
+    @if (excluded()) {
+      <app-feed-exclusion-marker [surfaces]="excludedSurfaces()" />
+    }
   </span>
   <span class="name">{{ label() }}</span>
   <ng-content select="app-sidebar-subtag-pill" />

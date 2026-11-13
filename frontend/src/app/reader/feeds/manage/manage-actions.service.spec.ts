@@ -17,6 +17,7 @@ import { makeSubscription } from '../../testing/subscription.factory';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import { TranslocoService } from '@jsverse/transloco';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 const BASE = 'https://api.test';
 
@@ -27,7 +28,15 @@ const sub: SubscriptionDto = makeSubscription({
   feedUrl: 'u',
   createdAt: 'x',
 });
-const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const tag: TagDto = {
+  id: 3,
+  name: 'Tech',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+  ...INCLUDED_EVERYWHERE,
+};
 
 describe('ManageActions', () => {
   let service: ManageActions;
@@ -72,6 +81,25 @@ describe('ManageActions', () => {
       .mockImplementation(() => undefined);
     service.editSubscription(sub);
     expect(savedSearchesLoad).toHaveBeenCalled();
+  });
+
+  it('reloads the Trending list after an edit that switched the Trending flag, and only then', () => {
+    jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+      .mockImplementation(() => undefined);
+    const reloadIfShowing = jest
+      .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
+      .mockImplementation(() => undefined);
+
+    closed = sub;
+    service.editSubscription(sub);
+    expect(reloadIfShowing).not.toHaveBeenCalled();
+
+    closed = { ...sub, includeInTrending: !sub.includeInTrending };
+    service.editSubscription(sub);
+    expect(reloadIfShowing).toHaveBeenCalledTimes(1);
+    expect(reloadIfShowing).toHaveBeenCalledWith('trending');
+    expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
   it('refreshes a search whose query the edit changed, and only then', () => {
@@ -201,6 +229,7 @@ describe('ManageActions', () => {
       icon: null,
       position: 1,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     };
     tags.tags.set([tag, news]);
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
@@ -223,12 +252,12 @@ describe('ManageActions', () => {
     http.expectNone('https://api.test/api/subscriptions/5/move-to-tag');
   });
 
-  it('setIncludeInAllItems: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
+  it('setInclusion allItems: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
     store.storedSubscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
-    service.setIncludeInAllItems(tagged, false);
+    service.setInclusion(tagged, 'allItems', false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInAllItems).toBe(false);
     const testRequest = http.expectOne('https://api.test/api/subscriptions/5');
     expect(testRequest.request.method).toBe('PATCH');
@@ -242,12 +271,12 @@ describe('ManageActions', () => {
     expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
-  it('setIncludeInForYou: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
+  it('setInclusion forYou: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
     store.storedSubscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
-    service.setIncludeInForYou(tagged, false);
+    service.setInclusion(tagged, 'forYou', false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInForYou).toBe(false);
     const testRequest = http.expectOne('https://api.test/api/subscriptions/5');
     expect(testRequest.request.method).toBe('PATCH');
@@ -261,14 +290,14 @@ describe('ManageActions', () => {
     expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
-  it('setIncludeInSavedSearches: PATCHes the flag, then reloads subscriptions and saved searches', () => {
+  it('setInclusion savedSearches: PATCHes the flag, then reloads subscriptions and saved searches', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
     store.storedSubscriptions.set([tagged]);
     const subscriptionsLoad = jest
       .spyOn(store, 'reloadQuietly')
       .mockImplementation(() => undefined);
-    service.setIncludeInSavedSearches(tagged, false);
+    service.setInclusion(tagged, 'savedSearches', false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInSavedSearches).toBe(false);
     const testRequest = http.expectOne('https://api.test/api/subscriptions/5');
     expect(testRequest.request.method).toBe('PATCH');
@@ -280,6 +309,28 @@ describe('ManageActions', () => {
     testRequest.flush({ subscription: { ...tagged, includeInSavedSearches: false } });
     expect(subscriptionsLoad).toHaveBeenCalled();
     expect(savedSearchesLoad).toHaveBeenCalled();
+  });
+
+  it('setInclusion trending: PATCHes the flag, then reloads subscriptions and the Trending list', () => {
+    const tagged: SubscriptionDto = { ...sub, tags: [tag] };
+    const store = TestBed.inject(SubscriptionsStore);
+    store.storedSubscriptions.set([tagged]);
+    jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
+    const reloadIfShowing = jest
+      .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
+      .mockImplementation(() => undefined);
+    service.setInclusion(tagged, 'trending', false);
+    expect(store.subscriptions().find((x) => x.id === 5)!.includeInTrending).toBe(false);
+    const testRequest = http.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.body).toEqual({
+      customTitle: tagged.customTitle,
+      tagIds: [3],
+      includeInTrending: false,
+    });
+    testRequest.flush({ subscription: { ...tagged, includeInTrending: false } });
+    expect(reloadIfShowing).toHaveBeenCalledTimes(1);
+    expect(reloadIfShowing).toHaveBeenCalledWith('trending');
+    expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
   it('reorderUntagged: PATCHes /api/subscriptions/reorder then reloads subs', () => {

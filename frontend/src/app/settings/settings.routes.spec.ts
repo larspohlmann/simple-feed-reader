@@ -35,6 +35,13 @@ describe('SETTINGS_ROUTES', () => {
     expect((loaded as { name: string }).name).toBe('ImportSectionComponent');
   });
 
+  it('loads the Visibility page on its own path', async () => {
+    const route = sections.find((candidate) => candidate.path === 'visibility')!;
+    const loaded = await (route.loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe('VisibilitySectionComponent');
+  });
+
   it('forwards the retired Tags path to Organise, so an old bookmark still lands', async () => {
     TestBed.configureTestingModule({ providers: [provideRouter(SETTINGS_ROUTES)] });
     const router = TestBed.inject(Router);

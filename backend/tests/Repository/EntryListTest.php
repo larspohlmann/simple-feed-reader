@@ -7,11 +7,14 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
+use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\EntryView;
 use App\Enum\FeedGroup;
+use App\Enum\InclusionSurface;
 use App\Enum\ListOrder;
 use App\Enum\SocialNetwork;
 use App\Pagination\EntryCursor;
@@ -189,6 +192,26 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->flush();
 
         return [$feed, $subscription];
+    }
+
+    private function tagNamed(string $name): Tag
+    {
+        $tag = new Tag($this->user, $name);
+        $this->entityManager->persist($tag);
+
+        return $tag;
+    }
+
+    /** @param list<Tag> $tags */
+    private function feedTagged(string $feedUrl, array $tags): Feed
+    {
+        [$feed, $subscription] = $this->secondSubscription($feedUrl);
+        foreach ($tags as $tag) {
+            $subscription->addTag($tag);
+        }
+        $this->entityManager->flush();
+
+        return $feed;
     }
 
     private function entryIn(Feed $feed, string $guid, string $effectiveDate): Entry
@@ -597,7 +620,7 @@ final class EntryListTest extends DbTestCase
     public function testANetworkListsOnlyItsFeedsExcludedOnesIncluded(): void
     {
         [$profile, $profileSubscription] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);
-        $profileSubscription->setIncludeInAllItems(false);
+        $profileSubscription->changeInclusions(new InclusionChange(allItems: false));
         [$mastodon] = $this->secondSubscription(NetworkFeedSubscriptions::MASTODON_PROFILE);
         $this->entityManager->flush();
         $this->entry('plain', '2026-07-05T00:00:00Z');
@@ -609,6 +632,68 @@ final class EntryListTest extends DbTestCase
         );
 
         self::assertSame(['bluesky'], $this->guids($rows));
+    }
+
+    public function testANetworkSwitchedOutOfAllItemsLeavesAllButStaysInItsOwnView(): void
+    {
+        [$profile] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $at = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $this->entityManager->persist(
+            new Entry($this->feed, 'plain-copy', 'https://example.com/copy', 'Plain copy', $at, $at, 'shared-url-hash'),
+        );
+        $this->entityManager->persist(
+            new Entry($profile, 'network-copy', 'https://bsky.app/copy', 'Network copy', $at, $at, 'shared-url-hash'),
+        );
+        $this->entryIn($profile, 'network-only', '2026-07-06T00:00:00Z');
+        $this->entityManager->persist(
+            new NetworkExclusion($this->user, SocialNetwork::Bluesky, InclusionSurface::AllItems),
+        );
+        $this->entityManager->flush();
+
+        $all = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
+        $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $network = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), networkScope: NetworkScope::whole(SocialNetwork::Bluesky)),
+        );
+
+        self::assertSame(['plain-copy'], $this->guids($all));
+        self::assertSame([], $all[0]->duplicates);
+        self::assertSame(['plain-copy'], $this->guids($unread));
+        self::assertSame(['network-only', 'network-copy'], $this->guids($network));
+    }
+
+    public function testATagSwitchedOutOfAllItemsTakesEveryFeedBelowItOutButStaysInItsOwnView(): void
+    {
+        $switchedOff = $this->tagNamed('off');
+        $switchedOff->changeInclusions(new InclusionChange(allItems: false));
+        $included = $this->tagNamed('on');
+        $below = $this->tagNamed('below');
+        $below->setParent($switchedOff);
+        $offOnly = $this->feedTagged('https://off.example.com/feed.xml', [$switchedOff]);
+        $belowOnly = $this->feedTagged('https://below.example.com/feed.xml', [$below]);
+        $offAndOn = $this->feedTagged('https://both.example.com/feed.xml', [$switchedOff, $included]);
+        $onOnly = $this->feedTagged('https://on.example.com/feed.xml', [$included]);
+        $at = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $this->entityManager->persist(
+            new Entry($this->feed, 'untagged', 'https://example.com/copy', 'Untagged', $at, $at, 'shared-url-hash'),
+        );
+        $this->entityManager->persist(
+            new Entry($offOnly, 'off', 'https://off.example.com/copy', 'Off', $at, $at, 'shared-url-hash'),
+        );
+        $this->entryIn($belowOnly, 'below', '2026-07-06T00:00:00Z');
+        $this->entryIn($offAndOn, 'both', '2026-07-07T00:00:00Z');
+        $this->entryIn($onOnly, 'on', '2026-07-08T00:00:00Z');
+
+        $all = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
+        $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $ownView = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), tagId: $switchedOff->requireId()),
+        );
+
+        self::assertSame(['on', 'untagged'], $this->guids($all));
+        self::assertSame([], $all[1]->duplicates);
+        self::assertSame(['on', 'untagged'], $this->guids($unread));
+        self::assertSame(['both', 'below', 'off'], $this->guids($ownView));
     }
 
     public function testANetworkWithoutFeedsListsNothing(): void
@@ -754,7 +839,7 @@ final class EntryListTest extends DbTestCase
             $excludedFeed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $excludedSubscription->setIncludeInAllItems(false);
+        $excludedSubscription->changeInclusions(new InclusionChange(allItems: false));
         $tag = new Tag($this->user, 'news');
         $this->entityManager->persist($tag);
         $excludedSubscription->addTag($tag);
@@ -1152,7 +1237,7 @@ final class EntryListTest extends DbTestCase
     public function testAFeedExcludedFromAllItemsDoesNotCountTowardTheScope(ListOrder $order): void
     {
         [$excludedFeed, $excluded] = $this->secondSubscription('https://excluded.example.com/feed.xml');
-        $excluded->setIncludeInAllItems(false);
+        $excluded->changeInclusions(new InclusionChange(allItems: false));
         $this->entityManager->flush();
         foreach (range(10, 14) as $day) {
             $this->entryIn($excludedFeed, 'excluded-' . $day, $this->dayToward($order, $day));

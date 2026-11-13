@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\InclusionChange;
 use App\Entity\SocialFeed;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
@@ -201,7 +202,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
     {
         $fixtures = $this->fixtures();
         $home = $fixtures->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
-        $home->setIncludeInAllItems(false);
+        $home->changeInclusions(new InclusionChange(allItems: false));
         $fixtures->post($home, 'home-post', '2026-10-05T00:00:00Z');
         $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
         $fixtures->post($profile, 'profile-post', '2026-10-06T00:00:00Z');

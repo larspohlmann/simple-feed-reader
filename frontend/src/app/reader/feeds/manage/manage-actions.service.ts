@@ -5,7 +5,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
 import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { TagsStore } from '../../state/tags.store';
+import { TagsStore, placeholderTag } from '../../state/tags.store';
 import { RefreshService } from '../../state/refresh.service';
 import { EntriesStore } from '../../state/entries.store';
 import { MoveFeedToTag, RefreshReport, SubscriptionDto, SubscriptionTagDto } from '../../models';
@@ -22,6 +22,13 @@ import {
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { isSearchFeed } from '../../state/social-sections';
 import { unsubscribeConfirm } from './unsubscribe-messages';
+import {
+  EXCLUSION_SURFACES,
+  ExclusionSurface,
+  INCLUSION_FLAG,
+  isIncludedIn,
+  surfacesIn,
+} from '../../feed-exclusions';
 
 /** The single place one feed's management dialog is opened and its side effects applied.
  *  Both the settings sections and the sidebar (via the shell) call these, so an
@@ -52,7 +59,7 @@ export class ManageActions {
         return;
       }
       if (!updated) return;
-      this.subscriptionReload.afterWrite(savedSearchFlagChange(subscription, updated));
+      this.subscriptionReload.afterWrite(changedSurfaces(subscription, updated));
       if (searchQueryOf(updated) !== searchQueryOf(subscription)) this.requeried(subscription);
     });
   }
@@ -94,32 +101,12 @@ export class ManageActions {
   }
 
   private tagShape(tagId: number): SubscriptionTagDto {
-    const tag = this.tags.tags().find((candidate) => candidate.id === tagId);
-    return {
-      id: tagId,
-      name: tag?.name ?? '',
-      color: tag?.color ?? null,
-      icon: tag?.icon ?? null,
-      position: 0,
-      parentId: tag?.parentId ?? null,
-    };
+    return { ...(this.tags.byId(tagId) ?? placeholderTag(tagId)), position: 0 };
   }
 
-  /** Flip whether this feed contributes to the "All items" list. Optimistic:
-   *  update the sidebar immediately, reconcile with the server. */
-  setIncludeInAllItems(subscription: SubscriptionDto, value: boolean): void {
-    this.patchFlags(subscription, { includeInAllItems: value });
-  }
-
-  /** Flip whether this feed contributes to "For you". Optimistic: update the
-   *  sidebar immediately, reconcile with the server. */
-  setIncludeInForYou(subscription: SubscriptionDto, value: boolean): void {
-    this.patchFlags(subscription, { includeInForYou: value });
-  }
-
-  /** Flip whether this feed's entries count in saved searches. Optimistic like the others. */
-  setIncludeInSavedSearches(subscription: SubscriptionDto, value: boolean): void {
-    this.patchFlags(subscription, { includeInSavedSearches: value });
+  /** Switch this feed in or out of one surface. Optimistic: the sidebar shows it at once, the reload reconciles. */
+  setInclusion(subscription: SubscriptionDto, surface: ExclusionSurface, included: boolean): void {
+    this.patchFlags(subscription, { [INCLUSION_FLAG[surface]]: included });
   }
 
   /** The backend PATCH clears customTitle/tagIds when they are omitted, so
@@ -132,7 +119,7 @@ export class ManageActions {
         tagIds: subscription.tags.map((tag) => tag.id),
         ...flags,
       }),
-      () => this.subscriptionReload.afterWrite(flags),
+      () => this.subscriptionReload.afterWrite(surfacesIn(flags)),
     );
   }
 
@@ -228,10 +215,8 @@ function searchQueryOf(subscription: SubscriptionDto): string | null {
   return isSearchFeed(subscription) ? subscription.social.query : null;
 }
 
-function savedSearchFlagChange(
-  before: SubscriptionDto,
-  after: SubscriptionDto,
-): Pick<SubscriptionFlags, 'includeInSavedSearches'> {
-  if (after.includeInSavedSearches === before.includeInSavedSearches) return {};
-  return { includeInSavedSearches: after.includeInSavedSearches };
+function changedSurfaces(before: SubscriptionDto, after: SubscriptionDto): ExclusionSurface[] {
+  return EXCLUSION_SURFACES.filter(
+    (surface) => isIncludedIn(before, surface) !== isIncludedIn(after, surface),
+  );
 }

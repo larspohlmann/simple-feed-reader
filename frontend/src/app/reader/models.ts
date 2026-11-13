@@ -29,7 +29,15 @@ export interface SavedSearchMembershipDto {
   term: string;
 }
 
-export interface TagDto {
+/** Whether a tag lets its feeds into each surface; switching one off overrides the feeds' own flags. */
+export interface TagInclusion {
+  includeInAllItems: boolean;
+  includeInForYou: boolean;
+  includeInSavedSearches: boolean;
+  includeInTrending: boolean;
+}
+
+export interface TagDto extends TagInclusion {
   id: number;
   name: string;
   color: string | null;
@@ -136,6 +144,8 @@ export interface SubscriptionDto {
   includeInForYou: boolean;
   /** False excludes this feed's entries from saved-search matches and counts. */
   includeInSavedSearches: boolean;
+  /** False keeps this feed's shares out of Trending. */
+  includeInTrending: boolean;
   /** Set for a private timeline, list or custom feed of a connected account (#1599); null for any other feed. */
   social: SocialFeedRefDto | null;
 }
@@ -399,6 +409,9 @@ export interface TagInput {
   parentId: number | null;
 }
 
+/** Body for PATCH /api/tags/{id}: the whole `TagInput`, and only the inclusion flags that change. */
+export type TagUpdate = TagInput & Partial<TagInclusion>;
+
 /** Body for PATCH /api/subscriptions/{id}. Replaces the whole tag set. Omitted
  *  flags leave the server's current value unchanged. */
 export interface SubscriptionUpdate {
@@ -407,6 +420,7 @@ export interface SubscriptionUpdate {
   includeInAllItems?: boolean;
   includeInForYou?: boolean;
   includeInSavedSearches?: boolean;
+  includeInTrending?: boolean;
 }
 
 /** A drag of one feed between the sidebar's lists: out of `fromTagId` and into

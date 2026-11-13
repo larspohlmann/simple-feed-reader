@@ -106,15 +106,23 @@ final class TrendingStoriesTest extends DbTestCase
         $four = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $social]);
         $threeOlder = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $social]);
         $threeNewer = $this->storyOf('2031-05-14 11:00:00', [$alpha, $gamma, $social]);
+        $threeOldest = $this->storyOf('2031-05-14 08:00:00', [$beta, $gamma, $social]);
+        $threeEarliest = $this->storyOf('2031-05-14 07:00:00', [$alpha, $beta, $gamma]);
         $this->storyOf('2031-05-14 12:00:00', [$alpha, $beta, $stranger]);
 
         $stories = $this->storiesFor(TrendingWindow::Day);
 
         self::assertSame(
-            [$four->requireId(), $threeNewer->requireId(), $threeOlder->requireId()],
+            [
+                $four->requireId(),
+                $threeNewer->requireId(),
+                $threeOlder->requireId(),
+                $threeOldest->requireId(),
+                $threeEarliest->requireId(),
+            ],
             array_map(fn (TrendingStoryCardModel $card): int => $this->storyIdOf($card), $stories),
         );
-        self::assertSame([4, 3, 3], array_map(
+        self::assertSame([4, 3, 3, 3, 3], array_map(
             static fn (TrendingStoryCardModel $card): int => $card->story->outletCount,
             $stories,
         ));
@@ -420,16 +428,19 @@ final class TrendingStoriesTest extends DbTestCase
     {
         $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
         $this->fixtures->subscribe($this->reader, ...$feeds);
-        $five = $this->storyOf('2031-05-14 10:00:00', $feeds, TrendingWindow::Week);
+        $fives = [];
+        for ($hour = 0; $hour < 5; ++$hour) {
+            $fives[] = $this->storyOf(\sprintf('2031-05-14 %02d:00:00', 10 - $hour), $feeds, TrendingWindow::Week);
+        }
         $this->storyOf('2031-05-14 11:00:00', \array_slice($feeds, 0, 4), TrendingWindow::Week);
         $this->storyOf('2031-05-14 12:00:00', $feeds);
 
         $stories = $this->storiesFor(TrendingWindow::Week);
 
-        self::assertSame([$five->requireId()], array_map(
-            fn (TrendingStoryCardModel $card): int => $this->storyIdOf($card),
-            $stories,
-        ));
+        self::assertSame(
+            array_map(static fn (TrendingStory $five): int => $five->requireId(), $fives),
+            array_map(fn (TrendingStoryCardModel $card): int => $this->storyIdOf($card), $stories),
+        );
     }
 
     public function testAWeekStorySharingAnEntryWithAShownDayStoryIsLeftOutOfTheListAndTheBadge(): void
@@ -450,7 +461,7 @@ final class TrendingStoriesTest extends DbTestCase
         $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
         $this->fixtures->subscribe($this->reader, ...$feeds);
         $inANarrowDayStory = $this->fixtures->entry($feeds[0], 'Narrow', '2031-05-14 11:00:00');
-        $this->storySharing($inANarrowDayStory, TrendingWindow::Day, \array_slice($feeds, 1, 1));
+        $this->storySharing($inANarrowDayStory, TrendingWindow::Day, []);
         $narrowWeek = $this->storySharing($inANarrowDayStory, TrendingWindow::Week, \array_slice($feeds, 1));
         $inAHiddenDayStory = $this->fixtures->entry($feeds[0], 'Hidden', '2031-05-14 10:00:00');
         $hiddenDayMember = $this->fixtures->entry($feeds[1], 'Hidden', '2031-05-14 09:00:00');
@@ -544,31 +555,38 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertCount(3, $this->rankedDayStoryIdsOf($other));
     }
 
-    public function testAThreeOutletStoryShowsToAFewActiveFeedsAndNotToOneHundredAndOne(): void
+    public function testAThreeOutletStoryShowsToAFewActiveFeedsAndNotToOneHundredAndOneBesideFiveWiderStories(): void
     {
-        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
-        $story = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        $story = $this->storyOf('2031-05-14 11:00:00', \array_slice($feeds, 0, 3));
+        for ($hour = 0; $hour < 5; ++$hour) {
+            $this->storyOf(\sprintf('2031-05-14 %02d:30:00', $hour + 5), $feeds);
+        }
 
-        self::assertSame([$story->requireId()], $this->rankedDayStoryIdsOf($this->reader));
-        self::assertSame(1, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
+        self::assertContains($story->requireId(), $this->rankedDayStoryIdsOf($this->reader));
+        self::assertSame(6, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
 
-        $this->followFeedsPostingAt(98, '2031-05-13 12:00:00');
+        $this->followFeedsPostingAt(97, '2031-05-13 12:00:00');
 
-        self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
-        self::assertSame([], $this->storiesFor(TrendingWindow::Day));
-        self::assertSame(0, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
+        self::assertNotContains($story->requireId(), $this->rankedDayStoryIdsOf($this->reader));
+        self::assertNotContains($story->requireId(), $this->storyIdsFor(TrendingWindow::Day));
+        self::assertSame(5, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
     }
 
     public function testFeedsThatPostedOnlyBeforeTheWindowAreNotActive(): void
     {
-        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
-        $story = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        $story = $this->storyOf('2031-05-14 11:00:00', \array_slice($feeds, 0, 3));
+        for ($hour = 0; $hour < 5; ++$hour) {
+            $this->storyOf(\sprintf('2031-05-14 %02d:30:00', $hour + 5), $feeds);
+        }
 
-        $this->followFeedsPostingAt(98, '2031-05-13 11:59:59');
+        $this->followFeedsPostingAt(97, '2031-05-13 11:59:59');
 
-        self::assertSame([$story->requireId()], $this->rankedDayStoryIdsOf($this->reader));
+        self::assertSame(3, $this->minimumOutletsOf(TrendingWindow::Day));
+        self::assertContains($story->requireId(), $this->rankedDayStoryIdsOf($this->reader));
     }
 
     public function testTheActiveFeedsAreTheReadersFeedsWithAnEntryInTheWindowEachCountedOnce(): void
@@ -585,6 +603,156 @@ final class TrendingStoriesTest extends DbTestCase
             $this->reader->requireId(),
             new \DateTimeImmutable('2031-05-14 00:00:00'),
         ));
+    }
+
+    public function testAFeedWhoseOnlyWindowEntryTheReaderHidIsNotActive(): void
+    {
+        [$hidden, $visible] = $this->articleFeeds('hidden', 'visible');
+        $this->fixtures->subscribe($this->reader, $hidden, $visible);
+        $hiddenEntry = $this->fixtures->entry($hidden, 'Hidden', '2031-05-14 08:00:00');
+        $this->fixtures->entry($visible, 'Visible', '2031-05-14 09:00:00');
+        $this->fixtures->flush();
+        $this->hideFor($this->reader, $hiddenEntry);
+
+        self::assertSame(1, $this->activeFeedCountOf($this->reader));
+    }
+
+    public function testAFeedWhoseOnlyWindowEntryAnotherReaderHidIsStillActive(): void
+    {
+        $feed = $this->fixtures->feed('shared');
+        $this->fixtures->subscribe($this->reader, $feed);
+        $entry = $this->fixtures->entry($feed, 'Shared', '2031-05-14 08:00:00');
+        $this->fixtures->flush();
+        $this->hideFor($this->user('other-reader@example.com'), $entry);
+
+        self::assertSame(1, $this->activeFeedCountOf($this->reader));
+    }
+
+    public function testAFeedWithOneHiddenAndOneVisibleWindowEntryIsActive(): void
+    {
+        $feed = $this->fixtures->feed('mixed');
+        $this->fixtures->subscribe($this->reader, $feed);
+        $hiddenEntry = $this->fixtures->entry($feed, 'Hidden', '2031-05-14 08:00:00');
+        $this->fixtures->entry($feed, 'Visible', '2031-05-14 09:00:00');
+        $this->fixtures->flush();
+        $this->hideFor($this->reader, $hiddenEntry);
+
+        self::assertSame(1, $this->activeFeedCountOf($this->reader));
+    }
+
+    public function testTheMinimumRelaxesOneSourceAtATimeUntilFiveStoriesShow(): void
+    {
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        $five = $this->storyOf('2031-05-14 10:00:00', $feeds, TrendingWindow::Week);
+        $fourNewer = $this->storyOf('2031-05-14 09:00:00', \array_slice($feeds, 0, 4), TrendingWindow::Week);
+        $fourOlder = $this->storyOf('2031-05-13 09:00:00', \array_slice($feeds, 1, 4), TrendingWindow::Week);
+        $threeNewer = $this->storyOf('2031-05-14 08:00:00', \array_slice($feeds, 0, 3), TrendingWindow::Week);
+        $threeOlder = $this->storyOf('2031-05-13 08:00:00', \array_slice($feeds, 2, 3), TrendingWindow::Week);
+        $this->storyOf('2031-05-14 07:00:00', \array_slice($feeds, 0, 2), TrendingWindow::Week);
+        $this->storyOf('2031-05-14 06:00:00', \array_slice($feeds, 0, 1), TrendingWindow::Week);
+
+        self::assertSame(3, $this->minimumOutletsOf(TrendingWindow::Week));
+        self::assertSame(
+            [
+                $five->requireId(),
+                $fourNewer->requireId(),
+                $fourOlder->requireId(),
+                $threeNewer->requireId(),
+                $threeOlder->requireId(),
+            ],
+            $this->storyIdsFor(TrendingWindow::Week),
+        );
+        self::assertSame(5, $this->stories()->unopenedFor($this->reader, TrendingWindow::Week)->unopened);
+    }
+
+    public function testFiveStoriesAtThePreferredMinimumKeepIt(): void
+    {
+        $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
+        $this->fixtures->subscribe($this->reader, ...$feeds);
+        for ($hour = 0; $hour < 5; ++$hour) {
+            $this->storyOf(\sprintf('2031-05-14 %02d:30:00', $hour + 5), $feeds, TrendingWindow::Week);
+        }
+        $narrower = $this->storyOf('2031-05-14 11:00:00', \array_slice($feeds, 0, 4), TrendingWindow::Week);
+
+        self::assertSame(5, $this->minimumOutletsOf(TrendingWindow::Week));
+        self::assertCount(5, $this->storyIdsFor(TrendingWindow::Week));
+        self::assertNotContains($narrower->requireId(), $this->storyIdsFor(TrendingWindow::Week));
+    }
+
+    public function testFewerThanFiveStoriesEvenAtTwoSourcesShowWhatTwoSourcesCarryAndNeverASingleSource(): void
+    {
+        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
+        $three = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma]);
+        $two = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta]);
+        $this->storyOf('2031-05-14 11:00:00', [$gamma]);
+
+        self::assertSame(2, $this->minimumOutletsOf(TrendingWindow::Day));
+        self::assertSame([$three->requireId(), $two->requireId()], $this->storyIdsFor(TrendingWindow::Day));
+    }
+
+    public function testAHiddenStoryDoesNotCountTowardTheFive(): void
+    {
+        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
+        $hiddenEntry = $this->fixtures->entry($alpha, 'Hidden', '2031-05-14 11:00:00');
+        $hidden = $this->storySharing($hiddenEntry, TrendingWindow::Day, [$beta, $gamma]);
+        for ($hour = 0; $hour < 4; ++$hour) {
+            $this->storyOf(\sprintf('2031-05-14 %02d:30:00', $hour + 5), [$alpha, $beta, $gamma]);
+        }
+        $two = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta]);
+        $this->hideFor($this->reader, $hiddenEntry);
+
+        $shown = $this->storyIdsFor(TrendingWindow::Day);
+
+        self::assertSame(2, $this->minimumOutletsOf(TrendingWindow::Day));
+        self::assertCount(5, $shown);
+        self::assertContains($two->requireId(), $shown);
+        self::assertNotContains($hidden->requireId(), $shown);
+    }
+
+    public function testAnArticleCarriedByTwoFeedsIsStillOneSourceWhenTheMinimumRelaxes(): void
+    {
+        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
+        $three = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma]);
+        $shared = 'https://news.example.com/one-article-twice';
+        $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $this->fixtures->article($alpha, 'Article', '2031-05-14 08:00:00', $shared),
+            $this->fixtures->article($beta, 'Article', '2031-05-14 09:00:00', $shared),
+        );
+
+        self::assertSame(2, $this->minimumOutletsOf(TrendingWindow::Day));
+        self::assertSame([$three->requireId()], $this->storyIdsFor(TrendingWindow::Day));
+    }
+
+    public function testHidingFindsAStoryShownOnlyThanksToTheRelaxedMinimum(): void
+    {
+        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
+        $this->fixtures->subscribe($this->reader, $alpha, $beta);
+        $member = $this->fixtures->entry($alpha, 'Member', '2031-05-14 09:00:00');
+        $two = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $member,
+            $this->fixtures->entry($beta, 'Member', '2031-05-14 10:00:00'),
+        );
+
+        self::assertSame(
+            $two->requireId(),
+            $this->storyRepository()->storyIdContaining($this->dayOf($this->reader->requireId()), $member->requireId()),
+        );
+    }
+
+    private function activeFeedCountOf(User $user): int
+    {
+        return (new TrendingEntryRepository($this->entityManager))->activeFeedCount(
+            $user->requireId(),
+            new \DateTimeImmutable('2031-05-14 00:00:00'),
+        );
     }
 
     /** Each new feed posts once at $effectiveDate; the clock stands at 2031-05-14 12:00, so a day reaches 05-13 12:00. */
@@ -693,6 +861,11 @@ final class TrendingStoriesTest extends DbTestCase
     private function dayOf(int $userId): ReaderWindowModel
     {
         return $this->readerWindows()->of($userId, TrendingWindow::Day);
+    }
+
+    private function minimumOutletsOf(TrendingWindow $window): int
+    {
+        return $this->readerWindows()->of($this->reader->requireId(), $window)->minimumOutlets;
     }
 
     private function readerWindows(): ReaderWindows

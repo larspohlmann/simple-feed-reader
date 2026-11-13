@@ -251,6 +251,7 @@
             [count]="node.unreadCount"
             [active]="activeTagId() === node.tag.id"
             [expanded]="open"
+            [inclusion]="node.tag"
             [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
             (toggled)="toggle(node.tag.id)"
           >

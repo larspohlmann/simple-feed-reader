@@ -1,0 +1,38 @@
+<div class="name" [title]="name()">
+  @if (expanded() === undefined) {
+    <span class="chevron" aria-hidden="true"></span>
+  } @else {
+    <button
+      type="button"
+      class="chevron expand"
+      data-test="expand"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-label]="name()"
+      (click)="expandToggled.emit()"
+    >
+      <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+    </button>
+  }
+  <span class="icon"><ng-content /></span>
+  <span class="label">{{ name() }}</span>
+</div>
+@for (cell of cells(); track cell.surface) {
+  @let reason =
+    cell.inheritedFrom.length > 0
+      ? ('settings.visibility.excludedBy' | transloco: { causes: cell.inheritedFrom.join(', ') })
+      : null;
+  @let reasonId = id + '-' + cell.surface;
+  <label class="cell" [class.inherited]="reason !== null" [attr.title]="reason">
+    <input
+      type="checkbox"
+      [checked]="cell.checked"
+      [attr.aria-label]="name() + ': ' + (surfaceLabelKeys[cell.surface] | transloco)"
+      [attr.aria-describedby]="reason === null ? null : reasonId"
+      (change)="toggled.emit(cell.surface)"
+    />
+    @if (reason !== null) {
+      <app-icon class="inherited-mark" name="visibility_off" size="xs" />
+      <span class="sr-only" [id]="reasonId">{{ reason }}</span>
+    }
+  </label>
+}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Account\Model\AccountSettingsModel;
@@ -20,10 +21,14 @@ use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
  */
 final readonly class AccountLine
 {
+    private const array EXCLUDED_NETWORKS_KEYS = [
+        'forYouExcludedNetworks' => InclusionSurface::ForYou,
+        'allItemsExcludedNetworks' => InclusionSurface::AllItems,
+        'trendingExcludedNetworks' => InclusionSurface::Trending,
+    ];
+
     /**
-     * @param list<SocialNetwork> $savedSearchIncludedNetworks
-     * @param list<SocialNetwork> $forYouExcludedNetworks
-     * @param list<string>        $hiddenShareTargets
+     * @param list<string> $hiddenShareTargets
      */
     public function __construct(
         public string $locale,
@@ -34,8 +39,7 @@ final readonly class AccountLine
         public bool $rememberShares,
         public bool $trendingEnabled,
         public FeedDirectoryScopeModel $feedDirectoryScope,
-        public array $savedSearchIncludedNetworks,
-        public array $forYouExcludedNetworks,
+        public AccountNetworkSwitchesModel $networks,
     ) {
     }
 
@@ -56,8 +60,10 @@ final readonly class AccountLine
             rememberShares: LineFieldWithDefault::bool($line, 'rememberShares', true),
             trendingEnabled: LineFieldWithDefault::bool($line, 'trendingEnabled', true),
             feedDirectoryScope: self::feedDirectoryScope(LineField::objectOrNull($line, 'feedDirectoryScope') ?? []),
-            savedSearchIncludedNetworks: self::networks($line, 'savedSearchIncludedNetworks'),
-            forYouExcludedNetworks: self::networks($line, 'forYouExcludedNetworks'),
+            networks: new AccountNetworkSwitchesModel(
+                self::networks($line, 'savedSearchIncludedNetworks'),
+                self::excludedNetworks($line),
+            ),
         );
     }
 
@@ -75,14 +81,13 @@ final readonly class AccountLine
                 $settings->feedDirectoryScope->getCountries(),
                 $settings->feedDirectoryScope->getLanguages(),
             ),
-            savedSearchIncludedNetworks: $networks->savedSearchIncludedNetworks,
-            forYouExcludedNetworks: $networks->forYouExcludedNetworks,
+            networks: $networks,
         );
     }
 
     public function toBackupLine(): string
     {
-        return BackupLineFormat::encode([
+        return BackupLineFormat::encode([...[
             'kind' => BackupSchema::KIND_ACCOUNT,
             'locale' => $this->locale,
             'scrapeFallbackEnabled' => $this->scrapeFallbackEnabled,
@@ -95,9 +100,11 @@ final readonly class AccountLine
                 'countries' => $this->feedDirectoryScope->countries,
                 'languages' => $this->feedDirectoryScope->languages,
             ],
-            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->savedSearchIncludedNetworks),
-            'forYouExcludedNetworks' => SocialNetwork::valuesOf($this->forYouExcludedNetworks),
-        ]);
+            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->networks->savedSearchIncludedNetworks),
+        ], ...array_map(
+            fn (InclusionSurface $surface): array => SocialNetwork::valuesOf($this->networks->excludedFrom($surface)),
+            self::EXCLUDED_NETWORKS_KEYS,
+        )]);
     }
 
     /** @param array<string, mixed> $fields */
@@ -107,6 +114,21 @@ final readonly class AccountLine
             LineFieldWithDefault::stringList($fields, 'countries'),
             LineFieldWithDefault::stringList($fields, 'languages'),
         );
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     *
+     * @return array<string, list<SocialNetwork>>
+     */
+    private static function excludedNetworks(array $line): array
+    {
+        $excluded = [];
+        foreach (self::EXCLUDED_NETWORKS_KEYS as $key => $surface) {
+            $excluded[$surface->value] = self::networks($line, $key);
+        }
+
+        return $excluded;
     }
 
     /**

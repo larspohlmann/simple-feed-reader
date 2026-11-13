@@ -21,7 +21,6 @@ final readonly class BulkSubscriptionUpdater
         private OwnedSubscriptions $ownedSubscriptions,
         private TagRepository $tags,
         private SubscriptionTagSync $tagSync,
-        private SubscriptionInclusions $inclusions,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -43,7 +42,7 @@ final readonly class BulkSubscriptionUpdater
             $subscription = $byId[$subscriptionId];
             $tagIds = $this->resultingTagIds($subscription, $addTagIds, $removeTagIds);
             $this->tagSync->sync($subscription, $tagIds, $userId);
-            $this->inclusions->apply($subscription, $change->inclusions);
+            $subscription->changeInclusions($change->inclusions);
             $changed[] = $subscription;
         }
 

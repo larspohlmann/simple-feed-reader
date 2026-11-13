@@ -13,6 +13,9 @@ enum TrendingWindow: string
     case Day = 'day';
     case Week = 'week';
 
+    public const int STORIES_WORTH_SHOWING = 5;
+    public const int MULTIPLE_SOURCES = 2;
+
     private const int HOUR = 3_600;
     private const int PER_MILLE = 1_000;
 
@@ -90,7 +93,7 @@ enum TrendingWindow: string
         };
     }
 
-    /** A story needs the floor, or this window's share of the reader's active feeds when that is more (D38). */
+    /** The preferred minimum: the floor, or this window's share of the reader's active feeds when that is more. */
     public function minimumOutletsFor(int $activeFeeds): int
     {
         $shareRoundedUp = intdiv($this->activeSharePerMille() * $activeFeeds + self::PER_MILLE - 1, self::PER_MILLE);

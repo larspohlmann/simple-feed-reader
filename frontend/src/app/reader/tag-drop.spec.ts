@@ -1,5 +1,6 @@
 import { TagDto } from './models';
 import { TagDropLayout, resolveTagDrop } from './tag-drop';
+import { INCLUDED_EVERYWHERE } from './tag-inclusion';
 
 const tag = (id: number, parentId: number | null = null, position = 0): TagDto => ({
   id,
@@ -8,6 +9,7 @@ const tag = (id: number, parentId: number | null = null, position = 0): TagDto =
   icon: null,
   position,
   parentId,
+  ...INCLUDED_EVERYWHERE,
 });
 const tagA = tag(1, null, 0);
 const tagB = tag(2, null, 1);

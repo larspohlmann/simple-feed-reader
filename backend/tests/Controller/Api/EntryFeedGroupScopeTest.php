@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\InclusionChange;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
@@ -140,7 +141,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
         $hiddenTagged = $fixtures->subscribe($user, 'https://example.com/hidden.xml');
         $hiddenTagged->addTag($news);
-        $hiddenTagged->setIncludeInAllItems(false);
+        $hiddenTagged->changeInclusions(new InclusionChange(allItems: false));
         $fixtures->post($hiddenTagged, 'hidden-tagged-post', '2026-10-05T00:00:00Z');
 
         $taggedSocial = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);

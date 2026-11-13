@@ -30,38 +30,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         'shorterWindowStoryIds' => ArrayParameterType::INTEGER,
     ];
 
-    /**
-     * The window's stories, counting only feeds the reader follows and an article URL once, leaving out any sharing an
-     * entry with a story the reader is shown in a shorter window; an `AND` on `story`, then VISIBLE_COVERAGE. An empty
-     * id list expands to `IN (NULL)`, which leaves nothing out.
-     */
-    private const string VISIBLE_STORIES = 'SELECT story.id AS story_id, story.last_seen,'
-        . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
-        . ' FROM trending_story story'
-        . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
-        . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
-        . ' JOIN subscription subscribed'
-        . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
-        . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
-        . ' WHERE story.time_window = :window'
-        . self::NO_EARLIER_COPY
-        . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry overlap_member'
-        . ' JOIN trending_story_entry shorter_member ON shorter_member.entry_id = overlap_member.entry_id'
-        . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
-
-    /**
-     * As in DuplicateCollapseDql, only the lowest-id copy of an article the reader can see in the story counts;
-     * the earlier copy must be one of theirs, or the article would count for no feed. Social posts always count.
-     */
-    private const string NO_EARLIER_COPY = ' AND (member_feed.network IS NOT NULL'
-        . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
-        . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
-        . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
-        . ' JOIN subscription earlier_reader'
-        . ' ON earlier_reader.feed_id = earlier_member.feed_id AND earlier_reader.user_id = :user'
-        . ' WHERE earlier_member.story_id = story.id AND earlier_member.entry_id < story_member.entry_id'
-        . ' AND earlier_entry.url_hash = member_entry.url_hash))';
-
     /** At least the reader's threshold of their feeds took part (social ones count), two of them article feeds. */
     private const string VISIBLE_COVERAGE = ' GROUP BY story.id, story.last_seen'
         . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
@@ -82,7 +50,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     {
         /** @var list<array{story_id: int|string, outlet_count: int|string, last_seen: string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            self::VISIBLE_STORIES
+            self::visibleStories()
             . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry hidden_member'
             . ' JOIN trending_hidden_entry hidden'
             . ' ON hidden.entry_id = hidden_member.entry_id AND hidden.user_id = :user'
@@ -110,9 +78,10 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     public function storyIdContaining(ReaderWindowModel $reader, int $entryId): int
     {
         $storyId = $this->getEntityManager()->getConnection()->fetchOne(
-            self::VISIBLE_STORIES
+            self::visibleStories()
             . ' AND EXISTS (SELECT 1 FROM trending_story_entry asked'
             . ' JOIN subscription asker ON asker.feed_id = asked.feed_id AND asker.user_id = :user'
+            . ' AND ' . TrendingInclusionSql::includes('asker')
             . ' WHERE asked.story_id = story.id AND asked.entry_id = :entry)'
             . self::VISIBLE_COVERAGE,
             [...self::visibilityParameters($reader), 'entry' => $entryId],
@@ -143,6 +112,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             'SELECT shown.story_id, shown.entry_id FROM trending_story_entry shown'
             . ' JOIN feed article_feed ON article_feed.id = shown.feed_id AND article_feed.network IS NULL'
             . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
+            . ' AND ' . TrendingInclusionSql::includes('reader')
             . ' WHERE shown.story_id IN (:storyIds)',
             ['user' => $userId, 'storyIds' => $storyIds],
             ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
@@ -178,6 +148,46 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
 
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $viewed);
+    }
+
+    /**
+     * The window's stories, counting only feeds the reader follows in Trending and an article URL once, leaving out
+     * any sharing an entry with a story the reader is shown in a shorter window; an `AND` on `story`, then
+     * VISIBLE_COVERAGE. An empty id list expands to `IN (NULL)`, which leaves nothing out.
+     */
+    private static function visibleStories(): string
+    {
+        return 'SELECT story.id AS story_id, story.last_seen,'
+            . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
+            . ' FROM trending_story story'
+            . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
+            . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
+            . ' JOIN subscription subscribed'
+            . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
+            . ' AND ' . TrendingInclusionSql::includes('subscribed')
+            . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
+            . ' WHERE story.time_window = :window'
+            . self::noEarlierCopy()
+            . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry overlap_member'
+            . ' JOIN trending_story_entry shorter_member ON shorter_member.entry_id = overlap_member.entry_id'
+            . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
+    }
+
+    /**
+     * As in DuplicateCollapseDql, only the lowest-id copy of an article the reader can see in the story counts;
+     * the earlier copy must be one of theirs, or the article would count for no feed. Social posts always count.
+     */
+    private static function noEarlierCopy(): string
+    {
+        return ' AND (member_feed.network IS NOT NULL'
+            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
+            . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
+            . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
+            . ' JOIN subscription earlier_reader'
+            . ' ON earlier_reader.feed_id = earlier_member.feed_id AND earlier_reader.user_id = :user'
+            . ' AND ' . TrendingInclusionSql::includes('earlier_reader')
+            . ' WHERE earlier_member.story_id = story.id AND earlier_member.entry_id < story_member.entry_id'
+            . ' AND earlier_entry.url_hash = member_entry.url_hash))';
     }
 
     /**

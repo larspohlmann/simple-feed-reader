@@ -19,8 +19,17 @@ import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
 
-const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const TECH: TagDto = {
+  id: 2,
+  name: 'Tech',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+  ...INCLUDED_EVERYWHERE,
+};
 const OTHER_TAG: TagDto = {
   id: 4,
   name: 'Nachrichten',
@@ -28,6 +37,7 @@ const OTHER_TAG: TagDto = {
   icon: null,
   position: 1,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 };
 const THIRD_TAG: TagDto = {
   id: 6,
@@ -36,6 +46,7 @@ const THIRD_TAG: TagDto = {
   icon: null,
   position: 2,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 };
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
@@ -52,6 +63,7 @@ const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
       icon: null,
       position: index,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     })),
   });
 
@@ -94,9 +106,7 @@ describe('OrganiseTagGroupComponent', () => {
     reorderUntagged: jest.fn(),
     moveFeedToTag: jest.fn(),
     editSubscription: jest.fn(),
-    setIncludeInAllItems: jest.fn(),
-    setIncludeInForYou: jest.fn(),
-    setIncludeInSavedSearches: jest.fn(),
+    setInclusion: jest.fn(),
     unsubscribe: jest.fn(),
   };
 

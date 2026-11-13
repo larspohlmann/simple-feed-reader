@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Factory;
 
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -27,6 +28,12 @@ final readonly class RestoredFoundationFactory
         $details = new TagDetailsModel($line->name, $line->color, $line->icon);
         $tag = $this->tagFactory->create($user, $details, $line->position);
         $tag->setParent($parent);
+        $tag->changeInclusions(new InclusionChange(
+            $line->includeInAllItems,
+            $line->includeInForYou,
+            $line->includeInSavedSearches,
+            $line->includeInTrending,
+        ));
 
         return $tag;
     }
@@ -49,9 +56,12 @@ final readonly class RestoredFoundationFactory
         $subscription->setCustomTitle($line->customTitle);
         $subscription->setPosition($line->position);
         $subscription->setMarkedReadUntil($line->markedReadUntil);
-        $subscription->setIncludeInAllItems($line->includeInAllItems);
-        $subscription->setIncludeInForYou($line->includeInForYou);
-        $subscription->setIncludeInSavedSearches($line->includeInSavedSearches);
+        $subscription->changeInclusions(new InclusionChange(
+            $line->includeInAllItems,
+            $line->includeInForYou,
+            $line->includeInSavedSearches,
+            $line->includeInTrending,
+        ));
 
         return $subscription;
     }

@@ -8,6 +8,11 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
+import { tagsById } from '../state/tag-ancestry';
+import { VisibilitySwitches } from '../state/visibility';
+import { makeTag } from '../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 import { SocialSection, buildSocialSections, socialFeedGroup } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
@@ -49,6 +54,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
       { provide: EntriesStore, useValue: {} },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
+      { provide: VisibilitySwitchesStore, useValue: {} },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
     ],
   });
@@ -212,12 +218,32 @@ describe("ListHeading for a feed group's combined view", () => {
     makeSubscription({
       id: 1,
       entryCount: 10,
-      tags: [{ id: 5, name: 'News', color: null, icon: null, position: 0, parentId: null }],
+      tags: [
+        {
+          id: 5,
+          name: 'News',
+          color: null,
+          icon: null,
+          position: 0,
+          parentId: null,
+          ...INCLUDED_EVERYWHERE,
+        },
+      ],
     }),
     makeSubscription({
       id: 2,
       entryCount: 20,
-      tags: [{ id: 6, name: 'Tech', color: null, icon: null, position: 1, parentId: null }],
+      tags: [
+        {
+          id: 6,
+          name: 'Tech',
+          color: null,
+          icon: null,
+          position: 1,
+          parentId: null,
+          ...INCLUDED_EVERYWHERE,
+        },
+      ],
     }),
     makeSubscription({ id: 3, entryCount: 300 }),
   ];
@@ -251,7 +277,11 @@ describe("ListHeading for a feed group's combined view", () => {
 });
 
 /** A ListHeading over one combined view: only the selection and the store stub differ between views. */
-function headingWith(selection: Selection, subscriptionsStore: object): ListHeading {
+function headingWith(
+  selection: Selection,
+  subscriptionsStore: object,
+  switches: VisibilitySwitches = NO_SWITCHES,
+): ListHeading {
   TestBed.configureTestingModule({
     imports: [provideTranslocoTesting()],
     providers: [
@@ -262,11 +292,41 @@ function headingWith(selection: Selection, subscriptionsStore: object): ListHead
       { provide: EntriesStore, useValue: {} },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
+      { provide: VisibilitySwitchesStore, useValue: { switches: signal(switches) } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
     ],
   });
   return TestBed.inject(ListHeading);
 }
+
+const NO_SWITCHES: VisibilitySwitches = {
+  tagsById: new Map(),
+  excludedNetworks: {
+    allItems: new Set(),
+    forYou: new Set(),
+    savedSearches: new Set(),
+    trending: new Set(),
+  },
+};
+
+describe('ListHeading for All items', () => {
+  it('counts only the posts of feeds the switches leave in', () => {
+    const tech = makeTag(6, 'Tech', { includeInAllItems: false });
+    const heading = headingWith(
+      { kind: 'all', unread: false },
+      {
+        totalUnread: signal(0),
+        subscriptions: signal([
+          makeSubscription({ id: 1, entryCount: 10 }),
+          makeSubscription({ id: 2, entryCount: 20, tags: [tech] }),
+        ]),
+      },
+      { ...NO_SWITCHES, tagsById: tagsById([tech]) },
+    );
+
+    expect(heading.titleCount()).toEqual({ value: 10, counts: 'items' });
+  });
+});
 
 describe('ListHeading for a child tag (#1736)', () => {
   const tagOf = (id: number, name: string, parentId: number | null): TagDto => ({
@@ -276,6 +336,7 @@ describe('ListHeading for a child tag (#1736)', () => {
     icon: null,
     position: 0,
     parentId,
+    ...INCLUDED_EVERYWHERE,
   });
   const nodeOf = (tag: TagDto, children: TagNode[] = []): TagNode => ({
     tag,
@@ -326,6 +387,8 @@ describe('ListHeading for the Trending list (#2017)', () => {
         },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: VisibilitySwitchesStore, useValue: {} },
+        { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
       ],
     });

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Digest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\SavedSearchNetworkInclusion;
@@ -134,7 +135,7 @@ final class DigestComposerTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
         $this->member($rust, 'Kept', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
         $dropped = $this->member($rust, 'Dropped', 'Feed B', new \DateTimeImmutable('2026-08-15T01:00:00Z'));
-        $this->subscriptionOf($dropped)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($dropped)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->entityManager->flush();
 
         $model = $this->composer()->compose($this->user, $this->since);
@@ -152,7 +153,7 @@ final class DigestComposerTest extends DbTestCase
         $rust = $this->search('rust');
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
         $dropped = $this->member($rust, 'Dropped', 'Feed B', new \DateTimeImmutable('2026-08-15T01:00:00Z'));
-        $this->subscriptionOf($dropped)->setIncludeInSavedSearches(false);
+        $this->subscriptionOf($dropped)->changeInclusions(new InclusionChange(savedSearches: false));
         $this->entityManager->flush();
 
         self::assertNull($this->composer()->compose($this->user, $this->since));

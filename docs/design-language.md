@@ -1224,14 +1224,58 @@ action may lead with a `symbol` (a Material symbol) or a `logo: { url, color? }`
 (drawn through `<app-masked-logo>`), and `ACTION_SHEET_DIVIDER` among the
 `actions` renders a separator between groups. A `{ note }` item renders a muted
 line of text in place among the actions — a hint no single action owns (the share
-sheet's quote hint, #1970). The head (grabber, title, the
+sheet's quote hint, #1970). An `ActionSheetCheck` item (`{ id, label, checked, toggle }`,
+`checked` a `Signal<boolean>`) renders an `<app-menu-checkbox>`: it calls `toggle` and
+leaves the sheet open, its box following the signal (a feed's or tag's surface
+switches, #2202). The head (grabber, title, the
 round close button) stays pinned while a long list scrolls. Dismissed by the
 close button, a backdrop tap, Escape, or a downward pull on a list at its top —
 all resolve `undefined`.
 
 **Not for:** fine-pointer surfaces (the sidebar keeps its inline `.pop`
-popover on desktop) or anything with form controls — that is a dialog in
-`<app-overlay-panel>`.
+popover on desktop) or a form — fields to fill in and submit are a dialog in
+`<app-overlay-panel>`. Check items that save on tap are fine.
+
+---
+
+### `<app-menu-checkbox>`
+
+A checkable row of a `role="menu"`: a `role="menuitemcheckbox"` box and its label
+that toggles in place and leaves the menu open. The fine-pointer row popovers
+(sidebar, Organise) list it among their `role="menuitem"` buttons, and the action
+sheet renders it for an `ActionSheetCheck`, so both pointers show the same switch.
+
+```html
+<app-menu-checkbox [label]="labelText" [checked]="isIncluded()" (toggled)="flip()" />
+```
+
+`label` is an **already-translated string**; `checked` is display only, and the
+owner flips its state on `toggled`. Arrow keys step through it with the menu's
+other items (`stepMenu` / `stepMenuFocus` in `shared/menu-keys.ts`).
+
+**Not for:** a settings toggle — that is a `<app-settings-row>` control — or a
+checkbox outside a menu.
+
+---
+
+### `<app-feed-exclusion-marker>`
+
+The eye badge on a hidden row's lead (see *Hidden-feed favicon*): `role="img"`,
+titled and labelled with `exclusionTitle()` for the surfaces it is given. It lives
+in `reader/shell/sidebar/`, not `shared/`, because it knows the reader's surface
+keys. The host carries `.feed-exclusion-marker`, which `row.hidden-feed-mark`
+positions on the lead's corner.
+
+| Input | Type | Default |
+|---|---|---|
+| `surfaces` | `readonly ExclusionSurface[]` (required) | — |
+
+```html
+<app-feed-exclusion-marker [surfaces]="markerSurfaces()" />
+```
+
+**Not for:** the Organise row's inline `visibility_off` glyph, which trails the
+title instead of riding a lead.
 
 ---
 
@@ -1646,19 +1690,17 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **Nesting** (two levels below the top, #1736, #1790). An open tag is a grey group (`.group.open`, `--surface-sunken`). Each child tag sits in its own `--surface-1` box, and a grandchild's box is a `.tag-child` inside that one, on the same background and marked only by the compounded margin; the parent's own feeds follow the boxes. Rows inside a box start at the box's edge again, so every chevron keeps the same gap to its own surface. The drop lists stay top-level siblings: the group and the box are plain divs, and the heads and feed lists are rendered through `#tagHead` / `#tagFeeds` templates.
 
-**Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
+**Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down, the four surface switches (All items, For You, saved searches, Trending) as checks, and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
 
 ### Hidden-feed favicon
 
-A feed hidden from All items, For you or saved searches (#688) shows it on its favicon, not with a trailing glyph. Only the feed's own exclusions mark it: a network-level saved-search exclusion is not repeated on each of the network's rows. It marks the network (Bluesky, Mastodon) head's logo instead, with the same treatment and title (`row.hidden-feed-mark` in `_sidebar-row.scss` styles both). The favicon greys and fades (`--hidden-favicon-opacity`, `grayscale(1)`), and a small eye badge sits on its bottom-right corner:
+A feed hidden from All items, For you, saved searches or Trending (#688, #2202) shows it on its favicon, not with a trailing glyph. Settings → Visibility lays every one of these switches, network, tag and feed, out in one matrix. Only the feed's own exclusions mark it: a network-level saved-search exclusion is not repeated on each of the network's rows. It marks the network (Bluesky, Mastodon) head's logo instead, with the same treatment and title (`row.hidden-feed-mark` in `_sidebar-row.scss` styles both). The favicon greys and fades (`--hidden-favicon-opacity`, `grayscale(1)`), and a small eye badge sits on its bottom-right corner:
 
 ```html
 <span class="favicon-slot" [class.hidden-feed]="excluded()">
   <app-favicon [url]="subscription().faviconUrl" [avatarUrl]="avatarUrl()" />
   @if (excluded()) {
-    <span class="feed-exclusion-marker" role="img" [attr.aria-label]="markerTitle()" [title]="markerTitle()">
-      <app-icon name="visibility_off" size="text" />
-    </span>
+    <app-feed-exclusion-marker [surfaces]="markerSurfaces()" />
   }
 </span>
 ```

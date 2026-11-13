@@ -7,6 +7,7 @@ import { TagsStore } from '../../reader/state/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
 
 const tag = (id: number, name: string, position: number): TagDto => ({
   id,
@@ -15,6 +16,7 @@ const tag = (id: number, name: string, position: number): TagDto => ({
   icon: null,
   position,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 
 const sub = (
@@ -35,6 +37,7 @@ const sub = (
       icon: null,
       position: index,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     })),
   });
 

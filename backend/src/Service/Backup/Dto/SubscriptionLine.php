@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Enum\InclusionSurface;
 use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
@@ -28,6 +29,7 @@ final readonly class SubscriptionLine
         public bool $includeInAllItems,
         public bool $includeInForYou,
         public bool $includeInSavedSearches,
+        public bool $includeInTrending,
     ) {
     }
 
@@ -46,6 +48,7 @@ final readonly class SubscriptionLine
             includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
             includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
             includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
+            includeInTrending: LineFieldWithDefault::bool($line, 'includeInTrending', true),
         );
     }
 
@@ -60,9 +63,10 @@ final readonly class SubscriptionLine
             markedReadUntil: $subscription->getMarkedReadUntil(),
             createdAt: $subscription->getCreatedAt(),
             tags: array_map(SubscriptionTagReference::of(...), $subscription->getSubscriptionTags()),
-            includeInAllItems: $subscription->isIncludeInAllItems(),
-            includeInForYou: $subscription->isIncludeInForYou(),
-            includeInSavedSearches: $subscription->isIncludeInSavedSearches(),
+            includeInAllItems: $subscription->isIncludedIn(InclusionSurface::AllItems),
+            includeInForYou: $subscription->isIncludedIn(InclusionSurface::ForYou),
+            includeInSavedSearches: $subscription->isIncludedIn(InclusionSurface::SavedSearches),
+            includeInTrending: $subscription->isIncludedIn(InclusionSurface::Trending),
         );
     }
 
@@ -82,6 +86,7 @@ final readonly class SubscriptionLine
             'includeInAllItems' => $this->includeInAllItems,
             'includeInForYou' => $this->includeInForYou,
             'includeInSavedSearches' => $this->includeInSavedSearches,
+            'includeInTrending' => $this->includeInTrending,
         ]);
     }
 

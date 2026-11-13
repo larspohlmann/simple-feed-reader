@@ -3,7 +3,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
 import { TagsStore } from './tags.store';
+import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
+import { TokenStore } from '../../core/auth/token.store';
 import { TagDto } from '../models';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 const tag = (id: number, name: string): TagDto => ({
   id,
@@ -12,6 +15,7 @@ const tag = (id: number, name: string): TagDto => ({
   icon: null,
   position: 0,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 
 describe('TagsStore', () => {
@@ -45,6 +49,27 @@ describe('TagsStore', () => {
       .flush({ tags: [tag(1, 'Reading'), { ...tag(2, 'Long reads'), parentId: 1 }] });
   });
 
+  it('loads at most once per freshness window, and afresh for the next user', () => {
+    jest.useFakeTimers({ now: new Date('2026-11-13T12:00:00Z') });
+
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    store.loadIfStale();
+    ctrl.expectNone('https://api.test/api/tags');
+
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+
+    const tokens = TestBed.inject(TokenStore);
+    tokens.set('user-b.jwt');
+    TestBed.tick();
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    tokens.clear();
+    jest.useRealTimers();
+  });
+
   it('records a Problem on error', () => {
     store.load();
     ctrl
@@ -55,6 +80,12 @@ describe('TagsStore', () => {
       );
     expect(store.error()?.title).toBe('Nope');
     expect(store.loading()).toBe(false);
+  });
+
+  it('finds a listed tag by id, and nothing for an unknown one', () => {
+    store.tags.set([tag(1, 'Zeta'), tag(2, 'Alpha')]);
+    expect(store.byId(2)?.name).toBe('Alpha');
+    expect(store.byId(3)).toBeUndefined();
   });
 
   it('adds a tag in position order', () => {

@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\InclusionSurface;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\QueryRecorder;
@@ -132,6 +133,26 @@ final class SubscriptionBulkTest extends ApiTestCase
         self::assertTrue($body['subscriptions'][0]['includeInForYou']);
     }
 
+    public function testSwitchesTheFeedsOutOfTrending(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-endpoint-trending@example.com');
+        $subscription = $this->makeSubscription($user, 'https://trending.example/feed.xml');
+        $this->entityManager()->flush();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => [$subscription->requireId()],
+            'includeInTrending' => false,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['subscriptions']);
+        self::assertIsArray($body['subscriptions'][0]);
+        self::assertFalse($body['subscriptions'][0]['includeInTrending']);
+        self::assertTrue($body['subscriptions'][0]['includeInAllItems']);
+    }
+
     public function testRejectsAForeignSubscriptionAndWritesNothing(): void
     {
         $client = self::createClient();
@@ -179,7 +200,10 @@ final class SubscriptionBulkTest extends ApiTestCase
         $reloaded = $this->entityManager()->getRepository(Subscription::class)->find($ourId);
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertCount(0, $reloaded->getTags(), 'A rejected bulk request must write no tag.');
-        self::assertTrue($reloaded->isIncludeInAllItems(), 'A rejected bulk request must write no flag.');
+        self::assertTrue(
+            $reloaded->isIncludedIn(InclusionSurface::AllItems),
+            'A rejected bulk request must write no flag.',
+        );
     }
 
     public function testRejectsMoreIdsThanTheHardCeiling(): void

@@ -2,6 +2,7 @@ import { Component, TemplateRef, computed, contentChild, inject, input } from '@
 import { NgTemplateOutlet } from '@angular/common';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
+import { stepMenu } from '../../../shared/menu-keys';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
 /** A sidebar row's fine-pointer ⋯ menu; its items come as an `<ng-template>`, built only while it is open. */
@@ -19,4 +20,5 @@ export class SidebarRowMenuComponent {
   protected readonly rows = inject(SidebarRowActions);
   protected readonly items = contentChild.required(TemplateRef);
   protected readonly open = computed(() => this.rows.menuFor() === this.menuKey());
+  protected readonly step = stepMenu;
 }

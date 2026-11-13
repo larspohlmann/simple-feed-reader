@@ -35,6 +35,7 @@ const SUBSCRIBED_GAMMA: SubscriptionDto = {
   includeInAllItems: true,
   includeInForYou: true,
   includeInSavedSearches: true,
+  includeInTrending: true,
   social: null,
 };
 

@@ -9,6 +9,7 @@ import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { anEntry } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -28,6 +29,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   icon: null,
   position: 0,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 
 function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imageShown?: boolean) {

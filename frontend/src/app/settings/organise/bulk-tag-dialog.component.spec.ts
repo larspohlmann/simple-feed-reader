@@ -5,8 +5,17 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
 
-const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const TECH: TagDto = {
+  id: 2,
+  name: 'Tech',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+  ...INCLUDED_EVERYWHERE,
+};
 const NEWS: TagDto = {
   id: 3,
   name: 'Nachrichten',
@@ -14,6 +23,7 @@ const NEWS: TagDto = {
   icon: null,
   position: 1,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 };
 
 const READING: TagDto = {
@@ -23,6 +33,7 @@ const READING: TagDto = {
   icon: null,
   position: 2,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 };
 const LONG_READS: TagDto = {
   id: 6,
@@ -31,6 +42,7 @@ const LONG_READS: TagDto = {
   icon: null,
   position: 0,
   parentId: 5,
+  ...INCLUDED_EVERYWHERE,
 };
 
 const feed = (id: number, tagIds: number[]): SubscriptionDto =>
@@ -47,6 +59,7 @@ const feed = (id: number, tagIds: number[]): SubscriptionDto =>
       icon: null,
       position: index,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     })),
   });
 
@@ -104,6 +117,7 @@ describe('BulkTagDialogComponent', () => {
           icon: null,
           position: 0,
           parentId: null,
+          ...INCLUDED_EVERYWHERE,
         },
       ],
     });

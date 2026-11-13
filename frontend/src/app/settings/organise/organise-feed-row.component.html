@@ -95,16 +95,16 @@
           <app-icon name="more_horiz" size="sm" />
         </button>
         @if (menuOpen()) {
-          <div class="pop" role="menu">
+          <div class="pop" role="menu" tabindex="-1" (keydown)="step($event)">
             @for (flag of feedFlags; track flag.surface) {
-              <button
-                role="menuitem"
+              <app-menu-checkbox
                 [attr.data-test]="flag.dataTest"
-                (click)="toggleFlag(flag); closeMenu()"
-              >
-                {{ feedFlagLabelKey(flag, subscription()) | transloco }}
-              </button>
+                [label]="flag.includeKey | transloco"
+                [checked]="subscription()[flag.flag]"
+                (toggled)="toggleFlag(flag.surface)"
+              />
             }
+            <hr />
             <button
               role="menuitem"
               class="danger"

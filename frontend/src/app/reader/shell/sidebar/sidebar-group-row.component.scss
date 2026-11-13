@@ -2,6 +2,7 @@
 @include row.row-parts;
 @include row.row-link('.nav');
 @include row.chevron('.chevzone');
+@include row.hidden-feed-mark('app-tag-glyph');
 @include row.row-states(':host', ':host(.current)');
 
 :host {

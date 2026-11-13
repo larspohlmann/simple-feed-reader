@@ -14,6 +14,14 @@
         </button>
       }
       <hr />
+      @for (check of surfaceChecks(); track check.id) {
+        <app-menu-checkbox
+          [label]="check.label"
+          [checked]="check.checked()"
+          (toggled)="check.toggle()"
+        />
+      }
+      <hr />
       <button
         role="menuitem"
         class="danger"

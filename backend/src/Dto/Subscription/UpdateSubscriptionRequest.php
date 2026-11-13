@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto\Subscription;
 
+use App\Entity\InclusionChange;
 use App\Service\Subscription\Model\SubscriptionChangeModel;
-use App\Service\Subscription\Model\InclusionChangeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class UpdateSubscriptionRequest
@@ -19,6 +19,7 @@ final readonly class UpdateSubscriptionRequest
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
+        public ?bool $includeInTrending = null,
     ) {
     }
 
@@ -27,10 +28,11 @@ final readonly class UpdateSubscriptionRequest
         return new SubscriptionChangeModel(
             customTitle: $this->customTitle,
             tagIds: $this->tagIds,
-            inclusions: new InclusionChangeModel(
-                includeInAllItems: $this->includeInAllItems,
-                includeInForYou: $this->includeInForYou,
-                includeInSavedSearches: $this->includeInSavedSearches,
+            inclusions: new InclusionChange(
+                allItems: $this->includeInAllItems,
+                forYou: $this->includeInForYou,
+                savedSearches: $this->includeInSavedSearches,
+                trending: $this->includeInTrending,
             ),
         );
     }

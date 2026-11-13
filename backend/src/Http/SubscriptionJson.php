@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Enum\InclusionSurface;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionDisplayTitle;
@@ -67,10 +68,11 @@ final class SubscriptionJson
      *   consecutiveFailures: int, lastErrorMessage: string|null,
      *   position: int,
      *   tags: list<array{
-     *     id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null
+     *     id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null,
+     *     includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool, includeInTrending: bool
      *   }>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
-     *   includeInSavedSearches: bool,
+     *   includeInSavedSearches: bool, includeInTrending: bool,
      *   social: array{network: string, accountId: int|null, kind: string, query?: string}|null
      * }
      */
@@ -108,9 +110,10 @@ final class SubscriptionJson
             'tags' => $tags,
             'unreadCount' => $unreadCount,
             'entryCount' => $entryCount,
-            'includeInAllItems' => $subscription->isIncludeInAllItems(),
-            'includeInForYou' => $subscription->isIncludeInForYou(),
-            'includeInSavedSearches' => $subscription->isIncludeInSavedSearches(),
+            'includeInAllItems' => $subscription->isIncludedIn(InclusionSurface::AllItems),
+            'includeInForYou' => $subscription->isIncludedIn(InclusionSurface::ForYou),
+            'includeInSavedSearches' => $subscription->isIncludedIn(InclusionSurface::SavedSearches),
+            'includeInTrending' => $subscription->isIncludedIn(InclusionSurface::Trending),
             'social' => self::social($feed),
         ];
     }

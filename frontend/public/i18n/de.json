@@ -814,7 +814,20 @@
       "hideFromForYou": "Aus Für dich ausblenden",
       "showInSavedSearches": "In gespeicherten Suchen anzeigen",
       "hideFromSavedSearches": "Aus gespeicherten Suchen ausblenden",
+      "showInTrending": "In „Im Trend“ anzeigen",
+      "hideFromTrending": "Aus „Im Trend“ ausblenden",
       "clear": "Zurücksetzen"
+    },
+    "visibility": {
+      "title": "Sichtbarkeit",
+      "intro": "Wo jedes Netzwerk, jeder Tag und jeder Feed erscheint. Ein ausgegrautes Kästchen ist an, aber etwas darüber hält den Feed draußen.",
+      "name": "Name",
+      "expandAll": "Alle aufklappen",
+      "collapseAll": "Alle zuklappen",
+      "filterPlaceholder": "Feeds filtern",
+      "excludedBy": "Ausgeschlossen durch {{causes}}",
+      "noFeedMatches": "Kein Feed passt zu „{{term}}“.",
+      "loading": "Sichtbarkeit wird geladen …"
     },
     "feedDirectory": {
       "browse": "Feed-Verzeichnis durchsuchen",
@@ -1013,6 +1026,7 @@
       "showInAllItems": "In Alle Einträge anzeigen",
       "showInForYou": "In Für dich anzeigen",
       "showInSavedSearches": "In gespeicherten Suchen anzeigen",
+      "showInTrending": "In „Im Trend“ anzeigen",
       "saving": "Wird gespeichert…",
       "save": "Speichern"
     }
@@ -1401,14 +1415,10 @@
     "moveTagDown": "Nach unten",
     "editFeed": "Feed bearbeiten",
     "unsubscribe": "Abbestellen",
-    "excludeFromAllItems": "Aus Alle Einträge ausschließen",
     "includeInAllItems": "In Alle Einträge anzeigen",
-    "excludeFromForYou": "Aus Für dich ausschließen",
     "includeInForYou": "In Für dich anzeigen",
-    "excludeFromSavedSearches": "Aus gespeicherten Suchen ausschließen",
-    "includeNetworkInSavedSearches": "In gespeicherte Suchen aufnehmen",
-    "excludeNetworkFromSavedSearches": "Aus gespeicherten Suchen ausschließen",
     "includeInSavedSearches": "In gespeicherten Suchen anzeigen",
+    "includeInTrending": "In „Im Trend“ anzeigen",
     "excludedFrom": "Ausgeblendet aus {{surfaces}}",
     "dropToRemoveTags": "Hier ablegen, um Tags zu entfernen",
     "unread": "nur ungelesene",

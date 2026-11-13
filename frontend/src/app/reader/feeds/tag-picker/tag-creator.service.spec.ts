@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../../core/api';
 import { TagDto } from '../../models';
 import { TagsStore } from '../../state/tags.store';
 import { TagCreator } from './tag-creator.service';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 describe('TagCreator', () => {
   let ctrl: HttpTestingController;
@@ -29,6 +30,7 @@ describe('TagCreator', () => {
       icon: null,
       position: 3,
       parentId: null,
+      ...INCLUDED_EVERYWHERE,
     };
     const seen: TagDto[] = [];
 

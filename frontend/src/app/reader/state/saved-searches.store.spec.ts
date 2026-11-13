@@ -336,6 +336,15 @@ describe('SavedSearchesStore', () => {
       expect([...store.includedNetworks()]).toEqual(['mastodon']);
     });
 
+    it('counts every network it does not include as excluded', () => {
+      const store = setup({ savedSearches: () => of(response(['mastodon'])) });
+      expect([...store.excludedNetworks()]).toEqual(['bluesky', 'mastodon']);
+
+      store.load();
+
+      expect([...store.excludedNetworks()]).toEqual(['bluesky']);
+    });
+
     it('includeNetwork() adds the network at once, writes it, then reloads', () => {
       const write = new Subject<void>();
       const includeNetworkInSavedSearches = jest.fn(() => write);

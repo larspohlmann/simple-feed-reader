@@ -1,0 +1,75 @@
+@use '../../theme/breakpoints' as bp;
+
+// Read by every row and the header, so the columns line up without a table.
+.matrix {
+  // Wide enough for "Trending": Chromium never hyphenates a capitalised English word.
+  --visibility-cell-w: calc(var(--tap-target) * 1.2);
+  --visibility-indent-step: var(--space-3);
+  --visibility-columns: minmax(0, 1fr)
+    repeat(var(--visibility-surface-count), var(--visibility-cell-w));
+}
+
+@media (width > bp.$bp-sm) {
+  .matrix {
+    --visibility-cell-w: calc(var(--tap-target) * 2.5);
+    --visibility-indent-step: var(--space-5);
+  }
+}
+
+.state {
+  display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.filter {
+  --field-rim-base: var(--border-strong);
+
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-sm);
+}
+
+app-button {
+  flex: none;
+}
+
+.head {
+  position: sticky;
+  top: var(--bar-h);
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--visibility-columns);
+  align-items: end;
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--border);
+  background: var(--surface-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.head-name {
+  padding-inline: var(--row-pad-x);
+}
+
+.head-surface {
+  padding-inline: var(--space-0);
+  text-align: center;
+  overflow-wrap: normal;
+  hyphens: auto;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--row-pad-comfy-y) var(--row-pad-x);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}

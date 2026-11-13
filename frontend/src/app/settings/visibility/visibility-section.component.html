@@ -1,0 +1,81 @@
+<app-settings-stack>
+  <app-settings-group
+    icon="visibility"
+    [title]="'settings.visibility.title' | transloco"
+    [caption]="'settings.visibility.intro' | transloco"
+  >
+    <div class="tools">
+      <input
+        class="filter"
+        type="search"
+        data-test="feed-filter"
+        [value]="feedFilter()"
+        [attr.placeholder]="'settings.visibility.filterPlaceholder' | transloco"
+        [attr.aria-label]="'settings.visibility.filterPlaceholder' | transloco"
+        (input)="feedFilter.set($any($event.target).value)"
+      />
+      @if (showsExpandToggle()) {
+        <app-button size="sm" data-test="expand-toggle" (click)="toggleExpandAll()">
+          <app-icon [name]="allExpanded() ? 'unfold_less' : 'unfold_more'" size="sm" />
+          {{
+            (allExpanded() ? 'settings.visibility.collapseAll' : 'settings.visibility.expandAll')
+              | transloco
+          }}
+        </app-button>
+      }
+    </div>
+
+    @if (loading()) {
+      <app-skeleton class="state" [label]="'settings.visibility.loading' | transloco" [rows]="6" />
+    } @else {
+      <div class="matrix" [style.--visibility-surface-count]="surfaces.length">
+        <div class="head" aria-hidden="true">
+          <span class="head-name">{{ 'settings.visibility.name' | transloco }}</span>
+          @for (surface of surfaces; track surface) {
+            <span class="head-surface">{{ surfaceLabelKeys[surface] | transloco }}</span>
+          }
+        </div>
+
+        @for (row of rows(); track row.line.key) {
+          <app-visibility-row
+            [attr.data-test]="'row-' + row.line.key"
+            [name]="row.name"
+            [cells]="row.cells"
+            [depth]="row.line.depth"
+            [expanded]="row.line.hasChildren ? isExpanded(row.line) : undefined"
+            (toggled)="toggle(row.line.target, $event)"
+            (expandToggled)="toggleExpanded(row.line)"
+          >
+            @switch (row.line.target.kind) {
+              @case ('tag') {
+                <app-tag-glyph
+                  [name]="row.line.target.tag.icon"
+                  [color]="row.line.target.tag.color"
+                  size="xs"
+                />
+              }
+              @case ('network') {
+                <app-network-logo [network]="row.line.target.network" />
+              }
+              @case ('feed') {
+                <app-favicon [url]="row.line.target.subscription.faviconUrl" />
+              }
+              @case ('feedKind') {
+                <app-icon [name]="feedKindDescriptors[row.line.target.feedKind].glyph" size="xs" />
+              }
+              @case ('untagged') {
+                <app-icon name="label_off" size="xs" />
+              }
+            }
+          </app-visibility-row>
+        } @empty {
+          @if (filtering()) {
+            <p class="empty" data-test="no-feed-matches">
+              {{ 'settings.visibility.noFeedMatches' | transloco: { term: feedFilter() } }}
+            </p>
+          }
+        }
+      </div>
+    }
+  </app-settings-group>
+</app-settings-stack>

@@ -110,6 +110,7 @@ final class RestoreLoadPassTest extends TestCase
             includeInAllItems: true,
             includeInForYou: true,
             includeInSavedSearches: true,
+            includeInTrending: true,
         );
     }
 

@@ -18,7 +18,6 @@ import {
   rootsOf,
   siblingIdsByTagId,
   siblingIdsOf,
-  sumEntries,
   tagLabel,
   tagNodesById,
   tagsInTreeOrder,
@@ -30,6 +29,7 @@ import { TrendingWindowService } from '../trending/trending-window.service';
 import { anEntry } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
 import { makeTag } from '../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 const tag = (id: number, name: string): TagDto => ({
   id,
@@ -38,6 +38,7 @@ const tag = (id: number, name: string): TagDto => ({
   icon: null,
   position: 0,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 const sub = (id: number, unread: number, tags = [] as SubscriptionTagDto[]): SubscriptionDto => ({
   id,
@@ -65,6 +66,7 @@ const sub = (id: number, unread: number, tags = [] as SubscriptionTagDto[]): Sub
   includeInAllItems: true,
   includeInForYou: true,
   includeInSavedSearches: true,
+  includeInTrending: true,
   social: null,
 });
 
@@ -141,27 +143,50 @@ describe('subscription derivations', () => {
     ]);
     expect(tree[0].entryCount).toBe(42);
   });
-
-  it('totals entries over the feeds included in All items only', () => {
-    expect(
-      sumEntries([
-        { ...sub(1, 0, []), entryCount: 30 },
-        { ...sub(2, 0, []), entryCount: 12, includeInAllItems: false },
-      ]),
-    ).toBe(30);
-  });
 });
 
 describe('buildTagTree with an explicit tag order', () => {
   const orderedTags: TagDto[] = [
-    { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
-    { id: 10, name: 'News', color: null, icon: null, position: 1, parentId: null },
-    { id: 30, name: 'Empty', color: null, icon: null, position: 2, parentId: null },
+    {
+      id: 20,
+      name: 'Tech',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: null,
+      ...INCLUDED_EVERYWHERE,
+    },
+    {
+      id: 10,
+      name: 'News',
+      color: null,
+      icon: null,
+      position: 1,
+      parentId: null,
+      ...INCLUDED_EVERYWHERE,
+    },
+    {
+      id: 30,
+      name: 'Empty',
+      color: null,
+      icon: null,
+      position: 2,
+      parentId: null,
+      ...INCLUDED_EVERYWHERE,
+    },
   ];
   // A sub carrying one tag, with an explicit per-tag (feed) position.
   const inTag = (id: number, tagId: number, feedPos: number): SubscriptionDto =>
     sub(id, 1, [
-      { id: tagId, name: 'x', color: null, icon: null, position: feedPos, parentId: null },
+      {
+        id: tagId,
+        name: 'x',
+        color: null,
+        icon: null,
+        position: feedPos,
+        parentId: null,
+        ...INCLUDED_EVERYWHERE,
+      },
     ]);
 
   it('orders nodes by tag.position, includes empty tags, and orders feeds per-tag', () => {

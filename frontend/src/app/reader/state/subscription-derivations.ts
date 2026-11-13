@@ -1,4 +1,6 @@
 import { SubscriptionDto, TagDto } from '../models';
+import { tagsById, withAncestors } from './tag-ancestry';
+import { VisibilitySwitches, isVisibleIn } from './visibility';
 
 export interface TagNode {
   tag: TagDto;
@@ -103,13 +105,21 @@ export function tagsInTreeOrder(tags: TagDto[]): TagDto[] {
 
 /** A nested tag reads with its ancestors, so a pill never shows a bare child out of context. */
 export function tagLabel(tag: TagDto, tags: readonly TagDto[]): string {
-  return tagPath(tag, new Map(tags.map((candidate) => [candidate.id, candidate]))).join(' / ');
+  return tagPath(tag, tagsById(tags)).join(' / ');
 }
 
 /** The names from the top-most known ancestor down to the tag. */
 export function tagPath(tag: TagDto, byId: ReadonlyMap<number, TagDto>): string[] {
-  const parent = tag.parentId === null ? undefined : byId.get(tag.parentId);
-  return parent === undefined ? [tag.name] : [...tagPath(parent, byId), tag.name];
+  return withAncestors(tag, byId)
+    .map(({ name }) => name)
+    .reverse();
+}
+
+/** A typed title filter as a test, case-insensitive; null while the filter is blank. */
+export function titleMatcher(filter: string): ((subscription: SubscriptionDto) => boolean) | null {
+  const term = filter.trim().toLocaleLowerCase();
+  if (term === '') return null;
+  return (subscription) => subscription.title.toLocaleLowerCase().includes(term);
 }
 
 export const SUGGESTED_TAG_LIMIT = 4;
@@ -186,14 +196,7 @@ function embeddedTagsByName(subscriptions: SubscriptionDto[]): TagDto[] {
   for (const subscription of subscriptions) {
     for (const tag of subscription.tags) {
       if (!byId.has(tag.id)) {
-        byId.set(tag.id, {
-          id: tag.id,
-          name: tag.name,
-          color: tag.color,
-          icon: tag.icon,
-          position: 0,
-          parentId: tag.parentId,
-        });
+        byId.set(tag.id, { ...tag, position: 0 });
       }
     }
   }
@@ -210,12 +213,14 @@ export function untaggedSubscriptions(subscriptions: SubscriptionDto[]): Subscri
     .sort((left, right) => left.position - right.position);
 }
 
-/** All-items list total: a feed excluded from All items (`includeInAllItems:
- *  false`) contributes nothing. */
-export function sumEntries(subscriptions: SubscriptionDto[]): number {
+/** All-items list total: a feed All items leaves out, by its own flag, a tag or its network, contributes nothing. */
+export function sumEntries(
+  subscriptions: readonly SubscriptionDto[],
+  switches: VisibilitySwitches,
+): number {
   return subscriptions.reduce(
     (total, subscription) =>
-      subscription.includeInAllItems ? total + subscription.entryCount : total,
+      isVisibleIn(subscription, 'allItems', switches) ? total + subscription.entryCount : total,
     0,
   );
 }

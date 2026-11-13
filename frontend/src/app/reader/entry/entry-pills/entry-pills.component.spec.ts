@@ -6,6 +6,7 @@ import { EntryPillsComponent } from './entry-pills.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
   id,
@@ -14,6 +15,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   icon: null,
   position: 0,
   parentId: null,
+  ...INCLUDED_EVERYWHERE,
 });
 
 const savedSearch = (id: number, term: string): SavedSearchMembershipDto => ({

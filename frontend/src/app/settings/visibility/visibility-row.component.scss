@@ -1,0 +1,87 @@
+// The matrix's column template; the section's header row reads the same one.
+:host {
+  display: grid;
+  grid-template-columns: var(--visibility-columns);
+  align-items: center;
+  min-height: var(--tap-target);
+  border-top: 1px solid var(--border);
+}
+
+.name {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--row-pad-y) var(--row-pad-x);
+  padding-left: calc(var(--space-1) + var(--visibility-depth) * var(--visibility-indent-step));
+}
+
+.chevron {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-sm);
+  color: var(--text-muted);
+}
+
+.expand {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+// The whole name cell toggles, not just the glyph: on a phone the glyph alone is too small a target.
+.expand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.expand:focus-visible {
+  outline: var(--focus-ring);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.icon:empty {
+  display: none;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-0);
+  min-height: var(--tap-target);
+  cursor: pointer;
+}
+
+.cell input {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cell.inherited input {
+  accent-color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.inherited-mark {
+  color: var(--text-muted);
+}

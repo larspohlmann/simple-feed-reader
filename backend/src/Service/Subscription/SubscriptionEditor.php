@@ -18,7 +18,6 @@ final readonly class SubscriptionEditor
         private FeedTagMove $feedTagMove,
         private OwnedSubscriptions $ownedSubscriptions,
         private PositionReorderer $reorderer,
-        private SubscriptionInclusions $inclusions,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -27,7 +26,7 @@ final readonly class SubscriptionEditor
     {
         $subscription->setCustomTitle('' === $change->customTitle ? null : $change->customTitle);
         $this->tagSync->sync($subscription, $change->tagIds, $subscription->getUser()->requireId());
-        $this->inclusions->apply($subscription, $change->inclusions);
+        $subscription->changeInclusions($change->inclusions);
         $this->entityManager->flush();
     }
 

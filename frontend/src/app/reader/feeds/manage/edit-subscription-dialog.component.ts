@@ -60,6 +60,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
   readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
+  readonly includeInTrending = signal<boolean>(this.data.includeInTrending);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly search = isSearchFeed(this.data) ? this.data.social : null;
@@ -100,6 +101,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
       includeInAllItems: this.includeInAllItems(),
       includeInForYou: this.includeInForYou(),
       includeInSavedSearches: this.includeInSavedSearches(),
+      includeInTrending: this.includeInTrending(),
     };
     this.loading.set(true);
     this.error.set(null);

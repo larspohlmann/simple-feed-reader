@@ -23,6 +23,7 @@ import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.com
 import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
+import { stepMenu } from '../../shared/menu-keys';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { OrganiseStore, OrganiseGroup, GroupKey } from './organise.store';
@@ -54,9 +55,7 @@ import { TagDragSession } from '../../reader/tag-drag-session';
 import { TagDropMark } from '../../reader/tag-drop';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
- *  value, and the i18n key for its label. A readonly literal array so the
- *  template renders the four commands from one loop instead of four
- *  near-identical buttons. */
+ *  value, and the i18n key for its label. */
 interface VisibilityMenuItem {
   readonly flag: keyof SubscriptionFlags;
   readonly value: boolean;
@@ -119,6 +118,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly failingCount = computed(() => this.subs.unhealthy().length - this.deadCount());
   protected readonly tagFilterOpen = signal(false);
   protected readonly visibilityOpen = signal(false);
+  protected readonly step = stepMenu;
 
   /** Commands, not toggles: a toggle over a mixed selection has no
    *  correct starting position (see the bulk bar's own comment in the
@@ -138,6 +138,8 @@ export class OrganiseSectionComponent implements OnInit {
       value: false,
       labelKey: 'settings.organise.hideFromSavedSearches',
     },
+    { flag: 'includeInTrending', value: true, labelKey: 'settings.organise.showInTrending' },
+    { flag: 'includeInTrending', value: false, labelKey: 'settings.organise.hideFromTrending' },
   ];
 
   protected toggleTagFilter(key: GroupKey): void {

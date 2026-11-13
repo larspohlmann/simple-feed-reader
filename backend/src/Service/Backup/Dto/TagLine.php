@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Entity\Tag;
+use App\Enum\InclusionSurface;
 use App\Service\Backup\Support\BackupLineFormat;
 use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\LineField;
+use App\Service\Backup\Support\LineFieldWithDefault;
 
 /**
  * One of the account's tags.
@@ -20,6 +22,10 @@ final readonly class TagLine
         public ?string $icon,
         public int $position,
         public ?string $parent = null,
+        public bool $includeInAllItems = true,
+        public bool $includeInForYou = true,
+        public bool $includeInSavedSearches = true,
+        public bool $includeInTrending = true,
     ) {
     }
 
@@ -34,6 +40,10 @@ final readonly class TagLine
             icon: LineField::stringOrNull($line, 'icon'),
             position: LineField::int($line, 'position'),
             parent: LineField::stringOrNull($line, 'parent'),
+            includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
+            includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
+            includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
+            includeInTrending: LineFieldWithDefault::bool($line, 'includeInTrending', true),
         );
     }
 
@@ -45,6 +55,10 @@ final readonly class TagLine
             icon: $tag->getIcon(),
             position: $tag->getPosition(),
             parent: $tag->getParent()?->getName(),
+            includeInAllItems: $tag->isIncludedIn(InclusionSurface::AllItems),
+            includeInForYou: $tag->isIncludedIn(InclusionSurface::ForYou),
+            includeInSavedSearches: $tag->isIncludedIn(InclusionSurface::SavedSearches),
+            includeInTrending: $tag->isIncludedIn(InclusionSurface::Trending),
         );
     }
 
@@ -57,6 +71,10 @@ final readonly class TagLine
             'icon' => $this->icon,
             'position' => $this->position,
             'parent' => $this->parent,
+            'includeInAllItems' => $this->includeInAllItems,
+            'includeInForYou' => $this->includeInForYou,
+            'includeInSavedSearches' => $this->includeInSavedSearches,
+            'includeInTrending' => $this->includeInTrending,
         ]);
     }
 }

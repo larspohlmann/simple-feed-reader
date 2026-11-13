@@ -27,6 +27,14 @@ export const SETTINGS_ROUTES: Routes = [
       // for stale bookmarks -- no section entry, no title, it is not a page.
       { path: 'tags', redirectTo: 'organise', pathMatch: 'full' },
       {
+        path: 'visibility',
+        title: sectionLabelKey('visibility'),
+        loadComponent: () =>
+          import('./visibility/visibility-section.component').then(
+            (module) => module.VisibilitySectionComponent,
+          ),
+      },
+      {
         path: 'feed-directory',
         title: sectionLabelKey('feed-directory'),
         loadComponent: () =>

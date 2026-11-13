@@ -11,21 +11,41 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import {
+  ActionSheetCheck,
+  ActionSheetItem,
+} from '../../shared/action-sheet/action-sheet.component';
 import { LanguageService } from '../../core/i18n/language.service';
 import { formatLongDateTime } from '../../reader/format';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
+import { SURFACE_DESCRIPTORS } from '../../reader/feed-exclusions';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 
 const SUBSCRIPTION = makeSubscription({
   id: 7,
   feedId: 7,
   title: 'heise online',
   feedUrl: 'https://heise.example/rss',
-  tags: [{ id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null }],
+  tags: [
+    {
+      id: 2,
+      name: 'Tech',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: null,
+      ...INCLUDED_EVERYWHERE,
+    },
+  ],
 });
 
 describe('OrganiseFeedRowComponent', () => {
   let fixture: ComponentFixture<OrganiseFeedRowComponent>;
   const sheetOpen = jest.fn(() => of(undefined));
+  const manage = { setInclusion: jest.fn() };
+
+  beforeEach(() => manage.setInclusion.mockClear());
 
   async function render(inputs: Record<string, unknown> = {}) {
     sheetOpen.mockClear();
@@ -39,6 +59,7 @@ describe('OrganiseFeedRowComponent', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(false) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LanguageService, useValue: { lang: () => 'en' } },
+        { provide: ManageActions, useValue: manage },
       ],
     }).compileComponents();
 
@@ -197,42 +218,34 @@ describe('OrganiseFeedRowComponent', () => {
     expect(sheetOpen).not.toHaveBeenCalled();
   });
 
-  it('emits toggleAllItems from the fine-pointer popover and closes it', async () => {
-    await render();
-    const toggled = jest.fn();
-    fixture.componentInstance.toggleAllItems.subscribe(toggled);
+  it.each(SURFACE_DESCRIPTORS)(
+    'flips the $surface switch from the fine-pointer popover and keeps it open',
+    async ({ surface, flag, dataTest }) => {
+      await render();
 
+      fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
+      fixture.detectChanges();
+      fixture.debugElement.query(By.css(`[data-test="${dataTest}"] input`)).nativeElement.click();
+      fixture.detectChanges();
+
+      expect(manage.setInclusion).toHaveBeenCalledWith(SUBSCRIPTION, surface, !SUBSCRIPTION[flag]);
+      expect(fixture.debugElement.query(By.css('.pop'))).not.toBeNull();
+    },
+  );
+
+  it('steps focus to the next switch on ArrowDown in the fine-pointer popover', async () => {
+    await render();
     fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
     fixture.detectChanges();
-    fixture.debugElement.query(By.css('[data-test="toggle-all-items"]')).nativeElement.click();
-    fixture.detectChanges();
+    const menu = fixture.debugElement.query(By.css('[role="menu"]')).nativeElement as HTMLElement;
+    const items = [
+      ...menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]'),
+    ];
+    items[0].focus();
 
-    expect(toggled).toHaveBeenCalled();
-    expect(fixture.debugElement.query(By.css('.pop'))).toBeNull();
-  });
+    items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 
-  it('emits toggleForYou from the fine-pointer popover', async () => {
-    await render();
-    const toggled = jest.fn();
-    fixture.componentInstance.toggleForYou.subscribe(toggled);
-
-    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
-    fixture.detectChanges();
-    fixture.debugElement.query(By.css('[data-test="toggle-for-you"]')).nativeElement.click();
-
-    expect(toggled).toHaveBeenCalled();
-  });
-
-  it('emits toggleSavedSearches from the fine-pointer popover', async () => {
-    await render();
-    const toggled = jest.fn();
-    fixture.componentInstance.toggleSavedSearches.subscribe(toggled);
-
-    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
-    fixture.detectChanges();
-    fixture.debugElement.query(By.css('[data-test="toggle-saved-searches"]')).nativeElement.click();
-
-    expect(toggled).toHaveBeenCalled();
+    expect(document.activeElement).toBe(items[1]);
   });
 
   it('emits unsubscribe from the fine-pointer popover', async () => {
@@ -260,6 +273,7 @@ describe('OrganiseFeedRowComponent', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(true) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LanguageService, useValue: { lang: () => 'en' } },
+        { provide: ManageActions, useValue: manage },
       ],
     }).compileComponents();
 
@@ -271,5 +285,43 @@ describe('OrganiseFeedRowComponent', () => {
 
     expect(sheetOpen).toHaveBeenCalled();
     expect(coarse.debugElement.query(By.css('.pop'))).toBeNull();
+  });
+
+  it('shows the sheet checks in step with the subscription input', async () => {
+    sheetOpen.mockClear();
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [OrganiseFeedRowComponent, provideTranslocoTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: LayoutService, useValue: { isCoarse: signal(true) } },
+        { provide: ActionSheet, useValue: { open: sheetOpen } },
+        { provide: LanguageService, useValue: { lang: () => 'en' } },
+        { provide: ManageActions, useValue: manage },
+      ],
+    }).compileComponents();
+    const coarse = TestBed.createComponent(OrganiseFeedRowComponent);
+    coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: true });
+    coarse.detectChanges();
+
+    coarse.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
+    const checks = (
+      sheetOpen.mock.calls[0] as unknown as [{ actions: ActionSheetItem[] }]
+    )[0].actions.filter((item): item is ActionSheetCheck => 'checked' in item);
+    const forYou = checks.find(({ id }) => id === 'forYou');
+
+    expect(checks.map(({ id }) => id)).toEqual(['allItems', 'forYou', 'savedSearches', 'trending']);
+    expect(forYou?.checked()).toBe(true);
+    coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: false });
+    expect(forYou?.checked()).toBe(false);
+    forYou?.toggle();
+    expect(manage.setInclusion).toHaveBeenCalledWith(
+      { ...SUBSCRIPTION, includeInForYou: false },
+      'forYou',
+      true,
+    );
   });
 });
