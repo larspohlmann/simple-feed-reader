@@ -41,6 +41,19 @@ const DE: FeedDirectoryCountryFile = {
     ['b.de', null, null, [0], [[1, 0, ['https://b.de/feed']]], null],
   ],
 };
+const MANY: FeedDirectoryCountryFile = {
+  country: 'DE',
+  categories: ['News'],
+  languages: ['de'],
+  domains: Array.from({ length: 250 }, (_unused, index) => [
+    `site${index}.de`,
+    index + 1,
+    1000,
+    [0],
+    [[0, 0, [`https://site${index}.de/feed`]]],
+    null,
+  ]),
+};
 const AT: FeedDirectoryCountryFile = {
   country: 'AT',
   categories: ['News'],
@@ -426,5 +439,55 @@ describe('FeedDirectoryStore', () => {
   it('finds the subscription behind a directory feed by its normalised address', () => {
     expect(store.subscriptionFor('http://heise.de/rss/heise.rdf/')?.id).toBe(7);
     expect(store.subscriptionFor('https://heise.de/security/rss')).toBeNull();
+  });
+
+  describe('batches', () => {
+    beforeEach(() => {
+      scope.set({ countries: ['DE'], languages: ['de'] });
+      country.mockReturnValue(of(MANY));
+      loadedStore();
+    });
+
+    it('shows the first batch and adds one on demand', () => {
+      expect(store.shownRows().length).toBe(100);
+      expect(store.hasMore()).toBe(true);
+
+      store.showMore();
+      expect(store.shownRows().length).toBe(200);
+
+      store.showMore();
+      expect(store.shownRows().length).toBe(250);
+      expect(store.hasMore()).toBe(false);
+    });
+
+    it('starts over at the first batch when a filter or the sort changes', () => {
+      store.showMore();
+      store.sort.set('az');
+      expect(store.shownRows().length).toBe(100);
+
+      store.showMore();
+      store.query.set('site2');
+      expect(store.shownRows().length).toBe(61);
+      expect(store.hasMore()).toBe(false);
+    });
+
+    it('keeps the batches shown when only the subscriptions change', () => {
+      store.showMore();
+
+      subscriptions.set([{ id: 9, feedUrl: 'https://site150.de/feed' }]);
+
+      expect(store.shownRows().length).toBe(200);
+      expect(store.shownRows().find((row) => row.host === 'site150.de')!.feeds[0].subscribed).toBe(
+        true,
+      );
+    });
+
+    it('starts over at the first batch when the directory loads again', () => {
+      store.showMore();
+
+      store.load();
+
+      expect(store.shownRows().length).toBe(100);
+    });
   });
 });
