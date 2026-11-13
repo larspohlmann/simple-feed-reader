@@ -104,14 +104,14 @@
                   }
                 </div>
               }
-              <button
-                type="button"
-                class="subscribe primary"
+              <app-button
+                class="subscribe"
+                variant="primary"
                 [disabled]="busy() !== null"
                 (click)="pick(c)"
               >
                 {{ 'dialog.addFeed.subscribe' | transloco }}
-              </button>
+              </app-button>
             </li>
           }
         </ul>
