@@ -32,7 +32,7 @@ describe('AddFeedDialogComponent', () => {
 
   function subscribeButton(fixture: { nativeElement: unknown }): HTMLButtonElement {
     return (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.card .subscribe',
+      '.card .subscribe button',
     )!;
   }
 
@@ -311,7 +311,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.detectChanges();
 
     const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
-    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    (card.querySelector('.subscribe button') as HTMLButtonElement).click();
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subTestRequest.request.body).toEqual({
       url: 'https://f/rss',
@@ -509,7 +509,7 @@ describe('AddFeedDialogComponent', () => {
     expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('Scraped');
     expect(card.querySelector('.scraped-hint')?.textContent).toContain('article list');
 
-    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    (card.querySelector('.subscribe button') as HTMLButtonElement).click();
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subTestRequest.request.body).toEqual({
       url: 'https://page.example/',
@@ -558,7 +558,7 @@ describe('AddFeedDialogComponent', () => {
     const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
     expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('Mixcloud');
 
-    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    (card.querySelector('.subscribe button') as HTMLButtonElement).click();
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subTestRequest.request.body).toEqual({
       url: 'https://api.mixcloud.com/johndigweed/cloudcasts/',
@@ -601,7 +601,7 @@ describe('AddFeedDialogComponent', () => {
     const card = (fixture.nativeElement as HTMLElement).querySelector('.card')!;
     expect(card.querySelector('.badge.format')?.textContent?.trim()).toBe('WordPress');
 
-    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    (card.querySelector('.subscribe button') as HTMLButtonElement).click();
     const subTestRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subTestRequest.request.body).toEqual({
       url: 'https://wp.example/wp-json/wp/v2/posts',
@@ -648,7 +648,7 @@ describe('AddFeedDialogComponent', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.warn')?.textContent).toContain('blocks automated access');
-    expect(element.querySelector('button.subscribe')).toBeNull();
+    expect(element.querySelector('.subscribe button')).toBeNull();
     // Nothing can be subscribed here, so the footer "Preview" would be a dead end.
     expect(element.querySelector('button[type="submit"]')).toBeNull();
     expect(close).not.toHaveBeenCalled();
@@ -697,7 +697,7 @@ describe('AddFeedDialogComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     const warn = element.querySelector('.warn');
     expect(warn?.textContent?.trim()).toBe("This page can't be subscribed.");
-    expect(element.querySelector('button.subscribe')).toBeNull();
+    expect(element.querySelector('.subscribe button')).toBeNull();
     expect(element.querySelector('button[type="submit"]')).toBeNull();
   });
 
@@ -732,7 +732,7 @@ describe('AddFeedDialogComponent', () => {
         feed: { title: 'RSS', itemCount: 3, content: 'summary', hasImages: false, items: [] },
       });
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('button.subscribe')).toBeTruthy();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.subscribe button')).toBeTruthy();
 
     // Re-search a different URL that cannot be scraped: the old cards (and their
     // Subscribe buttons) must be gone, leaving only the warning.
@@ -743,7 +743,7 @@ describe('AddFeedDialogComponent', () => {
       .flush({ candidates: [], scrapeFailureReason: 'blocked' });
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('button.subscribe')).toBeNull();
+    expect(element.querySelector('.subscribe button')).toBeNull();
     expect(element.querySelector('.card')).toBeNull();
     expect(element.querySelector('.warn')?.textContent).toContain('blocks automated access');
   });
@@ -874,7 +874,7 @@ describe('AddFeedDialogComponent', () => {
     expect(card.querySelector('.no-preview')?.textContent).toContain('logged-in Bluesky users');
     expect(card.querySelector('.preview-toggle')).toBeNull();
 
-    (card.querySelector('.subscribe') as HTMLButtonElement).click();
+    (card.querySelector('.subscribe button') as HTMLButtonElement).click();
     const subscribe = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subscribe.request.body).toEqual({
       url: 'https://bsky.app/profile/rusty-17.bsky.social',
@@ -1017,7 +1017,7 @@ describe('AddFeedDialogComponent', () => {
 
     subscribeButton(fixture).click();
     fixture.detectChanges();
-    const buttons = [...element.querySelectorAll<HTMLButtonElement>('.card .subscribe')];
+    const buttons = [...element.querySelectorAll<HTMLButtonElement>('.card .subscribe button')];
     expect(buttons.map((button) => button.disabled)).toEqual([true, true]);
     ctrl
       .expectOne('https://api.test/api/subscriptions')

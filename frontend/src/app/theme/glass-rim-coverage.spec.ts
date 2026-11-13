@@ -36,11 +36,6 @@ const EXEMPT: readonly Exemption[] = [
     reason: 'a 2px selection ring around a user colour, not chrome',
   },
   {
-    file: 'app/reader/feeds/add-feed/add-feed-dialog.component.scss',
-    selector: '.subscribe',
-    reason: 'a solid accent button: its border is its fill colour, flat like primary',
-  },
-  {
     file: 'app/settings/statistics/day-chart.component.scss',
     selector: '.chart-marker',
     reason: 'a 2px surface ring that lifts the marker dot off the chart line',
