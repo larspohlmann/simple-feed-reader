@@ -22,7 +22,9 @@ final class SignupUserFactoryTest extends DbTestCase
     /** @return iterable<string, array{string, string}> */
     public static function locales(): iterable
     {
-        yield 'a supported locale is kept' => ['de', 'de'];
+        yield 'German is kept' => ['de', 'de'];
+        yield 'French is kept' => ['fr', 'fr'];
+        yield 'Spanish is kept' => ['es', 'es'];
         yield 'an unsupported one falls back to English' => ['xx', 'en'];
     }
 

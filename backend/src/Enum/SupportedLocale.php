@@ -12,6 +12,8 @@ final class SupportedLocale
 {
     public const string ENGLISH = 'en';
     public const string GERMAN = 'de';
+    public const string FRENCH = 'fr';
+    public const string SPANISH = 'es';
 
-    public const array ALL = [self::ENGLISH, self::GERMAN];
+    public const array ALL = [self::ENGLISH, self::GERMAN, self::FRENCH, self::SPANISH];
 }

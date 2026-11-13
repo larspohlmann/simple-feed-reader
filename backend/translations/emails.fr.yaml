@@ -1,0 +1,26 @@
+# E-mails du compte. Les corps sont des chaînes entre guillemets sur une seule ligne, avec des \n explicites,
+# pour que le texte rendu reste aligné à gauche (le lien doit figurer seul sur une ligne sans retrait).
+verify:
+    subject: 'Confirmez votre adresse e-mail'
+    body: "Bienvenue sur Simple Feed Reader.\n\nConfirmez votre adresse e-mail en ouvrant ce lien :\n\n%link%\n\nLe lien est valable 24 heures. Après la confirmation, un administrateur\nexamine votre compte avant que vous puissiez vous connecter.\n\nSi vous ne vous êtes pas inscrit, ignorez ce message — le compte\nest supprimé automatiquement sous 48 heures."
+approved:
+    subject: 'Votre compte a été approuvé'
+    body: "Votre compte Simple Feed Reader a été approuvé.\n\nVous pouvez maintenant vous connecter sur %url%"
+reset:
+    subject: 'Réinitialisez votre mot de passe'
+    body: "Une réinitialisation du mot de passe a été demandée pour votre compte\nSimple Feed Reader.\n\nChoisissez un nouveau mot de passe ici :\n\n%link%\n\nLe lien est valable 24 heures et ne peut être utilisé qu'une seule fois. Si\nvous n'êtes pas à l'origine de cette demande, ignorez ce message — votre mot de passe reste inchangé."
+admin_pending_approval:
+    subject: 'Un nouvel utilisateur attend votre approbation'
+    body: "Un nouvel utilisateur s'est inscrit et a besoin de votre approbation.\n\nE-mail : %applicant_email%\nInscrit via : %method%\nUtilisateurs en attente d'approbation : %pending_count%\n\nExaminez et approuvez-les ici :\n\n%review_url%"
+    method_email_password: 'e-mail et mot de passe'
+digest:
+    subject: 'Du nouveau dans vos flux : %count% articles'
+    intro: "Voici les nouveaux articles correspondant à vos recherches enregistrées, regroupés par recherche."
+    group_heading: '%term% (%count%)'
+    more: '+ plus → %url%'
+    footer: 'Gérez votre récapitulatif dans Paramètres → E-mail.'
+    header: '%date% · %count% nouveaux articles'
+    open_reader: 'Ouvrir dans le lecteur'
+    manage_html: 'Gérez votre récapitulatif dans %link%.'
+    manage_link_label: 'Paramètres → E-mail'
+    more_link: '+%count% de plus dans « %term% »'
