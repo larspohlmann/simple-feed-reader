@@ -1684,7 +1684,7 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('one scoped refresh reloads the list once (#502)', () => {
-    it('fires exactly one entries reload and one tags reload after the run finishes', () => {
+    it('fires exactly one entries reload and one tags reload after the run finishes, and leaves the network exclusions alone', () => {
       const fixture = boot();
 
       fixture.componentInstance.refresh.refreshScoped();
@@ -1710,20 +1710,12 @@ describe('ReaderShellComponent', () => {
       const savedSearchesReloads = ctrl.match(
         (request) => request.url === 'https://api.test/api/saved-searches',
       );
-      const forYouNetworksReloads = ctrl.match(
-        (request) => request.url === 'https://api.test/api/for-you/excluded-networks',
-      );
-      const allItemsNetworksReloads = ctrl.match(
-        (request) => request.url === 'https://api.test/api/all-items/excluded-networks',
+      const networkExclusionReloads = ctrl.match((request) =>
+        request.url.endsWith('/excluded-networks'),
       );
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
-      expect(forYouNetworksReloads.length).toBe(1);
-      const trendingNetworksReloads = ctrl.match(
-        (request) => request.url === 'https://api.test/api/trending/excluded-networks',
-      );
-      expect(allItemsNetworksReloads.length).toBe(1);
-      expect(trendingNetworksReloads.length).toBe(1);
+      expect(networkExclusionReloads).toHaveLength(0);
       expect(subscriptionsReloads.length).toBe(1);
       expect(savedSearchesReloads.length).toBe(1);
 
@@ -1732,9 +1724,6 @@ describe('ReaderShellComponent', () => {
       tagsReloads[0].flush({ tags: [] });
       subscriptionsReloads[0].flush(subscriptionsBody);
       savedSearchesReloads[0].flush({ savedSearches: [] });
-      forYouNetworksReloads[0].flush({ excludedNetworks: [] });
-      allItemsNetworksReloads[0].flush({ excludedNetworks: [] });
-      trendingNetworksReloads[0].flush({ excludedNetworks: [] });
       ctrl.verify();
     });
   });
