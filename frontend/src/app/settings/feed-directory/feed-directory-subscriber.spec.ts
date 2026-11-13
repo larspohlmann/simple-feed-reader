@@ -56,6 +56,7 @@ const SEVERAL = row([
 describe('FeedDirectorySubscriber', () => {
   const isCoarse = signal(false);
   const mode = signal<FeedDirectoryMode>('channels');
+  const categories = signal<ReadonlySet<string>>(new Set());
   let closed: Subject<SubscriptionDto | undefined>;
   let dialogOpen: jest.Mock;
   let sheetOpen: jest.Mock<Observable<string | undefined>, [ActionSheetData]>;
@@ -67,6 +68,7 @@ describe('FeedDirectorySubscriber', () => {
   beforeEach(() => {
     isCoarse.set(false);
     mode.set('channels');
+    categories.set(new Set());
     closed = new Subject();
     dialogOpen = jest.fn(() => ({ closed }));
     sheetOpen = jest.fn<Observable<string | undefined>, [ActionSheetData]>(() => of(undefined));
@@ -83,6 +85,7 @@ describe('FeedDirectorySubscriber', () => {
           provide: FeedDirectoryStore,
           useValue: {
             mode,
+            categories,
             subscriptionFor: (url: string) => (url === SUBSCRIBED_URL ? { id: 7 } : null),
           },
         },
@@ -117,6 +120,19 @@ describe('FeedDirectorySubscriber', () => {
     expect(dialogOpen).toHaveBeenCalledWith(AddFeedDialogComponent, {
       panelClass: 'app-dialog',
       data: { url: 'https://www.spiegel.de/index.rss' },
+    });
+    expect(popover()).toBeNull();
+    expect(sheetOpen).not.toHaveBeenCalled();
+  });
+
+  it('opens the add-feed dialog directly when the chosen category leaves one feed', () => {
+    categories.set(new Set(['World']));
+
+    subscriber.open({ row: SEVERAL, anchor });
+
+    expect(dialogOpen).toHaveBeenCalledWith(AddFeedDialogComponent, {
+      panelClass: 'app-dialog',
+      data: { url: 'https://www.spiegel.de/ausland/index.rss' },
     });
     expect(popover()).toBeNull();
     expect(sheetOpen).not.toHaveBeenCalled();
@@ -161,6 +177,16 @@ describe('FeedDirectorySubscriber', () => {
       expect(popover()!.querySelectorAll('.feed')).toHaveLength(3);
       expect(sheetOpen).not.toHaveBeenCalled();
       expect(dialogOpen).not.toHaveBeenCalled();
+    });
+
+    it('lists only the feeds of the chosen categories', () => {
+      categories.set(new Set(['Culture']));
+
+      openPopover();
+
+      expect(
+        Array.from(popover()!.querySelectorAll('.path')).map((path) => path.textContent),
+      ).toEqual(['/kultur/index.rss', '/kultur/kino/index.rss']);
     });
 
     it('moves focus to the first feed it offers', () => {
@@ -261,6 +287,29 @@ describe('FeedDirectorySubscriber', () => {
           {
             id: 'https://www.spiegel.de/ausland/index.rss',
             label: '/ausland/index.rss',
+            symbol: 'add',
+          },
+        ],
+      });
+    });
+
+    it('offers only the feeds of the chosen categories on the sheet', () => {
+      categories.set(new Set(['Culture']));
+
+      subscriber.open({ row: SEVERAL, anchor });
+
+      expect(sheetOpen).toHaveBeenCalledWith({
+        title: 'spiegel.de · 2 feeds',
+        actions: [
+          { note: 'Culture · 2' },
+          {
+            id: 'https://www.spiegel.de/kultur/index.rss',
+            label: '/kultur/index.rss',
+            symbol: 'check',
+          },
+          {
+            id: 'https://www.spiegel.de/kultur/kino/index.rss',
+            label: '/kultur/kino/index.rss',
             symbol: 'add',
           },
         ],

@@ -154,6 +154,15 @@ export function feedsIn(row: FeedDirectoryRow, mode: FeedDirectoryMode): FeedDir
   return row.feeds.filter((feed) => feed.podcast === (mode === 'podcasts'));
 }
 
+export function shownFeeds(
+  row: FeedDirectoryRow,
+  mode: FeedDirectoryMode,
+  categories: ReadonlySet<string>,
+): FeedDirectoryFeed[] {
+  const feeds = feedsIn(row, mode);
+  return categories.size ? feeds.filter((feed) => categories.has(feed.category)) : feeds;
+}
+
 function matcher(criteria: FeedDirectoryCriteria): (row: FeedDirectoryRow) => boolean {
   const query = criteria.query.toLowerCase();
   const categories = [...criteria.categories];

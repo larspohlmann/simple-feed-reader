@@ -190,6 +190,49 @@ describe('FeedDirectoryRowComponent', () => {
     );
   });
 
+  describe('while the filter chooses categories', () => {
+    function narrowTo(categories: string[]): void {
+      fixture.componentRef.setInput('categories', new Set(categories));
+      fixture.detectChanges();
+    }
+
+    it('counts only the feeds of the chosen categories on the list button', () => {
+      const element = render({
+        ...ROW,
+        feeds: [
+          ...FEEDS,
+          feed('https://www.tagesschau.de/ausland/index~rss2.xml', { subscribed: true }),
+        ],
+      });
+      const button = (): string => text(element.querySelector('[data-test="feeds"]'));
+      expect(button()).toContain('3 feeds · 1 subscribed');
+
+      narrowTo(['World / International']);
+
+      expect(button()).toContain('2 feeds · 1 subscribed');
+    });
+
+    it('offers Subscribe straight away when one feed of the chosen categories is left', () => {
+      const element = render(ROW);
+
+      narrowTo(['Science & Technology']);
+
+      expect(element.querySelector('[data-test="subscribe"]')).not.toBeNull();
+      expect(element.querySelector('[data-test="feeds"]')).toBeNull();
+    });
+
+    it('keeps every category of the mode as a pill while the filter narrows the feeds', () => {
+      const element = render(ROW);
+
+      narrowTo(['Science & Technology']);
+
+      expect(Array.from(element.querySelectorAll('.chip')).map((chip) => text(chip))).toEqual([
+        'World / International',
+        'Science & Technology',
+      ]);
+    });
+  });
+
   it('keeps the Following label for screen readers only on a phone', () => {
     isPhone.set(true);
     const element = render({ ...ROW, following: true });
