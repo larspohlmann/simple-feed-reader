@@ -3,24 +3,24 @@ import { Observable, of } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
 import { MAGAZINE_STYLE_KEY, MagazineStyle } from './magazine-style';
 import { MagazineStyleService } from './magazine-style.service';
-import { MAGAZINE_STYLE_WRITER } from './magazine-style-writer';
+import { PREFERENCES_WRITER, ReadingPreferences } from './preferences-writer';
 
 function userWith(magazineStyle: MagazineStyle): CurrentUser {
   return { preferences: { magazineStyle } } as CurrentUser;
 }
 
 describe('MagazineStyleService', () => {
-  let written: MagazineStyle[];
+  let written: Partial<ReadingPreferences>[];
   let result: Observable<boolean>;
 
   function make(): MagazineStyleService {
     TestBed.configureTestingModule({
       providers: [
         {
-          provide: MAGAZINE_STYLE_WRITER,
+          provide: PREFERENCES_WRITER,
           useValue: {
-            write: (style: MagazineStyle) => {
-              written.push(style);
+            write: (change: Partial<ReadingPreferences>) => {
+              written.push(change);
               return result;
             },
           },
@@ -60,7 +60,7 @@ describe('MagazineStyleService', () => {
 
     expect(service.style()).toBe('airy');
     expect(localStorage.getItem(MAGAZINE_STYLE_KEY)).toBe('airy');
-    expect(written).toEqual(['airy']);
+    expect(written).toEqual([{ magazineStyle: 'airy' }]);
   });
 
   it('reports a failed account write without reverting the local value', () => {

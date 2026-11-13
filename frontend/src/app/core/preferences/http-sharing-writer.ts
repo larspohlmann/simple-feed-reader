@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../api';
 import { SharingSettings } from './sharing';
 import { SharingWriter } from './sharing-writer';
 
-/** Goes straight at `HttpClient` for the reason `HttpMagazineStyleWriter` does. */
+/** Goes straight at `HttpClient` for the reason `HttpPreferencesWriter` does. */
 @Injectable({ providedIn: 'root' })
 export class HttpSharingWriter implements SharingWriter {
   private readonly http = inject(HttpClient);

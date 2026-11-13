@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Account;
 
+use App\Entity\ReadingSettingsChange;
 use App\Entity\User;
-use App\Enum\Handedness;
-use App\Enum\MagazineStyle;
 use App\Repository\DigestSettingsRepository;
 use App\Repository\FeedDirectoryScopeRepository;
 use App\Repository\ReadingSettingsRepository;
@@ -39,21 +38,9 @@ final readonly class AccountPreferencesWriter
         $this->entityManager->flush();
     }
 
-    public function changeScrapeFallback(User $user, bool $scrapeFallbackEnabled): void
+    public function changeReadingSettings(User $user, ReadingSettingsChange $change): void
     {
-        $this->readingSettings->forUser($user)->setScrapeFallbackEnabled($scrapeFallbackEnabled);
-        $this->entityManager->flush();
-    }
-
-    public function changeMagazineStyle(User $user, MagazineStyle $magazineStyle): void
-    {
-        $this->readingSettings->forUser($user)->setMagazineStyle($magazineStyle);
-        $this->entityManager->flush();
-    }
-
-    public function changeHandedness(User $user, Handedness $handedness): void
-    {
-        $this->readingSettings->forUser($user)->setHandedness($handedness);
+        $this->readingSettings->forUser($user)->apply($change);
         $this->entityManager->flush();
     }
 
@@ -63,12 +50,6 @@ final readonly class AccountPreferencesWriter
         $settings->setEnabled($sharing->enabled);
         $settings->setHiddenTargets($sharing->hiddenTargets);
         $settings->setRememberingShares($sharing->rememberShares);
-        $this->entityManager->flush();
-    }
-
-    public function changeTrending(User $user, bool $trendingEnabled): void
-    {
-        $this->readingSettings->forUser($user)->setTrendingEnabled($trendingEnabled);
         $this->entityManager->flush();
     }
 

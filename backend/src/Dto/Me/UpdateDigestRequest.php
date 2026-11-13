@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * The whole digest configuration in one write. No field has a default: a value that falls back quietly cannot be
- * told from one the user set. Separate from UpdatePreferencesRequest so neither write resends the other.
+ * told from one the user set.
  */
 final readonly class UpdateDigestRequest
 {

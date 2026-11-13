@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { LanguageService } from '../../core/i18n/language.service';
 import { HandednessService } from '../../core/preferences/handedness.service';
-import { HANDEDNESS_WRITER } from '../../core/preferences/handedness-writer';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { PREFERENCES_WRITER } from '../../core/preferences/preferences-writer';
@@ -56,7 +55,7 @@ describe('PreferencesSectionComponent', () => {
 
   it('writes the handedness picked in its segmented choice', () => {
     const fixture = mount();
-    const write = jest.spyOn(TestBed.inject(HANDEDNESS_WRITER), 'write');
+    const write = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'write');
     const left = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
         'app-segmented-choice button',
@@ -67,7 +66,7 @@ describe('PreferencesSectionComponent', () => {
     fixture.detectChanges();
 
     expect(TestBed.inject(HandednessService).hand()).toBe('left');
-    expect(write).toHaveBeenCalledWith('left');
+    expect(write).toHaveBeenCalledWith({ handedness: 'left' });
   });
 
   it('surfaces a banner when the handedness write failed', () => {
@@ -160,14 +159,14 @@ describe('PreferencesSectionComponent', () => {
 
   it('writes the Trending preference when toggled', () => {
     const fixture = mount();
-    const writeTrending = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'writeTrending');
+    const write = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'write');
     const toggle = fixture.nativeElement.querySelector('#trending-toggle') as HTMLInputElement;
 
     toggle.click();
     fixture.detectChanges();
 
     expect(preferences.trendingEnabled()).toBe(false);
-    expect(writeTrending).toHaveBeenCalledWith(false);
+    expect(write).toHaveBeenCalledWith({ trendingEnabled: false });
   });
 
   it('surfaces a banner when the Trending write failed', () => {

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
+import { PREFERENCES_WRITER } from '../../../core/preferences/preferences-writer';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { ReadingLayoutService } from '../../reading-layout.service';
 import { ThemeService } from '../../../theme/theme.service';
@@ -15,7 +15,7 @@ describe('ViewControlsComponent', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [ViewControlsComponent, provideTranslocoTesting()],
-      providers: [{ provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } }],
+      providers: [{ provide: PREFERENCES_WRITER, useValue: { write: () => of(true) } }],
     });
   });
 

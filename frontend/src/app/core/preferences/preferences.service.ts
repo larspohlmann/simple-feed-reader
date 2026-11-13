@@ -2,7 +2,7 @@ import { Injectable, computed, inject, linkedSignal, signal } from '@angular/cor
 import { userIdClaim } from '../auth/account-identity';
 import { CurrentUser } from '../auth/auth.service';
 import { TokenStore } from '../auth/token.store';
-import { PREFERENCES_WRITER } from './preferences-writer';
+import { PREFERENCES_WRITER, writeTracked } from './preferences-writer';
 import { readDeviceValue, userDeviceKey, writeDeviceValue } from './user-device-storage';
 
 const TRENDING_ENABLED = 'trending-enabled';
@@ -53,20 +53,12 @@ export class PreferencesService {
 
   setScrapeFallbackEnabled(enabled: boolean): void {
     this.scrapeFallbackEnabled.set(enabled);
-    this.saveFailed.set(false);
-
-    this.writer.write(enabled).subscribe((ok) => {
-      if (!ok) this.saveFailed.set(true);
-    });
+    writeTracked(this.writer, { scrapeFallbackEnabled: enabled }, this.saveFailed);
   }
 
   setTrendingEnabled(enabled: boolean): void {
     this.applyTrending(enabled);
-    this.trendingSaveFailed.set(false);
-
-    this.writer.writeTrending(enabled).subscribe((ok) => {
-      if (!ok) this.trendingSaveFailed.set(true);
-    });
+    writeTracked(this.writer, { trendingEnabled: enabled }, this.trendingSaveFailed);
   }
 
   /**

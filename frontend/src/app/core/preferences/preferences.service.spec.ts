@@ -1,22 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { CurrentUser, UserPreferences } from '../auth/auth.service';
 import { Observable, of } from 'rxjs';
-import { PREFERENCES_WRITER, PreferencesWriter } from './preferences-writer';
+import { PREFERENCES_WRITER, PreferencesWriter, ReadingPreferences } from './preferences-writer';
 import { PreferencesService } from './preferences.service';
 import { SHARING_EVERYTHING } from './sharing';
 
 class FakeWriter implements PreferencesWriter {
-  written: boolean[] = [];
-  trendingWritten: boolean[] = [];
+  written: Partial<ReadingPreferences>[] = [];
   result = true;
 
-  write(enabled: boolean): Observable<boolean> {
-    this.written.push(enabled);
-    return of(this.result);
-  }
-
-  writeTrending(enabled: boolean): Observable<boolean> {
-    this.trendingWritten.push(enabled);
+  write(change: Partial<ReadingPreferences>): Observable<boolean> {
+    this.written.push(change);
     return of(this.result);
   }
 }
@@ -83,7 +77,7 @@ describe('PreferencesService', () => {
     preferencesService.setScrapeFallbackEnabled(true);
 
     expect(preferencesService.scrapeFallbackEnabled()).toBe(true);
-    expect(writer.written).toEqual([true]);
+    expect(writer.written).toEqual([{ scrapeFallbackEnabled: true }]);
     expect(preferencesService.saveFailed()).toBe(false);
   });
 
@@ -105,7 +99,6 @@ describe('PreferencesService', () => {
     expect(preferencesService.scrapeFallbackEnabled()).toBe(true);
     expect(preferencesService.trendingEnabled()).toBe(false);
     expect(writer.written).toEqual([]);
-    expect(writer.trendingWritten).toEqual([]);
   });
 
   describe('Trending (#2017, D39)', () => {
@@ -119,8 +112,7 @@ describe('PreferencesService', () => {
       preferencesService.setTrendingEnabled(false);
 
       expect(preferencesService.trendingEnabled()).toBe(false);
-      expect(writer.trendingWritten).toEqual([false]);
-      expect(writer.written).toEqual([]);
+      expect(writer.written).toEqual([{ trendingEnabled: false }]);
       expect(preferencesService.trendingSaveFailed()).toBe(false);
     });
 

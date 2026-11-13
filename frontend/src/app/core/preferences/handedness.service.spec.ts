@@ -3,24 +3,24 @@ import { Observable, of } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
 import { HANDEDNESS_KEY, Handedness } from './handedness';
 import { HandednessService } from './handedness.service';
-import { HANDEDNESS_WRITER } from './handedness-writer';
+import { PREFERENCES_WRITER, ReadingPreferences } from './preferences-writer';
 
 function userWith(handedness: Handedness): CurrentUser {
   return { preferences: { handedness } } as CurrentUser;
 }
 
 describe('HandednessService', () => {
-  let written: Handedness[];
+  let written: Partial<ReadingPreferences>[];
   let result: Observable<boolean>;
 
   function make(): HandednessService {
     TestBed.configureTestingModule({
       providers: [
         {
-          provide: HANDEDNESS_WRITER,
+          provide: PREFERENCES_WRITER,
           useValue: {
-            write: (hand: Handedness) => {
-              written.push(hand);
+            write: (change: Partial<ReadingPreferences>) => {
+              written.push(change);
               return result;
             },
           },
@@ -60,7 +60,7 @@ describe('HandednessService', () => {
 
     expect(service.hand()).toBe('left');
     expect(localStorage.getItem(HANDEDNESS_KEY)).toBe('left');
-    expect(written).toEqual(['left']);
+    expect(written).toEqual([{ handedness: 'left' }]);
   });
 
   it('reports a failed account write without reverting the local value', () => {

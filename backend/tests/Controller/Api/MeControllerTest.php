@@ -191,10 +191,12 @@ final class MeControllerTest extends ApiTestCase
 
         $client->request('POST', '/api/me/passkey-offer/answer');
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
-        $this->patch($client, '/api/me/preferences', ['scrapeFallbackEnabled' => true]);
-        $this->patch($client, '/api/me/magazine-style', ['magazineStyle' => 'airy']);
-        $this->patch($client, '/api/me/handedness', ['handedness' => 'left']);
-        $this->patch($client, '/api/me/trending', ['trendingEnabled' => false]);
+        $this->patch($client, '/api/me/preferences', [
+            'scrapeFallbackEnabled' => true,
+            'magazineStyle' => 'airy',
+            'handedness' => 'left',
+            'trendingEnabled' => false,
+        ]);
         $this->patch($client, '/api/me/feed-directory-scope', ['countries' => ['DE'], 'languages' => ['de']]);
         $this->patch(
             $client,

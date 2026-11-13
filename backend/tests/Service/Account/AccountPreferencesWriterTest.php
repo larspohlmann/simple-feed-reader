@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Account;
 
+use App\Entity\ReadingSettingsChange;
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
 use App\Enum\Handedness;
@@ -33,41 +34,20 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertSame(SupportedLocale::GERMAN, $this->reload($user)->getLocale());
     }
 
-    public function testChangeScrapeFallbackPersists(): void
+    public function testChangeReadingSettingsPersistsTheGivenOnes(): void
     {
-        $user = $this->user('prefs-scrape@example.com');
-        $wanted = !StoredUserSettings::reading($this->entityManager, $user)->isScrapeFallbackEnabled();
+        $user = $this->user('prefs-reading@example.com');
 
-        $this->writer()->changeScrapeFallback($user, $wanted);
+        $this->writer()->changeReadingSettings(
+            $user,
+            new ReadingSettingsChange(scrapeFallbackEnabled: true, handedness: Handedness::Left),
+        );
 
         $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
-        self::assertSame($wanted, $reloaded->isScrapeFallbackEnabled());
-    }
-
-    public function testChangeMagazineStylePersists(): void
-    {
-        $user = $this->user('prefs-magazine@example.com');
-        $wanted = MagazineStyle::Airy === StoredUserSettings::reading($this->entityManager, $user)->getMagazineStyle()
-            ? MagazineStyle::Boxed
-            : MagazineStyle::Airy;
-
-        $this->writer()->changeMagazineStyle($user, $wanted);
-
-        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
-        self::assertSame($wanted, $reloaded->getMagazineStyle());
-    }
-
-    public function testChangeHandednessPersists(): void
-    {
-        $user = $this->user('prefs-handedness@example.com');
-        $wanted = Handedness::Left === StoredUserSettings::reading($this->entityManager, $user)->getHandedness()
-            ? Handedness::Right
-            : Handedness::Left;
-
-        $this->writer()->changeHandedness($user, $wanted);
-
-        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
-        self::assertSame($wanted, $reloaded->getHandedness());
+        self::assertTrue($reloaded->isScrapeFallbackEnabled());
+        self::assertSame(Handedness::Left, $reloaded->getHandedness());
+        self::assertSame(MagazineStyle::Boxed, $reloaded->getMagazineStyle());
+        self::assertTrue($reloaded->isTrendingEnabled());
     }
 
     public function testChangeSharingPersistsAllThreeValues(): void
@@ -80,15 +60,6 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertFalse($reloaded->isEnabled());
         self::assertSame(['x'], $reloaded->getHiddenTargets());
         self::assertFalse($reloaded->isRememberingShares());
-    }
-
-    public function testChangeTrendingPersists(): void
-    {
-        $user = $this->user('prefs-trending@example.com');
-
-        $this->writer()->changeTrending($user, false);
-
-        self::assertFalse(StoredUserSettings::reading($this->entityManager, $this->reload($user))->isTrendingEnabled());
     }
 
     public function testChangeFeedDirectoryScopePersistsBothLists(): void

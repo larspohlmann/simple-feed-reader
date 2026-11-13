@@ -29,6 +29,14 @@ final class ReadingSettings
     #[ORM\Column(options: ['default' => true])]
     private bool $trendingEnabled = true;
 
+    public function apply(ReadingSettingsChange $change): void
+    {
+        $this->scrapeFallbackEnabled = $change->scrapeFallbackEnabled ?? $this->scrapeFallbackEnabled;
+        $this->magazineStyle = $change->magazineStyle ?? $this->magazineStyle;
+        $this->handedness = $change->handedness ?? $this->handedness;
+        $this->trendingEnabled = $change->trendingEnabled ?? $this->trendingEnabled;
+    }
+
     public function isScrapeFallbackEnabled(): bool
     {
         return $this->scrapeFallbackEnabled;
