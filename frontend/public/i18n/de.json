@@ -36,6 +36,13 @@
       "boxed": "Mit Rahmen",
       "airy": "Luftig"
     },
+    "handedness": "Händigkeit",
+    "handednessHint": "In welcher Ecke die schwebenden Knöpfe auf einem Touchscreen sitzen.",
+    "handednessSaveFailed": "Die Händigkeit konnte nicht in deinem Konto gespeichert werden.",
+    "handednessOption": {
+      "right": "Rechtshändig",
+      "left": "Linkshändig"
+    },
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",

@@ -88,6 +88,23 @@
     @if (magazineStyle.saveFailed()) {
       <app-error-banner class="state" [message]="'settings.magazineStyleSaveFailed' | transloco" />
     }
+
+    <app-settings-row
+      [title]="'settings.handedness' | transloco"
+      [description]="'settings.handednessHint' | transloco"
+      [stackable]="true"
+    >
+      <app-segmented-choice
+        [options]="handednessOptions"
+        [selected]="handedness.hand()"
+        ariaLabelKey="settings.handedness"
+        labelPrefix="settings.handednessOption."
+        (pick)="handedness.set($event)"
+      />
+    </app-settings-row>
+    @if (handedness.saveFailed()) {
+      <app-error-banner class="state" [message]="'settings.handednessSaveFailed' | transloco" />
+    }
   </app-settings-group>
   <app-sharing-settings />
 </app-settings-stack>

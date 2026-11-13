@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { LanguageService } from '../../core/i18n/language.service';
+import { HandednessService } from '../../core/preferences/handedness.service';
+import { HANDEDNESS_WRITER } from '../../core/preferences/handedness-writer';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { PREFERENCES_WRITER } from '../../core/preferences/preferences-writer';
@@ -43,13 +45,37 @@ describe('PreferencesSectionComponent', () => {
     );
   });
 
-  it('offers a segmented choice for the language and for the magazine style', () => {
+  it('offers a segmented choice for the language, the magazine style and the handedness', () => {
     const element = mount().nativeElement as HTMLElement;
     const labels = Array.from(element.querySelectorAll('app-segmented-choice [role="group"]')).map(
       (group) => group.getAttribute('aria-label'),
     );
 
-    expect(labels).toEqual(['Language', 'Magazine style']);
+    expect(labels).toEqual(['Language', 'Magazine style', 'Handedness']);
+  });
+
+  it('writes the handedness picked in its segmented choice', () => {
+    const fixture = mount();
+    const write = jest.spyOn(TestBed.inject(HANDEDNESS_WRITER), 'write');
+    const left = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        'app-segmented-choice button',
+      ),
+    ).find((button) => button.textContent?.trim() === en.settings.handednessOption.left)!;
+
+    left.click();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(HandednessService).hand()).toBe('left');
+    expect(write).toHaveBeenCalledWith('left');
+  });
+
+  it('surfaces a banner when the handedness write failed', () => {
+    const fixture = mount();
+    TestBed.inject(HandednessService).saveFailed.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(en.settings.handednessSaveFailed);
   });
 
   it('shows no banner while the language write has not failed', () => {
