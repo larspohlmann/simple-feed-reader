@@ -6,11 +6,17 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { StatisticsSectionComponent } from './statistics-section.component';
 import { SettingsApi } from '../settings-api';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
-import { SubscriptionDto } from '../../reader/models';
+import { SubscriptionDto, TagDto } from '../../reader/models';
+import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
+import { TagsStore } from '../../reader/state/tags.store';
+import { VisibilitySwitches } from '../../reader/state/visibility';
+import { VisibilitySwitchesStore } from '../../reader/state/visibility-switches.store';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
 import { ReadingActivity } from '../settings.models';
 
 interface StoreState {
   subscriptions?: SubscriptionDto[];
+  tags?: TagDto[];
   totalUnread?: number;
   viewedCount?: number;
   favoritesCount?: number;
@@ -36,6 +42,23 @@ function socialFeed(title: string, unreadCount: number): SubscriptionDto {
   } as unknown as SubscriptionDto;
 }
 
+function tag(id: number, overrides: Partial<TagDto> = {}): TagDto {
+  return {
+    id,
+    name: `Tag ${id}`,
+    color: null,
+    icon: null,
+    position: 0,
+    parentId: null,
+    ...INCLUDED_EVERYWHERE,
+    ...overrides,
+  };
+}
+
+function tagged(subscription: SubscriptionDto, carried: TagDto): SubscriptionDto {
+  return { ...subscription, tags: [carried] };
+}
+
 function excludedFromAllItems(subscription: SubscriptionDto): SubscriptionDto {
   return { ...subscription, includeInAllItems: false };
 }
@@ -56,6 +79,20 @@ function activity(overrides: Partial<ReadingActivity>): ReadingActivity {
 
 describe('StatisticsSectionComponent', () => {
   const loadIfStale = jest.fn();
+  const loadTags = jest.fn();
+  const loadExclusions = jest.fn();
+
+  function switchesOf(tags: TagDto[]): VisibilitySwitches {
+    return {
+      tags,
+      excludedNetworks: {
+        allItems: new Set(),
+        forYou: new Set(),
+        savedSearches: new Set(),
+        trending: new Set(),
+      },
+    };
+  }
 
   function mount(
     options: {
@@ -80,6 +117,12 @@ describe('StatisticsSectionComponent', () => {
             favoritesCount: signal(store.favoritesCount ?? 0),
           },
         },
+        { provide: TagsStore, useValue: { load: loadTags } },
+        { provide: NetworkSurfaceSwitches, useValue: { loadExclusions } },
+        {
+          provide: VisibilitySwitchesStore,
+          useValue: { switches: signal(switchesOf(store.tags ?? [])) },
+        },
         {
           provide: SettingsApi,
           useValue: {
@@ -100,12 +143,30 @@ describe('StatisticsSectionComponent', () => {
 
   beforeEach(() => {
     loadIfStale.mockReset();
+    loadTags.mockReset();
+    loadExclusions.mockReset();
     sequence = 0;
   });
 
   it('loads the subscription counts', () => {
     mount();
     expect(loadIfStale).toHaveBeenCalled();
+  });
+
+  it('loads the tag and network switches the unread tile reads', () => {
+    mount();
+    expect(loadTags).toHaveBeenCalled();
+    expect(loadExclusions).toHaveBeenCalled();
+  });
+
+  it('leaves a feed whose tag is switched out of All items out of the unread tile', () => {
+    const hidden = tag(1, { includeInAllItems: false });
+    const fixture = mount({
+      store: { subscriptions: [feed('A', 100), tagged(feed('B', 37), hidden)], tags: [hidden] },
+    });
+    const unread = fixture.nativeElement.querySelectorAll('.tile-value')[1];
+
+    expect(unread.textContent?.trim()).toBe('100');
   });
 
   it('renders the section as a settings group', () => {
