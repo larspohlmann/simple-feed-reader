@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Me\UpdateFeedDirectoryScopeRequest;
-use App\Dto\Me\UpdateHandednessRequest;
-use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Dto\Me\UpdateSharingRequest;
-use App\Dto\Me\UpdateTrendingRequest;
 use App\Entity\User;
 use App\Http\MeProfileJson;
 use App\Http\PartialPatchPayload;
@@ -39,45 +36,12 @@ final readonly class ReaderPreferencesController
     }
 
     /** Its own PATCH for the reason updatePreferences() gives. */
-    #[Route('/api/me/magazine-style', name: 'api_me_update_magazine_style', methods: ['PATCH'])]
-    public function updateMagazineStyle(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateMagazineStyleRequest $request,
-    ): JsonResponse {
-        $this->preferences->changeMagazineStyle($user, $request->magazineStyle);
-
-        return new JsonResponse($this->profile->of($user));
-    }
-
-    /** Its own PATCH for the reason updatePreferences() gives. */
-    #[Route('/api/me/handedness', name: 'api_me_update_handedness', methods: ['PATCH'])]
-    public function updateHandedness(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateHandednessRequest $request,
-    ): JsonResponse {
-        $this->preferences->changeHandedness($user, $request->handedness);
-
-        return new JsonResponse($this->profile->of($user));
-    }
-
-    /** Its own PATCH for the reason updatePreferences() gives. */
     #[Route('/api/me/sharing', name: 'api_me_update_sharing', methods: ['PATCH'])]
     public function updateSharing(
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateSharingRequest $request,
     ): JsonResponse {
         $this->preferences->changeSharing($user, $request->toSettings());
-
-        return new JsonResponse($this->profile->of($user));
-    }
-
-    /** Its own PATCH for the reason updatePreferences() gives. */
-    #[Route('/api/me/trending', name: 'api_me_update_trending', methods: ['PATCH'])]
-    public function updateTrending(
-        #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateTrendingRequest $request,
-    ): JsonResponse {
-        $this->preferences->changeTrending($user, $request->trendingEnabled);
 
         return new JsonResponse($this->profile->of($user));
     }

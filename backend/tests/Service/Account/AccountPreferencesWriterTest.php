@@ -50,32 +50,6 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertTrue($reloaded->isTrendingEnabled());
     }
 
-    public function testChangeMagazineStylePersists(): void
-    {
-        $user = $this->user('prefs-magazine@example.com');
-        $wanted = MagazineStyle::Airy === StoredUserSettings::reading($this->entityManager, $user)->getMagazineStyle()
-            ? MagazineStyle::Boxed
-            : MagazineStyle::Airy;
-
-        $this->writer()->changeMagazineStyle($user, $wanted);
-
-        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
-        self::assertSame($wanted, $reloaded->getMagazineStyle());
-    }
-
-    public function testChangeHandednessPersists(): void
-    {
-        $user = $this->user('prefs-handedness@example.com');
-        $wanted = Handedness::Left === StoredUserSettings::reading($this->entityManager, $user)->getHandedness()
-            ? Handedness::Right
-            : Handedness::Left;
-
-        $this->writer()->changeHandedness($user, $wanted);
-
-        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
-        self::assertSame($wanted, $reloaded->getHandedness());
-    }
-
     public function testChangeSharingPersistsAllThreeValues(): void
     {
         $user = $this->user('prefs-sharing@example.com');
@@ -86,15 +60,6 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertFalse($reloaded->isEnabled());
         self::assertSame(['x'], $reloaded->getHiddenTargets());
         self::assertFalse($reloaded->isRememberingShares());
-    }
-
-    public function testChangeTrendingPersists(): void
-    {
-        $user = $this->user('prefs-trending@example.com');
-
-        $this->writer()->changeTrending($user, false);
-
-        self::assertFalse(StoredUserSettings::reading($this->entityManager, $this->reload($user))->isTrendingEnabled());
     }
 
     public function testChangeFeedDirectoryScopePersistsBothLists(): void

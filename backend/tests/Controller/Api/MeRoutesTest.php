@@ -28,25 +28,10 @@ final class MeRoutesTest extends ApiTestCase
             '/api/me/preferences',
             ReaderPreferencesController::class . '::updatePreferences',
         ],
-        'api_me_update_magazine_style' => [
-            'PATCH',
-            '/api/me/magazine-style',
-            ReaderPreferencesController::class . '::updateMagazineStyle',
-        ],
-        'api_me_update_handedness' => [
-            'PATCH',
-            '/api/me/handedness',
-            ReaderPreferencesController::class . '::updateHandedness',
-        ],
         'api_me_update_sharing' => [
             'PATCH',
             '/api/me/sharing',
             ReaderPreferencesController::class . '::updateSharing',
-        ],
-        'api_me_update_trending' => [
-            'PATCH',
-            '/api/me/trending',
-            ReaderPreferencesController::class . '::updateTrending',
         ],
         'api_me_update_feed_directory_scope' => [
             'PATCH',

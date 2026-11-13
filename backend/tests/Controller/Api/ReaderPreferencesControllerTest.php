@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
+use App\Enum\Handedness;
+use App\Enum\MagazineStyle;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StoredUserSettings;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -13,16 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class ReaderPreferencesControllerTest extends ApiTestCase
 {
-    private function patchTrending(KernelBrowser $client, string $body): void
-    {
-        $client->request(
-            'PATCH',
-            '/api/me/trending',
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: $body,
-        );
-    }
-
     private function trendingEnabled(KernelBrowser $client): mixed
     {
         $preferences = $this->payload($client)['preferences'];
@@ -263,7 +255,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         $client = self::createClient();
         $this->signIn($client, 'no-trending@example.test');
 
-        $this->patchTrending($client, '{"trendingEnabled":false}');
+        $this->patchPreferences($client, '{"trendingEnabled":false}');
 
         self::assertResponseIsSuccessful();
         self::assertFalse($this->trendingEnabled($client));
@@ -278,58 +270,61 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->signIn($client, 'trending-again@example.test');
-        $this->patchTrending($client, '{"trendingEnabled":false}');
+        $this->patchPreferences($client, '{"trendingEnabled":false}');
 
-        $this->patchTrending($client, '{"trendingEnabled":true}');
+        $this->patchPreferences($client, '{"trendingEnabled":true}');
 
         self::assertResponseIsSuccessful();
         self::assertTrue($this->trendingEnabled($client));
     }
 
-    public function testAnEmptyBodyIsRejectedRatherThanSilentlySwitchingTrendingOff(): void
+    public function testAnUnknownHandednessIsRejected(): void
     {
         $client = self::createClient();
-        $this->signIn($client, 'trending-empty@example.test');
+        $this->signIn($client, 'ambidextrous@example.test');
 
-        $this->patchTrending($client, '{}');
+        $this->patchPreferences($client, '{"handedness":"both"}');
 
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
-    public function testANonBooleanIsRejected(): void
+    public function testChangingTheStyleAndHandednessPersistsThem(): void
     {
         $client = self::createClient();
-        $this->signIn($client, 'trending-yes@example.test');
+        $this->signIn($client, 'airy-left@example.test');
 
-        $this->patchTrending($client, '{"trendingEnabled":"no"}');
+        $this->patchPreferences($client, '{"magazineStyle":"airy","handedness":"left"}');
 
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->entityManager()->clear();
+        $reloaded = $this->users()->findOneBy(['email' => 'airy-left@example.test']);
+        self::assertNotNull($reloaded);
+        $stored = StoredUserSettings::reading($this->entityManager(), $reloaded);
+        self::assertSame(MagazineStyle::Airy, $stored->getMagazineStyle());
+        self::assertSame(Handedness::Left, $stored->getHandedness());
     }
 
-    public function testASignedOutClientIsRejected(): void
+    /** @return iterable<string, array{string}> */
+    public static function retiredSettingRoutes(): iterable
     {
-        $client = self::createClient();
-
-        $this->patchTrending($client, '{"trendingEnabled":false}');
-
-        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        yield 'magazine style' => ['/api/me/magazine-style'];
+        yield 'trending' => ['/api/me/trending'];
+        yield 'handedness' => ['/api/me/handedness'];
     }
 
-    public function testAPreferencesWriteLeavesTrendingAlone(): void
+    #[DataProvider('retiredSettingRoutes')]
+    public function testTheRetiredSettingRoutesAreGone(string $path): void
     {
         $client = self::createClient();
-        $this->signIn($client, 'trending-independent@example.test');
-        $this->patchTrending($client, '{"trendingEnabled":false}');
+        $this->signIn($client, 'retired' . md5($path) . '@example.test');
 
         $client->request(
             'PATCH',
-            '/api/me/preferences',
+            $path,
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: '{"scrapeFallbackEnabled":true}',
+            content: '{"magazineStyle":"airy","trendingEnabled":false,"handedness":"left"}',
         );
 
-        self::assertResponseIsSuccessful();
-        self::assertFalse($this->trendingEnabled($client));
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
     public function testANewAccountHasNoFeedDirectoryScope(): void

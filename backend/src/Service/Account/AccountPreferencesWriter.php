@@ -6,8 +6,6 @@ namespace App\Service\Account;
 
 use App\Entity\ReadingSettingsChange;
 use App\Entity\User;
-use App\Enum\Handedness;
-use App\Enum\MagazineStyle;
 use App\Repository\DigestSettingsRepository;
 use App\Repository\FeedDirectoryScopeRepository;
 use App\Repository\ReadingSettingsRepository;
@@ -46,30 +44,12 @@ final readonly class AccountPreferencesWriter
         $this->entityManager->flush();
     }
 
-    public function changeMagazineStyle(User $user, MagazineStyle $magazineStyle): void
-    {
-        $this->readingSettings->forUser($user)->setMagazineStyle($magazineStyle);
-        $this->entityManager->flush();
-    }
-
-    public function changeHandedness(User $user, Handedness $handedness): void
-    {
-        $this->readingSettings->forUser($user)->setHandedness($handedness);
-        $this->entityManager->flush();
-    }
-
     public function changeSharing(User $user, SharingSettingsModel $sharing): void
     {
         $settings = $this->sharingSettings->forUser($user);
         $settings->setEnabled($sharing->enabled);
         $settings->setHiddenTargets($sharing->hiddenTargets);
         $settings->setRememberingShares($sharing->rememberShares);
-        $this->entityManager->flush();
-    }
-
-    public function changeTrending(User $user, bool $trendingEnabled): void
-    {
-        $this->readingSettings->forUser($user)->setTrendingEnabled($trendingEnabled);
         $this->entityManager->flush();
     }
 
