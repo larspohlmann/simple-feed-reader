@@ -12,7 +12,7 @@ describe('SubscriptionReload', () => {
   let reload: SubscriptionReload;
   let reloadSubscriptions: jest.SpyInstance;
   let reloadSavedSearches: jest.SpyInstance;
-  let reloadTrending: jest.SpyInstance;
+  let reloadIfShowing: jest.SpyInstance;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -30,37 +30,33 @@ describe('SubscriptionReload', () => {
     reloadSavedSearches = jest
       .spyOn(TestBed.inject(SavedSearchesStore), 'load')
       .mockImplementation(() => undefined);
-    reloadTrending = jest
-      .spyOn(TestBed.inject(EntriesStore), 'reloadTrending')
+    reloadIfShowing = jest
+      .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
       .mockImplementation(() => undefined);
   });
 
   it('reloads only the subscriptions when the write left the saved-search flag alone', () => {
-    reload.afterWrite({});
+    reload.afterWrite([]);
 
     expect(reloadSubscriptions).toHaveBeenCalledTimes(1);
     expect(reloadSavedSearches).not.toHaveBeenCalled();
-    expect(reloadTrending).not.toHaveBeenCalled();
+    expect(reloadIfShowing).not.toHaveBeenCalled();
   });
 
-  it.each([true, false])(
-    'also reloads saved searches when the write set the flag to %s',
-    (includeInSavedSearches) => {
-      reload.afterWrite({ includeInSavedSearches });
+  it('also reloads saved searches when the write changed their switch', () => {
+    reload.afterWrite(['savedSearches']);
 
-      expect(reloadSubscriptions).toHaveBeenCalledTimes(1);
-      expect(reloadSavedSearches).toHaveBeenCalledTimes(1);
-    },
-  );
+    expect(reloadSubscriptions).toHaveBeenCalledTimes(1);
+    expect(reloadSavedSearches).toHaveBeenCalledTimes(1);
+    expect(reloadIfShowing).not.toHaveBeenCalledWith('trending');
+  });
 
-  it.each([true, false])(
-    'also reloads the Trending list when the write set its flag to %s',
-    (includeInTrending) => {
-      reload.afterWrite({ includeInTrending });
+  it('also reloads the Trending list when the write changed its switch', () => {
+    reload.afterWrite(['trending']);
 
-      expect(reloadSubscriptions).toHaveBeenCalledTimes(1);
-      expect(reloadTrending).toHaveBeenCalledTimes(1);
-      expect(reloadSavedSearches).not.toHaveBeenCalled();
-    },
-  );
+    expect(reloadSubscriptions).toHaveBeenCalledTimes(1);
+    expect(reloadIfShowing).toHaveBeenCalledTimes(1);
+    expect(reloadIfShowing).toHaveBeenCalledWith('trending');
+    expect(reloadSavedSearches).not.toHaveBeenCalled();
+  });
 });

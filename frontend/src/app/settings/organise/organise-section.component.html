@@ -318,7 +318,6 @@
           [selected]="store.selectedIds().has(s.id)"
           (selectedChange)="store.toggleFeed(s.id)"
           (edit)="manage.editSubscription(s)"
-          (flagToggled)="flipFlag($event, s)"
           (unsubscribe)="manage.unsubscribe(s)"
         />
       }

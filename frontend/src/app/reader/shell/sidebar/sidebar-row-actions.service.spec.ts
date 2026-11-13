@@ -1,10 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject, of } from 'rxjs';
-import { signal } from '@angular/core';
-import { SocialNetworkName } from '../../../core/social-network';
-import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
-import { ForYouNetworksStore } from '../../state/for-you-networks.store';
-import { TrendingNetworksStore } from '../../state/trending-networks.store';
+import { computed, signal } from '@angular/core';
+import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
+import { NETWORK_EXCLUSION_STORES } from '../../state/network-exclusions.store';
+import { NetworkSurfaceSwitches } from '../../state/network-surface-switches.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -24,7 +23,8 @@ import {
 } from '../../../shared/action-sheet/action-sheet.component';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
-import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
+import { ExclusionSurface, INCLUSION_FLAG } from '../../feed-exclusions';
 
 describe('SidebarRowActions', () => {
   it("titles an unrenamed Home's feed sheet with the Home's label", () => {
@@ -36,10 +36,7 @@ describe('SidebarRowActions', () => {
         { provide: ActionSheet, useValue: { open } },
         { provide: ManageActions, useValue: {} },
         { provide: TagActions, useValue: {} },
-        { provide: SavedSearchesStore, useValue: {} },
-        { provide: ForYouNetworksStore, useValue: {} },
-        { provide: AllItemsNetworksStore, useValue: {} },
-        { provide: TrendingNetworksStore, useValue: {} },
+        { provide: NetworkSurfaceSwitches, useValue: {} },
         { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
         { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
       ],
@@ -52,31 +49,30 @@ describe('SidebarRowActions', () => {
   describe('the feed sheet', () => {
     const feed = makeSubscription({ id: 5, title: 'Feed five' });
     const subscriptions = signal<SubscriptionDto[]>([feed]);
-    const setIncludeInForYou = jest.fn((subscription: SubscriptionDto, included: boolean) =>
-      subscriptions.update((current) =>
-        current.map((listed) =>
-          listed.id === subscription.id ? { ...listed, includeInForYou: included } : listed,
+    const setInclusion = jest.fn(
+      (subscription: SubscriptionDto, surface: ExclusionSurface, included: boolean) =>
+        subscriptions.update((current) =>
+          current.map((listed) =>
+            listed.id === subscription.id
+              ? { ...listed, [INCLUSION_FLAG[surface]]: included }
+              : listed,
+          ),
         ),
-      ),
     );
     const sheetOpen = jest.fn();
 
     beforeEach(() => {
       subscriptions.set([feed]);
-      setIncludeInForYou.mockClear();
+      setInclusion.mockClear();
       sheetOpen.mockReset();
       TestBed.configureTestingModule({
         imports: [provideTranslocoTesting()],
         providers: [
           SidebarRowActions,
           { provide: ActionSheet, useValue: { open: sheetOpen } },
-          { provide: ManageActions, useValue: { setIncludeInForYou } },
+          { provide: ManageActions, useValue: { setInclusion } },
           { provide: TagActions, useValue: {} },
-          { provide: SavedSearchesStore, useValue: {} },
-          { provide: ForYouNetworksStore, useValue: {} },
-          { provide: AllItemsNetworksStore, useValue: {} },
-          { provide: TrendingNetworksStore, useValue: {} },
-          { provide: TrendingNetworksStore, useValue: {} },
+          { provide: NetworkSurfaceSwitches, useValue: {} },
           { provide: SubscriptionsStore, useValue: { subscriptions } },
           { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
         ],
@@ -117,7 +113,10 @@ describe('SidebarRowActions', () => {
       expect(forYou.checked()).toBe(false);
       forYou.toggle();
 
-      expect(setIncludeInForYou.mock.calls.map(([, included]) => included)).toEqual([false, true]);
+      expect(setInclusion.mock.calls.map(([, surface, included]) => [surface, included])).toEqual([
+        ['forYou', false],
+        ['forYou', true],
+      ]);
       expect(forYou.checked()).toBe(true);
     });
 
@@ -194,19 +193,21 @@ describe('SidebarRowActions', () => {
           { provide: SocialFeedsPicker, useValue: { open: pickerOpen } },
           {
             provide: SavedSearchesStore,
-            useValue: { includedNetworks, toggleNetwork },
+            useValue: {
+              excludedNetworks: computed(
+                () =>
+                  new Set(SOCIAL_NETWORKS.filter((network) => !includedNetworks().has(network))),
+              ),
+              toggleNetwork,
+            },
           },
           {
-            provide: ForYouNetworksStore,
-            useValue: { excludedNetworks, toggleNetwork: forYouToggle },
-          },
-          {
-            provide: AllItemsNetworksStore,
-            useValue: { excludedNetworks: allItemsExcluded, toggleNetwork: allItemsToggle },
-          },
-          {
-            provide: TrendingNetworksStore,
-            useValue: { excludedNetworks: trendingExcluded, toggleNetwork: trendingToggle },
+            provide: NETWORK_EXCLUSION_STORES,
+            useValue: {
+              allItems: { excludedNetworks: allItemsExcluded, toggleNetwork: allItemsToggle },
+              forYou: { excludedNetworks, toggleNetwork: forYouToggle },
+              trending: { excludedNetworks: trendingExcluded, toggleNetwork: trendingToggle },
+            },
           },
           { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
           { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
@@ -352,11 +353,7 @@ describe('SidebarRowActions', () => {
             provide: TagActions,
             useValue: { reorderTags, editTag, deleteTag, createTag, setTagInclusion },
           },
-          { provide: SavedSearchesStore, useValue: {} },
-          { provide: ForYouNetworksStore, useValue: {} },
-          { provide: AllItemsNetworksStore, useValue: {} },
-          { provide: TrendingNetworksStore, useValue: {} },
-          { provide: TrendingNetworksStore, useValue: {} },
+          { provide: NetworkSurfaceSwitches, useValue: {} },
           { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
           { provide: TagsStore, useValue: tagsStoreStub(tags) },
         ],

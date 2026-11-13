@@ -1,5 +1,5 @@
 import { moveItemInArray } from '@angular/cdk/drag-drop';
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import {
@@ -15,10 +15,9 @@ import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker
 import { SubscriptionDto, TagDto } from '../../models';
 import {
   ExclusionSurface,
-  FEED_FLAG_TOGGLES,
-  FeedFlagToggle,
-  INCLUSION_FLAG,
   flipFeedFlag,
+  isIncludedIn,
+  surfaceChecks,
 } from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
 import { NetworkSurfaceSwitches } from '../../state/network-surface-switches.service';
@@ -41,7 +40,7 @@ export class SidebarRowActions {
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly networkSurfaceSwitches = inject(NetworkSurfaceSwitches).all;
+  private readonly networkSwitches = inject(NetworkSurfaceSwitches);
 
   readonly menuFor = signal<string | null>(null);
 
@@ -119,14 +118,10 @@ export class SidebarRowActions {
 
   /** The tag's surface switches, for its sheet and its menu alike; each reads the live tag. */
   tagSurfaceChecks(tag: TagDto): ActionSheetCheck[] {
-    return FEED_FLAG_TOGGLES.map(({ surface, includeKey }) => {
-      const checked = computed(() => this.liveTag(tag)[INCLUSION_FLAG[surface]]);
-      return {
-        id: surface,
-        label: this.transloco.translate(includeKey),
-        checked,
-        toggle: () => this.tagActions.setTagInclusion(tag, surface, !checked()),
-      };
+    return surfaceChecks(this.transloco, {
+      isIncluded: (surface) => isIncludedIn(this.liveTag(tag), surface),
+      flip: (surface) =>
+        this.tagActions.setTagInclusion(tag, surface, !isIncludedIn(this.liveTag(tag), surface)),
     });
   }
 
@@ -176,12 +171,10 @@ export class SidebarRowActions {
   }
 
   private feedFlagChecks(subscription: SubscriptionDto): ActionSheetCheck[] {
-    return FEED_FLAG_TOGGLES.map((toggle) => ({
-      id: toggle.surface,
-      label: this.transloco.translate(toggle.includeKey),
-      checked: computed(() => toggle.isIncluded(this.liveSubscription(subscription))),
-      toggle: () => this.toggleFeedFlag(toggle, subscription),
-    }));
+    return surfaceChecks(this.transloco, {
+      isIncluded: (surface) => isIncludedIn(this.liveSubscription(subscription), surface),
+      flip: (surface) => this.toggleFeedFlag(surface, subscription),
+    });
   }
 
   /** The row the menu opened on may predate a tick that has since patched the store. */
@@ -214,22 +207,18 @@ export class SidebarRowActions {
   /** The network head's switches, for its sheet and its menu alike. */
   networkSurfaceChecks(section: SocialSection): ActionSheetCheck[] {
     const network = section.network;
-    return this.networkSurfaceSwitches.map((surfaceSwitch) => ({
-      id: surfaceSwitch.surface,
-      label: this.transloco.translate(surfaceSwitch.labelKey),
-      checked: computed(() => !surfaceSwitch.isExcluded(network)),
-      toggle: () => surfaceSwitch.toggle(network),
-    }));
+    return surfaceChecks(this.transloco, {
+      isIncluded: (surface) => !this.networkSwitches.isExcluded(network, surface),
+      flip: (surface) => this.networkSwitches.toggle(network, surface),
+    });
   }
 
   networkExcludedSurfaces(network: SocialSection['network']): ExclusionSurface[] {
-    return this.networkSurfaceSwitches
-      .filter((surfaceSwitch) => surfaceSwitch.isExcluded(network))
-      .map(({ surface }) => surface);
+    return this.networkSwitches.excludedSurfaces(network);
   }
 
-  toggleFeedFlag(toggle: FeedFlagToggle, subscription: SubscriptionDto): void {
-    flipFeedFlag(this.manage, toggle, this.liveSubscription(subscription));
+  toggleFeedFlag(surface: ExclusionSurface, subscription: SubscriptionDto): void {
+    flipFeedFlag(this.manage, surface, this.liveSubscription(subscription));
   }
 
   socialAccountActions(section: SocialSection): ActionSheetAction[] {

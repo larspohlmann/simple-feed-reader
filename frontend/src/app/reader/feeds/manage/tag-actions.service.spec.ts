@@ -134,8 +134,8 @@ describe('TagActions', () => {
       jest
         .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
         .mockImplementation(() => undefined);
-      const reloadTrending = jest
-        .spyOn(TestBed.inject(EntriesStore), 'reloadTrending')
+      const reloadIfShowing = jest
+        .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
         .mockImplementation(() => undefined);
 
       service.setTagInclusion(tag, 'trending', false);
@@ -145,7 +145,8 @@ describe('TagActions', () => {
       );
       testRequest.flush({ tag });
 
-      expect(reloadTrending).toHaveBeenCalledTimes(1);
+      expect(reloadIfShowing).toHaveBeenCalledTimes(1);
+      expect(reloadIfShowing).toHaveBeenCalledWith('trending');
     });
 
     it('reloads the tags after a failed write, which snaps the switch back', () => {

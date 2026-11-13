@@ -28,7 +28,8 @@ import { TrendingUnopened } from '../trending/trending.models';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { anEntry } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
-import { makeTag, INCLUDED_EVERYWHERE } from '../testing/tag.factory';
+import { makeTag } from '../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 const tag = (id: number, name: string): TagDto => ({
   id,

@@ -1,5 +1,5 @@
 import { TagDto } from '../models';
-import { INCLUDED_EVERYWHERE } from '../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 import { tagsById, withAncestors } from './tag-ancestry';
 
 const tag = (id: number, parentId: number | null): TagDto => ({

@@ -1,58 +1,37 @@
 import { Injectable, inject } from '@angular/core';
 import { SocialNetworkName } from '../../core/social-network';
-import { ExclusionSurface } from '../feed-exclusions';
-import { AllItemsNetworksStore } from './all-items-networks.store';
-import { ForYouNetworksStore } from './for-you-networks.store';
+import { EXCLUSION_SURFACES, ExclusionSurface } from '../feed-exclusions';
+import { NETWORK_EXCLUSION_STORES, NetworkSwitchStore } from './network-exclusions.store';
 import { SavedSearchesStore } from './saved-searches.store';
-import { TrendingNetworksStore } from './trending-networks.store';
 
-export interface NetworkSurfaceSwitch {
-  readonly surface: ExclusionSurface;
-  readonly isExcluded: (network: SocialNetworkName) => boolean;
-  readonly toggle: (network: SocialNetworkName) => void;
-  readonly labelKey: string;
-}
-
-/** A network's surface switches over their stores, whatever default each store keeps. */
+/** Every surface's network switches, one store each. */
 @Injectable({ providedIn: 'root' })
 export class NetworkSurfaceSwitches {
-  private readonly allItemsNetworks = inject(AllItemsNetworksStore);
-  private readonly forYouNetworks = inject(ForYouNetworksStore);
-  private readonly savedSearches = inject(SavedSearchesStore);
-  private readonly trendingNetworks = inject(TrendingNetworksStore);
+  private readonly excludingStores = inject(NETWORK_EXCLUSION_STORES);
+  private readonly stores: Readonly<Record<ExclusionSurface, NetworkSwitchStore>> = {
+    ...this.excludingStores,
+    savedSearches: inject(SavedSearchesStore),
+  };
+
+  excludedNetworks(surface: ExclusionSurface): ReadonlySet<SocialNetworkName> {
+    return this.stores[surface].excludedNetworks();
+  }
+
+  isExcluded(network: SocialNetworkName, surface: ExclusionSurface): boolean {
+    return this.excludedNetworks(surface).has(network);
+  }
+
+  toggle(network: SocialNetworkName, surface: ExclusionSurface): void {
+    this.stores[surface].toggleNetwork(network);
+  }
 
   /** In title order: the network marker names its surfaces in this order. */
-  readonly all: readonly NetworkSurfaceSwitch[] = [
-    {
-      surface: 'allItems',
-      isExcluded: (network) => this.allItemsNetworks.excludedNetworks().has(network),
-      toggle: (network) => this.allItemsNetworks.toggleNetwork(network),
-      labelKey: 'reader.includeInAllItems',
-    },
-    {
-      surface: 'forYou',
-      isExcluded: (network) => this.forYouNetworks.excludedNetworks().has(network),
-      toggle: (network) => this.forYouNetworks.toggleNetwork(network),
-      labelKey: 'reader.includeInForYou',
-    },
-    {
-      surface: 'savedSearches',
-      isExcluded: (network) => !this.savedSearches.includedNetworks().has(network),
-      toggle: (network) => this.savedSearches.toggleNetwork(network),
-      labelKey: 'reader.includeInSavedSearches',
-    },
-    {
-      surface: 'trending',
-      isExcluded: (network) => this.trendingNetworks.excludedNetworks().has(network),
-      toggle: (network) => this.trendingNetworks.toggleNetwork(network),
-      labelKey: 'reader.includeInTrending',
-    },
-  ];
+  excludedSurfaces(network: SocialNetworkName): ExclusionSurface[] {
+    return EXCLUSION_SURFACES.filter((surface) => this.isExcluded(network, surface));
+  }
 
   /** Learns each surface's excluded networks; saved searches learn theirs with the searches. */
   loadExclusions(): void {
-    this.allItemsNetworks.load();
-    this.forYouNetworks.load();
-    this.trendingNetworks.load();
+    Object.values(this.excludingStores).forEach((store) => store.load());
   }
 }

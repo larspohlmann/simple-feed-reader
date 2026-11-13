@@ -3,6 +3,7 @@ import { makeSubscription } from '../testing/subscription.factory';
 import { makeTag } from '../testing/tag.factory';
 import { sumEntries, suggestedTags } from './subscription-derivations';
 import { VisibilitySwitches } from './visibility';
+import { tagsById } from './tag-ancestry';
 
 const news = makeTag(1, 'News');
 const tech = makeTag(2, 'Tech');
@@ -58,7 +59,7 @@ describe('sumEntries', () => {
     tags: readonly TagDto[],
     allItemsExcluded: readonly ('bluesky' | 'mastodon')[] = [],
   ): VisibilitySwitches => ({
-    tags,
+    tagsById: tagsById(tags),
     excludedNetworks: {
       allItems: new Set(allItemsExcluded),
       forYou: new Set(),

@@ -1,19 +1,19 @@
-import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { NetworkExclusionSurface, NetworkExclusionsApi } from '../network-exclusions-api';
-import { AllItemsNetworksStore } from './all-items-networks.store';
-import { ForYouNetworksStore } from './for-you-networks.store';
-import { NetworkExclusionsStore } from './network-exclusions.store';
+import {
+  NETWORK_EXCLUSION_STORES,
+  NetworkExcludingSurface,
+  NetworkExclusionsStore,
+} from './network-exclusions.store';
 import { SubscriptionsStore } from './subscriptions.store';
 import { EntriesStore } from './entries.store';
-import { TrendingNetworksStore } from './trending-networks.store';
 
-describe.each<{ store: Type<NetworkExclusionsStore>; surface: NetworkExclusionSurface }>([
-  { store: AllItemsNetworksStore, surface: 'all-items' },
-  { store: ForYouNetworksStore, surface: 'for-you' },
-  { store: TrendingNetworksStore, surface: 'trending' },
-])('the $surface network switches', ({ store: storeClass, surface }) => {
+describe.each<{ store: NetworkExcludingSurface; surface: NetworkExclusionSurface }>([
+  { store: 'allItems', surface: 'all-items' },
+  { store: 'forYou', surface: 'for-you' },
+  { store: 'trending', surface: 'trending' },
+])('the $surface network switches', ({ store: storeSurface, surface }) => {
   const reloadCountsQuietly = jest.fn();
 
   function setup(api: Partial<NetworkExclusionsApi>): NetworkExclusionsStore {
@@ -21,10 +21,10 @@ describe.each<{ store: Type<NetworkExclusionsStore>; surface: NetworkExclusionSu
       providers: [
         { provide: NetworkExclusionsApi, useValue: api },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
-        { provide: EntriesStore, useValue: { reloadTrending: jest.fn() } },
+        { provide: EntriesStore, useValue: { reloadIfShowing: jest.fn() } },
       ],
     });
-    return TestBed.inject(storeClass);
+    return TestBed.inject(NETWORK_EXCLUSION_STORES)[storeSurface];
   }
 
   beforeEach(() => reloadCountsQuietly.mockClear());
@@ -93,7 +93,7 @@ describe.each<{ store: Type<NetworkExclusionsStore>; surface: NetworkExclusionSu
 describe('the Trending network switches', () => {
   it('reload the Trending list once a switch lands', () => {
     const write = new Subject<undefined>();
-    const reloadTrending = jest.fn();
+    const reloadIfShowing = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         {
@@ -104,20 +104,21 @@ describe('the Trending network switches', () => {
           },
         },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly: jest.fn() } },
-        { provide: EntriesStore, useValue: { reloadTrending } },
+        { provide: EntriesStore, useValue: { reloadIfShowing } },
       ],
     });
-    const store = TestBed.inject(TrendingNetworksStore);
+    const store = TestBed.inject(NETWORK_EXCLUSION_STORES).trending;
 
     store.toggleNetwork('bluesky');
-    expect(reloadTrending).not.toHaveBeenCalled();
+    expect(reloadIfShowing).not.toHaveBeenCalled();
     write.next(undefined);
 
-    expect(reloadTrending).toHaveBeenCalledTimes(1);
+    expect(reloadIfShowing).toHaveBeenCalledTimes(1);
+    expect(reloadIfShowing).toHaveBeenCalledWith('trending');
   });
 
   it('leave the other surfaces’ lists alone', () => {
-    const reloadTrending = jest.fn();
+    const reloadIfShowing = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         {
@@ -128,12 +129,12 @@ describe('the Trending network switches', () => {
           },
         },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly: jest.fn() } },
-        { provide: EntriesStore, useValue: { reloadTrending } },
+        { provide: EntriesStore, useValue: { reloadIfShowing } },
       ],
     });
 
-    TestBed.inject(AllItemsNetworksStore).toggleNetwork('bluesky');
+    TestBed.inject(NETWORK_EXCLUSION_STORES).allItems.toggleNetwork('bluesky');
 
-    expect(reloadTrending).not.toHaveBeenCalled();
+    expect(reloadIfShowing).not.toHaveBeenCalledWith('trending');
   });
 });

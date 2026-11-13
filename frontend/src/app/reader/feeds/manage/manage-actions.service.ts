@@ -22,6 +22,13 @@ import {
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { isSearchFeed } from '../../state/social-sections';
 import { unsubscribeConfirm } from './unsubscribe-messages';
+import {
+  EXCLUSION_SURFACES,
+  ExclusionSurface,
+  INCLUSION_FLAG,
+  isIncludedIn,
+  surfacesIn,
+} from '../../feed-exclusions';
 
 /** The single place one feed's management dialog is opened and its side effects applied.
  *  Both the settings sections and the sidebar (via the shell) call these, so an
@@ -52,7 +59,7 @@ export class ManageActions {
         return;
       }
       if (!updated) return;
-      this.subscriptionReload.afterWrite(reloadingFlagChanges(subscription, updated));
+      this.subscriptionReload.afterWrite(changedSurfaces(subscription, updated));
       if (searchQueryOf(updated) !== searchQueryOf(subscription)) this.requeried(subscription);
     });
   }
@@ -97,26 +104,9 @@ export class ManageActions {
     return { ...(this.tags.byId(tagId) ?? placeholderTag(tagId)), position: 0 };
   }
 
-  /** Flip whether this feed contributes to the "All items" list. Optimistic:
-   *  update the sidebar immediately, reconcile with the server. */
-  setIncludeInAllItems(subscription: SubscriptionDto, value: boolean): void {
-    this.patchFlags(subscription, { includeInAllItems: value });
-  }
-
-  /** Flip whether this feed contributes to "For you". Optimistic: update the
-   *  sidebar immediately, reconcile with the server. */
-  setIncludeInForYou(subscription: SubscriptionDto, value: boolean): void {
-    this.patchFlags(subscription, { includeInForYou: value });
-  }
-
-  /** Flip whether this feed's entries count in saved searches. Optimistic like the others. */
-  setIncludeInSavedSearches(subscription: SubscriptionDto, value: boolean): void {
-    this.patchFlags(subscription, { includeInSavedSearches: value });
-  }
-
-  /** Flip whether this feed's shares count in Trending. Optimistic like the others. */
-  setIncludeInTrending(subscription: SubscriptionDto, value: boolean): void {
-    this.patchFlags(subscription, { includeInTrending: value });
+  /** Switch this feed in or out of one surface. Optimistic: the sidebar shows it at once, the reload reconciles. */
+  setInclusion(subscription: SubscriptionDto, surface: ExclusionSurface, included: boolean): void {
+    this.patchFlags(subscription, { [INCLUSION_FLAG[surface]]: included });
   }
 
   /** The backend PATCH clears customTitle/tagIds when they are omitted, so
@@ -129,7 +119,7 @@ export class ManageActions {
         tagIds: subscription.tags.map((tag) => tag.id),
         ...flags,
       }),
-      () => this.subscriptionReload.afterWrite(flags),
+      () => this.subscriptionReload.afterWrite(surfacesIn(flags)),
     );
   }
 
@@ -225,16 +215,8 @@ function searchQueryOf(subscription: SubscriptionDto): string | null {
   return isSearchFeed(subscription) ? subscription.social.query : null;
 }
 
-function reloadingFlagChanges(
-  before: SubscriptionDto,
-  after: SubscriptionDto,
-): Pick<SubscriptionFlags, 'includeInSavedSearches' | 'includeInTrending'> {
-  return {
-    ...(after.includeInSavedSearches === before.includeInSavedSearches
-      ? {}
-      : { includeInSavedSearches: after.includeInSavedSearches }),
-    ...(after.includeInTrending === before.includeInTrending
-      ? {}
-      : { includeInTrending: after.includeInTrending }),
-  };
+function changedSurfaces(before: SubscriptionDto, after: SubscriptionDto): ExclusionSurface[] {
+  return EXCLUSION_SURFACES.filter(
+    (surface) => isIncludedIn(before, surface) !== isIncludedIn(after, surface),
+  );
 }

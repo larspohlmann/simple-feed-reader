@@ -10,6 +10,7 @@ import { SubscriptionDto, TagDto } from '../../reader/models';
 import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
 import { TagsStore } from '../../reader/state/tags.store';
 import { VisibilitySwitches } from '../../reader/state/visibility';
+import { tagsById } from '../../reader/state/tag-ancestry';
 import { VisibilitySwitchesStore } from '../../reader/state/visibility-switches.store';
 import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
 import { ReadingActivity } from '../settings.models';
@@ -84,7 +85,7 @@ describe('StatisticsSectionComponent', () => {
 
   function switchesOf(tags: TagDto[]): VisibilitySwitches {
     return {
-      tags,
+      tagsById: tagsById(tags),
       excludedNetworks: {
         allItems: new Set(),
         forYou: new Set(),

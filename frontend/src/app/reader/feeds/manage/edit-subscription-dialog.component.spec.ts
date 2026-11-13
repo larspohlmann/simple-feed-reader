@@ -11,7 +11,7 @@ import {
 } from './edit-subscription-dialog.component';
 import { SubscriptionDto } from '../../models';
 import { SubscriptionRows } from '../../state/subscription-rows';
-import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 const sub: SubscriptionDto = {
   id: 5,

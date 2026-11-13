@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { TagsStore } from './state/tags.store';
 import { TagDto } from './models';
 import { TagDragSession, measureTagLayout } from './tag-drag-session';
-import { INCLUDED_EVERYWHERE } from './testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from './tag-inclusion';
 
 const tag = (id: number, position: number): TagDto => ({
   id,

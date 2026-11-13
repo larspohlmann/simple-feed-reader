@@ -9,6 +9,7 @@ import { TrendingApi } from '../trending/trending-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
+import { ExclusionSurface, SURFACE_DESCRIPTOR } from '../feed-exclusions';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withPatchedRow } from './entry-rows';
 
@@ -123,9 +124,10 @@ export class EntriesStore {
     if (query !== null) this.load(query);
   }
 
-  /** Loads the list again only while it shows Trending, for a switch that changed what Trending counts. */
-  reloadTrending(): void {
-    if (this.query()?.view === 'trending') this.reload();
+  /** Loads the list again only while it shows the surface a switch just changed. */
+  reloadIfShowing(surface: ExclusionSurface): void {
+    const view = SURFACE_DESCRIPTOR[surface].listView;
+    if (view !== null && this.query()?.view === view) this.reload();
   }
 
   /** Runs `mutation$` with the loading cue raised from the call, not from its

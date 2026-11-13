@@ -1,17 +1,14 @@
 import { TagDto } from '../models';
 import { isRootTag } from './subscription-derivations';
-import { tagsById, withAncestors } from './tag-ancestry';
 
 /** Levels below the top a tag may sit; a root is at 0. Mirrors the backend's `Tag::MAX_DEPTH`. */
 export const MAX_TAG_DEPTH = 2;
 
 export class TagHierarchy {
-  private readonly tagsById: ReadonlyMap<number, TagDto>;
   private readonly parentIds: ReadonlyMap<number, number | null>;
   private readonly childIds: ReadonlyMap<number, readonly number[]>;
 
   constructor(tags: readonly TagDto[]) {
-    this.tagsById = tagsById(tags);
     const knownIds = new Set(tags.map((tag) => tag.id));
     this.parentIds = new Map(
       tags.map((tag) => [tag.id, isRootTag(tag, knownIds) ? null : tag.parentId]),
@@ -36,11 +33,8 @@ export class TagHierarchy {
   }
 
   ancestorIdsOf(tagId: number): number[] {
-    const tag = this.tagsById.get(tagId);
-    if (tag === undefined) return [];
-    return withAncestors(tag, this.tagsById)
-      .slice(1)
-      .map(({ id }) => id);
+    const parentId = this.parentIds.get(tagId) ?? null;
+    return parentId === null ? [] : [parentId, ...this.ancestorIdsOf(parentId)];
   }
 
   /** Whether `tagId` is `ancestorId` itself or sits anywhere below it. */

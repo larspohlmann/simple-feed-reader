@@ -5,7 +5,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
-import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
 
 const TECH: TagDto = {
   id: 2,

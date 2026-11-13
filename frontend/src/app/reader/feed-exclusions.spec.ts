@@ -2,10 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import {
-  FEED_FLAG_TOGGLES,
+  SURFACE_DESCRIPTORS,
   exclusionTitle,
   ownExcludedSurfaces,
   flipFeedFlag,
+  surfacesIn,
 } from './feed-exclusions';
 import { ManageActions } from './feeds/manage/manage-actions.service';
 import { makeSubscription } from './testing/subscription.factory';
@@ -47,24 +48,9 @@ describe('exclusionTitle', () => {
   });
 });
 
-describe('FEED_FLAG_TOGGLES', () => {
-  const manage = (): jest.Mocked<
-    Pick<
-      ManageActions,
-      | 'setIncludeInAllItems'
-      | 'setIncludeInForYou'
-      | 'setIncludeInSavedSearches'
-      | 'setIncludeInTrending'
-    >
-  > => ({
-    setIncludeInAllItems: jest.fn(),
-    setIncludeInForYou: jest.fn(),
-    setIncludeInSavedSearches: jest.fn(),
-    setIncludeInTrending: jest.fn(),
-  });
-
+describe('SURFACE_DESCRIPTORS', () => {
   it('lists All items, For you, saved searches and Trending, in menu order', () => {
-    expect(FEED_FLAG_TOGGLES.map((toggle) => toggle.surface)).toEqual([
+    expect(SURFACE_DESCRIPTORS.map((descriptor) => descriptor.surface)).toEqual([
       'allItems',
       'forYou',
       'savedSearches',
@@ -73,27 +59,36 @@ describe('FEED_FLAG_TOGGLES', () => {
   });
 
   it('labels the Trending switch', () => {
-    expect(FEED_FLAG_TOGGLES[3].includeKey).toBe('reader.includeInTrending');
+    expect(SURFACE_DESCRIPTORS[3].includeKey).toBe('reader.includeInTrending');
   });
 
-  it('flips each flag through its own ManageActions setter', () => {
-    const [allItems, forYou, savedSearches, trending] = FEED_FLAG_TOGGLES;
+  it('flips each flag through ManageActions.setInclusion', () => {
     const feed = makeSubscription({
       includeInAllItems: true,
       includeInForYou: false,
       includeInSavedSearches: true,
       includeInTrending: false,
     });
-    const actions = manage();
+    const actions = { setInclusion: jest.fn() };
 
-    flipFeedFlag(actions as unknown as ManageActions, allItems, feed);
-    flipFeedFlag(actions as unknown as ManageActions, forYou, feed);
-    flipFeedFlag(actions as unknown as ManageActions, savedSearches, feed);
-    flipFeedFlag(actions as unknown as ManageActions, trending, feed);
+    for (const { surface } of SURFACE_DESCRIPTORS) {
+      flipFeedFlag(actions as unknown as ManageActions, surface, feed);
+    }
 
-    expect(actions.setIncludeInAllItems).toHaveBeenCalledWith(feed, false);
-    expect(actions.setIncludeInForYou).toHaveBeenCalledWith(feed, true);
-    expect(actions.setIncludeInSavedSearches).toHaveBeenCalledWith(feed, false);
-    expect(actions.setIncludeInTrending).toHaveBeenCalledWith(feed, true);
+    expect(actions.setInclusion.mock.calls).toEqual([
+      [feed, 'allItems', false],
+      [feed, 'forYou', true],
+      [feed, 'savedSearches', false],
+      [feed, 'trending', true],
+    ]);
+  });
+});
+
+describe('surfacesIn', () => {
+  it('names the surfaces whose flag a change carries, in title order', () => {
+    expect(surfacesIn({ includeInTrending: false, includeInAllItems: true })).toEqual([
+      'allItems',
+      'trending',
+    ]);
   });
 });

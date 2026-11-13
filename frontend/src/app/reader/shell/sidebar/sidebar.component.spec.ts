@@ -35,15 +35,13 @@ import { By } from '@angular/platform-browser';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SHARING_EVERYTHING } from '../../../core/preferences/sharing';
-import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
+import { ExclusionSurface, INCLUSION_FLAG } from '../../feed-exclusions';
 
 const manageActions = {
   editSubscription: jest.fn(),
   unsubscribe: jest.fn(),
-  setIncludeInAllItems: jest.fn(),
-  setIncludeInForYou: jest.fn(),
-  setIncludeInSavedSearches: jest.fn(),
-  setIncludeInTrending: jest.fn(),
+  setInclusion: jest.fn(),
   moveFeedToTag: jest.fn(),
   reorderUntagged: jest.fn(),
   reorderTagFeeds: jest.fn(),
@@ -1019,9 +1017,11 @@ describe('SidebarComponent', () => {
     const subscription = sub(1, 0);
     const fixture = mount({ untagged: [subscription] });
     const element = fixture.nativeElement as HTMLElement;
-    manageActions.setIncludeInForYou.mockImplementation(
-      (patched: SubscriptionDto, included: boolean) =>
-        fixture.componentRef.setInput('untagged', [{ ...patched, includeInForYou: included }]),
+    manageActions.setInclusion.mockImplementation(
+      (patched: SubscriptionDto, surface: ExclusionSurface, included: boolean) =>
+        fixture.componentRef.setInput('untagged', [
+          { ...patched, [INCLUSION_FLAG[surface]]: included },
+        ]),
     );
     (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -1033,7 +1033,7 @@ describe('SidebarComponent', () => {
       .click();
     fixture.detectChanges();
 
-    expect(manageActions.setIncludeInForYou).toHaveBeenCalledWith(subscription, false);
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(subscription, 'forYou', false);
     expect(rows.menuFor()).toBe(menuKey);
     const boxes = element.querySelectorAll<HTMLInputElement>(
       '.feedrow .pop [role="menuitemcheckbox"]',
@@ -1081,7 +1081,7 @@ describe('SidebarComponent', () => {
     ]);
 
     pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')[0].click();
-    expect(manageActions.setIncludeInAllItems).toHaveBeenCalledWith(subscription, false);
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(subscription, 'allItems', false);
   });
 
   it('marks the selected subscription’s row host current', () => {
@@ -2657,20 +2657,24 @@ describe('organise mode', () => {
 
     checks.forEach((check) => check.toggle());
 
-    expect(manageActions.setIncludeInAllItems).toHaveBeenCalledWith(
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 9 }),
+      'allItems',
       false,
     );
-    expect(manageActions.setIncludeInForYou).toHaveBeenCalledWith(
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 9 }),
+      'forYou',
       false,
     );
-    expect(manageActions.setIncludeInSavedSearches).toHaveBeenCalledWith(
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 9 }),
+      'savedSearches',
       false,
     );
-    expect(manageActions.setIncludeInTrending).toHaveBeenCalledWith(
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 9 }),
+      'trending',
       false,
     );
     expect(manageActions.unsubscribe).not.toHaveBeenCalled();

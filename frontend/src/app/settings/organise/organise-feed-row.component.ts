@@ -28,16 +28,20 @@ import { MenuCheckboxComponent } from '../../shared/menu-checkbox/menu-checkbox.
 import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import {
-  FEED_FLAG_TOGGLES,
-  FeedFlagToggle,
+  ExclusionSurface,
+  SURFACE_DESCRIPTORS,
+  flipFeedFlag,
+  isIncludedIn,
   ownExcludedSurfaces,
+  surfaceChecks,
 } from '../../reader/feed-exclusions';
 
 /**
- * One feed row on the Organise page. Presentational on purpose: the tree and
- * the flat list both render it, and only the parent knows what "move up" means
- * in its own context, so the row emits and never writes.
+ * One feed row on the Organise page. The tree and the flat list both render it,
+ * and only the parent knows what "move up" means in its own context, so moves
+ * are emitted; the row's own surface switches it flips itself, like a sidebar row.
  */
 @Component({
   selector: 'app-organise-feed-row',
@@ -80,14 +84,14 @@ export class OrganiseFeedRowComponent {
   readonly moveUp = output<void>();
   readonly moveDown = output<void>();
   readonly edit = output<void>();
-  readonly flagToggled = output<FeedFlagToggle>();
   readonly unsubscribe = output<void>();
 
-  protected readonly feedFlags = FEED_FLAG_TOGGLES;
+  protected readonly feedFlags = SURFACE_DESCRIPTORS;
   protected readonly step = stepMenu;
 
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
+  private readonly manage = inject(ManageActions);
   private readonly i18n = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -105,8 +109,8 @@ export class OrganiseFeedRowComponent {
     selectionQueryParams({ subscription: this.subscription().id }),
   );
 
-  protected toggleFlag(toggle: FeedFlagToggle): void {
-    this.flagToggled.emit(toggle);
+  protected toggleFlag(surface: ExclusionSurface): void {
+    flipFeedFlag(this.manage, surface, this.subscription());
   }
 
   protected toggleMenu(): void {
@@ -141,11 +145,9 @@ export class OrganiseFeedRowComponent {
   }
 
   private flagChecks(): ActionSheetCheck[] {
-    return FEED_FLAG_TOGGLES.map((toggle) => ({
-      id: toggle.surface,
-      label: this.i18n.translate(toggle.includeKey),
-      checked: computed(() => toggle.isIncluded(this.subscription())),
-      toggle: () => this.toggleFlag(toggle),
-    }));
+    return surfaceChecks(this.i18n, {
+      isIncluded: (surface) => isIncludedIn(this.subscription(), surface),
+      flip: (surface) => this.toggleFlag(surface),
+    });
   }
 }

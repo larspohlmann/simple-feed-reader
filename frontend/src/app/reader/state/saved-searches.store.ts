@@ -4,7 +4,7 @@ import { ReaderApi } from '../reader-api';
 import { SavedSearchDraft } from '../saved-search-api-shapes';
 import { countsAreStale } from './sidebar-freshness';
 import { SavedSearchDto, SavedSearchWire } from '../models';
-import { SocialNetworkName } from '../../core/social-network';
+import { SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
 import { sameMembers } from './same-members';
 
 /** The user's saved searches, newest first, each with a live unread-match
@@ -29,6 +29,10 @@ export class SavedSearchesStore {
   });
   /** The social networks whose feeds count in saved searches; every other network's are left out. */
   readonly includedNetworks = this.storedIncludedNetworks.asReadonly();
+  readonly excludedNetworks = computed<ReadonlySet<SocialNetworkName>>(
+    () => new Set(SOCIAL_NETWORKS.filter((network) => !this.includedNetworks().has(network))),
+    { equal: sameMembers },
+  );
 
   /** When the badges were last asked for, and the request still out for them —
    *  the two things the counts poll needs to know before it spends a tick. */

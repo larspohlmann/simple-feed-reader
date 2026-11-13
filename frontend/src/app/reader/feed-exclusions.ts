@@ -1,82 +1,109 @@
+import { computed } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { SubscriptionDto, TagInclusion } from './models';
+import type { ActionSheetCheck } from '../shared/action-sheet/action-sheet.component';
+import { EntryView, SubscriptionDto, TagInclusion } from './models';
 import type { ManageActions } from './feeds/manage/manage-actions.service';
 
 export type ExclusionSurface = 'allItems' | 'forYou' | 'savedSearches' | 'trending';
 
-/** Each surface's own switch, on a feed and on a tag alike, in title order. */
-export const INCLUSION_FLAG: Readonly<Record<ExclusionSurface, keyof TagInclusion>> = {
-  allItems: 'includeInAllItems',
-  forYou: 'includeInForYou',
-  savedSearches: 'includeInSavedSearches',
-  trending: 'includeInTrending',
-};
-
-export const EXCLUSION_SURFACES = Object.keys(INCLUSION_FLAG) as readonly ExclusionSurface[];
-
-export const SURFACE_LABEL_KEYS: Readonly<Record<ExclusionSurface, string>> = {
-  allItems: 'reader.allItems',
-  forYou: 'reader.forYou',
-  savedSearches: 'reader.savedSearches',
-  trending: 'reader.trending',
-};
-
-/** One per-feed inclusion switch, as every feed menu and sheet offers it. */
-export interface FeedFlagToggle {
+/** One surface a feed, a tag or a network can be switched out of. */
+export interface SurfaceDescriptor {
   readonly surface: ExclusionSurface;
-  readonly dataTest: string;
+  /** The surface's own switch, on a feed and on a tag alike. */
+  readonly flag: keyof TagInclusion;
   readonly includeKey: string;
-  readonly isIncluded: (subscription: SubscriptionDto) => boolean;
-  readonly set: (manage: ManageActions, subscription: SubscriptionDto, included: boolean) => void;
+  readonly labelKey: string;
+  readonly dataTest: string;
+  /** The entry list a switch changes, reloaded after a write while it shows; null where no list waits on it. */
+  readonly listView: EntryView | null;
+  /** A private feed is out of All items and For you by design. */
+  readonly privateFeedsIncluded: boolean;
 }
 
-function includedIn(surface: ExclusionSurface): (subscription: SubscriptionDto) => boolean {
-  return (subscription) => subscription[INCLUSION_FLAG[surface]];
-}
-
-export const FEED_FLAG_TOGGLES: readonly FeedFlagToggle[] = [
+/** In title order: menus, sheets, markers and the Visibility matrix all list the surfaces in this order. */
+export const SURFACE_DESCRIPTORS: readonly SurfaceDescriptor[] = [
   {
     surface: 'allItems',
-    dataTest: 'toggle-all-items',
+    flag: 'includeInAllItems',
     includeKey: 'reader.includeInAllItems',
-    isIncluded: includedIn('allItems'),
-    set: (manage, subscription, included) => manage.setIncludeInAllItems(subscription, included),
+    labelKey: 'reader.allItems',
+    dataTest: 'toggle-all-items',
+    listView: null,
+    privateFeedsIncluded: false,
   },
   {
     surface: 'forYou',
-    dataTest: 'toggle-for-you',
+    flag: 'includeInForYou',
     includeKey: 'reader.includeInForYou',
-    isIncluded: includedIn('forYou'),
-    set: (manage, subscription, included) => manage.setIncludeInForYou(subscription, included),
+    labelKey: 'reader.forYou',
+    dataTest: 'toggle-for-you',
+    listView: null,
+    privateFeedsIncluded: false,
   },
   {
     surface: 'savedSearches',
-    dataTest: 'toggle-saved-searches',
+    flag: 'includeInSavedSearches',
     includeKey: 'reader.includeInSavedSearches',
-    isIncluded: includedIn('savedSearches'),
-    set: (manage, subscription, included) =>
-      manage.setIncludeInSavedSearches(subscription, included),
+    labelKey: 'reader.savedSearches',
+    dataTest: 'toggle-saved-searches',
+    listView: null,
+    privateFeedsIncluded: true,
   },
   {
     surface: 'trending',
-    dataTest: 'toggle-trending',
+    flag: 'includeInTrending',
     includeKey: 'reader.includeInTrending',
-    isIncluded: includedIn('trending'),
-    set: (manage, subscription, included) => manage.setIncludeInTrending(subscription, included),
+    labelKey: 'reader.trending',
+    dataTest: 'toggle-trending',
+    listView: 'trending',
+    privateFeedsIncluded: true,
   },
 ];
 
+export function bySurface<T>(pick: (descriptor: SurfaceDescriptor) => T): Record<ExclusionSurface, T> {
+  return Object.fromEntries(
+    SURFACE_DESCRIPTORS.map((descriptor) => [descriptor.surface, pick(descriptor)]),
+  ) as Record<ExclusionSurface, T>;
+}
+
+export const SURFACE_DESCRIPTOR: Readonly<Record<ExclusionSurface, SurfaceDescriptor>> = bySurface(
+  (descriptor) => descriptor,
+);
+
+export const INCLUSION_FLAG: Readonly<Record<ExclusionSurface, keyof TagInclusion>> = bySurface(
+  ({ flag }) => flag,
+);
+
+export const EXCLUSION_SURFACES: readonly ExclusionSurface[] = SURFACE_DESCRIPTORS.map(
+  ({ surface }) => surface,
+);
+
+export const SURFACE_LABEL_KEYS: Readonly<Record<ExclusionSurface, string>> = bySurface(
+  ({ labelKey }) => labelKey,
+);
+
+export function isIncludedIn(inclusion: TagInclusion, surface: ExclusionSurface): boolean {
+  return inclusion[INCLUSION_FLAG[surface]];
+}
+
+/** The surfaces a flag change touched, as a bulk body or an edit carries it. */
+export function surfacesIn(flags: Partial<TagInclusion>): ExclusionSurface[] {
+  return SURFACE_DESCRIPTORS.filter(({ flag }) => flags[flag] !== undefined).map(
+    ({ surface }) => surface,
+  );
+}
+
 export function flipFeedFlag(
   manage: ManageActions,
-  toggle: FeedFlagToggle,
+  surface: ExclusionSurface,
   subscription: SubscriptionDto,
 ): void {
-  toggle.set(manage, subscription, !toggle.isIncluded(subscription));
+  manage.setInclusion(subscription, surface, !isIncludedIn(subscription, surface));
 }
 
 /** The surfaces a feed's or a tag's own switches leave it out of. */
 export function ownExcludedSurfaces(inclusion: TagInclusion): ExclusionSurface[] {
-  return EXCLUSION_SURFACES.filter((surface) => !inclusion[INCLUSION_FLAG[surface]]);
+  return EXCLUSION_SURFACES.filter((surface) => !isIncludedIn(inclusion, surface));
 }
 
 export function exclusionTitle(
@@ -85,4 +112,19 @@ export function exclusionTitle(
 ): string {
   const names = surfaces.map((surface) => i18n.translate(SURFACE_LABEL_KEYS[surface])).join(', ');
   return i18n.translate('reader.excludedFrom', { surfaces: names });
+}
+
+/** One row's surface switches as sheet checks; `isIncluded` is read live, so a tick shows at once. */
+export interface SurfaceSwitchRow {
+  readonly isIncluded: (surface: ExclusionSurface) => boolean;
+  readonly flip: (surface: ExclusionSurface) => void;
+}
+
+export function surfaceChecks(i18n: TranslocoService, row: SurfaceSwitchRow): ActionSheetCheck[] {
+  return SURFACE_DESCRIPTORS.map(({ surface, includeKey }) => ({
+    id: surface,
+    label: i18n.translate(includeKey),
+    checked: computed(() => row.isIncluded(surface)),
+    toggle: () => row.flip(surface),
+  }));
 }

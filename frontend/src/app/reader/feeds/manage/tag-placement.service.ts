@@ -16,7 +16,9 @@ export class TagPlacement {
   private readonly tags = inject(TagsStore);
 
   reorder(tagIds: readonly number[]): void {
-    this.tags.tags.update((current) => placed(current, positioned(current, tagIds)));
+    this.tags.tags.update((current) =>
+      placed(current, positioned(this.tags.tagsById(), tagIds)),
+    );
     reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());
   }
 
@@ -29,7 +31,10 @@ export class TagPlacement {
     this.tags.tags.update((current) =>
       placed(
         current,
-        positioned(current, drop.order).map((sibling) => ({ ...sibling, parentId: drop.parentId })),
+        positioned(this.tags.tagsById(), drop.order).map((sibling) => ({
+          ...sibling,
+          parentId: drop.parentId,
+        })),
       ),
     );
     const body: TagInput = {
@@ -48,8 +53,7 @@ export class TagPlacement {
   }
 }
 
-function positioned(current: readonly TagDto[], tagIds: readonly number[]): TagDto[] {
-  const byId = new Map(current.map((tag) => [tag.id, tag]));
+function positioned(byId: ReadonlyMap<number, TagDto>, tagIds: readonly number[]): TagDto[] {
   return tagIds.map((id, index) => ({
     ...(byId.get(id) ?? placeholderTag(id)),
     position: index,

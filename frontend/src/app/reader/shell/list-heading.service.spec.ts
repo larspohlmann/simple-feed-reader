@@ -9,8 +9,10 @@ import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
+import { tagsById } from '../state/tag-ancestry';
 import { VisibilitySwitches } from '../state/visibility';
-import { makeTag, INCLUDED_EVERYWHERE } from '../testing/tag.factory';
+import { makeTag } from '../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 import { SocialSection, buildSocialSections, socialFeedGroup } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
@@ -298,7 +300,7 @@ function headingWith(
 }
 
 const NO_SWITCHES: VisibilitySwitches = {
-  tags: [],
+  tagsById: new Map(),
   excludedNetworks: {
     allItems: new Set(),
     forYou: new Set(),
@@ -319,7 +321,7 @@ describe('ListHeading for All items', () => {
           makeSubscription({ id: 2, entryCount: 20, tags: [tech] }),
         ]),
       },
-      { ...NO_SWITCHES, tags: [tech] },
+      { ...NO_SWITCHES, tagsById: tagsById([tech]) },
     );
 
     expect(heading.titleCount()).toEqual({ value: 10, counts: 'items' });

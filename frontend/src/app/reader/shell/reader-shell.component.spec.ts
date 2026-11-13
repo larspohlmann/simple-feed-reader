@@ -68,7 +68,7 @@ import {
 } from '../../../testing/resize-observer-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
-import { INCLUDED_EVERYWHERE } from '../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 describe('ReaderShellComponent', () => {
   let screen: {

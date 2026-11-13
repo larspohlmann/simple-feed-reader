@@ -93,7 +93,7 @@ describe('EntriesStore', () => {
       .expectOne('https://api.test/api/trending?window=day')
       .flush({ entries: [entry(1)], nextCursor: null });
 
-    store.reloadTrending();
+    store.reloadIfShowing('trending');
 
     ctrl.expectOne('https://api.test/api/trending?window=day');
   });
@@ -104,7 +104,7 @@ describe('EntriesStore', () => {
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: null });
 
-    store.reloadTrending();
+    store.reloadIfShowing('trending');
 
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });

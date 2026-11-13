@@ -6,7 +6,7 @@ import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { API_BASE_URL } from '../../../core/api';
 import { TagFormDialogComponent, TagFormData } from './tag-form-dialog.component';
 import { TagDto } from '../../models';
-import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 describe('TagFormDialogComponent', () => {
   const close = jest.fn();

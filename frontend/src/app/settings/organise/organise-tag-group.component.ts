@@ -20,7 +20,6 @@ import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto } from '../../reader/models';
-import { FeedFlagToggle, flipFeedFlag } from '../../reader/feed-exclusions';
 import { isSubscriptionDrag } from '../../reader/drag-payload';
 
 /** One tag panel: a header row, its child panels (projected), and -- when open -- its feeds.
@@ -101,10 +100,6 @@ export class OrganiseTagGroupComponent {
     this.language.lang();
     return this.group().tag?.name ?? this.i18n.translate('settings.organise.untagged');
   });
-
-  protected flipFlag(toggle: FeedFlagToggle, subscription: SubscriptionDto): void {
-    flipFeedFlag(this.manage, toggle, subscription);
-  }
 
   protected toggle(): void {
     this.store.toggleGroup(this.group().key);

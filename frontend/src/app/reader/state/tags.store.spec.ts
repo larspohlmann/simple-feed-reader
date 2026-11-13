@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../../core/api';
 import { TagsStore } from './tags.store';
 import { TagDto } from '../models';
-import { INCLUDED_EVERYWHERE } from '../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 const tag = (id: number, name: string): TagDto => ({
   id,

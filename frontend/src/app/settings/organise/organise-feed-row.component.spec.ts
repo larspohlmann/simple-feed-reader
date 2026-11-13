@@ -18,8 +18,9 @@ import {
 import { LanguageService } from '../../core/i18n/language.service';
 import { formatLongDateTime } from '../../reader/format';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
-import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
-import { FEED_FLAG_TOGGLES } from '../../reader/feed-exclusions';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
+import { SURFACE_DESCRIPTORS } from '../../reader/feed-exclusions';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 
 const SUBSCRIPTION = makeSubscription({
   id: 7,
@@ -42,6 +43,9 @@ const SUBSCRIPTION = makeSubscription({
 describe('OrganiseFeedRowComponent', () => {
   let fixture: ComponentFixture<OrganiseFeedRowComponent>;
   const sheetOpen = jest.fn(() => of(undefined));
+  const manage = { setInclusion: jest.fn() };
+
+  beforeEach(() => manage.setInclusion.mockClear());
 
   async function render(inputs: Record<string, unknown> = {}) {
     sheetOpen.mockClear();
@@ -55,6 +59,7 @@ describe('OrganiseFeedRowComponent', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(false) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LanguageService, useValue: { lang: () => 'en' } },
+        { provide: ManageActions, useValue: manage },
       ],
     }).compileComponents();
 
@@ -213,21 +218,17 @@ describe('OrganiseFeedRowComponent', () => {
     expect(sheetOpen).not.toHaveBeenCalled();
   });
 
-  it.each(FEED_FLAG_TOGGLES)(
-    'emits the $surface switch from the fine-pointer popover and keeps it open',
-    async (toggle) => {
+  it.each(SURFACE_DESCRIPTORS)(
+    'flips the $surface switch from the fine-pointer popover and keeps it open',
+    async ({ surface, flag, dataTest }) => {
       await render();
-      const toggled = jest.fn();
-      fixture.componentInstance.flagToggled.subscribe(toggled);
 
       fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
       fixture.detectChanges();
-      fixture.debugElement
-        .query(By.css(`[data-test="${toggle.dataTest}"] input`))
-        .nativeElement.click();
+      fixture.debugElement.query(By.css(`[data-test="${dataTest}"] input`)).nativeElement.click();
       fixture.detectChanges();
 
-      expect(toggled).toHaveBeenCalledWith(toggle);
+      expect(manage.setInclusion).toHaveBeenCalledWith(SUBSCRIPTION, surface, !SUBSCRIPTION[flag]);
       expect(fixture.debugElement.query(By.css('.pop'))).not.toBeNull();
     },
   );
@@ -272,6 +273,7 @@ describe('OrganiseFeedRowComponent', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(true) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LanguageService, useValue: { lang: () => 'en' } },
+        { provide: ManageActions, useValue: manage },
       ],
     }).compileComponents();
 
@@ -298,13 +300,12 @@ describe('OrganiseFeedRowComponent', () => {
         { provide: LayoutService, useValue: { isCoarse: signal(true) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LanguageService, useValue: { lang: () => 'en' } },
+        { provide: ManageActions, useValue: manage },
       ],
     }).compileComponents();
     const coarse = TestBed.createComponent(OrganiseFeedRowComponent);
     coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: true });
     coarse.detectChanges();
-    const toggled = jest.fn();
-    coarse.componentInstance.flagToggled.subscribe(toggled);
 
     coarse.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
     const checks = (
@@ -317,6 +318,10 @@ describe('OrganiseFeedRowComponent', () => {
     coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: false });
     expect(forYou?.checked()).toBe(false);
     forYou?.toggle();
-    expect(toggled).toHaveBeenCalledWith(expect.objectContaining({ surface: 'forYou' }));
+    expect(manage.setInclusion).toHaveBeenCalledWith(
+      { ...SUBSCRIPTION, includeInForYou: false },
+      'forYou',
+      true,
+    );
   });
 });

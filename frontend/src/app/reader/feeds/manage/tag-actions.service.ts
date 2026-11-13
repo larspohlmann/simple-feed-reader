@@ -85,7 +85,7 @@ export class TagActions {
     };
     reloadAfter(this.api.updateTag(tag.id, body), () => {
       this.tags.load();
-      this.subscriptionReload.afterWrite(inclusion);
+      this.subscriptionReload.afterWrite([surface]);
     });
   }
 

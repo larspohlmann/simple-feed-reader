@@ -7,7 +7,7 @@ import { TagsStore } from '../../reader/state/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { INCLUDED_EVERYWHERE } from '../../reader/testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../../reader/tag-inclusion';
 
 const tag = (id: number, name: string, position: number): TagDto => ({
   id,

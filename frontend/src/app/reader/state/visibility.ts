@@ -1,7 +1,7 @@
 import { SocialNetworkName } from '../../core/social-network';
 import { ExclusionSurface, INCLUSION_FLAG } from '../feed-exclusions';
 import { SubscriptionDto, TagDto } from '../models';
-import { tagsById, withAncestors } from './tag-ancestry';
+import { withAncestors } from './tag-ancestry';
 
 /** What, besides its own flag, keeps a feed out of a surface. */
 export type ExclusionCause =
@@ -9,7 +9,7 @@ export type ExclusionCause =
 
 /** Every stored switch that reaches a feed from outside it. */
 export interface VisibilitySwitches {
-  readonly tags: readonly TagDto[];
+  readonly tagsById: ReadonlyMap<number, TagDto>;
   readonly excludedNetworks: Readonly<Record<ExclusionSurface, ReadonlySet<SocialNetworkName>>>;
 }
 
@@ -44,7 +44,7 @@ function excludingTags(
   surface: ExclusionSurface,
   switches: VisibilitySwitches,
 ): ExclusionCause[] {
-  const byId = tagsById(switches.tags);
+  const byId = switches.tagsById;
   const reaching = new Map<number, TagDto>();
   for (const carried of subscription.tags) {
     for (const tag of withAncestors(byId.get(carried.id) ?? carried, byId)) {

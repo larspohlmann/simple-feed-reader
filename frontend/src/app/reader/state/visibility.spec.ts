@@ -2,6 +2,7 @@ import { SubscriptionDto, TagDto } from '../models';
 import { makeSubscription } from '../testing/subscription.factory';
 import { makeTag } from '../testing/tag.factory';
 import { VisibilitySwitches, inheritedExclusions, isVisibleIn } from './visibility';
+import { tagsById } from './tag-ancestry';
 
 const reading = makeTag(1, 'Reading');
 const longReads = makeTag(2, 'Long reads', { parentId: 1 });
@@ -13,7 +14,7 @@ function switchesWith(
   trendingExcluded: readonly ('bluesky' | 'mastodon')[] = [],
 ): VisibilitySwitches {
   return {
-    tags,
+    tagsById: tagsById(tags),
     excludedNetworks: {
       allItems: new Set(allItemsExcluded),
       forYou: new Set(),

@@ -100,8 +100,8 @@
               <app-menu-checkbox
                 [attr.data-test]="flag.dataTest"
                 [label]="flag.includeKey | transloco"
-                [checked]="flag.isIncluded(subscription())"
-                (toggled)="toggleFlag(flag)"
+                [checked]="subscription()[flag.flag]"
+                (toggled)="toggleFlag(flag.surface)"
               />
             }
             <hr />

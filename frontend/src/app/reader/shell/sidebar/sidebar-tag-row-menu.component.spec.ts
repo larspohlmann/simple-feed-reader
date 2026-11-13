@@ -4,18 +4,15 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
-import { AllItemsNetworksStore } from '../../state/all-items-networks.store';
-import { ForYouNetworksStore } from '../../state/for-you-networks.store';
-import { TrendingNetworksStore } from '../../state/trending-networks.store';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
+import { NetworkSurfaceSwitches } from '../../state/network-surface-switches.service';
 import { LayoutService } from '../../layout.service';
 import { TagDto } from '../../models';
 import { TagsStore } from '../../state/tags.store';
 import { tagsStoreStub } from '../../testing/tags-store.stub';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
-import { INCLUDED_EVERYWHERE } from '../../testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 const tagOf = (id: number, parentId: number | null): TagDto => ({
   id,
@@ -35,10 +32,7 @@ function openMenuFor(target: TagDto): HTMLElement {
     providers: [
       SidebarRowActions,
       { provide: ActionSheet, useValue: {} },
-      { provide: SavedSearchesStore, useValue: {} },
-      { provide: ForYouNetworksStore, useValue: {} },
-      { provide: AllItemsNetworksStore, useValue: {} },
-      { provide: TrendingNetworksStore, useValue: {} },
+      { provide: NetworkSurfaceSwitches, useValue: {} },
       { provide: SubscriptionsStore, useValue: { subscriptions: signal([]) } },
       { provide: LayoutService, useValue: { isCoarse: signal(false) } },
       { provide: ManageActions, useValue: {} },

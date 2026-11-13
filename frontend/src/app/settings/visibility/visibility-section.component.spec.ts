@@ -2,14 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { computed, signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { SocialNetworkName } from '../../core/social-network';
-import { FEED_FLAG_TOGGLES } from '../../reader/feed-exclusions';
+import { SURFACE_DESCRIPTORS } from '../../reader/feed-exclusions';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
-import { AllItemsNetworksStore } from '../../reader/state/all-items-networks.store';
-import { ForYouNetworksStore } from '../../reader/state/for-you-networks.store';
+import { NETWORK_EXCLUSION_STORES } from '../../reader/state/network-exclusions.store';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
-import { TrendingNetworksStore } from '../../reader/state/trending-networks.store';
 import { buildSocialSections } from '../../reader/state/social-sections';
 import { NO_UNREAD_TOTALS } from '../../reader/state/unread-totals';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
@@ -48,7 +46,7 @@ describe('VisibilitySectionComponent', () => {
   let forYouNetworks: ReturnType<typeof networkStore>;
   let trendingNetworks: ReturnType<typeof networkStore>;
   let savedSearches: {
-    includedNetworks: ReturnType<typeof signal<ReadonlySet<SocialNetworkName>>>;
+    excludedNetworks: ReturnType<typeof signal<ReadonlySet<SocialNetworkName>>>;
     load: jest.Mock;
     toggleNetwork: jest.Mock;
   };
@@ -64,17 +62,14 @@ describe('VisibilitySectionComponent', () => {
     const subscriptions = signal<SubscriptionDto[]>(options.subscriptions ?? [TAZ, SKEET, HEISE]);
     const tags = signal<TagDto[]>(options.tags ?? [NEWS, LOCAL, TECH]);
     manage = {
-      setIncludeInAllItems: jest.fn(),
-      setIncludeInForYou: jest.fn(),
-      setIncludeInSavedSearches: jest.fn(),
-      setIncludeInTrending: jest.fn(),
+      setInclusion: jest.fn(),
     };
     tagActions = { setTagInclusion: jest.fn() };
     allItemsNetworks = networkStore(options.excludedFromAllItems);
     forYouNetworks = networkStore();
     trendingNetworks = networkStore(options.excludedFromTrending);
     savedSearches = {
-      includedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set(['bluesky'])),
+      excludedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set(['mastodon'])),
       load: jest.fn(),
       toggleNetwork: jest.fn(),
     };
@@ -83,9 +78,14 @@ describe('VisibilitySectionComponent', () => {
       providers: [
         { provide: ManageActions, useValue: manage },
         { provide: TagActions, useValue: tagActions },
-        { provide: AllItemsNetworksStore, useValue: allItemsNetworks },
-        { provide: ForYouNetworksStore, useValue: forYouNetworks },
-        { provide: TrendingNetworksStore, useValue: trendingNetworks },
+        {
+          provide: NETWORK_EXCLUSION_STORES,
+          useValue: {
+            allItems: allItemsNetworks,
+            forYou: forYouNetworks,
+            trending: trendingNetworks,
+          },
+        },
         { provide: SavedSearchesStore, useValue: savedSearches },
         {
           provide: SubscriptionsStore,
@@ -173,8 +173,8 @@ describe('VisibilitySectionComponent', () => {
       head.textContent!.trim(),
     );
     expect(heads).toEqual(['All items', 'For you', 'Saved searches', 'Trending']);
-    expect(heads).toHaveLength(FEED_FLAG_TOGGLES.length);
-    expect(row('tag:3/feed:11').querySelectorAll('input')).toHaveLength(FEED_FLAG_TOGGLES.length);
+    expect(heads).toHaveLength(SURFACE_DESCRIPTORS.length);
+    expect(row('tag:3/feed:11').querySelectorAll('input')).toHaveLength(SURFACE_DESCRIPTORS.length);
   });
 
   it('indents each row by its depth', () => {
@@ -225,8 +225,8 @@ describe('VisibilitySectionComponent', () => {
     box('tag:2/feed:11', 'For you').click();
     box('tag:3/feed:11', 'For you').click();
 
-    expect(manage['setIncludeInForYou']).toHaveBeenNthCalledWith(1, HEISE, false);
-    expect(manage['setIncludeInForYou']).toHaveBeenNthCalledWith(2, HEISE, false);
+    expect(manage['setInclusion']).toHaveBeenNthCalledWith(1, HEISE, 'forYou', false);
+    expect(manage['setInclusion']).toHaveBeenNthCalledWith(2, HEISE, 'forYou', false);
   });
 
   it('writes a network tick through the matching store', () => {
@@ -250,7 +250,7 @@ describe('VisibilitySectionComponent', () => {
 
     expect(trendingNetworks.toggleNetwork).toHaveBeenCalledWith('bluesky');
     expect(tagActions.setTagInclusion).toHaveBeenCalledWith(TECH, 'trending', false);
-    expect(manage['setIncludeInTrending']).toHaveBeenCalledWith(HEISE, false);
+    expect(manage['setInclusion']).toHaveBeenCalledWith(HEISE, 'trending', false);
   });
 
   it('dims a Bluesky feed in the Trending column while Bluesky is out of Trending', () => {
@@ -284,7 +284,7 @@ describe('VisibilitySectionComponent', () => {
     expect(dimmed.disabled).toBe(false);
     dimmed.click();
 
-    expect(manage['setIncludeInAllItems']).toHaveBeenCalledWith(SKEET, false);
+    expect(manage['setInclusion']).toHaveBeenCalledWith(SKEET, 'allItems', false);
   });
 
   it('starts with every parent collapsed, showing only the top-level rows', () => {

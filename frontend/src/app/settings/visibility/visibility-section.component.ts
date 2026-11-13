@@ -13,10 +13,9 @@ import { toggled } from '../../core/toggled-set';
 import {
   EXCLUSION_SURFACES,
   ExclusionSurface,
-  FEED_FLAG_TOGGLES,
-  INCLUSION_FLAG,
   SURFACE_LABEL_KEYS,
   flipFeedFlag,
+  isIncludedIn,
 } from '../../reader/feed-exclusions';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
@@ -158,30 +157,19 @@ export class VisibilitySectionComponent implements OnInit {
   protected toggle(target: VisibilityTarget, surface: ExclusionSurface): void {
     switch (target.kind) {
       case 'network':
-        return this.toggleNetwork(target.network, surface);
+        return this.networkSurfaceSwitches.toggle(target.network, surface);
       case 'tag':
         return this.tagActions.setTagInclusion(
           target.tag,
           surface,
-          !target.tag[INCLUSION_FLAG[surface]],
+          !isIncludedIn(target.tag, surface),
         );
       case 'feed':
-        return this.toggleFeed(target.subscription, surface);
+        return flipFeedFlag(this.manage, surface, target.subscription);
       case 'feedKind':
       case 'untagged':
         return;
     }
-  }
-
-  private toggleNetwork(network: SocialNetworkName, surface: ExclusionSurface): void {
-    this.networkSurfaceSwitches.all
-      .find((networkSwitch) => networkSwitch.surface === surface)
-      ?.toggle(network);
-  }
-
-  private toggleFeed(subscription: SubscriptionDto, surface: ExclusionSurface): void {
-    const toggle = FEED_FLAG_TOGGLES.find((candidate) => candidate.surface === surface);
-    if (toggle !== undefined) flipFeedFlag(this.manage, toggle, subscription);
   }
 
   private nameOf(target: VisibilityTarget): string {
@@ -214,9 +202,9 @@ export class VisibilitySectionComponent implements OnInit {
   }
 
   private networkCells(network: SocialNetworkName): VisibilityCell[] {
-    return this.networkSurfaceSwitches.all.map((networkSwitch) => ({
-      surface: networkSwitch.surface,
-      checked: !networkSwitch.isExcluded(network),
+    return EXCLUSION_SURFACES.map((surface) => ({
+      surface,
+      checked: !this.networkSurfaceSwitches.isExcluded(network, surface),
       inheritedFrom: [],
     }));
   }
@@ -225,10 +213,9 @@ export class VisibilitySectionComponent implements OnInit {
   private tagCells(tag: TagDto): VisibilityCell[] {
     const ancestors = withAncestors(tag, this.tags.tagsById()).slice(1);
     return EXCLUSION_SURFACES.map((surface) => {
-      const flag = INCLUSION_FLAG[surface];
-      const checked = tag[flag];
+      const checked = isIncludedIn(tag, surface);
       const inheritedFrom = checked
-        ? ancestors.filter((ancestor) => !ancestor[flag]).map(({ name }) => name)
+        ? ancestors.filter((ancestor) => !isIncludedIn(ancestor, surface)).map(({ name }) => name)
         : [];
       return { surface, checked, inheritedFrom };
     });
@@ -237,7 +224,7 @@ export class VisibilitySectionComponent implements OnInit {
   private feedCells(subscription: SubscriptionDto): VisibilityCell[] {
     const switches = this.visibilitySwitches();
     return EXCLUSION_SURFACES.map((surface) => {
-      const checked = subscription[INCLUSION_FLAG[surface]];
+      const checked = isIncludedIn(subscription, surface);
       const causes = checked ? inheritedExclusions(subscription, surface, switches) : [];
       return { surface, checked, inheritedFrom: causes.map((cause) => this.causeName(cause)) };
     });

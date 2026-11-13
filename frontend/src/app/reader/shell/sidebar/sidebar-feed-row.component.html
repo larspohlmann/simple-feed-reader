@@ -49,8 +49,8 @@
         @for (flag of feedFlags; track flag.surface) {
           <app-menu-checkbox
             [label]="flag.includeKey | transloco"
-            [checked]="flag.isIncluded(feed)"
-            (toggled)="rows.toggleFeedFlag(flag, feed)"
+            [checked]="feed[flag.flag]"
+            (toggled)="rows.toggleFeedFlag(flag.surface, feed)"
           />
         }
         <hr />

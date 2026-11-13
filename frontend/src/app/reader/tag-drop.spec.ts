@@ -1,6 +1,6 @@
 import { TagDto } from './models';
 import { TagDropLayout, resolveTagDrop } from './tag-drop';
-import { INCLUDED_EVERYWHERE } from './testing/tag.factory';
+import { INCLUDED_EVERYWHERE } from './tag-inclusion';
 
 const tag = (id: number, parentId: number | null = null, position = 0): TagDto => ({
   id,

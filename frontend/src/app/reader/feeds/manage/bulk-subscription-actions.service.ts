@@ -10,6 +10,7 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { bulkUnsubscribeConfirm } from './unsubscribe-messages';
+import { surfacesIn } from '../../feed-exclusions';
 
 /** The Organise page's bulk bar: one write across the selected feeds, confirmed by a toast. */
 @Injectable({ providedIn: 'root' })
@@ -80,7 +81,7 @@ export class BulkSubscriptionActions {
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
     return this.api.bulkUpdateSubscriptions(body).pipe(
       tap(() => {
-        this.subscriptionReload.afterWrite(body);
+        this.subscriptionReload.afterWrite(surfacesIn(body));
         this.toast.show({ message: confirmation, durationMs: CONFIRMATION_DURATION_MS });
       }),
       map(() => undefined),
