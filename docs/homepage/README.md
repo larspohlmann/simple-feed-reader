@@ -27,14 +27,40 @@ and a poster each) are a screen recording, not screenshots.
 writes the scene start times into the page's scene list
 ([its README](../../frontend/scripts/screenshots/README.md#tour-video)).
 
+## The changelog page has one source
+
+`changelog.html` is not in this folder: the deploy generates it from
+[`CHANGELOG.md`](../../CHANGELOG.md) while it stages the site, with
+`scripts/homepage-changelog.mjs` and the template beside it
+(`scripts/homepage-changelog/page.html`). Each release shows its highlights,
+with the full list of changes folded away and the version linked to its GitHub
+Release; `[Unreleased]` is left out. `index.html` and the changelog page share
+`base.css` and `theme.js`.
+
+To preview it, generate it into this folder (the file is gitignored) and open
+it from the checkout:
+
+```bash
+node scripts/homepage-changelog.mjs CHANGELOG.md docs/homepage/changelog.html
+```
+
+Its tests run with the other Node script tests in CI:
+
+```bash
+node --test "scripts/test/homepage-changelog/*.test.mjs"
+```
+
 ## Deployment
 
 `.github/workflows/deploy-homepage.yml` rsyncs this folder over SSH into
 `~/larspohlmann/simplefeedreader` on the Strato host, a subfolder of the
 portfolio docroot beside the app's own `reader` mount
 ([`deploy/strato/README.md`](../../deploy/strato/README.md)). It runs on every
-push to `develop` that touches `docs/homepage/` or `docs/screenshots/`, and on
-demand from the Actions tab. It is the maintainer's personal deployment, like
+push to `develop` that touches `docs/homepage/`, `docs/screenshots/`,
+`CHANGELOG.md` or the changelog generator, on demand from the Actions tab, and
+at the end of every release: `release.yml` calls it with the `develop` commit
+that carries the release's changelog. The release has to call it, because its
+own push to `develop` uses `GITHUB_TOKEN` and so starts no workflow. It is the maintainer's personal deployment, like
 `deploy/strato/`; nothing else in the repository depends on it.
 
 It reaches the host the way the app deploy does and needs no secrets of its

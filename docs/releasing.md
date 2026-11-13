@@ -17,10 +17,12 @@ which:
   Bluesky and Mastodon (see [Announcements](#announcements)),
 - for every release after the first, writes the generated release notes into
   [CHANGELOG.md](../CHANGELOG.md) and commits that to `main` as
-  `github-actions[bot]`, and
-- merges that commit onto `develop` as well.
+  `github-actions[bot]`,
+- merges that commit onto `develop` as well, and
+- redeploys the [project homepage](homepage/README.md) from that `develop`
+  commit, so its changelog page shows the release.
 
-That last step is what keeps step 1 below working. The changelog commit is made
+The merge onto `develop` is what keeps step 1 below working. The changelog commit is made
 on `main`, so without carrying it over, `main` would end every release one
 commit ahead of `develop` and the next release's `git merge --ff-only develop`
 would refuse. v0.5.2 hit exactly that and needed a manual back-merge
