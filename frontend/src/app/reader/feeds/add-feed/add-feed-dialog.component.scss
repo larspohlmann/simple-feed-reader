@@ -186,7 +186,12 @@ app-tag-picker {
   margin: 0;
 }
 
+// An open preview can outrun the panel body; sticking keeps Subscribe in reach while its card is on screen.
 .subscribe {
+  position: sticky;
+  bottom: var(--space-3);
+  z-index: 1;
+  box-shadow: var(--panel-shadow);
   align-self: flex-start;
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--accent);
