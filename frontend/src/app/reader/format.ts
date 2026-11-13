@@ -50,7 +50,7 @@ function relativeFormatter(locale: string, style: 'short' | 'narrow'): Intl.Rela
 /**
  * A short, localised "time ago" label (e.g. "5 min ago" / "vor 5 Min.") built from
  * Intl.RelativeTimeFormat so it follows the active UI language. `locale` is the
- * language tag ('en' | 'de'); pass a fixed `now` in tests.
+ * UI language code; pass a fixed `now` in tests.
  */
 export function relativeTime(iso: string, locale = 'en', now: Date = new Date()): string {
   const magnitude = relativeMagnitude(iso, now);

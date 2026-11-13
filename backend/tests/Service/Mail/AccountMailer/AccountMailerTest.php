@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\AccountMailer;
 
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
+use App\Enum\SupportedLocale;
 use App\Service\Mail\AccountMailer\AccountMailer;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Model\PendingApprovalNoticeModel;
@@ -39,8 +40,9 @@ final class AccountMailerTest extends TestCase
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
         $translationsDirectory = \dirname(__DIR__, 4) . '/translations';
-        $translator->addResource('yaml', "{$translationsDirectory}/emails.en.yaml", 'en', 'emails');
-        $translator->addResource('yaml', "{$translationsDirectory}/emails.de.yaml", 'de', 'emails');
+        foreach (SupportedLocale::ALL as $locale) {
+            $translator->addResource('yaml', "{$translationsDirectory}/emails.{$locale}.yaml", $locale, 'emails');
+        }
 
         $publicBaseUrl = new class implements PublicBaseUrlInterface {
             public function get(): string
@@ -107,12 +109,27 @@ final class AccountMailerTest extends TestCase
         self::assertStringNotContainsString('token=', $body);
     }
 
+    /** @return iterable<string, array{string, string}> */
+    public static function verificationSubjects(): iterable
+    {
+        yield 'German' => ['de', 'Bestätige deine E-Mail-Adresse'];
+        yield 'French' => ['fr', 'Confirmez votre adresse e-mail'];
+        yield 'Spanish' => ['es', 'Confirma tu dirección de correo electrónico'];
+    }
+
+    #[DataProvider('verificationSubjects')]
+    public function testTheVerificationSubjectSpeaksTheRecipientLanguage(string $locale, string $subject): void
+    {
+        $this->mailer->sendVerification($this->user($locale), 'tok');
+
+        self::assertSame($subject, $this->sent[0]->getSubject());
+    }
+
     public function testMailsAreLocalisedToTheRecipientLanguage(): void
     {
         $this->mailer->sendVerification($this->user('de'), 'tok');
 
         $email = $this->sent[0];
-        self::assertSame('Bestätige deine E-Mail-Adresse', $email->getSubject());
         self::assertStringContainsString('Willkommen bei Simple Feed Reader.', (string) $email->getTextBody());
         // The link still lands on the same frontend route regardless of language.
         self::assertStringContainsString(

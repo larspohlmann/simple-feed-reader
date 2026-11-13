@@ -66,8 +66,8 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $passwordChangedAt = null;
 
     /**
-     * The language of this account's mails ('en' | 'de'), captured from the UI at registration. API responses never
-     * vary by it.
+     * The language of this account's mails (one of SupportedLocale), captured from the UI at registration. API
+     * responses never vary by it.
      */
     #[ORM\Column(length: 5, options: ['default' => 'en'])]
     private string $locale = 'en';

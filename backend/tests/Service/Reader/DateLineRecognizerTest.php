@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 final class DateLineRecognizerTest extends TestCase
 {
+    private const int LOCALES_TIMES_STYLES = 5 * 3;
+
     private DateLineRecognizer $recognizer;
 
     protected function setUp(): void
@@ -39,6 +41,26 @@ final class DateLineRecognizerTest extends TestCase
         self::assertFalse($this->recognizer->isDateLine('2026'));
         self::assertFalse($this->recognizer->isDateLine('9 min.'));
         self::assertFalse($this->recognizer->isDateLine('0'));
+    }
+
+    public function testDateLineMatchesFrenchAndSpanishForms(): void
+    {
+        self::assertTrue($this->recognizer->isDateLine('13 novembre 2026'));
+        self::assertTrue($this->recognizer->isDateLine('vendredi 13 novembre 2026'));
+        self::assertTrue($this->recognizer->isDateLine('1 août 2026'));
+        self::assertTrue($this->recognizer->isDateLine('13 nov. 2026'));
+        self::assertTrue($this->recognizer->isDateLine('13 de noviembre de 2026'));
+        self::assertTrue($this->recognizer->isDateLine('viernes, 13 de noviembre de 2026'));
+        self::assertTrue($this->recognizer->isDateLine('1 ago 2026'));
+    }
+
+    public function testDateLineRejectsFrenchAndSpanishSentences(): void
+    {
+        self::assertFalse($this->recognizer->isDateLine('En 2026, tout a changé'));
+        self::assertFalse($this->recognizer->isDateLine('13 novembre 2026 à Paris'));
+        self::assertFalse($this->recognizer->isDateLine('noviembre'));
+        self::assertFalse($this->recognizer->isDateLine('13 novembre'));
+        self::assertFalse($this->recognizer->isDateLine('2 de mayo'));
     }
 
     public function testDateLineIsAnchoredForTheNumericForm(): void
@@ -71,7 +93,7 @@ final class DateLineRecognizerTest extends TestCase
         $recognizer->isDateLine('Hamburg 1');
         $recognizer->isDateLine('Hamburg 2');
 
-        self::assertCount(9, $formatters->built());
+        self::assertCount(self::LOCALES_TIMES_STYLES, $formatters->built());
         self::assertSame($formatters->built(), array_values(array_unique($formatters->built())));
     }
 
@@ -92,7 +114,7 @@ final class DateLineRecognizerTest extends TestCase
 
         (new DateLineRecognizer($formatters))->isDateLine(str_repeat('a', 47) . '1');
 
-        self::assertCount(9, $formatters->built());
+        self::assertCount(self::LOCALES_TIMES_STYLES, $formatters->built());
     }
 
     public function testCountsTheCapInCharactersNotBytes(): void
@@ -101,6 +123,6 @@ final class DateLineRecognizerTest extends TestCase
 
         (new DateLineRecognizer($formatters))->isDateLine(str_repeat('ä', 40) . '1');
 
-        self::assertCount(9, $formatters->built());
+        self::assertCount(self::LOCALES_TIMES_STYLES, $formatters->built());
     }
 }

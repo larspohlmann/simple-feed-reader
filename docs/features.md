@@ -149,4 +149,4 @@ screenshots; the [gallery](screenshots.md) has more.
 - Special effort went into mobile: a collapsible sidebar with swipe gestures,
   pull-to-refresh, and touch-friendly controls.
 - Light and dark themes, following your system setting if you want.
-- The interface is available in English and German.
+- The interface is available in English, German, French and Spanish.

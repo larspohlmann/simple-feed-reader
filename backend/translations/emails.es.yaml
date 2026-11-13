@@ -1,0 +1,26 @@
+# Correos de la cuenta. Los cuerpos son cadenas de una sola línea con \n explícitos, para que el texto
+# renderizado quede alineado a la izquierda (el enlace debe ir solo en una línea sin sangría).
+verify:
+    subject: 'Confirma tu dirección de correo electrónico'
+    body: "Te damos la bienvenida a Simple Feed Reader.\n\nConfirma tu dirección de correo electrónico abriendo este enlace:\n\n%link%\n\nEl enlace es válido durante 24 horas. Tras la confirmación, un administrador\nrevisa tu cuenta antes de que puedas iniciar sesión.\n\nSi no te has registrado, ignora este mensaje: la cuenta\nse elimina automáticamente en un plazo de 48 horas."
+approved:
+    subject: 'Tu cuenta ha sido aprobada'
+    body: "Tu cuenta de Simple Feed Reader ha sido aprobada.\n\nYa puedes iniciar sesión en %url%"
+reset:
+    subject: 'Restablece tu contraseña'
+    body: "Se ha solicitado restablecer la contraseña de tu cuenta de\nSimple Feed Reader.\n\nElige una nueva contraseña aquí:\n\n%link%\n\nEl enlace es válido durante 24 horas y solo puede usarse una vez. Si no\nlo has solicitado tú, ignora este mensaje: tu contraseña no cambia."
+admin_pending_approval:
+    subject: 'Un nuevo usuario espera aprobación'
+    body: "Un nuevo usuario se ha registrado y necesita tu aprobación.\n\nCorreo electrónico: %applicant_email%\nRegistrado mediante: %method%\nUsuarios pendientes de aprobación: %pending_count%\n\nRevísalos y apruébalos aquí:\n\n%review_url%"
+    method_email_password: 'correo electrónico y contraseña'
+digest:
+    subject: 'Novedades en tus feeds: %count% entradas'
+    intro: "Estas son las entradas nuevas que coinciden con tus búsquedas guardadas, agrupadas por búsqueda."
+    group_heading: '%term% (%count%)'
+    more: 'Ver más → %url%'
+    footer: 'Gestiona tu resumen en Configuración → Correo electrónico.'
+    header: '%date% · %count% entradas nuevas'
+    open_reader: 'Abrir en el lector'
+    manage_html: 'Gestiona tu resumen en %link%.'
+    manage_link_label: 'Configuración → Correo electrónico'
+    more_link: '+%count% más en “%term%”'

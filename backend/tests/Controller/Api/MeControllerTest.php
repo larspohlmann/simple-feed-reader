@@ -8,6 +8,7 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -30,7 +31,16 @@ final class MeControllerTest extends ApiTestCase
         self::assertSame('de', $this->payload($client)['locale']);
     }
 
-    public function testChangingTheLocalePersistsIt(): void
+    /** @return iterable<string, array{string}> */
+    public static function supportedLocales(): iterable
+    {
+        yield 'German' => ['de'];
+        yield 'French' => ['fr'];
+        yield 'Spanish' => ['es'];
+    }
+
+    #[DataProvider('supportedLocales')]
+    public function testChangingTheLocalePersistsIt(string $locale): void
     {
         $client = self::createClient();
         $this->signIn($client, 'switcher@example.test');
@@ -39,19 +49,27 @@ final class MeControllerTest extends ApiTestCase
             'PATCH',
             '/api/me',
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: '{"locale":"de"}',
+            content: json_encode(['locale' => $locale], JSON_THROW_ON_ERROR),
         );
 
         self::assertResponseIsSuccessful();
-        self::assertSame('de', $this->payload($client)['locale']);
+        self::assertSame($locale, $this->payload($client)['locale']);
 
         $this->entityManager()->clear();
         $reloaded = $this->users()->findOneBy(['email' => 'switcher@example.test']);
         self::assertNotNull($reloaded);
-        self::assertSame('de', $reloaded->getLocale());
+        self::assertSame($locale, $reloaded->getLocale());
     }
 
-    public function testAnUnsupportedLocaleIsRejected(): void
+    /** @return iterable<string, array{string}> */
+    public static function unsupportedLocales(): iterable
+    {
+        yield 'Klingon' => ['tlh'];
+        yield 'Italian' => ['it'];
+    }
+
+    #[DataProvider('unsupportedLocales')]
+    public function testAnUnsupportedLocaleIsRejected(string $locale): void
     {
         $client = self::createClient();
         $this->signIn($client, 'klingon@example.test');
@@ -60,7 +78,7 @@ final class MeControllerTest extends ApiTestCase
             'PATCH',
             '/api/me',
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: '{"locale":"tlh"}',
+            content: json_encode(['locale' => $locale], JSON_THROW_ON_ERROR),
         );
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);

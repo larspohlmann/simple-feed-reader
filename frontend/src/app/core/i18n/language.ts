@@ -1,15 +1,12 @@
 /** The languages the UI ships translations for.
  *
  *  Adding one needs a matching edit in `deploy/strato/.htaccess`, whose
- *  cache-header rule names the dictionary files explicitly. Missing it costs no
- *  test and no build error — the new dictionary just goes uncached in
- *  production, which is what made boot fragile on mobile in the first place
- *  (#280). `.htaccess` cannot express "everything under i18n/" without
- *  directives Apache rejects in that context, hence the duplication.
+ *  cache-header rule names the dictionary files explicitly: `.htaccess` cannot
+ *  express "everything under i18n/" without directives Apache rejects in that
+ *  context (#280).
  */
-export type Lang = 'en' | 'de';
-
-export const LANGS: readonly Lang[] = ['en', 'de'];
+export const LANGS = ['en', 'de', 'fr', 'es'] as const;
+export type Lang = (typeof LANGS)[number];
 export const LANG_KEY = 'sfr.lang';
 
 /**
@@ -19,16 +16,17 @@ export const LANG_KEY = 'sfr.lang';
  */
 export const FALLBACK_LANG: Lang = 'en';
 
-/**
- * Pick the initial UI language from a persisted choice or, failing that, the
- * browser's preferred language. German for any `de*` tag (de, de-DE, de-AT, …),
- * English for everything else — the two locales we translate.
- */
-export function detectLang(navigatorLanguage: string | null | undefined): Lang {
-  return (navigatorLanguage ?? '').toLowerCase().startsWith('de') ? 'de' : 'en';
-}
-
 /** Narrow an arbitrary stored/incoming value to a supported language, or null. */
 export function asLang(value: string | null | undefined): Lang | null {
   return value != null && (LANGS as readonly string[]).includes(value) ? (value as Lang) : null;
+}
+
+/**
+ * Pick the initial UI language from a persisted choice or, failing that, the
+ * browser's preferred language: the tag's primary subtag when we translate it
+ * (de-AT, fr-CA, es-419, …), English for everything else.
+ */
+export function detectLang(navigatorLanguage: string | null | undefined): Lang {
+  const primarySubtag = (navigatorLanguage ?? '').toLowerCase().split('-')[0];
+  return asLang(primarySubtag) ?? FALLBACK_LANG;
 }
