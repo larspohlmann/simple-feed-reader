@@ -360,7 +360,7 @@
         "debugStreamed": "{{ kb }} Ko reçus en streaming",
         "debugStreamedNoAnswer": "{{ kb }} Ko reçus en streaming, aucune réponse",
         "debugFinishReason": "Arrêt par le fournisseur : {{ reason }}",
-        "debugFinishTruncated": "Réponse tronquée par max_tokens (finish reason : length)",
+        "debugFinishTruncated": "Réponse tronquée par max_tokens (motif d'arrêt : length)",
         "debugAdjustedTokenParameter": "Ajusté pour la prochaine tentative : limite de jetons envoyée comme {{ value }}",
         "debugAdjustedOutputCap": "Ajusté pour la prochaine tentative : limite de sortie abaissée à {{ value }} jetons",
         "debugAdjustedReasoning": "Ajusté pour la prochaine tentative : le raisonnement n'est plus supprimé",
@@ -447,7 +447,7 @@
       "importStateAll": "Tous",
       "importStateNew": "Nouveaux",
       "importStateSubscribed": "Abonnés",
-      "importStateNoLongerFollowed": "Plus suivis",
+      "importStateNoLongerFollowed": "Non suivis",
       "importSubscribe": "S'abonner à {{handle}}",
       "importUnsubscribe": "Se désabonner de {{handle}}",
       "importUnsubscribeHint": "Décochez un flux pour vous désabonner.",
@@ -494,7 +494,7 @@
       "statusUnchanged": "Vos lectures n'ont pas changé depuis le dernier profil, le modèle n'a donc pas été sollicité à nouveau.",
       "statusNoHistory": "Il n'y a encore ni historique de lecture ni recherche enregistrée pour construire un profil.",
       "statusFailed": "La dernière tentative a échoué : {{error}}",
-      "statusUnreadable": "Le statut du cycle n'a pas pu être lu. Générer maintenant le vérifie à nouveau.",
+      "statusUnreadable": "Le statut du cycle n'a pas pu être lu. « Générer maintenant » le vérifie à nouveau.",
       "generateNow": "Générer maintenant",
       "chooseConnection": "Aucune connexion ne peut construire votre profil. Choisissez-en une ci-dessous, ou ajoutez une connexion LLM sous IA.",
       "schedule": "Régénérer",
@@ -542,7 +542,7 @@
         "confirmMessage": "L'application redémarre pendant la mise à jour et reste indisponible quelques minutes. Faites d'abord un dump de la base de données si cette version modifie le schéma.",
         "confirm": "Mettre à jour",
         "requested": "Mise à jour demandée — l'outil de mise à jour la prend en charge dans la minute.",
-        "running": "Mise à jour…",
+        "running": "Mise à jour en cours…",
         "succeeded": "Mise à jour terminée.",
         "failed": "La mise à jour a échoué.",
         "failedWithCode": "La mise à jour a échoué (code de sortie {{code}}).",
@@ -612,7 +612,7 @@
         "rule4": "Les clés d'accès exigent une page sécurisée. Utilisez HTTPS, ou localhost.",
         "idWarning": "Changer le domaine invalide définitivement toutes les clés d'accès. Le domaine est inscrit dans chaque clé à sa création, donc une clé existante ne correspond plus et ne peut pas être réparée. Le lecteur refuse le changement tant que vous ne l'avez pas confirmé, puis supprime les clés d'accès devenues inutilisables. Chaque personne devra ensuite ajouter une nouvelle clé d'accès sur son appareil.",
         "nameTitle": "Nom affiché des clés d'accès",
-        "nameBody": "C'est le nom que les gens voient quand leur appareil demande une clé d'accès, et le libellé qu'enregistre leur gestionnaire de mots de passe. Restez bref. Le changer est sans risque et toutes les clés d'accès continuent de fonctionner. Un appareil qui en a déjà enregistré une continue d'afficher l'ancien nom."
+        "nameBody": "C'est le nom que les gens voient quand leur appareil demande une clé d'accès, et le libellé qu'enregistre leur gestionnaire de mots de passe. Choisissez un nom court. Le changer est sans risque et toutes les clés d'accès continuent de fonctionner. Un appareil qui en a déjà enregistré une continue d'afficher l'ancien nom."
       }
     },
     "proxy": {
@@ -639,7 +639,7 @@
       "test": "Tester la connexion",
       "testDesc": "Teste le proxy avec les derniers paramètres enregistrés.",
       "testing": "Test en cours…",
-      "testOk": "Connecté. Le monde voit {{ip}}.",
+      "testOk": "Connecté. Adresse IP vue de l'extérieur : {{ip}}.",
       "testFailed": "Impossible de se connecter via le proxy : {{reason}}",
       "saved": "Paramètres du proxy enregistrés",
       "save": "Enregistrer",
@@ -862,8 +862,8 @@
       "editSubscriptionTo": "Modifier l'abonnement à {{feed}}",
       "following": "Abonné",
       "feeds": "{{count}} flux",
-      "feedsSubscribed": "{{count}} flux · {{subscribed}} abonnés",
-      "subscribedCount": "Abonnés : {{count}}",
+      "feedsSubscribed": "{{count}} flux · abonné à {{subscribed}}",
+      "subscribedCount": "abonné à {{count}}",
       "rank": "Rang {{rank}}",
       "lengths": {
         "headlines": "Titres",
@@ -879,7 +879,7 @@
       "sort": {
         "top": "Populaires",
         "az": "A–Z",
-        "feeds": "Plus de flux"
+        "feeds": "Nombre de flux"
       },
       "filters": {
         "countries": "Pays",
@@ -909,7 +909,7 @@
       "summaryOther": "{{count}} flux demandent votre attention",
       "badgeLabel": "{{count}} flux en mauvaise santé",
       "pill": {
-        "dead": "Mort",
+        "dead": "Hors service",
         "failing": "En échec"
       },
       "reason": {
@@ -1107,7 +1107,7 @@
       "lastRefresh": "Dernière actualisation",
       "neverRefreshed": "jamais",
       "dormant": "En sommeil",
-      "staleFeeds": "{{count}} non actualisés récemment",
+      "staleFeeds": "Non actualisés récemment : {{count}}",
       "feedsOfLimit": "{{used}} flux sur {{limit}}",
       "limits": "Limites",
       "trialNone": "Pas d'essai",
@@ -1135,8 +1135,8 @@
     "importModeMerge": "Fusionner — ajouter et mettre à jour, conserver tout le reste",
     "importModeReplace": "Remplacer — supprimer aussi les entrées absentes de ce fichier (les entrées verrouillées sont conservées)",
     "locked": "Verrouillé",
-    "lockedHint": "Les entrées verrouillées traversent un import intactes — ni écrasées ni supprimées.",
-    "importLockedSkipped": "{{count}} entrées verrouillées laissées intactes",
+    "lockedHint": "Un import laisse les entrées verrouillées intactes — ni écrasées ni supprimées.",
+    "importLockedSkipped": "Entrées verrouillées laissées intactes : {{count}}",
     "importDone": "Catégories +{{categoriesCreated}} ~{{categoriesUpdated}} −{{categoriesRemoved}}, flux +{{feedsCreated}} ~{{feedsUpdated}} −{{feedsRemoved}}",
     "importingCatalog": "Import du catalogue",
     "refreshingCatalog": "Actualisation du catalogue",
@@ -1625,7 +1625,7 @@
     "forYouStartOver": "Lancer un nouveau cycle",
     "forYouStop": "Arrêter",
     "forYouShowProgress": "Afficher la progression",
-    "forYouStopping": "Arrêt…",
+    "forYouStopping": "Arrêt en cours…",
     "forYouBuildingProfile": "Construction de votre profil…",
     "forYouProgress": "Classement de vos flux — {{done}} sur {{total}}",
     "forYouUnfinishedTitle": "Vous avez un cycle de recommandations inachevé",
