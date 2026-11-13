@@ -207,7 +207,8 @@ final class MeControllerTest extends ApiTestCase
             ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
         );
         $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","handedness":"left",'
-            . '"passkeyOfferAnswered":true,"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
+            . '"passkeyOfferAnswered":true,"trendingEnabled":false,'
+            . '"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'
             . '"digest":{"enabled":true,"cadence":"weekly","format":"text","sendHour":9,"weekday":3,"timezone":"UTC"}}';
         self::assertSame($expected, json_encode($this->payload($client)['preferences'], \JSON_THROW_ON_ERROR));

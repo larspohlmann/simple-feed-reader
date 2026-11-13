@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Entity\User;
+use App\Enum\Handedness;
 use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
@@ -34,6 +35,7 @@ final readonly class AccountLine
         public string $locale,
         public bool $scrapeFallbackEnabled,
         public MagazineStyle $magazineStyle,
+        public Handedness $handedness,
         public bool $sharingEnabled,
         public array $hiddenShareTargets,
         public bool $rememberShares,
@@ -55,6 +57,9 @@ final readonly class AccountLine
             magazineStyle: MagazineStyle::tryFrom(
                 LineFieldWithDefault::string($line, 'magazineStyle', MagazineStyle::Boxed->value),
             ) ?? MagazineStyle::Boxed,
+            handedness: Handedness::tryFrom(
+                LineFieldWithDefault::string($line, 'handedness', Handedness::Right->value),
+            ) ?? Handedness::Right,
             sharingEnabled: LineFieldWithDefault::bool($line, 'sharingEnabled', true),
             hiddenShareTargets: LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
             rememberShares: LineFieldWithDefault::bool($line, 'rememberShares', true),
@@ -73,6 +78,7 @@ final readonly class AccountLine
             locale: $user->getLocale(),
             scrapeFallbackEnabled: $settings->reading->isScrapeFallbackEnabled(),
             magazineStyle: $settings->reading->getMagazineStyle(),
+            handedness: $settings->reading->getHandedness(),
             sharingEnabled: $settings->sharing->isEnabled(),
             hiddenShareTargets: $settings->sharing->getHiddenTargets(),
             rememberShares: $settings->sharing->isRememberingShares(),
@@ -92,6 +98,7 @@ final readonly class AccountLine
             'locale' => $this->locale,
             'scrapeFallbackEnabled' => $this->scrapeFallbackEnabled,
             'magazineStyle' => $this->magazineStyle->value,
+            'handedness' => $this->handedness->value,
             'sharingEnabled' => $this->sharingEnabled,
             'hiddenShareTargets' => $this->hiddenShareTargets,
             'rememberShares' => $this->rememberShares,

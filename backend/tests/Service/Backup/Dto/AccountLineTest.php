@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup\Dto;
 
 use App\Enum\InclusionSurface;
+use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\AccountLine;
@@ -129,6 +130,35 @@ final class AccountLineTest extends TestCase
         self::assertSame(MagazineStyle::Boxed, $line->magazineStyle);
     }
 
+    public function testItReadsTheHandedness(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'handedness' => 'left',
+        ]);
+
+        self::assertSame(Handedness::Left, $line->handedness);
+    }
+
+    public function testAMissingHandednessFallsBackToRight(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame(Handedness::Right, $line->handedness);
+    }
+
+    public function testAnInvalidHandednessFallsBackToRight(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'handedness' => 'both',
+        ]);
+
+        self::assertSame(Handedness::Right, $line->handedness);
+    }
+
     /** An older backup's `recommendationSettings` object is ignored, not rejected: the format does not carry it. */
     public function testALegacyRecommendationSettingsBlockIsIgnored(): void
     {
@@ -226,6 +256,7 @@ final class AccountLineTest extends TestCase
         $settings = UnsavedUserSettings::of($user);
         $settings->reading->setScrapeFallbackEnabled(true);
         $settings->reading->setMagazineStyle(MagazineStyle::Airy);
+        $settings->reading->setHandedness(Handedness::Left);
         $settings->reading->setTrendingEnabled(false);
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
         $settings->sharing->setRememberingShares(false);
@@ -238,7 +269,8 @@ final class AccountLineTest extends TestCase
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
-            . '"sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],"rememberShares":false,'
+            . '"handedness":"left","sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],'
+            . '"rememberShares":false,'
             . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"savedSearchIncludedNetworks":["bluesky"],'
             . '"forYouExcludedNetworks":["mastodon"],'
