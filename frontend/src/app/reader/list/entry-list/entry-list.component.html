@@ -230,15 +230,13 @@
         }
       </div>
     }
-    @if (toTopShown || cornerTrailing()) {
-      <div class="end-corner">
-        @if (toTopShown) {
-          <app-to-top-button (activate)="scrollToTop()" />
-        }
-        @if (cornerTrailing(); as trailing) {
-          <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
-        }
-      </div>
-    }
+    <div class="end-corner">
+      @if (toTopShown) {
+        <app-to-top-button (activate)="scrollToTop()" />
+      }
+      @if (cornerTrailing(); as trailing) {
+        <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
+      }
+    </div>
   </div>
 </div>

@@ -1895,6 +1895,9 @@ the list's sidebar, the article's back).
   the actions in a column over the pair's outer disc, `--space-2` inside a group,
   `--space-5` between the column and the pair. The list's column reads mark all read,
   mark above as read; the article's favourite, save, share.
+- **Fixed slots on touch:** a disc never moves when another comes or goes. The pair's
+  row is held while empty, and the list's column keeps a row for mark above as read, so
+  mark all read sits at its final height from the first frame.
 - **Handedness** (Settings → Preferences, per account): right puts the stack in the
   bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
   pointer ignores it.

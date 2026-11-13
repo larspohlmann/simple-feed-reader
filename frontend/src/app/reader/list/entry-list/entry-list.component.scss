@@ -427,6 +427,18 @@ app-loading-overlay {
   @include circle.corner-cluster(4);
 }
 
+/* On touch each mark-read disc has its own row, so mark all read never moves (#2203). */
+@media (pointer: coarse) {
+  .corner-cluster .corner-actions {
+    display: grid;
+    grid-template-rows: repeat(2, var(--corner-button-size));
+  }
+
+  .mark-above {
+    grid-row: 2;
+  }
+}
+
 /* The filler comes from another component's template; it inherits the taps from the
    list-owned group around it (#1952). */
 .corner-trailing {

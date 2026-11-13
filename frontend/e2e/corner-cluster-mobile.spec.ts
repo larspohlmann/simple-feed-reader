@@ -98,6 +98,24 @@ test.describe('The corner cluster on a phone (#2203)', () => {
     await page.screenshot({ path: test.info().outputPath('list-right-handed.png') });
   });
 
+  test('keeps mark all read in place while mark above read fades in', async ({ page }) => {
+    await signInAs(page, 'right');
+    await page.route(
+      (url) => url.pathname === '/api/entries',
+      (route) => route.fulfill({ json: { entries: ENTRIES, nextCursor: null } }),
+    );
+    await page.goto('/?subscription=1');
+    await expect(page.getByText('Fixture entry 1', { exact: true })).toBeVisible();
+    await expect(page.locator(MARK_ABOVE)).toHaveCount(0);
+    const before = await discAt(page, MARK_ALL);
+
+    await scrollPageTo(page, 1500);
+    await expect(page.locator(MARK_ABOVE)).toBeVisible();
+
+    expect(await discAt(page, MARK_ALL)).toEqual(before);
+    expect(before).toMatchObject({ right: EDGE, bottom: ABOVE_PAIR + STEP });
+  });
+
   test('mirrors the list discs for a left-handed account', async ({ page }) => {
     await signInAs(page, 'left');
     await openScrolledList(page);
@@ -150,7 +168,7 @@ test.describe('The corner cluster on a phone (#2203)', () => {
 test.describe('The corner cluster on a touch tablet (#2203)', () => {
   test.use({ viewport: { width: 1024, height: 768 }, isMobile: true, hasTouch: true });
 
-  test('lets the column take the corner while the pair shows no disc', async ({ page }) => {
+  test('holds the pair slot, so mark all read sits where it will stay', async ({ page }) => {
     await signInAs(page, 'right');
     await page.route(
       (url) => url.pathname === '/api/entries',
@@ -159,8 +177,8 @@ test.describe('The corner cluster on a touch tablet (#2203)', () => {
     await page.goto('/?subscription=1');
     await expect(page.getByText('Fixture entry 1', { exact: true })).toBeVisible();
 
-    await expect(page.locator('app-entry-list .end-corner')).toHaveCount(0);
-    expect((await discAt(page, MARK_ALL)).bottom).toBe(EDGE);
+    await expect(page.locator('app-entry-list .end-corner button')).toHaveCount(0);
+    expect((await discAt(page, MARK_ALL)).bottom).toBe(ABOVE_PAIR + STEP);
   });
 });
 

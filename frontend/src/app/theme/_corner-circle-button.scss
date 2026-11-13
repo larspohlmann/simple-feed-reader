@@ -97,6 +97,11 @@
       position: static;
     }
 
+    /* Held while empty, so nothing above it moves when its discs come and go. */
+    .end-corner {
+      min-height: var(--corner-button-size);
+    }
+
     .corner-actions {
       flex-direction: $actions-flow;
     }
