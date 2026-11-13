@@ -47,11 +47,14 @@
     <!--
       Revealed when boot fails (#280, #282): by main.ts, by withNavigationErrorHandler,
       or by the watchdog below. Static and style-inlined because no bundle code is
-      trustworthy at that point; both languages because no dictionary loaded either.
+      trustworthy at that point; every language because no dictionary loaded either.
     -->
     <div id="boot-error" hidden style="padding: 2rem; text-align: center; font-family: system-ui">
-      <p>The app could not start. / Die App konnte nicht gestartet werden.</p>
-      <button onclick="location.reload()">Reload / Neu laden</button>
+      <p>
+        The app could not start. / Die App konnte nicht gestartet werden. / L’application n’a pas pu
+        démarrer. / No se pudo iniciar la aplicación.
+      </p>
+      <button onclick="location.reload()">Reload / Neu laden / Recharger / Recargar</button>
     </div>
     <!--
       Boot watchdog (#282): a lazy chunk that STALLS raises no event (a hung
