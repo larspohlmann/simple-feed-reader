@@ -79,7 +79,9 @@ More in the [screenshot gallery](docs/screenshots.md).
 - **Accounts** — email and password, Google, Apple or a passkey; several users
   with optional approval, trials and feed limits; full account backup.
 - **Mobile first-class** — swipe gestures, pull-to-refresh, light and dark
-  themes, English and German.
+  themes.
+- **Four languages** — English, German, French and Spanish, for the interface
+  and the emails.
 
 The full list is in [docs/features.md](docs/features.md).
 
