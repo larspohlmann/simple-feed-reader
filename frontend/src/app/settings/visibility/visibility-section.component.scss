@@ -40,7 +40,6 @@ app-button {
   flex: none;
 }
 
-// Sticks under the settings bar while the long feed group scrolls past.
 .head {
   position: sticky;
   top: var(--bar-h);

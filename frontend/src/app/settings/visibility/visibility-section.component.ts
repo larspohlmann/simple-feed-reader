@@ -76,7 +76,6 @@ export class VisibilitySectionComponent implements OnInit {
   private readonly tags = inject(TagsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly networkSurfaceSwitches = inject(NetworkSurfaceSwitches);
-  private readonly networkSwitches = this.networkSurfaceSwitches.all;
   private readonly visibilitySwitches = inject(VisibilitySwitchesStore).switches;
   private readonly manage = inject(ManageActions);
   private readonly tagActions = inject(TagActions);
@@ -175,7 +174,7 @@ export class VisibilitySectionComponent implements OnInit {
   }
 
   private toggleNetwork(network: SocialNetworkName, surface: ExclusionSurface): void {
-    this.networkSwitches
+    this.networkSurfaceSwitches.all
       .find((networkSwitch) => networkSwitch.surface === surface)
       ?.toggle(network);
   }
@@ -215,7 +214,7 @@ export class VisibilitySectionComponent implements OnInit {
   }
 
   private networkCells(network: SocialNetworkName): VisibilityCell[] {
-    return this.networkSwitches.map((networkSwitch) => ({
+    return this.networkSurfaceSwitches.all.map((networkSwitch) => ({
       surface: networkSwitch.surface,
       checked: !networkSwitch.isExcluded(network),
       inheritedFrom: [],
