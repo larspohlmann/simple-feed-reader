@@ -42,7 +42,10 @@ app's four languages (DE/EN/FR/ES, #2205), so inflections stay together and unre
   regroups live stories.
 - Build time is not a constraint (worker rebuild only); reader requests are untouched. Ingest time is: detection runs on
   refresh, so it must stay cheap (one detection over at most a few kilobytes of text per feed per refresh).
-- A new column on `feed` needs a migration for SQLite and MySQL; the CI migrate-from-empty leg covers it.
+- A new column on `feed` needs a migration for SQLite and MySQL; the CI migrate-from-empty leg covers it. #2218
+  (open, in the main checkout) adds migrations up to `Version20261114160000`; this one takes a later version so the
+  two merge in either order. Until #2218 merges, measuring on the dev database needs the temporary `case Lemmy` in
+  `SocialNetwork` (and now `SourceFormat::LEMMY_API`), as for #2225.
 - House rules (CLAUDE.md): the enum the entity stores lives in `App\Enum`; queries stay in `src/Repository`; tuned
   verdicts are injected services, pure helpers are `Support/`.
 
@@ -82,8 +85,14 @@ How a feed gets its language (Lars chose 3):
   empty page (a first fetch capped to the newest entries, a refresh with one new post) would flip the feed to `null`
   and back, and its stories would regroup from one rebuild to the next — the instability this lands before #2128 to
   avoid. A feed declaring a language outside the four (e.g. `it`) with no confident detection does record `null`.
-- **Social network feeds (`Feed::getNetwork() !== null`) get no language** (Lars, 2026-11-14): their timelines mix
-  languages and arrive in small pages, so they keep the six-character cut, exactly as today.
+- **Social timeline feeds get no language** (Lars, 2026-11-14): their timelines mix languages and arrive in small
+  pages, so they keep the six-character cut, exactly as today. The test is the feed's source format, in
+  `SourceFormat::SOCIAL` (the network API timelines and searches), **not** `Feed::getNetwork() !== null`: the parallel
+  #2218 part 2 (`docs/superpowers/specs/2026-11-14-2218-lemmy-feed-network-design.md`, not yet merged) sets
+  `network = lemmy` on plain-RSS Lemmy community feeds, as Mastodon profile RSS feeds already carry `network =
+  mastodon`. Those stay RSS, are one community or one person, and go through declared/detected like any feed; a
+  mixed-language profile simply gets no confident verdict. Keying on `SourceFormat::SOCIAL` picks up `LEMMY_API`
+  automatically once #2218 lands.
 - The WordPress JSON, Mixcloud and scraped-HTML parsers declare nothing; they rely on detection (my call).
 - No backfill: existing feeds get their language on their next refresh. Dev and Strato refresh continuously.
 
