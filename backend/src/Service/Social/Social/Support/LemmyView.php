@@ -26,7 +26,7 @@ final class LemmyView
         $post = $postView->node('post');
         $postId = $post->int('id') ?? throw new SocialPostNotFoundException(self::MISSING);
 
-        return self::target($postView, $postId, null, $post, $post->string('name'));
+        return self::target($postView, $postId, null);
     }
 
     /** @throws SocialPostNotFoundException */
@@ -36,16 +36,16 @@ final class LemmyView
         $commentId = $comment->int('id') ?? throw new SocialPostNotFoundException(self::MISSING);
         $postId = $comment->int('post_id') ?? throw new SocialPostNotFoundException(self::MISSING);
 
-        return self::target($commentView, $postId, $commentId, $commentView->node('post'), $comment->text('content'));
+        return self::target($commentView, $postId, $commentId);
     }
 
     private static function target(
         JsonNodeModel $view,
         int $postId,
         ?int $commentId,
-        JsonNodeModel $post,
-        ?string $text,
     ): LemmyTargetModel {
+        $post = $view->node('post');
+        $text = null === $commentId ? $post->string('name') : $view->node('comment')->text('content');
         $creator = $view->node('creator');
         $name = $creator->string('name');
         $identity = LemmyAuthor::identity($name, $creator->string('actor_id'));
