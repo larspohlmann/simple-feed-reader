@@ -408,13 +408,18 @@
       "connectedSince": "Connected since {{date}}",
       "connectAnother": "Connect another account",
       "importSectionTitle": "Manage feeds",
-      "importSectionCaption": "Choose which of your Bluesky and Mastodon follows, lists and feeds arrive here as feeds; follows land under the Feeds row of the Bluesky or Mastodon section. A tick means you are subscribed: untick a feed to unsubscribe, and come back any time for new follows. Lists, followed tags and feeds you save, follow or create on the network are added within the hour, and ones you remove or unfollow there go too; anything you remove here is not added back.",
+      "importSectionCaption": "Choose which of your Bluesky and Mastodon follows, lists and feeds, and your Lemmy communities and timelines, arrive here as feeds; follows land under the Feeds row of the Bluesky or Mastodon section, communities under Communities in the Lemmy section. A tick means you are subscribed: untick a feed to unsubscribe, and come back any time for new follows. Lists, followed tags and feeds you save, follow or create on the network are added within the hour, and ones you remove or unfollow there go too; anything you remove here is not added back.",
       "importChoose": "Manage feeds…",
       "importTitle": "Manage feeds of {{handle}}",
       "importLoading": "Loading the accounts you follow…",
       "importFilter": "Filter by name or handle",
       "importSelectAllNew": "Select all new ({{count}})",
       "importTabs": "Feed types",
+      "importTabLemmy": {
+        "accounts": "Communities",
+        "lists": "Timelines",
+        "search": "Search"
+      },
       "importTab": {
         "accounts": "Accounts",
         "lists": "Lists",
@@ -434,6 +439,7 @@
         "syntaxGroup": "groups terms",
         "syntaxCombined": "All of it combined:",
         "syntaxAllWords": "every word must appear",
+        "syntaxLemmyPlain": "plain words; matches post titles and bodies",
         "syntaxMastodonNote": "Needs full-text search on your instance; only posts from people who allow search are found.",
         "syntaxMastodonAlternatives": "Mastodon has no ||: each alternative is searched on its own, at most 8 per query.",
         "preview": "Preview",
@@ -453,6 +459,9 @@
       "importUnsubscribe": "Unsubscribe from {{handle}}",
       "importUnsubscribeHint": "Untick a feed to unsubscribe.",
       "importHome": "Home timeline",
+      "importLemmySubscribed": "Subscribed",
+      "importLemmyLocal": "Local",
+      "importLemmyAll": "All",
       "importTrending": "Trending posts",
       "importAddCollection": "Add {{name}}",
       "importRemoveCollection": "Remove {{name}}",
@@ -1393,6 +1402,7 @@
     "reconnectSocialAccount": "Reconnect {{handle}} in settings",
     "manageSocialSection": "{{network}} options",
     "socialFeeds": "Feeds",
+    "lemmyCommunities": "Communities",
     "socialSearches": "Searches",
     "socialHome": "Home@{{network}}",
     "savedFrom": {
@@ -1402,6 +1412,7 @@
       "feeds": "Saved from feeds"
     },
     "toggleSocialFeeds": "Toggle {{network}} feeds",
+    "toggleLemmyCommunities": "Toggle {{network}} communities",
     "toggleSocialSearches": "Toggle {{network}} searches",
     "socialNetworkShort": {
       "bluesky": "bsky",

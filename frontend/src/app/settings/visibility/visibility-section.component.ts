@@ -22,7 +22,10 @@ import { TagActions } from '../../reader/feeds/manage/tag-actions.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
-import { NETWORK_FEED_KIND_DESCRIPTORS } from '../../reader/state/social-sections';
+import {
+  NETWORK_FEED_KIND_DESCRIPTORS,
+  networkFeedKindLabels,
+} from '../../reader/state/social-sections';
 import { buildTagTree, titleMatcher } from '../../reader/state/subscription-derivations';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -190,7 +193,9 @@ export class VisibilitySectionComponent implements OnInit {
       case 'feed':
         return target.subscription.title;
       case 'feedKind':
-        return this.transloco.translate(NETWORK_FEED_KIND_DESCRIPTORS[target.feedKind].labelKey);
+        return this.transloco.translate(
+          networkFeedKindLabels(target.feedKind, target.network).labelKey,
+        );
       case 'untagged':
         return this.transloco.translate('settings.organise.untagged');
     }

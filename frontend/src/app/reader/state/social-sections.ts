@@ -48,6 +48,17 @@ export const NETWORK_FEED_KIND_DESCRIPTORS: Readonly<
   },
 };
 
+export function networkFeedKindLabels(
+  kind: NetworkFeedKind,
+  network: SocialNetworkName,
+): Pick<NetworkFeedKindDescriptor, 'labelKey' | 'toggleKey'> {
+  if (kind === 'profile' && network === 'lemmy') {
+    return { labelKey: 'reader.lemmyCommunities', toggleKey: 'reader.toggleLemmyCommunities' };
+  }
+  const { labelKey, toggleKey } = NETWORK_FEED_KIND_DESCRIPTORS[kind];
+  return { labelKey, toggleKey };
+}
+
 export const NETWORK_FEED_KINDS_IN_ORDER: readonly NetworkFeedKind[] = (
   Object.keys(NETWORK_FEED_KIND_DESCRIPTORS) as NetworkFeedKind[]
 ).sort(

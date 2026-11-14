@@ -2,7 +2,12 @@ import { SocialNetworkName } from '../../core/social-network';
 import { SocialAccountRefDto, SocialFeedRefDto } from '../social-feed';
 import { SubscriptionDto } from '../models';
 import { makeSubscription } from '../testing/subscription.factory';
-import { buildSocialSections, isPrivateFeed, isSocialFeed } from './social-sections';
+import {
+  buildSocialSections,
+  isPrivateFeed,
+  isSocialFeed,
+  networkFeedKindLabels,
+} from './social-sections';
 import { NO_UNREAD_TOTALS, UnreadTotals } from './unread-totals';
 
 const sectionsOf = (
@@ -296,5 +301,19 @@ describe('saved feeds in the social sections', () => {
   it('hides an empty saved feed and keeps a section that holds only saved posts', () => {
     expect(sectionsOf([saved(2, 'bluesky', 0)], [])).toEqual([]);
     expect(sectionsOf([saved(3, 'mastodon', 1)], [])[0].network).toBe('mastodon');
+  });
+});
+
+describe('networkFeedKindLabels', () => {
+  it('calls a Lemmy profile group Communities', () => {
+    expect(networkFeedKindLabels('profile', 'lemmy')).toEqual({
+      labelKey: 'reader.lemmyCommunities',
+      toggleKey: 'reader.toggleLemmyCommunities',
+    });
+  });
+
+  it('keeps every other network and kind on the descriptor labels', () => {
+    expect(networkFeedKindLabels('profile', 'mastodon').labelKey).toBe('reader.socialFeeds');
+    expect(networkFeedKindLabels('search', 'lemmy').labelKey).toBe('reader.socialSearches');
   });
 });

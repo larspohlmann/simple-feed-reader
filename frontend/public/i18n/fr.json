@@ -408,13 +408,18 @@
       "connectedSince": "Connecté depuis le {{date}}",
       "connectAnother": "Connecter un autre compte",
       "importSectionTitle": "Gérer les flux",
-      "importSectionCaption": "Choisissez lesquels de vos abonnements, listes et flux Bluesky et Mastodon arrivent ici sous forme de flux ; les comptes suivis apparaissent sous la ligne Flux de la section Bluesky ou Mastodon. Une coche signifie que vous êtes abonné : décochez un flux pour vous désabonner, et revenez quand vous voulez pour les nouveaux comptes suivis. Les listes, hashtags suivis et flux que vous enregistrez, suivez ou créez sur le réseau sont ajoutés dans l'heure, et ceux que vous y retirez ou cessez de suivre disparaissent aussi ; ce que vous retirez ici n'est pas rajouté.",
+      "importSectionCaption": "Choisissez lesquels de vos abonnements, listes et flux Bluesky et Mastodon, et de vos communautés et fils Lemmy, arrivent ici sous forme de flux ; les comptes suivis apparaissent sous la ligne Flux de la section Bluesky ou Mastodon, les communautés sous Communautés dans la section Lemmy. Une coche signifie que vous êtes abonné : décochez un flux pour vous désabonner, et revenez quand vous voulez pour les nouveaux comptes suivis. Les listes, hashtags suivis et flux que vous enregistrez, suivez ou créez sur le réseau sont ajoutés dans l'heure, et ceux que vous y retirez ou cessez de suivre disparaissent aussi ; ce que vous retirez ici n'est pas rajouté.",
       "importChoose": "Gérer les flux…",
       "importTitle": "Gérer les flux de {{handle}}",
       "importLoading": "Chargement des comptes que vous suivez…",
       "importFilter": "Filtrer par nom ou identifiant",
       "importSelectAllNew": "Sélectionner tous les nouveaux ({{count}})",
       "importTabs": "Types de flux",
+      "importTabLemmy": {
+        "accounts": "Communautés",
+        "lists": "Fils",
+        "search": "Recherche"
+      },
       "importTab": {
         "accounts": "Comptes",
         "lists": "Listes",
@@ -434,6 +439,7 @@
         "syntaxGroup": "regroupe des termes",
         "syntaxCombined": "Tout combiné :",
         "syntaxAllWords": "chaque mot doit apparaître",
+        "syntaxLemmyPlain": "mots simples ; trouve les titres et les textes des publications",
         "syntaxMastodonNote": "Nécessite la recherche plein texte sur votre instance ; seules les publications des personnes qui autorisent la recherche sont trouvées.",
         "syntaxMastodonAlternatives": "Mastodon ne connaît pas || : chaque alternative est recherchée séparément, 8 au maximum par requête.",
         "preview": "Aperçu",
@@ -453,6 +459,9 @@
       "importUnsubscribe": "Se désabonner de {{handle}}",
       "importUnsubscribeHint": "Décochez un flux pour vous désabonner.",
       "importHome": "Fil d'accueil",
+      "importLemmySubscribed": "Abonnements",
+      "importLemmyLocal": "Local",
+      "importLemmyAll": "Tout",
       "importTrending": "Publications tendance",
       "importAddCollection": "Ajouter {{name}}",
       "importRemoveCollection": "Retirer {{name}}",
@@ -1397,6 +1406,7 @@
     "reconnectSocialAccount": "Reconnecter {{handle}} dans les paramètres",
     "manageSocialSection": "Options {{network}}",
     "socialFeeds": "Flux",
+    "lemmyCommunities": "Communautés",
     "socialSearches": "Recherches",
     "socialHome": "Accueil@{{network}}",
     "savedFrom": {
@@ -1406,6 +1416,7 @@
       "feeds": "Enregistrés depuis les flux"
     },
     "toggleSocialFeeds": "Afficher/masquer les flux {{network}}",
+    "toggleLemmyCommunities": "Afficher/masquer les communautés {{network}}",
     "toggleSocialSearches": "Afficher/masquer les recherches {{network}}",
     "socialNetworkShort": {
       "bluesky": "bsky",

@@ -23,11 +23,7 @@ import { SubscriptionDto } from '../models';
 import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
 import { ReaderRouteState } from './reader-route-state.service';
-import {
-  NETWORK_FEED_KIND_DESCRIPTORS,
-  SocialSection,
-  feedAvatarUrl,
-} from '../state/social-sections';
+import { networkFeedKindLabels, SocialSection, feedAvatarUrl } from '../state/social-sections';
 
 @Injectable()
 export class ListHeading {
@@ -136,7 +132,7 @@ export class ListHeading {
   private networkTitle(selection: SelectionOf<'network'>): string {
     const network = this.i18n.translate(`settings.social.${selection.network}`);
     return selection.feedKind
-      ? `${network} · ${this.i18n.translate(NETWORK_FEED_KIND_DESCRIPTORS[selection.feedKind].labelKey)}`
+      ? `${network} · ${this.i18n.translate(networkFeedKindLabels(selection.feedKind, selection.network).labelKey)}`
       : network;
   }
 

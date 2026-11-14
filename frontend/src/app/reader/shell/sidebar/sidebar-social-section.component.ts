@@ -12,6 +12,7 @@ import { ExclusionSurface } from '../../feed-exclusions';
 import {
   NETWORK_FEED_KINDS_IN_ORDER,
   NETWORK_FEED_KIND_DESCRIPTORS,
+  networkFeedKindLabels,
   SocialSection,
 } from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
@@ -63,6 +64,7 @@ export class SidebarSocialSectionComponent {
     return NETWORK_FEED_KINDS_IN_ORDER.map((kind) => ({
       kind,
       ...NETWORK_FEED_KIND_DESCRIPTORS[kind],
+      ...networkFeedKindLabels(kind, section.network),
       feeds: section.groups[kind],
     })).filter((group) => group.feeds.subscriptions.length > 0);
   });

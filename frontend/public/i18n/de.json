@@ -408,13 +408,18 @@
       "connectedSince": "Verbunden seit {{date}}",
       "connectAnother": "Weiteres Konto verbinden",
       "importSectionTitle": "Feeds verwalten",
-      "importSectionCaption": "Wähle, welche deiner Bluesky- und Mastodon-Konten, -Listen und -Feeds hier als Feeds ankommen; gefolgte Konten landen unter „Feeds“ im Bluesky- oder Mastodon-Bereich. Ein Haken heißt abonniert: Entferne ihn, um einen Feed abzubestellen, und schau jederzeit wieder für neu Gefolgte vorbei. Listen, gefolgte Hashtags und Feeds, die du im Netzwerk speicherst, abonnierst oder anlegst, kommen innerhalb einer Stunde dazu, und was du dort entfernst oder entfolgst, verschwindet auch hier; was du hier entfernst, wird nicht wieder hinzugefügt.",
+      "importSectionCaption": "Wähle, welche deiner Bluesky- und Mastodon-Konten, -Listen und -Feeds sowie deiner Lemmy-Communities und -Timelines hier als Feeds ankommen; gefolgte Konten landen unter „Feeds“ im Bluesky- oder Mastodon-Bereich, Communities unter „Communities“ im Lemmy-Bereich. Ein Haken heißt abonniert: Entferne ihn, um einen Feed abzubestellen, und schau jederzeit wieder für neu Gefolgte vorbei. Listen, gefolgte Hashtags und Feeds, die du im Netzwerk speicherst, abonnierst oder anlegst, kommen innerhalb einer Stunde dazu, und was du dort entfernst oder entfolgst, verschwindet auch hier; was du hier entfernst, wird nicht wieder hinzugefügt.",
       "importChoose": "Feeds verwalten…",
       "importTitle": "Feeds von {{handle}} verwalten",
       "importLoading": "Lade die Konten, denen du folgst…",
       "importFilter": "Nach Name oder Handle filtern",
       "importSelectAllNew": "Alle neuen auswählen ({{count}})",
       "importTabs": "Feed-Arten",
+      "importTabLemmy": {
+        "accounts": "Communities",
+        "lists": "Timelines",
+        "search": "Suche"
+      },
       "importTab": {
         "accounts": "Konten",
         "lists": "Listen",
@@ -434,6 +439,7 @@
         "syntaxGroup": "fasst Begriffe zusammen",
         "syntaxCombined": "Alles zusammen:",
         "syntaxAllWords": "jedes Wort muss vorkommen",
+        "syntaxLemmyPlain": "einfache Wörter; trifft Titel und Texte von Beiträgen",
         "syntaxMastodonNote": "Setzt die Volltextsuche deiner Instanz voraus; gefunden werden nur Beiträge von Leuten, die die Suche erlauben.",
         "syntaxMastodonAlternatives": "Mastodon kennt kein ||: jede Alternative wird einzeln gesucht, höchstens 8 pro Suche.",
         "preview": "Vorschau",
@@ -453,6 +459,9 @@
       "importUnsubscribe": "{{handle}} abbestellen",
       "importUnsubscribeHint": "Entferne den Haken, um einen Feed abzubestellen.",
       "importHome": "Home-Timeline",
+      "importLemmySubscribed": "Abonniert",
+      "importLemmyLocal": "Lokal",
+      "importLemmyAll": "Alle",
       "importTrending": "Angesagte Beiträge",
       "importAddCollection": "{{name}} hinzufügen",
       "importRemoveCollection": "{{name}} entfernen",
@@ -1393,6 +1402,7 @@
     "reconnectSocialAccount": "{{handle}} in den Einstellungen neu verbinden",
     "manageSocialSection": "{{network}}-Optionen",
     "socialFeeds": "Feeds",
+    "lemmyCommunities": "Communities",
     "socialSearches": "Suchen",
     "socialHome": "Startseite@{{network}}",
     "savedFrom": {
@@ -1402,6 +1412,7 @@
       "feeds": "Gespeichert aus Feeds"
     },
     "toggleSocialFeeds": "{{network}}-Feeds ein-/ausklappen",
+    "toggleLemmyCommunities": "{{network}}-Communities ein-/ausklappen",
     "toggleSocialSearches": "{{network}}-Suchen ein-/ausklappen",
     "socialNetworkShort": {
       "bluesky": "bsky",

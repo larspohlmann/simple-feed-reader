@@ -39,9 +39,14 @@ interface SyntaxRule {
   readonly key: string;
 }
 
-const EXAMPLE_QUERY = '"rss reader" -gazette';
-
+const OPERATOR_EXAMPLE = '"rss reader" -gazette';
 const COMBINED_EXAMPLE = '("rss reader" || "feed reader" || rssreader) -gazette';
+
+const EXAMPLE_QUERIES: Readonly<Record<SocialNetworkName, string>> = {
+  bluesky: OPERATOR_EXAMPLE,
+  mastodon: OPERATOR_EXAMPLE,
+  lemmy: 'rss reader',
+};
 
 const PHRASE: SyntaxRule = { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' };
 const EITHER: SyntaxRule = { operator: 'rss || atom', key: 'settings.social.search.syntaxEither' };
@@ -62,7 +67,7 @@ const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, readonly SyntaxRule[]>> 
     EXCLUDE_AUTHOR,
     GROUP,
   ],
-  lemmy: [],
+  lemmy: [{ operator: 'rss reader', key: 'settings.social.search.syntaxLemmyPlain' }],
 };
 
 /** A search query with its syntax help and a preview of what it finds; the host projects its own action beside Preview. */
@@ -98,8 +103,10 @@ export class SocialSearchFormComponent {
   protected readonly outcome = signal<PreviewOutcome | null>(null);
 
   readonly normalizedQuery = computed(() => this.query().trim().replace(/\s+/g, ' '));
-  protected readonly exampleQuery = EXAMPLE_QUERY;
-  protected readonly combinedExample = COMBINED_EXAMPLE;
+  protected readonly exampleQuery = computed(() => EXAMPLE_QUERIES[this.network()]);
+  protected readonly combinedExample = computed(() =>
+    this.network() === 'lemmy' ? null : COMBINED_EXAMPLE,
+  );
   protected readonly syntaxRules = computed(() => SEARCH_SYNTAX[this.network()]);
   protected readonly canPreview = computed(
     () => this.normalizedQuery() !== '' && !this.previewing(),
