@@ -2,7 +2,7 @@ import { Component, computed, forwardRef, inject, input, signal } from '@angular
 import { CdkConnectedOverlay, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
-import { VoteValue } from '../vote-pill/vote';
+import { VoteValue } from '../../vote-pill/vote';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { entryRelativeTime } from '../../format';
