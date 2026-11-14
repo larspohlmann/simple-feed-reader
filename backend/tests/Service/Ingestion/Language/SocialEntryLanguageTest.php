@@ -10,135 +10,159 @@ use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Language\SocialEntryLanguage;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Tests\Support\StubbedDetector;
 use PHPUnit\Framework\TestCase;
 
 final class SocialEntryLanguageTest extends TestCase
 {
-    private const string SHORT_ENGLISH = 'Airports reopen tonight after the storm';
-    private const string LONG_GERMAN = 'Der Bundeskanzler sagte am Montag in Berlin, dass die Regierung weitere '
-        . 'Hilfen für die Menschen in den vom Hochwasser betroffenen Regionen vorbereitet und dafür zusätzliche '
-        . 'Mittel bereitstellt.';
-
     public function testAShortTextKeepsTheLanguageItsAuthorStated(): void
     {
-        self::assertSame(FeedLanguage::German, self::languageOf(self::SHORT_ENGLISH, 'de'));
+        self::assertSame(FeedLanguage::German, self::languageOf(self::textOfLength(5), 'de', 'en'));
     }
 
-    public function testALongTextTheDetectorReadsAsAnotherLanguageOverridesTheStatedOne(): void
+    public function testATextJustUnderTheLimitKeepsTheStatedLanguage(): void
     {
-        self::assertGreaterThanOrEqual(150, mb_strlen(self::LONG_GERMAN));
-        self::assertSame(FeedLanguage::German, self::languageOf(self::LONG_GERMAN, 'en'));
+        self::assertSame(
+            FeedLanguage::English,
+            self::languageOf(self::textOfLength(self::limit() - 1), 'en', 'de'),
+        );
     }
 
-    public function testAGermanTextOfOneHundredFortyNineCharactersKeepsTheStatedEnglish(): void
+    public function testTheLimitCountsCharactersNotBytes(): void
     {
-        self::assertSame(FeedLanguage::English, self::languageOf(self::germanOfLength(149), 'en'));
+        $body = str_repeat('ä', self::limit() - 1);
+
+        self::assertSame(FeedLanguage::English, self::languageOf($body, 'en', 'de'));
     }
 
-    public function testAGermanTextOfOneHundredFiftyCharactersOverridesTheStatedEnglish(): void
+    public function testATextAtTheLimitOverridesTheStatedLanguage(): void
     {
-        self::assertSame(FeedLanguage::German, self::languageOf(self::germanOfLength(150), 'en'));
+        self::assertSame(
+            FeedLanguage::German,
+            self::languageOf(self::textOfLength(self::limit()), 'en', 'de'),
+        );
     }
 
     public function testALongTextWithoutLettersKeepsTheStatedLanguage(): void
     {
-        self::assertSame(FeedLanguage::English, self::languageOf(str_repeat('2031 – 42 % … 12:30! ', 8), 'en'));
+        $digits = substr(str_repeat('2031 – 42 % … 12:30! ', self::limit()), 0, self::limit());
+
+        self::assertSame(FeedLanguage::English, self::languageOf($digits, 'en', 'de'));
     }
 
     public function testALongTextTheDetectorAgreesWithKeepsTheStatedLanguage(): void
     {
-        self::assertSame(FeedLanguage::German, self::languageOf(self::LONG_GERMAN, 'de'));
+        self::assertSame(
+            FeedLanguage::German,
+            self::languageOf(self::textOfLength(self::limit()), 'de', 'de'),
+        );
+    }
+
+    public function testALongTextTheDetectorPlacesOutsideTheFourKeepsTheStatedLanguage(): void
+    {
+        self::assertSame(
+            FeedLanguage::English,
+            self::languageOf(self::textOfLength(self::limit()), 'en', 'it'),
+        );
     }
 
     public function testALanguageOutsideTheFourIsStoredAsNone(): void
     {
-        self::assertNull(self::languageOf(self::SHORT_ENGLISH, 'pt'));
-        self::assertNull(self::languageOf(self::LONG_GERMAN, 'x-lemmy-130'));
+        self::assertNull(self::languageOf(self::textOfLength(1), 'pt', 'en'));
+    }
+
+    public function testALongTextStatedOutsideTheFourIsStoredAsNoneWhateverTheDetectorSays(): void
+    {
+        self::assertNull(self::languageOf(self::textOfLength(self::limit()), 'x-lemmy-130', 'de'));
     }
 
     public function testAPostStatingNothingGetsTheDetectorsGuess(): void
     {
-        self::assertSame(FeedLanguage::English, self::languageOf(self::SHORT_ENGLISH, null));
+        self::assertSame(FeedLanguage::French, self::languageOf(self::textOfLength(5), null, 'fr'));
+    }
+
+    public function testAPostStatingNothingAndGuessedOutsideTheFourGetsNone(): void
+    {
+        self::assertNull(self::languageOf(self::textOfLength(5), null, 'it'));
     }
 
     public function testARegionTagIsReadAsItsLanguage(): void
     {
-        self::assertSame(FeedLanguage::English, self::languageOf('Hallo', 'en-US'));
+        self::assertSame(FeedLanguage::English, self::languageOf(self::textOfLength(5), 'en-US', 'de'));
     }
 
-    public function testTheHeadlineCountsTowardsTheGuess(): void
+    public function testTheHeadlineAndTheBodyAreBothGuessedFrom(): void
     {
-        $entry = new ParsedEntryModel(
-            'guid',
-            null,
-            Headline::derived('Regierung beschließt neues Gesetz'),
-            null,
-            null,
-            '<p>2031</p>',
-            null,
-        );
+        $detector = StubbedDetector::saying('de');
 
-        self::assertSame(FeedLanguage::German, self::language()->of($entry));
+        new SocialEntryLanguage(new LanguageGuess($detector))->of(self::entry('A headline', 'A body', null));
+
+        self::assertSame(["A headline\nA body"], $detector->seenTexts());
     }
 
     public function testASummaryIsReadInPlaceOfTheContent(): void
     {
-        $entry = new ParsedEntryModel(
-            'guid',
-            null,
-            Headline::derived('…'),
-            null,
-            self::LONG_GERMAN,
-            '<p>2031</p>',
-            null,
-            statedLanguage: 'en',
-        );
+        $detector = StubbedDetector::saying('de');
 
-        self::assertSame(FeedLanguage::German, self::language()->of($entry));
+        new SocialEntryLanguage(new LanguageGuess($detector))
+            ->of(self::entry('…', 'The summary', 'en', '<p>The content</p>'));
+
+        self::assertSame(["…\nThe summary"], $detector->seenTexts());
     }
 
     public function testTheLengthIsTheBodysNotTheHeadlines(): void
     {
-        $entry = new ParsedEntryModel(
-            'guid',
-            null,
-            Headline::derived(self::LONG_GERMAN),
-            null,
-            null,
-            '<p>Hallo</p>',
-            null,
-            statedLanguage: 'en',
-        );
+        $entry = self::entry(self::textOfLength(self::limit()), 'short', 'en');
+        $language = new SocialEntryLanguage(new LanguageGuess(StubbedDetector::saying('de')));
 
-        self::assertSame(FeedLanguage::English, self::language()->of($entry));
+        self::assertSame(FeedLanguage::English, $language->of($entry));
     }
 
-    private static function germanOfLength(int $length): string
+    public function testARealDetectorOverridesAStatedLanguageOnALongUnambiguousText(): void
     {
-        $text = rtrim(mb_substr(self::LONG_GERMAN, 0, $length));
-        self::assertSame($length, mb_strlen($text));
+        $german = 'Der Bundeskanzler sagte am Montag in Berlin, dass die Regierung weitere Hilfen für die Menschen '
+            . 'in den vom Hochwasser betroffenen Regionen vorbereitet und dafür zusätzliche Mittel bereitstellt.';
+        $language = new SocialEntryLanguage(new LanguageGuess(new LanguageDetectionFactory()->create()));
 
-        return $text;
+        self::assertGreaterThanOrEqual(self::limit(), mb_strlen($german));
+        self::assertSame(FeedLanguage::German, $language->of(self::entry('…', $german, 'en')));
     }
 
-    private static function languageOf(string $body, ?string $statedLanguage): ?FeedLanguage
+    private static function limit(): int
     {
-        $entry = new ParsedEntryModel(
+        $limit = new \ReflectionClassConstant(SocialEntryLanguage::class, 'LONG_TEXT_LENGTH')->getValue();
+        self::assertIsInt($limit);
+
+        return $limit;
+    }
+
+    private static function textOfLength(int $length): string
+    {
+        return str_repeat('x', $length);
+    }
+
+    private static function languageOf(string $body, ?string $statedLanguage, string $detectorSays): ?FeedLanguage
+    {
+        $language = new SocialEntryLanguage(new LanguageGuess(StubbedDetector::saying($detectorSays)));
+
+        return $language->of(self::entry('…', $body, $statedLanguage));
+    }
+
+    private static function entry(
+        string $headline,
+        string $summary,
+        ?string $statedLanguage,
+        string $contentHtml = '<p>content</p>',
+    ): ParsedEntryModel {
+        return new ParsedEntryModel(
             'guid',
             null,
-            Headline::derived('…'),
+            Headline::derived($headline),
             null,
-            null,
-            '<p>' . $body . '</p>',
+            $summary,
+            $contentHtml,
             null,
             statedLanguage: $statedLanguage,
         );
-
-        return self::language()->of($entry);
-    }
-
-    private static function language(): SocialEntryLanguage
-    {
-        return new SocialEntryLanguage(new LanguageGuess(new LanguageDetectionFactory()->create()));
     }
 }

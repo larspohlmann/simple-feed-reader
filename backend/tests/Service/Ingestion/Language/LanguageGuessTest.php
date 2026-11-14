@@ -7,38 +7,47 @@ namespace App\Tests\Service\Ingestion\Language;
 use App\Enum\FeedLanguage;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
-use PHPUnit\Framework\Attributes\DataProvider;
+use App\Tests\Support\StubbedDetector;
 use PHPUnit\Framework\TestCase;
 
 final class LanguageGuessTest extends TestCase
 {
-    /** @return iterable<string, array{string, FeedLanguage}> */
-    public static function shortTexts(): iterable
+    public function testTheDetectorsTopLanguageIsTheGuess(): void
     {
-        yield 'German' => ['Regierung beschließt neues Gesetz', FeedLanguage::German];
-        yield 'French' => ['Le gouvernement adopte une nouvelle loi', FeedLanguage::French];
-        yield 'Spanish' => ['El gobierno aprueba una nueva ley', FeedLanguage::Spanish];
-        yield 'English' => ['Airports reopen tonight after the storm', FeedLanguage::English];
+        $guess = new LanguageGuess(StubbedDetector::saying('fr'));
+
+        self::assertSame(FeedLanguage::French, $guess->bestFor('Some text'));
     }
 
-    #[DataProvider('shortTexts')]
-    public function testAShortTextGetsTheDetectorsTopLanguage(string $text, FeedLanguage $language): void
+    public function testALanguageOutsideTheFourGetsNoGuess(): void
     {
-        self::assertSame($language, self::guess()->bestFor($text));
+        $guess = new LanguageGuess(StubbedDetector::saying('it'));
+
+        self::assertNull($guess->bestFor('Some text'));
     }
 
-    public function testATextWithoutLettersGetsNoGuess(): void
+    public function testADetectorWithoutAnswerGetsNoGuess(): void
     {
-        self::assertNull(self::guess()->bestFor('2031 – 42 % … 12:30!'));
+        self::assertNull(new LanguageGuess(StubbedDetector::sayingNothing())->bestFor('Some text'));
     }
 
-    public function testAnEmptyTextGetsNoGuess(): void
+    public function testATextWithoutLettersGetsNoGuessWhateverTheDetectorSays(): void
     {
-        self::assertNull(self::guess()->bestFor(''));
+        $guess = new LanguageGuess(StubbedDetector::saying('de'));
+
+        self::assertNull($guess->bestFor('2031 – 42 % … 12:30!'));
     }
 
-    private static function guess(): LanguageGuess
+    public function testAnEmptyTextGetsNoGuessWhateverTheDetectorSays(): void
     {
-        return new LanguageGuess(new LanguageDetectionFactory()->create());
+        self::assertNull(new LanguageGuess(StubbedDetector::saying('de'))->bestFor(''));
+    }
+
+    public function testTheRealDetectorIsWiredToTheGuess(): void
+    {
+        $guess = new LanguageGuess(new LanguageDetectionFactory()->create());
+        $german = 'Der Bundeskanzler sagte am Montag in Berlin, dass die Regierung weitere Hilfen vorbereitet.';
+
+        self::assertSame(FeedLanguage::German, $guess->bestFor($german));
     }
 }

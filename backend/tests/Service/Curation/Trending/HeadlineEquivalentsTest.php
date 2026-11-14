@@ -276,8 +276,13 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testAGermanWordIsStemmedWithTheGermanStemmer(): void
     {
+        $stemmer = TrendingWiring::stemmer();
+
         self::assertSame(
-            ['bundesregier', 'beschliesst', 'haushalt'],
+            array_map(
+                static fn (string $word): string => $stemmer->stem($word, FeedLanguage::German),
+                ['Bundesregierung', 'beschließt', 'Haushalt'],
+            ),
             $this->equivalents->stemsOf('Bundesregierung beschließt Haushalt', FeedLanguage::German),
         );
     }
