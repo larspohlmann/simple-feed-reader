@@ -58,22 +58,57 @@ final class HeadlineEquivalentsTest extends TestCase
         self::assertNotContains('onu', $this->equivalents->stemsOf('Un plan de paix pour Gaza'));
     }
 
-    #[DataProvider('allCapsTexts')]
-    public function testAnAbbreviationInAllCapsTextDoesNotFire(string $text): void
+    #[DataProvider('shoutedTexts')]
+    public function testAnAbbreviationThatIsAnOrdinaryWordDoesNotFireInAShoutedRun(string $text): void
     {
-        $stems = $this->equivalents->stemsOf($text);
-
-        self::assertNotContains('onu', $stems);
-        self::assertNotContains('eunion', $stems);
+        self::assertNotContains('onu', $this->equivalents->stemsOf($text));
     }
 
     /** @return iterable<string, array{string}> */
-    public static function allCapsTexts(): iterable
+    public static function shoutedTexts(): iterable
     {
-        yield 'whole text in capitals' => ['THE EU AND THE UN'];
-        yield 'between all-caps words' => ['Breaking: WHO EU NEWS today'];
-        yield 'at the start, before an all-caps word' => ['EU WILL FALL, critics say'];
-        yield 'next to a two-letter all-caps word' => ['THE EU UK DEAL is done'];
+        yield 'French in capitals' => ['UN PLAN DE PAIX'];
+        yield 'between all-caps words' => ['Breaking: WHO UN NEWS today'];
+        yield 'at the start, before an all-caps word' => ['UNO WILL FALL, critics say'];
+        yield 'next to a two-letter all-caps word' => ['THE UN UK DEAL is done'];
+    }
+
+    #[DataProvider('abbreviationsNextToCapitals')]
+    public function testAnUnambiguousAbbreviationFiresNextToCapitals(string $text, string $canonical): void
+    {
+        self::assertContains($canonical, $this->equivalents->stemsOf($text));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function abbreviationsNextToCapitals(): iterable
+    {
+        yield 'EU before an acronym' => ['EU AI Act tritt in Kraft', 'eunion'];
+        yield 'WM after an acronym' => ['Tickets für die FIFA WM', 'weltme'];
+        yield 'whole text in capitals' => ['THE EU AND THE UN', 'eunion'];
+    }
+
+    public function testALongFormNextToAnAbbreviationStillMaps(): void
+    {
+        self::assertContains('britai', $this->equivalents->stemsOf('Großbritanniens EU-Austritt'));
+        self::assertContains('osterr', $this->equivalents->stemsOf('ÖVP Austria'));
+    }
+
+    public function testGermanInflectedPhrasesMatch(): void
+    {
+        $union = $this->equivalents->stemsOf('Gipfel der Europäischen Union in Brüssel');
+        self::assertContains('eunion', $union);
+        self::assertNotContains('union', $union);
+        $nations = $this->equivalents->stemsOf('Rede bei den Vereinten Nationen');
+        self::assertContains('onu', $nations);
+        self::assertNotContains('nation', $nations);
+    }
+
+    public function testGermanGenitivesMatch(): void
+    {
+        self::assertContains('poland', $this->equivalents->stemsOf('Polens Regierung'));
+        self::assertContains('china', $this->equivalents->stemsOf('Chinas Exporte'));
+        self::assertContains('japan', $this->equivalents->stemsOf('Japans Premier'));
+        self::assertContains('kremli', $this->equivalents->stemsOf('Sprecher des Kremls'));
     }
 
     public function testAnAbbreviationStandingAloneFires(): void
@@ -83,7 +118,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testNeighboursWithLowerCaseLettersDoNotSilenceAnAbbreviation(): void
     {
-        self::assertContains('eunion', $this->equivalents->stemsOf('Talks between OpenAI EU AstraZeneca'));
+        self::assertContains('onu', $this->equivalents->stemsOf('Talks between OpenAI UN AstraZeneca'));
     }
 
     public function testSeveralAbbreviationsInOneTextAreAllMapped(): void
@@ -141,7 +176,7 @@ final class HeadlineEquivalentsTest extends TestCase
     {
         $filler = new HeadlineFiller();
         $stemTable = self::table('STEMS');
-        foreach (['EXACT_WORDS', 'PHRASES', 'STEMS'] as $table) {
+        foreach (['EXACT_WORDS', 'SHOUTABLE_WORDS', 'PHRASES', 'STEMS'] as $table) {
             foreach (self::table($table) as $key => $canonical) {
                 $label = \sprintf('%s[%s] = %s', $table, $key, $canonical);
                 self::assertGreaterThanOrEqual(3, mb_strlen($canonical), $label);
@@ -154,7 +189,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testEveryExactWordIsLettersAndDigitsOnly(): void
     {
-        foreach (array_keys(self::table('EXACT_WORDS')) as $word) {
+        foreach ([...array_keys(self::table('EXACT_WORDS')), ...array_keys(self::table('SHOUTABLE_WORDS'))] as $word) {
             self::assertMatchesRegularExpression('/^[\p{L}\p{N}]+$/u', $word);
         }
     }

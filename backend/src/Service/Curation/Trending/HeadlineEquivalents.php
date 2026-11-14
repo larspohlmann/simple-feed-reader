@@ -12,7 +12,7 @@ final readonly class HeadlineEquivalents
     /** Case-sensitive whole words: abbreviations, and long forms whose six-letter stem would catch unrelated words. */
     private const array EXACT_WORDS = [
         'EU' => 'eunion', 'UE' => 'eunion',
-        'UN' => 'onu', 'UNO' => 'onu', 'ONU' => 'onu',
+        'ONU' => 'onu',
         'UK' => 'britai', 'Großbritannien' => 'britai', 'Großbritanniens' => 'britai',
         'WM' => 'weltme',
         'Schweiz' => 'switze', 'Schweizer' => 'switze',
@@ -21,12 +21,17 @@ final readonly class HeadlineEquivalents
         'Francia' => 'france',
     ];
 
+    /** Exact words that are also ordinary words in a shouted headline: French "UN PLAN", Spanish "UNO MÁS". */
+    private const array SHOUTABLE_WORDS = [
+        'UN' => 'onu', 'UNO' => 'onu',
+    ];
+
     /** Folded words joined by one space. */
     private const array PHRASES = [
         'united nations' => 'onu', 'vereinte nationen' => 'onu', 'nations unies' => 'onu',
-        'naciones unidas' => 'onu',
+        'naciones unidas' => 'onu', 'vereinten nationen' => 'onu',
         'europaische union' => 'eunion', 'european union' => 'eunion', 'union europeenne' => 'eunion',
-        'union europea' => 'eunion',
+        'union europea' => 'eunion', 'europaischen union' => 'eunion',
         'united kingdom' => 'britai', 'royaume uni' => 'britai', 'reino unido' => 'britai',
         'pays bas' => 'nether', 'paises bajos' => 'nether',
     ];
@@ -36,13 +41,13 @@ final readonly class HeadlineEquivalents
         'zelens' => 'selens',
         'russla' => 'russia', 'russie' => 'russia', 'rusia' => 'russia',
         'ucrani' => 'ukrain',
-        'chine' => 'china',
+        'chine' => 'china', 'chinas' => 'china',
         'frankr' => 'france',
         'spanie' => 'spain', 'espagn' => 'spain', 'espana' => 'spain',
         'italie' => 'italia', 'italy' => 'italia',
         'turkei' => 'turkey', 'turqui' => 'turkey',
-        'japon' => 'japan',
-        'polen' => 'poland', 'pologn' => 'poland', 'poloni' => 'poland',
+        'japon' => 'japan', 'japans' => 'japan',
+        'polen' => 'poland', 'polens' => 'poland', 'pologn' => 'poland', 'poloni' => 'poland',
         'suisse' => 'switze', 'suiza' => 'switze',
         'autric' => 'osterr',
         'brasil' => 'brazil', 'bresil' => 'brazil',
@@ -52,7 +57,7 @@ final readonly class HeadlineEquivalents
         'syrien' => 'syria', 'syrie' => 'syria', 'siria' => 'syria',
         'moskau' => 'moscow', 'moscou' => 'moscow', 'moscu' => 'moscow',
         'peking' => 'beijin', 'pekin' => 'beijin',
-        'kreml' => 'kremli',
+        'kreml' => 'kremli', 'kremls' => 'kremli',
         'brusel' => 'brusse', 'bruxel' => 'brusse',
     ];
 
@@ -83,9 +88,11 @@ final readonly class HeadlineEquivalents
         preg_match_all($this->exactWordPattern, $text, $matches, \PREG_OFFSET_CAPTURE | \PREG_SET_ORDER);
         $replaced = $text;
         foreach (array_reverse($matches) as [[$word, $offset]]) {
-            if (!self::isInAllCapsRun($text, $offset, \strlen($word))) {
-                $replaced = substr_replace($replaced, self::EXACT_WORDS[$word], $offset, \strlen($word));
+            if (isset(self::SHOUTABLE_WORDS[$word]) && self::isInAllCapsRun($text, $offset, \strlen($word))) {
+                continue;
             }
+            $canonical = self::EXACT_WORDS[$word] ?? self::SHOUTABLE_WORDS[$word];
+            $replaced = substr_replace($replaced, $canonical, $offset, \strlen($word));
         }
 
         return $replaced;
@@ -146,7 +153,7 @@ final readonly class HeadlineEquivalents
 
     private static function exactWordPattern(): string
     {
-        return '/(?<![\p{L}\p{N}])(?:' . implode('|', array_keys(self::EXACT_WORDS)) . ')(?![\p{L}\p{N}])/u';
+        return '/(?<![\p{L}\p{N}])(?:' . implode('|', array_keys([...self::EXACT_WORDS, ...self::SHOUTABLE_WORDS])) . ')(?![\p{L}\p{N}])/u';
     }
 
     /** @return array<string, list<array{list<string>, string}>> */
