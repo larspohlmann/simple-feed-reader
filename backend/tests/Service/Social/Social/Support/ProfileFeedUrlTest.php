@@ -89,6 +89,7 @@ final class ProfileFeedUrlTest extends TestCase
         yield 'a community feed' => ['https://feddit.example/feeds/c/rss.xml', 'rss@feddit.example'];
         yield 'upper case and a query' => ['https://Feddit.Example/feeds/c/RSS.xml?sort=New', 'rss@feddit.example'];
         yield 'over http' => ['http://feddit.example/feeds/c/rss.xml', 'rss@feddit.example'];
+        yield 'on a port' => ['https://feddit.example:8443/feeds/c/rss.xml', 'rss@feddit.example:8443'];
         yield 'a user feed' => ['https://feddit.example/feeds/u/ada.xml', null];
         yield 'no extension' => ['https://feddit.example/feeds/c/rss', null];
         yield 'a nested path' => ['https://feddit.example/feeds/c/a/b.xml', null];
@@ -111,6 +112,10 @@ final class ProfileFeedUrlTest extends TestCase
         self::assertSame(
             'https://feddit.example/feeds/c/rss.xml',
             ProfileFeedUrl::lemmy('rss', 'feddit.example'),
+        );
+        self::assertSame(
+            'https://feddit.example:8443/feeds/c/rss.xml',
+            ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss@feddit.example:8443'),
         );
         self::assertNull(ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss'));
     }

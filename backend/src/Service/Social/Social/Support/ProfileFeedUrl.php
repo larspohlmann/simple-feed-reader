@@ -47,7 +47,7 @@ final class ProfileFeedUrl
     {
         $parts = self::webPartsOf($url);
 
-        return null === $parts ? null : self::identityIn($network, $parts['host'], $parts['path']);
+        return null === $parts ? null : self::identityIn($network, $parts);
     }
 
     /** @return SocialNetwork|null the network whose profile feed $url is; null when it is no profile feed */
@@ -58,7 +58,7 @@ final class ProfileFeedUrl
             return null;
         }
         foreach (SocialNetwork::cases() as $network) {
-            if (null !== self::identityIn($network, $parts['host'], $parts['path'])) {
+            if (null !== self::identityIn($network, $parts)) {
                 return $network;
             }
         }
@@ -82,23 +82,29 @@ final class ProfileFeedUrl
         return BlueskyActor::isValid($actor) ? $actor : null;
     }
 
-    /** @return array{host: string, path: string}|null */
+    /** @return array{host: string, hostWithPort: string, path: string}|null */
     private static function webPartsOf(string $url): ?array
     {
         $parts = parse_url($url);
         if (false === $parts || !isset($parts['host']) || !self::isWeb($parts['scheme'] ?? '')) {
             return null;
         }
+        $host = strtolower($parts['host']);
 
-        return ['host' => strtolower($parts['host']), 'path' => $parts['path'] ?? ''];
+        return [
+            'host' => $host,
+            'hostWithPort' => isset($parts['port']) ? $host . ':' . $parts['port'] : $host,
+            'path' => $parts['path'] ?? '',
+        ];
     }
 
-    private static function identityIn(SocialNetwork $network, string $host, string $path): ?string
+    /** @param array{host: string, hostWithPort: string, path: string} $parts */
+    private static function identityIn(SocialNetwork $network, array $parts): ?string
     {
         return match ($network) {
-            SocialNetwork::Bluesky => self::blueskyIdentity($host, $path),
-            SocialNetwork::Mastodon => self::mastodonIdentity($host, $path),
-            SocialNetwork::Lemmy => self::lemmyIdentity($host, $path),
+            SocialNetwork::Bluesky => self::blueskyIdentity($parts['host'], $parts['path']),
+            SocialNetwork::Mastodon => self::mastodonIdentity($parts['host'], $parts['path']),
+            SocialNetwork::Lemmy => self::lemmyIdentity($parts['hostWithPort'], $parts['path']),
         };
     }
 

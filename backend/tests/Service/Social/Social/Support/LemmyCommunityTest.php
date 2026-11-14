@@ -43,6 +43,18 @@ final class LemmyCommunityTest extends TestCase
         self::assertNull($follow->avatarUrl);
     }
 
+    public function testACommunityOnAPortKeepsThePortInItsIdentityAndFeed(): void
+    {
+        $follow = LemmyCommunity::follow(JsonNodeModel::of([
+            'community' => ['name' => 'Linux', 'actor_id' => 'https://Lemmy.Example:8443/c/Linux'],
+        ]));
+
+        self::assertNotNull($follow);
+        self::assertSame('linux@lemmy.example:8443', $follow->identity);
+        self::assertSame('!linux@lemmy.example:8443', $follow->handle);
+        self::assertSame('https://lemmy.example:8443/feeds/c/linux.xml', $follow->feedUrl);
+    }
+
     public function testACommunityOnAPlainHttpInstanceIsLeftOut(): void
     {
         self::assertNull(LemmyCommunity::follow(self::view(2)));

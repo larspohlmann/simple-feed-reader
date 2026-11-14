@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
+use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 
@@ -14,13 +15,13 @@ final class LemmyCommunity
     {
         $community = $communityView->node('community');
         $name = $community->string('name');
-        $parts = parse_url($community->string('actor_id') ?? '');
-        $host = \is_array($parts) && 'https' === ($parts['scheme'] ?? null) ? ($parts['host'] ?? null) : null;
+        $host = self::httpsHostOf($community->string('actor_id') ?? '');
         if (null === $name || null === $host) {
             return null;
         }
-        $identity = strtolower($name . '@' . $host);
-        [$lowerName, $lowerHost] = explode('@', $identity);
+        $lowerName = strtolower($name);
+        $lowerHost = strtolower($host);
+        $identity = $lowerName . '@' . $lowerHost;
 
         return new FollowedAccountModel(
             $identity,
@@ -29,6 +30,11 @@ final class LemmyCommunity
             ProfileFeedUrl::lemmy($lowerName, $lowerHost),
             $community->string('icon'),
         );
+    }
+
+    private static function httpsHostOf(string $actorId): ?string
+    {
+        return 'https' === parse_url($actorId, \PHP_URL_SCHEME) ? UrlOrigin::hostWithPort($actorId) : null;
     }
 
     private function __construct()
