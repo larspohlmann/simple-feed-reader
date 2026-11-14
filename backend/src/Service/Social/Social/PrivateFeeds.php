@@ -155,7 +155,7 @@ final readonly class PrivateFeeds
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => SourceFormat::BLUESKY_API,
             SocialNetwork::Mastodon => SourceFormat::MASTODON_API,
-            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
+            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
         };
     }
 }

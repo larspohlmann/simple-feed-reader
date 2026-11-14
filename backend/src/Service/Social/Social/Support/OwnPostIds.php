@@ -20,7 +20,7 @@ final class OwnPostIds
         return match ($post->network) {
             SocialNetwork::Bluesky => $post->address,
             SocialNetwork::Mastodon => self::mastodonStatusId($post->address, $account),
-            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
+            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
         };
     }
 
@@ -30,7 +30,7 @@ final class OwnPostIds
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyPost($url, $account),
             SocialNetwork::Mastodon => self::mastodonStatusId($url, $account),
-            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
+            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
         };
     }
 

@@ -20,8 +20,7 @@ final class SocialPostAddress
         return match ($entry->getFeed()->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyPost($entry->getGuid()),
             SocialNetwork::Mastodon => self::mastodonPost($entry),
-            SocialNetwork::Lemmy => null,
-            null => null,
+            SocialNetwork::Lemmy, null => null,
         };
     }
 

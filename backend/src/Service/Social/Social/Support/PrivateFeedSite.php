@@ -19,7 +19,7 @@ final class PrivateFeedSite
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::bluesky($account, $privateFeed),
             SocialNetwork::Mastodon => self::mastodon($account, $privateFeed),
-            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
+            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
         };
     }
 

@@ -33,7 +33,7 @@ final class PrivateFeeds
         return match ($account->getNetwork()) {
             SocialNetwork::Mastodon => self::mastodon($account, $feedId, $kind, $remoteId),
             SocialNetwork::Bluesky => self::bluesky($account, $feedId, $kind, $remoteId),
-            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
+            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
         };
     }
 

@@ -50,7 +50,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                 $query,
             ),
             SocialNetwork::Mastodon => MastodonSearchPage::of($this->mastodonAnswers($account, $query), $query),
-            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
+            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
         };
     }
 
