@@ -1,7 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  linkedSignal,
+  NgZone,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { observeResize } from '../../../shared/observe-resize';
+
+const CLAMPED_LINES = 2;
 
 /**
  * What a feed says about itself: its own image, description, and a link to its
@@ -19,6 +35,8 @@ import { IconComponent } from '../../../shared/icon/icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FeedIntroComponent {
+  private readonly zone = inject(NgZone);
+
   /** The feed's name as the sidebar shows it, custom title included. Repeated
    *  from the list header on purpose: with the logo beside it the block reads
    *  as the feed's masthead rather than as a stray paragraph. */
@@ -39,4 +57,31 @@ export class FeedIntroComponent {
    *  favicon branch, so a dead logo URL degrades to the site icon rather than
    *  to nothing. */
   protected readonly logoUrl = computed(() => (this.broken() ? null : this.imageUrl()));
+
+  private readonly text = viewChild<ElementRef<HTMLElement>>('text');
+  private readonly blurbLines = viewChild<ElementRef<HTMLElement>>('blurbLines');
+  private readonly lineCount = signal(0);
+  protected readonly long = computed(() => this.lineCount() > CLAMPED_LINES);
+  protected readonly expanded = linkedSignal({
+    source: this.description,
+    computation: () => false,
+  });
+  protected readonly clamped = computed(() => this.long() && !this.expanded());
+
+  constructor() {
+    afterRenderEffect(() => {
+      this.description();
+      this.countLines();
+    });
+    effect((onCleanup) => {
+      const text = this.text()?.nativeElement;
+      if (text) onCleanup(observeResize(this.zone, [text], () => this.countLines()));
+    });
+  }
+
+  /** An inline box has one client rect per line it wraps onto, clamped or not,
+   *  so the count holds still while the clamp toggles. */
+  private countLines(): void {
+    this.lineCount.set(this.blurbLines()?.nativeElement.getClientRects().length ?? 0);
+  }
 }

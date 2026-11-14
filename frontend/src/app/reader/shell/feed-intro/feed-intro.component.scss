@@ -49,9 +49,7 @@
   line-height: 1;
 }
 
-/* One inline flow, so the blurb wraps freely and the link trails its last line.
-   Nothing is clipped: the server's character cap is the only bound, and it is
-   set high enough that no real feed description reaches it. */
+/* One inline flow, so the blurb wraps freely and the link trails its last line. */
 .text {
   margin: 0;
   font-size: var(--fs-sm);
@@ -61,9 +59,37 @@
   color: var(--text-muted);
 }
 
-/* Separation from the blurb, and only from the blurb: applied unconditionally
-   it also indented the link past the title on the feeds that carry no blurb. */
-.description + .homepage {
+/* A block while clamped, so the toggle and the link start the row below the
+   ellipsis and stay visible (#2221). */
+.description.clamped {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    text-decoration: underline;
+  }
+}
+
+/* Separation from what precedes in the same line, and only then: applied
+   unconditionally it also indented the link past the title on the feeds that
+   carry no blurb, and the toggle past a clamped blurb's left edge. */
+.description:not(.clamped) + .toggle,
+.description:not(.clamped) + .homepage,
+.toggle + .homepage {
   margin-left: var(--space-2);
 }
 
