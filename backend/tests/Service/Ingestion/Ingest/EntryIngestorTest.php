@@ -326,25 +326,24 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(FeedLanguage::German, $feed->getLanguage());
     }
 
-    public function testAPageTooShortToJudgeKeepsTheRecordedLanguage(): void
+    public function testARecordedLanguageIsKeptOnLaterRefreshes(): void
     {
         $feed = $this->feed();
         $this->ingestLanguagePage($feed, self::languagePage('german'));
 
-        $this->ingestLanguagePage($feed, self::languagePage('german', 1));
+        $this->ingestLanguagePage($feed, self::languagePage('french', declared: 'fr'));
 
         self::assertSame(FeedLanguage::German, $feed->getLanguage());
         self::assertNull($feed->getPlatform());
     }
 
-    public function testADeclaredLanguageOutsideTheFourClearsTheRecordedLanguage(): void
+    public function testADeclaredLanguageOutsideTheFourGivesWayToTheGuess(): void
     {
         $feed = $this->feed();
-        $this->ingestLanguagePage($feed, self::languagePage('german'));
 
-        $this->ingestLanguagePage($feed, self::languagePage('italian', declared: 'it'));
+        $this->ingestLanguagePage($feed, self::languagePage('french', declared: 'it'));
 
-        self::assertNull($feed->getLanguage());
+        self::assertSame(FeedLanguage::French, $feed->getLanguage());
     }
 
     public function testASocialApiFeedRecordsNoLanguage(): void

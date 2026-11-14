@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Enum\FeedPlatform;
-use App\Enum\SourceFormat;
 use App\Repository\EntryRepository;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\FeedTitle\FeedTitleInterface;
@@ -137,13 +136,9 @@ final readonly class EntryIngestor
 
     private function recordTraits(Feed $feed, ParsedFeedModel $parsed): void
     {
-        $traits = $feed->getTraits()->withPlatform(FeedPlatform::fromGenerator($parsed->generator));
-        $verdict = SourceFormat::isSocial($feed->getSourceFormat())
-            ? null
-            : $this->languageResolver->verdictFor($parsed);
-        if (null !== $verdict) {
-            $traits = $traits->withLanguage($verdict->language);
-        }
+        $traits = $feed->getTraits()
+            ->withPlatform(FeedPlatform::fromGenerator($parsed->generator))
+            ->withLanguage($this->languageResolver->languageFor($feed, $parsed));
         $feed->recordTraits($traits);
     }
 

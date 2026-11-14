@@ -4,117 +4,91 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Language;
 
+use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Enum\FeedLanguage;
+use App\Enum\SourceFormat;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\FeedLanguageResolver;
+use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use PHPUnit\Framework\TestCase;
 
 final class FeedLanguageResolverTest extends TestCase
 {
+    private const string URL = 'https://news.test/feed.xml';
+
     private FeedLanguageResolver $resolver;
 
     protected function setUp(): void
     {
-        $this->resolver = new FeedLanguageResolver(new LanguageDetectionFactory()->create());
+        $this->resolver = new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create()));
     }
 
-    public function testDeclaredLanguageAgreeingWithTheEntriesIsKept(): void
+    public function testADeclaredTagWinsOverDetection(): void
     {
-        $verdict = $this->resolver->verdictFor(self::feed('de', self::entries('german')));
+        $language = $this->resolver->languageFor(new Feed(self::URL), self::feed('en-US', self::entries('german')));
 
-        self::assertSame(FeedLanguage::German, $verdict?->language);
+        self::assertSame(FeedLanguage::English, $language);
     }
 
-    public function testConfidentDetectionOverrulesAWrongDeclaration(): void
+    public function testAnUnknownDeclaredTagFallsThroughToTheGuess(): void
     {
-        $verdict = $this->resolver->verdictFor(self::feed('en-US', self::entries('german')));
+        $language = $this->resolver->languageFor(new Feed(self::URL), self::feed('it', self::entries('french')));
 
-        self::assertSame(FeedLanguage::German, $verdict?->language);
+        self::assertSame(FeedLanguage::French, $language);
     }
 
-    public function testTooLittleTextLeavesTheDeclarationStanding(): void
+    public function testAnUndeclaredFeedGetsTheBestGuess(): void
     {
-        $twoHeadlines = self::headlinesOnly(\array_slice(self::entries('german'), 0, 2));
+        $language = $this->resolver->languageFor(new Feed(self::URL), self::feed(null, self::entries('spanish')));
 
-        $verdict = $this->resolver->verdictFor(self::feed('en-US', $twoHeadlines));
-
-        self::assertSame(FeedLanguage::English, $verdict?->language);
+        self::assertSame(FeedLanguage::Spanish, $language);
     }
 
-    public function testFortyWordsAreEnoughToDetect(): void
+    public function testAFewHeadlinesAreGuessedWithoutAFloor(): void
     {
-        $verdict = $this->resolver->verdictFor(self::feed(null, [[self::germanWords(40), null]]));
+        $headlines = self::headlinesOnly(\array_slice(self::entries('german'), 0, 1));
 
-        self::assertSame(FeedLanguage::German, $verdict?->language);
+        $language = $this->resolver->languageFor(new Feed(self::URL), self::feed(null, $headlines));
+
+        self::assertSame(FeedLanguage::German, $language);
     }
 
-    public function testThirtyNineWordsAreTooFewToDetect(): void
+    public function testABlankDeclarationCountsAsUndeclared(): void
     {
-        self::assertNull($this->resolver->verdictFor(self::feed(null, [[self::germanWords(39), null]])));
+        $language = $this->resolver->languageFor(new Feed(self::URL), self::feed('  ', self::entries('english')));
+
+        self::assertSame(FeedLanguage::English, $language);
     }
 
-    public function testDeclaredLanguageOutsideTheFourWithoutDetectionRecordsNoLanguage(): void
+    public function testAFeedWithoutLettersStaysWithoutALanguage(): void
     {
-        $verdict = $this->resolver->verdictFor(self::feed('it', self::entries('italian')));
-
-        self::assertNotNull($verdict);
-        self::assertNull($verdict->language);
+        self::assertNull($this->resolver->languageFor(new Feed(self::URL), self::feed(null, [['2031 – 42 %', null]])));
     }
 
-    public function testUnparsableDeclarationWithoutDetectionRecordsNoLanguage(): void
+    public function testAFeedWithoutEntriesOrDeclarationStaysWithoutALanguage(): void
     {
-        $verdict = $this->resolver->verdictFor(self::feed('  klingon ', []));
-
-        self::assertNotNull($verdict);
-        self::assertNull($verdict->language);
+        self::assertNull($this->resolver->languageFor(new Feed(self::URL), self::feed(null, [])));
     }
 
-    public function testDeclaredLanguageOutsideTheFourGivesWayToConfidentDetection(): void
+    public function testASetLanguageIsKeptWhateverTheBodyDeclaresOrReads(): void
     {
-        $verdict = $this->resolver->verdictFor(self::feed('it', self::entries('french')));
+        $feed = new Feed(self::URL);
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
 
-        self::assertSame(FeedLanguage::French, $verdict?->language);
+        $language = $this->resolver->languageFor($feed, self::feed('de', self::entries('german')));
+
+        self::assertSame(FeedLanguage::French, $language);
     }
 
-    public function testUndeclaredFeedIsDetected(): void
+    public function testASocialTimelineIsNotJudged(): void
     {
-        $verdict = $this->resolver->verdictFor(self::feed(null, self::entries('spanish')));
+        $feed = new Feed(self::URL);
+        $feed->setSourceFormat(SourceFormat::MASTODON_API);
 
-        self::assertSame(FeedLanguage::Spanish, $verdict?->language);
-    }
-
-    public function testUndeclaredEnglishFeedIsDetected(): void
-    {
-        $verdict = $this->resolver->verdictFor(self::feed(null, self::entries('english')));
-
-        self::assertSame(FeedLanguage::English, $verdict?->language);
-    }
-
-    public function testUndeclaredFeedWithTooLittleTextHasNoVerdict(): void
-    {
-        $twoHeadlines = self::headlinesOnly(\array_slice(self::entries('spanish'), 0, 2));
-
-        self::assertNull($this->resolver->verdictFor(self::feed(null, $twoHeadlines)));
-    }
-
-    public function testBlankDeclarationCountsAsUndeclared(): void
-    {
-        self::assertNull($this->resolver->verdictFor(self::feed('  ', [])));
-    }
-
-    public function testUndeclaredMixedLanguageFeedHasNoVerdict(): void
-    {
-        $english = self::entries('english');
-        $mixed = [];
-        foreach (self::entries('german') as $index => $german) {
-            $mixed[] = $english[$index];
-            $mixed[] = $german;
-        }
-
-        self::assertNull($this->resolver->verdictFor(self::feed(null, $mixed)));
+        self::assertNull($this->resolver->languageFor($feed, self::feed('de', self::entries('german'))));
     }
 
     /**
@@ -134,14 +108,6 @@ final class FeedLanguageResolverTest extends TestCase
             },
             explode("\n\n", trim($fixture)),
         );
-    }
-
-    private static function germanWords(int $count): string
-    {
-        $text = implode(' ', array_merge(...self::entries('german')));
-        preg_match_all('/\p{L}+/u', strip_tags($text), $words);
-
-        return implode(' ', \array_slice($words[0], 0, $count));
     }
 
     /**

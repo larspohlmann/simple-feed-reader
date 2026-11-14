@@ -19,6 +19,7 @@ use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\FeedLanguageResolver;
+use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Social\Social\ProfileFeedTitle;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -52,7 +53,7 @@ final class EntryIngestors
             $imageWriter,
             new ProfileFeedTitle(),
             new EntryTranscriptWriter($entityManager),
-            new FeedLanguageResolver(new LanguageDetectionFactory()->create()),
+            new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create())),
         );
     }
 }
