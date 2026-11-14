@@ -76,13 +76,7 @@ export class SocialAccountsService {
   }
 
   connectLemmy(credentials: LemmyCredentials): Observable<SocialAccount> {
-    const { totpToken, ...fields } = credentials;
-    return this.upserting(
-      this.http.post<SocialAccount>(`${this.endpoint}/lemmy`, {
-        ...fields,
-        ...withTotp(totpToken),
-      }),
-    );
+    return this.upserting(this.http.post<SocialAccount>(`${this.endpoint}/lemmy`, credentials));
   }
 
   reconnect(
@@ -91,10 +85,7 @@ export class SocialAccountsService {
     totpToken: string | null = null,
   ): Observable<SocialAccount> {
     return this.upserting(
-      this.http.put<SocialAccount>(`${this.endpoint}/${id}/credential`, {
-        secret,
-        ...withTotp(totpToken),
-      }),
+      this.http.put<SocialAccount>(`${this.endpoint}/${id}/credential`, { secret, totpToken }),
     );
   }
 
@@ -151,8 +142,4 @@ export class SocialAccountsService {
   private fail(error: HttpErrorResponse): void {
     this.failure.set(problemMessage(parseProblem(error)));
   }
-}
-
-function withTotp(totpToken: string | null): { totpToken?: string } {
-  return totpToken === null ? {} : { totpToken };
 }

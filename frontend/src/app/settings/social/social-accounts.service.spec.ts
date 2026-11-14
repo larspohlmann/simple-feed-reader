@@ -100,12 +100,12 @@ describe('SocialAccountsService', () => {
 
     const put = http.expectOne(`${ENDPOINT}/1/credential`);
     expect(put.request.method).toBe('PUT');
-    expect(put.request.body).toEqual({ secret: 'new-secret' });
+    expect(put.request.body).toEqual({ secret: 'new-secret', totpToken: null });
     put.flush(healed);
     expect(service.accounts()).toEqual([healed, account({ id: 2, isDefault: false })]);
   });
 
-  it('connectLemmy() POSTs the instance, username and password, and omits an absent two-factor code', () => {
+  it('connectLemmy() POSTs the instance, username and password, with a null two-factor code when there is none', () => {
     loadAccounts([]);
 
     service
@@ -123,6 +123,7 @@ describe('SocialAccountsService', () => {
       instanceUrl: 'lemmy.example',
       username: 'lars',
       password: 'pw',
+      totpToken: null,
     });
     post.flush(account({ network: 'lemmy' }));
   });

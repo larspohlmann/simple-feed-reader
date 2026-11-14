@@ -368,7 +368,7 @@ describe('SocialSectionComponent', () => {
     press(fixture, 'social-reconnect-1');
 
     const put = http.expectOne(`${ENDPOINT}/1/credential`);
-    expect(put.request.body).toEqual({ secret: 'fresh-secret' });
+    expect(put.request.body).toEqual({ secret: 'fresh-secret', totpToken: null });
     put.flush(account({ status: 'connected' }));
     fixture.detectChanges();
     expect(byTestId(fixture, 'social-reconnect-secret-1')).toBeNull();
@@ -661,6 +661,7 @@ describe('SocialSectionComponent', () => {
         instanceUrl: 'lemmy.example',
         username: 'lars',
         password: 'pw',
+        totpToken: null,
       });
       post.flush(lemmy());
     });
