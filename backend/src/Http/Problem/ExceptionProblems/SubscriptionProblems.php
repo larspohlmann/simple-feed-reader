@@ -8,7 +8,7 @@ use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Library\Subscription\Exception\NotAFeedException;
-use App\Service\Library\Subscription\Exception\SocialTimelineLanguageException;
+use App\Service\Library\Subscription\Exception\FeedLanguageNotSettableException;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -34,9 +34,9 @@ final readonly class SubscriptionProblems implements ExceptionProblemsInterface
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 'No feed could be read at that address.',
             )),
-            $exception instanceof SocialTimelineLanguageException => new ResolvedProblem(new ApiProblem(
-                'social_timeline_language',
-                'A social timeline has no feed language',
+            $exception instanceof FeedLanguageNotSettableException => new ResolvedProblem(new ApiProblem(
+                'feed_language_not_settable',
+                'This feed has no language to set',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

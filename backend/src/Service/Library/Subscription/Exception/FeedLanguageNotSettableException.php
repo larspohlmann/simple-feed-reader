@@ -4,6 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Library\Subscription\Exception;
 
-final class SocialTimelineLanguageException extends \RuntimeException
+final class FeedLanguageNotSettableException extends \RuntimeException
 {
 }

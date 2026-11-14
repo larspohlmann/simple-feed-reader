@@ -9,7 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Service\Foundation\Ordering\PositionReorderer;
-use App\Service\Library\Subscription\Exception\SocialTimelineLanguageException;
+use App\Service\Library\Subscription\Exception\FeedLanguageNotSettableException;
 use App\Service\Library\Subscription\Model\FeedLanguageChangeModel;
 use App\Service\Library\Subscription\Model\FeedMoveModel;
 use App\Service\Library\Subscription\Model\SubscriptionChangeModel;
@@ -54,10 +54,17 @@ final readonly class SubscriptionEditor
 
     private function changeLanguage(Feed $feed, FeedLanguageChangeModel $change): void
     {
-        if (null !== $change->language && SourceFormat::isSocial($feed->getSourceFormat())) {
-            throw new SocialTimelineLanguageException('A social timeline guesses each post\'s language on its own.');
+        if (null !== $change->language && self::hasNoFeedLanguage($feed)) {
+            throw new FeedLanguageNotSettableException(
+                'A social timeline or a saved feed mixes languages, so it has none of its own.',
+            );
         }
 
         $feed->recordTraits($feed->getTraits()->withLanguage($change->language));
+    }
+
+    private static function hasNoFeedLanguage(Feed $feed): bool
+    {
+        return SourceFormat::isSocial($feed->getSourceFormat()) || SourceFormat::isSaved($feed->getSourceFormat());
     }
 }

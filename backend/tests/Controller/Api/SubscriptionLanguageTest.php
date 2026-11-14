@@ -97,9 +97,22 @@ final class SubscriptionLanguageTest extends ApiTestCase
         $this->patch($subscription, ['customTitle' => 'Renamed', 'language' => 'de']);
 
         $this->assertRejected($this->client, Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame('social_timeline_language', $this->payload($this->client)['type'] ?? null);
+        self::assertSame('feed_language_not_settable', $this->payload($this->client)['type'] ?? null);
         self::assertNull($this->storedLanguage($subscription));
         self::assertNull($this->storedSubscription($subscription)->getCustomTitle());
+    }
+
+    public function testASavedFeedRefusesALanguage(): void
+    {
+        $feed = $this->feed('https://saved.example.com/feed', null);
+        $feed->setSourceFormat(SourceFormat::SAVED);
+        $subscription = $this->subscriptionTo($feed);
+
+        $this->patch($subscription, ['language' => 'en']);
+
+        $this->assertRejected($this->client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('feed_language_not_settable', $this->payload($this->client)['type'] ?? null);
+        self::assertNull($this->storedLanguage($subscription));
     }
 
     private function feed(string $url, ?FeedLanguage $language): Feed
