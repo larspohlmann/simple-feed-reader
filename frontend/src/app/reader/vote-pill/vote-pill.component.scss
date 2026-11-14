@@ -43,22 +43,22 @@ button.arrow {
 }
 
 .pill.up {
-  --rim-base: var(--accent);
-
   color: var(--accent);
 }
 
 .pill.down {
-  --rim-base: var(--danger);
-
   color: var(--danger);
 }
 
 :host(:not(.bare)) .pill.up {
+  --rim-base: var(--accent);
+
   background: var(--accent-soft);
 }
 
 :host(:not(.bare)) .pill.down {
+  --rim-base: var(--danger);
+
   background: var(--bg-danger);
 }
 
