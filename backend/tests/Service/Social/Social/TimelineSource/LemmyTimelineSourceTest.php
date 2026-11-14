@@ -122,6 +122,14 @@ final class LemmyTimelineSourceTest extends TestCase
         self::assertCount(2, $page->parsed->entries);
     }
 
+    public function testAPageIsReadFromItsOneAnswer(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('A Lemmy timeline is read with one request.');
+
+        self::source()->pageOf(self::socialFeed(SocialFeedKind::Home), []);
+    }
+
     private static function source(): LemmyTimelineSource
     {
         return new LemmyTimelineSource(

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Social\Model;
 
 use App\Enum\SocialFeedKind;
 use App\Service\Social\Social\Model\PrivateFeedModel;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PrivateFeedModelTest extends TestCase
@@ -69,10 +70,21 @@ final class PrivateFeedModelTest extends TestCase
         self::assertSame(['Home', 'Trending', 'Local', 'All'], $names);
     }
 
-    public function testAKindNamedByItsRemoteIdIsNoTimeline(): void
+    /** @return iterable<string, array{SocialFeedKind}> */
+    public static function kindsNamedByTheirRemoteId(): iterable
+    {
+        yield 'list' => [SocialFeedKind::UserList];
+        yield 'custom feed' => [SocialFeedKind::CustomFeed];
+        yield 'author' => [SocialFeedKind::Author];
+        yield 'tag' => [SocialFeedKind::Tag];
+        yield 'search' => [SocialFeedKind::Search];
+    }
+
+    #[DataProvider('kindsNamedByTheirRemoteId')]
+    public function testAKindNamedByItsRemoteIdIsNoTimeline(SocialFeedKind $kind): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        PrivateFeedModel::timeline(SocialFeedKind::UserList);
+        PrivateFeedModel::timeline($kind);
     }
 }

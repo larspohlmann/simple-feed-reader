@@ -42,7 +42,7 @@ final class PrivateFeedSiteTest extends TestCase
     }
 
     #[DataProvider('lemmyTimelines')]
-    public function testALemmyTimelineIsItsListingPage(PrivateFeedModel $timeline, string $site): void
+    public function testALemmyFeedIsItsListingPageOrTheInstance(PrivateFeedModel $timeline, string $site): void
     {
         self::assertSame($site, PrivateFeedSite::of(SocialAccounts::lemmyOf(SocialAccounts::owner()), $timeline));
     }
@@ -54,6 +54,11 @@ final class PrivateFeedSiteTest extends TestCase
         yield 'subscribed' => [PrivateFeedModel::timeline(SocialFeedKind::Home), $listing . 'Subscribed'];
         yield 'local' => [PrivateFeedModel::timeline(SocialFeedKind::Local), $listing . 'Local'];
         yield 'all' => [PrivateFeedModel::timeline(SocialFeedKind::All), $listing . 'All'];
+        yield 'list' => [PrivateFeedModel::of(SocialFeedKind::UserList, '1', 'Friends'), 'https://lemmy.example'];
+        yield 'custom feed' => [PrivateFeedModel::of(SocialFeedKind::CustomFeed, 'f', 'F'), 'https://lemmy.example'];
+        yield 'author' => [PrivateFeedModel::of(SocialFeedKind::Author, 'did:plc:a', 'A'), 'https://lemmy.example'];
+        yield 'tag' => [PrivateFeedModel::of(SocialFeedKind::Tag, 'caturday', '#caturday'), 'https://lemmy.example'];
+        yield 'trending' => [PrivateFeedModel::timeline(SocialFeedKind::Trending), 'https://lemmy.example'];
     }
 
     public function testALemmySearchIsItsSearchPage(): void

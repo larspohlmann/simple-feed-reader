@@ -52,26 +52,21 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
 
     private static function pathOf(SocialFeed $socialFeed): string
     {
-        $kind = $socialFeed->getKind();
-        if (SocialFeedKind::Search === $kind) {
-            return SocialSearchPaths::lemmy($socialFeed->getRemoteId());
-        }
-
-        return '/api/v3/post/list?type_=' . self::listingOf($kind) . '&sort=New&limit=' . self::PAGE_SIZE;
-    }
-
-    private static function listingOf(SocialFeedKind $kind): string
-    {
-        return match ($kind) {
-            SocialFeedKind::Home => 'Subscribed',
-            SocialFeedKind::Local => 'Local',
-            SocialFeedKind::All => 'All',
+        return match ($socialFeed->getKind()) {
+            SocialFeedKind::Home => self::listingPath('Subscribed'),
+            SocialFeedKind::Local => self::listingPath('Local'),
+            SocialFeedKind::All => self::listingPath('All'),
+            SocialFeedKind::Search => SocialSearchPaths::lemmy($socialFeed->getRemoteId()),
             SocialFeedKind::UserList,
             SocialFeedKind::CustomFeed,
             SocialFeedKind::Author,
             SocialFeedKind::Tag,
-            SocialFeedKind::Trending,
-            SocialFeedKind::Search => throw new SocialNetworkUnreachableException('Lemmy has no such timeline.'),
+            SocialFeedKind::Trending => throw new SocialNetworkUnreachableException('Lemmy has no such timeline.'),
         };
+    }
+
+    private static function listingPath(string $listing): string
+    {
+        return '/api/v3/post/list?type_=' . $listing . '&sort=New&limit=' . self::PAGE_SIZE;
     }
 }
