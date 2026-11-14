@@ -8,8 +8,6 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Service\Content\Comments\Exception\CommentsThrottledException;
-use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\LemmyThreadReader\LemmyThreadReaderInterface;
 use App\Service\Content\Comments\Model\LemmyPostModel;
 use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
@@ -20,14 +18,13 @@ use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Support\CommentsFailures;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /** Reads a Lemmy thread from the reader's own instance, where the votes on it are theirs. */
 final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
 {
-    private const int RETRY_AFTER_UNNAMED_WAIT = 60;
-
     public function __construct(
         private SocialAccountRepository $socialAccounts,
         private ActingAccountGuard $guard,
@@ -55,11 +52,7 @@ final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
                 return $this->accountApi->get($account, LemmyPostModel::commentsApiPath($localPostId))->body;
             });
         } catch (SocialNetworkThrottledException $exception) {
-            throw new CommentsThrottledException(
-                $exception->getMessage(),
-                $exception->retryAfterSeconds ?? self::RETRY_AFTER_UNNAMED_WAIT,
-                $exception,
-            );
+            throw CommentsFailures::throttled($exception);
         } catch (
             RateLimitedException
             | SocialAccountNeedsReconnectException
@@ -68,7 +61,7 @@ final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
             | SocialPostNotFoundException
             | SocialNetworkUnreachableException $exception
         ) {
-            throw new CommentsUnavailableException($exception->getMessage(), previous: $exception);
+            throw CommentsFailures::unavailable($exception);
         }
     }
 }
