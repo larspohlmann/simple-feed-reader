@@ -23,6 +23,13 @@ import { SocialAccount, SocialAccountsService, SyncChange } from './social-accou
 
 type FeedAccount = SocialAccount & { network: SocialNetworkName };
 
+interface ReconnectDraft {
+  readonly secret: string;
+  readonly totp: string;
+}
+
+const EMPTY_RECONNECT_DRAFT: ReconnectDraft = { secret: '', totp: '' };
+
 @Component({
   selector: 'app-social-section',
   imports: [
@@ -70,8 +77,8 @@ export class SocialSectionComponent {
   protected readonly lemmyUsername = signal('');
   protected readonly lemmyPassword = signal('');
   protected readonly lemmyTotp = signal('');
-  protected readonly reconnectSecrets = signal<Readonly<Record<number, string>>>({});
-  protected readonly reconnectTotps = signal<Readonly<Record<number, string>>>({});
+  protected readonly reconnectDrafts = signal<Readonly<Record<number, ReconnectDraft>>>({});
+  protected readonly reconnectTitleKeys = RECONNECT_TITLE_KEYS;
   protected readonly inputValue = inputValue;
 
   constructor() {
@@ -104,29 +111,28 @@ export class SocialSectionComponent {
     });
   }
 
-  protected reconnectTitleKey(network: AccountNetworkName): string {
-    return RECONNECT_TITLE_KEYS[network];
+  protected reconnectDraft(id: number): ReconnectDraft {
+    return this.reconnectDrafts()[id] ?? EMPTY_RECONNECT_DRAFT;
   }
 
   protected setReconnectSecret(id: number, secret: string): void {
-    this.reconnectSecrets.update((current) => ({ ...current, [id]: secret }));
+    this.reconnectDrafts.update((current) => ({
+      ...current,
+      [id]: { ...this.reconnectDraft(id), secret },
+    }));
   }
 
   protected setReconnectTotp(id: number, totp: string): void {
-    this.reconnectTotps.update((current) => ({ ...current, [id]: totp }));
+    this.reconnectDrafts.update((current) => ({
+      ...current,
+      [id]: { ...this.reconnectDraft(id), totp },
+    }));
   }
 
-  protected reconnectTotp(id: number): string {
-    return this.reconnectTotps()[id] ?? '';
-  }
-
-  private forgetReconnectSecret(id: number): void {
-    this.reconnectSecrets.update((current) => without(current, id));
-    this.reconnectTotps.update((current) => without(current, id));
-  }
-
-  protected reconnectSecret(id: number): string {
-    return this.reconnectSecrets()[id] ?? '';
+  private forgetReconnectDraft(id: number): void {
+    this.reconnectDrafts.update((current) =>
+      Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== id)),
+    );
   }
 
   protected connectBluesky(): void {
@@ -188,17 +194,14 @@ export class SocialSectionComponent {
   }
 
   protected reconnect(account: SocialAccount): void {
-    const totp = account.network === 'lemmy' ? this.reconnectTotp(account.id).trim() : '';
-    this.svc
-      .reconnect(account.id, this.reconnectSecret(account.id), totp === '' ? null : totp)
-      .subscribe({
-        next: () => {
-          this.setReconnectSecret(account.id, '');
-          this.setReconnectTotp(account.id, '');
-          this.announceConnected();
-        },
-        error: () => undefined,
-      });
+    const { secret, totp } = this.reconnectDraft(account.id);
+    this.svc.reconnect(account.id, secret, totp.trim() === '' ? null : totp.trim()).subscribe({
+      next: () => {
+        this.forgetReconnectDraft(account.id);
+        this.announceConnected();
+      },
+      error: () => undefined,
+    });
   }
 
   protected openImport(account: FeedAccount): void {
@@ -221,7 +224,7 @@ export class SocialSectionComponent {
       },
       () => {
         this.svc.disconnect(account.id);
-        this.forgetReconnectSecret(account.id);
+        this.forgetReconnectDraft(account.id);
       },
     );
   }
@@ -245,13 +248,6 @@ const RECONNECT_TITLE_KEYS: Record<AccountNetworkName, string> = {
   mastodon: 'settings.social.accessToken',
   lemmy: 'settings.social.lemmyPassword',
 };
-
-function without(
-  current: Readonly<Record<number, string>>,
-  id: number,
-): Readonly<Record<number, string>> {
-  return Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== id));
-}
 
 function hostOf(instance: string): string | null {
   const typed = instance.trim();

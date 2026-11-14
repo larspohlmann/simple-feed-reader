@@ -44,13 +44,13 @@
     </app-settings-row>
 
     @if (account.status === 'needs_reconnect') {
-      <app-settings-row [stackable]="true" [title]="reconnectTitleKey(network) | transloco">
+      <app-settings-row [stackable]="true" [title]="reconnectTitleKeys[network] | transloco">
         <app-password-input class="secret-field">
           <input
             type="password"
             autocomplete="off"
             [attr.data-testid]="'social-reconnect-secret-' + account.id"
-            [value]="reconnectSecret(account.id)"
+            [value]="reconnectDraft(account.id).secret"
             (input)="setReconnectSecret(account.id, inputValue($event))"
           />
         </app-password-input>
@@ -63,7 +63,7 @@
             [attr.aria-label]="'settings.social.twoFactorCode' | transloco"
             [attr.placeholder]="'settings.social.twoFactorCode' | transloco"
             [attr.data-testid]="'social-reconnect-totp-' + account.id"
-            [value]="reconnectTotp(account.id)"
+            [value]="reconnectDraft(account.id).totp"
             (input)="setReconnectTotp(account.id, inputValue($event))"
           />
         }
@@ -71,7 +71,7 @@
           size="sm"
           variant="primary"
           [attr.data-testid]="'social-reconnect-' + account.id"
-          [disabled]="svc.busy() || reconnectSecret(account.id) === ''"
+          [disabled]="svc.busy() || reconnectDraft(account.id).secret === ''"
           (click)="reconnect(account)"
         >
           {{ 'settings.social.reconnect' | transloco }}
