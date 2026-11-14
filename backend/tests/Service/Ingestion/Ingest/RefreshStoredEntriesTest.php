@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest;
 
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
@@ -15,7 +16,7 @@ use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Tests\DbTestCase;
 
-final class FillMissingImagesTest extends DbTestCase
+final class RefreshStoredEntriesTest extends DbTestCase
 {
     private function ingestor(): EntryIngestor
     {
@@ -44,6 +45,44 @@ final class FillMissingImagesTest extends DbTestCase
         return $feed;
     }
 
+    private const string POST = 'https://lemmy.world/post/1';
+
+    private static function header(string $counts): string
+    {
+        return 'submitted by <a href="https://lemmy.world/u/someone">someone</a> to '
+            . '<a href="https://lemmy.world/c/politics">politics</a><br>' . $counts;
+    }
+
+    private static function lemmyPost(string $counts): ParsedFeedModel
+    {
+        $post = new ParsedEntryModel(
+            self::POST,
+            self::POST,
+            Headline::fromFeed('Post'),
+            'x',
+            null,
+            self::header($counts),
+            null,
+        );
+
+        return new ParsedFeedModel('T', null, null, null, [$post]);
+    }
+
+    private function storedPost(Feed $feed): Entry
+    {
+        $this->ingestor()->ingest(
+            $feed,
+            self::lemmyPost('10 points | <a href="' . self::POST . '">1 comments</a>'),
+            self::context(),
+        );
+        $this->entityManager->flush();
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => self::POST]);
+        self::assertNotNull($entry);
+        self::assertEquals(DiscussionCounts::of(10, 1), $entry->getDiscussionCounts());
+
+        return $entry;
+    }
+
     private function parsedEntry(string $guid, ?DeclaredImageModel $image): ParsedEntryModel
     {
         return new ParsedEntryModel(
@@ -68,10 +107,9 @@ final class FillMissingImagesTest extends DbTestCase
         $withImage = new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g2', new DeclaredImageModel('https://i/2.jpg', 700, null)),
         ]);
-        $filled = $this->ingestor()->fillMissingImages($feed, $withImage);
+        $this->ingestor()->refreshStoredEntries($feed, $withImage);
         $this->entityManager->flush();
 
-        self::assertSame(1, $filled);
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g2']);
         self::assertNotNull($entry);
         self::assertSame('https://i/2.jpg', $entry->getImageUrl());
@@ -87,12 +125,11 @@ final class FillMissingImagesTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g3', new DeclaredImageModel('https://i/replacement.jpg', 100, 100)),
         ]));
         $this->entityManager->flush();
 
-        self::assertSame(0, $filled);
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g3']);
         self::assertNotNull($entry);
         self::assertSame('https://i/original.jpg', $entry->getImageUrl());
@@ -102,11 +139,11 @@ final class FillMissingImagesTest extends DbTestCase
     {
         $feed = $this->feed();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('missing', new DeclaredImageModel('https://i/4.jpg', 400, 300)),
         ]));
 
-        self::assertSame(0, $filled);
+        self::assertNull($this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'missing']));
     }
 
     public function testSkipsParsedEntriesThatCarryNoImage(): void
@@ -116,11 +153,10 @@ final class FillMissingImagesTest extends DbTestCase
         $this->ingestor()->ingest($feed, $parsedFeed, self::context());
         $this->entityManager->flush();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g5', null),
         ]));
 
-        self::assertSame(0, $filled);
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g5']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
@@ -134,11 +170,10 @@ final class FillMissingImagesTest extends DbTestCase
         $this->entityManager->flush();
 
         $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g6', new DeclaredImageModel($overlongUrl, 100, 100)),
         ]));
 
-        self::assertSame(0, $filled);
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g6']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
@@ -158,10 +193,9 @@ final class FillMissingImagesTest extends DbTestCase
         $entry->getImage()->drop(new \DateTimeImmutable('2026-09-21 12:00:00'));
         $this->entityManager->flush();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, $withImage);
+        $this->ingestor()->refreshStoredEntries($feed, $withImage);
         $this->entityManager->flush();
 
-        self::assertSame(0, $filled);
         self::assertNull($entry->getImageUrl());
     }
 
@@ -172,13 +206,37 @@ final class FillMissingImagesTest extends DbTestCase
         $this->ingestor()->ingest($feed, $parsedFeed, self::context());
         $this->entityManager->flush();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g7', new DeclaredImageModel('http://i/7.jpg', 100, 100)),
         ]));
 
-        self::assertSame(1, $filled);
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g7']);
         self::assertNotNull($entry);
         self::assertSame('https://i/7.jpg', $entry->getImageUrl());
+    }
+
+    public function testUpdatesTheCountsOfAStoredEntry(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedPost($feed);
+
+        $this->ingestor()->refreshStoredEntries(
+            $feed,
+            self::lemmyPost('42 points | <a href="' . self::POST . '">9 comments</a>'),
+        );
+        $this->entityManager->flush();
+
+        self::assertEquals(DiscussionCounts::of(42, 9), $entry->getDiscussionCounts());
+    }
+
+    public function testUnknownCountsKeepTheStoredOnes(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedPost($feed);
+
+        $this->ingestor()->refreshStoredEntries($feed, self::lemmyPost('a header Lemmy no longer writes'));
+        $this->entityManager->flush();
+
+        self::assertEquals(DiscussionCounts::of(10, 1), $entry->getDiscussionCounts());
     }
 }

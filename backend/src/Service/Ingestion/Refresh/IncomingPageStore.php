@@ -52,7 +52,7 @@ final readonly class IncomingPageStore
         $stored = $this->withoutDeletedPosts($feed, $incoming);
         $createdEntries = $this->ingestor->ingest($feed, $stored->parsed, $context);
         // A backfilled image is not new content, so it stays out of the count.
-        $this->ingestor->fillMissingImages($feed, $stored->parsed);
+        $this->ingestor->refreshStoredEntries($feed, $stored->parsed);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->settle($feed, $stored, $createdEntries);
         $this->entityManager->flush();

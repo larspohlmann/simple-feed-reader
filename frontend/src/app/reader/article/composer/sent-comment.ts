@@ -13,6 +13,7 @@ export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto 
     html: paragraphsOf(sent.text),
     byEntryAuthor: false,
     depth: 0,
+    score: null,
     media: [],
     linkCard: null,
     quote: null,

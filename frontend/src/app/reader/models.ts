@@ -272,6 +272,10 @@ export interface EntryDto {
   discussionUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */
   comments: CommentsLoad | null;
+  /** A Lemmy post's vote score, 0 and negatives included; null on every other source (#2217). */
+  score: number | null;
+  /** A Lemmy post's comment count; null on every other source (#2217). */
+  commentCount: number | null;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
   /** The model's 0-1000 score for this entry (0-100 before #403); present on

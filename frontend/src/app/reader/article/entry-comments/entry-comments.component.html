@@ -74,18 +74,23 @@
                     <span class="when">{{ when(publishedAt) }}</span>
                   }
                 }
-                @if (social && likeable() && c.post?.isOwn) {
-                  <button
-                    appIconButton
-                    type="button"
-                    class="delete danger"
-                    [attr.aria-label]="'reader.deleteReply.action' | transloco"
-                    [title]="'reader.deleteReply.action' | transloco"
-                    (click)="deleteReply(social.network, c)"
-                  >
-                    <app-icon name="delete" size="sm" />
-                  </button>
-                }
+                <span class="byline-end">
+                  @if (c.score !== null) {
+                    <app-vote-pill class="score" variant="bare" [score]="c.score" />
+                  }
+                  @if (canDelete(c)) {
+                    <button
+                      appIconButton
+                      type="button"
+                      class="delete danger"
+                      [attr.aria-label]="'reader.deleteReply.action' | transloco"
+                      [title]="'reader.deleteReply.action' | transloco"
+                      (click)="deleteReply(c)"
+                    >
+                      <app-icon name="delete" size="sm" />
+                    </button>
+                  }
+                </span>
               </p>
               <div class="body" [innerHTML]="c.html"></div>
               @if (c.media.length) {

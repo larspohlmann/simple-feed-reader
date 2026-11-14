@@ -50,6 +50,50 @@ function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imag
 }
 
 describe('EntryMetaComponent', () => {
+  describe('discussion counts', () => {
+    const discussionMeta = (overrides: Partial<EntryDto>) =>
+      mount([], anEntry(overrides)).nativeElement as HTMLElement;
+
+    it('shows the score and comment count first', () => {
+      const element = discussionMeta({ score: 1284, commentCount: 212 });
+      const discussion = element.firstElementChild as HTMLElement;
+      expect(discussion.classList).toContain('discussion');
+      expect(discussion.querySelector('app-vote-pill')).not.toBeNull();
+      const comments = discussion.querySelector('.comments') as HTMLElement;
+      expect(comments.textContent).toContain('212');
+      expect(comments.querySelector('app-icon')?.getAttribute('name')).toBe('chat_bubble');
+      expect(comments.getAttribute('aria-label')).toBe('212 comments');
+      expect(discussion.nextElementSibling?.tagName).toBe('APP-ENTRY-PILLS');
+      expect(element.lastElementChild?.tagName).toBe('APP-ENTRY-ACTIONS');
+    });
+
+    it('shows the vote pill alone without a comment count', () => {
+      const element = discussionMeta({ score: 5, commentCount: null });
+      expect(element.querySelector('app-vote-pill')).not.toBeNull();
+      expect(element.querySelector('.comments')).toBeNull();
+    });
+
+    it('words a single comment in the singular', () => {
+      const comments = discussionMeta({ score: 5, commentCount: 1 }).querySelector('.comments');
+      expect(comments?.getAttribute('aria-label')).toBe('1 comment');
+    });
+
+    it('shows a zero comment count', () => {
+      const comments = discussionMeta({ score: 5, commentCount: 0 }).querySelector('.comments');
+      expect(comments?.textContent).toContain('0');
+    });
+
+    it('shows nothing without a score', () => {
+      expect(
+        discussionMeta({ score: null, commentCount: 3 }).querySelector('.discussion'),
+      ).toBeNull();
+    });
+
+    it('shows a zero score', () => {
+      expect(discussionMeta({ score: 0 }).querySelector('app-vote-pill')).not.toBeNull();
+    });
+  });
+
   it('renders the tag pills beside the actions', () => {
     const element = mount([tag(1, 'Tech')]).nativeElement as HTMLElement;
     expect(element.textContent).toContain('Tech');

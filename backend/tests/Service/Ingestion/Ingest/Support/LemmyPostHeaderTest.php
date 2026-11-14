@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest\Support;
 
+use App\Entity\DiscussionCounts;
 use App\Service\Ingestion\Ingest\Support\LemmyPostHeader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -12,23 +13,50 @@ final class LemmyPostHeaderTest extends TestCase
 {
     private const string LINK = '<a href="https://example.com/a">https://example.com/a</a>';
 
-    private static function header(string $score): string
+    private static function header(string $score, string $comments = '3 comments'): string
     {
         return 'submitted by <a href="https://lemmy.world/u/someone">someone</a> to '
             . '<a href="https://lemmy.world/c/politics">politics</a><br>' . $score
-            . '<a href="https://lemmy.world/post/1">3 comments</a>';
+            . '<a href="https://lemmy.world/post/1">' . $comments . '</a>';
     }
 
-    /** @return iterable<string, array{string}> */
+    /** @return iterable<string, array{string, int}> */
     public static function scores(): iterable
     {
-        yield 'positive' => ['535 points | '];
-        yield 'negative' => ['-3 points | '];
-        yield 'singular' => ['1 point | '];
+        yield 'positive' => ['535 points | ', 535];
+        yield 'negative' => ['-3 points | ', -3];
+        yield 'singular' => ['1 point | ', 1];
+    }
+
+    /** @return iterable<string, array{string, int}> */
+    public static function commentCounts(): iterable
+    {
+        yield 'plural' => ['3 comments', 3];
+        yield 'singular' => ['1 comment', 1];
+        yield 'none' => ['0 comments', 0];
     }
 
     #[DataProvider('scores')]
-    public function testReadsTheAuthorAndTheBodyAfterTheHeader(string $score): void
+    public function testReadsTheScore(string $score, int $expected): void
+    {
+        self::assertSame($expected, LemmyPostHeader::read(self::header($score))?->counts->score);
+    }
+
+    #[DataProvider('commentCounts')]
+    public function testReadsTheCommentCount(string $label, int $expected): void
+    {
+        self::assertSame($expected, LemmyPostHeader::read(self::header('5 points | ', $label))?->counts->commentCount);
+    }
+
+    public function testACommentLinkWithoutANumberLeavesTheCountUnknown(): void
+    {
+        $counts = LemmyPostHeader::read(self::header('5 points | ', 'comments'))?->counts;
+
+        self::assertEquals(DiscussionCounts::of(5, null), $counts);
+    }
+
+    #[DataProvider('scores')]
+    public function testReadsTheAuthorAndTheBodyAfterTheHeader(string $score, int $expectedScore): void
     {
         $post = LemmyPostHeader::read(self::header($score) . '<br>' . self::LINK);
 
@@ -36,6 +64,7 @@ final class LemmyPostHeaderTest extends TestCase
         self::assertSame('someone', $post->authorName);
         self::assertSame('https://lemmy.world/u/someone', $post->profileUrl);
         self::assertSame(self::LINK, $post->bodyHtml);
+        self::assertSame($expectedScore, $post->counts->score);
     }
 
     public function testAHeaderWithoutBodyLeavesAnEmptyBody(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest\Factory;
 
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\EntryChapter;
 use App\Entity\Feed;
@@ -237,6 +238,27 @@ final class IngestedEntryFactoryTest extends TestCase
             new IncomingEntryModel($parsed, hash('sha256', 'g-5'), 'url-hash'),
             self::context(),
         );
+    }
+
+    public function testCarriesTheParsedDiscussionCounts(): void
+    {
+        $parsed = new ParsedEntryModel(
+            guid: 'g-6',
+            url: 'https://example.com/a',
+            headline: Headline::fromFeed('Post'),
+            author: null,
+            summary: null,
+            contentHtml: null,
+            publishedAt: null,
+        )->withDiscussionCounts(DiscussionCounts::of(7, 2));
+
+        $entry = $this->factory()->create(
+            new Feed('https://example.com/feed'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-6'), 'url-hash'),
+            self::context(),
+        );
+
+        self::assertEquals(DiscussionCounts::of(7, 2), $entry->getDiscussionCounts());
     }
 
     private function factory(): IngestedEntryFactory

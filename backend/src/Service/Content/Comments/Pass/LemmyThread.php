@@ -100,6 +100,7 @@ final readonly class LemmyThread
             DateParser::parse($comment->string('published')),
             $html,
             null !== $profileUrl && $profileUrl === $this->entryAuthorUrl,
+            score: $node->node('counts')->int('score'),
         )->atDepth($depth);
     }
 

@@ -57,12 +57,16 @@
   </ng-container>
   <app-entry-discussion-link pageMetaTail [entry]="e" (jump)="scrollToComments()" />
   <ng-container pageHead>
-    <app-entry-pills
-      class="tags"
-      [tags]="tags()"
-      [subscriptionId]="e.subscriptionId"
-      [savedSearches]="e.savedSearches ?? []"
-    />
+    <div class="head-line">
+      @if (e.score !== null) {
+        <app-vote-pill [score]="e.score" />
+      }
+      <app-entry-pills
+        [tags]="tags()"
+        [subscriptionId]="e.subscriptionId"
+        [savedSearches]="e.savedSearches ?? []"
+      />
+    </div>
     <app-entry-actions class="actions" size="md" [entry]="e" [audio]="false" [like]="false" />
     @if (audio.attachment()) {
       <app-listen-row [audio]="audio" />

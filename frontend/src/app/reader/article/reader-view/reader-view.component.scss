@@ -11,7 +11,11 @@
   margin: var(--space-3) 0 0;
 }
 
-.tags {
+.head-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
   margin: 0 0 var(--space-3);
 }
 

@@ -82,8 +82,15 @@
   text-decoration: none;
 }
 
-.delete {
+.byline-end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   margin-inline-start: auto;
+
+  &:empty {
+    display: none;
+  }
 }
 
 a.author:hover,

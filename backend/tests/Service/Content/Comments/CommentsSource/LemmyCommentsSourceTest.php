@@ -180,6 +180,29 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         self::assertStringContainsString('Text 5', $comments[0]->html);
     }
 
+    public function testACommentCarriesItsScoreIncludingZeroAndNegative(): void
+    {
+        $nodes = [
+            self::node(5, '0.5') + ['counts' => ['score' => 17]],
+            self::node(6, '0.6') + ['counts' => ['score' => 0]],
+            self::node(7, '0.7') + ['counts' => ['score' => -3]],
+        ];
+
+        $comments = $this->read((string) json_encode(['comments' => $nodes]));
+
+        self::assertSame(
+            [17, 0, -3],
+            array_map(static fn (EntryCommentModel $comment): ?int => $comment->score, $comments),
+        );
+    }
+
+    public function testACommentWithoutCountsHasNoScore(): void
+    {
+        $comments = $this->read((string) json_encode(['comments' => [self::node(5, '0.5')]]));
+
+        self::assertNull($comments[0]->score);
+    }
+
     public function testACommenterIsNamedByDisplayNameBeforeAccount(): void
     {
         $node = self::node(5, '0.5', creator: ['display_name' => 'Display Name']);

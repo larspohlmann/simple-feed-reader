@@ -287,6 +287,20 @@ final class Entry
         $this->discussion->store($discussion);
     }
 
+    public function getDiscussionCounts(): DiscussionCounts
+    {
+        return $this->discussion->readCounts();
+    }
+
+    public function recordDiscussionCounts(DiscussionCounts $counts): void
+    {
+        if ($counts->isUnknown()) {
+            return;
+        }
+
+        $this->discussion->storeCounts($counts);
+    }
+
     public function getShareKind(): ?ShareKind
     {
         return $this->share->kind();

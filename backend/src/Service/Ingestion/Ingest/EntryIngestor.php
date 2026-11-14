@@ -84,34 +84,33 @@ final readonly class EntryIngestor
     }
 
     /**
-     * Fills the image of stored entries that never had one judged, matched by GUID hash against a fresh parse, so a
-     * feed dropping its images erases nothing. Reaches only what the feed still serves; returns the count.
+     * Brings the stored entries a fresh parse still serves up to date, matched by GUID hash: fills an image never
+     * judged, so a feed dropping its images erases nothing, and records the discussion counts the parse read.
      */
-    public function fillMissingImages(Feed $feed, ParsedFeedModel $parsed): int
+    public function refreshStoredEntries(Feed $feed, ParsedFeedModel $parsed): void
     {
         if ($parsed->entries === []) {
-            return 0;
+            return;
         }
 
-        $hashes = $this->guidHashesOf($parsed->entries);
-        $existing = $this->entries->findByFeedIndexedByGuidHash($feed, $hashes);
-
-        $updated = 0;
+        $stored = $this->entries->findByFeedIndexedByGuidHash($feed, $this->guidHashesOf($parsed->entries));
         foreach ($parsed->entries as $parsedEntry) {
-            $image = $parsedEntry->media->image;
-            if ($image === null) {
+            $entry = $stored[self::guidHash($parsedEntry->guid)] ?? null;
+            if ($entry === null) {
                 continue;
             }
-            $entry = $existing[self::guidHash($parsedEntry->guid)] ?? null;
-            if ($entry === null || !$entry->getImage()->isMissing()) {
-                continue;
-            }
-            if ($this->imageWriter->write($entry, $image)) {
-                $updated++;
-            }
+            $this->fillMissingImage($entry, $parsedEntry);
+            $entry->recordDiscussionCounts($this->platformRules->apply($parsedEntry)->discussionCounts);
         }
+    }
 
-        return $updated;
+    private function fillMissingImage(Entry $entry, ParsedEntryModel $parsedEntry): void
+    {
+        $image = $parsedEntry->media->image;
+        if ($image === null || !$entry->getImage()->isMissing()) {
+            return;
+        }
+        $this->imageWriter->write($entry, $image);
     }
 
     private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void

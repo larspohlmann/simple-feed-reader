@@ -369,6 +369,30 @@ describe('EntryCommentsComponent', () => {
     expect(navigation.layer).toHaveBeenCalledWith(card);
   });
 
+  it('showsACommentsScoreAtTheEndOfItsByline', () => {
+    show('auto');
+    const byline = settleComments([
+      anEntryComment({ publishedAt: '2026-09-24T11:00:00Z', score: 87 }),
+    ]).querySelector('.byline')!;
+    const pill = byline.querySelector('app-vote-pill.bare');
+    expect(pill?.textContent).toContain('87');
+    expect(
+      byline.querySelector('.when')!.compareDocumentPosition(pill!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('showsAZeroScore', () => {
+    show('auto');
+    const pill = settleComments([anEntryComment({ score: 0 })]).querySelector('app-vote-pill');
+    expect(pill?.textContent).toContain('0');
+  });
+
+  it('showsNoScoreForCommentsWithout', () => {
+    show('auto');
+    expect(settleComments([anEntryComment()]).querySelector('app-vote-pill')).toBeNull();
+  });
+
   it('renders no embeds for a plain comment', () => {
     show('auto');
     const row = settleComments([anEntryComment()]).querySelector('.comment')!;

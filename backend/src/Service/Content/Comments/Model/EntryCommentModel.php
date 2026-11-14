@@ -15,6 +15,7 @@ final readonly class EntryCommentModel
         public CommentEmbedsModel $embeds = new CommentEmbedsModel(),
         public int $depth = 0,
         public ?CommentPostModel $post = null,
+        public ?int $score = null,
     ) {
     }
 

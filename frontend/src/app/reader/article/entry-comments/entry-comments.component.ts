@@ -30,6 +30,7 @@ import { mediumRatio } from '../../entry-medium';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
+import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
@@ -51,6 +52,7 @@ const DEEPEST_INDENT = 5;
     QuotedPostComponent,
     LinkCardComponent,
     SocialCountsRowComponent,
+    VotePillComponent,
   ],
   templateUrl: './entry-comments.component.html',
   styleUrl: './entry-comments.component.scss',
@@ -124,8 +126,11 @@ export class EntryCommentsComponent {
     this.responses.quote(this.entryId(), network, post.address);
   }
 
-  deleteReply(network: SocialNetworkName, comment: EntryCommentDto): void {
-    this.responses.delete(this.entryId(), network, comment);
+  deleteReply(comment: EntryCommentDto): void {
+    const social = likeableSocial(this.entry());
+    if (social !== null) {
+      this.responses.delete(this.entryId(), social.network, comment);
+    }
   }
 
   when(iso: string): string {
@@ -134,6 +139,10 @@ export class EntryCommentsComponent {
 
   indentOf(comment: EntryCommentDto): number {
     return Math.min(comment.depth, DEEPEST_INDENT);
+  }
+
+  canDelete(comment: EntryCommentDto): boolean {
+    return this.likeable() && comment.post?.isOwn === true;
   }
 
   ratioOf(comment: EntryCommentDto): number {

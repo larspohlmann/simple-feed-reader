@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest\PlatformEntryRule;
 
+use App\Entity\DiscussionCounts;
 use App\Entity\Headline;
 use App\Enum\CommentsLoad;
 use App\Service\Ingestion\Ingest\PlatformEntryRule\LemmyEntryRule;
@@ -82,6 +83,13 @@ final class LemmyEntryRuleTest extends TestCase
         self::assertSame(CommentsLoad::Auto, $result->discussion->commentsLoad);
         self::assertNull($result->discussion->commentsFeedUrl);
         self::assertSame(self::LINK_POST, $result->guid);
+    }
+
+    public function testCarriesTheCountsOntoTheEntry(): void
+    {
+        $result = (new LemmyEntryRule())->apply($this->post(self::LINK_POST));
+
+        self::assertEquals(DiscussionCounts::of(-3, 19), $result->discussionCounts);
     }
 
     public function testLeavesAnEntryWhoseHeaderIsNotTheLemmyOneUnchanged(): void

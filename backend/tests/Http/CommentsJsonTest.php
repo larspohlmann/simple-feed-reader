@@ -48,6 +48,7 @@ final class CommentsJsonTest extends TestCase
                 new CommentCountsModel(5, 1, 2, 0),
                 new CommentViewerModel(true, true, false, canReply: false, isOwn: true),
             ),
+            -4,
         );
 
         $json = JsonMappers::commentsJson()->one(CommentsResultModel::ok(
@@ -78,6 +79,7 @@ final class CommentsJsonTest extends TestCase
                 'readerToken' => JsonMappers::readerToken('https://site.test/a'),
             ],
             'quote' => JsonMappers::quotedPostJson()->ofOrNull($quote),
+            'score' => -4,
             'post' => [
                 'address' => 'at://did:plc:ann/app.bsky.feed.post/2',
                 'counts' => ['likes' => 5, 'reposts' => 1, 'replies' => 2, 'quotes' => 0],
@@ -101,6 +103,7 @@ final class CommentsJsonTest extends TestCase
         )));
 
         self::assertNull($json['post']);
+        self::assertNull($json['score']);
     }
 
     public function testACommentWithoutEmbedsHasNoCardNoQuoteAndNoMedia(): void

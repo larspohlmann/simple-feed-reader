@@ -41,6 +41,8 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     social: null,
     discussionUrl: null,
     comments: null,
+    score: null,
+    commentCount: null,
     ...overrides,
   };
 }
@@ -100,6 +102,7 @@ export function anEntryComment(overrides: Partial<EntryCommentDto> = {}): EntryC
     html: '<p>x</p>',
     byEntryAuthor: false,
     depth: 0,
+    score: null,
     media: [],
     linkCard: null,
     quote: null,

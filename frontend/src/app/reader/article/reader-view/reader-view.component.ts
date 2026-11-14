@@ -43,6 +43,7 @@ import { HandedAutoplayRegion, handedAutoplayRegion } from '../../media/autoplay
 import { entryRelativeTime } from '../../format';
 import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
+import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ArticlePageSlotDirective } from '../article-page/article-page-slot.directive';
 import { provideArticlePage } from '../article-page/provide-article-page';
@@ -56,6 +57,7 @@ import { EntryArticlePage } from './entry-article-page';
     FlagToggleDirective,
     EntrySourceComponent,
     EntryPillsComponent,
+    VotePillComponent,
     EntryActionsComponent,
     TranslocoPipe,
     ErrorBannerComponent,

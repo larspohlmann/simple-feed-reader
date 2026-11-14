@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\Discussion;
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
@@ -76,6 +77,30 @@ final class EntryTest extends TestCase
     public function testAnEntryWithoutADiscussionPageIsNotADiscussionThread(): void
     {
         self::assertFalse($this->entry(null)->isDiscussionThread());
+    }
+
+    public function testANewEntryHasUnknownCounts(): void
+    {
+        self::assertTrue($this->entry()->getDiscussionCounts()->isUnknown());
+    }
+
+    public function testRecordsDiscussionCounts(): void
+    {
+        $entry = $this->entry();
+
+        $entry->recordDiscussionCounts(DiscussionCounts::of(12, 4));
+
+        self::assertEquals(DiscussionCounts::of(12, 4), $entry->getDiscussionCounts());
+    }
+
+    public function testAnUnknownRecordKeepsTheStoredCounts(): void
+    {
+        $entry = $this->entry();
+        $entry->recordDiscussionCounts(DiscussionCounts::of(12, 4));
+
+        $entry->recordDiscussionCounts(DiscussionCounts::unknown());
+
+        self::assertEquals(DiscussionCounts::of(12, 4), $entry->getDiscussionCounts());
     }
 
     private function entry(?string $url = 'https://example.test/1'): Entry

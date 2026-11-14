@@ -227,6 +227,26 @@ describe('ReaderViewComponent', () => {
     });
   });
 
+  describe('the vote pill in the head line (#2217)', () => {
+    it('sits before the tag pills when the entry has a score', () => {
+      const fixture = mount(entryWithBody('<p>x</p>', { score: 463 }));
+      const line = fixture.nativeElement.querySelector('.head-line') as HTMLElement;
+      const pill = line.querySelector('app-vote-pill') as HTMLElement;
+      const tags = line.querySelector('app-entry-pills') as HTMLElement;
+      expect(pill.compareDocumentPosition(tags) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('renders a score of zero', () => {
+      const fixture = mount(entryWithBody('<p>x</p>', { score: 0 }));
+      expect(fixture.nativeElement.querySelector('app-vote-pill')).not.toBeNull();
+    });
+
+    it('is absent without a score', () => {
+      const fixture = mount(entryWithBody('<p>x</p>', { score: null }));
+      expect(fixture.nativeElement.querySelector('app-vote-pill')).toBeNull();
+    });
+  });
+
   describe('reading focus setting', () => {
     it('clears dimming from the open article when disabled', async () => {
       const fixture = mount(entryWithBody('<p>First</p><p>Second</p>'));

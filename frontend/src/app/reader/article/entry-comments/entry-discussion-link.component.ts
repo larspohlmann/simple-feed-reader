@@ -22,6 +22,6 @@ export class EntryDiscussionLinkComponent {
     const entry = this.entry();
     if (!entry.comments) return null;
     const state = this.comments.state(entry.id)();
-    return state.status === 'ok' ? state.comments.length + state.omitted : null;
+    return state.status === 'ok' ? state.comments.length + state.omitted : entry.commentCount;
   });
 }

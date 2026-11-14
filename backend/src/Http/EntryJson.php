@@ -51,6 +51,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
+ *   score: int|null, commentCount: int|null,
  * }
  * @phpstan-type CompletedEntryRow array{
  *   id: int|null, pending: bool, summary: string|null, excerpt: string,
@@ -149,12 +150,19 @@ final readonly class EntryJson
         ];
     }
 
-    /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null} */
+    /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null, score: int|null, commentCount: int|null} */
     private static function discussionOf(EntryListRow $row): array
     {
         $discussion = $row->enrichment->discussion ?? EntryListRowDiscussion::storedOf($row->entry->getDiscussion());
 
-        return ['discussionUrl' => $discussion->url, 'comments' => $discussion->commentsLoad?->value];
+        $counts = $row->entry->getDiscussionCounts();
+
+        return [
+            'discussionUrl' => $discussion->url,
+            'comments' => $discussion->commentsLoad?->value,
+            'score' => $counts->score,
+            'commentCount' => $counts->commentCount,
+        ];
     }
 
     /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null */

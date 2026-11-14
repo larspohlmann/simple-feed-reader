@@ -1470,8 +1470,9 @@ where many moving lines at once compete for attention; truncate those.
 
 ### `<app-entry-meta>`
 
-The line a magazine card or a list row ends on: `app-entry-pills` on the left,
-`app-entry-actions` right-aligned against them. Six of the seven magazine
+The line a magazine card or a list row ends on: `app-entry-pills` on the left
+(a Lemmy post's score and comment count lead them), `app-entry-actions`
+right-aligned against them. Six of the seven magazine
 blocks use it — hero, wide, split, thumb, kicker, quote — and so does the list
 layout's `entry-row`.
 
@@ -1603,6 +1604,20 @@ Used by: the magazine thread block, rows, the article.
 
 **Not for:** replies by other people. Those are the comments panel, threaded by
 indent ([§5](#5-magazine-blocks)).
+
+### `<app-vote-pill>`
+
+A Lemmy score (#2217): up arrow, compact score, down arrow, in one `role="img"` labelled
+"N points". The arrows are inert and dimmed (opacity 0.7) until #2218 makes them vote buttons.
+
+| Input | Type | Default |
+|---|---|---|
+| `score` | `number` (required) | — |
+| `variant` | `'framed' \| 'bare'` | `'framed'` — `framed` wears the `pill-toggle` ring (list footers, the article head row); `bare` has none (comment bylines) |
+
+```html
+<app-vote-pill [score]="comment.score" variant="bare" />
+```
 
 ### `<app-scrubber>`
 

@@ -1,0 +1,5 @@
+<span class="pill" role="img" [attr.aria-label]="pointsKey() | transloco: { count: score() }">
+  <span class="arrow"><app-icon name="arrow_upward" size="sm" aria-hidden="true" /></span>
+  <span class="number">{{ compactScore() }}</span>
+  <span class="arrow"><app-icon name="arrow_downward" size="sm" aria-hidden="true" /></span>
+</span>

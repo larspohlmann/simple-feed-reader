@@ -19,6 +19,12 @@ final class EntryDiscussion
     #[ORM\Column(name: 'comments_load', length: 8, nullable: true, enumType: CommentsLoad::class)]
     private ?CommentsLoad $commentsLoad = null;
 
+    #[ORM\Column(name: 'score', nullable: true)]
+    private ?int $score = null;
+
+    #[ORM\Column(name: 'comment_count', nullable: true)]
+    private ?int $commentCount = null;
+
     public function store(Discussion $discussion): void
     {
         $bounded = Discussion::of(
@@ -34,6 +40,17 @@ final class EntryDiscussion
     public function read(): Discussion
     {
         return Discussion::of($this->url, $this->commentsFeedUrl, $this->commentsLoad ?? CommentsLoad::Manual);
+    }
+
+    public function storeCounts(DiscussionCounts $counts): void
+    {
+        $this->score = $counts->score;
+        $this->commentCount = $counts->commentCount;
+    }
+
+    public function readCounts(): DiscussionCounts
+    {
+        return DiscussionCounts::of($this->score, $this->commentCount);
     }
 
     private static function bounded(?string $url): ?string
