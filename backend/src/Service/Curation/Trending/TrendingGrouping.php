@@ -21,6 +21,7 @@ final readonly class TrendingGrouping
         private TrendingEntryRepository $windowEntries,
         private UrlNormalizer $urlNormalizer,
         private HeadlineFiller $filler,
+        private HeadlineEquivalents $equivalents,
         private StoryLinks $storyLinks,
         private StoryGrouping $storyGrouping,
         private NaiveUtcClock $clock,
@@ -29,7 +30,7 @@ final readonly class TrendingGrouping
 
     public function collect(TrendingWindow $window): TrendingRun
     {
-        $run = new TrendingRun($window, new HeadlineWindow($this->filler));
+        $run = new TrendingRun($window, new HeadlineWindow($this->filler, $this->equivalents));
         $since = $window->startBefore($this->clock->now());
         foreach ($this->windowEntries->windowEntries($since) as $entry) {
             $run->add($entry, $this->urlHashesOf($entry));

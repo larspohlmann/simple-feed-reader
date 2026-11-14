@@ -11,46 +11,60 @@ final class HeadlineStemsTest extends TestCase
 {
     public function testDiacriticsAndUmlautsAreStrippedAndSharpSIsCaseFolded(): void
     {
-        self::assertSame(['uber', 'die', 'strass'], HeadlineStems::of('Über die Straße'));
-        self::assertSame(['cafe', 'resume', 'naive'], HeadlineStems::of('Café Résumé naïve'));
+        self::assertSame(['uber', 'die', 'strass'], self::stems('Über die Straße'));
+        self::assertSame(['cafe', 'resume', 'naive'], self::stems('Café Résumé naïve'));
     }
 
     public function testCompatibilityCharactersDecomposeToPlainLetters(): void
     {
-        self::assertSame(['financ'], HeadlineStems::of('ＦＩＮＡＮＣＩＡＬ'));
+        self::assertSame(['financ'], self::stems('ＦＩＮＡＮＣＩＡＬ'));
     }
 
     public function testEveryWordIsCutToItsFirstSixCharacters(): void
     {
-        self::assertSame(['abcdef', 'ukrain'], HeadlineStems::of('abcdef abcdefg Ukraine Ukrainian'));
+        self::assertSame(['abcdef', 'ukrain'], self::stems('abcdef abcdefg Ukraine Ukrainian'));
     }
 
     public function testAWordInAnotherScriptIsCutAndMeasuredInCharacters(): void
     {
-        self::assertSame(['αθηναι'], HeadlineStems::of('Το Αθηναϊκό'));
-        self::assertSame(['zołtos'], HeadlineStems::of('Żółtość'));
+        self::assertSame(['αθηναι'], self::stems('Το Αθηναϊκό'));
+        self::assertSame(['zołtos'], self::stems('Żółtość'));
     }
 
     public function testWordsUnderThreeLettersAreDropped(): void
     {
-        self::assertSame(['ban'], HeadlineStems::of('EU to ban AI'));
+        self::assertSame(['ban'], self::stems('EU to ban AI'));
     }
 
     public function testNumbersOfTwoOrMoreDigitsAreKeptAndShorterOnesDropped(): void
     {
         self::assertSame(
             ['summit', '2026', 'deaths', '12', 'hurt'],
-            HeadlineStems::of('G7 summit 2026: 9 deaths, 12 hurt'),
+            self::stems('G7 summit 2026: 9 deaths, 12 hurt'),
         );
     }
 
     public function testStemsAreDistinctInReadingOrder(): void
     {
-        self::assertSame(['fire', 'statio'], HeadlineStems::of('Fire fire FIRE station'));
+        self::assertSame(['fire', 'statio'], self::stems('Fire fire FIRE station'));
     }
 
     public function testTextWithoutWordsHasNoStems(): void
     {
-        self::assertSame([], HeadlineStems::of(' — !! '));
+        self::assertSame([], self::stems(' — !! '));
+    }
+
+    public function testWordsAreFoldedAndSplitButNotCut(): void
+    {
+        self::assertSame(
+            ['vereinigte', 'staaten', 'etats', 'unis'],
+            HeadlineStems::words('Vereinigte Staaten, États-Unis'),
+        );
+    }
+
+    /** @return list<string> */
+    private static function stems(string $text): array
+    {
+        return HeadlineStems::ofWords(HeadlineStems::words($text));
     }
 }

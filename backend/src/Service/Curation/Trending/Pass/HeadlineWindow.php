@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Pass;
 
+use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
-use App\Service\Curation\Trending\Support\HeadlineStems;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
 final class HeadlineWindow
@@ -46,15 +46,17 @@ final class HeadlineWindow
     /** @var array<int, float> */
     private array $totalWeights = [];
 
-    public function __construct(private readonly HeadlineFiller $filler)
-    {
+    public function __construct(
+        private readonly HeadlineFiller $filler,
+        private readonly HeadlineEquivalents $equivalents,
+    ) {
     }
 
     /** Entries must arrive in ascending id order: the postings stay sorted. */
     public function add(int $entryId, int $feedId, string $headline, string $body): void
     {
-        $headlineIds = $this->idsOf(HeadlineStems::of($headline));
-        $bodyIds = array_values(array_diff($this->idsOf(HeadlineStems::of($body)), $headlineIds));
+        $headlineIds = $this->idsOf($this->equivalents->stemsOf($headline));
+        $bodyIds = array_values(array_diff($this->idsOf($this->equivalents->stemsOf($body)), $headlineIds));
         $this->headlineStems[$entryId] = $headlineIds;
         $this->bodyStems[$entryId] = $bodyIds;
         $this->feedOfEntry[$entryId] = $feedId;

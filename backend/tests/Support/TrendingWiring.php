@@ -8,6 +8,7 @@ use App\Entity\TrendingSnapshot;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryGrouping;
@@ -44,6 +45,7 @@ final class TrendingWiring
             new TrendingEntryRepository($entityManager),
             new UrlNormalizer(),
             new HeadlineFiller(),
+            new HeadlineEquivalents(),
             self::storyLinks(),
             new StoryGrouping(),
             new NaiveUtcClock($clock),
