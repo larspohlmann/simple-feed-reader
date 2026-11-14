@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\Feed;
+use App\Enum\FeedLanguage;
 use App\Enum\FeedStatus;
 use App\Enum\SocialNetwork;
 use PHPUnit\Framework\TestCase;
@@ -156,5 +157,17 @@ final class FeedTest extends TestCase
 
         $feed->classifyAs(null);
         self::assertNull($feed->getNetwork());
+    }
+
+    public function testAFeedStartsWithoutALanguageAndKeepsTheOneRecorded(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        self::assertNull($feed->getLanguage());
+
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
+        self::assertSame(FeedLanguage::French, $feed->getLanguage());
+
+        $feed->recordTraits($feed->getTraits()->withLanguage(null));
+        self::assertNull($feed->getLanguage());
     }
 }

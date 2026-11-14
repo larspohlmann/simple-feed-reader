@@ -50,7 +50,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     private static function entry(?string $author = 'Joe Writer'): Entry
     {
         $feed = new Feed('https://joe.substack.com/feed');
-        $feed->recordPlatform(FeedPlatform::Substack);
+        $feed->recordTraits($feed->getTraits()->withPlatform(FeedPlatform::Substack));
         $now = new \DateTimeImmutable();
         $entry = new Entry($feed, self::POST, self::POST, 'One post', $now, $now);
         $entry->setAuthor(new EntryAuthor($author));
@@ -94,7 +94,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     public function testServesNoEntryOfAnotherFeed(): void
     {
         $entry = self::entry();
-        $entry->getFeed()->recordPlatform(null);
+        $entry->getFeed()->recordTraits($entry->getFeed()->getTraits()->withPlatform(null));
 
         self::assertFalse($this->source->serves($entry));
     }
@@ -226,7 +226,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     public function testAnEntryOfAnotherFeedIsUnavailable(): void
     {
         $entry = self::entry();
-        $entry->getFeed()->recordPlatform(null);
+        $entry->getFeed()->recordTraits($entry->getFeed()->getTraits()->withPlatform(null));
         $this->expectException(CommentsUnavailableException::class);
 
         $this->fetch($entry);

@@ -875,7 +875,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testAFeedThatStopsNamingSubstackIsNoLongerOne(): void
     {
         $feed = $this->feed();
-        $feed->recordPlatform(FeedPlatform::Substack);
+        $feed->recordTraits($feed->getTraits()->withPlatform(FeedPlatform::Substack));
 
         $this->ingestor->ingest($feed, new ParsedFeedModel('Example', null, null, null, []), self::context());
 

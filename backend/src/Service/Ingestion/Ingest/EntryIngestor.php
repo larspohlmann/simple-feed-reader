@@ -115,7 +115,7 @@ final readonly class EntryIngestor
 
     private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void
     {
-        $feed->recordPlatform(FeedPlatform::fromGenerator($parsed->generator));
+        $feed->recordTraits($feed->getTraits()->withPlatform(FeedPlatform::fromGenerator($parsed->generator)));
         if ($parsed->title !== null) {
             $title = $this->feedTitle->of($feed->getUrl(), $parsed->title);
             $feed->setTitle(mb_substr($title, 0, self::FEED_TITLE_MAX));
