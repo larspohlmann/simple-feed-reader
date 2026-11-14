@@ -3,7 +3,7 @@ import { SentPost } from './composed-post';
 
 /** The reader's reply as the panel shows it until the network's thread includes it. */
 export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto {
-  return {
+  const shared = {
     author: null,
     authorHandle: sent.authorHandle,
     authorUrl: null,
@@ -13,13 +13,19 @@ export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto 
     html: paragraphsOf(sent.text),
     byEntryAuthor: false,
     depth: 0,
-    score: sent.network === 'lemmy' ? 1 : null,
     media: [],
     linkCard: null,
     quote: null,
-    post: sent.network === 'lemmy' ? null : sentPost(sent),
-    vote: sent.network === 'lemmy' ? { address: sent.address, myVote: 1, canReply: true } : null,
   };
+  if (sent.network === 'lemmy') {
+    return {
+      ...shared,
+      score: 1,
+      post: null,
+      vote: { address: sent.address, myVote: 1, canReply: true },
+    };
+  }
+  return { ...shared, score: null, post: sentPost(sent), vote: null };
 }
 
 function sentPost(sent: SentPost): EntryCommentPostDto {
