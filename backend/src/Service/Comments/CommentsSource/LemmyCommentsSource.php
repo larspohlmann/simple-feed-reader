@@ -23,7 +23,7 @@ use App\Service\Text\MarkdownHtml;
 final readonly class LemmyCommentsSource implements CommentsSourceInterface
 {
     public function __construct(
-        private CommentsEndpointFetcher $endpoints,
+        private CommentsEndpointFetcher $endpointFetcher,
         private MarkdownHtml $markdown,
         private EntrySanitizer $sanitizer,
     ) {
@@ -48,7 +48,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
             'The Lemmy instance could not be reached.',
         );
 
-        return CommentsAnswerModel::settled($this->endpoints->body($post->commentsApiUrl(), $endpoint, $request->user));
+        return CommentsAnswerModel::settled($this->endpointFetcher->body($post->commentsApiUrl(), $endpoint, $request->user));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel

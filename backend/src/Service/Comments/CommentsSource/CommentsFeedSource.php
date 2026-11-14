@@ -23,7 +23,7 @@ use App\Service\Sanitize\EntrySanitizer;
 final readonly class CommentsFeedSource implements CommentsSourceInterface
 {
     public function __construct(
-        private CommentsEndpointFetcher $endpoints,
+        private CommentsEndpointFetcher $endpointFetcher,
         private FeedParser $parser,
         private EntrySanitizer $sanitizer,
     ) {
@@ -48,7 +48,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
             'The comments feed could not be fetched.',
         );
 
-        return CommentsAnswerModel::settled($this->endpoints->body($feedUrl, $endpoint, $request->user));
+        return CommentsAnswerModel::settled($this->endpointFetcher->body($feedUrl, $endpoint, $request->user));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel

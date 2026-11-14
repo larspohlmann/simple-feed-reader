@@ -24,7 +24,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
 {
     public function __construct(
         private FeedFetcherInterface $fetcher,
-        private CommentsEndpointFetcher $endpoints,
+        private CommentsEndpointFetcher $endpointFetcher,
     ) {
     }
 
@@ -48,7 +48,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         );
         $commentsOf = fn (): string => $this->body($post->commentsApiUrl($this->postIdOf($post)));
 
-        return CommentsAnswerModel::settled($this->endpoints->guarded($endpoint, $request->user, $commentsOf));
+        return CommentsAnswerModel::settled($this->endpointFetcher->guarded($endpoint, $request->user, $commentsOf));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
