@@ -114,6 +114,30 @@ final readonly class EntryIngestor
         return $updated;
     }
 
+    /**
+     * Writes the score and comment count a fresh parse carries onto the stored entries, matched by GUID hash. A parse
+     * that read no counts leaves the stored ones alone.
+     */
+    public function refreshDiscussionCounts(Feed $feed, ParsedFeedModel $parsed): void
+    {
+        $counted = [];
+        foreach ($parsed->entries as $parsedEntry) {
+            $ruled = $this->platformRules->apply($parsedEntry);
+            if (!$ruled->discussionCounts->isUnknown()) {
+                $counted[] = $ruled;
+            }
+        }
+        if ($counted === []) {
+            return;
+        }
+
+        $existing = $this->entries->findByFeedIndexedByGuidHash($feed, $this->guidHashesOf($counted));
+        foreach ($counted as $ruled) {
+            $entry = $existing[self::guidHash($ruled->guid)] ?? null;
+            $entry?->recordDiscussionCounts($ruled->discussionCounts);
+        }
+    }
+
     private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void
     {
         $feed->recordPlatform(FeedPlatform::fromGenerator($parsed->generator));

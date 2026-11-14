@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\Discussion;
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryAuthor;
@@ -433,6 +434,25 @@ final class EntryJsonTest extends TestCase
         self::assertSame('https://example.com/a#comments', $json['discussionUrl']);
     }
 
+    public function testTheStoredDiscussionCountsAreEmitted(): void
+    {
+        $entry = $this->entryTitled('Post');
+        $entry->recordDiscussionCounts(DiscussionCounts::of(-3, 0));
+
+        $json = JsonMappers::entryJson()->listRow($this->row($entry));
+
+        self::assertSame(-3, $json['score']);
+        self::assertSame(0, $json['commentCount']);
+    }
+
+    public function testAPlainEntryHasNoDiscussionCounts(): void
+    {
+        $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')));
+
+        self::assertNull($json['score']);
+        self::assertNull($json['commentCount']);
+    }
+
     public function testAnArticleWithoutADiscussionHasNone(): void
     {
         $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')));
@@ -464,7 +484,7 @@ final class EntryJsonTest extends TestCase
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
                 'imageRenditions', 'media', 'linkCards', 'thread', 'share', 'quote', 'title', 'url', 'discussionUrl',
-                'comments',
+                'comments', 'score', 'commentCount',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',
