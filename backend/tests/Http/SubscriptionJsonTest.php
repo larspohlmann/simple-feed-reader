@@ -9,6 +9,7 @@ use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\FeedLanguage;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Http\SubscriptionJson;
@@ -149,6 +150,22 @@ final class SubscriptionJsonTest extends TestCase
         $feed->setSiteUrl('https://www.telepolis.de/feed.xml');
 
         self::assertSame('https://www.telepolis.de', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
+    }
+
+    public function testSendsTheFeedsLanguage(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
+
+        self::assertSame('fr', SubscriptionJson::one($this->subscriptionTo($feed))['language']);
+    }
+
+    public function testAFeedWithoutALanguageSendsNull(): void
+    {
+        $json = SubscriptionJson::one($this->subscriptionTo(new Feed('https://example.com/feed.xml')));
+
+        self::assertArrayHasKey('language', $json);
+        self::assertNull($json['language']);
     }
 
     public function testSendsTheFeedImage(): void

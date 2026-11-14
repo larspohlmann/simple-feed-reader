@@ -7,6 +7,7 @@ namespace App\Tests\Http\Problem\ExceptionProblems;
 use App\Http\Problem\ExceptionProblems\SubscriptionProblems;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Library\Subscription\Exception\NotAFeedException;
+use App\Service\Library\Subscription\Exception\SocialTimelineLanguageException;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +44,17 @@ final class SubscriptionProblemsTest extends TestCase
         self::assertSame('Not a feed', $resolved->problem->title);
         self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $resolved->problem->status);
         self::assertSame('No feed could be read at that address.', $resolved->problem->detail);
+    }
+
+    public function testALanguageOnASocialTimelineIsUnprocessable(): void
+    {
+        $resolved = (new SubscriptionProblems())->resolve(new SocialTimelineLanguageException('Per post.'));
+
+        self::assertNotNull($resolved);
+        self::assertSame('social_timeline_language', $resolved->problem->type);
+        self::assertSame('A social timeline has no feed language', $resolved->problem->title);
+        self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $resolved->problem->status);
+        self::assertSame('Per post.', $resolved->problem->detail);
     }
 
     public function testOtherExceptionsPassThrough(): void

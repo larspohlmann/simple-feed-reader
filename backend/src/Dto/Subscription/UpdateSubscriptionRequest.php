@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Dto\Subscription;
 
 use App\Entity\InclusionChange;
+use App\Enum\FeedLanguage;
+use App\Service\Library\Subscription\Model\FeedLanguageChangeModel;
 use App\Service\Library\Subscription\Model\SubscriptionChangeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class UpdateSubscriptionRequest
 {
+    public const string AUTOMATIC_LANGUAGE = 'automatic';
+
     /** @param list<int> $tagIds */
     public function __construct(
         #[Assert\Length(max: 512)]
@@ -20,7 +24,18 @@ final readonly class UpdateSubscriptionRequest
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
         public ?bool $includeInTrending = null,
+        #[Assert\Choice(callback: 'languageChoices')]
+        public ?string $language = null,
     ) {
+    }
+
+    /** @return list<string> */
+    public static function languageChoices(): array
+    {
+        return [
+            ...array_map(static fn (FeedLanguage $language): string => $language->value, FeedLanguage::cases()),
+            self::AUTOMATIC_LANGUAGE,
+        ];
     }
 
     public function toChange(): SubscriptionChangeModel
@@ -34,6 +49,16 @@ final readonly class UpdateSubscriptionRequest
                 savedSearches: $this->includeInSavedSearches,
                 trending: $this->includeInTrending,
             ),
+            language: $this->languageChange(),
         );
+    }
+
+    private function languageChange(): ?FeedLanguageChangeModel
+    {
+        if (null === $this->language) {
+            return null;
+        }
+
+        return new FeedLanguageChangeModel(FeedLanguage::tryFrom($this->language));
     }
 }
