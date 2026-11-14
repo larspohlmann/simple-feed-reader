@@ -78,7 +78,7 @@ final readonly class DiscussionVotes
         VoteScore $score,
     ): DiscussionVoteResultModel {
         self::postOf($entry);
-        if (!str_starts_with(mb_strtolower(AbsoluteHttpUrl::orNull($address) ?? ''), 'https://')) {
+        if (null === AbsoluteHttpUrl::httpsOrNull($address)) {
             throw new NotASocialPostException('The address names no Lemmy comment.');
         }
         $account = $this->accounts->accountFor($user, $entry, SocialNetwork::Lemmy);

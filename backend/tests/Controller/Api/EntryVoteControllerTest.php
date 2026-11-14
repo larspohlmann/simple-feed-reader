@@ -329,13 +329,16 @@ final class EntryVoteControllerTest extends ApiTestCase
         $cache = self::getContainer()->get(CommentsCache::class);
         self::assertInstanceOf(CommentsCache::class, $cache);
         $key = LemmyCommentsSource::class . ' https://lemmy.example/post/42 account:' . $accountId;
+        $anonymousKey = LemmyCommentsSource::class . ' https://lemmy.example/post/42';
         $cache->remember($key, CommentsAnswerModel::settled('{}'), new \DateTimeImmutable());
+        $cache->remember($anonymousKey, CommentsAnswerModel::settled('{}'), new \DateTimeImmutable());
         self::assertNotNull($cache->find($key));
 
         $this->voteOnComment($client, $entryId, self::COMMENT_ADDRESS, 1);
 
         self::assertResponseIsSuccessful();
         self::assertNull($cache->find($key));
+        self::assertNotNull($cache->find($anonymousKey));
     }
 
     public function testAnAddressThatIsNoUrlIsRefused(): void
@@ -351,6 +354,47 @@ final class EntryVoteControllerTest extends ApiTestCase
         self::assertSame('social_post_unsupported', $this->payload($client)['type']);
         self::assertSame('The address names no Lemmy comment.', $this->payload($client)['detail']);
         self::assertSame([], $this->http->requests);
+    }
+
+    public function testACommentVoteOnAnEntryThatIsNoLemmyPostIsRefused(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'vote-comment-plain@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->voteOnComment($client, $this->plainEntryFor($user), self::COMMENT_ADDRESS, 1);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('social_post_unsupported', $this->payload($client)['type']);
+        self::assertSame('This entry is not a Lemmy post.', $this->payload($client)['detail']);
+        self::assertSame([], $this->http->requests);
+    }
+
+    public function testAnHttpCommentAddressIsRefusedWithoutAskingTheNetwork(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'vote-comment-http@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->voteOnComment($client, $this->lemmyPostFor($user), 'http://origin.example/comment/5', 1);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('social_post_unsupported', $this->payload($client)['type']);
+        self::assertSame([], $this->http->requests);
+    }
+
+    public function testAResolveAnswerWithoutACommentIsNotFound(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::RESOLVE_COMMENT => new MockResponse('{}'),
+        ]);
+        $user = $this->signIn($client, 'vote-comment-empty@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->voteOnComment($client, $this->lemmyPostFor($user), self::COMMENT_ADDRESS, 1);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertSame([self::RESOLVE_COMMENT], $this->routesAsked());
     }
 
     public function testAMissingAddressIsABadRequest(): void
