@@ -207,7 +207,7 @@ services:
 
   # The #311 background worker: same image, different command. It drives
   # recommendation runs, sweeps due feeds, and purges the failure transport
-  # (see backend/src/Service/Worker/WorkerSchedule.php). If it dies, the app
+  # (see backend/src/Service/Operations/Worker/WorkerSchedule.php). If it dies, the app
   # degrades to #308's poll-driven behaviour automatically -- no config.
   worker:
     <<: *php-image
