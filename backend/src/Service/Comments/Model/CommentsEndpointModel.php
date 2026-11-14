@@ -8,7 +8,6 @@ final readonly class CommentsEndpointModel
 {
     public function __construct(
         public string $throttleKey,
-        public string $url,
         public string $throttledMessage,
         public string $unreachableMessage,
     ) {

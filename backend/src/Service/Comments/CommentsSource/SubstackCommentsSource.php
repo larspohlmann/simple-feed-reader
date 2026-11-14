@@ -43,7 +43,6 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         $post = self::postOf($request->entry);
         $endpoint = new CommentsEndpointModel(
             $post->url(),
-            $post->postApiUrl(),
             'Substack asked us to wait.',
             'Substack could not be reached.',
         );

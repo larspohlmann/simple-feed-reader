@@ -27,9 +27,9 @@ final readonly class CommentsEndpointFetcher
     ) {
     }
 
-    public function body(CommentsEndpointModel $endpoint, User $user): string
+    public function body(string $url, CommentsEndpointModel $endpoint, User $user): string
     {
-        return $this->guarded($endpoint, $user, fn (): string => $this->fetcher->fetch($endpoint->url)->modifiedBody());
+        return $this->guarded($endpoint, $user, fn (): string => $this->fetcher->fetch($url)->modifiedBody());
     }
 
     /** @param \Closure(): string $fetch asks the endpoint's host, however many requests that takes */

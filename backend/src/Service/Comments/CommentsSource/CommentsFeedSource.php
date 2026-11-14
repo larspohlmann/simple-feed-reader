@@ -44,12 +44,11 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         $feedUrl = self::feedUrlOf($request->entry);
         $endpoint = new CommentsEndpointModel(
             $feedUrl,
-            $feedUrl,
             'The comments feed host asked us to wait.',
             'The comments feed could not be fetched.',
         );
 
-        return CommentsAnswerModel::settled($this->endpoints->body($endpoint, $request->user));
+        return CommentsAnswerModel::settled($this->endpoints->body($feedUrl, $endpoint, $request->user));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
