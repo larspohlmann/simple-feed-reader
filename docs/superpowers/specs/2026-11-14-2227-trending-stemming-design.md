@@ -113,13 +113,27 @@ bridge yet (Lars, 2026-11-14). The measurement failed that ruling. Over the week
 across the boundary against 160 gained, and in total 15,852 pairs fell to 13,823. Setting every language-less feed to
 `en` turned the result into a net gain.
 
-**Every entry is stemmed** (Lars, 2026-11-14, replacing the first ruling). When an entry's feed has no language,
-Trending guesses the entry's own language at build time from its headline and plain summary. The guess is always the
-detector's top language among the four, even when it is not confident, because a wrong guess costs little: names stem
-the same in every language. This applies to social timeline entries too. The feed column still stays empty for them,
-since their feeds mix languages. Only an entry with no letters to detect keeps the six-character cut. The guess is not
-stored, which costs about 0.16 ms per entry per run. German compounds that the cut used to join (*Dreiertreffen /
-Dreiergipfel*) are measured after this change and get an issue of their own if they matter.
+**A feed's language is guessed once and saved; social timelines guess per entry** (Lars, 2026-11-14). This
+replaces the first ruling and a short-lived build-time guess.
+
+- **New feed:** when a feed has no language, the first refresh sets one.
+  - A declared language wins.
+  - Otherwise, the detector's best guess over all the parsed entries (headlines plus full plain summaries), with no
+    confidence floor.
+  - Only text with no letters leaves it empty.
+- **Later refreshes** never change a feed language that is already set. Re-detection on every refresh is gone, and so
+  is "detection may overrule a declared language". A wrong declaration is fixed by hand.
+- **Edit:** any subscriber can set the feed's language in the edit-subscription dialog: one of the four, or
+  "Automatic", which clears it so the next refresh guesses again.
+  - The language belongs to the feed, so the change applies to every subscriber.
+  - Trending builds one snapshot over all feeds, so a per-user value could not steer it.
+- **Header:** the list view header for a single feed shows its language name. It is hidden when there is none.
+- **Social timelines** (`SourceFormat::SOCIAL`) get no feed language and no editor.
+  - Each of their entries stores its own best guess at ingest (`entry.language`), from its headline and plain text.
+  - Trending reads `entry.language` first, then `feed.language`.
+- **No backfill.** The column is unreleased: existing feeds are guessed on their next refresh.
+- **German compounds** that the six-character cut used to join (*Dreiertreffen / Dreiergipfel*) are measured after
+  this change. If they matter, they get an issue of their own.
 
 ### Stemming in Trending
 

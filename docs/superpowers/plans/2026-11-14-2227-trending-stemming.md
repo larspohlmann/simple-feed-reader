@@ -151,21 +151,68 @@ Rules (in this order):
 - [ ] **Step 5: Curate** from what Step 4 shows, one commit per ruling class: demonym and capital pairs Snowball keeps apart (*ukraine/ukrainian*, *rusia/ruso*, …), #2225 exact words now redundant under Snowball (*Schweiz*, *Niederlande*, *Großbritannien*, *Austria* — keep each only if a null-language feed still needs it), seeds that show up as top shared stems. Re-measure after each; eye-check every new, grown or split group.
 - [ ] **Step 6:** Record the outcome (coverage, day/week pairs, cross-boundary losses, rulings) in the spec under "Outcome"; commit `docs(#2227): record the measured outcome`.
 
-### Task 6b: Best-guess language per entry
+### Task 6b: A feed's language is guessed once and kept
 
-Inserted after Task 6's first measurement, which found a net loss (see the spec's "Feeds with and without a language").
+This task was inserted after Task 6's first measurement found a net loss. See the spec, "Feeds with and without a
+language".
 
 **Files:**
-- Create: a best-guess service that turns an entry's text into `?FeedLanguage`.
-- Modify: `TrendingRun` or `HeadlineWindow`, so that an entry whose feed has no language is stemmed in its guessed language.
-- Modify: `LanguageCoverageModel` and the explain line, so the guessed entries are visible.
+- `Service/Ingestion/Language/LanguageGuess.php`: `bestFor(string): ?FeedLanguage`, with no floor and null for text
+  without letters. It already exists uncommitted, with its test.
+- `FeedLanguageResolver`
+- `EntryIngestor` with its `recordTraits`
+- the tests for both
 
-- [ ] **Step 1: Failing tests**
-  - A language-less entry with an English headline and lead links to an English-feed entry on a word longer than six letters whose Snowball stem differs from the cut (for example *airports*).
-  - An entry with no letters keeps the cut.
-  - The explain line counts the guessed entries.
-- [ ] **Step 2:** Implement, PASS, gates, commit.
-- [ ] **Step 3:** Re-run Task 6's day and week measurement, then go on with Task 6 Steps 5 and 6.
+**Steps:**
+- [ ] **Failing tests:**
+  - A feed with no language and no declared tag gets the best guess over its entries, even where today's floors
+    return null.
+  - A declared tag wins over detection.
+  - A feed whose language is already set keeps it on refresh, whatever the body declares or detects.
+  - A feed with no letters stays null.
+  - Social timeline feeds are still skipped.
+- [ ] **Implement.** Drop the MINIMUM_* floors and the verdict-null-keeps-stored rule that no longer applies. Run
+  PASS and the gates, then commit.
+
+### Task 6c: Social timeline entries store their own guess
+
+**Files:**
+- `Entry` gains a nullable `language` (`FeedLanguage`); add a migration and a BackupSchemaCoverage row.
+- At ingest, set `Entry` language for entries of `SourceFormat::SOCIAL` feeds from `LanguageGuess` over headline
+  plus plain summary.
+- `TrendingEntryRepository` selects `COALESCE(entry.language, feed.language)`.
+
+**Steps:**
+- [ ] **Failing tests:**
+  - A social timeline entry is ingested with its guessed language.
+  - A non-social entry stores null.
+  - The Trending window reads the entry's language before the feed's.
+- [ ] **Implement.** Run PASS and the gates, then commit.
+
+### Task 6d: Edit and show the feed language
+
+**Files:**
+- `UpdateSubscriptionRequest`, with its change value and the editor. The field is `language`: `"de"|"en"|"fr"|"es"`,
+  or `null` for Automatic, which clears it. Absent means unchanged.
+- A problem mapping for a social timeline feed (422).
+- The subscription and feed JSON carry `language`.
+- Frontend:
+  - the edit-subscription dialog gets a language select;
+  - the single-feed list header shows the language name;
+  - transloco keys in all four locales;
+  - Jest specs.
+
+**Steps:**
+- [ ] **Failing tests:**
+  - a controller functional test for setting, clearing and refusing on social;
+  - JSON shape tests;
+  - Jest tests for the dialog and the header.
+- [ ] **Implement.** Run PASS, `composer check`, `composer md` and `npm run check`, then commit.
+
+### Task 6e: Re-measure, then curate
+
+- [ ] Re-run Task 6's day and week measurement. Then continue with Task 6 Steps 5 and 6, adding `zelensky` to the
+  German map.
 
 ### Task 7: Gates and PR
 
