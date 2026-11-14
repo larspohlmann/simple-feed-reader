@@ -48,6 +48,20 @@ final readonly class LemmyPosts
     }
 
     /**
+     * The post's id on the account's own instance: the post's own id there, with no request, and a lookup elsewhere.
+     *
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialPostRefusedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function homePostIdOf(SocialAccount $account, LemmyPostModel $post): int
+    {
+        return self::isHomeInstance($account, $post) ? $post->postId : $this->postOn($account, $post)->postId;
+    }
+
+    /**
      * @throws SocialPostNotFoundException
      * @throws SocialCredentialsRejectedException
      * @throws SocialPostRefusedException

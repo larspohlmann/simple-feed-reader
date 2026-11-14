@@ -67,7 +67,6 @@ final class EntryVoteControllerTest extends ApiTestCase
     public function testAnUpvoteReachesTheHomeInstanceAndIsStored(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::HOME_POST => self::fixture('post-as-account.json'),
             self::LIKE => self::fixture('post-like.json'),
         ]);
         $user = $this->signIn($client, 'vote-up@example.test');
@@ -78,8 +77,8 @@ final class EntryVoteControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(['myVote' => 1, 'score' => 43], $this->payload($client));
-        self::assertSame([self::HOME_POST, self::LIKE], $this->routesAsked());
-        self::assertSame('{"post_id":42,"score":1}', $this->http->requests[1]['body']);
+        self::assertSame([self::LIKE], $this->routesAsked());
+        self::assertSame('{"post_id":42,"score":1}', $this->http->requests[0]['body']);
         self::assertSame([VoteScore::Up], $this->storedScores());
     }
 
@@ -103,7 +102,6 @@ final class EntryVoteControllerTest extends ApiTestCase
     public function testClearingAVoteDropsTheStoredRow(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::HOME_POST => self::fixture('post-as-account.json'),
             self::LIKE => self::fixture('post-like-no-vote.json'),
         ]);
         $user = $this->signIn($client, 'vote-clear@example.test');
@@ -121,7 +119,6 @@ final class EntryVoteControllerTest extends ApiTestCase
     public function testARefusedDownvoteKeepsTheStoredVote(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::HOME_POST => self::fixture('post-as-account.json'),
             self::LIKE => new MockResponse(
                 '{"error":"downvotes_are_disabled"}',
                 ['http_code' => Response::HTTP_BAD_REQUEST],
@@ -144,7 +141,7 @@ final class EntryVoteControllerTest extends ApiTestCase
     public function testARefusedSessionMarksTheAccountForReconnect(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::HOME_POST => new MockResponse('{}', ['http_code' => Response::HTTP_UNAUTHORIZED]),
+            self::LIKE => new MockResponse('{}', ['http_code' => Response::HTTP_UNAUTHORIZED]),
         ]);
         $user = $this->signIn($client, 'vote-session@example.test');
         $accountId = $this->lemmyAccountOf($user)->requireId();
@@ -253,7 +250,6 @@ final class EntryVoteControllerTest extends ApiTestCase
     public function testAVoteRecastsTheStoredRowToTheNetworksAnswer(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::HOME_POST => self::fixture('post-as-account.json'),
             self::LIKE => self::fixture('post-like-downvoted.json'),
         ]);
         $user = $this->signIn($client, 'vote-recast@example.test');

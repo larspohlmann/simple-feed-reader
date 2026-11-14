@@ -38,11 +38,10 @@ final readonly class LemmyVoting
     public function castOnPost(SocialAccount $account, LemmyPostModel $post, VoteScore $score): LemmyTargetModel
     {
         return $this->guard->actAs($account, function () use ($account, $post, $score): LemmyTargetModel {
-            $target = $this->posts->postOn($account, $post);
             $answer = $this->accountApi->post(
                 $account,
                 '/api/v3/post/like',
-                ['post_id' => $target->postId, 'score' => $score->value],
+                ['post_id' => $this->posts->homePostIdOf($account, $post), 'score' => $score->value],
             );
 
             return LemmyView::ofPost(JsonNodeModel::of($answer->json())->node('post_view'));

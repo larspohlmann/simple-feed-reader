@@ -47,7 +47,7 @@ final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
             $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $account->getUser());
 
             return $this->guard->actAs($account, function () use ($account, $post): string {
-                $localPostId = $this->posts->postOn($account, $post)->postId;
+                $localPostId = $this->posts->homePostIdOf($account, $post);
 
                 return $this->accountApi->get($account, LemmyPostModel::commentsApiPath($localPostId))->body;
             });

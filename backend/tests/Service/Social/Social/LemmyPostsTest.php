@@ -62,6 +62,26 @@ final class LemmyPostsTest extends TestCase
         self::assertSame(990, $target->postId);
     }
 
+    public function testAPostOnTheHomeInstanceNeedsNoRequestForItsHomeId(): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        $postId = $this->posts($http)->homePostIdOf($this->account(), new LemmyPostModel('https://lemmy.example', 42));
+
+        self::assertSame(42, $postId);
+        self::assertSame([], $http->requests);
+    }
+
+    public function testAFederatedCopyFindsItsHomeIdByResolving(): void
+    {
+        $http = $this->federated(self::fixture('resolve-post.json'));
+
+        $postId = $this->posts($http)->homePostIdOf($this->account(), new LemmyPostModel('https://feddit.example', 7));
+
+        self::assertSame(990, $postId);
+        self::assertSame([self::FEDERATED_POST, self::RESOLVE . self::ORIGIN_POST], $http->requestLines());
+    }
+
     public function testAFederatedCopyIsLookedUpWithoutTheToken(): void
     {
         $http = $this->federated(self::fixture('resolve-post.json'));
