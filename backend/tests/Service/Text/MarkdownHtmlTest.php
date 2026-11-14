@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Text;
+
+use App\Service\Text\MarkdownHtml;
+use PHPUnit\Framework\TestCase;
+
+final class MarkdownHtmlTest extends TestCase
+{
+    private MarkdownHtml $markdown;
+
+    protected function setUp(): void
+    {
+        $this->markdown = new MarkdownHtml();
+    }
+
+    public function testParagraphsEmphasisAndQuotes(): void
+    {
+        self::assertSame(
+            "<p>One</p>\n<p><strong>two</strong></p>\n<blockquote>\n<p>three</p>\n</blockquote>\n",
+            $this->markdown->of("One\n\n**two**\n\n> three"),
+        );
+    }
+
+    public function testALinkKeepsItsAddress(): void
+    {
+        self::assertSame(
+            "<p>See <a href=\"https://example.org/a\">the study</a></p>\n",
+            $this->markdown->of('See [the study](https://example.org/a)'),
+        );
+    }
+
+    public function testRawHtmlIsEscaped(): void
+    {
+        $html = $this->markdown->of('<script>alert(1)</script> hi');
+
+        self::assertStringNotContainsString('<script>', $html);
+        self::assertStringContainsString('&lt;script&gt;', $html);
+    }
+
+    public function testAJavascriptLinkLosesItsAddress(): void
+    {
+        self::assertStringNotContainsString('javascript:', $this->markdown->of('[x](javascript:alert(1))'));
+    }
+}
