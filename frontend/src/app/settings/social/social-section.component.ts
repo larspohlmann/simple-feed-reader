@@ -78,11 +78,14 @@ export class SocialSectionComponent {
   protected readonly lemmyPassword = signal('');
   protected readonly lemmyTotp = signal('');
   protected readonly reconnectDrafts = signal<Readonly<Record<number, ReconnectDraft>>>({});
-  protected readonly reconnectTitleKeys = RECONNECT_TITLE_KEYS;
   protected readonly inputValue = inputValue;
 
   constructor() {
     this.svc.load();
+  }
+
+  protected reconnectTitleKey(account: SocialAccount): string {
+    return RECONNECT_TITLE_KEYS[account.network];
   }
 
   protected describeSince(account: SocialAccount): string {

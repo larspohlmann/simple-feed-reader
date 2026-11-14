@@ -44,7 +44,7 @@
     </app-settings-row>
 
     @if (account.status === 'needs_reconnect') {
-      <app-settings-row [stackable]="true" [title]="reconnectTitleKeys[network] | transloco">
+      <app-settings-row [stackable]="true" [title]="reconnectTitleKey(account) | transloco">
         <app-password-input class="secret-field">
           <input
             type="password"
@@ -54,7 +54,7 @@
             (input)="setReconnectSecret(account.id, inputValue($event))"
           />
         </app-password-input>
-        @if (network === 'lemmy') {
+        @if (account.network === 'lemmy') {
           <input
             type="text"
             class="text-field"
