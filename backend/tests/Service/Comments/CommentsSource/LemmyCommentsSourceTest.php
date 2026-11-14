@@ -182,6 +182,51 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         );
     }
 
+    public function testACraftedAnswerKeepsTheFirstCommentOfARepeatedIdAndDropsOneWithoutAnId(): void
+    {
+        $repeated = self::node(5, '0.9.5');
+        $repeated['comment']['content'] = 'Second';
+        $withoutId = self::node(6, '0.6');
+        unset($withoutId['comment']['id']);
+        $answer = (string) json_encode(['comments' => [self::node(5, '0.5'), $repeated, $withoutId]]);
+
+        $comments = $this->read($answer);
+
+        self::assertCount(1, $comments);
+        self::assertStringContainsString('Text 5', $comments[0]->html);
+    }
+
+    public function testACommenterIsNamedByDisplayNameBeforeAccount(): void
+    {
+        $node = self::node(5, '0.5');
+        $node['creator']['display_name'] = 'Display Name';
+
+        self::assertSame('Display Name', $this->read((string) json_encode(['comments' => [$node]]))[0]->author->name);
+    }
+
+    public function testACommenterWithoutAnAccountOrAProfileHasNoHandle(): void
+    {
+        $noAccount = self::node(5, '0.5');
+        unset($noAccount['creator']['name']);
+        $noProfile = self::node(6, '0.6');
+        unset($noProfile['creator']['actor_id']);
+
+        $comments = $this->read((string) json_encode(['comments' => [$noAccount, $noProfile]]));
+
+        self::assertNull($comments[0]->author->handle);
+        self::assertNull($comments[1]->author->handle);
+    }
+
+    public function testAsksTheLowercasedHostOfAnUppercasedPostAddress(): void
+    {
+        $this->fetcher->willReturnBody(self::COMMENTS_API, '{"comments": []}');
+        $discussion = Discussion::platformThread('https://Lemmy.WORLD/post/54385737');
+
+        $this->fetch(self::entry(discussion: $discussion));
+
+        self::assertSame([self::COMMENTS_API], $this->fetcher->fetchedUrls);
+    }
+
     public function testARemovedCommentDropsButItsReplyStays(): void
     {
         $urls = array_map(static fn (EntryCommentModel $comment): ?string => $comment->url, $this->comments());

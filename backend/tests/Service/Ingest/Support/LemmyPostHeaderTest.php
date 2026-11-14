@@ -74,4 +74,29 @@ final class LemmyPostHeaderTest extends TestCase
 
         self::assertNull(LemmyPostHeader::read($html));
     }
+
+    public function testTheAuthorNameLosesItsSurroundingWhitespace(): void
+    {
+        $html = str_replace('>someone<', '> someone <', self::header('5 points | '));
+
+        self::assertSame('someone', LemmyPostHeader::read($html)?->authorName);
+    }
+
+    public function testAnElementWhereTheHeaderTextBelongsIsNotAPost(): void
+    {
+        $html = str_replace('submitted by', '<b>submitted by</b>', self::header('5 points | '));
+
+        self::assertNull(LemmyPostHeader::read($html));
+    }
+
+    public function testACommentCountThatIsNoLinkIsNotAPost(): void
+    {
+        $html = str_replace(
+            '<a href="https://lemmy.world/post/1">3 comments</a>',
+            '<span>3 comments</span>',
+            self::header('5 points | '),
+        );
+
+        self::assertNull(LemmyPostHeader::read($html));
+    }
 }
