@@ -34,7 +34,7 @@ describe('VotePillComponent', () => {
 
     expect(host.querySelector('.number')?.textContent?.trim()).toBe('1.3K');
     const icons = Array.from(host.querySelectorAll('.arrow app-icon'));
-    expect(icons.map((icon) => icon.getAttribute('name'))).toEqual([
+    expect(icons.map((icon) => icon.textContent?.trim())).toEqual([
       'arrow_upward',
       'arrow_downward',
     ]);

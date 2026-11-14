@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CompactCount } from '../../core/i18n/compact-count';
 import { pluralKey } from '../../core/i18n/plural-key';
@@ -7,7 +8,7 @@ import { VoteValue, nextVote } from './vote';
 
 @Component({
   selector: 'app-vote-pill',
-  imports: [IconComponent, TranslocoPipe],
+  imports: [IconComponent, NgTemplateOutlet, TranslocoPipe],
   templateUrl: './vote-pill.component.html',
   styleUrl: './vote-pill.component.scss',
   host: { '[class.bare]': "variant() === 'bare'" },
