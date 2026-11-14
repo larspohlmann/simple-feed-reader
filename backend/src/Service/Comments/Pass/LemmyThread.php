@@ -84,7 +84,6 @@ final readonly class LemmyThread
     private function commentOrNull(JsonNodeModel $node, int $depth): ?EntryCommentModel
     {
         $comment = $node->node('comment');
-        $creator = $node->node('creator');
         if ($comment->isTrue('removed') || $comment->isTrue('deleted')) {
             return null;
         }
@@ -92,6 +91,7 @@ final readonly class LemmyThread
         if (null === $html) {
             return null;
         }
+        $creator = $node->node('creator');
         $profileUrl = $creator->string('actor_id');
 
         return new EntryCommentModel(

@@ -32,7 +32,7 @@ final readonly class CommentsEndpointFetcher
         return $this->guarded($endpoint, $user, fn (): string => $this->fetcher->fetch($url)->modifiedBody());
     }
 
-    /** @param \Closure(): string $fetch asks the endpoint's host, however many requests that takes */
+    /** @param \Closure(): string $fetch */
     public function guarded(CommentsEndpointModel $endpoint, User $user, \Closure $fetch): string
     {
         $wait = $this->hostThrottle->remainingSeconds($endpoint->throttleKey);

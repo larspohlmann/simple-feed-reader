@@ -42,16 +42,15 @@ final class LemmyPostHeader
     /** @param list<Node> $nodes */
     private static function profileLink(array $nodes): ?Element
     {
-        $isHeader = count($nodes) >= self::HEADER_LENGTH
+        return count($nodes) >= self::HEADER_LENGTH
             && self::isText($nodes[0], '#^\s*submitted by\s*$#')
             && self::isLink($nodes[1], self::PROFILE_PATH)
             && self::isText($nodes[2], '#^\s*to\s*$#')
             && self::isLink($nodes[3], self::COMMUNITY_PATH)
             && self::isBreak($nodes[4])
             && self::isText($nodes[5], self::SCORE)
-            && self::isLink($nodes[6], null);
-
-        return $isHeader && $nodes[1] instanceof Element ? $nodes[1] : null;
+            && self::isLink($nodes[6], null)
+            && $nodes[1] instanceof Element ? $nodes[1] : null;
     }
 
     /** @param list<Node> $nodes */
