@@ -14,11 +14,6 @@ final readonly class LemmySessionModel
     ) {
     }
 
-    public function url(string $path): string
-    {
-        return $this->instanceUrl . $path;
-    }
-
     public function get(string $path): ApiRequestModel
     {
         return ApiRequestModel::get($this->url($path), $this->authorization());
@@ -28,6 +23,11 @@ final readonly class LemmySessionModel
     public function postJson(string $path, array $json): ApiRequestModel
     {
         return ApiRequestModel::postJson($this->url($path), $json, $this->authorization());
+    }
+
+    private function url(string $path): string
+    {
+        return $this->instanceUrl . $path;
     }
 
     /** @return array<string, string> */

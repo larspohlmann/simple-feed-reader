@@ -169,13 +169,6 @@ final class LemmyApiClientTest extends TestCase
         $client->send(ApiRequestModel::get(self::SITE));
     }
 
-    public function testAnswerReturnsAnyStatusWithoutThrowing(): void
-    {
-        $client = $this->clientAnswering($this->errorAnswer(Response::HTTP_BAD_REQUEST, 'incorrect_login'));
-
-        self::assertSame(Response::HTTP_BAD_REQUEST, $client->answer(ApiRequestModel::get(self::SITE))->status);
-    }
-
     private function errorAnswer(int $status, string $code): MockResponse
     {
         $body = '' === $code ? '' : json_encode(['error' => $code], \JSON_THROW_ON_ERROR);

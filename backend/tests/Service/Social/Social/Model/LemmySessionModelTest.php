@@ -22,6 +22,5 @@ final class LemmySessionModelTest extends TestCase
         self::assertSame('https://lemmy.example/api/v3/post/like', $post->url);
         self::assertSame(['post_id' => 42, 'score' => 1], $post->json);
         self::assertSame('Bearer test-jwt-not-a-real-token', $post->headers['Authorization']);
-        self::assertSame('https://lemmy.example/api/v3/site', $session->url('/api/v3/site'));
     }
 }

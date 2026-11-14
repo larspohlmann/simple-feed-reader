@@ -53,12 +53,6 @@ final readonly class LemmyApiClient
         throw self::failure($answer->status, $code);
     }
 
-    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
-    public function answer(ApiRequestModel $request): ApiResponseModel
-    {
-        return NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
-    }
-
     private static function failure(int $status, ?string $code): \RuntimeException
     {
         return self::failureOfCode($code) ?? match ($status) {
@@ -86,5 +80,11 @@ final readonly class LemmyApiClient
             'rate_limit_error' => new SocialNetworkThrottledException(self::THROTTLED),
             default => null,
         };
+    }
+
+    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    private function answer(ApiRequestModel $request): ApiResponseModel
+    {
+        return NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
     }
 }
