@@ -12,6 +12,8 @@ use App\Service\Foundation\RateLimit\RateLimitGuard;
 use App\Service\Social\Social\DiscussionVotes;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -40,6 +42,25 @@ final readonly class EntryVoteController
         return new JsonResponse(
             DiscussionVoteJson::result($this->discussionVotes->vote($user, $entry, $request->toScore())),
         );
+    }
+
+    #[Route(
+        '/{id}/comments/vote',
+        name: 'api_entries_comment_vote',
+        methods: ['PUT'],
+        requirements: ['id' => '\d+'],
+    )]
+    public function voteOnComment(
+        int $id,
+        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] string $address,
+        #[MapRequestPayload] VoteRequest $request,
+        #[CurrentUser] User $user,
+    ): JsonResponse {
+        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
+        $this->rateLimitGuard->enforceForUser($this->socialLikeLimiter, $user);
+        $result = $this->discussionVotes->voteOnComment($user, $entry, $address, $request->toScore());
+
+        return new JsonResponse(DiscussionVoteJson::result($result));
     }
 
     #[Route('/{id}/vote', name: 'api_entries_vote_read', methods: ['GET'], requirements: ['id' => '\d+'])]

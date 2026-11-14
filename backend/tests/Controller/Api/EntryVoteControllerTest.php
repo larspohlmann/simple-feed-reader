@@ -16,6 +16,9 @@ use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\StaticDnsResolver;
+use App\Service\Content\Comments\CommentsCache;
+use App\Service\Content\Comments\CommentsSource\LemmyCommentsSource;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -31,6 +34,10 @@ final class EntryVoteControllerTest extends ApiTestCase
     private const string FEDERATED_POST = 'GET https://feddit.example/api/v3/post?id=7';
     private const string RESOLVE = 'GET https://lemmy.example/api/v3/resolve_object?q='
         . 'https%3A%2F%2Forigin.example%2Fpost%2F3';
+    private const string COMMENT_ADDRESS = 'https://origin.example/comment/5';
+    private const string RESOLVE_COMMENT = 'GET https://lemmy.example/api/v3/resolve_object?q='
+        . 'https%3A%2F%2Forigin.example%2Fcomment%2F5';
+    private const string COMMENT_LIKE = 'POST https://lemmy.example/api/v3/comment/like';
     private const string LIKE = 'POST https://lemmy.example/api/v3/post/like';
 
     /** Must match framework.rate_limiter.social_like.limit in rate_limiter.yaml. */
@@ -289,6 +296,82 @@ final class EntryVoteControllerTest extends ApiTestCase
         $this->vote($client, $entryId, 1);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    public function testACommentVoteResolvesTheCommentAndCastsIt(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::RESOLVE_COMMENT => self::fixture('resolve-comment.json'),
+            self::COMMENT_LIKE => self::fixture('comment-like.json'),
+        ]);
+        $user = $this->signIn($client, 'vote-comment@example.test');
+        $this->lemmyAccountOf($user);
+        $entryId = $this->lemmyPostFor($user);
+
+        $this->voteOnComment($client, $entryId, self::COMMENT_ADDRESS, 1);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['myVote' => 1, 'score' => 5], $this->payload($client));
+        self::assertSame([self::RESOLVE_COMMENT, self::COMMENT_LIKE], $this->routesAsked());
+        self::assertSame('{"comment_id":77,"score":1}', $this->http->requests[1]['body']);
+        self::assertSame([], $this->storedScores());
+    }
+
+    public function testACommentVoteForgetsTheCachedThread(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::RESOLVE_COMMENT => self::fixture('resolve-comment.json'),
+            self::COMMENT_LIKE => self::fixture('comment-like.json'),
+        ]);
+        $user = $this->signIn($client, 'vote-comment-cache@example.test');
+        $accountId = $this->lemmyAccountOf($user)->requireId();
+        $entryId = $this->lemmyPostFor($user);
+        $cache = self::getContainer()->get(CommentsCache::class);
+        self::assertInstanceOf(CommentsCache::class, $cache);
+        $key = LemmyCommentsSource::class . ' https://lemmy.example/post/42 account:' . $accountId;
+        $cache->remember($key, CommentsAnswerModel::settled('{}'), new \DateTimeImmutable());
+        self::assertNotNull($cache->find($key));
+
+        $this->voteOnComment($client, $entryId, self::COMMENT_ADDRESS, 1);
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($cache->find($key));
+    }
+
+    public function testAnAddressThatIsNoUrlIsRefused(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'vote-comment-address@example.test');
+        $this->lemmyAccountOf($user);
+        $entryId = $this->lemmyPostFor($user);
+
+        $this->voteOnComment($client, $entryId, '77', 1);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('social_post_unsupported', $this->payload($client)['type']);
+        self::assertSame('The address names no Lemmy comment.', $this->payload($client)['detail']);
+        self::assertSame([], $this->http->requests);
+    }
+
+    public function testAMissingAddressIsABadRequest(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'vote-comment-missing@example.test');
+        $this->lemmyAccountOf($user);
+        $entryId = $this->lemmyPostFor($user);
+
+        $client->jsonRequest('PUT', sprintf('/api/entries/%d/comments/vote', $entryId), ['score' => 1]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+    }
+
+    private function voteOnComment(KernelBrowser $client, int $entryId, string $address, int $score): void
+    {
+        $client->jsonRequest(
+            'PUT',
+            sprintf('/api/entries/%d/comments/vote?address=%s', $entryId, rawurlencode($address)),
+            ['score' => $score],
+        );
     }
 
     private function plainEntryFor(User $user): int

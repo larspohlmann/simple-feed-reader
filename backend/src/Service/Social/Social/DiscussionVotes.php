@@ -11,9 +11,11 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\VoteScore;
 use App\Repository\DiscussionVoteRepository;
+use App\Service\Content\Comments\CommentsLoader;
 use App\Service\Content\Comments\Model\LemmyPostModel;
 use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
@@ -34,6 +36,7 @@ final readonly class DiscussionVotes
         private DiscussionVoteRepository $votes,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
+        private CommentsLoader $comments,
     ) {
     }
 
@@ -54,6 +57,34 @@ final readonly class DiscussionVotes
 
         $target = $this->voting->castOnPost($account, $post, $score);
         $this->mirror($user, $entry, $account, $target->myVote);
+
+        return new DiscussionVoteResultModel($target->myVote, $target->score);
+    }
+
+    /**
+     * @throws NotASocialPostException
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialPostRefusedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function voteOnComment(
+        User $user,
+        Entry $entry,
+        string $address,
+        VoteScore $score,
+    ): DiscussionVoteResultModel {
+        self::postOf($entry);
+        if (!str_starts_with(mb_strtolower(AbsoluteHttpUrl::orNull($address) ?? ''), 'https://')) {
+            throw new NotASocialPostException('The address names no Lemmy comment.');
+        }
+        $account = $this->accounts->accountFor($user, $entry, SocialNetwork::Lemmy);
+
+        $target = $this->voting->castOnComment($account, $address, $score);
+        $this->comments->forget($user, $entry);
 
         return new DiscussionVoteResultModel($target->myVote, $target->score);
     }
