@@ -11,7 +11,7 @@ final readonly class HeadlineFiller
     private const int FEED_MINIMUM_ENTRIES = 4;
     private const float FEED_SHARE = 0.5;
 
-    /** German, English, French and Spanish; already in HeadlineStems' form: casefolded, without diacritics, cut to six characters. */
+    /** Already in HeadlineStems' form: casefolded, without diacritics, cut to six characters. */
     private const array SEED_STEMS = [
         'the' => true, 'and' => true, 'for' => true, 'with' => true, 'from' => true, 'that' => true,
         'this' => true, 'these' => true, 'those' => true, 'are' => true, 'was' => true, 'were' => true,

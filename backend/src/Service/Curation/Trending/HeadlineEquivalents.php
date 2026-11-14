@@ -6,13 +6,13 @@ namespace App\Service\Curation\Trending;
 
 use App\Service\Curation\Trending\Support\HeadlineStems;
 
-/** Spellings of one thing, across the four app languages, share one stem (#2225); every entry is reviewed by hand. */
+/** Spellings of one thing, across the four app languages, share one stem (#2225). */
 final readonly class HeadlineEquivalents
 {
     /** Case-sensitive whole words: abbreviations, and long forms whose six-letter stem would catch unrelated words. */
     private const array EXACT_WORDS = [
         'EU' => 'eunion', 'UE' => 'eunion',
-        'ONU' => 'onu',
+        'UN' => 'onu', 'UNO' => 'onu', 'ONU' => 'onu',
         'UK' => 'britai', 'Großbritannien' => 'britai', 'Großbritanniens' => 'britai',
         'WM' => 'weltme',
         'Schweiz' => 'switze', 'Schweizer' => 'switze',
@@ -22,9 +22,7 @@ final readonly class HeadlineEquivalents
     ];
 
     /** Exact words that are also ordinary words in a shouted headline: French "UN PLAN", Spanish "UNO MÁS". */
-    private const array SHOUTABLE_WORDS = [
-        'UN' => 'onu', 'UNO' => 'onu',
-    ];
+    private const array SHOUTABLE_WORDS = ['UN' => true, 'UNO' => true];
 
     /** Folded words joined by one space. */
     private const array PHRASES = [
@@ -36,7 +34,7 @@ final readonly class HeadlineEquivalents
         'pays bas' => 'nether', 'paises bajos' => 'nether',
     ];
 
-    /** Cut stems; checked against the dev windows for unrelated words sharing the six letters. */
+    /** A key also merges every unrelated word sharing its six letters: check the window's words before adding one. */
     private const array STEMS = [
         'zelens' => 'selens',
         'russla' => 'russia', 'russie' => 'russia', 'rusia' => 'russia',
@@ -91,8 +89,7 @@ final readonly class HeadlineEquivalents
             if (isset(self::SHOUTABLE_WORDS[$word]) && self::isInAllCapsRun($text, $offset, \strlen($word))) {
                 continue;
             }
-            $canonical = self::EXACT_WORDS[$word] ?? self::SHOUTABLE_WORDS[$word];
-            $replaced = substr_replace($replaced, $canonical, $offset, \strlen($word));
+            $replaced = substr_replace($replaced, self::EXACT_WORDS[$word], $offset, \strlen($word));
         }
 
         return $replaced;
@@ -109,7 +106,7 @@ final readonly class HeadlineEquivalents
             $neighbours[] = $next[0];
         }
 
-        return $neighbours !== [] && array_filter($neighbours, self::isAllCaps(...)) === $neighbours;
+        return $neighbours !== [] && array_all($neighbours, self::isAllCaps(...));
     }
 
     private static function isAllCaps(string $word): bool
@@ -153,9 +150,7 @@ final readonly class HeadlineEquivalents
 
     private static function exactWordPattern(): string
     {
-        $alternatives = implode('|', array_keys([...self::EXACT_WORDS, ...self::SHOUTABLE_WORDS]));
-
-        return '/(?<![\p{L}\p{N}])(?:' . $alternatives . ')(?![\p{L}\p{N}])/u';
+        return '/(?<![\p{L}\p{N}])(?:' . implode('|', array_keys(self::EXACT_WORDS)) . ')(?![\p{L}\p{N}])/u';
     }
 
     /** @return array<string, list<array{list<string>, string}>> */

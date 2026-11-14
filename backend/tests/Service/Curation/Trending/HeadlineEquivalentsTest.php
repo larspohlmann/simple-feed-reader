@@ -176,7 +176,7 @@ final class HeadlineEquivalentsTest extends TestCase
     {
         $filler = new HeadlineFiller();
         $stemTable = self::table('STEMS');
-        foreach (['EXACT_WORDS', 'SHOUTABLE_WORDS', 'PHRASES', 'STEMS'] as $table) {
+        foreach (['EXACT_WORDS', 'PHRASES', 'STEMS'] as $table) {
             foreach (self::table($table) as $key => $canonical) {
                 $label = \sprintf('%s[%s] = %s', $table, $key, $canonical);
                 self::assertGreaterThanOrEqual(3, mb_strlen($canonical), $label);
@@ -189,9 +189,14 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testEveryExactWordIsLettersAndDigitsOnly(): void
     {
-        foreach ([...array_keys(self::table('EXACT_WORDS')), ...array_keys(self::table('SHOUTABLE_WORDS'))] as $word) {
+        foreach (array_keys(self::table('EXACT_WORDS')) as $word) {
             self::assertMatchesRegularExpression('/^[\p{L}\p{N}]+$/u', $word);
         }
+    }
+
+    public function testEveryShoutableWordIsAnExactWord(): void
+    {
+        self::assertSame([], array_diff_key(self::table('SHOUTABLE_WORDS'), self::table('EXACT_WORDS')));
     }
 
     public function testNoPhraseStartsAnotherPhrase(): void
