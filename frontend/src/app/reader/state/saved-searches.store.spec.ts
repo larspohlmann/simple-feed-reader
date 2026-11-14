@@ -338,11 +338,11 @@ describe('SavedSearchesStore', () => {
 
     it('counts every network it does not include as excluded', () => {
       const store = setup({ savedSearches: () => of(response(['mastodon'])) });
-      expect([...store.excludedNetworks()]).toEqual(['bluesky', 'mastodon']);
+      expect([...store.excludedNetworks()]).toEqual(['bluesky', 'mastodon', 'lemmy']);
 
       store.load();
 
-      expect([...store.excludedNetworks()]).toEqual(['bluesky']);
+      expect([...store.excludedNetworks()]).toEqual(['bluesky', 'lemmy']);
     });
 
     it('includeNetwork() adds the network at once, writes it, then reloads', () => {

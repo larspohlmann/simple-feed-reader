@@ -88,7 +88,8 @@ final readonly class ImportCandidates
     private static function singletonsOf(SocialAccount $account, array $subscribed): array
     {
         $singletons = [];
-        foreach ([PrivateFeedModel::home(), PrivateFeedModel::trending()] as $privateFeed) {
+        foreach (SocialFeedKind::timelines() as $kind) {
+            $privateFeed = PrivateFeedModel::timeline($kind);
             if (PrivateFeedRules::allows($account->getNetwork(), $privateFeed)) {
                 $singletons[] = CollectionCandidateModel::of($privateFeed, $subscribed);
             }

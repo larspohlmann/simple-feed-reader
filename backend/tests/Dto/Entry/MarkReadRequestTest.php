@@ -66,7 +66,7 @@ final class MarkReadRequestTest extends TestCase
     public function testAnUnknownNetworkIsAValidationError(): void
     {
         $this->assertRejectedWith(
-            ['network' => ['Unknown network. Use one of: bluesky, mastodon.']],
+            ['network' => ['Unknown network. Use one of: bluesky, mastodon, lemmy.']],
             $this->networkRequest('myspace'),
         );
     }

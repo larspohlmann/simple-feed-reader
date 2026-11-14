@@ -1,0 +1,5 @@
+{
+  "jwt": "test-jwt-not-a-real-token",
+  "registration_created": false,
+  "verify_email_sent": false
+}

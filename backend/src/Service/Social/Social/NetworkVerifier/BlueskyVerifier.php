@@ -25,6 +25,11 @@ final readonly class BlueskyVerifier implements NetworkVerifierInterface
         $identity = $this->identities->resolve($credentials->address);
         $session = $this->sessions->open($identity, $credentials->secret);
 
-        return new VerifiedAccountModel($identity->did, '@' . $session->handle, $identity->pdsUrl);
+        return new VerifiedAccountModel(
+            $identity->did,
+            '@' . $session->handle,
+            $identity->pdsUrl,
+            $credentials->secret,
+        );
     }
 }

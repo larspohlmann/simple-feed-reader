@@ -48,6 +48,26 @@ export const NETWORK_FEED_KIND_DESCRIPTORS: Readonly<
   },
 };
 
+type NetworkFeedKindLabels = Pick<NetworkFeedKindDescriptor, 'labelKey' | 'toggleKey'>;
+
+const NETWORK_FEED_KIND_LABELS: Readonly<
+  Record<SocialNetworkName, Readonly<Partial<Record<NetworkFeedKind, NetworkFeedKindLabels>>>>
+> = {
+  bluesky: {},
+  mastodon: {},
+  lemmy: {
+    profile: { labelKey: 'reader.lemmyCommunities', toggleKey: 'reader.toggleLemmyCommunities' },
+  },
+};
+
+export function networkFeedKindLabels(
+  kind: NetworkFeedKind,
+  network: SocialNetworkName,
+): NetworkFeedKindLabels {
+  const { labelKey, toggleKey } = NETWORK_FEED_KIND_DESCRIPTORS[kind];
+  return NETWORK_FEED_KIND_LABELS[network][kind] ?? { labelKey, toggleKey };
+}
+
 export const NETWORK_FEED_KINDS_IN_ORDER: readonly NetworkFeedKind[] = (
   Object.keys(NETWORK_FEED_KIND_DESCRIPTORS) as NetworkFeedKind[]
 ).sort(
@@ -74,11 +94,13 @@ type PrivateSubscription = SubscriptionDto & { social: PrivateFeedRefDto };
 
 const KIND_ORDER: Readonly<Record<PrivateFeedRefDto['kind'], number>> = {
   home: 0,
-  trending: 1,
-  list: 2,
-  custom_feed: 3,
-  tag: 4,
-  search: 5,
+  local: 1,
+  all: 2,
+  trending: 3,
+  list: 4,
+  custom_feed: 5,
+  tag: 6,
+  search: 7,
 };
 
 export function isSocialFeed(subscription: SubscriptionDto): boolean {

@@ -44,7 +44,7 @@ final readonly class ResponseTargetFinder
     private static function addressOf(ResponseTargetModel $target): SocialPostAddressModel
     {
         return null === $target->address
-            ? SocialPostAddress::ofOrRefuse($target->entry)
-            : SocialPostAddress::replyOrRefuse($target->entry, $target->address);
+            ? SocialPostAddress::respondableOrRefuse($target->entry)
+            : SocialPostAddress::respondableReplyOrRefuse($target->entry, $target->address);
     }
 }

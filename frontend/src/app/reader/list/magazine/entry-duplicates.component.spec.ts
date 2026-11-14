@@ -14,6 +14,7 @@ import { ENTRY_ROW_ACTION, EntryRowAction } from '../../entry/entry-actions/entr
 const entryActions = {
   favorite: jest.fn(),
   like: jest.fn(),
+  vote: jest.fn(),
   keep: jest.fn(),
   unshare: jest.fn(),
   toggleRead: jest.fn(),
@@ -260,6 +261,15 @@ it('re-emits like for the copy and follows the store through the flip and its re
   storeHolds(false);
 
   expect(button().getAttribute('aria-pressed')).toBe('false');
+});
+
+it('re-emits a vote for the copy to the shell actions (#2218)', () => {
+  const dup = entry({ id: 99, score: 5, myVote: 0 });
+  const fixture = mount(entry({ duplicates: [dup] }));
+
+  fixture.componentInstance.vote(dup, -1);
+
+  expect(entryActions.vote).toHaveBeenCalledWith(dup, -1);
 });
 
 it('never flips the like on its own (#1600)', () => {

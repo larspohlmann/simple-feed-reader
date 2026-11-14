@@ -1,0 +1,36 @@
+@let score = comment().score;
+@if (score !== null) {
+  <app-vote-pill
+    class="score"
+    variant="bare"
+    [score]="score"
+    [myVote]="comment().vote?.myVote ?? null"
+    (voted)="voted.emit($event)"
+  />
+}
+@if (comment().vote; as lemmyVote) {
+  @if (lemmyVote.canReply) {
+    <button
+      appIconButton
+      type="button"
+      class="reply-action"
+      [attr.aria-label]="'reader.reply.lemmy' | transloco"
+      [title]="'reader.reply.lemmy' | transloco"
+      (click)="replyRequested.emit(lemmyVote)"
+    >
+      <app-icon name="reply" size="sm" />
+    </button>
+  }
+}
+@if (deletable()) {
+  <button
+    appIconButton
+    type="button"
+    class="delete danger"
+    [attr.aria-label]="'reader.deleteReply.action' | transloco"
+    [title]="'reader.deleteReply.action' | transloco"
+    (click)="deleteRequested.emit()"
+  >
+    <app-icon name="delete" size="sm" />
+  </button>
+}

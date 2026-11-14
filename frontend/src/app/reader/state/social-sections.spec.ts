@@ -1,7 +1,13 @@
+import { SocialNetworkName } from '../../core/social-network';
 import { SocialAccountRefDto, SocialFeedRefDto } from '../social-feed';
 import { SubscriptionDto } from '../models';
 import { makeSubscription } from '../testing/subscription.factory';
-import { buildSocialSections, isPrivateFeed, isSocialFeed } from './social-sections';
+import {
+  buildSocialSections,
+  isPrivateFeed,
+  isSocialFeed,
+  networkFeedKindLabels,
+} from './social-sections';
 import { NO_UNREAD_TOTALS, UnreadTotals } from './unread-totals';
 
 const sectionsOf = (
@@ -11,13 +17,13 @@ const sectionsOf = (
 ) => buildSocialSections(subscriptions, socialAccounts, totals);
 
 const ref = (
-  network: 'bluesky' | 'mastodon',
+  network: SocialNetworkName,
   accountId: number,
-  kind: 'home' | 'list' | 'custom_feed' | 'tag' | 'search',
+  kind: 'home' | 'local' | 'all' | 'list' | 'custom_feed' | 'tag' | 'search',
 ): SocialFeedRefDto =>
   kind === 'search' ? { network, accountId, kind, query: 'rss' } : { network, accountId, kind };
 
-const profile = (id: number, network: 'bluesky' | 'mastodon', title: string): SubscriptionDto =>
+const profile = (id: number, network: SocialNetworkName, title: string): SubscriptionDto =>
   feed(id, { network, accountId: null, kind: 'profile' }, title);
 
 const feed = (id: number, social: SocialFeedRefDto, title = `Feed ${id}`): SubscriptionDto =>
@@ -87,6 +93,35 @@ describe('buildSocialSections', () => {
       [9, null, [1]],
     ]);
     expect(sections[0].showsHandles).toBe(true);
+  });
+
+  it('buildsALemmySectionFromItsAccountAndCommunityFeeds', () => {
+    const lemmy: SocialAccountRefDto = {
+      id: 7,
+      network: 'lemmy',
+      handle: 'lars@lemmy.example',
+      status: 'connected',
+    };
+
+    const sections = sectionsOf([profile(1, 'lemmy', 'rss@feddit.example')], [lemmy]);
+
+    expect(sections.map((section) => section.network)).toEqual(['lemmy']);
+    expect(sections[0].networkAccounts).toEqual([lemmy]);
+    expect(sections[0].groups.profile.subscriptions.map(({ id }) => id)).toEqual([1]);
+  });
+
+  it('orders the Local and All timelines right after Home', () => {
+    const sections = sectionsOf(
+      [
+        feed(1, ref('lemmy', 7, 'all'), 'All'),
+        feed(2, ref('lemmy', 7, 'list'), 'A list'),
+        feed(3, ref('lemmy', 7, 'local'), 'Local'),
+        feed(4, ref('lemmy', 7, 'home'), 'Home'),
+      ],
+      [],
+    );
+
+    expect(sections[0].accounts[0].subscriptions.map(({ id }) => id)).toEqual([4, 3, 1, 2]);
   });
 
   it("takes search feeds out of their account's group into the network's searches, by title", () => {
@@ -266,5 +301,19 @@ describe('saved feeds in the social sections', () => {
   it('hides an empty saved feed and keeps a section that holds only saved posts', () => {
     expect(sectionsOf([saved(2, 'bluesky', 0)], [])).toEqual([]);
     expect(sectionsOf([saved(3, 'mastodon', 1)], [])[0].network).toBe('mastodon');
+  });
+});
+
+describe('networkFeedKindLabels', () => {
+  it('calls a Lemmy profile group Communities', () => {
+    expect(networkFeedKindLabels('profile', 'lemmy')).toEqual({
+      labelKey: 'reader.lemmyCommunities',
+      toggleKey: 'reader.toggleLemmyCommunities',
+    });
+  });
+
+  it('keeps every other network and kind on the descriptor labels', () => {
+    expect(networkFeedKindLabels('profile', 'mastodon').labelKey).toBe('reader.socialFeeds');
+    expect(networkFeedKindLabels('search', 'lemmy').labelKey).toBe('reader.socialSearches');
   });
 });

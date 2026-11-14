@@ -30,6 +30,7 @@ final class PostAuthor
             SocialNetwork::Mastodon => MastodonAuthor::identityOfProfileUrl(
                 $entry->getAuthorUrl() ?? MastodonStatusAddress::ofOrNull($post->address)?->authorPrefix,
             ),
+            SocialNetwork::Lemmy => null,
         };
     }
 

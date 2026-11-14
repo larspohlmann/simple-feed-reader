@@ -9,6 +9,8 @@ use App\Entity\SocialAccount;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Enum\VoteScore;
+use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Content\Comments\Support\SubstackPostAddress;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\Support\OwnInstancePostUrl;
@@ -30,6 +32,7 @@ final readonly class EntryListRowEnricher
         private SocialLikeRepository $socialLikes,
         private ThreadPostRepository $threadPosts,
         private SavedEntryOriginRepository $savedOrigins,
+        private DiscussionVoteRepository $discussionVotes,
     ) {
     }
 
@@ -59,7 +62,11 @@ final readonly class EntryListRowEnricher
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
         $threads = $this->threadPosts->byEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::topLevelEntryIdsOf($rows)));
-        $socialStates = $this->socialStatesOf($entries, $userId);
+        $postAddresses = self::postAddressesOf($entries);
+        $lemmyPostIds = self::lemmyPostIdsOf($entries);
+        $accountsByNetwork = $this->accountsByNetworkOf($postAddresses, $lemmyPostIds, $userId);
+        $socialStates = $this->socialStatesOf($entries, $postAddresses, $accountsByNetwork, $userId);
+        $votes = $this->votesOf($lemmyPostIds, $accountsByNetwork, $userId);
         $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
 
         $enrichments = [];
@@ -73,6 +80,7 @@ final readonly class EntryListRowEnricher
                 self::discussionOf($entries[$entryId], $socialStates[$entryId] ?? null),
                 $origins[$entryId] ?? null,
                 $threads[$entryId] ?? [],
+                $votes[$entryId] ?? null,
             );
         }
 
@@ -80,17 +88,62 @@ final readonly class EntryListRowEnricher
     }
 
     /**
+     * @param array<int, SocialPostAddressModel> $postAddresses
+     * @param list<int> $lemmyPostIds
+     *
+     * @return array<string, non-empty-list<SocialAccount>> by network value; read only when a post can use them
+     */
+    private function accountsByNetworkOf(array $postAddresses, array $lemmyPostIds, int $userId): array
+    {
+        if ([] === $postAddresses && [] === $lemmyPostIds) {
+            return [];
+        }
+
+        return self::accountsByNetwork($this->socialAccounts->findAllForUserIdInActingOrder($userId));
+    }
+
+    /**
+     * @param list<int> $lemmyPostIds
+     * @param array<string, non-empty-list<SocialAccount>> $accountsByNetwork
+     *
+     * @return array<int, VoteScore> by entry id, for every Lemmy post of a reader with a Lemmy account in any status
+     */
+    private function votesOf(array $lemmyPostIds, array $accountsByNetwork, int $userId): array
+    {
+        if (!isset($accountsByNetwork[SocialNetwork::Lemmy->value])) {
+            return [];
+        }
+
+        $stored = $this->discussionVotes->scoresAmong($userId, $lemmyPostIds);
+
+        return $stored + array_fill_keys($lemmyPostIds, VoteScore::None);
+    }
+
+    /**
      * @param array<int, Entry> $entries
+     *
+     * @return list<int>
+     */
+    private static function lemmyPostIdsOf(array $entries): array
+    {
+        return array_keys(array_filter(
+            $entries,
+            static fn (Entry $entry): bool => null !== LemmyPostAddress::of($entry),
+        ));
+    }
+
+    /**
+     * @param array<int, Entry> $entries
+     * @param array<int, SocialPostAddressModel> $posts
+     * @param array<string, non-empty-list<SocialAccount>> $accountsByNetwork
      *
      * @return array<int, EntryListRowSocial> by entry id, for every post
      */
-    private function socialStatesOf(array $entries, int $userId): array
+    private function socialStatesOf(array $entries, array $posts, array $accountsByNetwork, int $userId): array
     {
-        $posts = self::postAddressesOf($entries);
         if ([] === $posts) {
             return [];
         }
-        $accountsByNetwork = self::accountsByNetwork($this->socialAccounts->findAllForUserIdInActingOrder($userId));
         $likeable = array_filter(
             $posts,
             static fn (SocialPostAddressModel $post): bool => isset($accountsByNetwork[$post->network->value]),

@@ -52,7 +52,7 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
         self::assertSame(2, $this->feeds()->countDue($criteria));
     }
 
-    public function testANetworkWithoutFeedsSelectsNothing(): void
+    public function testANetworkTheUserHasNoFeedsOnSelectsNothing(): void
     {
         $owner = $this->user('network-scope-empty@example.com');
         $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::PLAIN);

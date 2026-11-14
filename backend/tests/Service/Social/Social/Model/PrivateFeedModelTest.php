@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Social\Model;
 
 use App\Enum\SocialFeedKind;
 use App\Service\Social\Social\Model\PrivateFeedModel;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PrivateFeedModelTest extends TestCase
@@ -13,7 +14,7 @@ final class PrivateFeedModelTest extends TestCase
     public function testAKeyNamesTheKindThenTheRemoteId(): void
     {
         self::assertSame('list:at://list/a', PrivateFeedModel::keyOf(SocialFeedKind::UserList, 'at://list/a'));
-        self::assertSame('home:', PrivateFeedModel::home()->key());
+        self::assertSame('home:', PrivateFeedModel::timeline(SocialFeedKind::Home)->key());
     }
 
     public function testAFollowedTagIsKeyedByItsLowercasedNameAndKeepsTheCasingItWasShownIn(): void
@@ -37,7 +38,7 @@ final class PrivateFeedModelTest extends TestCase
 
     public function testTrendingIsOnePerAccountLikeHome(): void
     {
-        $trending = PrivateFeedModel::trending();
+        $trending = PrivateFeedModel::timeline(SocialFeedKind::Trending);
 
         self::assertSame(SocialFeedKind::Trending, $trending->kind);
         self::assertSame('', $trending->remoteId);
@@ -53,5 +54,37 @@ final class PrivateFeedModelTest extends TestCase
         self::assertSame('rss reader', $search->remoteId);
         self::assertSame('rss reader', $search->name);
         self::assertEquals($search, PrivateFeedModel::of(SocialFeedKind::Search, ' rss reader', 'ignored'));
+    }
+
+    public function testEveryTimelineIsNamedAfterItsKindWithoutARemoteId(): void
+    {
+        $names = [];
+        foreach (SocialFeedKind::timelines() as $kind) {
+            $timeline = PrivateFeedModel::timeline($kind);
+            self::assertSame($kind, $timeline->kind);
+            self::assertSame('', $timeline->remoteId);
+            self::assertEquals($timeline, PrivateFeedModel::of($kind, 'ignored', 'ignored'));
+            $names[] = $timeline->name;
+        }
+
+        self::assertSame(['Home', 'Trending', 'Local', 'All'], $names);
+    }
+
+    /** @return iterable<string, array{SocialFeedKind}> */
+    public static function kindsNamedByTheirRemoteId(): iterable
+    {
+        yield 'list' => [SocialFeedKind::UserList];
+        yield 'custom feed' => [SocialFeedKind::CustomFeed];
+        yield 'author' => [SocialFeedKind::Author];
+        yield 'tag' => [SocialFeedKind::Tag];
+        yield 'search' => [SocialFeedKind::Search];
+    }
+
+    #[DataProvider('kindsNamedByTheirRemoteId')]
+    public function testAKindNamedByItsRemoteIdIsNoTimeline(SocialFeedKind $kind): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        PrivateFeedModel::timeline($kind);
     }
 }

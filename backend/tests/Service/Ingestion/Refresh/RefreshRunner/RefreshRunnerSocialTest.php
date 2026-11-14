@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Refresh\RefreshRunner;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
@@ -40,6 +41,9 @@ final class RefreshRunnerSocialTest extends DbTestCase
     private const string HOME = 'GET https://mastodon.example/api/v1/timelines/home?limit=40';
     private const string FRIENDS = 'GET https://mastodon.example/api/v1/timelines/list/42?limit=40';
     private const string FAMILY = 'GET https://mastodon.example/api/v1/timelines/list/43?limit=40';
+    private const string LEMMY_SUBSCRIBED
+        = 'GET https://lemmy.example/api/v3/post/list?type_=Subscribed&sort=New&limit=50';
+    private const string LEMMY_POSTS = __DIR__ . '/../../../../Fixtures/lemmy/post-list.json';
 
     private MockClock $clock;
     private User $user;
@@ -60,7 +64,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
     public function testAPrivateFeedIsReadThroughItsAccountAndNeverFetchedByUrl(): void
     {
         $this->subscribeToRss();
-        $homeId = $this->privateFeed(PrivateFeedModel::home())->requireId();
+        $homeId = $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home))->requireId();
         $http = new RoutedHttpClient([self::RSS => self::rssBody(), self::HOME => self::statuses()]);
 
         $report = $this->runner($http)->run(RefreshRequestModel::allDue(300));
@@ -74,9 +78,34 @@ final class RefreshRunnerSocialTest extends DbTestCase
         self::assertSame('109', $stored?->getNewestSeenId());
     }
 
+    public function testALemmyHomeFeedIngestsItsPosts(): void
+    {
+        $lemmy = SocialAccounts::lemmyOf($this->user);
+        $this->entityManager->persist($lemmy);
+        $this->entityManager->flush();
+        $homeId = $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home), $lemmy)->requireId();
+        $http = new RoutedHttpClient([
+            self::LEMMY_SUBSCRIBED => new MockResponse((string) file_get_contents(self::LEMMY_POSTS)),
+        ]);
+
+        $this->runner($http)->run(RefreshRequestModel::allDue(300));
+
+        $guids = array_map(
+            static fn (Entry $entry): string => $entry->getGuid(),
+            $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $homeId]),
+        );
+        self::assertEqualsCanonicalizing(
+            ['https://feddit.example/post/7', 'https://lemmy.example/post/102', 'https://mbin.example/m/rss/t/9'],
+            $guids,
+        );
+        $this->entityManager->clear();
+        $stored = SocialFeeds::repository($this->entityManager)->findWithAccountByFeedIds([$homeId])[$homeId] ?? null;
+        self::assertSame('105', $stored?->getNewestSeenId());
+    }
+
     public function testAThrottledAccountIsAskedOnceAPass(): void
     {
-        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([self::HOME => self::throttled(), self::FRIENDS => self::throttled()]);
 
@@ -88,7 +117,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
 
     public function testARefusedTokenPausesTheAccountForGoodAndSparesItsOtherFeeds(): void
     {
-        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([self::HOME => self::refused(), self::FRIENDS => self::refused()]);
 
@@ -105,7 +134,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
 
     public function testTheBudgetGateStopsThePassMidway(): void
     {
-        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([self::HOME => self::statuses(), self::FRIENDS => self::statuses()]);
 
@@ -119,7 +148,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
 
     public function testAStoreThatAbortsTheRunStopsReadingTimelines(): void
     {
-        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $this->privateFeed(PrivateFeedModel::userList('43', 'Family'));
         $http = new RoutedHttpClient([
@@ -144,7 +173,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
     public function testAMixedPassReadsFeedsAndTimelinesInOneRunAndLeavesNothingRemaining(): void
     {
         $this->subscribeToRss();
-        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([
             self::RSS => self::rssBody(),
@@ -162,7 +191,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
     public function testAThrottledAccountsWithheldFeedIsTalliedSoNothingStaysRemaining(): void
     {
         $this->subscribeToRss();
-        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([
             self::RSS => self::rssBody(),
@@ -182,7 +211,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
     public function testAnAbortInAMixedPassLeavesEveryUnprocessedFeedRemaining(): void
     {
         $this->subscribeToRss();
-        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([
             self::RSS => self::rssBody(),
@@ -222,12 +251,13 @@ final class RefreshRunnerSocialTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    private function privateFeed(PrivateFeedModel $privateFeed): Feed
+    private function privateFeed(PrivateFeedModel $privateFeed, ?SocialAccount $account = null): Feed
     {
+        $account ??= $this->account;
         PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
-            ->create($this->account, $privateFeed);
+            ->create($account, $privateFeed);
         $socialFeed = SocialFeeds::repository($this->entityManager)
-            ->findOneFor($this->account, $privateFeed->kind, $privateFeed->remoteId);
+            ->findOneFor($account, $privateFeed->kind, $privateFeed->remoteId);
         self::assertNotNull($socialFeed);
 
         return $socialFeed->getFeed();
@@ -236,7 +266,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
     private function homepages(): StubFeedFetcher
     {
         $homepages = new StubFeedFetcher();
-        foreach (['https://news.example', 'https://mastodon.example'] as $origin) {
+        foreach (['https://news.example', 'https://mastodon.example', 'https://lemmy.example'] as $origin) {
             $homepages->willReturn(
                 $origin,
                 FetchResponseModel::fetched($origin, false, '<html lang="en"></html>', null, null),

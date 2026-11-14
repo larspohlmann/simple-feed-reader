@@ -117,7 +117,7 @@ final readonly class ComposerContexts
     private function threadStarterOrNull(SocialPostModel $post, ResponseTargetModel $target): ?SocialPostModel
     {
         try {
-            return $this->posts->findAs($post->account, SocialPostAddress::ofOrRefuse($target->entry));
+            return $this->posts->findAs($post->account, SocialPostAddress::respondableOrRefuse($target->entry));
         } catch (
             SocialPostNotFoundException
             | SocialAccountNeedsReconnectException

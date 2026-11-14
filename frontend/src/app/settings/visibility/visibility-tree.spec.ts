@@ -19,6 +19,11 @@ const TOOT = makeSubscription({
   title: 'Bob on Mastodon',
   social: { network: 'mastodon', kind: 'profile', accountId: null },
 });
+const COMMUNITY = makeSubscription({
+  id: 17,
+  title: 'rss@feddit.example',
+  social: { network: 'lemmy', kind: 'profile', accountId: null },
+});
 const HEISE = makeSubscription({ id: 12, title: 'heise online', tags: [TECH] });
 const TAZ = makeSubscription({ id: 13, title: 'taz' });
 const HOME = makeSubscription({
@@ -38,7 +43,7 @@ const SAVED = makeSubscription({
   entryCount: 3,
   social: { network: 'bluesky', kind: 'saved', accountId: null },
 });
-const SUBSCRIPTIONS = [SKEET, TOOT, HEISE, TAZ, HOME, SEARCH, SAVED];
+const SUBSCRIPTIONS = [SKEET, TOOT, COMMUNITY, HEISE, TAZ, HOME, SEARCH, SAVED];
 
 function keys(feedFilter: ((subscription: SubscriptionDto) => boolean) | null = null): string[] {
   return visibilityLines(
@@ -88,6 +93,14 @@ describe('visibilityLines', () => {
       'network:mastodon',
       'network:mastodon/kind:profile',
       'network:mastodon/kind:profile/feed:11',
+    ]);
+  });
+
+  it('offers a Lemmy community under its own network', () => {
+    expect(keys().filter((key) => key.startsWith('network:lemmy'))).toEqual([
+      'network:lemmy',
+      'network:lemmy/kind:profile',
+      'network:lemmy/kind:profile/feed:17',
     ]);
   });
 

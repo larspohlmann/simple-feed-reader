@@ -28,6 +28,23 @@ final class UrlOriginTest extends TestCase
         self::assertSame($expected, UrlOrigin::of($url));
     }
 
+    /** @return iterable<string, array{string, ?string}> */
+    public static function hosts(): iterable
+    {
+        yield 'a bare host' => ['https://Example.org/a?b#c', 'Example.org'];
+        yield 'a port kept' => ['https://example.org:8443/a', 'example.org:8443'];
+        yield 'a default port still named' => ['https://example.org:443/a', 'example.org:443'];
+        yield 'no host' => ['/a/b', null];
+        yield 'an empty string' => ['', null];
+        yield 'unparseable' => ['http:///example.org', null];
+    }
+
+    #[DataProvider('hosts')]
+    public function testHostWithPortIsTheHostAndItsPort(string $url, ?string $expected): void
+    {
+        self::assertSame($expected, UrlOrigin::hostWithPort($url));
+    }
+
     public function testFromPartsAddsThePortOnlyWhenThereIsOne(): void
     {
         self::assertSame('https://example.org', UrlOrigin::fromParts('https', 'example.org', null));

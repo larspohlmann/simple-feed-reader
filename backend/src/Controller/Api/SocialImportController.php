@@ -52,7 +52,7 @@ final readonly class SocialImportController
         int $id,
         #[MapRequestPayload] SocialImportRequest $request,
     ): JsonResponse {
-        $account = $this->socialAccount->require($user, $id);
+        $account = $this->socialAccount->requireConnected($user, $id);
 
         return new JsonResponse($this->importJson->result($this->importer->import($account, $request->toImport())));
     }

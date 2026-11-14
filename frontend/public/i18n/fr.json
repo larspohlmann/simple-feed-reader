@@ -384,6 +384,7 @@
       "title": "Réseaux sociaux",
       "bluesky": "Bluesky",
       "mastodon": "Mastodon",
+      "lemmy": "Lemmy",
       "handle": "Identifiant",
       "appPassword": "Mot de passe d'application",
       "appPasswordHint": "Créez un mot de passe d'application dans Bluesky sous Paramètres → Confidentialité et sécurité → Mots de passe d'application. Il ressemble à xxxx-xxxx-xxxx-xxxx ; le mot de passe de votre compte est refusé.",
@@ -407,13 +408,18 @@
       "connectedSince": "Connecté depuis le {{date}}",
       "connectAnother": "Connecter un autre compte",
       "importSectionTitle": "Gérer les flux",
-      "importSectionCaption": "Choisissez lesquels de vos abonnements, listes et flux Bluesky et Mastodon arrivent ici sous forme de flux ; les comptes suivis apparaissent sous la ligne Flux de la section Bluesky ou Mastodon. Une coche signifie que vous êtes abonné : décochez un flux pour vous désabonner, et revenez quand vous voulez pour les nouveaux comptes suivis. Les listes, hashtags suivis et flux que vous enregistrez, suivez ou créez sur le réseau sont ajoutés dans l'heure, et ceux que vous y retirez ou cessez de suivre disparaissent aussi ; ce que vous retirez ici n'est pas rajouté.",
+      "importSectionCaption": "Choisissez lesquels de vos abonnements, listes et flux Bluesky et Mastodon, et de vos communautés et fils Lemmy, arrivent ici sous forme de flux ; les comptes suivis apparaissent sous la ligne Flux de la section Bluesky ou Mastodon, les communautés sous Communautés dans la section Lemmy. Une coche signifie que vous êtes abonné : décochez un flux pour vous désabonner, et revenez quand vous voulez pour les nouveaux comptes suivis. Les listes, hashtags suivis et flux que vous enregistrez, suivez ou créez sur le réseau sont ajoutés dans l'heure, et ceux que vous y retirez ou cessez de suivre disparaissent aussi ; ce que vous retirez ici n'est pas rajouté.",
       "importChoose": "Gérer les flux…",
       "importTitle": "Gérer les flux de {{handle}}",
       "importLoading": "Chargement des comptes que vous suivez…",
       "importFilter": "Filtrer par nom ou identifiant",
       "importSelectAllNew": "Sélectionner tous les nouveaux ({{count}})",
       "importTabs": "Types de flux",
+      "importTabLemmy": {
+        "accounts": "Communautés",
+        "lists": "Fils",
+        "search": "Recherche"
+      },
       "importTab": {
         "accounts": "Comptes",
         "lists": "Listes",
@@ -433,6 +439,7 @@
         "syntaxGroup": "regroupe des termes",
         "syntaxCombined": "Tout combiné :",
         "syntaxAllWords": "chaque mot doit apparaître",
+        "syntaxLemmyPlain": "mots simples ; trouve les titres et les textes des publications",
         "syntaxMastodonNote": "Nécessite la recherche plein texte sur votre instance ; seules les publications des personnes qui autorisent la recherche sont trouvées.",
         "syntaxMastodonAlternatives": "Mastodon ne connaît pas || : chaque alternative est recherchée séparément, 8 au maximum par requête.",
         "preview": "Aperçu",
@@ -452,6 +459,9 @@
       "importUnsubscribe": "Se désabonner de {{handle}}",
       "importUnsubscribeHint": "Décochez un flux pour vous désabonner.",
       "importHome": "Fil d'accueil",
+      "importLemmySubscribed": "Abonnements",
+      "importLemmyLocal": "Local",
+      "importLemmyAll": "Tout",
       "importTrending": "Publications tendance",
       "importAddCollection": "Ajouter {{name}}",
       "importRemoveCollection": "Retirer {{name}}",
@@ -482,7 +492,12 @@
       "importApplyCountOne": "Enregistrer 1 modification",
       "importApplyCountOther": "Enregistrer {{count}} modifications",
       "importDone": "{{imported}} ajoutés, {{removed}} retirés, {{alreadySubscribed}} déjà abonnés.",
-      "importOverLimit": "{{count}} non ajoutés : limite d'abonnements atteinte."
+      "importOverLimit": "{{count}} non ajoutés : limite d'abonnements atteinte.",
+      "lemmyUsername": "Nom d'utilisateur ou e-mail",
+      "lemmyPassword": "Mot de passe",
+      "lemmyPasswordHint": "Envoyé une seule fois à votre instance pour vous connecter. Seule la session renvoyée est conservée.",
+      "twoFactorCode": "Code à deux facteurs",
+      "twoFactorHint": "Uniquement si votre compte en demande un."
     },
     "profile": {
       "title": "Profil",
@@ -1391,18 +1406,23 @@
     "reconnectSocialAccount": "Reconnecter {{handle}} dans les paramètres",
     "manageSocialSection": "Options {{network}}",
     "socialFeeds": "Flux",
+    "lemmyCommunities": "Communautés",
     "socialSearches": "Recherches",
     "socialHome": "Accueil@{{network}}",
+    "socialSubscribed": "Abonnements@{{network}}",
     "savedFrom": {
       "bluesky": "Enregistrés depuis Bluesky",
       "mastodon": "Enregistrés depuis Mastodon",
+      "lemmy": "Enregistrés depuis Lemmy",
       "feeds": "Enregistrés depuis les flux"
     },
     "toggleSocialFeeds": "Afficher/masquer les flux {{network}}",
+    "toggleLemmyCommunities": "Afficher/masquer les communautés {{network}}",
     "toggleSocialSearches": "Afficher/masquer les recherches {{network}}",
     "socialNetworkShort": {
       "bluesky": "bsky",
-      "mastodon": "mastodon"
+      "mastodon": "mastodon",
+      "lemmy": "lemmy"
     },
     "organise": "Organiser",
     "organiseDone": "Terminé",
@@ -1547,6 +1567,10 @@
       "throttledNow": "Le site limite les requêtes. Réessayez maintenant.",
       "failed": "Les commentaires n'ont pas pu être chargés."
     },
+    "vote": {
+      "up": "Voter pour",
+      "down": "Voter contre"
+    },
     "discussionCounts": {
       "pointsOne": "{{count}} point",
       "pointsOther": "{{count}} points",
@@ -1665,11 +1689,13 @@
     },
     "replyForbidden": {
       "bluesky": "L'auteur limite qui peut répondre",
-      "mastodon": "Vous ne pouvez pas répondre à cette publication"
+      "mastodon": "Vous ne pouvez pas répondre à cette publication",
+      "lemmy": "Cette publication est verrouillée"
     },
     "reply": {
       "bluesky": "Répondre sur Bluesky",
-      "mastodon": "Répondre sur Mastodon"
+      "mastodon": "Répondre sur Mastodon",
+      "lemmy": "Répondre sur Lemmy"
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",

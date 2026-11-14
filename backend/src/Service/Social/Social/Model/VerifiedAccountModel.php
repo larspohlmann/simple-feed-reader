@@ -10,6 +10,7 @@ final readonly class VerifiedAccountModel
         public string $identity,
         public string $handle,
         public string $serviceUrl,
+        #[\SensitiveParameter] public string $credential,
     ) {
     }
 }

@@ -121,7 +121,9 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             SocialFeedKind::Trending => '/api/v1/trends/statuses?limit=' . self::PAGE_SIZE,
             SocialFeedKind::Search => throw new \LogicException('A search is asked once per alternative.'),
             SocialFeedKind::Author,
-            SocialFeedKind::CustomFeed => throw new SocialNetworkUnreachableException('Mastodon has no such timeline.'),
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Local,
+            SocialFeedKind::All => throw new SocialNetworkUnreachableException('Mastodon has no such timeline.'),
         };
     }
 

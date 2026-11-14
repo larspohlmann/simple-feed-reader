@@ -172,7 +172,7 @@ final class PrivateFeedSyncTest extends DbTestCase
             [SocialFeedKind::UserList, SocialFeedKind::CustomFeed, SocialFeedKind::Tag],
             SocialFeedKind::rememberedCollections(),
         );
-        $this->privateFeeds()->create($this->account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($this->account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->stampAnHourAgo();
 
         $outcome = $this->syncAgainst(new NetworkCollectionsModel([], [], [], false));

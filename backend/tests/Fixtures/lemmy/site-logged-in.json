@@ -1,0 +1,16 @@
+{
+  "site_view": {
+    "local_site": {
+      "enable_downvotes": true
+    }
+  },
+  "my_user": {
+    "local_user_view": {
+      "person": {
+        "name": "lars",
+        "display_name": null,
+        "actor_id": "https://lemmy.example/u/lars"
+      }
+    }
+  }
+}

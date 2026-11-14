@@ -34,11 +34,17 @@ final class NetworkAccountVerifierTest extends TestCase
 
     public function testEachNetworksCredentialsReachTheirOwnVerifier(): void
     {
-        $bluesky = new VerifiedAccountModel('did:plc:alice', '@alice.bsky.social', 'https://pds.example.test');
+        $bluesky = new VerifiedAccountModel(
+            'did:plc:alice',
+            '@alice.bsky.social',
+            'https://pds.example.test',
+            'abcd-efgh-ijkl-mnop',
+        );
         $mastodon = new VerifiedAccountModel(
             'lars@mastodon.example.test',
             '@lars@mastodon.example.test',
             'https://mastodon.example.test',
+            'token-1234',
         );
         $verifier = new NetworkAccountVerifier(new ServiceLocator([
             'bluesky' => fn () => $this->stubFor($bluesky),

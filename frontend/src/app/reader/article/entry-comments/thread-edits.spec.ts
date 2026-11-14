@@ -31,6 +31,24 @@ describe('thread edits', () => {
     expect(edited[0].post?.counts.replies).toBe(2);
   });
 
+  it('puts a Lemmy reply right under the comment whose vote address it answers', () => {
+    const lemmy = (address: string, depth: number) =>
+      anEntryComment({
+        html: address,
+        depth,
+        score: 1,
+        vote: { address, myVote: 0, canReply: true },
+      });
+    const comments = [lemmy('a', 0), lemmy('a1', 1), lemmy('b', 0)];
+
+    expect(shape(withReply(comments, 'a', lemmy('new', 0)))).toEqual([
+      'a@0',
+      'new@1',
+      'a1@1',
+      'b@0',
+    ]);
+  });
+
   it('drops a reply whose parent is no longer shown', () => {
     expect(withReply(thread, 'gone', commentAt('new', 0))).toBe(thread);
   });

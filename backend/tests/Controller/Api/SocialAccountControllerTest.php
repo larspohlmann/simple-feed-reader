@@ -15,13 +15,21 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\StubAccountVerifier;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 final class SocialAccountControllerTest extends ApiTestCase
 {
+    use RoutesSocialApis;
+
+    private const string LEMMY_LOGIN = 'POST https://lemmy.example/api/v3/user/login';
+    private const string LEMMY_SITE = 'GET https://lemmy.example/api/v3/site';
+    private const string LEMMY_FIXTURES = __DIR__ . '/../../Fixtures/lemmy/';
+
     /** Must match framework.rate_limiter.social_account.limit in rate_limiter.yaml. */
     private const int CONNECT_BUDGET = 10;
 
@@ -143,7 +151,12 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testConnectingMastodonNormalisesTheInstance(): void
     {
         $stub = new StubAccountVerifier(
-            new VerifiedAccountModel('42', 'alice@mastodon.example.test', 'https://mastodon.example.test'),
+            new VerifiedAccountModel(
+                '42',
+                'alice@mastodon.example.test',
+                'https://mastodon.example.test',
+                'token-1234',
+            ),
         );
         $client = $this->clientVerifying($stub);
         $this->signIn($client, 'social-mastodon@example.test');
@@ -169,7 +182,12 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAnInvalidInstanceUrlSpendsNoConnectBudget(): void
     {
         $client = $this->clientVerifying(new StubAccountVerifier(
-            new VerifiedAccountModel('42', 'alice@mastodon.example.test', 'https://mastodon.example.test'),
+            new VerifiedAccountModel(
+                '42',
+                'alice@mastodon.example.test',
+                'https://mastodon.example.test',
+                'token-1234',
+            ),
         ));
         $this->signIn($client, 'social-http-budget@example.test');
 
@@ -445,7 +463,12 @@ final class SocialAccountControllerTest extends ApiTestCase
 
     private function alice(): StubAccountVerifier
     {
-        return new StubAccountVerifier(new VerifiedAccountModel('did:plc:alice', self::ALICE, 'https://bsky.social'));
+        return new StubAccountVerifier(new VerifiedAccountModel(
+            'did:plc:alice',
+            self::ALICE,
+            'https://bsky.social',
+            self::APP_PASSWORD,
+        ));
     }
 
     private function echoingVerifier(): AccountVerifierInterface
@@ -457,6 +480,7 @@ final class SocialAccountControllerTest extends ApiTestCase
                     'did:plc:' . $credentials->address,
                     $credentials->address,
                     'https://bsky.social',
+                    $credentials->secret,
                 );
             }
         };
@@ -482,6 +506,113 @@ final class SocialAccountControllerTest extends ApiTestCase
             '/api/me/social-accounts/bluesky',
             sprintf('{"handle":"%s","appPassword":"%s"}', $handle, $appPassword),
         );
+    }
+
+    public function testConnectsALemmyAccount(): void
+    {
+        $client = $this->lemmyClient();
+        $this->signIn($client, 'social-lemmy@example.test');
+
+        $this->connectLemmy($client, '{"instanceUrl":"lemmy.example","username":"lars","password":"pw"}');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $account = $this->payload($client);
+        self::assertSame('lemmy', $account['network']);
+        self::assertSame('@lars@lemmy.example', $account['handle']);
+        self::assertSame('', $account['credentialHint']);
+        self::assertStringNotContainsString('test-jwt-not-a-real-token', (string) $client->getResponse()->getContent());
+    }
+
+    public function testATwoFactorCodeThatIsNotSixDigitsIsRefused(): void
+    {
+        $client = $this->lemmyClient();
+        $this->signIn($client, 'social-lemmy-totp@example.test');
+
+        $this->connectLemmy(
+            $client,
+            '{"instanceUrl":"lemmy.example","username":"lars","password":"pw","totpToken":"12345"}',
+        );
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame([], $this->http->requests);
+    }
+
+    public function testReconnectingLemmyLogsInAgain(): void
+    {
+        $client = $this->lemmyClient();
+        $user = $this->signIn($client, 'social-lemmy-reconnect@example.test');
+        $account = $this->lemmyAccountOf($user);
+        $account->markNeedsReconnect();
+        $this->entityManager()->flush();
+
+        $this->putJson(
+            $client,
+            sprintf('/api/me/social-accounts/%d/credential', $account->requireId()),
+            '{"secret":"pw","totpToken":"123456"}',
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('connected', $this->payload($client)['status']);
+        self::assertSame(
+            '{"username_or_email":"lars","password":"pw","totp_2fa_token":"123456"}',
+            $this->http->requests[0]['body'],
+        );
+    }
+
+    public function testAMissingTwoFactorCodeIsRejectedCredentials(): void
+    {
+        $client = $this->lemmyClient(new MockResponse(
+            '{"error":"missing_totp_token"}',
+            ['http_code' => Response::HTTP_BAD_REQUEST],
+        ));
+        $user = $this->signIn($client, 'social-lemmy-missing-totp@example.test');
+        $account = $this->lemmyAccountOf($user);
+
+        $this->putJson(
+            $client,
+            sprintf('/api/me/social-accounts/%d/credential', $account->requireId()),
+            '{"secret":"pw"}',
+        );
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $problem = $this->payload($client);
+        self::assertSame('social_credentials_rejected', $problem['type']);
+        self::assertSame('This Lemmy account needs its two-factor code.', $problem['detail']);
+    }
+
+    public function testDisconnectingLemmyRemovesTheAccountAlone(): void
+    {
+        $client = $this->lemmyClient();
+        $user = $this->signIn($client, 'social-lemmy-disconnect@example.test');
+        $account = $this->lemmyAccountOf($user);
+        $subscriptions = $this->entityManager()->getConnection()->fetchOne('SELECT COUNT(*) FROM subscription');
+
+        $client->request('DELETE', sprintf('/api/me/social-accounts/%d', $account->requireId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['accounts' => []], $this->payload($client));
+        self::assertSame(
+            $subscriptions,
+            $this->entityManager()->getConnection()->fetchOne('SELECT COUNT(*) FROM subscription'),
+        );
+    }
+
+    private function lemmyClient(?MockResponse $login = null): KernelBrowser
+    {
+        return $this->clientRouting(['lemmy.example'], [
+            self::LEMMY_LOGIN => $login ?? new MockResponse(self::lemmyFixture('login.json')),
+            self::LEMMY_SITE => new MockResponse(self::lemmyFixture('site-logged-in.json')),
+        ]);
+    }
+
+    private static function lemmyFixture(string $name): string
+    {
+        return (string) file_get_contents(self::LEMMY_FIXTURES . $name);
+    }
+
+    private function connectLemmy(KernelBrowser $client, string $json): void
+    {
+        $this->postJson($client, '/api/me/social-accounts/lemmy', $json);
     }
 
     private function connectMastodon(KernelBrowser $client, string $instanceUrl): void

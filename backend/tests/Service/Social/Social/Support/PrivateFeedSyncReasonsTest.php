@@ -67,6 +67,17 @@ final class PrivateFeedSyncReasonsTest extends TestCase
         );
     }
 
+    public function testALemmyListIsNeverOwned(): void
+    {
+        self::assertSame(
+            PrivateFeedSyncReason::Saved,
+            PrivateFeedSyncReasons::added(
+                SocialAccounts::lemmyOf(SocialAccounts::owner()),
+                PrivateFeedModel::userList('1', 'x'),
+            ),
+        );
+    }
+
     public function testACollectionTheNetworkReportsGoneWasDeleted(): void
     {
         self::assertSame(

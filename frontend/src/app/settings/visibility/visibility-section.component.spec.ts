@@ -340,6 +340,22 @@ describe('VisibilitySectionComponent', () => {
     expect(rowKeys()).toContain('network:bluesky/kind:profile/feed:10');
   });
 
+  it('heads Lemmy’s community feeds as Communities', () => {
+    const community = makeSubscription({
+      id: 13,
+      title: 'Memes',
+      social: { network: 'lemmy', kind: 'profile', accountId: null },
+    });
+    setUp({ subscriptions: [community] });
+
+    row('network:lemmy').querySelector<HTMLButtonElement>('[data-test="expand"]')!.click();
+    fixture.detectChanges();
+
+    expect(row('network:lemmy/kind:profile').querySelector('.label')!.textContent!.trim()).toBe(
+      'Communities',
+    );
+  });
+
   it('shows a matching network feed through its collapsed kind', () => {
     setUp();
 

@@ -35,6 +35,8 @@ class HostComponent implements EntryActionHandler {
   liked: EntryDto | null = null;
   deleted: EntryDto | null = null;
 
+  readonly vote = (): void => undefined;
+
   favorite(): void {
     this.favoriteCount++;
   }

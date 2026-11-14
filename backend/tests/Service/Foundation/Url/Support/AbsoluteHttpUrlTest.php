@@ -54,4 +54,12 @@ final class AbsoluteHttpUrlTest extends TestCase
 
         self::assertSame($url, AbsoluteHttpUrl::orNullWithin($url, 25));
     }
+
+    public function testHttpsOrNullKeepsOnlyHttpsInAnyCase(): void
+    {
+        self::assertSame('HTTPS://example.org/a', AbsoluteHttpUrl::httpsOrNull('HTTPS://example.org/a'));
+        self::assertNull(AbsoluteHttpUrl::httpsOrNull('http://example.org/a'));
+        self::assertNull(AbsoluteHttpUrl::httpsOrNull('77'));
+        self::assertNull(AbsoluteHttpUrl::httpsOrNull(null));
+    }
 }

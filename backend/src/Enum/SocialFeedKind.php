@@ -13,6 +13,18 @@ enum SocialFeedKind: string
     case Tag = 'tag';
     case Trending = 'trending';
     case Search = 'search';
+    case Local = 'local';
+    case All = 'all';
+
+    /**
+     * The kinds that are a network's own timeline, one per account and without a remote id.
+     *
+     * @return list<self>
+     */
+    public static function timelines(): array
+    {
+        return [self::Home, self::Trending, self::Local, self::All];
+    }
 
     public function followsOnePerson(): bool
     {

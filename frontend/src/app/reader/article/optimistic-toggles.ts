@@ -12,6 +12,14 @@ export interface OptimisticToggle {
   show: (value: boolean) => void;
 }
 
+/** A change shown at once and reverted if what `send` sends fails. */
+export interface OptimisticChange {
+  key: string;
+  apply: () => void;
+  revert: () => void;
+  send: () => Observable<unknown>;
+}
+
 /**
  * Flags toggled ahead of their answer; a toggle whose key is still on the wire for its entry is dropped, and a failed
  * one is toasted.
@@ -26,17 +34,26 @@ export class OptimisticToggles {
   }
 
   run(entryId: number, toggle: OptimisticToggle): void {
+    this.change(entryId, {
+      key: toggle.key,
+      apply: () => toggle.show(toggle.to),
+      revert: () => toggle.show(!toggle.to),
+      send: toggle.send,
+    });
+  }
+
+  change(entryId: number, change: OptimisticChange): void {
     const keys = this.inFlight.get(entryId) ?? new Set<string>();
-    if (keys.has(toggle.key)) return;
-    keys.add(toggle.key);
+    if (keys.has(change.key)) return;
+    keys.add(change.key);
     this.inFlight.set(entryId, keys);
-    toggle.show(toggle.to);
-    toggle
+    change.apply();
+    change
       .send()
-      .pipe(finalize(() => this.settle(entryId, toggle.key)))
+      .pipe(finalize(() => this.settle(entryId, change.key)))
       .subscribe({
         error: (error: HttpErrorResponse) => {
-          toggle.show(!toggle.to);
+          change.revert();
           this.toast.showProblem(parseProblem(error));
         },
       });

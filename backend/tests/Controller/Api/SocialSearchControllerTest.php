@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Enum\SocialFeedKind;
+use App\Entity\Discussion;
 use App\Entity\Headline;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
@@ -18,6 +20,7 @@ use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Social\SocialSearch\SocialSearchInterface;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\StubSocialSearch;
 use Psr\Cache\CacheItemPoolInterface;
@@ -58,6 +61,65 @@ final class SocialSearchControllerTest extends ApiTestCase
 
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
         self::assertSame('social_account_not_found', $this->payload($client)['type']);
+    }
+
+    public function testALemmyAccountPreviewsASearch(): void
+    {
+        $search = new StubSocialSearch(self::pageOf(2));
+        $client = $this->searchClientWith($search);
+        $owner = $this->signIn($client, 'search-lemmy@example.test');
+        $account = SocialFeeds::persistedAccount($this->entityManager(), SocialAccounts::lemmyOf($owner));
+
+        $this->requestSearchPreview($client, $account, 'rss');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['count' => 2, 'posts' => array_map(self::previewPost(...), [1, 2])],
+            $this->payload($client),
+        );
+        self::assertSame('rss', $search->query);
+    }
+
+    public function testALemmyPreviewPostLinksItsThreadAndLeadsWithItsTitle(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageWith([
+            self::lemmyPostWith('<p>The <b>whole</b> text</p>'),
+            self::lemmyPostWith(null),
+        ])));
+        $owner = $this->signIn($client, 'search-lemmy-title@example.test');
+        $account = SocialFeeds::persistedAccount($this->entityManager(), SocialAccounts::lemmyOf($owner));
+
+        $this->requestSearchPreview($client, $account, 'rss');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            [
+                self::lemmyPreviewPost('A reader for feeds — The whole text'),
+                self::lemmyPreviewPost('A reader for feeds'),
+            ],
+            $this->payload($client)['posts'],
+        );
+    }
+
+    public function testAPreviewPostWithItsOwnLinkKeepsItOverItsThread(): void
+    {
+        $post = new ParsedEntryModel(
+            'guid-1',
+            'https://bsky.app/profile/amy/post/1',
+            Headline::derived('Post 1'),
+            '@amy.bsky.social',
+            null,
+            self::postHtml(1),
+            new \DateTimeImmutable(self::publishedAt(1)),
+            discussion: Discussion::platformThread('https://lemmy.example/post/7'),
+            authorAvatarUrl: 'https://cdn.test/amy.jpg',
+        );
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageWith([$post])));
+        $user = $this->signIn($client, 'search-own-link@example.test');
+
+        $this->requestSearchPreview($client, $this->blueskyAccountOf($user), 'rss');
+
+        self::assertSame([self::previewPost(1)], $this->payload($client)['posts']);
     }
 
     public function testABlankSearchPreviewQueryIsRefused(): void
@@ -226,7 +288,11 @@ final class SocialSearchControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->signIn($client, 'requery-home@example.test');
-        $home = $this->privateFeeds()->subscribe($this->accountOf($user), PrivateFeedModel::home(), []);
+        $home = $this->privateFeeds()->subscribe(
+            $this->accountOf($user),
+            PrivateFeedModel::timeline(SocialFeedKind::Home),
+            [],
+        );
 
         $this->putQuery($client, $home, 'rss');
 
@@ -285,13 +351,40 @@ final class SocialSearchControllerTest extends ApiTestCase
         return new ParsedEntryModel(
             'guid-' . $number,
             'https://bsky.app/profile/amy/post/' . $number,
-            Headline::fromFeed('Post ' . $number),
+            Headline::derived('Post ' . $number),
             '@amy.bsky.social',
             null,
             $contentHtml,
             new \DateTimeImmutable(self::publishedAt($number)),
             authorAvatarUrl: 'https://cdn.test/amy.jpg',
         );
+    }
+
+    private static function lemmyPostWith(?string $contentHtml): ParsedEntryModel
+    {
+        $post = new ParsedEntryModel(
+            'https://lemmy.example/post/7',
+            null,
+            Headline::fromFeed('A reader for feeds'),
+            'amy',
+            null,
+            $contentHtml,
+            new \DateTimeImmutable(self::publishedAt(7)),
+        );
+
+        return $post->asDiscussionThread(Discussion::platformThread('https://lemmy.example/post/7'));
+    }
+
+    /** @return array<string, ?string> */
+    private static function lemmyPreviewPost(string $text): array
+    {
+        return [
+            'url' => 'https://lemmy.example/post/7',
+            'author' => 'amy',
+            'authorAvatarUrl' => null,
+            'text' => $text,
+            'publishedAt' => self::publishedAt(7),
+        ];
     }
 
     private static function postHtml(int $number): string

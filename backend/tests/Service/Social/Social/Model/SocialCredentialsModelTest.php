@@ -124,6 +124,37 @@ final class SocialCredentialsModelTest extends TestCase
         );
     }
 
+    public function testALemmyLoginKeepsThePasswordUntrimmedAndLeavesNoHint(): void
+    {
+        $credentials = SocialCredentialsModel::lemmy('lemmy.example', 'lars', ' pass word ', null);
+
+        self::assertSame(SocialNetwork::Lemmy, $credentials->network);
+        self::assertSame('https://lemmy.example', $credentials->address);
+        self::assertSame(' pass word ', $credentials->secret);
+        self::assertSame('lars', $credentials->login);
+        self::assertNull($credentials->secondFactor);
+        self::assertSame('', $credentials->hint());
+    }
+
+    public function testALemmyInstanceOverPlainHttpIsRefused(): void
+    {
+        $this->expectException(InvalidInstanceUrlException::class);
+
+        SocialCredentialsModel::lemmy('http://lemmy.example', 'lars', 'pw', null);
+    }
+
+    public function testReconnectingALemmyAccountLogsInAsItsStoredUser(): void
+    {
+        $account = $this->account(SocialNetwork::Lemmy, 'lars@lemmy.example', 'https://lemmy.example');
+
+        $credentials = SocialCredentialsModel::forReconnect($account, 'pw', '123456');
+
+        self::assertSame('lars', $credentials->login);
+        self::assertSame('123456', $credentials->secondFactor);
+        self::assertSame('https://lemmy.example', $credentials->address);
+        self::assertSame('pw', $credentials->secret);
+    }
+
     /** @return iterable<string, array{string, string}> */
     public static function instanceUrls(): iterable
     {

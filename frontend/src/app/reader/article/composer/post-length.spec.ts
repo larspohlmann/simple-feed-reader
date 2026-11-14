@@ -19,6 +19,11 @@ describe('postLength', () => {
     expect(postLength('@ann@hachyderm.io hi @bob', 'mastodon')).toBe('@ann hi @bob'.length);
   });
 
+  it('counts Lemmy text in code points, links at their length', () => {
+    expect(postLength('a😀', 'lemmy')).toBe(2);
+    expect(postLength('https://example.test/a/long/path', 'lemmy')).toBe(32);
+  });
+
   it('counts Mastodon text in code points, so an emoji is one', () => {
     expect(postLength('é😀', 'mastodon')).toBe(2);
   });

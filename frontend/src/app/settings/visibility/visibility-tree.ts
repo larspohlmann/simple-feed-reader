@@ -10,7 +10,11 @@ import { TagNode, untaggedSubscriptions } from '../../reader/state/subscription-
 export type VisibilityTarget =
   | { readonly kind: 'tag'; readonly tag: TagDto }
   | { readonly kind: 'network'; readonly network: SocialNetworkName }
-  | { readonly kind: 'feedKind'; readonly feedKind: NetworkFeedKind }
+  | {
+      readonly kind: 'feedKind';
+      readonly network: SocialNetworkName;
+      readonly feedKind: NetworkFeedKind;
+    }
   | { readonly kind: 'untagged' }
   | { readonly kind: 'feed'; readonly subscription: SubscriptionDto };
 
@@ -70,7 +74,7 @@ function networkNode(section: SocialSection): VisibilityNode {
   const accountFeeds = section.accounts.flatMap((account) => account.subscriptions);
   const kinds = NETWORK_FEED_KINDS_IN_ORDER.filter(
     (feedKind) => section.groups[feedKind].subscriptions.length > 0,
-  ).map((feedKind) => feedKindNode(key, feedKind, section.groups[feedKind].subscriptions));
+  ).map((feedKind) => feedKindNode(section, feedKind));
   return {
     key,
     target: { kind: 'network', network: section.network },
@@ -82,16 +86,14 @@ function networkNode(section: SocialSection): VisibilityNode {
   };
 }
 
-function feedKindNode(
-  networkKey: string,
-  feedKind: NetworkFeedKind,
-  subscriptions: readonly SubscriptionDto[],
-): VisibilityNode {
-  const key = `${networkKey}/kind:${feedKind}`;
+function feedKindNode(section: SocialSection, feedKind: NetworkFeedKind): VisibilityNode {
+  const key = `network:${section.network}/kind:${feedKind}`;
   return {
     key,
-    target: { kind: 'feedKind', feedKind },
-    children: subscriptions.map((subscription) => feedNode(key, subscription)),
+    target: { kind: 'feedKind', network: section.network, feedKind },
+    children: section.groups[feedKind].subscriptions.map((subscription) =>
+      feedNode(key, subscription),
+    ),
   };
 }
 

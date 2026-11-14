@@ -18,13 +18,19 @@ use App\Service\Social\Social\BlueskySessionCache;
 use App\Service\Social\Social\BlueskySessionOpener;
 use App\Service\Social\Social\BlueskySessions;
 use App\Service\Social\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Social\LemmyAccountApi;
+use App\Service\Social\Social\LemmyApiClient;
+use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\StoredCredential;
 use App\Service\Social\Social\TimelineRounds;
+use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Social\Social\TimelineSource\BlueskyTimelineSource;
+use App\Service\Social\Social\TimelineSource\LemmyTimelineSource;
 use App\Service\Social\Social\TimelineSource\MastodonTimelineSource;
 use App\Service\Social\Social\TimelineSources;
+use League\CommonMark\CommonMarkConverter;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -42,6 +48,7 @@ final class SocialApiWiring
     private const string MASTODON_HOST = 'mastodon.example';
     private const string OTHER_MASTODON_HOST = 'other.example';
     private const string ORIGIN_MASTODON_HOST = 'mastodon.social';
+    private const string LEMMY_HOST = 'lemmy.example';
     private const string PUBLIC_ADDRESS = '93.184.216.34';
     private const int ACCOUNT_ID = 3;
 
@@ -95,6 +102,24 @@ final class SocialApiWiring
         return new MastodonAccountApi(self::mastodonApiClient($http), new StoredCredential(SocialAccounts::cipher()));
     }
 
+    public static function lemmyAccountApi(HttpClientInterface $http): LemmyAccountApi
+    {
+        $client = new LemmyApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::LEMMY_HOST)));
+
+        return new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher()));
+    }
+
+    /** The container's untrusted-Markdown converter, as config/services.yaml configures it. */
+    public static function lemmyPostEntries(): LemmyPostEntries
+    {
+        return new LemmyPostEntries(new MarkdownHtml(new CommonMarkConverter([
+            'html_input' => 'escape',
+            'allow_unsafe_links' => false,
+            'max_nesting_level' => 20,
+            'max_delimiters_per_line' => 1000,
+        ])));
+    }
+
     public static function blueskyAccount(): SocialAccount
     {
         $account = SocialAccounts::bluesky();
@@ -125,7 +150,13 @@ final class SocialApiWiring
         ArrayAdapter $cache,
         int $accountConcurrency = 3,
     ): ConcurrentPassFetcher {
-        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST, self::RSS_HOST);
+        $guard = self::guardFor(
+            self::BLUESKY_HOST,
+            self::MASTODON_HOST,
+            self::OTHER_MASTODON_HOST,
+            self::LEMMY_HOST,
+            self::RSS_HOST,
+        );
 
         return new ConcurrentPassFetcher(
             FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8),
@@ -136,7 +167,13 @@ final class SocialApiWiring
 
     public static function requestEngine(HttpClientInterface $http): ConcurrentRequestEngine
     {
-        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST, self::RSS_HOST);
+        $guard = self::guardFor(
+            self::BLUESKY_HOST,
+            self::MASTODON_HOST,
+            self::OTHER_MASTODON_HOST,
+            self::LEMMY_HOST,
+            self::RSS_HOST,
+        );
 
         return FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8);
     }
@@ -159,6 +196,11 @@ final class SocialApiWiring
             TaggedItemOf::index(MastodonTimelineSource::class)
                 => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
                     self::mastodonAccountApi($http),
+                ),
+            TaggedItemOf::index(LemmyTimelineSource::class)
+                => static fn (): LemmyTimelineSource => new LemmyTimelineSource(
+                    self::lemmyAccountApi($http),
+                    self::lemmyPostEntries(),
                 ),
         ]));
     }

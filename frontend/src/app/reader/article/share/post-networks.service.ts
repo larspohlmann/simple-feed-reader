@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
+import { LINK_POST_NETWORKS, SocialNetworkName } from '../../../core/social-network';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 
 export interface PostNetwork {
@@ -16,7 +16,7 @@ export class PostNetworks {
     const connected = this.subscriptions
       .socialAccounts()
       .filter((account) => account.status === 'connected');
-    return SOCIAL_NETWORKS.flatMap((network) => {
+    return LINK_POST_NETWORKS.flatMap((network) => {
       const handles = connected
         .filter((account) => account.network === network)
         .map((account) => account.handle);

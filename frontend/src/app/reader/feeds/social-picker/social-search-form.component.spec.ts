@@ -343,4 +343,20 @@ describe('SocialSearchFormComponent', () => {
     const bluesky = byTestId(mount('bluesky'), 'social-search-syntax')?.textContent ?? '';
     expect(bluesky).not.toContain('at most 8');
   });
+
+  it('shows Lemmy one plain rule, no combined example and no Mastodon notes', () => {
+    const fixture = mount('lemmy');
+    const syntax = byTestId(fixture, 'social-search-syntax');
+
+    expect(syntax?.querySelectorAll('.rules dt')).toHaveLength(1);
+    expect(syntax?.querySelector('.rules')?.textContent).toContain('rss reader');
+    expect(syntax?.querySelector('.rules')?.textContent).toContain(
+      'plain words; matches post titles and bodies',
+    );
+    expect(byTestId(fixture, 'social-search-combined')).toBeNull();
+    expect(syntax?.querySelector('.note')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.example code')?.textContent).toBe(
+      'rss reader',
+    );
+  });
 });
