@@ -20,16 +20,8 @@ final class LemmyPostHeaderTest extends TestCase
             . '<a href="https://lemmy.world/post/1">' . $comments . '</a>';
     }
 
-    /** @return iterable<string, array{string}> */
-    public static function scores(): iterable
-    {
-        yield 'positive' => ['535 points | '];
-        yield 'negative' => ['-3 points | '];
-        yield 'singular' => ['1 point | '];
-    }
-
     /** @return iterable<string, array{string, int}> */
-    public static function scoresWithTheirValue(): iterable
+    public static function scores(): iterable
     {
         yield 'positive' => ['535 points | ', 535];
         yield 'negative' => ['-3 points | ', -3];
@@ -44,7 +36,7 @@ final class LemmyPostHeaderTest extends TestCase
         yield 'none' => ['0 comments', 0];
     }
 
-    #[DataProvider('scoresWithTheirValue')]
+    #[DataProvider('scores')]
     public function testReadsTheScore(string $score, int $expected): void
     {
         self::assertSame($expected, LemmyPostHeader::read(self::header($score))?->counts->score);
@@ -64,7 +56,7 @@ final class LemmyPostHeaderTest extends TestCase
     }
 
     #[DataProvider('scores')]
-    public function testReadsTheAuthorAndTheBodyAfterTheHeader(string $score): void
+    public function testReadsTheAuthorAndTheBodyAfterTheHeader(string $score, int $expectedScore): void
     {
         $post = LemmyPostHeader::read(self::header($score) . '<br>' . self::LINK);
 
@@ -72,6 +64,7 @@ final class LemmyPostHeaderTest extends TestCase
         self::assertSame('someone', $post->authorName);
         self::assertSame('https://lemmy.world/u/someone', $post->profileUrl);
         self::assertSame(self::LINK, $post->bodyHtml);
+        self::assertSame($expectedScore, $post->counts->score);
     }
 
     public function testAHeaderWithoutBodyLeavesAnEmptyBody(): void
