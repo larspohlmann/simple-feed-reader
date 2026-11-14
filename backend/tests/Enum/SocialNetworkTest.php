@@ -55,4 +55,14 @@ final class SocialNetworkTest extends TestCase
             self::assertSame(['network' => ['Unknown network. Use one of: bluesky, mastodon.']], $exception->errors);
         }
     }
+
+    public function testAnAccountOnlyNetworkIsNotARequestValue(): void
+    {
+        try {
+            SocialNetwork::fromRequestValue('lemmy');
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['network' => ['Unknown network. Use one of: bluesky, mastodon.']], $exception->errors);
+        }
+    }
 }

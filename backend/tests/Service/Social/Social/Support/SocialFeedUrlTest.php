@@ -99,6 +99,7 @@ final class SocialFeedUrlTest extends TestCase
         ];
         yield 'an rss feed' => ['https://bsky.app/profile/did:plc:bob/rss', null];
         yield 'an unknown network' => ['social:threads:4:home', null];
+        yield 'an account-only network' => ['social:lemmy:4:home', null];
         yield 'an unknown kind' => ['social:bluesky:4:starter-pack:x', null];
         yield 'the stored kind, not its segment' => ['social:bluesky:4:custom_feed:x', null];
         yield 'no account id' => ['social:bluesky:alice:home', null];

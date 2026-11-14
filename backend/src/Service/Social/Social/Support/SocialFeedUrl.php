@@ -50,7 +50,7 @@ final class SocialFeedUrl
         $network = SocialNetwork::tryFrom($parts[1] ?? '');
         $kind = self::kindOf($parts[3] ?? '');
         $accountId = $parts[2] ?? '';
-        if (null === $network || null === $kind || 1 !== preg_match(self::ACCOUNT_ID, $accountId)) {
+        if (true !== $network?->carriesFeeds() || null === $kind || 1 !== preg_match(self::ACCOUNT_ID, $accountId)) {
             return null;
         }
 
