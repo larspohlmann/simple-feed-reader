@@ -1,5 +1,40 @@
-<span class="pill" role="img" [attr.aria-label]="pointsKey() | transloco: { count: score() }">
-  <span class="arrow"><app-icon name="arrow_upward" size="sm" aria-hidden="true" /></span>
+@let vote = myVote();
+<span
+  class="pill"
+  [attr.role]="vote === null ? 'img' : 'group'"
+  [attr.aria-label]="pointsKey() | transloco: { count: score() }"
+>
+  @if (vote === null) {
+    <span class="arrow"><app-icon name="arrow_upward" size="sm" aria-hidden="true" /></span>
+  } @else {
+    <button
+      type="button"
+      class="arrow up"
+      [class.voted]="vote === 1"
+      [attr.aria-pressed]="vote === 1"
+      [attr.aria-label]="'reader.vote.up' | transloco"
+      (click)="press('up', $event)"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    >
+      <app-icon name="arrow_upward" size="sm" aria-hidden="true" />
+    </button>
+  }
   <span class="number">{{ compactScore() }}</span>
-  <span class="arrow"><app-icon name="arrow_downward" size="sm" aria-hidden="true" /></span>
+  @if (vote === null) {
+    <span class="arrow"><app-icon name="arrow_downward" size="sm" aria-hidden="true" /></span>
+  } @else {
+    <button
+      type="button"
+      class="arrow down"
+      [class.voted]="vote === -1"
+      [attr.aria-pressed]="vote === -1"
+      [attr.aria-label]="'reader.vote.down' | transloco"
+      (click)="press('down', $event)"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    >
+      <app-icon name="arrow_downward" size="sm" aria-hidden="true" />
+    </button>
+  }
 </span>

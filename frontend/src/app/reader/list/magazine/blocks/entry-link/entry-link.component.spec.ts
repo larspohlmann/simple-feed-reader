@@ -11,6 +11,7 @@ import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { aLinkCard, anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideDiscussionVotesStub } from '../../../../../../testing/discussion-votes-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -47,6 +48,7 @@ function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryLinkComponent, provideTranslocoTesting()],
     providers: [
+      provideDiscussionVotesStub(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: LinkReaderNavigation, useValue: navigation },

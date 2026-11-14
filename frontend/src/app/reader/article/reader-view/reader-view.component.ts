@@ -43,6 +43,7 @@ import { HandedAutoplayRegion, handedAutoplayRegion } from '../../media/autoplay
 import { entryRelativeTime } from '../../format';
 import { EntryDiscussionLinkComponent } from '../entry-comments/entry-discussion-link.component';
 import { EntryCornerFlagsComponent } from '../../entry/entry-corner-flags/entry-corner-flags.component';
+import { DiscussionVotes } from '../../vote-pill/discussion-votes.service';
 import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ArticlePageSlotDirective } from '../article-page/article-page-slot.directive';
@@ -133,6 +134,7 @@ export class ReaderViewComponent implements OnChanges {
   private readonly entryPage = inject(EntryArticlePage);
   protected readonly audio = this.entryPage.audio;
   private readonly autoplay = inject(ListAutoplayCoordinator);
+  protected readonly votes = inject(DiscussionVotes);
 
   readonly mode = this.readerMode.mode;
   private readonly openId = computed(() => this.entry().id);
@@ -142,6 +144,10 @@ export class ReaderViewComponent implements OnChanges {
     effect(() => {
       this.openId();
       untracked(() => this.autoplay.soundChanged(false));
+    });
+    effect(() => {
+      this.openId();
+      untracked(() => this.votes.refresh(this.entry()));
     });
   }
 

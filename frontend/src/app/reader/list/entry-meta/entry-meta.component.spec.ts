@@ -10,6 +10,9 @@ import { makeSubscription } from '../../testing/subscription.factory';
 import { anEntry } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
+import { DiscussionVotes } from '../../vote-pill/discussion-votes.service';
+
+const discussionVotes = { vote: jest.fn() };
 
 const entryActions = {
   favorite: jest.fn(),
@@ -20,6 +23,7 @@ const entryActions = {
 
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
+  discussionVotes.vote.mockReset();
 });
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
@@ -38,6 +42,7 @@ function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imag
     providers: [
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
+      { provide: DiscussionVotes, useValue: discussionVotes },
       provideRouter([]),
     ],
   });
@@ -50,6 +55,15 @@ function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imag
 }
 
 describe('EntryMetaComponent', () => {
+  it('votesFromTheRow', () => {
+    const votable = anEntry({ score: 5, myVote: 0 });
+    const element = mount([], votable).nativeElement as HTMLElement;
+
+    (element.querySelector('button[aria-label="Downvote"]') as HTMLButtonElement).click();
+
+    expect(discussionVotes.vote).toHaveBeenCalledWith(votable, -1);
+  });
+
   describe('discussion counts', () => {
     const discussionMeta = (overrides: Partial<EntryDto>) =>
       mount([], anEntry(overrides)).nativeElement as HTMLElement;
@@ -153,6 +167,7 @@ describe('EntryMetaComponent', () => {
       providers: [
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
+        { provide: DiscussionVotes, useValue: discussionVotes },
         provideRouter([]),
       ],
     });

@@ -42,6 +42,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     discussionUrl: null,
     comments: null,
     score: null,
+    myVote: null,
     commentCount: null,
     ...overrides,
   };

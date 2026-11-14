@@ -1,3 +1,4 @@
+import { VoteValue } from './vote-pill/vote';
 import { EntryMediumDto } from './entry-medium';
 import { LinkCardDto } from './link-card/link-card';
 import { ThreadPostDto } from './thread-post';
@@ -274,6 +275,8 @@ export interface EntryDto {
   comments: CommentsLoad | null;
   /** A Lemmy post's vote score, 0 and negatives included; null on every other source (#2217). */
   score: number | null;
+  /** The linked Lemmy account's vote on this post; null when it is not a Lemmy post or no account is linked (#2218). */
+  myVote: VoteValue | null;
   /** A Lemmy post's comment count; null on every other source (#2217). */
   commentCount: number | null;
   /** Why the recommender picked this entry; set only on for-you results. */

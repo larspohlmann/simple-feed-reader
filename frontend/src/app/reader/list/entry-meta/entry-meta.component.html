@@ -1,7 +1,11 @@
 @let score = entry().score;
 @if (score !== null) {
   <span class="discussion">
-    <app-vote-pill [score]="score" />
+    <app-vote-pill
+      [score]="score"
+      [myVote]="entry().myVote"
+      (voted)="votes.vote(entry(), $event)"
+    />
     @if (comments(); as comments) {
       <span
         class="comments"

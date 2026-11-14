@@ -10,6 +10,7 @@ import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { ENTRY_ROW_ACTION, EntryRowAction } from '../../entry/entry-actions/entry-row-action';
+import { provideDiscussionVotesStub } from '../../../../testing/discussion-votes-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -36,6 +37,7 @@ function mount(testEntry: EntryDto, arrange?: () => void) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
+      provideDiscussionVotesStub(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),

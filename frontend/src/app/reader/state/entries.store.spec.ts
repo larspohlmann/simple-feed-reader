@@ -10,6 +10,7 @@ import { transientGatewayRetryInterceptor } from '../../core/http/retry-transien
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from '../models';
+import { VoteValue } from '../vote-pill/vote';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
 import { aLinkCard, anEntry } from '../../../testing/entry-testing';
@@ -943,6 +944,104 @@ describe('EntriesStore', () => {
 
       expect(store.entries()[0].isFavorite).toBe(false);
       patch.flush({});
+    });
+  });
+
+  describe('voting on a Lemmy post (#2218)', () => {
+    const votePath = 'https://api.test/api/entries/1/vote';
+
+    const loadVotable = (myVote: VoteValue | null = 0): void => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1, { score: 10, myVote })], nextCursor: null });
+    };
+
+    it('setsAVoteAndItsScoreAtOnce', () => {
+      loadVotable();
+
+      store.setVote(store.entries()[0], 1, () => undefined);
+
+      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
+      const request = ctrl.expectOne(votePath);
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body).toEqual({ score: 1 });
+      request.flush({ myVote: 1, score: 11 });
+      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
+    });
+
+    it('moves a flipped vote by two', () => {
+      loadVotable(1);
+
+      store.setVote(store.entries()[0], -1, () => undefined);
+
+      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 8 });
+      ctrl.expectOne(votePath).flush({ myVote: -1, score: 8 });
+    });
+
+    it('adoptsTheScoreTheNetworkAnswers', () => {
+      loadVotable();
+
+      store.setVote(store.entries()[0], 1, () => undefined);
+      ctrl.expectOne(votePath).flush({ myVote: 1, score: 15 });
+
+      expect(store.entries()[0].score).toBe(15);
+    });
+
+    it('restoresTheVoteAndScoreOnFailure', () => {
+      loadVotable();
+      const problems: string[] = [];
+
+      store.setVote(store.entries()[0], 1, (problem) => problems.push(problem.title));
+      ctrl
+        .expectOne(votePath)
+        .flush(
+          { type: 'social_post_not_found', title: 'Post no longer available', status: 404 },
+          { status: 404, statusText: 'Not Found' },
+        );
+
+      expect(store.entries()[0]).toMatchObject({ myVote: 0, score: 10 });
+      expect(problems).toEqual(['Post no longer available']);
+    });
+
+    it('dropsAVoteWhileOneIsOnTheWire', () => {
+      loadVotable();
+      store.setVote(store.entries()[0], 1, () => undefined);
+      const first = ctrl.expectOne(votePath);
+
+      store.setVote(store.entries()[0], -1, () => undefined);
+
+      ctrl.expectNone(votePath);
+      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
+      first.flush({ myVote: 1, score: 11 });
+    });
+
+    it('ignoresAnEntryWithoutAVote', () => {
+      loadVotable(null);
+
+      store.setVote(store.entries()[0], 1, () => undefined);
+
+      ctrl.expectNone(votePath);
+      expect(store.entries()[0]).toMatchObject({ myVote: null, score: 10 });
+    });
+
+    it('adoptsTheNetworksVoteWithoutTouchingTheScore', () => {
+      loadVotable(0);
+
+      store.adoptVote(1, { from: 0, to: -1 });
+
+      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 10 });
+    });
+
+    it('lets a vote on the wire win over the network report', () => {
+      loadVotable(0);
+      store.setVote(store.entries()[0], 1, () => undefined);
+      const request = ctrl.expectOne(votePath);
+
+      store.adoptVote(1, { from: 1, to: -1 });
+
+      expect(store.entries()[0].myVote).toBe(1);
+      request.flush({ myVote: 1, score: 11 });
     });
   });
 

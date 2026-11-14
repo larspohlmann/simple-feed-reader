@@ -8,25 +8,12 @@ import { DEFAULT_TRENDING_WINDOW } from '../trending/trending-window';
 import { TrendingApi } from '../trending/trending-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
+import { VoteValue, steppedScore } from '../vote-pill/vote';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { ExclusionSurface, SURFACE_DESCRIPTOR } from '../feed-exclusions';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withPatchedRow } from './entry-rows';
-
-/** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
- *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
- *  would just lengthen the marker pattern for no benefit (search-marks.ts). */
-function unionMatchedWords(existing: string[], incoming: string[]): string[] {
-  const seen = new Set(existing.map((word) => word.toLowerCase()));
-  const union = [...existing];
-  for (const word of incoming) {
-    const key = word.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    union.push(word);
-  }
-  return union;
-}
+import { unionMatchedWords } from './union-matched-words';
 
 /** A row flag change still on the wire — a state PATCH or a like — kept so a list reload that lands meanwhile
  *  can lay the row's optimistic state back over the server's stale copy. */
@@ -35,7 +22,7 @@ interface InFlightPatch {
   patch: RowPatch;
 }
 
-type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
+type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score'>;
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
@@ -261,12 +248,27 @@ export class EntriesStore {
     );
   }
 
+  /** Optimistic vote on a Lemmy post, its score stepped with it; dropped unless the account can vote and no vote is on the wire. */
+  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
+    const from = entry.myVote;
+    if (from === null || entry.score === null || this.voteInFlight(entry.id)) return;
+    const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
+    this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
+      next: (answer) => this.patchEntries([entry.id], (row) => ({ ...row, ...answer })),
+      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+    });
+  }
+
+  /** The vote the network reports, laid over entries still showing `from`; a click made since wins. */
+  adoptVote(entryId: number, change: { from: VoteValue; to: VoteValue }): void {
+    if (change.from === change.to || this.voteInFlight(entryId)) return;
+    this.patchEntries([entryId], (entry) =>
+      entry.myVote === change.from ? { ...entry, myVote: change.to } : entry,
+    );
+  }
+
   /** Lays `patch` over `target` and its copies until `request$` settles, and puts the old values back if it fails. */
-  private optimistic(
-    target: EntryDto,
-    patch: RowPatch,
-    request$: Observable<unknown>,
-  ): Observable<unknown> {
+  private optimistic<T>(target: EntryDto, patch: RowPatch, request$: Observable<T>): Observable<T> {
     const inFlight: InFlightPatch = { entryId: target.id, patch };
     const before = valuesBefore(target, patch);
     this.inFlightPatches.add(inFlight);
@@ -280,6 +282,13 @@ export class EntriesStore {
   private likeInFlight(entryId: number): boolean {
     for (const inFlight of this.inFlightPatches) {
       if (inFlight.entryId === entryId && inFlight.patch.social) return true;
+    }
+    return false;
+  }
+
+  private voteInFlight(entryId: number): boolean {
+    for (const inFlight of this.inFlightPatches) {
+      if (inFlight.entryId === entryId && inFlight.patch.myVote !== undefined) return true;
     }
     return false;
   }

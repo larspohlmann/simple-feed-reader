@@ -1553,6 +1553,10 @@
       "throttledNow": "Le site limite les requêtes. Réessayez maintenant.",
       "failed": "Les commentaires n'ont pas pu être chargés."
     },
+    "vote": {
+      "up": "Voter pour",
+      "down": "Voter contre"
+    },
     "discussionCounts": {
       "pointsOne": "{{count}} point",
       "pointsOther": "{{count}} points",

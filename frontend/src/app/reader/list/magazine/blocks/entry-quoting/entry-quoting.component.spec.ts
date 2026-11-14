@@ -6,6 +6,7 @@ import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideDiscussionVotesStub } from '../../../../../../testing/discussion-votes-testing';
 
 const entryActions = { open: jest.fn() };
 
@@ -25,6 +26,7 @@ function mount(entry: EntryDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [EntryQuotingComponent, provideTranslocoTesting()],
     providers: [
+      provideDiscussionVotesStub(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
