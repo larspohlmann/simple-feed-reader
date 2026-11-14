@@ -1671,11 +1671,13 @@
     },
     "replyForbidden": {
       "bluesky": "Antworten auf diesen Beitrag sind eingeschränkt",
-      "mastodon": "Auf diesen Beitrag kannst du nicht antworten"
+      "mastodon": "Auf diesen Beitrag kannst du nicht antworten",
+      "lemmy": "Dieser Beitrag ist gesperrt"
     },
     "reply": {
       "bluesky": "Auf Bluesky antworten",
-      "mastodon": "Auf Mastodon antworten"
+      "mastodon": "Auf Mastodon antworten",
+      "lemmy": "Auf Lemmy antworten"
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",

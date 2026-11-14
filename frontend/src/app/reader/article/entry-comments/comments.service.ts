@@ -1,12 +1,13 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable, catchError, of, tap } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { OptimisticToggles, steppedCounts } from '../optimistic-toggles';
 import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { SocialCountsDto } from '../../entry-social';
 import { ReaderApi } from '../../reader-api';
-import { SocialPostApi } from '../../social-post-api';
+import { SocialPostApi, VoteAnswer } from '../../social-post-api';
+import { VoteValue, steppedScore } from '../../vote-pill/vote';
 import { withReply, withoutReply } from './thread-edits';
 
 const CACHE_CAP = 50;
@@ -73,6 +74,25 @@ export class CommentsService {
   /** Optimistic repost of one comment; dropped while one is on the wire or the network forbids it. */
   toggleRepost(entryId: number, post: EntryCommentPostDto): void {
     if (post.canRepost) this.toggle(entryId, post, 'isReposted');
+  }
+
+  /** Optimistic vote on one Lemmy comment, its score stepping; dropped while a vote on the same comment is on the wire. */
+  vote(entryId: number, comment: EntryCommentDto, to: VoteValue): void {
+    if (comment.vote === null) return;
+    const { address, myVote: from } = comment.vote;
+    const score = comment.score ?? 0;
+    const state = this.stateFor(entryId);
+    const show = (shown: VoteAnswer) =>
+      state.update((current) => withVote(current, address, shown));
+    this.toggles.run(entryId, {
+      key: `vote ${address}`,
+      send: () => this.socialPosts.voteComment(entryId, address, to).pipe(tap(show)),
+      to: true,
+      show: (applied) =>
+        applied
+          ? show({ myVote: to, score: steppedScore(score, from, to) })
+          : show({ myVote: from, score }),
+    });
   }
 
   /** Shows a reply the reader just published, until the next load brings it from the network. */
@@ -193,5 +213,15 @@ function withPost(
     const changed = change(post);
     return changed === post ? comment : { ...comment, post: changed };
   });
+  return { ...state, comments };
+}
+
+function withVote(state: CommentsState, address: string, shown: VoteAnswer): CommentsState {
+  if (state.status !== 'ok') return state;
+  const comments = state.comments.map((comment) =>
+    comment.vote?.address === address
+      ? { ...comment, score: shown.score, vote: { ...comment.vote, myVote: shown.myVote } }
+      : comment,
+  );
   return { ...state, comments };
 }

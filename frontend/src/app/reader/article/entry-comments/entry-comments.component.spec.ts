@@ -35,6 +35,7 @@ describe('EntryCommentsComponent', () => {
     reload: jest.Mock;
     toggleLike: jest.Mock;
     toggleRepost: jest.Mock;
+    vote: jest.Mock;
   };
 
   beforeEach(() => {
@@ -46,6 +47,7 @@ describe('EntryCommentsComponent', () => {
       reload: jest.fn(),
       toggleLike: jest.fn(),
       toggleRepost: jest.fn(),
+      vote: jest.fn(),
     };
     navigation.layer.mockReset();
     TestBed.configureTestingModule({
@@ -380,6 +382,41 @@ describe('EntryCommentsComponent', () => {
       byline.querySelector('.when')!.compareDocumentPosition(pill!) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  describe('a Lemmy comment with a connected account', () => {
+    const address = 'https://origin.example/comment/5';
+    const lemmy = (canReply: boolean) =>
+      anEntryComment({ score: 4, vote: { address, myVote: 0, canReply } });
+
+    it('showsAnInteractivePillWithAVote', () => {
+      show('auto');
+      const element = settleComments([lemmy(true)]);
+
+      element.querySelector<HTMLButtonElement>('.byline button[aria-label="Upvote"]')!.click();
+
+      expect(service.vote).toHaveBeenCalledWith(5, lemmy(true), 1);
+    });
+
+    it('offersReplyOnAReplyableLemmyComment', () => {
+      show('auto');
+      const button = settleComments([lemmy(true)]).querySelector<HTMLButtonElement>(
+        '.byline button.reply-action',
+      )!;
+
+      expect(button.getAttribute('aria-label')).toBe('Reply on Lemmy');
+      expect(button.textContent).toContain('reply');
+      button.click();
+
+      expect(responses.reply).toHaveBeenCalledWith(5, 'lemmy', address);
+    });
+
+    it('offersNoReplyOnALockedPost', () => {
+      show('auto');
+      expect(
+        settleComments([lemmy(false)]).querySelector('.byline button.reply-action'),
+      ).toBeNull();
+    });
   });
 
   it('showsAZeroScore', () => {

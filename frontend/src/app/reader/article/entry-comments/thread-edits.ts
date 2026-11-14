@@ -11,9 +11,9 @@ export function withReply(
   reply: EntryCommentDto,
 ): EntryCommentDto[] {
   if (parentAddress === null) return [{ ...reply, depth: 0 }, ...comments];
-  const at = comments.findIndex((comment) => comment.post?.address === parentAddress);
+  const at = comments.findIndex((comment) => addressOf(comment) === parentAddress);
   const parent = comments[at];
-  if (parent?.post == null) return comments;
+  if (parent === undefined) return comments;
   return [
     ...comments.slice(0, at),
     withRepliesStepped(parent, true),
@@ -24,7 +24,7 @@ export function withReply(
 
 /** The thread without the comment at `address` and the replies under it; its parent counts one reply less. */
 export function withoutReply(comments: EntryCommentDto[], address: string): EntryCommentDto[] {
-  const at = comments.findIndex((comment) => comment.post?.address === address);
+  const at = comments.findIndex((comment) => addressOf(comment) === address);
   if (at === -1) return comments;
   const depth = comments[at].depth;
   const after = comments.slice(at + 1);
@@ -34,6 +34,10 @@ export function withoutReply(comments: EntryCommentDto[], address: string): Entr
     .slice(0, at)
     .map((comment, index) => (index === parentAt ? withRepliesStepped(comment, false) : comment));
   return [...before, ...(firstOutside === -1 ? [] : after.slice(firstOutside))];
+}
+
+function addressOf(comment: EntryCommentDto): string | undefined {
+  return comment.post?.address ?? comment.vote?.address;
 }
 
 function parentIndexOf(comments: EntryCommentDto[], at: number): number {

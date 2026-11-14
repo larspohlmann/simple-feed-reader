@@ -1,4 +1,4 @@
-import { SocialNetworkName } from '../core/social-network';
+import { AccountNetworkName, SocialNetworkName } from '../core/social-network';
 import { LinkCardDto } from './link-card/link-card';
 
 /** `canLike`: the reader has an account on the post's network (#1615). */
@@ -92,7 +92,7 @@ export interface ComposerContextDto {
 export interface ResponseTargetDto {
   kind: ResponseKind;
   entryId: number;
-  network: SocialNetworkName;
+  network: AccountNetworkName;
   address: string | null;
 }
 

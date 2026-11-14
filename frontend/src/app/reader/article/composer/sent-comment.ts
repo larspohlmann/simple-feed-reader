@@ -1,4 +1,4 @@
-import { EntryCommentDto } from '../../entry-comment';
+import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { SentPost } from './composed-post';
 
 /** The reader's reply as the panel shows it until the network's thread includes it. */
@@ -13,20 +13,25 @@ export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto 
     html: paragraphsOf(sent.text),
     byEntryAuthor: false,
     depth: 0,
-    score: null,
+    score: sent.network === 'lemmy' ? 1 : null,
     media: [],
     linkCard: null,
     quote: null,
-    post: {
-      address: sent.address,
-      counts: { likes: 0, reposts: 0, replies: 0, quotes: null },
-      isLiked: false,
-      isReposted: false,
-      canRepost: true,
-      canReply: true,
-      canQuote: true,
-      isOwn: true,
-    },
+    post: sent.network === 'lemmy' ? null : sentPost(sent),
+    vote: sent.network === 'lemmy' ? { address: sent.address, myVote: 1, canReply: true } : null,
+  };
+}
+
+function sentPost(sent: SentPost): EntryCommentPostDto {
+  return {
+    address: sent.address,
+    counts: { likes: 0, reposts: 0, replies: 0, quotes: null },
+    isLiked: false,
+    isReposted: false,
+    canRepost: true,
+    canReply: true,
+    canQuote: true,
+    isOwn: true,
   };
 }
 

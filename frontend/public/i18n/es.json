@@ -1675,11 +1675,13 @@
     },
     "replyForbidden": {
       "bluesky": "El autor limita quién puede responder",
-      "mastodon": "No puedes responder a esta publicación"
+      "mastodon": "No puedes responder a esta publicación",
+      "lemmy": "Esta publicación está bloqueada"
     },
     "reply": {
       "bluesky": "Responder en Bluesky",
-      "mastodon": "Responder en Mastodon"
+      "mastodon": "Responder en Mastodon",
+      "lemmy": "Responder en Lemmy"
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",

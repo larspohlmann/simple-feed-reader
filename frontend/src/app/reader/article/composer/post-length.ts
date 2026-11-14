@@ -1,4 +1,4 @@
-import { SocialNetworkName } from '../../../core/social-network';
+import { AccountNetworkName } from '../../../core/social-network';
 
 /** Mastodon counts every link as this many characters, whatever its length. */
 const MASTODON_LINK_LENGTH = 23;
@@ -8,9 +8,16 @@ const REMOTE_MENTION = /(^|[^\w/])@(\w+)@[\w.-]*\w/g;
 
 let graphemes: Intl.Segmenter | null | undefined;
 
-/** How long a post's text counts on its network: Bluesky counts graphemes, Mastodon code points. */
-export function postLength(text: string, network: SocialNetworkName): number {
-  return network === 'bluesky' ? graphemeCount(text) : mastodonLength(text);
+/** How long a post's text counts on its network: Bluesky counts graphemes, Mastodon and Lemmy code points. */
+export function postLength(text: string, network: AccountNetworkName): number {
+  switch (network) {
+    case 'bluesky':
+      return graphemeCount(text);
+    case 'mastodon':
+      return mastodonLength(text);
+    case 'lemmy':
+      return [...text].length;
+  }
 }
 
 function graphemeCount(text: string): number {

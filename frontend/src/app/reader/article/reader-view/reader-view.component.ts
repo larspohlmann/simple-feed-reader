@@ -36,6 +36,9 @@ import { entryMediumRatio } from '../../entry-medium';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { SocialCountsService } from '../social-counts/social-counts.service';
+import { PostActions } from '../composer/post-actions.service';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
@@ -58,6 +61,7 @@ import { EntryArticlePage } from './entry-article-page';
     EntrySourceComponent,
     EntryPillsComponent,
     VotePillComponent,
+    IconButtonDirective,
     EntryActionsComponent,
     TranslocoPipe,
     ErrorBannerComponent,
@@ -127,6 +131,13 @@ export class ReaderViewComponent implements OnChanges {
       expectedHeight: this.commentsForecast.expectedHeight,
     },
   ];
+  private readonly responses = inject(PostActions);
+  private readonly subscriptions = inject(SubscriptionsStore);
+  protected readonly lemmyConnected = computed(() =>
+    this.subscriptions
+      .socialAccounts()
+      .some((account) => account.network === 'lemmy' && account.status === 'connected'),
+  );
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   protected readonly source = inject(ArticleSource);
@@ -147,6 +158,10 @@ export class ReaderViewComponent implements OnChanges {
 
   ngOnChanges(): void {
     this.source.show(this.entry());
+  }
+
+  protected replyToPost(entry: EntryDto): void {
+    this.responses.reply(entry.id, 'lemmy', null);
   }
 
   protected scrollToComments(): void {

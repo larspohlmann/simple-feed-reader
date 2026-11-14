@@ -108,6 +108,7 @@ export function anEntryComment(overrides: Partial<EntryCommentDto> = {}): EntryC
     linkCard: null,
     quote: null,
     post: null,
+    vote: null,
     ...overrides,
   };
 }

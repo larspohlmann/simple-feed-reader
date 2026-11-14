@@ -1671,11 +1671,13 @@
     },
     "replyForbidden": {
       "bluesky": "The author limits who can reply",
-      "mastodon": "You can’t reply to this post"
+      "mastodon": "You can’t reply to this post",
+      "lemmy": "This post is locked"
     },
     "reply": {
       "bluesky": "Reply on Bluesky",
-      "mastodon": "Reply on Mastodon"
+      "mastodon": "Reply on Mastodon",
+      "lemmy": "Reply on Lemmy"
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
