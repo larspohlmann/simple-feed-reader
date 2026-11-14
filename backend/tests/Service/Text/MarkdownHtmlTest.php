@@ -44,4 +44,25 @@ final class MarkdownHtmlTest extends TestCase
     {
         self::assertStringNotContainsString('javascript:', $this->markdown->of('[x](javascript:alert(1))'));
     }
+
+    public function testDeeplyNestedQuotesReturnHtml(): void
+    {
+        $html = $this->markdown->of(str_repeat('>', 5000) . ' deep');
+
+        self::assertLessThanOrEqual(20, substr_count($html, '<blockquote>'));
+        self::assertStringContainsString('deep', $html);
+    }
+
+    public function testDeeplyNestedListsReturnHtml(): void
+    {
+        $nested = '';
+        for ($depth = 0; $depth < 5000; ++$depth) {
+            $nested .= str_repeat('  ', $depth) . "- item\n";
+        }
+
+        $html = $this->markdown->of($nested);
+
+        self::assertLessThanOrEqual(20, substr_count($html, '<ul>'));
+        self::assertStringContainsString('item', $html);
+    }
 }
