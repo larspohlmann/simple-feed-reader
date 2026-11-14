@@ -1,0 +1,21 @@
+{
+  "post_view": {
+    "post": {
+      "id": 42,
+      "name": "A post title",
+      "ap_id": "https://lemmy.example/post/42",
+      "locked": false,
+      "deleted": false,
+      "removed": false
+    },
+    "creator": {
+      "name": "ada",
+      "display_name": "Ada",
+      "actor_id": "https://origin.example/u/ada"
+    },
+    "counts": {
+      "score": 43
+    },
+    "my_vote": 1
+  }
+}

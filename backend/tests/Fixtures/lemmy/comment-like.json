@@ -1,0 +1,30 @@
+{
+  "comment_view": {
+    "comment": {
+      "id": 77,
+      "post_id": 990,
+      "ap_id": "https://origin.example/comment/5",
+      "content": "A reply",
+      "deleted": false,
+      "removed": false
+    },
+    "creator": {
+      "name": "ada",
+      "display_name": "Ada",
+      "actor_id": "https://origin.example/u/ada"
+    },
+    "post": {
+      "id": 990,
+      "name": "A post title",
+      "ap_id": "https://origin.example/post/3",
+      "locked": false,
+      "deleted": false,
+      "removed": false
+    },
+    "counts": {
+      "score": 5
+    },
+    "my_vote": 1
+  },
+  "recipient_ids": []
+}
