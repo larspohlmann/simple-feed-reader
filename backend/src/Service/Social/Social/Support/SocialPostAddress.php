@@ -6,6 +6,7 @@ namespace App\Service\Social\Social\Support;
 
 use App\Entity\Entry;
 use App\Enum\SocialNetwork;
+use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
@@ -44,6 +45,38 @@ final class SocialPostAddress
         };
 
         return $reply ?? throw new NotASocialPostException('The reply is no post on the entry\'s network.');
+    }
+
+    /** The post an entry can be answered at: any `of()` post, else the Lemmy post its discussion is. */
+    public static function respondableOf(Entry $entry): ?SocialPostAddressModel
+    {
+        $lemmyPost = LemmyPostAddress::of($entry);
+
+        return self::of($entry)
+            ?? (null === $lemmyPost ? null : new SocialPostAddressModel(SocialNetwork::Lemmy, $lemmyPost->pageUrl()));
+    }
+
+    /** @throws NotASocialPostException */
+    public static function respondableOrRefuse(Entry $entry): SocialPostAddressModel
+    {
+        return self::respondableOf($entry)
+            ?? throw new NotASocialPostException('This entry is not a Bluesky, Mastodon or Lemmy post.');
+    }
+
+    /**
+     * A reply under the entry's post, named by the address its comment carries.
+     *
+     * @throws NotASocialPostException
+     */
+    public static function respondableReplyOrRefuse(Entry $entry, string $address): SocialPostAddressModel
+    {
+        if (SocialNetwork::Lemmy !== self::respondableOrRefuse($entry)->network) {
+            return self::replyOrRefuse($entry, $address);
+        }
+        $comment = AbsoluteHttpUrl::httpsOrNull($address)
+            ?? throw new NotASocialPostException('The reply is no post on the entry\'s network.');
+
+        return new SocialPostAddressModel(SocialNetwork::Lemmy, $comment);
     }
 
     /** The post a shared URL names, whatever its fragment: a Bluesky post's web or AT address, or a Mastodon status. */

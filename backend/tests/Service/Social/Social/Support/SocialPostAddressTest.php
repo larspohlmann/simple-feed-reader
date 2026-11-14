@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Support;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
+use App\Enum\CommentsLoad;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
@@ -119,6 +121,54 @@ final class SocialPostAddressTest extends TestCase
         SocialPostAddress::ofOrRefuse(self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null));
     }
 
+    public function testALemmyPostIsRespondableButNoLikeablePost(): void
+    {
+        $entry = self::lemmyPost();
+
+        self::assertNull(SocialPostAddress::of($entry));
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/42'),
+            SocialPostAddress::respondableOf($entry),
+        );
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/42'),
+            SocialPostAddress::respondableOrRefuse($entry),
+        );
+    }
+
+    public function testAnEntryThatIsNoPostIsNotRespondable(): void
+    {
+        $entry = self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null);
+
+        self::assertNull(SocialPostAddress::respondableOf($entry));
+        $this->expectException(NotASocialPostException::class);
+
+        SocialPostAddress::respondableOrRefuse($entry);
+    }
+
+    public function testAReplyUnderALemmyPostIsAnHttpsAddress(): void
+    {
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://origin.example/comment/5'),
+            SocialPostAddress::respondableReplyOrRefuse(self::lemmyPost(), 'https://origin.example/comment/5'),
+        );
+    }
+
+    public function testAReplyUnderALemmyPostThatIsNoUrlIsRefused(): void
+    {
+        $this->expectException(NotASocialPostException::class);
+
+        SocialPostAddress::respondableReplyOrRefuse(self::lemmyPost(), '77');
+    }
+
+    public function testAReplyUnderAMastodonPostIsAddressedAsBefore(): void
+    {
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URI),
+            SocialPostAddress::respondableReplyOrRefuse(self::postOn(SocialNetwork::Mastodon), self::STATUS_URI),
+        );
+    }
+
     #[DataProvider('replies')]
     public function testAReplyIsAddressedOnItsEntrysNetwork(SocialNetwork $network, string $address): void
     {
@@ -185,6 +235,16 @@ final class SocialPostAddressTest extends TestCase
         ];
         yield 'an article' => ['https://news.example/article?id=7', null];
         yield 'a mastodon profile' => ['https://mastodon.social/@Gargron', null];
+    }
+
+    private static function lemmyPost(): Entry
+    {
+        $now = new \DateTimeImmutable('2026-10-13 10:00:00');
+        $feed = new Feed('https://lemmy.example/feeds/a.xml');
+        $entry = new Entry($feed, 'https://lemmy.example/post/42', null, 'Post', $now, $now);
+        $entry->setDiscussion(Discussion::of('https://lemmy.example/post/42', null, CommentsLoad::Auto));
+
+        return $entry;
     }
 
     private static function postOn(SocialNetwork $network): Entry
