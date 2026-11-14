@@ -48,7 +48,7 @@ final readonly class SocialSearchController
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
         SocialSearchQueryRequest $request,
     ): JsonResponse {
-        $account = $this->socialAccount->requireFeedAccount($user, $id);
+        $account = $this->socialAccount->requireConnected($user, $id);
         $this->rateLimitGuard->enforceForUser($this->socialSearchPreviewLimiter, $user);
 
         return new JsonResponse(

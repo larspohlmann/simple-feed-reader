@@ -29,6 +29,9 @@ final class NetworkSocialSearchTest extends TestCase
         . '?q=rss%20reader&sort=latest&limit=100';
     private const string MASTODON_SEARCH = 'GET https://mastodon.example/api/v2/search'
         . '?type=statuses&resolve=false&limit=40&q=rss%20reader';
+    private const string LEMMY_SEARCH = 'GET https://lemmy.example/api/v3/search'
+        . '?q=rss%20reader&type_=Posts&sort=New&listing_type=All&limit=50';
+    private const string LEMMY_FOUND = __DIR__ . '/../../../../Fixtures/lemmy/search.json';
 
     private ArrayAdapter $cache;
 
@@ -203,6 +206,22 @@ final class NetworkSocialSearchTest extends TestCase
         }
     }
 
+    public function testALemmySearchPreviewsThePostsFound(): void
+    {
+        $http = new RoutedHttpClient([
+            self::LEMMY_SEARCH => new MockResponse((string) file_get_contents(self::LEMMY_FOUND)),
+        ]);
+
+        $page = $this->search($http->client())->newest(SocialAccounts::lemmyOf(SocialAccounts::owner()), 'rss reader');
+
+        self::assertSame(
+            ['https://feddit.example/post/7', 'https://lemmy.example/post/102'],
+            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
+        );
+        self::assertSame([self::LEMMY_SEARCH], $http->requestLines());
+        self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[0]['headers']);
+    }
+
     private function search(HttpClientInterface $http): NetworkSocialSearch
     {
         return new NetworkSocialSearch(
@@ -212,6 +231,8 @@ final class NetworkSocialSearchTest extends TestCase
             new PassThroughSettler(),
             new ActingAccountGuard($this->entityManager),
             SocialApiWiring::timelineRounds($http, $this->cache),
+            SocialApiWiring::lemmyAccountApi($http),
+            SocialApiWiring::lemmyPostEntries(),
         );
     }
 

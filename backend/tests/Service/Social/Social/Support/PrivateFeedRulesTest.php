@@ -8,6 +8,7 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Support\PrivateFeedRules;
+use App\Service\Social\Social\Support\SocialSearchQuery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -47,8 +48,20 @@ final class PrivateFeedRulesTest extends TestCase
         self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Mastodon, $fits));
     }
 
+    public function testLemmyTakesAPlainSearch(): void
+    {
+        $nineAlternatives = PrivateFeedModel::search('a || b || c || d || e || f || g || h || i');
+
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Lemmy, $nineAlternatives));
+        self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Lemmy, PrivateFeedModel::search('')));
+        $tooLong = PrivateFeedModel::search(str_repeat('a', SocialSearchQuery::MAX_LENGTH + 1));
+        self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Lemmy, $tooLong));
+        $longest = PrivateFeedModel::search(str_repeat('ä', SocialSearchQuery::MAX_LENGTH));
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Lemmy, $longest));
+    }
+
     #[DataProvider('lemmyVerdicts')]
-    public function testLemmyAllowsItsTimelinesOnly(
+    public function testLemmyAllowsItsTimelinesAndNoOtherCollection(
         SocialNetwork $network,
         PrivateFeedModel $privateFeed,
         bool $allowed,
@@ -67,7 +80,6 @@ final class PrivateFeedRulesTest extends TestCase
         yield 'lemmy author' => [SocialNetwork::Lemmy, PrivateFeedModel::author('did:plc:rusty', 'Rusty'), false];
         yield 'lemmy tag' => [SocialNetwork::Lemmy, PrivateFeedModel::followedTag('caturday', '#caturday'), false];
         yield 'lemmy trending' => [SocialNetwork::Lemmy, PrivateFeedModel::timeline(SocialFeedKind::Trending), false];
-        yield 'lemmy search' => [SocialNetwork::Lemmy, PrivateFeedModel::search('rss reader'), false];
         yield 'bluesky local' => [SocialNetwork::Bluesky, PrivateFeedModel::timeline(SocialFeedKind::Local), false];
         yield 'bluesky all' => [SocialNetwork::Bluesky, PrivateFeedModel::timeline(SocialFeedKind::All), false];
         yield 'mastodon local' => [SocialNetwork::Mastodon, PrivateFeedModel::timeline(SocialFeedKind::Local), false];

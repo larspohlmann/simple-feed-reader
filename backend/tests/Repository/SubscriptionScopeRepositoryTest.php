@@ -83,7 +83,7 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         self::assertSame([], $this->idsOnNetwork($user, NetworkScope::profiles(SocialNetwork::Bluesky)));
     }
 
-    public function testANetworkWithoutFeedsHoldsNone(): void
+    public function testANetworkTheUserHasNoFeedsOnHoldsNone(): void
     {
         $user = $this->user('network-empty@example.com');
         $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::PLAIN);

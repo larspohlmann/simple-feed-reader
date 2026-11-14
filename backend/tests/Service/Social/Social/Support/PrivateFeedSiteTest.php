@@ -56,6 +56,17 @@ final class PrivateFeedSiteTest extends TestCase
         yield 'all' => [PrivateFeedModel::timeline(SocialFeedKind::All), $listing . 'All'];
     }
 
+    public function testALemmySearchIsItsSearchPage(): void
+    {
+        self::assertSame(
+            'https://lemmy.example/search?q=rss%20reader&type=Posts',
+            PrivateFeedSite::of(
+                SocialAccounts::lemmyOf(SocialAccounts::owner()),
+                PrivateFeedModel::search('rss reader'),
+            ),
+        );
+    }
+
     public function testAMastodonFeedLinksToItsInstance(): void
     {
         self::assertSame(

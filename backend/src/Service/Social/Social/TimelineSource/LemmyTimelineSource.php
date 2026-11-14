@@ -15,6 +15,7 @@ use App\Service\Social\Social\LemmyAccountApi;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\SocialSearchPaths;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
@@ -30,7 +31,7 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
 
     public function requests(SocialFeed $socialFeed): array
     {
-        return [$this->lemmy->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed->getKind()))];
+        return [$this->lemmy->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed))];
     }
 
     public function accepted(SocialFeed $socialFeed, FetchOutcomeModel $outcome): ApiResponseModel
@@ -49,8 +50,13 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
     {
     }
 
-    private static function pathOf(SocialFeedKind $kind): string
+    private static function pathOf(SocialFeed $socialFeed): string
     {
+        $kind = $socialFeed->getKind();
+        if (SocialFeedKind::Search === $kind) {
+            return SocialSearchPaths::lemmy($socialFeed->getRemoteId());
+        }
+
         return '/api/v3/post/list?type_=' . self::listingOf($kind) . '&sort=New&limit=' . self::PAGE_SIZE;
     }
 

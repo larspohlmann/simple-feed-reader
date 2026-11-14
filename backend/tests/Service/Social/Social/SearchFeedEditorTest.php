@@ -234,6 +234,26 @@ final class SearchFeedEditorTest extends DbTestCase
         self::assertSame(['remote'], $this->remainingGuids($subscription));
     }
 
+    public function testRequeryingALemmySearchKeepsItsPosts(): void
+    {
+        $account = $this->stored(SocialAccounts::lemmyOf($this->user));
+        $subscription = $this->searchFor($account, 'rss reader');
+        $this->post($subscription, 'https://lemmy.example/post/1', '<p>rss reader</p>', 'https://lemmy.example/u/ada');
+        $this->post($subscription, 'https://feddit.example/post/2', '<p>An RSS gazette</p>', null);
+
+        $this->editor()->requery($subscription, 'atom');
+
+        self::assertSame(
+            sprintf('social:lemmy:%d:search:atom', $account->requireId()),
+            $subscription->getFeed()->getUrl(),
+        );
+        self::assertEqualsCanonicalizing(
+            ['https://lemmy.example/post/1', 'https://feddit.example/post/2'],
+            $this->remainingGuids($subscription),
+        );
+        self::assertSame([], $this->indexWriter->forgets);
+    }
+
     private function editor(): SearchFeedEditor
     {
         return new SearchFeedEditor(

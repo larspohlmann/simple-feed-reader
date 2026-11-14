@@ -57,7 +57,12 @@ final class PrivateFeedSite
             SocialFeedKind::Home => $instance . '/?listingType=Subscribed',
             SocialFeedKind::Local => $instance . '/?listingType=Local',
             SocialFeedKind::All => $instance . '/?listingType=All',
-            default => $instance,
+            SocialFeedKind::Search => $instance . '/search?q=' . rawurlencode($privateFeed->remoteId) . '&type=Posts',
+            SocialFeedKind::UserList,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Author,
+            SocialFeedKind::Tag,
+            SocialFeedKind::Trending => $instance,
         };
     }
 

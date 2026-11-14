@@ -23,6 +23,9 @@ use Symfony\Component\HttpFoundation\Response;
 final class LemmyTimelineSourceTest extends TestCase
 {
     private const string POST_LIST = __DIR__ . '/../../../../Fixtures/lemmy/post-list.json';
+    private const string FOUND = __DIR__ . '/../../../../Fixtures/lemmy/search.json';
+    private const string SEARCH = 'GET https://lemmy.example/api/v3/search'
+        . '?q=rss%20reader&type_=Posts&sort=New&listing_type=All&limit=50';
     private const string LISTING = 'GET https://lemmy.example/api/v3/post/list?type_=%s&sort=New&limit=50';
 
     /** @return iterable<string, array{SocialFeedKind, string}> */
@@ -50,7 +53,6 @@ final class LemmyTimelineSourceTest extends TestCase
         yield 'author' => [SocialFeedKind::Author];
         yield 'tag' => [SocialFeedKind::Tag];
         yield 'trending' => [SocialFeedKind::Trending];
-        yield 'search' => [SocialFeedKind::Search];
     }
 
     #[DataProvider('kindsLemmyHasNoTimelineFor')]
@@ -106,6 +108,20 @@ final class LemmyTimelineSourceTest extends TestCase
         self::assertCount(3, $page->parsed->entries);
     }
 
+    public function testASearchFeedAsksTheSearch(): void
+    {
+        $source = self::source();
+        $search = self::socialFeed(SocialFeedKind::Search, 'rss reader');
+        $requests = $source->requests($search);
+        $answer = new ApiResponseModel(Response::HTTP_OK, (string) file_get_contents(self::FOUND), []);
+
+        $page = $source->pageOf($search, [$source->accepted($search, FetchOutcomeModel::answered($answer))]);
+
+        self::assertCount(1, $requests);
+        self::assertSame(self::SEARCH, $requests[0]->method . ' ' . $requests[0]->url);
+        self::assertCount(2, $page->parsed->entries);
+    }
+
     private static function source(): LemmyTimelineSource
     {
         return new LemmyTimelineSource(
@@ -114,8 +130,8 @@ final class LemmyTimelineSourceTest extends TestCase
         );
     }
 
-    private static function socialFeed(SocialFeedKind $kind): SocialFeed
+    private static function socialFeed(SocialFeedKind $kind, string $remoteId = ''): SocialFeed
     {
-        return PrivateFeeds::of(SocialAccounts::lemmyOf(SocialAccounts::owner()), 1, $kind);
+        return PrivateFeeds::of(SocialAccounts::lemmyOf(SocialAccounts::owner()), 1, $kind, $remoteId);
     }
 }

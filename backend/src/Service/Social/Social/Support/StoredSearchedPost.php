@@ -6,7 +6,6 @@ namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Social\Model\SearchedPostModel;
 use App\Service\Social\Social\Model\StoredPostModel;
@@ -32,7 +31,7 @@ final class StoredSearchedPost
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyNamesOf($post),
             SocialNetwork::Mastodon => self::mastodonNamesOf($account, $post->authorUrl),
-            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
+            SocialNetwork::Lemmy => throw new \LogicException('A Lemmy search is never matched by the reader.'),
         };
     }
 

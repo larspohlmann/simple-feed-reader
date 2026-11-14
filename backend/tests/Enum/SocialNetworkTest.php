@@ -21,19 +21,18 @@ final class SocialNetworkTest extends TestCase
         self::assertSame('Lemmy', SocialNetwork::Lemmy->displayName());
     }
 
-    public function testOnlyBlueskyAndMastodonCarryFeeds(): void
-    {
-        self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Mastodon], SocialNetwork::feedNetworks());
-        self::assertTrue(SocialNetwork::Bluesky->carriesFeeds());
-        self::assertTrue(SocialNetwork::Mastodon->carriesFeeds());
-        self::assertFalse(SocialNetwork::Lemmy->carriesFeeds());
-    }
-
     public function testOnlyLemmyTakesNoLinkPosts(): void
     {
         self::assertTrue(SocialNetwork::Bluesky->takesLinkPosts());
         self::assertTrue(SocialNetwork::Mastodon->takesLinkPosts());
         self::assertFalse(SocialNetwork::Lemmy->takesLinkPosts());
+    }
+
+    public function testOnlyLemmyLeavesSearchResultsToTheInstance(): void
+    {
+        self::assertTrue(SocialNetwork::Bluesky->checksSearchResults());
+        self::assertTrue(SocialNetwork::Mastodon->checksSearchResults());
+        self::assertFalse(SocialNetwork::Lemmy->checksSearchResults());
     }
 
     public function testTheRouteRequirementNamesEveryNetwork(): void
@@ -44,28 +43,11 @@ final class SocialNetworkTest extends TestCase
         );
     }
 
-    public function testAFeedNetworkValueNamesItsNetwork(): void
-    {
-        self::assertSame(SocialNetwork::Bluesky, SocialNetwork::tryFromFeed('bluesky'));
-    }
-
-    public function testAnAccountOnlyOrUnknownOrAbsentValueNamesNoFeedNetwork(): void
-    {
-        self::assertNull(SocialNetwork::tryFromFeed('lemmy'));
-        self::assertNull(SocialNetwork::tryFromFeed('myspace'));
-        self::assertNull(SocialNetwork::tryFromFeed(null));
-    }
-
     public function testNetworksListTheirWireValues(): void
     {
         $networks = [SocialNetwork::Mastodon, SocialNetwork::Bluesky];
 
         self::assertSame(['mastodon', 'bluesky'], SocialNetwork::valuesOf($networks));
-    }
-
-    public function testARequestValueNamesItsNetwork(): void
-    {
-        self::assertSame(SocialNetwork::Mastodon, SocialNetwork::fromRequestValue('mastodon'));
     }
 
     public function testAnAbsentRequestValueNamesNoNetwork(): void
@@ -86,8 +68,10 @@ final class SocialNetworkTest extends TestCase
         }
     }
 
-    public function testLemmyIsARequestValue(): void
+    public function testEveryNetworkParsesFromARequest(): void
     {
+        self::assertSame(SocialNetwork::Bluesky, SocialNetwork::fromRequestValue('bluesky'));
+        self::assertSame(SocialNetwork::Mastodon, SocialNetwork::fromRequestValue('mastodon'));
         self::assertSame(SocialNetwork::Lemmy, SocialNetwork::fromRequestValue('lemmy'));
     }
 }

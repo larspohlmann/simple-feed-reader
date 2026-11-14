@@ -62,16 +62,21 @@ final class SocialSearchControllerTest extends ApiTestCase
         self::assertSame('social_account_not_found', $this->payload($client)['type']);
     }
 
-    public function testTheSearchPreviewOfALemmyAccountAnswers404(): void
+    public function testALemmyAccountPreviewsASearch(): void
     {
-        $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
+        $search = new StubSocialSearch(self::pageOf(2));
+        $client = $this->searchClientWith($search);
         $owner = $this->signIn($client, 'search-lemmy@example.test');
         $account = SocialFeeds::persistedAccount($this->entityManager(), SocialAccounts::lemmyOf($owner));
 
         $this->requestSearchPreview($client, $account, 'rss');
 
-        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
-        self::assertSame('social_account_not_found', $this->payload($client)['type']);
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['count' => 2, 'posts' => array_map(self::previewPost(...), [1, 2])],
+            $this->payload($client),
+        );
+        self::assertSame('rss', $search->query);
     }
 
     public function testABlankSearchPreviewQueryIsRefused(): void

@@ -696,7 +696,7 @@ final class EntryListTest extends DbTestCase
         self::assertSame(['both', 'below', 'off'], $this->guids($ownView));
     }
 
-    public function testANetworkWithoutFeedsListsNothing(): void
+    public function testANetworkTheUserHasNoFeedsOnListsNothing(): void
     {
         $this->entry('plain', '2026-07-05T00:00:00Z');
 

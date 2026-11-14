@@ -28,13 +28,6 @@ enum SocialNetwork: string
         return self::caseOrRefusal($value, 'network');
     }
 
-    public static function tryFromFeed(?string $value): ?self
-    {
-        $network = null === $value ? null : self::tryFrom($value);
-
-        return true === $network?->carriesFeeds() ? $network : null;
-    }
-
     /**
      * @param list<self> $networks
      *
@@ -45,18 +38,12 @@ enum SocialNetwork: string
         return array_map(static fn (self $network): string => $network->value, $networks);
     }
 
-    /** @return list<self> the networks whose posts arrive as feeds */
-    public static function feedNetworks(): array
-    {
-        return array_values(array_filter(self::cases(), static fn (self $network): bool => $network->carriesFeeds()));
-    }
-
-    public function carriesFeeds(): bool
+    public function takesLinkPosts(): bool
     {
         return self::Lemmy !== $this;
     }
 
-    public function takesLinkPosts(): bool
+    public function checksSearchResults(): bool
     {
         return self::Lemmy !== $this;
     }

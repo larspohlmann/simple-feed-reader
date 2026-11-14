@@ -63,12 +63,12 @@ final class PrivateFeedRules
     {
         return match ($privateFeed->kind) {
             SocialFeedKind::Home, SocialFeedKind::Local, SocialFeedKind::All => true,
+            SocialFeedKind::Search => self::isSearchQuery($privateFeed->remoteId),
             SocialFeedKind::UserList,
             SocialFeedKind::CustomFeed,
             SocialFeedKind::Author,
             SocialFeedKind::Tag,
-            SocialFeedKind::Trending,
-            SocialFeedKind::Search => false,
+            SocialFeedKind::Trending => false,
         };
     }
 
