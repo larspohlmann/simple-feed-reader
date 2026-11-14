@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Enum\SocialFeedKind;
+use App\Entity\Discussion;
 use App\Entity\Headline;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
@@ -77,6 +78,29 @@ final class SocialSearchControllerTest extends ApiTestCase
             $this->payload($client),
         );
         self::assertSame('rss', $search->query);
+    }
+
+    public function testALemmyPreviewPostLinksItsThreadAndLeadsWithItsTitle(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageWith([
+            self::lemmyPostWith('<p>The <b>whole</b> text</p>'),
+            self::lemmyPostWith(null),
+        ])));
+        $owner = $this->signIn($client, 'search-lemmy-title@example.test');
+        $account = SocialFeeds::persistedAccount($this->entityManager(), SocialAccounts::lemmyOf($owner));
+
+        $this->requestSearchPreview($client, $account, 'rss');
+
+        self::assertResponseIsSuccessful();
+        $posts = $this->payload($client)['posts'];
+        self::assertIsArray($posts);
+        self::assertSame(
+            [
+                ['https://lemmy.example/post/7', 'A reader for feeds — The whole text'],
+                ['https://lemmy.example/post/7', 'A reader for feeds'],
+            ],
+            array_map(static fn (array $post): array => [$post['url'], $post['text']], $posts),
+        );
     }
 
     public function testABlankSearchPreviewQueryIsRefused(): void
@@ -308,13 +332,28 @@ final class SocialSearchControllerTest extends ApiTestCase
         return new ParsedEntryModel(
             'guid-' . $number,
             'https://bsky.app/profile/amy/post/' . $number,
-            Headline::fromFeed('Post ' . $number),
+            Headline::derived('Post ' . $number),
             '@amy.bsky.social',
             null,
             $contentHtml,
             new \DateTimeImmutable(self::publishedAt($number)),
             authorAvatarUrl: 'https://cdn.test/amy.jpg',
         );
+    }
+
+    private static function lemmyPostWith(?string $contentHtml): ParsedEntryModel
+    {
+        $post = new ParsedEntryModel(
+            'https://lemmy.example/post/7',
+            null,
+            Headline::fromFeed('A reader for feeds'),
+            'amy',
+            null,
+            $contentHtml,
+            new \DateTimeImmutable(self::publishedAt(7)),
+        );
+
+        return $post->asDiscussionThread(Discussion::platformThread('https://lemmy.example/post/7'));
     }
 
     private static function postHtml(int $number): string
