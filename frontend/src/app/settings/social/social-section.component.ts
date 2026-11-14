@@ -22,6 +22,14 @@ interface ReconnectDraft {
   readonly totp: string;
 }
 
+interface LemmyDraft {
+  readonly instance: string;
+  readonly username: string;
+  readonly password: string;
+  readonly totp: string;
+}
+
+const EMPTY_LEMMY_DRAFT: LemmyDraft = { instance: '', username: '', password: '', totp: '' };
 const EMPTY_RECONNECT_DRAFT: ReconnectDraft = { secret: '', totp: '' };
 
 @Component({
@@ -53,7 +61,6 @@ export class SocialSectionComponent {
   protected readonly blueskyAccounts = this.accountsOf('bluesky');
   protected readonly mastodonAccounts = this.accountsOf('mastodon');
   protected readonly lemmyAccounts = this.accountsOf('lemmy');
-  protected readonly importableAccounts = computed(() => this.svc.accounts() ?? []);
 
   protected readonly blueskyFormOpen = signal(false);
   protected readonly mastodonFormOpen = signal(false);
@@ -63,10 +70,7 @@ export class SocialSectionComponent {
   protected readonly mastodonToken = signal('');
   protected readonly mastodonHost = computed(() => hostOf(this.mastodonInstance()));
   protected readonly lemmyFormOpen = signal(false);
-  protected readonly lemmyInstance = signal('');
-  protected readonly lemmyUsername = signal('');
-  protected readonly lemmyPassword = signal('');
-  protected readonly lemmyTotp = signal('');
+  protected readonly lemmyDraft = signal<LemmyDraft>(EMPTY_LEMMY_DRAFT);
   protected readonly reconnectDrafts = signal<Readonly<Record<number, ReconnectDraft>>>({});
   protected readonly inputValue = inputValue;
 
@@ -149,12 +153,13 @@ export class SocialSectionComponent {
   }
 
   protected connectLemmy(): void {
-    const totp = this.lemmyTotp().trim();
+    const { instance, username, password, totp: rawTotp } = this.lemmyDraft();
+    const totp = rawTotp.trim();
     this.svc
       .connectLemmy({
-        instanceUrl: this.lemmyInstance(),
-        username: this.lemmyUsername(),
-        password: this.lemmyPassword(),
+        instanceUrl: instance,
+        username,
+        password,
         totpToken: totp === '' ? null : totp,
       })
       .subscribe({
@@ -178,11 +183,12 @@ export class SocialSectionComponent {
     this.mastodonFormOpen.set(false);
   }
 
+  protected setLemmyField(field: keyof LemmyDraft, value: string): void {
+    this.lemmyDraft.update((draft) => ({ ...draft, [field]: value }));
+  }
+
   protected resetLemmyForm(): void {
-    this.lemmyInstance.set('');
-    this.lemmyUsername.set('');
-    this.lemmyPassword.set('');
-    this.lemmyTotp.set('');
+    this.lemmyDraft.set(EMPTY_LEMMY_DRAFT);
     this.lemmyFormOpen.set(false);
   }
 

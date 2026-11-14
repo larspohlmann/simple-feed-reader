@@ -243,8 +243,8 @@
             autocomplete="off"
             autocapitalize="none"
             data-testid="social-lemmy-instance"
-            [value]="lemmyInstance()"
-            (input)="lemmyInstance.set(inputValue($event))"
+            [value]="lemmyDraft().instance"
+            (input)="setLemmyField('instance', inputValue($event))"
           />
         </app-settings-row>
         <app-settings-row [stackable]="true" [title]="'settings.social.lemmyUsername' | transloco">
@@ -254,8 +254,8 @@
             autocomplete="off"
             autocapitalize="none"
             data-testid="social-lemmy-username"
-            [value]="lemmyUsername()"
-            (input)="lemmyUsername.set(inputValue($event))"
+            [value]="lemmyDraft().username"
+            (input)="setLemmyField('username', inputValue($event))"
           />
         </app-settings-row>
         <app-settings-row
@@ -268,8 +268,8 @@
               type="password"
               autocomplete="off"
               data-testid="social-lemmy-password"
-              [value]="lemmyPassword()"
-              (input)="lemmyPassword.set(inputValue($event))"
+              [value]="lemmyDraft().password"
+              (input)="setLemmyField('password', inputValue($event))"
             />
           </app-password-input>
         </app-settings-row>
@@ -284,17 +284,17 @@
             inputmode="numeric"
             autocomplete="one-time-code"
             data-testid="social-lemmy-totp"
-            [value]="lemmyTotp()"
-            (input)="lemmyTotp.set(inputValue($event))"
+            [value]="lemmyDraft().totp"
+            (input)="setLemmyField('totp', inputValue($event))"
           />
           <app-button
             variant="primary"
             data-testid="social-lemmy-connect"
             [disabled]="
               svc.busy() ||
-              lemmyInstance() === '' ||
-              lemmyUsername() === '' ||
-              lemmyPassword() === ''
+              lemmyDraft().instance === '' ||
+              lemmyDraft().username === '' ||
+              lemmyDraft().password === ''
             "
             (click)="connectLemmy()"
           >
@@ -315,14 +315,14 @@
       }
     </app-settings-group>
 
-    @if (importableAccounts().length) {
+    @if (svc.accounts()?.length) {
       <app-settings-group
         icon="group_add"
         data-testid="social-import-section"
         [title]="'settings.social.importSectionTitle' | transloco"
         [caption]="'settings.social.importSectionCaption' | transloco"
       >
-        @for (account of importableAccounts(); track account.id) {
+        @for (account of svc.accounts(); track account.id) {
           <app-settings-row
             [stackable]="true"
             [title]="account.handle"
