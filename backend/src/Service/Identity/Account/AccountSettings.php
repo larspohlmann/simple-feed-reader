@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Identity\Account;
+
+use App\Entity\User;
+use App\Repository\DigestSettingsRepository;
+use App\Repository\FeedDirectoryScopeRepository;
+use App\Repository\ReadingSettingsRepository;
+use App\Repository\SharingSettingsRepository;
+use App\Service\Identity\Account\Model\AccountSettingsModel;
+
+final readonly class AccountSettings
+{
+    public function __construct(
+        private ReadingSettingsRepository $readingSettings,
+        private SharingSettingsRepository $sharingSettings,
+        private DigestSettingsRepository $digestSettings,
+        private FeedDirectoryScopeRepository $feedDirectoryScopes,
+    ) {
+    }
+
+    public function of(User $user): AccountSettingsModel
+    {
+        return new AccountSettingsModel(
+            $this->readingSettings->forUser($user),
+            $this->sharingSettings->forUser($user),
+            $this->digestSettings->forUser($user),
+            $this->feedDirectoryScopes->forUser($user),
+        );
+    }
+}

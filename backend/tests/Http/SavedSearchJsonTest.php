@@ -7,7 +7,7 @@ namespace App\Tests\Http;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Http\SavedSearchJson;
-use App\Service\Search\Model\SavedSearchTallyModel;
+use App\Service\Library\Search\Model\SavedSearchTallyModel;
 use PHPUnit\Framework\TestCase;
 
 final class SavedSearchJsonTest extends TestCase

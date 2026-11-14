@@ -6,11 +6,11 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
-use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
-use App\Service\Recommendation\Exception\ProfileConnectionRejectedException;
-use App\Service\Recommendation\Exception\RecommendationRunActiveException;
-use App\Service\Recommendation\Profile\Exception\ProfileConnectionMissingException;
+use App\Service\Curation\Recommendation\Exception\NoActiveRecommendationRunException;
+use App\Service\Curation\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Curation\Recommendation\Exception\ProfileConnectionRejectedException;
+use App\Service\Curation\Recommendation\Exception\RecommendationRunActiveException;
+use App\Service\Curation\Recommendation\Profile\Exception\ProfileConnectionMissingException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class RecommendationRunProblems implements ExceptionProblemsInterface

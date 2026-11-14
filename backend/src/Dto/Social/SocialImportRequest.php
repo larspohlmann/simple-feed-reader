@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
-use App\Service\Social\Model\CollectedItemsModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\SocialImportFeedModel;
-use App\Service\Social\Model\SocialImportModel;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Social\Social\Model\CollectedItemsModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\SocialImportFeedModel;
+use App\Service\Social\Social\Model\SocialImportModel;
+use App\Service\Library\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class SocialImportRequest

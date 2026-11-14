@@ -6,8 +6,8 @@ namespace App\Http;
 
 use App\Entity\User;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Account\AccountSettings;
-use App\Service\Mail\MailCapability;
+use App\Service\Identity\Account\AccountSettings;
+use App\Service\Outbound\Mail\MailCapability;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /** MeJson::profile plus the parts that need a service: mail, timezone, active AI, catalog availability. */

@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\Media\MediaCandidateSource;
+
+use App\Service\Foundation\Html\Support\JsonLd;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\PageFurniture;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
+
+/**
+ * An embed a client-side player names only in an inline script: every https URL the script holds goes through the
+ * embed allow-list, and scripts under page chrome are skipped. No prose anchor, so it is top-placed as the hero: the
+ * script sits far from the mount the player fills.
+ */
+#[AsTaggedItem(priority: 50)]
+final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
+{
+    private const string URL_PATTERN = '#https://[^"\'\s\\\\<>]+#i';
+
+    public function __construct(private EmbedProviders $providers, private PageFurniture $furniture)
+    {
+    }
+
+    public function find(RawPageModel $page): array
+    {
+        $found = [];
+        foreach ($page->document->querySelectorAll('script') as $script) {
+            if ($this->furniture->holds($script)) {
+                continue;
+            }
+            // JSON-LD scripts are already handled by JsonLdMediaSource, which has
+            // prioritized logic for choosing between contentUrl and embedUrl.
+            if (JsonLd::isScript($script)) {
+                continue;
+            }
+            foreach ($this->embedTargets($script->textContent ?? '') as $target) {
+                $found[$target->url] ??= new MediaCandidateModel(
+                    MediaKind::Embed,
+                    $target->url,
+                    $target->posterUrl,
+                    $target->label,
+                );
+            }
+        }
+
+        return array_values($found);
+    }
+
+    /** @return list<EmbedTargetModel> */
+    private function embedTargets(string $scriptText): array
+    {
+        preg_match_all(self::URL_PATTERN, $scriptText, $matches);
+        $targets = [];
+        foreach ($matches[0] as $url) {
+            $target = $this->providers->resolve($url);
+            if ($target !== null) {
+                $targets[] = $target;
+            }
+        }
+
+        return $targets;
+    }
+}

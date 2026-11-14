@@ -1,0 +1,417 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Sourcing\Preview;
+
+use App\Entity\ReadingSettings;
+use App\Entity\User;
+use App\Enum\SourceFormat;
+use App\Repository\ReadingSettingsRepository;
+use App\Service\Sourcing\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Sourcing\Preview\Exception\FeedPreviewException;
+use App\Service\Sourcing\Preview\Factory\FeedPreviewFactory;
+use App\Service\Sourcing\Preview\FeedPreviewService;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
+use App\Tests\DbTestCase;
+use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
+use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\StubFeedFetcher;
+
+final class FeedPreviewServiceTest extends DbTestCase
+{
+    use ScrapedFixtures;
+    use ReadsFixtures;
+
+    private const URL = 'https://example.com/feed';
+
+    private function service(StubFeedFetcher $fetcher): FeedPreviewService
+    {
+        $bodyParser = self::getContainer()->get(FeedBodyParser::class);
+        self::assertInstanceOf(FeedBodyParser::class, $bodyParser);
+
+        $readingSettings = $this->entityManager->getRepository(ReadingSettings::class);
+        self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
+
+        return new FeedPreviewService(
+            $fetcher,
+            $bodyParser,
+            new ScrapeFallbackPolicy($readingSettings),
+            new FeedPreviewFactory(),
+        );
+    }
+
+    private function user(): User
+    {
+        return $this->persisted(new User('preview@example.com', new \DateTimeImmutable('2026-08-02 10:00:00')));
+    }
+
+    private function userWithScrapingEnabled(): User
+    {
+        $user = $this->user();
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function persisted(User $user): User
+    {
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function fetcherWithBody(string $xml): StubFeedFetcher
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            self::URL,
+            FetchResponseModel::fetched(
+                self::URL,
+                permanentRedirect: false,
+                body: $xml,
+                etag: null,
+                lastModified: null,
+            ),
+        );
+
+        return $fetcher;
+    }
+
+    private function longParagraph(): string
+    {
+        // ~684 chars of plain text once stripped — comfortably over the 600 minimum.
+        return '<p>' . str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 12) . '</p>';
+    }
+
+    private function rss(string $itemsXml, string $namespaces = ''): string
+    {
+        return /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"
+                 xmlns:content="http://purl.org/rss/1.0/modules/content/"
+                 xmlns:dc="http://purl.org/dc/elements/1.1/"{$namespaces}>
+              <channel>
+                <title>Example Feed</title>
+                <link>https://example.com/</link>
+                <description>An example feed</description>
+                {$itemsXml}
+              </channel>
+            </rss>
+            XML;
+    }
+
+    public function testFullTextFeedYieldsFullVerdictAndShowsEveryEntryUpToTheCap(): void
+    {
+        $items = '';
+        for ($index = 1; $index <= 9; ++$index) {
+            $items .= <<<XML
+                <item>
+                  <title>Post {$index}</title>
+                  <link>https://example.com/{$index}</link>
+                  <guid>https://example.com/{$index}</guid>
+                  <description>Short teaser {$index}.</description>
+                  <content:encoded><![CDATA[{$this->longParagraph()}]]></content:encoded>
+                </item>
+                XML;
+        }
+
+        $fetcher = $this->fetcherWithBody($this->rss($items));
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        self::assertSame('Example Feed', $preview->title);
+        self::assertSame(9, $preview->itemCount);
+        self::assertSame('full', $preview->content);
+        self::assertCount(9, $preview->items);
+        self::assertSame('Post 1', $preview->items[0]->title);
+    }
+
+    public function testSummaryOnlyFeedYieldsSummaryVerdict(): void
+    {
+        $items = '';
+        for ($index = 1; $index <= 3; ++$index) {
+            $items .= <<<XML
+                <item>
+                  <title>Post {$index}</title>
+                  <link>https://example.com/{$index}</link>
+                  <guid>https://example.com/{$index}</guid>
+                  <description>Just a short description for post {$index}.</description>
+                </item>
+                XML;
+        }
+
+        $fetcher = $this->fetcherWithBody($this->rss($items));
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        self::assertSame('summary', $preview->content);
+        self::assertSame(3, $preview->itemCount);
+    }
+
+    public function testTitlesOnlyFeedYieldsTitleOnlyVerdict(): void
+    {
+        $items = '';
+        for ($index = 1; $index <= 3; ++$index) {
+            $items .= <<<XML
+                <item>
+                  <title>Post {$index}</title>
+                  <link>https://example.com/{$index}</link>
+                  <guid>https://example.com/{$index}</guid>
+                </item>
+                XML;
+        }
+
+        $fetcher = $this->fetcherWithBody($this->rss($items));
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        self::assertSame('title-only', $preview->content);
+        self::assertNull($preview->items[0]->summary);
+        self::assertNull($preview->items[0]->imageUrl);
+    }
+
+    public function testEmptyButTitledFeedYieldsTitleOnlyVerdict(): void
+    {
+        // A channel with a title but no items parses fine; the verdict must fall
+        // back to 'title-only' rather than the richest tier.
+        $fetcher = $this->fetcherWithBody($this->rss(''));
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        self::assertSame(0, $preview->itemCount);
+        self::assertSame('title-only', $preview->content);
+        self::assertFalse($preview->hasImages);
+        self::assertSame([], $preview->items);
+    }
+
+    public function testItemWithMediaImageMarksHasImages(): void
+    {
+        $items = <<<'XML'
+            <item>
+              <title>With image</title>
+              <link>https://example.com/1</link>
+              <guid>https://example.com/1</guid>
+              <description>Has a picture.</description>
+              <media:content url="https://img.example/a.jpg" medium="image" width="800" height="600" />
+            </item>
+            <item>
+              <title>Without image</title>
+              <link>https://example.com/2</link>
+              <guid>https://example.com/2</guid>
+              <description>No picture here.</description>
+            </item>
+            XML;
+
+        $xml = $this->rss($items, ' xmlns:media="http://search.yahoo.com/mrss/"');
+        $fetcher = $this->fetcherWithBody($xml);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        self::assertTrue($preview->hasImages);
+        self::assertSame('https://img.example/a.jpg', $preview->items[0]->imageUrl);
+        self::assertSame(800, $preview->items[0]->imageWidth);
+        self::assertSame(600, $preview->items[0]->imageHeight);
+        self::assertNull($preview->items[1]->imageUrl);
+    }
+
+    public function testHttpImageIsDroppedFromPreviewItem(): void
+    {
+        $items = <<<'XML'
+            <item>
+              <title>With image</title>
+              <link>https://example.com/1</link>
+              <guid>https://example.com/1</guid>
+              <description>Has a picture.</description>
+              <media:content url="http://img.example/a.jpg" medium="image" width="800" height="600" />
+            </item>
+            XML;
+
+        $xml = $this->rss($items, ' xmlns:media="http://search.yahoo.com/mrss/"');
+        $fetcher = $this->fetcherWithBody($xml);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        self::assertNull($preview->items[0]->imageUrl);
+        self::assertNull($preview->items[0]->imageWidth);
+        self::assertNull($preview->items[0]->imageHeight);
+        // The only image on offer is http-only and gets dropped, so the feed as a
+        // whole must not claim to have images either.
+        self::assertFalse($preview->hasImages);
+    }
+
+    public function testItemSummaryPrefersTheFeedsOwnSummaryOverContentHtml(): void
+    {
+        // summary and contentHtml carry distinct, recognizable text so the assertion
+        // proves the precedence rather than merely tolerating either field: item()
+        // must prefer the feed's own summary/teaser, not fall back to the full body.
+        $items = <<<XML
+            <item>
+              <title>Precedence check</title>
+              <link>https://example.com/precedence</link>
+              <guid>https://example.com/precedence</guid>
+              <description>TEASER-FROM-SUMMARY</description>
+              <content:encoded><![CDATA[<p>BODY-FROM-CONTENT</p>]]></content:encoded>
+            </item>
+            XML;
+
+        $fetcher = $this->fetcherWithBody($this->rss($items));
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        $summary = $preview->items[0]->summary;
+        self::assertNotNull($summary);
+        self::assertStringContainsString('TEASER-FROM-SUMMARY', $summary);
+        self::assertStringNotContainsString('BODY-FROM-CONTENT', $summary);
+    }
+
+    public function testSummaryIsTruncatedForLongItemsAndUntouchedForShortOnes(): void
+    {
+        // Well over EntrySnippet's 500-character cap: item() must delegate the truncation, not reimplement it.
+        $longText = str_repeat('word ', 200);
+        $items = <<<XML
+            <item>
+              <title>Long</title>
+              <link>https://example.com/long</link>
+              <guid>https://example.com/long</guid>
+              <description>{$longText}</description>
+            </item>
+            <item>
+              <title>Short</title>
+              <link>https://example.com/short</link>
+              <guid>https://example.com/short</guid>
+              <description>A short teaser.</description>
+            </item>
+            XML;
+
+        $fetcher = $this->fetcherWithBody($this->rss($items));
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        $longSnippet = $preview->items[0]->summary;
+        self::assertNotNull($longSnippet);
+        self::assertSame(500, mb_strlen($longSnippet));
+
+        self::assertSame('A short teaser.', $preview->items[1]->summary);
+    }
+
+    public function testFetchFailureBecomesFeedPreviewException(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow(self::URL, new FeedUnreachableException('blocked'));
+
+        $this->expectException(FeedPreviewException::class);
+        $this->service($fetcher)->preview($this->user(), self::URL);
+    }
+
+    public function testAFetchFailureCarriesItsCauseAndNoErrorCode(): void
+    {
+        $cause = new FeedUnreachableException('blocked');
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow(self::URL, $cause);
+
+        try {
+            $this->service($fetcher)->preview($this->user(), self::URL);
+            self::fail('expected the preview to fail');
+        } catch (FeedPreviewException $exception) {
+            self::assertSame('The feed could not be loaded.', $exception->getMessage());
+            self::assertSame(0, $exception->getCode());
+            self::assertSame($cause, $exception->getPrevious());
+        }
+    }
+
+    public function testAnOversizedFeedSaysItIsTooLarge(): void
+    {
+        $cause = new ResponseTooLargeException('too large');
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow(self::URL, $cause);
+
+        try {
+            $this->service($fetcher)->preview($this->user(), self::URL);
+            self::fail('expected the preview to fail');
+        } catch (FeedPreviewException $exception) {
+            self::assertSame('The feed is larger than the reader accepts.', $exception->getMessage());
+            self::assertSame(0, $exception->getCode());
+            self::assertSame($cause, $exception->getPrevious());
+        }
+    }
+
+    public function testUnparseableBodyBecomesFeedPreviewException(): void
+    {
+        $fetcher = $this->fetcherWithBody(/** @lang TEXT */ '<html>nope');
+
+        $this->expectException(FeedPreviewException::class);
+        $this->service($fetcher)->preview($this->user(), self::URL);
+    }
+
+    public function testEmptyBodyBecomesFeedPreviewException(): void
+    {
+        $fetcher = $this->fetcherWithBody('   ');
+
+        $this->expectException(FeedPreviewException::class);
+        $this->service($fetcher)->preview($this->user(), self::URL);
+    }
+
+    /**
+     * A scraped preview keeps the extractor's own message, which names the problem for the user, instead of the
+     * generic "That address is not a readable feed.".
+     */
+    public function testScrapedPreviewFailureKeepsTheExtractorsMessage(): void
+    {
+        $fetcher = $this->fetcherWithBody($this->scrapedFixture('nav-only.html'));
+
+        $this->expectException(FeedPreviewException::class);
+        $this->expectExceptionMessage('No article list was detected on the page.');
+        $this->service($fetcher)->preview($this->userWithScrapingEnabled(), self::URL, 'scraped');
+    }
+
+    public function testAScrapedPreviewIsRefusedWhenTheUserHasScrapingDisabled(): void
+    {
+        $user = $this->user();
+
+        $this->expectException(ScrapingDisabledException::class);
+
+        $this->service(new StubFeedFetcher())->preview($user, 'https://example.com/blog', SourceFormat::SCRAPED);
+    }
+
+    public function testPreviewsAWpJsonCandidateAsFullContent(): void
+    {
+        $body = '[{"id":1,"link":"https://site.example/p","title":{"rendered":"Post"},'
+            . '"content":{"rendered":' . json_encode($this->longParagraph()) . '},'
+            . '"date_gmt":"2026-08-20T10:00:00"}]';
+        $fetcher = $this->fetcherWithBody($body);
+
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL, SourceFormat::WP_JSON);
+
+        self::assertSame(1, $preview->itemCount);
+        self::assertSame('full', $preview->content);
+    }
+
+    public function testPreviewsAMixcloudCandidateWithoutItsExclusiveShows(): void
+    {
+        $fetcher = $this->fetcherWithBody($this->fixture('mixcloud/cloudcasts.json'));
+
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL, SourceFormat::MIXCLOUD_API);
+
+        self::assertSame('John Digweed', $preview->title);
+        self::assertSame(2, $preview->itemCount);
+        self::assertSame('title-only', $preview->content);
+        self::assertTrue($preview->hasImages);
+    }
+
+    public function testAMixcloudBodyThatIsNoListIsNotAReadableFeed(): void
+    {
+        $fetcher = $this->fetcherWithBody('{"error":{"type":"NotFound"}}');
+
+        $this->expectException(FeedPreviewException::class);
+        $this->expectExceptionMessage('That address is not a readable feed.');
+        $this->service($fetcher)->preview($this->user(), self::URL, SourceFormat::MIXCLOUD_API);
+    }
+
+    /** A format this build has no parser for reads as a feed document, as a refresh reads it. */
+    public function testAnUnknownFormatPreviewsAsAFeedDocument(): void
+    {
+        $fetcher = $this->fetcherWithBody($this->rss(''));
+
+        self::assertSame('Example Feed', $this->service($fetcher)->preview($this->user(), self::URL, 'rss')->title);
+    }
+}

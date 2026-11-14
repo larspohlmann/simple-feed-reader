@@ -9,7 +9,7 @@ use App\Entity\FeedDirectoryScope;
 use App\Entity\ReadingSettings;
 use App\Entity\SharingSettings;
 use App\Entity\User;
-use App\Service\Account\Model\AccountSettingsModel;
+use App\Service\Identity\Account\Model\AccountSettingsModel;
 
 final class UnsavedUserSettings
 {

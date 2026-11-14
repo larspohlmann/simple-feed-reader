@@ -10,7 +10,7 @@ use App\Entity\Feed;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionActivityRepository;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Service\Library\SubscriptionHistory\Model\TrackedSubscriptionModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 

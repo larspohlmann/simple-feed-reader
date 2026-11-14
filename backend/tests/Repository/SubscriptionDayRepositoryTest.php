@@ -6,7 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
-use App\Service\SubscriptionHistory\Support\UtcDay;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 

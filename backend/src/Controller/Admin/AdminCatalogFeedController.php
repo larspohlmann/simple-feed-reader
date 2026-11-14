@@ -8,7 +8,7 @@ use App\Dto\Admin\CatalogFeedRequest;
 use App\Dto\Admin\ReorderRequest;
 use App\Http\AdminCatalogJson;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Catalog\CatalogFeedEditor;
+use App\Service\Sourcing\Catalog\CatalogFeedEditor;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;

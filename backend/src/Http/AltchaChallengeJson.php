@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Auth\Model\AltchaChallengeModel;
+use App\Service\Identity\Auth\Model\AltchaChallengeModel;
 
 /** The JSON the ALTCHA browser widget consumes verbatim. */
 final class AltchaChallengeJson

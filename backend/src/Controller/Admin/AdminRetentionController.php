@@ -7,7 +7,7 @@ namespace App\Controller\Admin;
 use App\Dto\Admin\RetentionSettingsRequest;
 use App\Http\Admin\RetentionSettingsJson;
 use App\Http\FullReplacePayload;
-use App\Service\Retention\RetentionSettings;
+use App\Service\Ingestion\Retention\RetentionSettings;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;

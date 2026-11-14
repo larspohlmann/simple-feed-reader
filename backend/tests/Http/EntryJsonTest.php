@@ -25,8 +25,8 @@ use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
-use App\Service\Chapter\Model\ServedChaptersModel;
-use App\Service\Social\Model\ThreadPostModel;
+use App\Service\Content\Chapter\Model\ServedChaptersModel;
+use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 

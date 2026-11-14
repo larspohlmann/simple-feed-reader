@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Me;
 
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class UpdateFeedDirectoryScopeRequest

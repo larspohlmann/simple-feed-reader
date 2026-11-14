@@ -6,7 +6,7 @@ namespace App\Tests\Dto\ClientError;
 
 use App\Dto\ClientError\ClientErrorItem;
 use App\Dto\ClientError\ClientErrorReportRequest;
-use App\Service\ClientError\Model\ClientErrorModel;
+use App\Service\Operations\ClientError\Model\ClientErrorModel;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;

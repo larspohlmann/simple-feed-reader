@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\LinkCard\LinkCardSweep;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Content\LinkCard\LinkCardSweep;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

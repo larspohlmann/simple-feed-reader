@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
-use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
-use App\Service\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
-use App\Service\Recommendation\Run\Model\BatchReplyVerdictModel;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\BatchCall;
-use App\Service\Recommendation\Run\RecommendationCallRecorder;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Curation\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
+use App\Service\Curation\Recommendation\Run\Model\BatchReplyVerdictModel;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\BatchCall;
+use App\Service\Curation\Recommendation\Run\RecommendationCallRecorder;
 
 /**
  * An engine whose rounds a test queues: each send answers with the next queued result or throws the next queued error.

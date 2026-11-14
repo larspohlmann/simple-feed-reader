@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Social\Model\PrivateFeedSyncReportModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
 
 final readonly class PrivateFeedSyncJson implements SweepReportJsonInterface
 {

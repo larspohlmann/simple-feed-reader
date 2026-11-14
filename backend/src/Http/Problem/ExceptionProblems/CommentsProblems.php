@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Comments\Exception\NoCommentsFeedException;
+use App\Service\Content\Comments\Exception\NoCommentsFeedException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class CommentsProblems implements ExceptionProblemsInterface

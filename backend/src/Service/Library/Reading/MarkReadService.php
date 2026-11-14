@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Library\Reading;
+
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionScopeRepository;
+use App\Repository\TagRepository;
+use App\Service\Library\Reading\Model\ReadScopeKind;
+use App\Service\Library\Reading\Model\ReadScopeModel;
+
+/** "Mark all read until T" for a scope: every subscription the scope covers is marked by watermark. */
+final readonly class MarkReadService
+{
+    public function __construct(
+        private EntryReadMarker $readMarker,
+        private SubscriptionRepository $subscriptions,
+        private SubscriptionScopeRepository $subscriptionScope,
+        private TagRepository $tags,
+    ) {
+    }
+
+    public function mark(User $user, ReadScopeModel $scope, \DateTimeImmutable $until): void
+    {
+        $userId = $user->requireId();
+        $this->readMarker->markSubscriptionsReadUntil($userId, $this->subscriptionsIn($userId, $scope), $until);
+    }
+
+    /** @return list<Subscription> */
+    private function subscriptionsIn(int $userId, ReadScopeModel $scope): array
+    {
+        return match ($scope->kind) {
+            ReadScopeKind::All => $this->subscriptionScope->findIncludedInAllItemsForUser($userId),
+            ReadScopeKind::Feed => [$this->subscriptions->getOneForUser($userId, $scope->targetId())],
+            ReadScopeKind::Tag => $this->subscriptionScope->findForUserInTagScope(
+                $userId,
+                $this->tags->getOneForUser($userId, $scope->targetId())->requireId(),
+            ),
+            ReadScopeKind::Network => $this->subscriptionScope->findForUserOnNetwork(
+                $userId,
+                $scope->targetNetworkScope(),
+            ),
+            ReadScopeKind::Group => $this->subscriptionScope->findForUserInFeedGroup(
+                $userId,
+                $scope->targetFeedGroup(),
+            ),
+        };
+    }
+}

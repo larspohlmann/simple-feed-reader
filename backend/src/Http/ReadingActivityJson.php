@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Reading\Model\ReadingActivityModel;
-use App\Service\SubscriptionHistory\Model\ActivityDayModel;
-use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
+use App\Service\Library\Reading\Model\ReadingActivityModel;
+use App\Service\Library\SubscriptionHistory\Model\ActivityDayModel;
+use App\Service\Library\SubscriptionHistory\Model\FeedArrivalRateModel;
 
 /**
  * The About page's statistics over plain feeds; social feeds are left out. The two 30-day charts have one entry per

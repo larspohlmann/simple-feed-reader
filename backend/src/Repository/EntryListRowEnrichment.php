@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
-use App\Service\Social\Model\ThreadPostModel;
+use App\Service\Social\Social\Model\ThreadPostModel;
 
 final readonly class EntryListRowEnrichment
 {

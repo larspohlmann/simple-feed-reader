@@ -1,0 +1,223 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Outbound\Image;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\ImageRendition;
+use App\Repository\PendingImageVerificationRepository;
+use App\Repository\ProbedLadderRepository;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Image\ImageVerificationSweep;
+use App\Service\Outbound\Image\ImageVerifier;
+use App\Service\Outbound\Image\Model\ImageVerificationBudgetModel;
+use App\Tests\DbTestCase;
+use App\Tests\Support\RenditionProbes;
+use App\Tests\Support\PendingImageFixtures;
+use App\Tests\Support\PngImageFactory;
+use App\Tests\Support\StubGuardedImageDownloader;
+use App\Tests\Support\StubGuardedImageProbe;
+use Symfony\Component\Clock\MockClock;
+
+final class ImageVerificationSweepTest extends DbTestCase
+{
+    private const string NOW = '2026-09-21 12:00:00';
+
+    private function sweep(
+        StubGuardedImageDownloader $downloader,
+        StubGuardedImageProbe $probe = new StubGuardedImageProbe(),
+        MockClock $clock = new MockClock(self::NOW),
+    ): ImageVerificationSweep {
+        /** @var PendingImageVerificationRepository $repository */
+        $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        /** @var ProbedLadderRepository $probedLadders */
+        $probedLadders = self::getContainer()->get(ProbedLadderRepository::class);
+        $verifier = new ImageVerifier(
+            $downloader,
+            new NaiveUtcClock($clock),
+            RenditionProbes::over($probe),
+            $probedLadders,
+        );
+
+        return new ImageVerificationSweep($repository, $verifier, $this->entityManager, $clock);
+    }
+
+    private function pendingEntry(Feed $feed, string $guid, string $imageUrl): void
+    {
+        (new PendingImageFixtures($this->entityManager))->pendingImage($feed, $guid, $imageUrl);
+    }
+
+    public function testMeasuresDropsAndReportsCounts(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'good', 'https://i/good.png');
+        $this->pendingEntry($feed, 'beacon', 'https://i/beacon.png');
+        $this->pendingEntry($feed, 'rejected', 'https://i/rejected.png');
+        $this->entityManager->flush();
+
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes('https://i/good.png', PngImageFactory::bytes(600, 400));
+        $downloader->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
+        $downloader->willFail('https://i/rejected.png', new GuardedImageRejectedException('Image responded 403.'));
+
+        $report = $this->sweep($downloader)->verifyDue(self::anHour());
+
+        self::assertSame(1, $report->measured);
+        self::assertSame(1, $report->kept);
+        self::assertSame(1, $report->dropped);
+        self::assertSame(0, $report->retried);
+
+        $this->entityManager->clear();
+        $good = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'good']);
+        self::assertNotNull($good);
+        self::assertSame(600, $good->getImageWidth());
+        self::assertNotNull($good->getImage()->getCheckedAt());
+        $beacon = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'beacon']);
+        self::assertNotNull($beacon);
+        self::assertNull($beacon->getImageUrl());
+        $rejected = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'rejected']);
+        self::assertNotNull($rejected);
+        self::assertSame('https://i/rejected.png', $rejected->getImageUrl());
+        self::assertNotNull($rejected->getImage()->getCheckedAt());
+    }
+
+    public function testImagesSharingAUrlInOneTickAreProbedOnce(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'episode-1', 'https://i/podcast/logo-600x600.jpg');
+        $this->pendingEntry($feed, 'episode-2', 'https://i/podcast/logo-600x600.jpg');
+        $this->entityManager->flush();
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 600));
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist('https://i/podcast/logo-512x512.jpg');
+
+        $this->sweep($downloader, $probe)->verifyDue(self::anHour());
+
+        self::assertCount(1, array_keys($probe->requestedUrls(), 'https://i/podcast/logo-512x512.jpg', true));
+        $this->entityManager->clear();
+        $second = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'episode-2']);
+        self::assertNotNull($second);
+        self::assertEquals(
+            [new ImageRendition('https://i/podcast/logo-512x512.jpg', 512)],
+            $second->getImage()->getRenditions(),
+        );
+    }
+
+    public function testCountsARetriedImageAndLeavesItPending(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'gone', 'https://i/gone.png');
+        $this->entityManager->flush();
+
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willFail('https://i/gone.png', new GuardedImageUnavailableException('timeout'));
+
+        $report = $this->sweep($downloader)->verifyDue(self::anHour());
+
+        self::assertSame(0, $report->measured);
+        self::assertSame(0, $report->dropped);
+        self::assertSame(1, $report->retried);
+
+        $this->entityManager->clear();
+        $gone = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'gone']);
+        self::assertNotNull($gone);
+        self::assertSame('https://i/gone.png', $gone->getImageUrl());
+        self::assertNull($gone->getImage()->getCheckedAt());
+    }
+
+    public function testAQueuedRowWithoutAUrlIsSettledNotReturnedForever(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'poison', 'https://i/poison.png');
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE entry SET image_url = NULL WHERE guid = ?',
+            ['poison'],
+        );
+        $this->entityManager->clear();
+
+        $report = $this->sweep(new StubGuardedImageDownloader())->verifyDue(self::anHour());
+
+        self::assertSame(1, $report->dropped);
+        /** @var PendingImageVerificationRepository $repository */
+        $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertCount(0, $repository->findPendingImageVerification(50));
+    }
+
+    public function testAVerifiedImageLeavesTheQueue(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'good', 'https://i/good.png');
+        $this->entityManager->flush();
+
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+        $this->sweep($downloader)->verifyDue(self::anHour());
+        $this->entityManager->clear();
+
+        /** @var PendingImageVerificationRepository $repository */
+        $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertCount(0, $repository->findPendingImageVerification(50));
+    }
+
+    public function testAPassedDeadlineVerifiesNothing(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'good', 'https://i/good.png');
+        $this->entityManager->flush();
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+
+        $report = $this->sweep($downloader)->verifyDue(ImageVerificationBudgetModel::seconds(0));
+
+        self::assertSame(0, $report->measured);
+    }
+
+    public function testStopsAtTheDeadlineWhenDownloadsTakeTime(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        foreach (['one', 'two', 'three'] as $guid) {
+            $this->pendingEntry($feed, $guid, 'https://i/' . $guid . '.png');
+        }
+        $this->entityManager->flush();
+        $clock = new MockClock(self::NOW);
+        $downloader = new StubGuardedImageDownloader($clock);
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+        $downloader->secondsPerDownload = 10;
+
+        $report = $this->sweep($downloader, clock: $clock)->verifyDue(ImageVerificationBudgetModel::seconds(15));
+
+        self::assertSame(2, $report->measured);
+    }
+
+    public function testAPassLeavesNoEntryManaged(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $verified = (new PendingImageFixtures($this->entityManager))->pendingImage($feed, 'good', 'https://i/good.png');
+        $this->entityManager->flush();
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+
+        $this->sweep($downloader)->verifyDue(self::anHour());
+
+        self::assertFalse($this->entityManager->contains($verified));
+    }
+
+    private static function anHour(): ImageVerificationBudgetModel
+    {
+        return ImageVerificationBudgetModel::seconds(3600);
+    }
+}

@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryImage;
 use App\Entity\ImageRendition;
 use App\Entity\StoredList;
-use App\Service\Image\ProbedLadder\ProbedLadderInterface;
+use App\Service\Outbound\Image\ProbedLadder\ProbedLadderInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

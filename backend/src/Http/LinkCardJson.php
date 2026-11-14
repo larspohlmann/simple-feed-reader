@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\LinkCardContent;
-use App\Service\Reader\ReaderUrlSignature;
+use App\Service\Content\Reader\ReaderUrlSignature;
 
 /**
  * @phpstan-type LinkCardFields array{

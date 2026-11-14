@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Image\Model\ProxiedImageModel;
+use App\Service\Outbound\Image\Model\ProxiedImageModel;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ProxiedImageResponse

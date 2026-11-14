@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 use App\Enum\SourceFormat;
-use App\Service\Catalog\Model\CatalogFeedDetailsModel;
+use App\Service\Sourcing\Catalog\Model\CatalogFeedDetailsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CatalogFeedRequest

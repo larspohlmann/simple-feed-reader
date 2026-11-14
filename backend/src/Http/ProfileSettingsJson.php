@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileTuning;
-use App\Service\Recommendation\Profile\Model\ProfileSettingsModel;
-use App\Service\Recommendation\Profile\Support\ProfileSchedule;
-use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileSettingsModel;
+use App\Service\Curation\Recommendation\Profile\Support\ProfileSchedule;
+use App\Service\Curation\Recommendation\Settings\Support\RecommendationSettingsBounds;
 
 /** The profile section's state. `connection` is the one that builds the profile; null means none can. */
 final class ProfileSettingsJson

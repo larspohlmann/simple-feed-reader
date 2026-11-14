@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\SelfUpdate\Model\UpdateRequestModel;
-use App\Service\SelfUpdate\Model\UpdateRunModel;
-use App\Service\SelfUpdate\UpdateStateStore\UpdateStateStoreInterface;
+use App\Service\Operations\SelfUpdate\Model\UpdateRequestModel;
+use App\Service\Operations\SelfUpdate\Model\UpdateRunModel;
+use App\Service\Operations\SelfUpdate\UpdateStateStore\UpdateStateStoreInterface;
 
 final class InMemoryUpdateStateStore implements UpdateStateStoreInterface
 {

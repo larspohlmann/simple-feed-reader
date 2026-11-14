@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Fetch\DnsResolver\NativeDnsResolver;
+use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
 

@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\Recommendation\Run\Model;
+
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+
+/**
+ * One batch of the frozen plan in a wave: its plan position, its snapshot-order ids, and the article lines those ids
+ * still resolve to. A batch pruned to nothing resolves to no winners without a provider call.
+ */
+final readonly class WaveBatchModel
+{
+    /**
+     * @param list<int>                   $ids       the batch's entry ids, in snapshot order
+     * @param array<int, ArticleLineModel> $linesById entries pruned since the snapshot are absent
+     */
+    public function __construct(
+        public int $index,
+        public array $ids,
+        public array $linesById,
+    ) {
+    }
+
+    /**
+     * The ids whose entries still exist, so the reply must cover exactly these.
+     *
+     * @return list<int>
+     */
+    public function validIds(): array
+    {
+        return array_keys($this->linesById);
+    }
+
+    /** @return list<ArticleLineModel> */
+    public function linesInSnapshotOrder(): array
+    {
+        $present = array_filter($this->ids, fn (int $id): bool => isset($this->linesById[$id]));
+
+        return array_values(array_map(fn (int $id): ArticleLineModel => $this->linesById[$id], $present));
+    }
+
+    /**
+     * @return non-empty-list<ArticleLineModel>
+     *
+     * @throws \LogicException when the batch was pruned to nothing, which makes no call
+     */
+    public function requireLinesInSnapshotOrder(): array
+    {
+        $lines = $this->linesInSnapshotOrder();
+
+        return [] === $lines
+            ? throw new \LogicException(sprintf('Batch %d was pruned to nothing and makes no call.', $this->index))
+            : $lines;
+    }
+
+    public function isFullyPruned(): bool
+    {
+        return [] === $this->linesById;
+    }
+}

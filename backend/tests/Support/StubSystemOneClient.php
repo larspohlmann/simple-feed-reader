@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Scoring\Support\SystemOneReplyDecoder;
-use App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Support\SystemOneReplyDecoder;
+use App\Service\Curation\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface;
 
 /**
  * The test container's SystemOneClientInterface: records every request and answers each from one FIFO queue, so

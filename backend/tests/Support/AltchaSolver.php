@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Auth\AltchaService;
+use App\Service\Identity\Auth\AltchaService;
 
 /**
  * Builds the payload the widget would submit by brute-forcing an issued challenge: verify() checks an HMAC and a

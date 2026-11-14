@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
+use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** A maintenance sweep that records the deadlines it was run with. */

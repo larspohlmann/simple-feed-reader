@@ -6,13 +6,13 @@ namespace App\Tests\Support;
 
 use App\Entity\SubscriptionDay;
 use App\Repository\SubscriptionActivityRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Retention\RetentionSettings;
-use App\Service\SubscriptionHistory\Factory\DaySourcesFactory;
-use App\Service\SubscriptionHistory\LiveDayCounter;
-use App\Service\SubscriptionHistory\RetentionHorizon;
-use App\Service\SubscriptionHistory\SubscriptionActivityCounter;
-use App\Service\SubscriptionHistory\SubscriptionHistoryRecorder;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Ingestion\Retention\RetentionSettings;
+use App\Service\Library\SubscriptionHistory\Factory\DaySourcesFactory;
+use App\Service\Library\SubscriptionHistory\LiveDayCounter;
+use App\Service\Library\SubscriptionHistory\RetentionHorizon;
+use App\Service\Library\SubscriptionHistory\SubscriptionActivityCounter;
+use App\Service\Library\SubscriptionHistory\SubscriptionHistoryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

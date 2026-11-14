@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ReplaceCredentialRequest

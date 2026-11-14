@@ -33,7 +33,7 @@ use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\LinkCardRepository;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;

@@ -6,7 +6,7 @@ declare(strict_types=1);
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 namespace App\Entity\Fixtures {
-    use App\Service\Crypto\SealedSecret;
+    use App\Service\Foundation\Crypto\SealedSecret;
 
     final class StoresAServiceValue
     {
@@ -19,12 +19,12 @@ namespace App\Entity\Fixtures {
 namespace App\Enum\Fixtures {
     enum NamesAService: string
     {
-        case Mailer = 'App\Service\Mail\AccountMailer';
+        case Mailer = 'App\Service\Outbound\Mail\AccountMailer';
     }
 }
 
 namespace App\Doctrine\Fixtures {
-    use App\{Service\Search\WordBoundaries};
+    use App\{Service\Library\Search\WordBoundaries};
 
     final class SharesAServiceHelper
     {
@@ -37,7 +37,7 @@ namespace App\Doctrine\Fixtures {
 
 namespace App\Service\Fixtures {
     use App\Entity\SealedSecret;
-    use App\Service\Mail\AccountMailer;
+    use App\Service\Outbound\Mail\AccountMailer;
 
     final class ServicesMayKnowEntities
     {
@@ -70,7 +70,7 @@ namespace App\Entity\Fixtures\Clean {
 }
 
 namespace App\Entity\Fixtures\Gaps {
-    use App\Service\{Crypto\SealedSecret, Search\WordBoundaries};
+    use App\Service\{Foundation\Crypto\SealedSecret, Library\Search\WordBoundaries};
     use App\Service as Services;
 
     final class KnowsServicesThroughTheGaps
@@ -82,7 +82,7 @@ namespace App\Entity\Fixtures\Gaps {
 
         public function fullyQualifiedName(): string
         {
-            return \App\Service\Mail\AccountMailer::class;
+            return \App\Service\Outbound\Mail\AccountMailer::class;
         }
 
         public function interpolatedString(string $suffix): string

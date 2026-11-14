@@ -6,8 +6,8 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
-use App\Service\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class FeedDirectoryProblems implements ExceptionProblemsInterface

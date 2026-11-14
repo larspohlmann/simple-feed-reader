@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Operations\Worker\Handler;
+
+use App\Service\Outbound\Mail\Digest\SendDueDigests as SendDueDigestsService;
+use App\Service\Operations\Worker\Message\SendDueDigests;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+
+/** Delegates straight to SendDueDigests: nothing here re-derives dueness or second-guesses the service's report. */
+#[AsMessageHandler]
+final readonly class SendDueDigestsHandler
+{
+    public function __construct(
+        private SendDueDigestsService $sendDueDigests,
+        private LoggerInterface $logger,
+    ) {
+    }
+
+    public function __invoke(SendDueDigests $message): void
+    {
+        $report = $this->sendDueDigests->run();
+
+        $this->logger->info('Worker digest sweep finished.', ['report' => $report->toLogContext()]);
+    }
+}

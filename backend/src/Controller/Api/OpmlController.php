@@ -6,8 +6,8 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\OpmlJson;
-use App\Service\Opml\OpmlExporter;
-use App\Service\Opml\OpmlImporter;
+use App\Service\Library\Opml\OpmlExporter;
+use App\Service\Library\Opml\OpmlImporter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

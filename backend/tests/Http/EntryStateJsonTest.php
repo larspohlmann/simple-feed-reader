@@ -9,7 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\User;
 use App\Http\EntryStateJson;
-use App\Service\Reading\Model\UpdatedEntryStateModel;
+use App\Service\Library\Reading\Model\UpdatedEntryStateModel;
 use PHPUnit\Framework\TestCase;
 
 final class EntryStateJsonTest extends TestCase

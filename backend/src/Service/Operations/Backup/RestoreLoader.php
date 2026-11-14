@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Operations\Backup;
+
+use App\Entity\User;
+use App\Repository\FeedRepository;
+use App\Service\Identity\Account\AccountSettings;
+use App\Service\Operations\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Operations\Backup\Model\RestoreResultModel;
+use App\Service\Operations\Backup\Pass\RestoreLoadPass;
+use App\Service\Library\Search\SavedSearchSlug;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * Pass 2 of the restore: the second read of the same bytes, now writing rows. It assumes AccountReset has just run
+ * and removes nothing; the per-run state lives on the RestoreLoadPass built for each call.
+ */
+final readonly class RestoreLoader
+{
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private BackupReader $reader,
+        private FeedRepository $feeds,
+        private SavedSearchSlug $savedSearchSlug,
+        private RestoredFoundationFactory $foundationFactory,
+        private AccountSettings $accountSettings,
+    ) {
+    }
+
+    public function load(User $user, string $gzipBytes): RestoreResultModel
+    {
+        $pass = new RestoreLoadPass(
+            $this->entityManager,
+            $this->feeds,
+            $this->savedSearchSlug,
+            $this->foundationFactory,
+            $this->accountSettings->of($user),
+        );
+
+        return $pass->run($user, $this->reader->read($gzipBytes, $user->requireId()));
+    }
+}

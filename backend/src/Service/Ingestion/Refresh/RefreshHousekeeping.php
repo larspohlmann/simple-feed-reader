@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Ingestion\Refresh;
+
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Retention\EntryPruner;
+use App\Service\Library\SubscriptionHistory\SubscriptionHistoryRecorder;
+use Psr\Log\LoggerInterface;
+
+/** The work only a pruning (maintenance) refresh does; a user-triggered refresh skips it to stay fast. */
+final readonly class RefreshHousekeeping
+{
+    public function __construct(
+        private OrphanedFeedReclaimer $orphanedFeeds,
+        private EntryPruner $pruner,
+        private SubscriptionHistoryRecorder $history,
+        private LoggerInterface $logger,
+    ) {
+    }
+
+    public function reclaimOrphanedFeeds(RefreshRequestModel $request): void
+    {
+        if (!$request->prune) {
+            return;
+        }
+
+        $reclaimed = $this->orphanedFeeds->reclaimAll();
+        if ($reclaimed > 0) {
+            $this->logger->info('Reclaimed orphaned feeds', ['count' => $reclaimed]);
+        }
+    }
+
+    public function recordSubscriptionHistory(RefreshRequestModel $request): void
+    {
+        if (!$request->prune) {
+            return;
+        }
+
+        $recorded = $this->history->recordCompletedDays();
+        if ($recorded > 0) {
+            $this->logger->info('Recorded subscription history days', ['count' => $recorded]);
+        }
+    }
+
+    public function pruneEntries(RefreshRequestModel $request): int
+    {
+        return $request->prune ? $this->pruner->prune() : 0;
+    }
+}

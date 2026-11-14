@@ -463,7 +463,7 @@ prod_uses_bundled_mysql() {
 # Trim leading and trailing whitespace -- POSIX character-class parameter
 # expansion, no external process. Used below so the shell's idea of "empty"
 # matches PHP's trim(), the way SearchEngineCapability::isConfigured() defines
-# it (backend/src/Service/Search/SearchEngineCapability.php).
+# it (backend/src/Service/Library/Search/SearchEngineCapability.php).
 trim_whitespace() {
   local value=$1
   value="${value#"${value%%[![:space:]]*}"}"

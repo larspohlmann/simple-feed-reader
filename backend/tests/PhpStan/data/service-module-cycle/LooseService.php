@@ -6,7 +6,7 @@ declare(strict_types=1);
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 namespace App\Service {
-    use App\Service\Alpha\AlphaThing;
+    use App\Service\Fixture\Alpha\AlphaThing;
 
     final class LooseService
     {
@@ -16,7 +16,7 @@ namespace App\Service {
     }
 }
 
-namespace App\Service\Alpha {
+namespace App\Service\Fixture\Alpha {
     use App\Service\LooseService;
 
     final class AlphaThing

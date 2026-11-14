@@ -13,7 +13,7 @@ use App\Dto\Admin\AdminUserTag;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Admin\Model\UserFootprintModel;
+use App\Service\Operations\Admin\Model\UserFootprintModel;
 
 /**
  * The admin view of one account and of the approval queue, built field by field so a column added to User never

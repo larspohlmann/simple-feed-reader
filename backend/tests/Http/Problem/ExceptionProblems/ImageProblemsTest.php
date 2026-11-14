@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\ImageProblems;
-use App\Service\Image\Exception\ImageRefusedException;
-use App\Service\Image\Exception\ImageUnavailableException;
-use App\Service\Image\Exception\InvalidImageUrlException;
+use App\Service\Outbound\Image\Exception\ImageRefusedException;
+use App\Service\Outbound\Image\Exception\ImageUnavailableException;
+use App\Service\Outbound\Image\Exception\InvalidImageUrlException;
 use PHPUnit\Framework\TestCase;
 
 final class ImageProblemsTest extends TestCase

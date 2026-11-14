@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Ingestion\Scraper;
+
+use App\Service\Ingestion\Scraper\CardTitle;
+use App\Service\Ingestion\Scraper\ScrapeLayer\ClusterLayer;
+use App\Tests\Support\ParsesHtml;
+use PHPUnit\Framework\TestCase;
+
+final class ClusterLayerTest extends TestCase
+{
+    use ParsesHtml;
+
+    use ScrapedFixtures;
+
+    /** @return list<\App\Service\Ingestion\Scraper\Model\ScrapedItemModel> */
+    private function extract(string $fixture, string $baseUrl): array
+    {
+        $document = $this->document($this->scrapedFixture($fixture));
+
+        return new ClusterLayer(new CardTitle())->extract($document, $baseUrl);
+    }
+
+    public function testFindsTagesschauTeaserCluster(): void
+    {
+        $items = $this->extract('tagesschau-2026-07-23.html', 'https://www.tagesschau.de/');
+        self::assertGreaterThanOrEqual(20, \count($items));
+        $first = $items[0];
+        self::assertStringNotContainsString("\u{00AD}", $first->title);
+        self::assertMatchesRegularExpression('#^https://www\.tagesschau\.de/#', $first->url);
+        $withTeaser = array_filter($items, static fn ($item) => $item->teaser !== null);
+        self::assertGreaterThanOrEqual(10, \count($withTeaser));
+    }
+
+    public function testChromeOnlyPagesYieldNothing(): void
+    {
+        self::assertSame([], $this->extract('nav-only.html', 'https://nav.test/'));
+    }
+
+    public function testFooterListDoesNotBeatRealCards(): void
+    {
+        $items = $this->extract('footer-links.html', 'https://footer.test/');
+        self::assertCount(3, $items);
+        self::assertStringContainsString('/posts/', $items[0]->url);
+    }
+
+    /**
+     * Guards the container-ascent memo on a flat page: no timing assertion, since the suite's duration is the tell, but
+     * the extraction must stay correct.
+     */
+    public function testFlatPageWithThousandsOfSiblingAnchorsStillExtracts(): void
+    {
+        $links = '';
+        for ($index = 0; $index < 2000; $index++) {
+            $links .= sprintf('<a href="/p/%d">Story number %d headline</a>', $index, $index);
+        }
+        $document = $this->document(
+            '<html lang="en"><body><main>' . $links . '</main></body></html>'
+        );
+
+        $items = new ClusterLayer(new CardTitle())->extract($document, 'https://flat.test/');
+
+        self::assertCount(2000, $items);
+        self::assertSame('https://flat.test/p/0', $items[0]->url);
+        self::assertSame('Story number 0 headline', $items[0]->title);
+    }
+}

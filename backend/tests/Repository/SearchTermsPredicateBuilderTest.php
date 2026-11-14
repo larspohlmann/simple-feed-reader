@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Repository\IndexSearchPredicates;
 use App\Repository\LikeSearchPredicates;
 use App\Repository\SearchTermsPredicateBuilder;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 

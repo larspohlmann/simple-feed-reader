@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\Factory\FeedDirectoryFileResponseFactory;
-use App\Service\FeedDirectory\FeedDirectoryFiles;
+use App\Service\Sourcing\FeedDirectory\FeedDirectoryFiles;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;

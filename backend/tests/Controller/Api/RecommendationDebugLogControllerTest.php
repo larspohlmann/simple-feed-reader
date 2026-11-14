@@ -9,7 +9,7 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
-use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 

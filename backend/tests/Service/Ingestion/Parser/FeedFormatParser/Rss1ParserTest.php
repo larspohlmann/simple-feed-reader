@@ -1,0 +1,344 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Ingestion\Parser\FeedFormatParser;
+
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Tests\Support\FeedFormatParsers;
+use PHPUnit\Framework\TestCase;
+
+final class Rss1ParserTest extends TestCase
+{
+    private function parseSingleItem(string $itemXml): ParsedEntryModel
+    {
+        /** @noinspection XmlUnusedNamespaceDeclaration */
+        $xml = <<<XML
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
+                     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+              <channel rdf:about="https://rss1.example.com/"><title>Feed</title></channel>
+              {$itemXml}
+            </rdf:RDF>
+            XML;
+
+        return FeedFormatParsers::feed($xml)->entries[0];
+    }
+
+    public function testImageUrlComesFromContentEncodedThenMediaThenNull(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:dc="http://purl.org/dc/elements/1.1/"
+                     xmlns:content="http://purl.org/rss/1.0/modules/content/"
+                     xmlns:media="http://search.yahoo.com/mrss/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+                <description>An RDF site summary</description>
+              </channel>
+              <item rdf:about="https://e/content">
+                <title>Content Item</title>
+                <link>https://e/content</link>
+                <description>desc content</description>
+                <content:encoded>&lt;p&gt;&lt;img src="https://e/c.jpg"&gt;&lt;/p&gt;</content:encoded>
+                <dc:creator>Grace Hopper</dc:creator>
+              </item>
+              <item rdf:about="https://e/media">
+                <title>Media Item</title>
+                <link>https://e/media</link>
+                <description>desc media</description>
+                <media:content url="https://e/m.jpg" medium="image"/>
+              </item>
+              <item rdf:about="https://e/plain">
+                <title>Plain Item</title>
+                <link>https://e/plain</link>
+                <description>desc plain, no image anywhere</description>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = FeedFormatParsers::feed($xml);
+
+        self::assertCount(3, $feed->entries);
+        self::assertSame('https://e/c.jpg', $feed->entries[0]->media->image?->url);
+        self::assertSame('https://e/m.jpg', $feed->entries[1]->media->image?->url);
+        self::assertNull($feed->entries[2]->media->image);
+    }
+
+    public function testReadsACustomImageBigElementWhenTheItemHasNoStandardImage(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+                <description>An RDF site summary</description>
+              </channel>
+              <item rdf:about="https://e/custom">
+                <title>Custom image item</title>
+                <link>https://e/custom</link>
+                <description>desc, no inline image</description>
+                <image url="https://images.example.de/small.jpg" width="194" height="126"/>
+                <image_big url="https://images.example.de/big.jpg" width="640" height="300"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = FeedFormatParsers::feed($xml);
+
+        self::assertCount(1, $feed->entries);
+        $image = $feed->entries[0]->media->image;
+        self::assertNotNull($image);
+        self::assertSame('https://images.example.de/big.jpg', $image->url);
+        self::assertSame(640, $image->width);
+    }
+
+    public function testMediaImageWinsOverACustomImageElement(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:media="http://search.yahoo.com/mrss/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+                <description>An RDF site summary</description>
+              </channel>
+              <item rdf:about="https://e/both">
+                <title>Both kinds item</title>
+                <link>https://e/both</link>
+                <description>desc</description>
+                <media:content url="https://e/media.jpg" medium="image" width="800"/>
+                <image_big url="https://e/custom.jpg" width="640"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = FeedFormatParsers::feed($xml);
+
+        self::assertSame('https://e/media.jpg', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testCustomImageElementWinsOverAnInlineImg(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+                <description>An RDF site summary</description>
+              </channel>
+              <item rdf:about="https://e/custom-over-inline">
+                <title>Custom over inline</title>
+                <link>https://e/custom-over-inline</link>
+                <content:encoded>&lt;p&gt;&lt;img src="https://e/inline.jpg"&gt;&lt;/p&gt;</content:encoded>
+                <image_big url="https://e/custom.jpg" width="640"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = FeedFormatParsers::feed($xml);
+
+        self::assertSame('https://e/custom.jpg', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testTitlesAreReducedToPlainText(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>The &lt;em&gt;Weekly&lt;/em&gt; Review</title>
+                <link>https://rss1.example.com/</link>
+                <description>desc</description>
+              </channel>
+              <item rdf:about="https://e/odyssey">
+                <title>An &lt;em&gt;Odyssey&lt;/em&gt; for Our Own Time</title>
+                <link>https://e/odyssey</link>
+              </item>
+              <item rdf:about="https://e/datatype">
+                <title>&amp;#8220;Datatype&amp;#8221; is an OpenType variable font</title>
+                <link>https://e/datatype</link>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = FeedFormatParsers::feed($xml);
+
+        self::assertSame('The Weekly Review', $feed->title);
+        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->headline->text);
+        self::assertSame(
+            "\u{201C}Datatype\u{201D} is an OpenType variable font",
+            $feed->entries[1]->headline->text,
+        );
+    }
+
+    public function testANestedChannelIsNotTheFeedsChannel(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
+                     xmlns:x="urn:example:other">
+              <x:meta><channel rdf:about="https://decoy.example/"><title>Decoy</title></channel></x:meta>
+              <channel rdf:about="https://example.com/"><title>Core</title></channel>
+            </rdf:RDF>
+            XML);
+
+        self::assertSame('Core', $feed->title);
+    }
+
+    public function testADocumentWithoutARootIsAParseError(): void
+    {
+        $this->expectException(FeedParseException::class);
+
+        FeedFormatParsers::rss1()->parseFeed(new \DOMDocument(), []);
+    }
+
+    public function testADocumentWithoutAChannelIsAParseError(): void
+    {
+        $document = new \DOMDocument();
+        $document->loadXML(
+            '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"/>',
+        );
+
+        $this->expectException(FeedParseException::class);
+
+        FeedFormatParsers::rss1()->parseFeed($document, []);
+    }
+
+    public function testReadsTheImageFromTheRdfRoot(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/">
+                <channel rdf:about="https://example.com/">
+                    <title>Example</title>
+                    <link>https://example.com/</link>
+                    <description>Example feed</description>
+                    <image rdf:resource="https://example.com/logo.png"/>
+                </channel>
+                <image rdf:about="https://example.com/logo.png">
+                    <url>https://example.com/logo.png</url>
+                </image>
+                <item rdf:about="https://example.com/1">
+                    <title>One</title>
+                    <link>https://example.com/1</link>
+                </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = FeedFormatParsers::feed($xml);
+
+        self::assertSame('https://example.com/logo.png', $feed->imageUrl);
+    }
+
+    public function testCarriesAMediaContentAudioIntoTheEntryAttachments(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:media="http://search.yahoo.com/mrss/">
+              <channel rdf:about="https://e/">
+                <title>Feed</title>
+                <link>https://e/</link>
+                <description>Feed</description>
+              </channel>
+              <item rdf:about="https://e/audio">
+                <title>Audio Item</title>
+                <link>https://e/audio</link>
+                <description>desc</description>
+                <media:content url="https://cdn/ep.mp3" type="audio/mpeg"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $entry = FeedFormatParsers::feed($xml)->entries[0];
+
+        $bundle = $entry->media->mediaBundle;
+
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
+    }
+
+    public function testAPlainTextDescriptionKeepsItsLineBreaks(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item rdf:about="https://e/set">
+              <title>Summer set</title>
+              <description>Track list :
+            1.Idaishoy</description>
+            </item>
+            XML);
+
+        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $entry->contentHtml);
+    }
+
+    public function testTheLinkWinsOverRdfAboutAsTheUrlAndAboutStandsInWithoutOne(): void
+    {
+        $linked = $this->parseSingleItem(
+            '<item rdf:about="https://e/about"><title>T</title><link>https://e/link</link></item>',
+        );
+        $unlinked = $this->parseSingleItem('<item rdf:about=" https://e/about "><title>T</title></item>');
+        $blankAbout = $this->parseSingleItem('<item rdf:about=" "><title>T</title></item>');
+
+        self::assertSame('https://e/link', $linked->url);
+        self::assertSame('https://e/about', $unlinked->url);
+        self::assertNull($blankAbout->url);
+    }
+
+    public function testContentEncodedWinsOverTheDescriptionAsTheBody(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item rdf:about="https://e/post">
+              <title>Post</title>
+              <description>The teaser</description>
+              <content:encoded>&lt;p&gt;The article&lt;/p&gt;</content:encoded>
+            </item>
+            XML);
+
+        self::assertSame('<p>The article</p>', $entry->contentHtml);
+        self::assertSame('The teaser', $entry->summary);
+    }
+
+    public function testAWhitespacePaddedAboutBecomesTheUrlOfAnItemWithoutALink(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item rdf:about="  https://rss1.example.com/padded  "><title>Padded</title></item>',
+        );
+
+        self::assertSame('https://rss1.example.com/padded', $entry->url);
+    }
+
+    public function testAnItemInsideTheChannelIsNotAnEntry(): void
+    {
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(FeedFormatParsers::feed(<<<'XML'
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/">
+              <channel><title>Feed</title><item><title>Decoy</title></item></channel>
+              <item><title>Core</title></item>
+            </rdf:RDF>
+            XML)));
+    }
+
+    public function testAnItemWithoutATitleTakesItsTitleFromTheDescription(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item rdf:about="https://example.social/@a/1"><link>https://example.social/@a/1</link>'
+            . '<description>&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</description></item>',
+        );
+
+        self::assertSame('Hello from the fediverse.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
+    }
+}

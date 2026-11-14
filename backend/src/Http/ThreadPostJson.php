@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\EntryMedia;
-use App\Service\Ingest\Support\EntrySnippet;
-use App\Service\Social\Model\ThreadPostModel;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
+use App\Service\Social\Social\Model\ThreadPostModel;
 
 /**
  * @phpstan-import-type LinkCardRow from LinkCardJson

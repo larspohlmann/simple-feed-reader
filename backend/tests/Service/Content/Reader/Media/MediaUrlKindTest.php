@@ -1,0 +1,121 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Content\Reader\Media;
+
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use PHPUnit\Framework\TestCase;
+
+final class MediaUrlKindTest extends TestCase
+{
+    private MediaUrlKind $kind;
+
+    protected function setUp(): void
+    {
+        $this->kind = new MediaUrlKind(
+            new DurableMediaUrl(),
+            new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
+        );
+    }
+
+    public function testRecognisesAudioByExtension(): void
+    {
+        $mp3 = $this->kind->resolve('https://x.test/a.mp3');
+        self::assertNotNull($mp3);
+        self::assertSame(MediaKind::Audio, $mp3->kind);
+        self::assertSame('https://x.test/a.mp3', $mp3->url);
+
+        $m4a = $this->kind->resolve('https://x.test/a.m4a');
+        self::assertNotNull($m4a);
+        self::assertSame(MediaKind::Audio, $m4a->kind);
+    }
+
+    public function testRecognisesVideoByExtension(): void
+    {
+        $video = $this->kind->resolve('https://x.test/v.mp4');
+
+        self::assertNotNull($video);
+        self::assertSame(MediaKind::Video, $video->kind);
+        self::assertSame('https://x.test/v.mp4', $video->url);
+    }
+
+    public function testRecognisesAnEmbedByProviderAndReturnsItsCanonicalUrl(): void
+    {
+        $embed = $this->kind->resolve('https://www.youtube.com/watch?v=M1j_uRqKMKI');
+
+        self::assertNotNull($embed);
+        self::assertSame(MediaKind::Embed, $embed->kind);
+        self::assertStringContainsString('M1j_uRqKMKI', $embed->url);
+    }
+
+    /**
+     * The trap ARD sets: og:video points at a player PAGE. Treating that as
+     * video would put an HTML document in a <video src>.
+     */
+    public function testRejectsAPlayerPage(): void
+    {
+        self::assertNull($this->kind->resolve('https://www.tagesschau.de/video/video-1640158~player.html'));
+    }
+
+    public function testRejectsAnImage(): void
+    {
+        self::assertNull($this->kind->resolve('https://x.test/photo.jpg'));
+    }
+
+    /** ZDF 491430: an HLS playlist is a stream, never a file — VIDEO_EXTENSIONS must not learn it. */
+    public function testRecognisesAnHlsPlaylistAsAStreamNotAFile(): void
+    {
+        $resolved = $this->kind->resolve('https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8');
+
+        self::assertNotNull($resolved);
+        self::assertSame(MediaKind::Stream, $resolved->kind);
+        self::assertNotSame(MediaKind::Video, $resolved->kind);
+    }
+
+    public function testATokenisedPlaylistIsStillRefused(): void
+    {
+        self::assertNull($this->kind->resolve('https://cdn.test/v/master.m3u8?hdnts=exp=1'));
+    }
+
+    /** A query is stripped before the extension is read, then re-checked. */
+    public function testStripsAQueryBeforeJudging(): void
+    {
+        $resolved = $this->kind->resolve('https://x.test/a.mp3?t=progseg&sc=siteplayer');
+
+        self::assertNotNull($resolved);
+        self::assertSame(MediaKind::Audio, $resolved->kind);
+        self::assertSame('https://x.test/a.mp3', $resolved->url);
+    }
+
+    /** The exact failure this refactor closes: a signed url must never survive into the resolved form. */
+    public function testStripsASignedUrlsQueryBeforeEmitting(): void
+    {
+        $resolved = $this->kind->resolve('https://x.test/v.mp4?Expires=1&Signature=abc');
+
+        self::assertNotNull($resolved);
+        self::assertSame(MediaKind::Video, $resolved->kind);
+        self::assertSame('https://x.test/v.mp4', $resolved->url);
+    }
+
+    /** DurableMediaUrl's exclusions still bind: narration is not this article. */
+    public function testRejectsMachineNarration(): void
+    {
+        self::assertNull($this->kind->resolve('https://x.test/tts/a-OnyxTurboMultilingualNeural.mp3'));
+    }
+
+    public function testRejectsALiveStream(): void
+    {
+        self::assertNull($this->kind->resolve('https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3'));
+    }
+
+    public function testRefusesALiveAudioStream(): void
+    {
+        self::assertNull($this->kind->resolve('https://radio.test/live.aac'));
+    }
+}

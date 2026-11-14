@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * The admin's per-account limits, the trial window and the subscription cap, written only by
- * App\Service\Admin\UserLimits.
+ * App\Service\Operations\Admin\UserLimits.
  */
 #[ORM\Embeddable]
 final class AccountLimits
@@ -24,7 +24,7 @@ final class AccountLimits
     /**
      * A per-user override of the global subscription cap. Null means "fall back
      * to SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER" — resolved in exactly
-     * one place, App\Service\Subscription\SubscriptionLimitResolver.
+     * one place, App\Service\Library\Subscription\SubscriptionLimitResolver.
      */
     #[ORM\Column(nullable: true)]
     private ?int $maxSubscriptions = null;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
+use App\Service\Foundation\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 
 /**
  * Records each launch instead of forking, so a test can assert the line and the count: the drain listener fires at

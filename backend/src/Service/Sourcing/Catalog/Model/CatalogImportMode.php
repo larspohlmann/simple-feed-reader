@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Sourcing\Catalog\Model;
+
+/**
+ * The two import modes differ in exactly one respect: what happens to rows the
+ * document does not mention.
+ */
+enum CatalogImportMode: string
+{
+    /** Rows the document does not mention are left alone. */
+    case Merge = 'merge';
+
+    /** Rows the document does not mention are deleted. */
+    case Replace = 'replace';
+}

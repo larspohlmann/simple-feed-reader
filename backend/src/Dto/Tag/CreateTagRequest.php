@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Tag;
 
-use App\Service\Tag\Model\TagDetailsModel;
+use App\Service\Library\Tag\Model\TagDetailsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CreateTagRequest

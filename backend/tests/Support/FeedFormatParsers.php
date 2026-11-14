@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\FeedFormatParser\Atom03Parser;
-use App\Service\Parser\FeedFormatParser\Atom10Parser;
-use App\Service\Parser\FeedFormatParser\FeedFormatParserInterface;
-use App\Service\Parser\FeedFormatParser\Rss1Parser;
-use App\Service\Parser\FeedFormatParser\Rss2Parser;
-use App\Service\Parser\FeedItemImageSelector;
-use App\Service\Parser\FeedParser;
-use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\ItemMediaExtractor;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Factory\FeedParserFactory;
+use App\Service\Ingestion\Parser\FeedFormatParser\Atom03Parser;
+use App\Service\Ingestion\Parser\FeedFormatParser\Atom10Parser;
+use App\Service\Ingestion\Parser\FeedFormatParser\FeedFormatParserInterface;
+use App\Service\Ingestion\Parser\FeedFormatParser\Rss1Parser;
+use App\Service\Ingestion\Parser\FeedFormatParser\Rss2Parser;
+use App\Service\Ingestion\Parser\FeedItemImageSelector;
+use App\Service\Ingestion\Parser\FeedParser;
+use App\Service\Ingestion\Parser\ItemImageExtractor;
+use App\Service\Ingestion\Parser\ItemMediaExtractor;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 
 /** The format parsers over the real image and media policies, wired as the container wires them. */
 final class FeedFormatParsers

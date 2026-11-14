@@ -6,7 +6,7 @@ namespace App\Tests\Dto\Social;
 
 use App\Dto\Social\SocialImportCollectionItem;
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;

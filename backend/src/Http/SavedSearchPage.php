@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\EntryListSort;
-use App\Service\Search\Model\SavedSearchEntriesResultModel;
+use App\Service\Library\Search\Model\SavedSearchEntriesResultModel;
 
 /**
  * The `{entries, nextCursor}` shape the combined saved-search list returns.

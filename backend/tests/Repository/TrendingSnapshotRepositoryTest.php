@@ -8,9 +8,9 @@ use App\Entity\Entry;
 use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingSnapshotRepository;
-use App\Service\Trending\Model\StoryMemberModel;
-use App\Service\Trending\Model\TrendingBuildReportModel;
-use App\Service\Trending\Model\TrendingStoryModel;
+use App\Service\Curation\Trending\Model\StoryMemberModel;
+use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
+use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 

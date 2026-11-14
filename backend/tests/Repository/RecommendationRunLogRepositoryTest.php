@@ -14,7 +14,7 @@ use App\Enum\CallVerdict;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;

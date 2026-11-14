@@ -16,18 +16,32 @@ parameters:
         - tests/PhpStan/data/*
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    # The navigation groups every src/Service module sits in (docs/architecture.md §9).
+    serviceGroups:
+        - Foundation
+        - Outbound
+        - Sourcing
+        - Ingestion
+        - Content
+        - Library
+        - Social
+        - Curation
+        - Identity
+        - Operations
     # Directories below a src/Service module that are modules of their own (docs/architecture.md §9).
     serviceSubModules:
-        - Recommendation\Llm
-        - Recommendation\Scoring
+        - Curation\Recommendation\Llm
+        - Curation\Recommendation\Scoring
 
 parametersSchema:
+    serviceGroups: listOf(string())
     serviceSubModules: listOf(string())
 
 services:
     -
         class: App\Tests\PhpStan\ServiceModules
         arguments:
+            groups: %serviceGroups%
             subModules: %serviceSubModules%
     -
         class: App\Tests\PhpStan\ChainedNullCoalescingRule

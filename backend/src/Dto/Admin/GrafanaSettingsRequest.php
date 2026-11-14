@@ -6,8 +6,8 @@ namespace App\Dto\Admin;
 
 use App\Entity\GrafanaConnection;
 use App\Http\FullReplacePayload;
-use App\Service\Crypto\Model\SecretChangeModel;
-use App\Service\Grafana\Model\GrafanaSettingsUpdateModel;
+use App\Service\Foundation\Crypto\Model\SecretChangeModel;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsUpdateModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

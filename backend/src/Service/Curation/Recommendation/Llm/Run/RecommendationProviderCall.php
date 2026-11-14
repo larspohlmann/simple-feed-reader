@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\Recommendation\Llm\Run;
+
+use App\Service\Curation\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\RateLimitedCompletion;
+use App\Service\Curation\Recommendation\Llm\Run\Pass\RecordedCallObserver;
+use App\Service\Curation\Recommendation\Run\Model\ProviderCallRouteModel;
+use App\Service\Curation\Recommendation\Run\Pass\RecordedCall;
+
+/**
+ * One recorded provider call for the single-call phases. Any failure, an unreadable key included, settles the debug
+ * row before it propagates unchanged: an unsettled row reads as "still streaming" forever.
+ */
+final readonly class RecommendationProviderCall
+{
+    public function __construct(
+        private RateLimitedCompletion $completion,
+        private ProviderConnectionFactory $connectionFactory,
+    ) {
+    }
+
+    public function complete(
+        ProviderCallRouteModel $route,
+        CompletionRequestModel $request,
+        RecordedCall $recordedCall,
+    ): string {
+        try {
+            return $this->completion->complete(
+                $this->connectionFactory->forSettings($route->connection),
+                $request,
+                new RecordedCallObserver($recordedCall),
+                $route->retryPlan,
+            );
+        } catch (\Throwable $exception) {
+            $recordedCall->abortAfterTransportFailure($exception->getMessage());
+
+            throw $exception;
+        }
+    }
+}

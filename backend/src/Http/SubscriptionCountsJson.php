@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Subscription\Model\SubscriptionTalliesModel;
+use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 
 /**
  * The sidebar poll's payload: each subscription's counts and the surface totals, nothing else. A subscription

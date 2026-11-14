@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Doctrine\WordBoundaries;
-use App\Service\Search\Model\SearchTermsModel;
-use App\Service\Search\Support\LikePattern;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Support\LikePattern;
 use Doctrine\ORM\QueryBuilder;
 
 /** The search as LIKEs, for MySQL: its utf8mb4_0900_ai_ci columns already ignore case and accents. */

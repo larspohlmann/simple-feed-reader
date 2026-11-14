@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
-use App\Service\Social\Support\SocialSearchQuery;
+use App\Service\Social\Social\Support\SocialSearchQuery;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class SocialSearchQueryRequest

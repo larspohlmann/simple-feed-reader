@@ -7,7 +7,7 @@ namespace App\Tests\Dto\Admin;
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyConnection;
 use App\Enum\ProxyType;
-use App\Service\Crypto\Model\SecretChangeModel;
+use App\Service\Foundation\Crypto\Model\SecretChangeModel;
 use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;

@@ -1,0 +1,198 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Library\Search\Membership;
+
+use App\Entity\SavedSearch;
+use App\Repository\EntryMembershipSweepRepository;
+use App\Repository\SavedSearchRepository;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\Pass\SweepTally;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
+use App\Service\Library\Search\Support\SavedSearchTerms;
+use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
+use Psr\Log\LoggerInterface;
+
+/**
+ * Fills saved_search_entry incrementally: each search carries a
+ * high-water mark; a run walks entry ids above it to a settled ceiling in
+ * chunks, inserts the matches and advances the mark, within a budget.
+ */
+final readonly class SavedSearchMembershipSweep
+{
+    public const int CHUNK = 500;
+
+    /** How old an entry must be before it is matched, so an engine's async indexing has landed. */
+    public const int SETTLE_SECONDS = 60;
+
+    public function __construct(
+        private SavedSearchRepository $searches,
+        private EntryMembershipSweepRepository $entries,
+        private SavedSearchMembershipWriterInterface $memberships,
+        private SavedSearchMatcherInterface $matcher,
+        private EntityManagerInterface $entityManager,
+        private ClockInterface $clock,
+        private LoggerInterface $logger,
+    ) {
+    }
+
+    public function sweep(SweepBudgetModel $budget): SavedSearchMembershipSweepReportModel
+    {
+        $ceiling = $this->ceiling();
+
+        return $this->walkGroups(self::groupedByMark($this->searches->findBelowMark($ceiling)), $ceiling, $budget);
+    }
+
+    public function sweepOne(SavedSearch $search, SweepBudgetModel $budget): SavedSearchMembershipSweepReportModel
+    {
+        $ceiling = $this->ceiling();
+        $mark = $search->matchedUpToEntryId();
+
+        return $this->walkGroups($mark < $ceiling ? [$mark => [$search]] : [], $ceiling, $budget);
+    }
+
+    private function ceiling(): int
+    {
+        return $this->entries->settledCeilingId(
+            $this->clock->now()->modify(\sprintf('-%d seconds', self::SETTLE_SECONDS)),
+        );
+    }
+
+    /**
+     * @param list<SavedSearch> $due
+     *
+     * @return array<int, non-empty-list<SavedSearch>> mark => the searches at it, ascending
+     */
+    private static function groupedByMark(array $due): array
+    {
+        $groups = [];
+        foreach ($due as $search) {
+            $groups[$search->matchedUpToEntryId()][] = $search;
+        }
+        ksort($groups);
+
+        return $groups;
+    }
+
+    /**
+     * Lowest mark first. A group walks only up to the next group's mark, then
+     * joins it, so every chunk is matched once and a backfill never starves.
+     *
+     * @param array<int, non-empty-list<SavedSearch>> $groupsByMark
+     */
+    private function walkGroups(
+        array $groupsByMark,
+        int $ceiling,
+        SweepBudgetModel $budget,
+    ): SavedSearchMembershipSweepReportModel {
+        $tally = new SweepTally();
+        $deadline = $budget->deadlineFrom($this->clock->now());
+        $marks = array_keys($groupsByMark);
+        $walking = [];
+        foreach ($marks as $index => $mark) {
+            $walking = [...$walking, ...$groupsByMark[$mark]];
+            $tally->searchesSwept += \count($groupsByMark[$mark]);
+            if (!$this->walkGroup($walking, $mark, $marks[$index + 1] ?? $ceiling, $deadline, $tally)) {
+                return $tally->stoppedShort();
+            }
+        }
+
+        return $tally->caughtUp();
+    }
+
+    /**
+     * Walks one group from $mark to $stopAt; false when the budget or a
+     * failure stopped it short.
+     *
+     * @param non-empty-list<SavedSearch> $group
+     */
+    private function walkGroup(
+        array $group,
+        int $mark,
+        int $stopAt,
+        \DateTimeImmutable $deadline,
+        SweepTally $tally,
+    ): bool {
+        while ($mark < $stopAt) {
+            if ($this->clock->now() >= $deadline) {
+                return false;
+            }
+            $chunk = $this->entries->idsBetween($mark, $stopAt, self::CHUNK);
+            if ($chunk === []) {
+                $this->searches->advanceMarks(self::idsOf($group), $stopAt);
+
+                return true;
+            }
+            if (!$this->applyChunk($group, $chunk, $tally)) {
+                return false;
+            }
+            $mark = array_last($chunk);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param non-empty-list<SavedSearch> $group
+     * @param non-empty-list<int>         $chunk
+     */
+    private function applyChunk(array $group, array $chunk, SweepTally $tally): bool
+    {
+        try {
+            $matches = $this->matcher->matchingIds(array_map(SavedSearchTerms::termOf(...), $group), $chunk);
+            $tally->matchesInserted += $this->store($group, $chunk, $matches);
+        } catch (SearchEngineUnavailableException $exception) {
+            $this->logger->warning('Search engine unavailable; the membership sweep stops here and retries next run.', [
+                'exception' => $exception,
+            ]);
+
+            return false;
+        } catch (\Throwable $exception) {
+            $this->logger->error('The membership sweep failed on a chunk; it stops here and retries next run.', [
+                'exception' => $exception,
+            ]);
+
+            return false;
+        }
+        $tally->entriesScanned += \count($chunk);
+
+        return true;
+    }
+
+    /**
+     * @param non-empty-list<SavedSearch> $group
+     * @param non-empty-list<int>         $chunk
+     * @param array<int, list<int>>       $matches
+     *
+     * @return int the pairs added
+     */
+    private function store(array $group, array $chunk, array $matches): int
+    {
+        $now = $this->clock->now();
+        $lastId = array_last($chunk);
+
+        // Insert and mark advance share one transaction: a run that dies here
+        // leaves neither half-inserted rows nor a skipped chunk.
+        return $this->entityManager->wrapInTransaction(function () use ($group, $matches, $now, $lastId): int {
+            $inserted = $this->memberships->insertMissing($matches, $now);
+            $this->searches->advanceMarks(self::idsOf($group), $lastId);
+
+            return $inserted;
+        });
+    }
+
+    /**
+     * @param non-empty-list<SavedSearch> $group
+     *
+     * @return non-empty-list<int>
+     */
+    private static function idsOf(array $group): array
+    {
+        return array_map(static fn (SavedSearch $search): int => $search->requireId(), $group);
+    }
+}

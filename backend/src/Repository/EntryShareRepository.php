@@ -6,8 +6,8 @@ namespace App\Repository;
 
 use App\Entity\EntryShare;
 use App\Entity\Subscription;
-use App\Service\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
-use App\Service\Reading\EntryShareStore\EntryShareStoreInterface;
+use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
+use App\Service\Library\Reading\EntryShareStore\EntryShareStoreInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;

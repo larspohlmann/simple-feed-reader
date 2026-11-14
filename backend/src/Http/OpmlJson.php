@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Opml\Model\OpmlImportResultModel;
+use App\Service\Library\Opml\Model\OpmlImportResultModel;
 
 final class OpmlJson
 {

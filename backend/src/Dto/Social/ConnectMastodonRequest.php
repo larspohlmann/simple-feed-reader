@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
-use App\Service\Social\Exception\InvalidInstanceUrlException;
-use App\Service\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ConnectMastodonRequest

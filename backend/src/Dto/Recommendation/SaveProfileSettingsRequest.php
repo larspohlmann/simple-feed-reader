@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Dto\Recommendation;
 
-use App\Service\Recommendation\Profile\Model\ProfileSettingsChangeModel;
-use App\Service\Recommendation\Profile\Support\ProfileSchedule;
-use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileSettingsChangeModel;
+use App\Service\Curation\Recommendation\Profile\Support\ProfileSchedule;
+use App\Service\Curation\Recommendation\Settings\Support\RecommendationSettingsBounds;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class SaveProfileSettingsRequest

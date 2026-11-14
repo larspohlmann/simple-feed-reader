@@ -1,0 +1,175 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Ingestion\Refresh;
+
+use App\Entity\Feed;
+use App\Repository\FeedRepository;
+use App\Service\Ingestion\Feed\FeedScheduler;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Model\IncomingFeedModel;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
+use Psr\Log\LoggerInterface;
+
+/** Stores one feed's fetch outcome and flushes it, so a budget exit never loses what an earlier feed committed. */
+final readonly class FeedOutcomePersister
+{
+    private const int URL_MAX = 750;
+
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private FeedRepository $feeds,
+        private FeedBodyParser $bodyParser,
+        private FeedScheduler $scheduler,
+        private IncomingPageStore $pageStore,
+        private FeedShareEnrichment $shareEnrichment,
+        private LoggerInterface $logger,
+    ) {
+    }
+
+    /** @throws \DateMalformedStringException */
+    public function persist(Feed $feed, FetchOutcomeModel $outcome, \DateTimeImmutable $now): FeedRefreshResultModel
+    {
+        // Read before recordSuccess() stamps the new lastSuccessfulFetchAt (#384).
+        $context = new FeedIngestContext($now, $feed->getLastSuccessfulFetchAt());
+
+        return $this->guarded($feed, fn (): FeedRefreshResultModel => $this->record($feed, $outcome, $context));
+    }
+
+    /** A social timeline's page: stored through the very step a fetched body takes, its self-replies folded. */
+    public function storeTimeline(Feed $feed, TimelinePageModel $page, \DateTimeImmutable $now): FeedRefreshResultModel
+    {
+        $context = new FeedIngestContext($now, $feed->getLastSuccessfulFetchAt());
+
+        return $this->guarded(
+            $feed,
+            fn (): FeedRefreshResultModel => $this->pageStore->storeTimeline($feed, $page, $context),
+        );
+    }
+
+    public function storeFailure(Feed $feed, \Exception $failure): FeedRefreshResultModel
+    {
+        return $this->guarded($feed, fn (): FeedRefreshResultModel => $this->recordFailure($feed, $failure));
+    }
+
+    public function storeThrottled(Feed $feed, ?int $retryAfterSeconds): FeedRefreshResultModel
+    {
+        return $this->guarded(
+            $feed,
+            fn (): FeedRefreshResultModel => $this->recordThrottled($feed, $retryAfterSeconds),
+        );
+    }
+
+    /** @param \Closure(): FeedRefreshResultModel $store */
+    private function guarded(Feed $feed, \Closure $store): FeedRefreshResultModel
+    {
+        try {
+            return $store();
+        } catch (
+            UniqueConstraintViolationException |
+            ForeignKeyConstraintViolationException |
+            ORMException $exception
+        ) {
+            // A failed flush closes the EntityManager, so the run must stop here. The FK case is a feed whose
+            // last subscriber left mid-run and whose row was reclaimed under the fetch.
+            $this->logger->error(
+                'Refresh aborted: persistence failed for {url}',
+                ['url' => $feed->getUrl(), 'exception' => $exception],
+            );
+
+            return FeedRefreshResultModel::of(FeedOutcome::Aborted);
+        }
+    }
+
+    private function record(Feed $feed, FetchOutcomeModel $outcome, FeedIngestContext $context): FeedRefreshResultModel
+    {
+        try {
+            $response = $outcome->responseOrThrow();
+            if ($response->notModified) {
+                return $this->storeNotModified($feed, $response);
+            }
+
+            $parsed = $this->bodyParser->parse($feed, $response->modifiedBody());
+            $feed->recordCacheValidators($response->etag, $response->lastModified);
+            $this->applyPermanentRedirect($feed, $response);
+
+            return $this->pageStore->store($feed, IncomingFeedModel::parsed($parsed), $context);
+        } catch (FeedThrottledException $exception) {
+            return $this->recordThrottled($feed, $exception->retryAfterSeconds);
+        } catch (FeedGoneException $exception) {
+            return $this->recordGone($feed, $exception);
+        } catch (FetchException | FeedParseException $exception) {
+            return $this->recordFailure($feed, $exception);
+        }
+    }
+
+    /** @throws \DateMalformedStringException */
+    private function storeNotModified(Feed $feed, FetchResponseModel $response): FeedRefreshResultModel
+    {
+        // A moved feed can answer 304 at its new address; without this the redirect chain is re-walked every time.
+        $this->applyPermanentRedirect($feed, $response);
+        $this->scheduler->recordNotModified($feed);
+        $this->entityManager->flush();
+        $this->shareEnrichment->enrich($feed);
+
+        return FeedRefreshResultModel::of(FeedOutcome::NotModified);
+    }
+
+    /** @throws \DateMalformedStringException */
+    private function recordThrottled(Feed $feed, ?int $retryAfterSeconds): FeedRefreshResultModel
+    {
+        $this->scheduler->recordThrottled($feed, $retryAfterSeconds);
+        $this->entityManager->flush();
+        $this->logger->info('Feed rate limited: {url}', ['url' => $feed->getUrl()]);
+
+        return FeedRefreshResultModel::of(FeedOutcome::Throttled);
+    }
+
+    private function recordGone(Feed $feed, FeedGoneException $gone): FeedRefreshResultModel
+    {
+        $this->scheduler->recordGone($feed, $gone->getMessage());
+        $this->entityManager->flush();
+        $this->logger->warning('Feed gone: {url}', ['url' => $feed->getUrl(), 'exception' => $gone]);
+
+        return FeedRefreshResultModel::of(FeedOutcome::Failed);
+    }
+
+    /** @throws \DateMalformedStringException */
+    private function recordFailure(Feed $feed, \Exception $failure): FeedRefreshResultModel
+    {
+        $this->scheduler->recordFailure($feed, $failure->getMessage());
+        $this->entityManager->flush();
+        $this->logger->warning('Feed refresh failed: {url}', ['url' => $feed->getUrl(), 'exception' => $failure]);
+
+        return FeedRefreshResultModel::of(FeedOutcome::Failed);
+    }
+
+    private function applyPermanentRedirect(Feed $feed, FetchResponseModel $response): void
+    {
+        if (!$response->permanentRedirect || $response->finalUrl === $feed->getUrl()) {
+            return;
+        }
+        // A truncated URL is a broken URL, so an over-long target is declined rather than shortened.
+        if (mb_strlen($response->finalUrl) > self::URL_MAX) {
+            return;
+        }
+        // The url column is unique: a target another feed already claims leaves this feed where it is.
+        if ($this->feeds->findOneBy(['url' => $response->finalUrl]) !== null) {
+            return;
+        }
+        $feed->setUrl($response->finalUrl);
+    }
+}

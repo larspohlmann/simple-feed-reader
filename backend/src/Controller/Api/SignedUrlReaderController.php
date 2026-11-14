@@ -6,9 +6,9 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\ReaderJson;
-use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ReaderUrlSignature;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\Reader\ReaderUrlSignature;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;

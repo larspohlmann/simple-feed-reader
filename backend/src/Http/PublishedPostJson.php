@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
 
 final class PublishedPostJson
 {

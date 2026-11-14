@@ -7,7 +7,7 @@ namespace App\Tests\Command;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RefreshFetchers;
 use App\Tests\Support\StubPassFetcher;

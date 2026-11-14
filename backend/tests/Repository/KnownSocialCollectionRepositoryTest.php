@@ -8,7 +8,7 @@ use App\Entity\KnownSocialCollection;
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Repository\KnownSocialCollectionRepository;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;

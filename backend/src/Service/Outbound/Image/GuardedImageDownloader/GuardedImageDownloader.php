@@ -1,0 +1,169 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Outbound\Image\GuardedImageDownloader;
+
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\RedirectFollower;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Model\DownloadedImageModel;
+use App\Service\Outbound\Image\Support\ImageType;
+use App\Service\Outbound\Image\Support\MediaType;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+
+/**
+ * Downloads one image we store or measure over RedirectFollower's guarded chain, with a timeout, size caps, no
+ * compression and an image content-type allow-list. The proxy downloads through ImageDownloader instead.
+ */
+final readonly class GuardedImageDownloader implements GuardedImageDownloaderInterface
+{
+    /** GdImageResizer's pixel cap is the real memory guard. */
+    public const int MAX_BYTES = 3_145_728;
+
+    private const int TIMEOUT_SECONDS = 8;
+    private const int MAX_REDIRECTS = 3;
+
+    /** Gone for good: retried and then dropped, unlike a merely-refused status. */
+    private const array GONE_STATUSES = [Response::HTTP_NOT_FOUND, Response::HTTP_GONE];
+
+    /** Formats a browser will render in an <img>. SVG is excluded deliberately:
+     *  it is a script-carrying document format, and we serve these bytes back
+     *  from our own origin. */
+    private const array ALLOWED_TYPES = [
+        'image/png',
+        'image/jpeg',
+        'image/gif',
+        'image/webp',
+        'image/x-icon',
+        'image/vnd.microsoft.icon',
+    ];
+
+    public function __construct(
+        private RedirectFollower $redirects,
+        private string $userAgent,
+    ) {
+    }
+
+    public function download(string $imageUrl): DownloadedImageModel
+    {
+        try {
+            $landed = $this->redirects->follow($imageUrl, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));
+            [$bytes, $contentType] = $this->readSuccessfulResponse($landed);
+        } catch (FetchException | TransportExceptionInterface $exception) {
+            throw $this->asDownloadFailure($exception);
+        }
+
+        $this->assertNotEmpty($bytes);
+        $this->assertWithinSizeCap($bytes);
+
+        return new DownloadedImageModel($imageUrl, $bytes, $contentType);
+    }
+
+    /** A wire- or buffer-cap trip is a policy rejection, not a dead host. */
+    private function asDownloadFailure(\Throwable $exception): GuardedImageUnavailableException
+    {
+        if ($this->causedByOversizedResponse($exception)) {
+            return new GuardedImageRejectedException($exception->getMessage(), 0, $exception);
+        }
+
+        return new GuardedImageUnavailableException($exception->getMessage(), 0, $exception);
+    }
+
+    private function causedByOversizedResponse(\Throwable $exception): bool
+    {
+        for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof ResponseTooLargeException) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array<string, mixed> */
+    private function options(): array
+    {
+        return [
+            'timeout' => self::TIMEOUT_SECONDS,
+            'max_duration' => self::TIMEOUT_SECONDS,
+            // No transparent compression, so the wire cap also bounds the buffered body: a compressed response
+            // would otherwise decompress unbounded before the size check runs.
+            'headers' => ['Accept-Encoding' => 'identity', 'User-Agent' => $this->userAgent],
+            'on_progress' => static function (int $downloaded): void {
+                ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Download, $downloaded);
+            },
+        ];
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     * @throws TransportExceptionInterface
+     */
+    private function readSuccessfulResponse(LandedResponse $landed): array
+    {
+        $this->assertOk($landed->status);
+        $declaredType = MediaType::of($landed->header('content-type'));
+        $this->assertAllowedUnlessUndeclared($declaredType);
+        $bytes = $landed->response->getContent();
+        $contentType = ImageType::declaredOrSniffed($declaredType, $bytes);
+        $this->assertAllowedType($contentType);
+
+        return [$bytes, $contentType];
+    }
+
+    private function assertOk(int $status): void
+    {
+        if (Response::HTTP_OK === $status) {
+            return;
+        }
+        if (
+            $status >= Response::HTTP_BAD_REQUEST
+            && $status < Response::HTTP_INTERNAL_SERVER_ERROR
+            && !\in_array($status, self::GONE_STATUSES, true)
+        ) {
+            throw new GuardedImageRejectedException('Image responded ' . $status . '.');
+        }
+
+        throw new GuardedImageUnavailableException('Image responded ' . $status . '.');
+    }
+
+    private function assertNotEmpty(string $bytes): void
+    {
+        if ('' === $bytes) {
+            throw new GuardedImageUnavailableException('Image body was empty.');
+        }
+    }
+
+    private function assertWithinSizeCap(string $bytes): void
+    {
+        if (\strlen($bytes) > self::MAX_BYTES) {
+            throw new GuardedImageRejectedException('Image exceeded ' . self::MAX_BYTES . ' bytes.');
+        }
+    }
+
+    private function assertAllowedUnlessUndeclared(string $declaredType): void
+    {
+        if (!ImageType::isUndeclared($declaredType)) {
+            $this->assertAllowedType($declaredType);
+        }
+    }
+
+    private function assertAllowedType(string $type): void
+    {
+        if (\in_array($type, self::ALLOWED_TYPES, true)) {
+            return;
+        }
+        $message = \sprintf('Content type "%s" is not an allowed image type.', $type);
+
+        throw str_starts_with($type, 'image/')
+            ? new GuardedImageRejectedException($message)
+            : new GuardedImageUnavailableException($message);
+    }
+}

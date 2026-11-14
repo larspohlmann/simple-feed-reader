@@ -1,0 +1,115 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Ingestion\Feed;
+
+use App\Entity\Feed;
+use App\Enum\SourceFormat;
+use App\Service\Outbound\Fetch\HostThrottle;
+use Symfony\Component\Clock\ClockInterface;
+
+final readonly class FeedScheduler
+{
+    private const int FLOOR_MINUTES = 5;
+    private const int SOCIAL_FLOOR_MINUTES = 15;
+    private const int CEILING_MINUTES = 120;       // 2 h
+    private const int FAILURE_CAP_MINUTES = 10080; // 7 days
+    private const int FAILURES_UNTIL_GONE = 30;
+    private const int MAX_BACKOFF_EXPONENT = 9;
+    private const int SECONDS_PER_MINUTE = 60;
+
+    public function __construct(
+        private ClockInterface $clock,
+        private HostThrottle $hostThrottle,
+    ) {
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function recordSuccess(Feed $feed, int $newEntryCount): void
+    {
+        // New entries reset to the floor at once, not by halving, or a burst blocks the top of All items (#643).
+        $interval = $newEntryCount > 0 ? self::floorOf($feed) : $this->grownInterval($feed);
+
+        $now = $this->clock->now();
+        $feed->recordSuccessfulFetch($now, $interval);
+        if ($newEntryCount > 0) {
+            $feed->recordNewEntries($now);
+        }
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function recordNotModified(Feed $feed): void
+    {
+        $feed->recordSuccessfulFetch($this->clock->now(), $this->grownInterval($feed));
+    }
+
+    /**
+     * A 429 rations, it does not fail: only nextFetchAt moves, or one 429 silences a working feed for hours (#290).
+     * lastFetchedAt stays too: the manual refresh's cooldown reads it, and stamping it would block a retry by hand.
+     *
+     * @throws \DateMalformedStringException
+     */
+    public function recordThrottled(Feed $feed, ?int $retryAfterSeconds): void
+    {
+        $hostWait = $this->hostThrottle->record($feed->getUrl(), $retryAfterSeconds);
+        // A ration can reset in seconds, so without a Retry-After only this feed, not the host, waits out its cadence.
+        $wait = $retryAfterSeconds === null ? max($hostWait, $this->cadenceSeconds($feed)) : $hostWait;
+
+        $feed->scheduleNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
+    }
+
+    private function cadenceSeconds(Feed $feed): int
+    {
+        return min(HostThrottle::MAXIMUM_WAIT_SECONDS, $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE);
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function recordFailure(Feed $feed, string $message): void
+    {
+        $failures = $feed->getConsecutiveFailures() + 1;
+        $now = $this->clock->now();
+
+        if ($failures >= self::FAILURES_UNTIL_GONE) {
+            $feed->markGone($now, $message);
+
+            return;
+        }
+
+        $feed->recordFailedFetch($now, $message, $this->backoffMinutes($feed, $failures));
+    }
+
+    public function recordGone(Feed $feed, string $message): void
+    {
+        $feed->markGone($this->clock->now(), $message);
+    }
+
+    private function backoffMinutes(Feed $feed, int $failures): int
+    {
+        return (int) min(
+            self::FAILURE_CAP_MINUTES,
+            max($feed->getFetchIntervalMinutes(), self::floorOf($feed))
+                * (2 ** min($failures, self::MAX_BACKOFF_EXPONENT)),
+        );
+    }
+
+    /** The grow branch keeps the floor guard: a stored interval <= 0 would otherwise refetch the feed every run. */
+    private function grownInterval(Feed $feed): int
+    {
+        $minutes = $feed->getFetchIntervalMinutes();
+
+        return max(self::floorOf($feed), min(self::CEILING_MINUTES, $minutes + intdiv($minutes + 1, 2)));
+    }
+
+    /** A private social feed costs its account an API call per poll, so it polls at most every 15 minutes. */
+    private static function floorOf(Feed $feed): int
+    {
+        return SourceFormat::isSocial($feed->getSourceFormat()) ? self::SOCIAL_FLOOR_MINUTES : self::FLOOR_MINUTES;
+    }
+}

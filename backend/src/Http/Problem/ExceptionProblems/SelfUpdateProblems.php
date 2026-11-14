@@ -6,11 +6,11 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\SelfUpdate\Exception\MalformedUpdateStateException;
-use App\Service\SelfUpdate\Exception\NoUpdateAvailableException;
-use App\Service\SelfUpdate\Exception\UpdateInProgressException;
-use App\Service\SelfUpdate\Exception\UpdateRequestNotSavedException;
-use App\Service\SelfUpdate\Exception\UpdaterUnavailableException;
+use App\Service\Operations\SelfUpdate\Exception\MalformedUpdateStateException;
+use App\Service\Operations\SelfUpdate\Exception\NoUpdateAvailableException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateInProgressException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateRequestNotSavedException;
+use App\Service\Operations\SelfUpdate\Exception\UpdaterUnavailableException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SelfUpdateProblems implements ExceptionProblemsInterface

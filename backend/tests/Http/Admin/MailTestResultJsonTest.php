@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http\Admin;
 
 use App\Http\Admin\MailTestResultJson;
-use App\Service\Mail\Settings\Model\MailTestFailure;
-use App\Service\Mail\Settings\Model\MailTestResultModel;
+use App\Service\Outbound\Mail\Settings\Model\MailTestFailure;
+use App\Service\Outbound\Mail\Settings\Model\MailTestResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class MailTestResultJsonTest extends TestCase

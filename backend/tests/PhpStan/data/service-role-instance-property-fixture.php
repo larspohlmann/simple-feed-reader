@@ -5,7 +5,7 @@ declare(strict_types=1);
 // A fixture for ServiceRoleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Tally {
+namespace App\Service\Fixture\Tally {
     /** @noinspection AutoloadingIssuesInspection */
     final readonly class Scoreboard
     {

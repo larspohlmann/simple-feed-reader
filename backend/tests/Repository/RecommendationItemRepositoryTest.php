@@ -12,7 +12,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 

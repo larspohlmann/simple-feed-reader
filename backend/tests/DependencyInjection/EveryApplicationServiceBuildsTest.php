@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\DependencyInjection;
 
-use App\Service\Refresh\FeedBodyParser;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class EveryApplicationServiceBuildsTest extends KernelTestCase

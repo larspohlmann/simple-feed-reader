@@ -1,0 +1,84 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\Media\EmbedProvider;
+
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+
+/**
+ * Vimeo player embed. Public video is `vimeo.com/<id>`; unlisted carries a
+ * privacy hash as a second segment, which the player needs as `?h=<hash>`.
+ */
+final readonly class VimeoEmbedProvider implements EmbedProviderInterface
+{
+    private const string PLAYER_HOST = 'player.vimeo.com';
+    private const array PAGE_HOSTS = ['vimeo.com', 'www.vimeo.com'];
+    private const string HASH = '[A-Za-z0-9]+';
+    private const string LABEL = 'Watch on Vimeo';
+
+    public function target(string $url): ?EmbedTargetModel
+    {
+        $reference = $this->reference($url);
+        if ($reference === null) {
+            return null;
+        }
+        [$id, $hash] = $reference;
+
+        $embedUrl = 'https://player.vimeo.com/video/' . $id . ($hash === null ? '' : '?h=' . $hash);
+
+        return new EmbedTargetModel($embedUrl, null, self::LABEL);
+    }
+
+    public function frames(): array
+    {
+        return [new EmbedFrameModel(
+            '^https://' . preg_quote(self::PLAYER_HOST, '#') . '/video/\d+(?:\?h=' . self::HASH . ')?$',
+            EmbedKind::Video,
+            EmbedShape::Landscape,
+        )];
+    }
+
+    public function sourceHosts(): array
+    {
+        return [self::PLAYER_HOST, ...self::PAGE_HOSTS];
+    }
+
+    /** @return array{0: string, 1: ?string}|null the video id and its optional privacy hash */
+    private function reference(string $url): ?array
+    {
+        $parts = parse_url($url);
+        if (($parts['scheme'] ?? '') !== 'https' || !isset($parts['host'], $parts['path'])) {
+            return null;
+        }
+        $host = strtolower($parts['host']);
+        if ($host === self::PLAYER_HOST) {
+            return $this->fromPlayer($parts['path'], $parts['query'] ?? '');
+        }
+
+        return \in_array($host, self::PAGE_HOSTS, true) ? $this->fromPage($parts['path']) : null;
+    }
+
+    /** @return array{0: string, 1: ?string}|null */
+    private function fromPlayer(string $path, string $query): ?array
+    {
+        if (preg_match('#^/video/(\d+)/?$#', $path, $matches) !== 1) {
+            return null;
+        }
+        parse_str($query, $queryParameters);
+        $hash = $queryParameters['h'] ?? null;
+
+        return [$matches[1], \is_string($hash) && preg_match('#^' . self::HASH . '$#', $hash) === 1 ? $hash : null];
+    }
+
+    /** @return array{0: string, 1: ?string}|null */
+    private function fromPage(string $path): ?array
+    {
+        return preg_match('#^/(\d+)(?:/(' . self::HASH . '))?/?$#', $path, $matches) === 1
+            ? [$matches[1], $matches[2] ?? null]
+            : null;
+    }
+}

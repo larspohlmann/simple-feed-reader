@@ -1,0 +1,589 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Ingestion\Parser\FeedFormatParser;
+
+use App\Enum\CommentsLoad;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Tests\Support\FeedFormatParsers;
+use PHPUnit\Framework\TestCase;
+
+final class Atom10ParserTest extends TestCase
+{
+    private function parse(string $xml): ParsedFeedModel
+    {
+        return FeedFormatParsers::feed($xml);
+    }
+
+    private function parseSingleEntry(string $entryXml): ParsedEntryModel
+    {
+        $feed = $this->parse(<<<XML
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>F</title>
+              {$entryXml}
+            </feed>
+            XML);
+
+        return $feed->entries[0];
+    }
+
+    public function testEntryImageComesFromMediaThumbnailEnclosureOrInlineImg(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+              <title>Atom Image Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Media thumbnail entry</title>
+                <link rel="alternate" href="https://e/media"/>
+                <id>urn:uuid:media</id>
+                <media:thumbnail url="https://e/t.jpg"/>
+              </entry>
+              <entry>
+                <title>Enclosure entry</title>
+                <link rel="alternate" href="https://e/enclosure"/>
+                <link rel="enclosure" type="image/png" href="https://e/enc.png"/>
+                <id>urn:uuid:enclosure</id>
+              </entry>
+              <entry>
+                <title>Inline image entry</title>
+                <link rel="alternate" href="https://e/inline"/>
+                <id>urn:uuid:inline</id>
+                <content type="html">&lt;p&gt;Body &lt;img src="https://e/inline.jpg"&gt; text&lt;/p&gt;</content>
+              </entry>
+              <entry>
+                <title>No image entry</title>
+                <link rel="alternate" href="https://e/none"/>
+                <id>urn:uuid:none</id>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertCount(4, $feed->entries);
+        self::assertSame('https://e/t.jpg', $feed->entries[0]->media->image?->url);
+        self::assertSame('https://e/enc.png', $feed->entries[1]->media->image?->url);
+        self::assertSame('https://e/inline.jpg', $feed->entries[2]->media->image?->url);
+        self::assertNull($feed->entries[3]->media->image);
+    }
+
+    public function testEntryImageFallsBackToAnImgInAnHtmlSummary(): void
+    {
+        // An Atom entry whose only picture is an <img> in a type="html"
+        // <summary> and which carries no <content> element at all.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Summary Image Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Summary-only image entry</title>
+                <link rel="alternate" href="https://e/summary"/>
+                <id>urn:uuid:summary</id>
+                <summary type="html">&lt;p&gt;Lead &lt;img src="https://e/summary.jpg"&gt; text&lt;/p&gt;</summary>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://e/summary.jpg', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testEntryImageFallsBackToAnImgInAnXhtmlSummary(): void
+    {
+        // A type="xhtml" summary carries the <img> as a real nested element, so
+        // its markup must be serialized before the <img> can be seen.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Xhtml Summary Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Xhtml summary entry</title>
+                <link rel="alternate" href="https://e/xhtml"/>
+                <id>urn:uuid:xhtml</id>
+                <summary type="xhtml">
+                  <div xmlns="http://www.w3.org/1999/xhtml"><p><img src="https://e/xhtml.jpg"/> text</p></div>
+                </summary>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://e/xhtml.jpg', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testEntryContentImageStillWinsOverASummaryImage(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Precedence Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Both content and summary</title>
+                <link rel="alternate" href="https://e/both"/>
+                <id>urn:uuid:both</id>
+                <summary type="html">&lt;img src="https://e/summary.jpg"&gt;</summary>
+                <content type="html">&lt;p&gt;&lt;img src="https://e/content.jpg"&gt;&lt;/p&gt;</content>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://e/content.jpg', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testMediaImageWinsWhenEveryImageSourceIsPresent(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+              <title>Precedence Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Every source entry</title>
+                <link rel="alternate" href="https://e/every"/>
+                <link rel="enclosure" type="image/png" href="https://e/enc.png"/>
+                <id>urn:uuid:every</id>
+                <media:thumbnail url="https://e/media.jpg"/>
+                <image_big url="https://e/custom.jpg" width="640"/>
+                <summary type="html">&lt;img src="https://e/summary.jpg"&gt;</summary>
+                <content type="html">&lt;img src="https://e/content.jpg"&gt;</content>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://e/media.jpg', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testEnclosureWinsOverCustomImageAndBodyImages(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Precedence Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Enclosure over rest</title>
+                <link rel="alternate" href="https://e/enc-over"/>
+                <link rel="enclosure" type="image/png" href="https://e/enc.png"/>
+                <id>urn:uuid:enc-over</id>
+                <image_big url="https://e/custom.jpg" width="640"/>
+                <summary type="html">&lt;img src="https://e/summary.jpg"&gt;</summary>
+                <content type="html">&lt;img src="https://e/content.jpg"&gt;</content>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://e/enc.png', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testCustomImageElementWinsOverBodyImages(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Precedence Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Custom over body</title>
+                <link rel="alternate" href="https://e/custom-over"/>
+                <id>urn:uuid:custom-over</id>
+                <image_big url="https://e/custom.jpg" width="640"/>
+                <summary type="html">&lt;img src="https://e/summary.jpg"&gt;</summary>
+                <content type="html">&lt;img src="https://e/content.jpg"&gt;</content>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://e/custom.jpg', $feed->entries[0]->media->image?->url);
+    }
+
+    public function testEntryImageComesFromACustomImageBigElement(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Custom Image Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Custom image entry</title>
+                <link rel="alternate" href="https://e/custom"/>
+                <id>urn:uuid:custom</id>
+                <image url="https://images.example.de/small.jpg" width="194" height="126"/>
+                <image_big url="https://images.example.de/big.jpg" width="640" height="300"/>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        $image = $feed->entries[0]->media->image;
+        self::assertNotNull($image);
+        self::assertSame('https://images.example.de/big.jpg', $image->url);
+        self::assertSame(640, $image->width);
+    }
+
+    public function testEntryUrlFallsBackToAnHttpIdWhenNoLinkIsPresent(): void
+    {
+        // Some WordPress Atom feeds carry the permalink only in <id>; a urn:/tag: id must stay out of ->url.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Linkless Atom Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Permalink in id</title>
+                <id>https://jacobin.com/2026/08/utopia-is-a-promise</id>
+              </entry>
+              <entry>
+                <title>Opaque id</title>
+                <id>urn:uuid:opaque</id>
+              </entry>
+              <entry>
+                <title>Real link still wins over id</title>
+                <link rel="alternate" href="https://e/real"/>
+                <id>https://e/from-id</id>
+              </entry>
+              <entry>
+                <title>Uppercase scheme in id</title>
+                <id>HTTPS://jacobin.com/2026/08/upper-scheme</id>
+              </entry>
+              <entry>
+                <title>Url embedded mid-id is not a permalink</title>
+                <id>urn:x:https://not-the-permalink.example/mid</id>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://jacobin.com/2026/08/utopia-is-a-promise', $feed->entries[0]->url);
+        self::assertNull($feed->entries[1]->url);
+        self::assertSame('https://e/real', $feed->entries[2]->url);
+        // The scheme is case-insensitive, so an uppercase id is still a URL.
+        self::assertSame('HTTPS://jacobin.com/2026/08/upper-scheme', $feed->entries[3]->url);
+        // Only a leading scheme counts: a urn: id that merely contains a URL is
+        // opaque, not a fetchable permalink.
+        self::assertNull($feed->entries[4]->url);
+    }
+
+    public function testTitlesAreReducedToPlainText(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>The &lt;em&gt;Weekly&lt;/em&gt; Review</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>An &lt;em&gt;Odyssey&lt;/em&gt; for Our Own Time</title>
+                <link rel="alternate" href="https://e/odyssey"/>
+                <id>urn:uuid:odyssey</id>
+              </entry>
+              <entry>
+                <title>&amp;#8220;Datatype&amp;#8221; is an OpenType variable font</title>
+                <link rel="alternate" href="https://e/datatype"/>
+                <id>urn:uuid:datatype</id>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('The Weekly Review', $feed->title);
+        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->headline->text);
+        self::assertSame(
+            "\u{201C}Datatype\u{201D} is an OpenType variable font",
+            $feed->entries[1]->headline->text,
+        );
+    }
+
+    public function testReadsTheFeedLogo(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+                <title>Example</title>
+                <logo>https://example.com/banner.png</logo>
+                <entry><title>One</title><id>urn:1</id></entry>
+            </feed>
+            XML;
+
+        self::assertSame('https://example.com/banner.png', $this->parse($xml)->imageUrl);
+    }
+
+    public function testRepliesLinkWithAFeedTypeIsAManualCommentsFeed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link href="https://blog.example/post"/>
+              <link rel="replies" type="application/atom+xml" href="https://blog.example/post/comments.xml"/>
+              <link rel="replies" type="text/html" href="https://blog.example/post#comments"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://blog.example/post#comments', $entry->discussion->url);
+        self::assertSame('https://blog.example/post/comments.xml', $entry->discussion->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Manual, $entry->discussion->commentsLoad);
+    }
+
+    public function testTheFirstRepliesLinkOfEachKindWinsWhateverTheTypesCase(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link rel="replies" type="APPLICATION/ATOM+XML" href="https://blog.example/post/comments.xml"/>
+              <link rel="replies" type="application/rss+xml" href="https://blog.example/post/other.xml"/>
+              <link rel="replies" type="text/html" href="https://blog.example/post#comments"/>
+              <link rel="replies" type="text/html" href="https://blog.example/post#later"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://blog.example/post#comments', $entry->discussion->url);
+        self::assertSame('https://blog.example/post/comments.xml', $entry->discussion->commentsFeedUrl);
+    }
+
+    public function testRepliesLinkWithoutATypeIsADiscussionPage(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link href="https://blog.example/post"/>
+              <link rel="replies" href="https://forum.example/t/1"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://forum.example/t/1', $entry->discussion->url);
+        self::assertNull($entry->discussion->commentsFeedUrl);
+    }
+
+    public function testAWhitespacePaddedRepliesLinkIsStillRead(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link rel="replies" type="application/atom+xml" href=" https://blog.example/post/comments.xml "/>
+            </entry>
+            XML);
+
+        self::assertSame('https://blog.example/post/comments.xml', $entry->discussion->commentsFeedUrl);
+    }
+
+    public function testAuthorUriIsCarried(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <author><name>/u/someone</name><uri>https://www.reddit.com/user/someone</uri></author>
+            </entry>
+            XML);
+
+        self::assertSame('https://www.reddit.com/user/someone', $entry->authorUrl);
+    }
+
+    public function testCarriesAMediaContentAudioIntoTheEntryAttachments(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+              <title>Feed</title>
+              <entry>
+                <title>Audio entry</title>
+                <link rel="alternate" href="https://e/audio"/>
+                <id>urn:uuid:audio</id>
+                <media:content url="https://cdn/ep.mp3" type="audio/mpeg"/>
+              </entry>
+            </feed>
+            XML;
+
+        $entry = $this->parse($xml)->entries[0];
+
+        $bundle = $entry->media->mediaBundle;
+
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
+    }
+
+    public function testAnAtomElementThatIsNotAnEntryIsNotParsedAsOne(): void
+    {
+        $feed = $this->parse(<<<'XML'
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>F</title>
+              <source><title>Stray</title></source>
+              <entry><title>Real</title></entry>
+            </feed>
+            XML);
+
+        self::assertSame(['Real'], FeedFormatParsers::entryTitles($feed));
+    }
+
+    public function testALinkOutsideTheAtomNamespaceIsNotTheEntryUrl(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>T</title>
+              <x:link xmlns:x="urn:other" rel="alternate" href="https://foreign.example/"/>
+              <link rel="alternate" href="https://e/real"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://e/real', $entry->url);
+    }
+
+    public function testAPlainTextContentKeepsItsLineBreaks(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Summer set</title>
+              <id>urn:uuid:set</id>
+              <content type="text">Track list :
+            1.Idaishoy</content>
+            </entry>
+            XML);
+
+        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $entry->contentHtml);
+    }
+
+    public function testAnXhtmlContentKeepsTheLineBreaksOfPastedText(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>a
+
+            b</p></div></content>
+            </entry>
+            XML);
+
+        self::assertStringContainsString('<p>a<br><br>b</p>', (string) $entry->contentHtml);
+    }
+
+    public function testAnAlternateLinkHrefIsTrimmed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry><title>T</title><id>urn:1</id><link rel="alternate" href="  https://example.com/a  "/></entry>
+            XML);
+
+        self::assertSame('https://example.com/a', $entry->url);
+    }
+
+    public function testAnHtmlContentIsTrimmed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry><title>T</title><id>urn:1</id><content type="html">
+              &lt;p&gt;Body&lt;/p&gt;
+            </content></entry>
+            XML);
+
+        self::assertSame('<p>Body</p>', $entry->contentHtml);
+    }
+
+    public function testAnXhtmlContentIsTrimmed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry><title>T</title><id>urn:1</id><content type="xhtml">
+              <div xmlns="http://www.w3.org/1999/xhtml"><p>Body</p></div>
+            </content></entry>
+            XML);
+
+        self::assertStringStartsWith('<div', (string) $entry->contentHtml);
+        self::assertStringEndsWith('</div>', (string) $entry->contentHtml);
+    }
+
+    public function testContentWinsOverAMediaGroupDescription(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title>
+              <link rel="alternate" href="https://example.com/a"/>
+              <content type="html">&lt;p&gt;Body&lt;/p&gt;</content>
+              <media:group><media:description>Described</media:description></media:group>
+            </entry>
+            XML);
+
+        self::assertSame('<p>Body</p>', $entry->contentHtml);
+    }
+
+    public function testAMediaGroupDescriptionFillsABodylessEntry(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title>
+              <link rel="alternate" href="https://example.com/a"/>
+              <media:group><media:description>Described</media:description></media:group>
+            </entry>
+            XML);
+
+        self::assertSame('<p>Described</p>', $entry->contentHtml);
+    }
+
+    public function testASummaryKeepsAMediaDescriptionOutOfTheBody(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title>
+              <link rel="alternate" href="https://example.com/a"/>
+              <summary>Short</summary>
+              <media:group><media:description>Described</media:description></media:group>
+            </entry>
+            XML);
+
+        self::assertNull($entry->contentHtml);
+    }
+
+    public function testAnEntryWithoutATitleTakesItsTitleFromTheContent(): void
+    {
+        $entry = $this->parseSingleEntry(
+            '<entry><id>tag:example.social,2026:1</id><link rel="alternate" href="https://example.social/@a/1"/>'
+            . '<content type="html">&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</content></entry>',
+        );
+
+        self::assertSame('Hello from the fediverse.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
+    }
+
+    public function testTheContentOutranksTheSummaryAsTheSourceOfADerivedTitle(): void
+    {
+        $entry = $this->parseSingleEntry(
+            '<entry><id>tag:example.social,2026:4</id><link rel="alternate" href="https://example.social/@a/4"/>'
+            . '<summary>From the summary.</summary>'
+            . '<content type="html">&lt;p&gt;From the content.&lt;/p&gt;</content></entry>',
+        );
+
+        self::assertSame('From the content.', $entry->headline->text);
+    }
+
+    public function testAnEntryWithoutATitleOrContentTakesItsTitleFromTheSummary(): void
+    {
+        $entry = $this->parseSingleEntry(
+            '<entry><id>tag:example.social,2026:2</id><link rel="alternate" href="https://example.social/@a/2"/>'
+            . '<summary>Only a summary here. More.</summary></entry>',
+        );
+
+        self::assertSame('Only a summary here.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
+    }
+
+    public function testATitledEntryIsNotDerived(): void
+    {
+        $entry = $this->parseSingleEntry('<entry><title>Real</title><id>tag:x,2026:3</id></entry>');
+
+        self::assertSame('Real', $entry->headline->text);
+        self::assertFalse($entry->headline->derived);
+    }
+}

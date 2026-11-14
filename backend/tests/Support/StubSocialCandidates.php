@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 
 final class StubSocialCandidates implements SocialCandidatesInterface
 {

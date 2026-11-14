@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Account\Exception\LastAdminException;
+use App\Service\Identity\Account\Exception\LastAdminException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class AccountProblems implements ExceptionProblemsInterface

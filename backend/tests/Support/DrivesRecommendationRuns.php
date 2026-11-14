@@ -12,11 +12,11 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Profile\ProfileRunAdvancer;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Recommendation\Profile\ProfileRunAdvancer;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Curation\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 
 /** For a DbTestCase that drives runs through the advancer's real dispatch, with only the providers faked. */
 trait DrivesRecommendationRuns

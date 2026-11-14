@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Repository\PendingImageVerificationRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\ImageVerificationSweep;
-use App\Service\Image\ImageVerifier;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Image\ImageVerificationSweep;
+use App\Service\Outbound\Image\ImageVerifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;

@@ -11,7 +11,7 @@ namespace App\DependencyInjection;
  */
 final readonly class ReaderOutputSources
 {
-    private const string ROOT_MODULE = 'Reader';
+    private const string ROOT_MODULE = 'Content\Reader';
 
     private const string RESPONSE_MAPPER = 'src/Http/ReaderJson.php';
 

@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Operations\Backup\Factory;
+
+use App\Entity\Feed;
+use App\Entity\InclusionChange;
+use App\Entity\Subscription;
+use App\Entity\Tag;
+use App\Entity\User;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Operations\Backup\Dto\TagLine;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\Tag\Factory\TagFactory;
+use App\Service\Library\Tag\Model\TagDetailsModel;
+
+/** The rows a backup's foundation lines describe, as the file states them. */
+final readonly class RestoredFoundationFactory
+{
+    public function __construct(private TagFactory $tagFactory, private FeedFactory $feedFactory)
+    {
+    }
+
+    public function tag(User $user, TagLine $line, ?Tag $parent): Tag
+    {
+        $details = new TagDetailsModel($line->name, $line->color, $line->icon);
+        $tag = $this->tagFactory->create($user, $details, $line->position);
+        $tag->setParent($parent);
+        $tag->changeInclusions(new InclusionChange(
+            $line->includeInAllItems,
+            $line->includeInForYou,
+            $line->includeInSavedSearches,
+            $line->includeInTrending,
+        ));
+
+        return $tag;
+    }
+
+    public function feed(FeedLine $line): Feed
+    {
+        $feed = $this->feedFactory->create($line->url, $line->sourceFormat, $line->title);
+        $feed->setSiteUrl($line->siteUrl);
+        $feed->setDescription($line->description);
+        $feed->setFaviconUrl($line->faviconUrl);
+        $feed->setImageUrl($line->imageUrl);
+
+        return $feed;
+    }
+
+    /** Without its tags: only the restore knows the tags this file declared. */
+    public function subscription(User $user, Feed $feed, SubscriptionLine $line): Subscription
+    {
+        $subscription = new Subscription($user, $feed, $line->createdAt);
+        $subscription->setCustomTitle($line->customTitle);
+        $subscription->setPosition($line->position);
+        $subscription->setMarkedReadUntil($line->markedReadUntil);
+        $subscription->changeInclusions(new InclusionChange(
+            $line->includeInAllItems,
+            $line->includeInForYou,
+            $line->includeInSavedSearches,
+            $line->includeInTrending,
+        ));
+
+        return $subscription;
+    }
+}

@@ -1,0 +1,230 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Library\Reading;
+
+use App\Entity\Entry;
+use App\Entity\EntryShare;
+use App\Entity\EntryState;
+use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Repository\EntryListRepository;
+use App\Service\Library\Reading\EntryStateUpdater;
+use App\Service\Library\Reading\Model\EntryStateChangeModel;
+use App\Tests\DbTestCase;
+use App\Tests\Support\StoredUserSettings;
+
+final class EntryStateUpdaterTest extends DbTestCase
+{
+    /** @return array{User, Entry, Entry} */
+    private function seedGroup(): array
+    {
+        $user = new User('mirror@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+
+        $feedA = new Feed('https://example.com/mirror-a.xml');
+        $this->entityManager->persist($feedA);
+        $this->entityManager->persist(new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $feedB = new Feed('https://example.com/mirror-b.xml');
+        $this->entityManager->persist($feedB);
+        $this->entityManager->persist(new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $target = new Entry(
+            $feedA,
+            'mirror-target',
+            'https://news.example.com/shared',
+            'Shared Article A',
+            $effectiveDate,
+            $effectiveDate,
+            'shared-url-hash',
+        );
+        $this->entityManager->persist($target);
+        $sibling = new Entry(
+            $feedB,
+            'mirror-sibling',
+            'https://news.example.com/shared',
+            'Shared Article B',
+            $effectiveDate,
+            $effectiveDate,
+            'shared-url-hash',
+        );
+        $this->entityManager->persist($sibling);
+        $this->entityManager->flush();
+
+        return [$user, $target, $sibling];
+    }
+
+    private function change(
+        ?bool $isHidden = null,
+        ?bool $isFavorite = null,
+        ?bool $isKept = null,
+        ?bool $isViewed = null,
+        ?bool $isShared = null,
+    ): EntryStateChangeModel {
+        return new EntryStateChangeModel($isHidden, $isFavorite, $isKept, $isViewed, $isShared);
+    }
+
+    /**
+     * The persisted state, or an unpersisted all-false default when no row was
+     * ever created for it — a mirror that only touches isHidden/isViewed
+     * leaves an untouched sibling with no row at all.
+     */
+    private function stateOf(User $user, Entry $entry): EntryState
+    {
+        return $this->entityManager->getRepository(EntryState::class)
+            ->findOneForUserEntry($user->requireId(), $entry->requireId())
+            ?? new EntryState($user, $entry);
+    }
+
+    private function sharedAtOf(User $user, Entry $entry): ?\DateTimeImmutable
+    {
+        return $this->entityManager->getRepository(EntryShare::class)
+            ->sharedAtFor($user->requireId(), $entry->requireId());
+    }
+
+    /**
+     * Null when no row was ever created. stateOf() cannot tell that apart from a row created but never written
+     * to: its unpersisted fallback reads all-false too.
+     */
+    private function persistedStateOf(User $user, Entry $entry): ?EntryState
+    {
+        return $this->entityManager->getRepository(EntryState::class)
+            ->findOneForUserEntry($user->requireId(), $entry->requireId());
+    }
+
+    private function rows(): EntryListRepository
+    {
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function updater(): EntryStateUpdater
+    {
+        $service = self::getContainer()->get(EntryStateUpdater::class);
+        self::assertInstanceOf(EntryStateUpdater::class, $service);
+
+        return $service;
+    }
+
+    public function testReadMirrorsToTheSubscribedSibling(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isHidden: true));
+
+        self::assertTrue($this->stateOf($user, $target)->isHidden());
+        self::assertTrue($this->stateOf($user, $sibling)->isHidden());
+    }
+
+    public function testFavoriteDoesNotMirror(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isFavorite: true));
+
+        self::assertTrue($this->stateOf($user, $target)->isFavorite());
+        self::assertFalse($this->stateOf($user, $sibling)->isFavorite());
+        self::assertNull($this->persistedStateOf($user, $sibling));
+    }
+
+    public function testKeptDoesNotMirror(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isKept: true));
+
+        self::assertTrue($this->stateOf($user, $target)->isKept());
+        self::assertFalse($this->stateOf($user, $sibling)->isKept());
+        self::assertNull($this->persistedStateOf($user, $sibling));
+    }
+
+    public function testSharingOneCopyDoesNotMarkTheSibling(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isShared: true));
+
+        self::assertNotNull($this->sharedAtOf($user, $target));
+        self::assertNull($this->sharedAtOf($user, $sibling));
+    }
+
+    public function testSharingAgainMovesTheShareOnToTheNewInstant(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $earlier = new \DateTimeImmutable('2026-01-01T00:00:00Z');
+        $this->entityManager->getRepository(EntryShare::class)
+            ->record($user->requireId(), $target->requireId(), $earlier);
+        $sharedRow = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $updated = $this->updater()->apply($user, $sharedRow, $this->change(isShared: true));
+
+        self::assertNotNull($updated->sharedAt);
+        self::assertGreaterThan($earlier, $updated->sharedAt);
+    }
+
+    public function testSharingWhileSharesAreNotRecordedKeepsTheEarlierShare(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $this->updater()->apply(
+            $user,
+            $this->rows()->getRowForUser($user->requireId(), $target->requireId()),
+            $this->change(isShared: true),
+        );
+        StoredUserSettings::sharing($this->entityManager, $user)->setRememberingShares(false);
+        $sharedRow = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $updated = $this->updater()->apply($user, $sharedRow, $this->change(isShared: true));
+
+        self::assertEquals($this->sharedAtOf($user, $target), $updated->sharedAt);
+        self::assertNotNull($updated->sharedAt);
+    }
+
+    public function testUnfavouritingAndUnkeepingClearBothFlags(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+        $this->updater()->apply($user, $row, $this->change(isFavorite: true, isKept: true));
+
+        $this->updater()->apply($user, $row, $this->change(isFavorite: false, isKept: false));
+
+        self::assertFalse($this->stateOf($user, $target)->isFavorite());
+        self::assertFalse($this->stateOf($user, $target)->isKept());
+    }
+
+    public function testViewedMirrorsToTheSubscribedSiblingAndImpliesHiddenThere(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isViewed: true));
+
+        self::assertTrue($this->stateOf($user, $target)->isViewed());
+        self::assertTrue($this->stateOf($user, $sibling)->isViewed());
+        // A viewed row is always hidden, on the mirrored copy too.
+        self::assertTrue($this->stateOf($user, $sibling)->isHidden());
+    }
+
+    public function testSiblingRowsForUserExcludesTheTargetAndIsNotCollapsed(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+
+        $siblingRows = $this->rows()->siblingRowsForUser(
+            $user->requireId(),
+            'shared-url-hash',
+            $target->requireId(),
+        );
+
+        self::assertCount(1, $siblingRows);
+        self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
+    }
+}

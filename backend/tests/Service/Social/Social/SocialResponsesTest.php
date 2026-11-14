@@ -1,0 +1,546 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Social\Social;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\LinkCardContent;
+use App\Entity\SocialAccount;
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Repository\SharingSettingsRepository;
+use App\Repository\SocialAccountRepository;
+use App\Service\Content\Comments\CommentsCache;
+use App\Service\Content\Comments\CommentsLoader;
+use App\Service\Library\Reading\EntryShareRecorder;
+use App\Service\Library\Reading\EntryShares;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\ComposerContexts;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\ComposerKind;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\PostPreviewModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\ResponseKind;
+use App\Service\Social\Social\Model\ResponseTargetModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\PostWriting;
+use App\Service\Social\Social\ResponseTargetFinder;
+use App\Service\Social\Social\SharedPageCards;
+use App\Service\Social\Social\SocialCountsCache;
+use App\Service\Social\Social\SocialPostFinder;
+use App\Service\Social\Social\SocialResponses;
+use App\Tests\DbTestCase;
+use App\Tests\Support\AssertsRefusal;
+use App\Tests\Support\FakeCommentsSource;
+use App\Tests\Support\FakeComposerDefaults;
+use App\Tests\Support\FailingEntryShareStore;
+use App\Tests\Support\FakeMastodonNetwork;
+use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StubPageCardReader;
+use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Component\DependencyInjection\ServiceLocator;
+
+final class SocialResponsesTest extends DbTestCase
+{
+    use AssertsRefusal;
+    use SeedsUsers;
+
+    private const string FEED_URL = 'https://mastodon.social/@Gargron.rss';
+    private const string STATUS_URL = 'https://mastodon.social/@Gargron/110';
+    private const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/200';
+
+    private FakeMastodonNetwork $mastodon;
+    private FakeCommentsSource $thread;
+    private CommentsLoader $comments;
+    private SocialCountsCache $countsCache;
+    private User $owner;
+    private SocialAccount $account;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->mastodon = new FakeMastodonNetwork();
+        $this->thread = new FakeCommentsSource('thread');
+        $clock = new MockClock('2026-11-01 12:00:00');
+        $this->comments = new CommentsLoader(
+            [$this->thread],
+            new CommentsCache(new ArrayAdapter(clock: $clock), 7200, 60),
+            $clock,
+        );
+        $this->countsCache = new SocialCountsCache(new ArrayAdapter());
+        $this->owner = $this->user('social-replies@example.test');
+        $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+    }
+
+    public function testTheComposerAnswersAsTheActingAccountAmongTheConnectedOnes(): void
+    {
+        $first = $this->account;
+        $default = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $default->becomeDefault();
+        $broken = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'cid@mastodon.example'),
+        );
+        $broken->markNeedsReconnect();
+        $this->entityManager->flush();
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Reply,
+        );
+
+        self::assertSame([$default, $first], $context->accounts);
+        self::assertSame($default, $context->account);
+        self::assertFalse($context->canSend);
+        self::assertEquals(new ComposerDefaultsModel(500, 'public', ['110', '110']), $context->defaults);
+        self::assertSame(ComposerKind::Reply, $context->kind);
+        self::assertSame('110 110 ', $context->text);
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testTheComposerShowsThePostItAnswersWithTheLinkCardItCarries(): void
+    {
+        $preview = new PostPreviewModel(
+            'Eugen',
+            '@Gargron@mastodon.social',
+            'Hello',
+            new LinkCardContent('https://example.org/story', 'The story', null, null, 'Example'),
+        );
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Quote,
+        );
+
+        self::assertSame($preview, $context->target);
+    }
+
+    public function testAReplyInTheThreadAlsoLooksUpTheEntrysPostAsItsStarter(): void
+    {
+
+        $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
+        );
+
+        self::assertSame(['resolve ' . self::REPLY_URI, 'resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testAThreadStarterTheAccountCannotFindLeavesItsAuthorOut(): void
+    {
+        $calls = &$this->mastodon->calls;
+        $this->mastodon->onResolve(static function () use (&$calls): void {
+            if (\count($calls) > 1) {
+                throw new SocialPostNotFoundException('The entry\'s post is gone.');
+            }
+        });
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
+        );
+
+        self::assertSame(['110', 'no thread starter'], $context->defaults->mentions);
+    }
+
+    public function testAQuoteMaySendOnlyWhereTheAuthorAllowsQuotes(): void
+    {
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+        $target = new ResponseTargetModel($this->post());
+
+        self::assertFalse($this->responses()->contextFor($this->owner, $target, ResponseKind::Quote)->canSend);
+        self::assertTrue($this->responses()->contextFor($this->owner, $target, ResponseKind::Reply)->canSend);
+    }
+
+    public function testAQuoteOfAReplyStartsWithNoMentionsAndNeverLooksUpTheThreadStarter(): void
+    {
+
+        $context = $this->responses()->contextFor(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Quote,
+        );
+
+        self::assertSame([], $context->defaults->mentions);
+        self::assertSame(ComposerKind::Quote, $context->kind);
+        self::assertSame('', $context->text);
+        self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
+    }
+
+    public function testAReplyAnswersTheEntrysPostAsTheActingAccount(): void
+    {
+        $target = new ResponseTargetModel($this->post());
+
+        $published = $this->responses()->respond($this->owner, $target, ResponseKind::Reply, new PostDraftModel('Hi'));
+
+        self::assertSame(['resolve ' . self::STATUS_URL, 'reply 110 Hi'], $this->mastodon->calls);
+        self::assertEquals(
+            new PublishedPostModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
+            $published,
+        );
+    }
+
+    public function testAReplyToAReplyAnswersThatReply(): void
+    {
+        $this->responses()->respond(
+            $this->owner,
+            new ResponseTargetModel($this->post(), self::REPLY_URI),
+            ResponseKind::Reply,
+            new PostDraftModel('Hi'),
+        );
+
+        self::assertSame(['resolve ' . self::REPLY_URI, 'reply 110 Hi'], $this->mastodon->calls);
+    }
+
+    public function testAReplyOnAChosenAccountResolvesThePostThere(): void
+    {
+        $second = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $resolvedOn = [];
+        $this->mastodon->onResolve(static function (SocialAccount $account) use (&$resolvedOn): void {
+            $resolvedOn[] = $account->getIdentity();
+        });
+
+        $this->responses()->respond(
+            $this->owner,
+            new ResponseTargetModel($this->post(), accountId: $second->requireId()),
+            ResponseKind::Reply,
+            new PostDraftModel('Hi'),
+        );
+
+        self::assertSame(['bea@mastodon.example'], $resolvedOn);
+    }
+
+    public function testAnAccountThatIsNotTheUsersOrOnAnotherNetworkCannotBeChosen(): void
+    {
+        $foreign = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonOf($this->user('someone-else@example.test')),
+        );
+        $bluesky = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->owner));
+        $entry = $this->post();
+
+        foreach ([$foreign, $bluesky] as $account) {
+            $this->assertRefused(
+                fn (): mixed => $this->responses()->respond(
+                    $this->owner,
+                    new ResponseTargetModel($entry, accountId: $account->requireId()),
+                    ResponseKind::Reply,
+                    new PostDraftModel('Hi'),
+                ),
+                SocialAccountNotFoundException::class,
+                'Only an account of the user on the entry\'s network can answer.',
+            );
+        }
+        self::assertSame([], $this->mastodon->calls);
+    }
+
+    public function testAPostThatTakesNoRepliesIsRefusedBeforeTheReply(): void
+    {
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
+
+        $this->assertRefused(
+            fn (): mixed => $this->responses()->respond(
+                $this->owner,
+                new ResponseTargetModel($this->post()),
+                ResponseKind::Reply,
+                new PostDraftModel('Hi'),
+            ),
+            SocialPostRefusedException::class,
+            'A post that takes no replies cannot be answered.',
+        );
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testAReplyDropsTheCachedCountsAndTheCachedThread(): void
+    {
+        $entry = $this->post();
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, null));
+        $this->comments->load($this->owner, $entry);
+
+        $target = new ResponseTargetModel($entry);
+
+        $this->responses()->respond($this->owner, $target, ResponseKind::Reply, new PostDraftModel('Hi'));
+        $this->comments->load($this->owner, $entry);
+
+        self::assertNull($this->countsCache->find(self::address()));
+        self::assertCount(2, $this->thread->fetches);
+    }
+
+    public function testAnAddressThatIsNoPostOnTheEntrysNetworkIsRefusedBeforeAnyCall(): void
+    {
+        $this->assertRefused(
+            fn (): mixed => $this->responses()->respond(
+                $this->owner,
+                new ResponseTargetModel($this->post(), 'at://did:plc:x/app.bsky.feed.post/1'),
+                ResponseKind::Reply,
+                new PostDraftModel('Hi'),
+            ),
+            NotASocialPostException::class,
+            'Only a post on the entry\'s network can be answered.',
+        );
+        self::assertSame([], $this->mastodon->calls);
+    }
+
+    public function testAQuoteQuotesTheEntrysPostAsTheActingAccountAndDropsItsCachedCounts(): void
+    {
+        $entry = $this->post();
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, 2));
+
+        $target = new ResponseTargetModel($entry);
+        $draft = new PostDraftModel('Read');
+
+        $published = $this->responses()->respond($this->owner, $target, ResponseKind::Quote, $draft);
+
+        self::assertSame(['resolve ' . self::STATUS_URL, 'quote 110 Read'], $this->mastodon->calls);
+        self::assertEquals(
+            new PublishedPostModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
+            $published,
+        );
+        self::assertNull($this->countsCache->find(self::address()));
+    }
+
+    public function testAQuoteTheNetworkAcceptedStillSucceedsWhenRecordingTheShareFails(): void
+    {
+        $responses = $this->responses($this->failingShareRecorder());
+
+        $published = $responses->respond(
+            $this->owner,
+            new ResponseTargetModel($this->post()),
+            ResponseKind::Quote,
+            new PostDraftModel('Read'),
+        );
+
+        self::assertSame(FakeMastodonNetwork::REPLY_URI, $published->url);
+        self::assertSame(['resolve ' . self::STATUS_URL, 'quote 110 Read'], $this->mastodon->calls);
+    }
+
+    public function testAQuoteOfAReplyQuotesThatReplyAndDropsTheCachedCountsAndThread(): void
+    {
+        $entry = $this->post();
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, 2));
+        $this->comments->load($this->owner, $entry);
+
+        $this->responses()->respond(
+            $this->owner,
+            new ResponseTargetModel($entry, self::REPLY_URI),
+            ResponseKind::Quote,
+            new PostDraftModel('Read'),
+        );
+        $this->comments->load($this->owner, $entry);
+
+        self::assertSame(['resolve ' . self::REPLY_URI, 'quote 110 Read'], $this->mastodon->calls);
+        self::assertNull($this->countsCache->find(self::address()));
+        self::assertCount(2, $this->thread->fetches);
+    }
+
+    public function testAPostItsAuthorKeepsFromQuotesIsRefusedBeforeTheQuote(): void
+    {
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+
+        $this->assertRefused(
+            fn (): mixed => $this->responses()->respond(
+                $this->owner,
+                new ResponseTargetModel($this->post()),
+                ResponseKind::Quote,
+                new PostDraftModel('Read'),
+            ),
+            SocialPostRefusedException::class,
+            'A post its author keeps from quotes cannot be quoted.',
+        );
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    public function testAReplyAConnectedAccountWroteIsDeletedAndTheCachesDropped(): void
+    {
+        $entry = $this->post();
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'Alice@Mastodon.Example'));
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 1, null));
+        $this->comments->load($this->owner, $entry);
+
+        $this->responses()->delete($this->owner, $entry, self::REPLY_URI);
+        $this->comments->load($this->owner, $entry);
+
+        self::assertSame(['resolve ' . self::REPLY_URI, 'delete 110'], $this->mastodon->calls);
+        self::assertNull($this->countsCache->find(self::address()));
+        self::assertCount(2, $this->thread->fetches);
+    }
+
+    public function testAReplySomeoneElseWroteIsNotDeleted(): void
+    {
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'ann@hachyderm.io'));
+
+        $this->assertRefused(
+            fn () => $this->responses()->delete($this->owner, $this->post(), self::REPLY_URI),
+            SocialPostRefusedException::class,
+            'Only a reply a connected account wrote can be deleted.',
+        );
+        self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
+    }
+
+    public function testAnotherAccountDeletesItsReplyWhenTheFirstCannotReachIt(): void
+    {
+        SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'bea@mastodon.example'));
+        $this->mastodon->onResolve(function (SocialAccount $account): void {
+            if ($account === $this->account) {
+                throw new SocialNetworkUnreachableException('The instance is down.');
+            }
+        });
+
+        $this->responses()->delete($this->owner, $this->post(), self::REPLY_URI);
+
+        self::assertSame(
+            ['resolve ' . self::REPLY_URI, 'resolve ' . self::REPLY_URI, 'delete 110'],
+            $this->mastodon->calls,
+        );
+    }
+
+    public function testAReplyNoAccountFindsAnyMoreCountsAsDeleted(): void
+    {
+        $entry = $this->post();
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 1, null));
+        $this->mastodon->onResolve(static function (): void {
+            throw new SocialPostNotFoundException('Gone.');
+        });
+
+        $this->responses()->delete($this->owner, $entry, self::REPLY_URI);
+
+        self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
+        self::assertNull($this->countsCache->find(self::address()));
+    }
+
+    public function testAnAccountThatCannotReachTheReplyOutranksOneThatDidNotWriteIt(): void
+    {
+        SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
+        );
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'ann@hachyderm.io'));
+        $this->mastodon->onResolve(function (SocialAccount $account): void {
+            if ($account !== $this->account) {
+                throw new SocialNetworkUnreachableException('The instance is down.');
+            }
+        });
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->responses()->delete($this->owner, $this->post(), self::REPLY_URI);
+    }
+
+    public function testAnAccountThatNeedsReconnectingIsNotAskedToDelete(): void
+    {
+        $this->account->markNeedsReconnect();
+        $this->entityManager->flush();
+        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'alice@mastodon.example'));
+
+        $this->assertRefused(
+            fn () => $this->responses()->delete($this->owner, $this->post(), self::REPLY_URI),
+            SocialPostRefusedException::class,
+            'An account that needs reconnecting deletes nothing.',
+        );
+        self::assertSame([], $this->mastodon->calls);
+    }
+
+    private function post(): Entry
+    {
+        $feed = new Feed(self::FEED_URL);
+        $this->entityManager->persist($feed);
+        $now = new \DateTimeImmutable('2026-11-01 10:00:00');
+        $this->entityManager->persist(new Subscription($this->owner, $feed, $now));
+        $entry = new Entry($feed, 'tag:mastodon.social,2026:110', self::STATUS_URL, 'Post', $now, $now);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private static function address(): SocialPostAddressModel
+    {
+        return new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL);
+    }
+
+    private function responses(?EntryShareRecorder $shareRecorder = null): SocialResponses
+    {
+        /** @var SocialAccountRepository $accounts */
+        $accounts = $this->entityManager->getRepository(SocialAccount::class);
+        $guard = new ActingAccountGuard($this->entityManager);
+        $mastodon = $this->mastodon;
+        $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
+        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
+        $posts = new SocialPostFinder($chooser, $guard, $network);
+
+        return new SocialResponses(
+            new ResponseTargetFinder($posts, $chooser),
+            new ComposerContexts(
+                $accounts,
+                $posts,
+                new SharedPageCards(new StubPageCardReader(), new NullLogger()),
+                new ServiceLocator(['mastodon' => static fn (): FakeComposerDefaults => new FakeComposerDefaults()]),
+            ),
+            $posts,
+            new PostWriting($guard, $network),
+            $accounts,
+            $this->countsCache,
+            $this->comments,
+            $shareRecorder ?? $this->shareRecorder(),
+        );
+    }
+
+    private function failingShareRecorder(): EntryShareRecorder
+    {
+        return new EntryShareRecorder(
+            new EntryShares(
+                new FailingEntryShareStore(),
+                new MockClock('2026-11-01 12:00:00'),
+                $this->sharingSettings(),
+            ),
+            new NullLogger(),
+        );
+    }
+
+    private function sharingSettings(): SharingSettingsRepository
+    {
+        $repository = self::getContainer()->get(SharingSettingsRepository::class);
+        self::assertInstanceOf(SharingSettingsRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function shareRecorder(): EntryShareRecorder
+    {
+        $recorder = self::getContainer()->get(EntryShareRecorder::class);
+        self::assertInstanceOf(EntryShareRecorder::class, $recorder);
+
+        return $recorder;
+    }
+}

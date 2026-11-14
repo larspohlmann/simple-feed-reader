@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Subscription\Model\SubscribeOutcomeModel;
-use App\Service\Subscription\Model\SubscribeRequestModel;
-use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
+use App\Service\Library\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Library\Subscription\Model\SubscribeRequestModel;
+use App\Service\Library\Subscription\SubscribeRoute\SubscribeRouteInterface;
 
 final class RecordingSubscribeRoute implements SubscribeRouteInterface
 {

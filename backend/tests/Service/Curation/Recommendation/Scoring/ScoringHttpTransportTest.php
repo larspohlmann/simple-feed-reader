@@ -1,0 +1,136 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Curation\Recommendation\Scoring;
+
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Recommendation\Scoring\Pass\ScoringEndpoint;
+use App\Service\Curation\Recommendation\Scoring\ScoringHttpTransport;
+use App\Tests\Support\CountingProviderCallHeartbeat;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\ResponseInterface;
+
+/** The endpoint is the protocol's; everything else is the transport's, and HttpSystemOneClientTest covers it. */
+final class ScoringHttpTransportTest extends TestCase
+{
+    public function testItPostsEachBodyToTheEndpointsPathAndReadsTheReplyTheEndpointsWay(): void
+    {
+        $response = new MockResponse('{"ranked":[0.4]}', ['response_headers' => ['x-rank-request' => 'rank-31']]);
+
+        $outcomes = $this->transport([$response])->sendAll(
+            new ScoringEndpoint(
+                '/rank',
+                static fn (string $body, ResponseInterface $reply): ScoringReplyModel => new ScoringReplyModel(
+                    $body,
+                    [31 => 0.4],
+                    new ProviderCallReceiptModel(ResponseHeader::first($reply, 'x-rank-request'), null, null),
+                ),
+            ),
+            $this->credentials(),
+            ['{"query":"Rust"}'],
+        );
+
+        self::assertSame('https://api.rank.test/v2/rank', $response->getRequestUrl());
+        /** @var array{headers: list<string>, body: string} $options */
+        $options = $response->getRequestOptions();
+        self::assertSame('{"query":"Rust"}', $options['body']);
+        self::assertContains('Authorization: Bearer sk-rank', $options['headers']);
+        self::assertSame([31 => 0.4], $outcomes[0]->reply()->scores);
+        self::assertSame('rank-31', $outcomes[0]->reply()->receipt->requestId);
+    }
+
+    public function testItSendsEachRequestWithoutRedirectsOrCompressionAndIdentifiesItself(): void
+    {
+        /** @var array{max_redirects: int, normalized_headers: array<string, list<string>>} $captured */
+        $captured = ['max_redirects' => -1, 'normalized_headers' => []];
+        $httpClient = new MockHttpClient(
+            static function (string $method, string $url, array $options) use (&$captured): MockResponse {
+                /** @var array{max_redirects: int, normalized_headers: array<string, list<string>>} $options */
+                $captured = $options;
+
+                return new MockResponse('{}');
+            },
+        );
+
+        (new ScoringHttpTransport(
+            $httpClient,
+            new CountingProviderCallHeartbeat(),
+            new MockClock(),
+            'SimpleFeedReader/1.0',
+        ))->sendAll(
+            new ScoringEndpoint('/rank', static fn (): ScoringReplyModel => new ScoringReplyModel(
+                '{}',
+                [],
+                new ProviderCallReceiptModel(null, null, null),
+            )),
+            $this->credentials(),
+            ['{}'],
+        );
+
+        self::assertSame(0, $captured['max_redirects']);
+        self::assertContains('Accept: application/json', $captured['normalized_headers']['accept']);
+        self::assertContains('Accept-Encoding: identity', $captured['normalized_headers']['accept-encoding']);
+        self::assertContains('User-Agent: SimpleFeedReader/1.0', $captured['normalized_headers']['user-agent']);
+    }
+
+    /** 503 is no rate limit: only 429 and 529 are waited out, for every protocol. */
+    public function testOnlyA429OrA529IsRetryable(): void
+    {
+        $outcomes = $this->transport([
+            new MockResponse('{}', ['http_code' => 429]),
+            new MockResponse('{}', ['http_code' => 529]),
+            new MockResponse('{}', ['http_code' => 503]),
+        ])->sendAll(
+            new ScoringEndpoint('/rank', static fn (): ScoringReplyModel => throw new \LogicException('No reply.')),
+            $this->credentials(),
+            ['{}', '{}', '{}'],
+        );
+
+        self::assertTrue($outcomes[0]->isRetryable());
+        self::assertTrue($outcomes[1]->isRetryable());
+        self::assertFalse($outcomes[2]->isRetryable());
+        self::assertSame('That provider answered with status 503.', $outcomes[2]->cause()->getMessage());
+    }
+
+    /** Rerank results name documents by index, so each reply must be read against its own request. */
+    public function testEachReplyIsReadKnowingItsRequestsPosition(): void
+    {
+        $transport = $this->transport([new MockResponse('{"first":true}'), new MockResponse('{"second":true}')]);
+
+        $outcomes = $transport->sendAll(
+            new ScoringEndpoint(
+                '/rank',
+                static fn (string $body, ResponseInterface $reply, int $position): ScoringReplyModel
+                    => new ScoringReplyModel($body, [$position => 1.0], new ProviderCallReceiptModel(null, null, null)),
+            ),
+            $this->credentials(),
+            ['{}', '{}'],
+        );
+
+        self::assertSame([0 => 1.0], $outcomes[0]->reply()->scores);
+        self::assertSame([1 => 1.0], $outcomes[1]->reply()->scores);
+    }
+
+    /** @param list<MockResponse> $responses */
+    private function transport(array $responses): ScoringHttpTransport
+    {
+        return new ScoringHttpTransport(
+            new MockHttpClient($responses),
+            new CountingProviderCallHeartbeat(),
+            new MockClock(),
+            'SimpleFeedReader/1.0',
+        );
+    }
+
+    private function credentials(): ProviderCredentialsModel
+    {
+        return ProviderCredentialsModel::fromStoredConfiguration('https://api.rank.test/v2', 'sk-rank');
+    }
+}

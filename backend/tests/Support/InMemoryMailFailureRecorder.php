@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\MailKind;
-use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 
 /** A MailFailureRecorderInterface that captures calls in memory. */
 final class InMemoryMailFailureRecorder implements MailFailureRecorderInterface

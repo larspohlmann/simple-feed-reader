@@ -1,0 +1,172 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Foundation\Sanitize;
+
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use PHPUnit\Framework\TestCase;
+
+final class EntrySanitizerTest extends TestCase
+{
+    private EntrySanitizer $sanitizer;
+
+    protected function setUp(): void
+    {
+        $this->sanitizer = new EntrySanitizer(new TrailingBlankRemover());
+    }
+
+    public function testStripsScriptsAndEventHandlers(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            /** @lang TEXT */
+            '<p onclick="evil()">Hi</p><script>alert(1)</script><img src="x" onerror="evil()">',
+        );
+
+        self::assertStringNotContainsString('script', $clean);
+        self::assertStringNotContainsString('onclick', $clean);
+        self::assertStringNotContainsString('onerror', $clean);
+        self::assertStringContainsString('<p>Hi</p>', $clean);
+    }
+
+    public function testStripsJavascriptUrls(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize('<a href="javascript:alert(1)">x</a>');
+
+        self::assertStringNotContainsString('javascript:', $clean);
+    }
+
+    public function testKeepsFormattingImagesAndLinks(): void
+    {
+        $html = '<p>Some <strong>bold</strong> text with <img src="https://example.com/pic.jpg" alt="pic"> '
+            . 'and a <a href="https://example.com/">link</a>.</p>';
+        $clean = (string) $this->sanitizer->sanitize($html);
+
+        self::assertStringContainsString('<strong>bold</strong>', $clean);
+        self::assertStringContainsString('src="https://example.com/pic.jpg"', $clean);
+        self::assertStringContainsString('href="https://example.com/"', $clean);
+    }
+
+    public function testKeepsTheNarrationClassOnAnAudioPlayer(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            '<audio class="reader-narration" controls src="https://x.test/full.mp3"></audio>',
+        );
+
+        self::assertStringContainsString('class="reader-narration"', $clean);
+    }
+
+    public function testStillStripsClassFromOtherElements(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize('<p class="lead">Text</p>');
+
+        self::assertStringNotContainsString('class=', $clean);
+        self::assertStringContainsString('Text', $clean);
+    }
+
+    public function testForcesSafeLinkAttributes(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize('<a href="https://example.com/">link</a>');
+
+        self::assertStringContainsString('rel="noopener noreferrer"', $clean);
+        self::assertStringContainsString('target="_blank"', $clean);
+    }
+
+    public function testStripsXmlNamespaceArtifactsFromAtomXhtmlContent(): void
+    {
+        $fromAtom = '<div xmlns="http://www.w3.org/1999/xhtml"><p>Inline <strong>xhtml</strong> body.</p></div>';
+        $clean = (string) $this->sanitizer->sanitize($fromAtom);
+
+        self::assertStringNotContainsString('xmlns', $clean);
+        self::assertStringContainsString('<strong>xhtml</strong>', $clean);
+    }
+
+    public function testStripsDangerousEmbeddedContent(): void
+    {
+        $dirty = /** @lang TEXT */ '<iframe src="https://evil.example.com/"></iframe>'
+            . '<object data="evil.swf"></object>'
+            . '<embed src="evil.swf">'
+            . '<form action="https://evil.example.com/"><input name="pw" type="password"></form>'
+            . '<style>body { display: none }</style>';
+        $clean = (string) $this->sanitizer->sanitize($dirty);
+
+        self::assertStringNotContainsString('iframe', $clean);
+        self::assertStringNotContainsString('<object', $clean);
+        self::assertStringNotContainsString('<embed', $clean);
+        self::assertStringNotContainsString('<form', $clean);
+        self::assertStringNotContainsString('<input', $clean);
+        self::assertStringNotContainsString('display: none', $clean);
+    }
+
+    public function testStripsDataUriImages(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            /** @lang TEXT */
+            '<img src="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">',
+        );
+
+        self::assertStringNotContainsString('data:', $clean);
+    }
+
+    /**
+     * Both bodies of article HTML cross this barrier — the feed's on ingest and
+     * the extracted one on every reader request — so trimming the blank tail
+     * here is what keeps it out of every client's article.
+     */
+    public function testTrimsTheBlankTailAFeedLeftBehind(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            "<p>The last sentence.</p>\n<p>&nbsp;</p>\n<p></p>\n<br>\n\n  ",
+        );
+
+        self::assertSame('<p>The last sentence.</p>', $clean);
+    }
+
+    public function testEmptyInputBecomesNull(): void
+    {
+        self::assertNull($this->sanitizer->sanitize(null));
+        self::assertNull($this->sanitizer->sanitize('   '));
+        self::assertNull($this->sanitizer->sanitize('<script>only evil</script>'));
+        // Nothing but a tail is not an article either.
+        self::assertNull($this->sanitizer->sanitize('<p>&nbsp;</p><p></p><br>'));
+    }
+
+    public function testKeepsTheSlideshowFigureMarker(): void
+    {
+        $html = '<figure class="reader-slideshow"><ol><li>'
+            . '<img src="https://img/1.jpg" alt="a" loading="eager"></li>'
+            . '<li><img src="https://img/2.jpg" alt="b" loading="lazy"></li></ol></figure>';
+
+        $clean = $this->sanitizer->sanitize($html);
+
+        self::assertNotNull($clean);
+        self::assertStringContainsString('class="reader-slideshow"', $clean);
+        self::assertSame(2, substr_count($clean, '<img'));
+    }
+
+    public function testStripsAHostileAttributeInsideTheSlideshow(): void
+    {
+        $html = '<figure class="reader-slideshow" onclick="steal()"><ol>'
+            . '<li><img src="https://img/1.jpg" alt="a"></li>'
+            . '<li><img src="https://img/2.jpg" alt="b"></li></ol></figure>';
+
+        $clean = $this->sanitizer->sanitize($html);
+
+        self::assertNotNull($clean);
+        self::assertStringNotContainsString('onclick', $clean);
+        self::assertStringContainsString('class="reader-slideshow"', $clean);
+    }
+
+    public function testKeepsTheClipTitleAndItsDurationTimeOnAnAudioPlayer(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            '<audio controls preload="none" src="https://x.test/a.mp3" title="Clip" onplay="evil()">'
+            . '<time datetime="PT2871S">47:51</time></audio>',
+        );
+
+        self::assertStringContainsString('title="Clip"', $clean);
+        self::assertStringContainsString('<time datetime="PT2871S">47:51</time></audio>', $clean);
+        self::assertStringNotContainsString('onplay', $clean);
+    }
+}

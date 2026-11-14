@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\UserPasskey;
-use App\Service\Passkey\Model\AccountPasskeysModel;
+use App\Service\Identity\Passkey\Model\AccountPasskeysModel;
 
 /**
  * The passkey listing: the rows plus the three values the WebAuthn Signal API needs, which `register/options` already

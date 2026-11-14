@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\SavedSearch;
 use App\Repository\Exception\RecordNotFoundException;
-use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
+use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\Persistence\ManagerRegistry;

@@ -5,14 +5,14 @@ declare(strict_types=1);
 // Fixtures for ServiceModuleCycleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Ai {
+namespace App\Service\Curation\Ai {
     final class FixtureConnection
     {
     }
 }
 
-namespace App\Service\Recommendation {
-    use App\Service\Ai\FixtureConnection;
+namespace App\Service\Curation\Recommendation {
+    use App\Service\Curation\Ai\FixtureConnection;
 
     interface FixtureEngineInterface
     {
@@ -20,8 +20,8 @@ namespace App\Service\Recommendation {
     }
 }
 
-namespace App\Service\Digest {
-    use App\Service\Recommendation\FixtureEngineInterface;
+namespace App\Service\Fixture\Digest {
+    use App\Service\Curation\Recommendation\FixtureEngineInterface;
 
     final class FixtureDigestSchedule
     {
@@ -31,10 +31,10 @@ namespace App\Service\Digest {
     }
 }
 
-namespace App\Service\Recommendation\Llm {
-    use App\Service\Ai\FixtureConnection;
-    use App\Service\Digest\FixtureDigestSchedule;
-    use App\Service\Recommendation\FixtureEngineInterface;
+namespace App\Service\Curation\Recommendation\Llm {
+    use App\Service\Curation\Ai\FixtureConnection;
+    use App\Service\Fixture\Digest\FixtureDigestSchedule;
+    use App\Service\Curation\Recommendation\FixtureEngineInterface;
 
     final class FixtureLlmEngine implements FixtureEngineInterface
     {

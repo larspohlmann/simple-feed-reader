@@ -8,7 +8,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Http\OnboardingJson;
 use App\Http\TagJson;
-use App\Service\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class OnboardingJsonTest extends TestCase

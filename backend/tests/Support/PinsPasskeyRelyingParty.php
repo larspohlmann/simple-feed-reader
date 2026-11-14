@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\InstanceSettingsUpdate;
-use App\Service\Settings\InstanceSettings;
+use App\Service\Operations\Settings\InstanceSettings;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**

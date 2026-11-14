@@ -11,7 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
-use App\Service\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\AccountBackupExporter;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\BackupArchiveReader;
 use App\Tests\Support\CorruptGzip;

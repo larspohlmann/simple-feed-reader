@@ -5,9 +5,9 @@ declare(strict_types=1);
 // Fixtures for ServiceModuleCycleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Alpha {
-    use App\Service\Beta\BetaThing;
-    use App\Service\Epsilon\EpsilonThing;
+namespace App\Service\Fixture\Alpha {
+    use App\Service\Fixture\Beta\BetaThing;
+    use App\Service\Fixture\Epsilon\EpsilonThing;
 
     final class AlphaThing
     {
@@ -17,8 +17,8 @@ namespace App\Service\Alpha {
     }
 }
 
-namespace App\Service\Beta {
-    use App\Service\Gamma\GammaThing;
+namespace App\Service\Fixture\Beta {
+    use App\Service\Fixture\Gamma\GammaThing;
 
     final class BetaThing
     {
@@ -28,18 +28,18 @@ namespace App\Service\Beta {
     }
 }
 
-namespace App\Service\Gamma {
+namespace App\Service\Fixture\Gamma {
     final class GammaThing
     {
         public function alpha(): string
         {
-            return 'App\Service\Alpha\AlphaThing';
+            return 'App\Service\Fixture\Alpha\AlphaThing';
         }
     }
 }
 
-namespace App\Service\Delta {
-    use App\Service\Alpha\AlphaThing;
+namespace App\Service\Fixture\Delta {
+    use App\Service\Fixture\Alpha\AlphaThing;
 
     final class DependsOnTheCycle
     {
@@ -49,7 +49,7 @@ namespace App\Service\Delta {
     }
 }
 
-namespace App\Service\Epsilon {
+namespace App\Service\Fixture\Epsilon {
     final class EpsilonThing
     {
     }

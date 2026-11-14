@@ -24,7 +24,7 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\ScoringProtocol;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

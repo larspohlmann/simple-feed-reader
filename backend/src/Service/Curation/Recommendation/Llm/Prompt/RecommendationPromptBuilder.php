@@ -1,0 +1,414 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
+
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolSummaryModel;
+use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
+use App\Service\Foundation\Text\Support\ClippedText;
+
+/**
+ * Renders the recommendation prompts and packs the candidate pool into batches that fit the context window.
+ */
+final readonly class RecommendationPromptBuilder
+{
+    private const int FIXED_OVERHEAD_TOKENS = 1500;
+
+    /** Generous for German and proper names, which tokenise worse than plain English prose. */
+    private const int PROFILE_TOKENS_PER_HUNDRED_WORDS = 240;
+
+    /** What packBatches() budgets for the profile, an estimate at the cap DISTILL_ROLE sets. */
+    public const int ESTIMATED_PROFILE_TOKENS = RecommendationPromptText::PROFILE_WORD_CAP
+        * self::PROFILE_TOKENS_PER_HUNDRED_WORDS / 100;
+
+    /**
+     * Consolidation re-scores, reasons and dedups in one pass. The floor (twice the final list) keeps dedup's backfill
+     * slack, the ceiling (six times) bounds reasoning on entries later dropped; the context window picks between them.
+     */
+    private const int CONSOLIDATION_MIN_INPUT_FACTOR = 2;
+    private const int CONSOLIDATION_MAX_INPUT_FACTOR = 6;
+
+    /** A candidate line's characters besides its description: id, title, feed, date and separators, roughly. */
+    private const int CANDIDATE_LINE_FRAME_CHARS = 90;
+
+    private const int MINIMUM_BATCH_SIZE = 10;
+
+    /** Quotes an ordinary rejected reply whole, and a runaway's tens of kilobytes of repetition only in part. */
+    private const int QUOTED_REPLY_LIMIT_CHARS = 2000;
+
+    /**
+     * Neutral on purpose: the clip cannot know why the reply was long, so a merely verbose
+     * reply well inside its ceiling must not be told it "did not stop" -- a false statement
+     * that, inside a prompt, changes what the model does next rather than just reading badly.
+     */
+    private const string QUOTED_REPLY_ELLIPSIS = "\n… (this quote is truncated)";
+
+    private const int DESCRIPTION_CHARS = 1000;
+
+    public function __construct(private RecommendationAnswerBudget $answerBudget)
+    {
+    }
+
+    /**
+     * @param list<ArticleLineModel> $candidates
+     *
+     * @return list<list<int>>
+     */
+    public function packBatches(
+        array $candidates,
+        RecommendationHistoryModel $history,
+        EffectiveRecommendationSettingsModel $settings,
+    ): array {
+        $favoritesSection = $this->favoritesSection($history);
+        $historyTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::of($favoritesSection);
+        $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
+        $responseReserve = $this->answerBudget->answerBoundTokens(
+            $cap,
+            RecommendationResponseSchema::BatchScore,
+        );
+        $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
+
+        $batches = [];
+        $current = [];
+        $used = 0;
+
+        foreach ($candidates as $candidate) {
+            $lineTokens = TokenEstimate::of($this->candidateLine($candidate));
+            $overBudget = $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE;
+            $atCapacity = \count($current) >= $cap;
+            if ([] !== $current && ($overBudget || $atCapacity)) {
+                $batches[] = $current;
+                $current = [];
+                $used = 0;
+            }
+            $current[] = $candidate->entryId;
+            $used += $lineTokens;
+        }
+
+        if ([] !== $current) {
+            $batches[] = $current;
+        }
+
+        return $batches;
+    }
+
+    /**
+     * How many ranked winners the consolidation call takes: the largest shortlist whose whole call, reply and
+     * reasoning headroom included, fits the context window and whose reply fits the model's cap, clamped between the
+     * floor and ceiling factors.
+     */
+    public function consolidationInputSize(PromptContext $context, OutputLimitModel $limit): int
+    {
+        $contextWindow = $context->settings->packing->contextWindow;
+        $picksLimit = $context->settings->poolLimits->picksLimit;
+        $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
+            + TokenEstimate::of((string) $context->profile)
+            + TokenEstimate::of($this->favoritesSection($context->history));
+        $lineChars = self::DESCRIPTION_CHARS + self::CANDIDATE_LINE_FRAME_CHARS;
+        $perCandidateInputTokens = TokenEstimate::ofLength($lineChars);
+
+        $floor = self::CONSOLIDATION_MIN_INPUT_FACTOR * $picksLimit;
+        $ceiling = self::CONSOLIDATION_MAX_INPUT_FACTOR * $picksLimit;
+
+        for ($size = $ceiling; $size > $floor; --$size) {
+            $callTokens = $fixedInputTokens
+                + $size * $perCandidateInputTokens
+                + $this->answerBudget->outputBoundTokens($size, RecommendationResponseSchema::Consolidation, $limit);
+            $answerTokens = $this->answerBudget->answerBoundTokens($size, RecommendationResponseSchema::Consolidation);
+            if ($callTokens <= $contextWindow && $limit->admits($answerTokens)) {
+                return $size;
+            }
+        }
+
+        return $floor;
+    }
+
+    /**
+     * @param list<ArticleLineModel> $candidateLines
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    public function batchMessages(
+        PromptContext $context,
+        array $candidateLines,
+        ?CandidatePoolSummaryModel $poolSummary = null,
+    ): array {
+        $system = implode("\n\n", [
+            RecommendationPromptText::BATCH_SYSTEM_ROLE,
+            $context->settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE,
+            RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
+        ]);
+        $user = implode("\n\n", $this->batchUserSections($context, $candidateLines, $poolSummary));
+
+        return [
+            ['role' => 'system', 'content' => $system],
+            ['role' => 'user', 'content' => $user],
+        ];
+    }
+
+    /**
+     * The profile when there is one, FAVORITES only (SHARED, KEPT and VIEWED shaped the profile), the whole pool's
+     * frame (each batch is a random sample of it), then the candidates.
+     *
+     * @param list<ArticleLineModel> $candidateLines
+     *
+     * @return list<string>
+     */
+    private function batchUserSections(
+        PromptContext $context,
+        array $candidateLines,
+        ?CandidatePoolSummaryModel $poolSummary,
+    ): array {
+        $sections = [];
+        if ($this->hasContent($context->profile)) {
+            $sections[] = "PROFILE:\n" . $context->profile;
+        }
+        $sections[] = $this->favoritesSection($context->history);
+        $poolFrame = $this->poolFrameLine($poolSummary);
+        if (null !== $poolFrame) {
+            $sections[] = $poolFrame;
+        }
+        $sections[] = $this->candidateSection($candidateLines);
+
+        return $sections;
+    }
+
+    private function poolFrameLine(?CandidatePoolSummaryModel $poolSummary): ?string
+    {
+        if (null === $poolSummary) {
+            return null;
+        }
+
+        return \sprintf(
+            'The full candidate set has %d posts spanning %s to %s. This batch is a random sample of that set.',
+            $poolSummary->total,
+            $poolSummary->oldest,
+            $poolSummary->newest,
+        );
+    }
+
+    /**
+     * The only call that sees SAVED SEARCHES, SHARED, KEPT and VIEWED; every later phase gets the profile it writes
+     * plus FAVORITES.
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    public function distillMessages(ProfileInputsModel $inputs): array
+    {
+        return [
+            [
+                'role' => 'system',
+                'content' => RecommendationPromptText::DISTILL_ROLE
+                    . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT,
+            ],
+            ['role' => 'user', 'content' => $this->distillSections($inputs)],
+        ];
+    }
+
+    private function distillSections(ProfileInputsModel $inputs): string
+    {
+        $historySections = $this->historySections($inputs->history);
+        if ([] === $inputs->savedSearchTerms) {
+            return $historySections;
+        }
+
+        return $this->savedSearchesSection($inputs->savedSearchTerms) . "\n\n" . $historySections;
+    }
+
+    /**
+     * @param list<string> $savedSearchTerms
+     */
+    private function savedSearchesSection(array $savedSearchTerms): string
+    {
+        $rendered = array_map(static fn (string $term): string => '- ' . $term, $savedSearchTerms);
+
+        return "SAVED SEARCHES:\n" . implode("\n", $rendered);
+    }
+
+    /**
+     * Profile and FAVORITES like the batch call, then the ranked shortlist rendered candidate-style, so each line
+     * keeps the id a recommendation resolves back to; a winner pruned since its batch is dropped.
+     *
+     * @param list<array{id: int, score: int, reason: string}> $rankedPool
+     * @param array<int, ArticleLineModel>                      $linesById
+     *
+     * @return list<array{role: string, content: string}>
+     *
+     * @throws \LogicException if called with an empty pool
+     */
+    public function consolidationMessages(PromptContext $context, array $rankedPool, array $linesById): array
+    {
+        if ([] === $rankedPool) {
+            throw new \LogicException('The consolidation phase requires at least one ranked winner.');
+        }
+
+        $shortlistLines = array_values(array_filter(array_map(
+            static fn (array $winner): ?ArticleLineModel => $linesById[$winner['id']] ?? null,
+            $rankedPool,
+        )));
+
+        $sections = [];
+        if ($this->hasContent($context->profile)) {
+            $sections[] = "PROFILE:\n" . $context->profile;
+        }
+        $sections[] = $this->favoritesSection($context->history);
+        $sections[] = $this->candidateSection($shortlistLines);
+
+        return [
+            [
+                'role' => 'system',
+                'content' => RecommendationPromptText::CONSOLIDATION_ROLE
+                    . "\n\n" . RecommendationPromptText::CONSOLIDATION_OUTPUT_CONTRACT,
+            ],
+            ['role' => 'user', 'content' => implode("\n\n", $sections)],
+        ];
+    }
+
+    /**
+     * @return list<array{role: string, content: string}>
+     */
+    public function correctiveTail(string $invalidReply, string $correction): array
+    {
+        return [
+            ['role' => 'assistant', 'content' => $this->quotableReply($invalidReply)],
+            ['role' => 'user', 'content' => $correction],
+        ];
+    }
+
+    /**
+     * A runaway reply repeats one line for tens of kilobytes: quoting it whole spends the retry's context on the loop
+     * and primes the model to continue it. Its head shows the same mistake, and the marker says it is a fragment.
+     */
+    private function quotableReply(string $invalidReply): string
+    {
+        return ClippedText::of($invalidReply, self::QUOTED_REPLY_LIMIT_CHARS, self::QUOTED_REPLY_ELLIPSIS);
+    }
+
+    /**
+     * Appends the model's last invalid reply and the phase's own correction, when there is a reply: the batch phase
+     * passes each batch's own, consolidation the run's and distillation the profile run's; each asks for different
+     * things back.
+     *
+     * @param list<array{role: string, content: string}> $messages
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    public function messagesWithCorrectiveTail(
+        array $messages,
+        ?string $lastInvalidReply,
+        string $correction,
+    ): array {
+        // Empty counts as absent: a runaway cut before its body parses answers '', and an empty assistant turn
+        // beside a correction names a reply the model cannot see. The retry goes as the plain question.
+        if (!$this->hasContent($lastInvalidReply)) {
+            return $messages;
+        }
+
+        return [...$messages, ...$this->correctiveTail($lastInvalidReply, $correction)];
+    }
+
+    /**
+     * @phpstan-assert-if-true string $value
+     */
+    private function hasContent(?string $value): bool
+    {
+        return null !== $value && '' !== trim($value);
+    }
+
+    /** FAVORITES, SHARED, KEPT, then VIEWED, newest first within each. */
+    private function historySections(RecommendationHistoryModel $history): string
+    {
+        return implode("\n\n", [
+            $this->favoritesSection($history),
+            $this->historySection('SHARED (newest first):', $history->shared),
+            $this->historySection('KEPT (newest first):', $history->kept),
+            $this->historySection('VIEWED (newest first):', $history->viewed),
+        ]);
+    }
+
+    private function favoritesSection(RecommendationHistoryModel $history): string
+    {
+        return $this->historySection('FAVORITES (newest first):', $history->favorites);
+    }
+
+    /**
+     * @param list<ArticleLineModel> $lines
+     */
+    private function historySection(string $header, array $lines): string
+    {
+        if ([] === $lines) {
+            return $header . "\n- none";
+        }
+
+        $rendered = array_map(
+            fn (ArticleLineModel $line): string => $this->historyLine($line),
+            $lines,
+        );
+
+        return $header . "\n" . implode("\n", $rendered);
+    }
+
+    /**
+     * @param list<ArticleLineModel> $candidateLines
+     */
+    private function candidateSection(array $candidateLines): string
+    {
+        if ([] === $candidateLines) {
+            return "CANDIDATES:\n- none";
+        }
+
+        // The count is the model's own check on "score every candidate": the
+        // instruction alone is unverifiable from inside the reply, and 3.2% of
+        // candidates went unscored without it (#399).
+        $candidateCount = \count($candidateLines);
+        $header = \sprintf(
+            'CANDIDATES (%d posts — return %d objects, one per line):',
+            $candidateCount,
+            $candidateCount,
+        );
+
+        $rendered = array_map(
+            fn (ArticleLineModel $line): string => $this->candidateLine($line),
+            $candidateLines,
+        );
+
+        return $header . "\n" . implode("\n", $rendered);
+    }
+
+    private function historyLine(ArticleLineModel $line): string
+    {
+        $description = $this->truncatedDescription($line->description);
+
+        return null === $description
+            ? \sprintf('- %s — %s — %s', $line->title, $line->feedName, $line->date)
+            : \sprintf('- %s — %s — %s — %s', $line->title, $line->feedName, $line->date, $description);
+    }
+
+    private function candidateLine(ArticleLineModel $line): string
+    {
+        $description = $this->truncatedDescription($line->description);
+        $baseLine = \sprintf('- [%d] %s — %s — %s', $line->entryId, $line->title, $line->feedName, $line->date);
+
+        return null === $description
+            ? $baseLine
+            : $baseLine . ' — ' . $description;
+    }
+
+    private function truncatedDescription(?string $description): ?string
+    {
+        if (null === $description) {
+            return null;
+        }
+
+        return ClippedText::of($description, self::DESCRIPTION_CHARS);
+    }
+}

@@ -6,9 +6,9 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Backup\Exception\BackupDoesNotFitException;
-use App\Service\Backup\Exception\BackupLoadFailedException;
-use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Operations\Backup\Exception\BackupLoadFailedException;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BackupProblems implements ExceptionProblemsInterface

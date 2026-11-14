@@ -1,0 +1,125 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Operations\Backup\Factory;
+
+use App\Entity\Feed;
+use App\Entity\User;
+use App\Enum\InclusionSurface;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Operations\Backup\Dto\TagLine;
+use App\Service\Operations\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\Tag\Factory\TagFactory;
+use PHPUnit\Framework\TestCase;
+
+final class RestoredFoundationFactoryTest extends TestCase
+{
+    public function testATagIsRestoredAsTheFileStatesIt(): void
+    {
+        $tag = $this->factory()->tag($this->user(), new TagLine('Science', '#123456', 'flask', 4), null);
+
+        self::assertSame('Science', $tag->getName());
+        self::assertSame('#123456', $tag->getColor());
+        self::assertSame('flask', $tag->getIcon());
+        self::assertSame(4, $tag->getPosition());
+    }
+
+    public function testATagIsRestoredWithItsSwitches(): void
+    {
+        $tag = $this->factory()->tag(
+            $this->user(),
+            new TagLine(
+                name: 'Noise',
+                color: null,
+                icon: null,
+                position: 0,
+                includeInAllItems: false,
+                includeInForYou: true,
+                includeInSavedSearches: false,
+                includeInTrending: false,
+            ),
+            null,
+        );
+
+        self::assertFalse($tag->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($tag->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($tag->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($tag->isIncludedIn(InclusionSurface::Trending));
+    }
+
+    public function testATagIsRestoredUnderTheParentItNames(): void
+    {
+        $user = $this->user();
+        $parent = $this->factory()->tag($user, new TagLine('Reading', null, null, 1), null);
+
+        $child = $this->factory()->tag($user, new TagLine('Long reads', null, null, 2, 'Reading'), $parent);
+
+        self::assertSame($parent, $child->getParent());
+    }
+
+    public function testAFeedIsRestoredWithEveryFieldTheFileCarries(): void
+    {
+        $feed = $this->factory()->feed(new FeedLine(
+            url: 'https://restored.example/feed.xml',
+            siteUrl: 'https://restored.example',
+            title: 'Restored',
+            description: 'A restored feed',
+            faviconUrl: 'https://restored.example/favicon.ico',
+            imageUrl: 'https://restored.example/logo.png',
+            sourceFormat: 'scraped',
+        ));
+
+        self::assertSame('https://restored.example/feed.xml', $feed->getUrl());
+        self::assertSame('https://restored.example', $feed->getSiteUrl());
+        self::assertSame('Restored', $feed->getTitle());
+        self::assertSame('A restored feed', $feed->getDescription());
+        self::assertSame('https://restored.example/favicon.ico', $feed->getFaviconUrl());
+        self::assertSame('https://restored.example/logo.png', $feed->getImageUrl());
+        self::assertSame('scraped', $feed->getSourceFormat());
+    }
+
+    public function testASubscriptionIsRestoredWithItsSettings(): void
+    {
+        $createdAt = new \DateTimeImmutable('2026-07-01 08:00:00');
+        $readUntil = new \DateTimeImmutable('2026-07-15 09:30:00');
+
+        $subscription = $this->factory()->subscription(
+            $this->user(),
+            new Feed('https://restored.example/feed.xml'),
+            new SubscriptionLine(
+                feedUrl: 'https://restored.example/feed.xml',
+                customTitle: 'My name for it',
+                position: 3,
+                markedReadUntil: $readUntil,
+                createdAt: $createdAt,
+                tags: [],
+                includeInAllItems: false,
+                includeInForYou: false,
+                includeInSavedSearches: false,
+                includeInTrending: false,
+            ),
+        );
+
+        self::assertSame('My name for it', $subscription->getCustomTitle());
+        self::assertSame(3, $subscription->getPosition());
+        self::assertSame($readUntil, $subscription->getMarkedReadUntil());
+        self::assertSame($createdAt, $subscription->getCreatedAt());
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::Trending));
+    }
+
+    private function factory(): RestoredFoundationFactory
+    {
+        return new RestoredFoundationFactory(new TagFactory(), new FeedFactory());
+    }
+
+    private function user(): User
+    {
+        return new User('restorer@example.test', new \DateTimeImmutable('2026-08-01'));
+    }
+}

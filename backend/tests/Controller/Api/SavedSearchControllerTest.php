@@ -8,8 +8,8 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
-use App\Service\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
 use App\Tests\Support\ApiTestCase;
 
 final class SavedSearchControllerTest extends ApiTestCase

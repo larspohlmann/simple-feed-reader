@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Operations\Settings;
+
+use App\Exception\ValidationException;
+use App\Service\Operations\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
+use App\Service\Operations\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
+use App\Service\Operations\Settings\Model\RelyingPartyIdChoiceModel;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Operations\Settings\ServingHost\ServingHostInterface;
+
+/**
+ * A change of the EFFECTIVE relying-party id orphans every enrolled passkey, so it needs confirmation and then deletes
+ * them all. The delete commits before the settings flush; a crash between the two is accepted.
+ */
+final readonly class RelyingPartyChangeGuard
+{
+    public function __construct(
+        private PasskeyRelyingPartyInterface $relyingParty,
+        private EffectivePasskeyRelyingPartyId $effectiveId,
+        private EnrolledPasskeysInterface $passkeys,
+        private RelyingPartyIdRule $relyingPartyIdRule,
+        private ServingHostInterface $servingHost,
+    ) {
+    }
+
+    /**
+     * @throws ValidationException if the id could not work as a relying-party id at all
+     * @throws RelyingPartyChangeRequiresConfirmationException if the effective id changes while passkeys exist
+     *         and the change was not confirmed
+     */
+    public function guardAndInvalidatePasskeysIfChanged(RelyingPartyIdChoiceModel $choice): void
+    {
+        $this->assertUsableRelyingPartyId($choice->passkeyRpId);
+
+        $requestedEffectiveId = $this->effectiveId->derive($choice->passkeyRpId, $this->servingHost->get());
+        if ($requestedEffectiveId === $this->relyingParty->id()) {
+            return;
+        }
+
+        $enrolledCount = $this->passkeys->countAll();
+        if (0 === $enrolledCount) {
+            return;
+        }
+
+        if (!$choice->invalidateExistingPasskeys) {
+            throw new RelyingPartyChangeRequiresConfirmationException($enrolledCount);
+        }
+
+        $this->passkeys->deleteAll();
+    }
+
+    private function assertUsableRelyingPartyId(?string $passkeyRpId): void
+    {
+        if (null === $passkeyRpId || $this->relyingPartyIdRule->isUsable($passkeyRpId)) {
+            return;
+        }
+
+        throw new ValidationException([
+            'passkeyRpId' => [
+                'Must be a domain name, not an IP address or a bare top-level domain.',
+            ],
+        ]);
+    }
+}

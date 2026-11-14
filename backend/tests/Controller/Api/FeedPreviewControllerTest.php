@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\StubFeedFetcher;

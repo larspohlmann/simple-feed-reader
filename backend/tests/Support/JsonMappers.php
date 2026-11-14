@@ -13,7 +13,7 @@ use App\Http\RecommendationFeedJson;
 use App\Http\SavedSearchPage;
 use App\Http\SearchPage;
 use App\Http\ThreadPostJson;
-use App\Service\Reader\ReaderUrlSignature;
+use App\Service\Content\Reader\ReaderUrlSignature;
 
 final class JsonMappers
 {

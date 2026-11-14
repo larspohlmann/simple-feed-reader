@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Refresh\Model\TrackedRefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\TrackedRefreshReportModel;
 
 /**
  * The refresh response. `progress` covers the whole run and is the one figure a client renders; the counters are

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\HeadlineFiller;
-use App\Service\Trending\Model\WindowEntryModel;
-use App\Service\Trending\Pass\HeadlineWindow;
-use App\Service\Trending\Pass\TrendingRun;
+use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Pass\HeadlineWindow;
+use App\Service\Curation\Trending\Pass\TrendingRun;
 
 final class TrendingRuns
 {

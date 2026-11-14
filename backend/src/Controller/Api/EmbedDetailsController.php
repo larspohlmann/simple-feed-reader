@@ -6,11 +6,11 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\EmbedDetailsJson;
-use App\Service\Chapter\EmbedDetails;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Url\Support\YouTubeUrl;
+use App\Service\Content\Chapter\EmbedDetails;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;

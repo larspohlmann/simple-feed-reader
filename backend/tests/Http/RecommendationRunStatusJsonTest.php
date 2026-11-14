@@ -8,10 +8,10 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationRunStatusJson;
-use App\Service\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
-use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Model\RunForecastModel;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationRunStatusModel;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Model\RunForecastModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationRunStatusJsonTest extends TestCase

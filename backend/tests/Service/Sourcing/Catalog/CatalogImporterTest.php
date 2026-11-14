@@ -1,0 +1,396 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Sourcing\Catalog;
+
+use App\Entity\CatalogCategory;
+use App\Entity\CatalogFeed;
+use App\Service\Sourcing\Catalog\CatalogDocument;
+use App\Service\Sourcing\Catalog\CatalogImporter;
+use App\Service\Sourcing\Catalog\Model\CatalogImportMode;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
+use App\Tests\DbTestCase;
+
+final class CatalogImporterTest extends DbTestCase
+{
+    private function importer(): CatalogImporter
+    {
+        $importer = self::getContainer()->get(CatalogImporter::class);
+        self::assertInstanceOf(CatalogImporter::class, $importer);
+
+        return $importer;
+    }
+
+    /**
+     * @param list<array{title: string, url: string}> $feeds
+     */
+    private function document(array $feeds, string $key = 'technology', string $name = 'Technology'): ParsedCatalogModel
+    {
+        $outlines = '';
+        foreach ($feeds as $feed) {
+            $outlines .= \sprintf(
+                '<outline type="rss" text="%s" xmlUrl="%s"/>',
+                htmlspecialchars($feed['title'], \ENT_XML1),
+                htmlspecialchars($feed['url'], \ENT_XML1),
+            );
+        }
+
+        return $this->parsed(\sprintf(
+            '<outline text="%s" key="%s" icon="memory" color="#3b82f6">%s</outline>',
+            $name,
+            $key,
+            $outlines,
+        ));
+    }
+
+    private function parsed(string $categoryOutlines): ParsedCatalogModel
+    {
+        $parser = self::getContainer()->get(CatalogDocument::class);
+        self::assertInstanceOf(CatalogDocument::class, $parser);
+
+        return $parser->parse(
+            '<opml version="2.0"><head><title>t</title></head><body>' . $categoryOutlines . '</body></opml>',
+        );
+    }
+
+    /**
+     * Two empty categories, in the REVERSE of alphabetical order, so a test can
+     * tell "positioned by document order" apart from "fell back to the name
+     * tiebreak" — the two would otherwise look identical.
+     */
+    private function twoCategoryDocumentInReverseAlphabeticalOrder(): ParsedCatalogModel
+    {
+        return $this->parsed(
+            '<outline text="Zebra" key="zebra" icon="memory" color="#3b82f6"></outline>'
+            . '<outline text="Apple" key="apple" icon="memory" color="#3b82f6"></outline>',
+        );
+    }
+
+    public function testAFirstImportCreatesEverything(): void
+    {
+        $result = $this->importer()->import(
+            $this->document([
+                ['title' => 'The Verge', 'url' => 'https://www.theverge.com/rss/index.xml'],
+                ['title' => 'Ars Technica', 'url' => 'https://feeds.arstechnica.com/arstechnica/index'],
+            ]),
+            CatalogImportMode::Merge,
+        );
+
+        self::assertSame(1, $result->categoriesCreated);
+        self::assertSame(2, $result->feedsCreated);
+        self::assertSame(0, $result->feedsUpdated);
+        self::assertSame(0, $result->feedsRemoved);
+    }
+
+    public function testReimportingUpdatesInPlace(): void
+    {
+        $document = $this->document([
+            ['title' => 'The Verge', 'url' => 'https://www.theverge.com/rss/index.xml'],
+        ]);
+        $this->importer()->import($document, CatalogImportMode::Merge);
+
+        $renamed = $this->document([
+            ['title' => 'The Verge (renamed)', 'url' => 'https://www.theverge.com/rss/index.xml'],
+        ]);
+        $result = $this->importer()->import($renamed, CatalogImportMode::Merge);
+
+        self::assertSame(0, $result->feedsCreated);
+        self::assertSame(1, $result->feedsUpdated);
+
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://www.theverge.com/rss/index.xml',
+        ]);
+        self::assertNotNull($reloaded);
+        self::assertSame('The Verge (renamed)', $reloaded->getTitle());
+    }
+
+    public function testMergeLeavesRowsTheDocumentDoesNotMention(): void
+    {
+        $this->importer()->import(
+            $this->document([['title' => 'Keep me', 'url' => 'https://keep.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        $result = $this->importer()->import(
+            $this->document([['title' => 'New', 'url' => 'https://new.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        self::assertSame(0, $result->feedsRemoved);
+        self::assertCount(2, $this->entityManager->getRepository(CatalogFeed::class)->findAll());
+    }
+
+    public function testReplaceRemovesRowsTheDocumentDoesNotMention(): void
+    {
+        $this->importer()->import(
+            $this->document([['title' => 'Retired', 'url' => 'https://retired.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        $result = $this->importer()->import(
+            $this->document([['title' => 'New', 'url' => 'https://new.example.com/rss.xml']]),
+            CatalogImportMode::Replace,
+        );
+
+        self::assertSame(1, $result->feedsRemoved);
+
+        $this->entityManager->clear();
+        $remaining = $this->entityManager->getRepository(CatalogFeed::class)->findAll();
+        self::assertCount(1, $remaining);
+        self::assertSame('New', $remaining[0]->getTitle());
+    }
+
+    public function testReplaceAlsoRemovesACategoryTheDocumentDropped(): void
+    {
+        $this->importer()->import($this->document([], 'gone', 'Gone'), CatalogImportMode::Merge);
+        $result = $this->importer()->import($this->document([]), CatalogImportMode::Replace);
+
+        self::assertSame(1, $result->categoriesRemoved);
+
+        $this->entityManager->clear();
+        self::assertCount(1, $this->entityManager->getRepository(CatalogCategory::class)->findAll());
+    }
+
+    public function testReplaceKeepsALockedFeedTheDocumentNoLongerLists(): void
+    {
+        $this->importer()->import(
+            $this->document([['title' => 'Mine', 'url' => 'https://mine.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
+        self::assertNotNull($feed);
+        $feed->setLocked(true);
+        $this->entityManager->flush();
+
+        $result = $this->importer()->import(
+            $this->document([['title' => 'New', 'url' => 'https://new.example.com/rss.xml']]),
+            CatalogImportMode::Replace,
+        );
+
+        self::assertSame(0, $result->feedsRemoved);
+        self::assertSame(1, $result->lockedSkipped);
+
+        $this->entityManager->clear();
+        self::assertCount(2, $this->entityManager->getRepository(CatalogFeed::class)->findAll());
+    }
+
+    public function testALockedFeedIsNotOverwrittenByTheDocument(): void
+    {
+        $this->importer()->import(
+            $this->document([['title' => 'Original', 'url' => 'https://locked.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Original']);
+        self::assertNotNull($feed);
+        $feed->setLocked(true);
+        $this->entityManager->flush();
+
+        $result = $this->importer()->import(
+            $this->document([['title' => 'Renamed by the document', 'url' => 'https://locked.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        self::assertSame(0, $result->feedsUpdated);
+        self::assertSame(1, $result->lockedSkipped);
+
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://locked.example.com/rss.xml',
+        ]);
+        self::assertNotNull($reloaded);
+        self::assertSame('Original', $reloaded->getTitle());
+    }
+
+    public function testReplaceKeepsACategoryThatStillHoldsALockedFeed(): void
+    {
+        $this->importer()->import(
+            $this->document([['title' => 'Mine', 'url' => 'https://mine.example.com/rss.xml']], 'mine', 'Mine'),
+            CatalogImportMode::Merge,
+        );
+
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
+        self::assertNotNull($feed);
+        $feed->setLocked(true);
+        $this->entityManager->flush();
+
+        // The document drops the whole 'mine' category. Removing it would
+        // cascade to the locked feed, so it has to survive.
+        $result = $this->importer()->import($this->document([]), CatalogImportMode::Replace);
+
+        self::assertSame(0, $result->categoriesRemoved);
+        self::assertSame(2, $result->lockedSkipped);
+
+        $this->entityManager->clear();
+        self::assertCount(1, $this->entityManager->getRepository(CatalogFeed::class)->findAll());
+        self::assertCount(2, $this->entityManager->getRepository(CatalogCategory::class)->findAll());
+    }
+
+    public function testReplaceKeepsALockedCategory(): void
+    {
+        $this->importer()->import($this->document([], 'mine', 'Mine'), CatalogImportMode::Merge);
+
+        $category = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'mine']);
+        self::assertNotNull($category);
+        $category->setLocked(true);
+        $this->entityManager->flush();
+
+        $result = $this->importer()->import($this->document([]), CatalogImportMode::Replace);
+
+        self::assertSame(0, $result->categoriesRemoved);
+        self::assertSame(1, $result->lockedSkipped);
+    }
+
+    public function testAnUpdateRewritesTheCategoryAndTheFeedFromTheDocument(): void
+    {
+        $this->importer()->import($this->parsed(
+            '<outline text="Technology" key="technology" icon="memory" color="#3b82f6">'
+            . '<outline type="rss" text="Old title" xmlUrl="https://moved.example.com/rss.xml"/>'
+            . '<outline type="rss" text="Filler" xmlUrl="https://filler.example.com/rss.xml"/>'
+            . '</outline>',
+        ), CatalogImportMode::Merge);
+
+        $result = $this->importer()->import($this->parsed(
+            '<outline text="Science" key="science" icon="science" color="#10b981"></outline>'
+            . '<outline text="Tech and Gadgets" key="technology" icon="devices" color="#ef4444">'
+            . '<outline type="rss" text="Ahead" xmlUrl="https://ahead.example.com/rss.xml"/>'
+            . '<outline type="rss" text="New title" xmlUrl="https://moved.example.com/rss.xml"'
+            . ' htmlUrl="https://moved.example.com/" description="A description" sourceFormat="scraped"/>'
+            . '</outline>',
+        ), CatalogImportMode::Merge);
+
+        self::assertSame(1, $result->categoriesCreated);
+        self::assertSame(1, $result->categoriesUpdated);
+        self::assertSame(1, $result->feedsCreated);
+        self::assertSame(1, $result->feedsUpdated);
+        self::assertSame(0, $result->lockedSkipped);
+
+        $this->entityManager->clear();
+        $category = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        self::assertNotNull($category);
+        self::assertSame('Tech and Gadgets', $category->getName());
+        self::assertSame('devices', $category->getIcon());
+        self::assertSame('#ef4444', $category->getColor());
+        self::assertSame(1, $category->getPosition());
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://moved.example.com/rss.xml',
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('New title', $feed->getTitle());
+        self::assertSame('technology', $feed->getCategory()->getKey());
+        self::assertSame('https://moved.example.com/', $feed->getSiteUrl());
+        self::assertSame('A description', $feed->getDescription());
+        self::assertSame('scraped', $feed->getSourceFormat());
+        self::assertSame(1, $feed->getPosition());
+    }
+
+    public function testAFeedListedUnderAnotherCategoryMovesThere(): void
+    {
+        $this->importer()->import(
+            $this->document([['title' => 'Wanderer', 'url' => 'https://wanderer.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        $result = $this->importer()->import(
+            $this->document(
+                [['title' => 'Wanderer', 'url' => 'https://wanderer.example.com/rss.xml']],
+                'science',
+                'Science',
+            ),
+            CatalogImportMode::Merge,
+        );
+
+        self::assertSame(1, $result->categoriesCreated);
+        self::assertSame(1, $result->feedsUpdated);
+
+        $this->entityManager->clear();
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://wanderer.example.com/rss.xml',
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('science', $feed->getCategory()->getKey());
+    }
+
+    public function testALockedCategoryKeepsItsRowWhileItsFeedsAreStillImported(): void
+    {
+        $this->importer()->import($this->document([]), CatalogImportMode::Merge);
+        $category = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        self::assertNotNull($category);
+        $category->setLocked(true);
+        $this->entityManager->flush();
+
+        $result = $this->importer()->import(
+            $this->document(
+                [['title' => 'Inside', 'url' => 'https://inside.example.com/rss.xml']],
+                'technology',
+                'Renamed',
+            ),
+            CatalogImportMode::Merge,
+        );
+
+        self::assertSame(1, $result->lockedSkipped);
+        self::assertSame(0, $result->categoriesUpdated);
+        self::assertSame(1, $result->feedsCreated);
+
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        self::assertNotNull($reloaded);
+        self::assertSame('Technology', $reloaded->getName());
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://inside.example.com/rss.xml',
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('technology', $feed->getCategory()->getKey());
+    }
+
+    public function testReplaceCountsALockedFeedTheDocumentStillListsOnce(): void
+    {
+        $document = $this->document([['title' => 'Mine', 'url' => 'https://mine.example.com/rss.xml']]);
+        $this->importer()->import($document, CatalogImportMode::Merge);
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
+        self::assertNotNull($feed);
+        $feed->setLocked(true);
+        $this->entityManager->flush();
+
+        $result = $this->importer()->import($document, CatalogImportMode::Replace);
+
+        self::assertSame(1, $result->lockedSkipped);
+        self::assertSame(0, $result->feedsUpdated);
+        self::assertSame(0, $result->feedsRemoved);
+        self::assertSame(1, $result->categoriesUpdated);
+        self::assertSame(0, $result->categoriesRemoved);
+    }
+
+    public function testPositionsFollowDocumentOrder(): void
+    {
+        $this->importer()->import(
+            $this->document([
+                ['title' => 'First', 'url' => 'https://first.example.com/rss.xml'],
+                ['title' => 'Second', 'url' => 'https://second.example.com/rss.xml'],
+            ]),
+            CatalogImportMode::Merge,
+        );
+
+        $this->entityManager->clear();
+        $second = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Second']);
+        self::assertNotNull($second);
+        self::assertSame(1, $second->getPosition());
+    }
+
+    public function testFirstImportPositionsCategoriesInDocumentOrder(): void
+    {
+        $this->importer()->import($this->twoCategoryDocumentInReverseAlphabeticalOrder(), CatalogImportMode::Merge);
+
+        $this->entityManager->clear();
+        $ordered = $this->entityManager->getRepository(CatalogCategory::class)->findAllOrdered();
+
+        self::assertSame(
+            ['Zebra', 'Apple'],
+            array_map(static fn (CatalogCategory $category): string => $category->getName(), $ordered),
+            'a category created on a first import must keep the document order, not fall back to name',
+        );
+    }
+}

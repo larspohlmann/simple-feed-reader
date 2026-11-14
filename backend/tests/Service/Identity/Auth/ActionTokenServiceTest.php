@@ -1,0 +1,159 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Identity\Auth;
+
+use App\Entity\ActionToken;
+use App\Entity\User;
+use App\Enum\TokenPurpose;
+use App\Repository\ActionTokenRepository;
+use App\Service\Identity\Auth\ActionTokenService;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
+use App\Tests\DbTestCase;
+use App\Tests\Support\AssertsRefusal;
+use Symfony\Component\Clock\MockClock;
+
+final class ActionTokenServiceTest extends DbTestCase
+{
+    use AssertsRefusal;
+
+    private MockClock $clock;
+    private ActionTokenService $service;
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->clock = new MockClock('2026-07-21 12:00:00');
+        $repository = $this->entityManager->getRepository(ActionToken::class);
+        self::assertInstanceOf(ActionTokenRepository::class, $repository);
+        $this->service = new ActionTokenService($this->entityManager, $this->clock, $repository);
+
+        $this->user = new User('token@example.com', $this->clock->now());
+        $this->entityManager->persist($this->user);
+        $this->entityManager->flush();
+    }
+
+    public function testIssueReturnsAPlaintextTokenAndStoresOnlyItsHash(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+
+        self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $plain);
+
+        $stored = $this->entityManager->getRepository(ActionToken::class)->findOneBy(['user' => $this->user]);
+        self::assertNotNull($stored);
+        self::assertSame(hash('sha256', $plain), $stored->getTokenHash());
+        self::assertNotSame($plain, $stored->getTokenHash());
+    }
+
+    public function testExpiryIs24Hours(): void
+    {
+        $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+
+        $stored = $this->entityManager->getRepository(ActionToken::class)->findOneBy(['user' => $this->user]);
+        self::assertNotNull($stored);
+        self::assertSame('2026-07-22 12:00:00', $stored->getExpiresAt()->format('Y-m-d H:i:s'));
+    }
+
+    public function testConsumeReturnsTheUser(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+
+        $consumed = $this->service->consume($plain, TokenPurpose::VerifyEmail);
+
+        self::assertSame($this->user->getId(), $consumed->getId());
+    }
+
+    public function testConsumeIsSingleUse(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+        $this->service->consume($plain, TokenPurpose::VerifyEmail);
+
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+
+    public function testConsumeStaysSingleUseForTheNextRequest(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+        $this->service->consume($plain, TokenPurpose::VerifyEmail);
+        $this->entityManager->clear();
+
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+
+    public function testConsumeRejectsTheWrongPurpose(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::ResetPassword),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+
+    public function testConsumeRejectsAnExpiredToken(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+        $this->clock->modify('+25 hours');
+
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+
+    public function testConsumeRejectsGarbage(): void
+    {
+        $this->assertRefused(
+            fn () => $this->service->consume('not-a-real-token', TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+
+    public function testIssuingInvalidatesEarlierTokensOfTheSamePurpose(): void
+    {
+        $first = $this->service->issue($this->user, TokenPurpose::ResetPassword);
+        $second = $this->service->issue($this->user, TokenPurpose::ResetPassword);
+
+        // Requesting a new reset link must retire the previous one, otherwise
+        // an old link stolen from an inbox stays usable for 24 hours.
+        $this->assertRefused(
+            fn () => $this->service->consume($first, TokenPurpose::ResetPassword),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+        self::assertSame($this->user->getId(), $this->service->consume($second, TokenPurpose::ResetPassword)->getId());
+    }
+
+    /**
+     * The purge deletes unverified users and action_token cascades, so a purged account's link must read as an
+     * unknown token, not a dangling reference.
+     */
+    public function testConsumeRejectsATokenWhoseUserHasBeenDeleted(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+
+        $this->entityManager->remove($this->user);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+}

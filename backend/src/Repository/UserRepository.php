@@ -7,7 +7,7 @@ namespace App\Repository;
 use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Repository\Exception\RecordNotFoundException;
-use App\Service\Auth\UserByEmail\UserByEmailInterface;
+use App\Service\Identity\Auth\UserByEmail\UserByEmailInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;

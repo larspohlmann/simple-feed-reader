@@ -11,23 +11,30 @@ use PHPStan\Testing\RuleTestCase;
 /** @extends RuleTestCase<ServiceModuleCycleRule> */
 final class ServiceModuleCycleRuleTest extends RuleTestCase
 {
-    private const array SUB_MODULES = ['Recommendation\\Llm', 'Atlas\\Maps', 'Atlas\\Maps\\Tiles'];
+    private const array SUB_MODULES = [
+        'Curation\\Recommendation\\Llm',
+        'Fixture\\Atlas\\Maps',
+        'Fixture\\Atlas\\Maps\\Tiles',
+    ];
 
     protected function getRule(): Rule
     {
-        return new ServiceModuleCycleRule(new ServiceModules(self::SUB_MODULES));
+        return new ServiceModuleCycleRule(new ServiceModules([], self::SUB_MODULES));
     }
 
     protected function getCollectors(): array
     {
-        return [new ServiceModuleDependencyCollector(new NodeFinder(), new ServiceModules(self::SUB_MODULES))];
+        return [new ServiceModuleDependencyCollector(new NodeFinder(), new ServiceModules([], self::SUB_MODULES))];
     }
 
     public function testATwoModuleCycleIsReportedOnceWhereItCloses(): void
     {
         $this->analyse(
             [self::fixture('two-module-cycle')],
-            [[self::message('Alpha -> Beta (two-module-cycle.php:11) -> Alpha (two-module-cycle.php:26)'), 26]],
+            [[self::message(
+                'Fixture\Alpha -> Fixture\Beta (two-module-cycle.php:11) '
+                . '-> Fixture\Alpha (two-module-cycle.php:26)',
+            ), 26]],
         );
     }
 
@@ -36,8 +43,8 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('three-module-cycle')],
             [[self::message(
-                'Alpha -> Beta (three-module-cycle.php:9) -> Gamma (three-module-cycle.php:21) '
-                . '-> Alpha (three-module-cycle.php:36)',
+                'Fixture\Alpha -> Fixture\Beta (three-module-cycle.php:9) -> Fixture\Gamma (three-module-cycle.php:21) '
+                . '-> Fixture\Alpha (three-module-cycle.php:36)',
             ), 36]],
         );
     }
@@ -51,7 +58,10 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
     {
         $this->analyse(
             [self::fixture('LooseService')],
-            [[self::message('Alpha -> LooseService (LooseService.php:20) -> Alpha (LooseService.php:9)'), 9]],
+            [[self::message(
+                'Fixture\Alpha -> LooseService (LooseService.php:20) '
+                . '-> Fixture\Alpha (LooseService.php:9)',
+            ), 9]],
         );
     }
 
@@ -60,8 +70,14 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('two-cycles')],
             [
-                [self::message('Alpha -> Beta (two-cycles.php:13) -> Alpha (two-cycles.php:23)'), 23],
-                [self::message('Delta -> Gamma (two-cycles.php:43) -> Delta (two-cycles.php:33)'), 33],
+                [self::message(
+                    'Fixture\Alpha -> Fixture\Beta (two-cycles.php:13) '
+                    . '-> Fixture\Alpha (two-cycles.php:23)',
+                ), 23],
+                [self::message(
+                    'Fixture\Delta -> Fixture\Gamma (two-cycles.php:43) '
+                    . '-> Fixture\Delta (two-cycles.php:33)',
+                ), 33],
             ],
         );
     }
@@ -70,7 +86,10 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
     {
         $this->analyse(
             [self::fixture('beta-first')],
-            [[self::message('Alpha -> Beta (beta-first.php:23) -> Alpha (beta-first.php:13)'), 13]],
+            [[self::message(
+                'Fixture\Alpha -> Fixture\Beta (beta-first.php:23) '
+                . '-> Fixture\Alpha (beta-first.php:13)',
+            ), 13]],
         );
     }
 
@@ -79,8 +98,14 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('two-ways-back')],
             [
-                [self::message('Gamma -> Alpha (two-ways-back.php:34) -> Gamma (two-ways-back.php:14)'), 14],
-                [self::message('Alpha -> Beta (two-ways-back.php:14) -> Alpha (two-ways-back.php:24)'), 24],
+                [self::message(
+                    'Fixture\Gamma -> Fixture\Alpha (two-ways-back.php:34) '
+                    . '-> Fixture\Gamma (two-ways-back.php:14)',
+                ), 14],
+                [self::message(
+                    'Fixture\Alpha -> Fixture\Beta (two-ways-back.php:14) '
+                    . '-> Fixture\Alpha (two-ways-back.php:24)',
+                ), 24],
             ],
         );
     }
@@ -89,7 +114,10 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
     {
         $this->analyse(
             [self::fixture('later-file'), self::fixture('earlier-file')],
-            [[self::message('Alpha -> Beta (earlier-file.php:13) -> Alpha (earlier-file.php:23)'), 23]],
+            [[self::message(
+                'Fixture\Alpha -> Fixture\Beta (earlier-file.php:13) '
+                . '-> Fixture\Alpha (earlier-file.php:23)',
+            ), 23]],
         );
     }
 
@@ -103,8 +131,8 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('recommendation-sub-module-cycle')],
             [[self::message(
-                'Recommendation -> Recommendation\Llm (recommendation-sub-module-cycle.php:25) '
-                . '-> Recommendation (recommendation-sub-module-cycle.php:31)',
+                'Curation\Recommendation -> Curation\Recommendation\Llm (recommendation-sub-module-cycle.php:25) '
+                . '-> Curation\Recommendation (recommendation-sub-module-cycle.php:31)',
             ), 25]],
         );
     }
@@ -114,8 +142,8 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('made-up-parent-sub-module-cycle')],
             [[self::message(
-                'Atlas -> Atlas\Maps (made-up-parent-sub-module-cycle.php:13) '
-                . '-> Atlas (made-up-parent-sub-module-cycle.php:19)',
+                'Fixture\Atlas -> Fixture\Atlas\Maps (made-up-parent-sub-module-cycle.php:13) '
+                . '-> Fixture\Atlas (made-up-parent-sub-module-cycle.php:19)',
             ), 13]],
         );
     }
@@ -125,8 +153,8 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('nested-sub-module-cycle')],
             [[self::message(
-                'Atlas\Maps -> Atlas\Maps\Tiles (nested-sub-module-cycle.php:13) '
-                . '-> Atlas\Maps (nested-sub-module-cycle.php:19)',
+                'Fixture\Atlas\Maps -> Fixture\Atlas\Maps\Tiles (nested-sub-module-cycle.php:13) '
+                . '-> Fixture\Atlas\Maps (nested-sub-module-cycle.php:19)',
             ), 13]],
         );
     }
@@ -136,8 +164,8 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('peer-names-sub-module-cycle')],
             [[self::message(
-                'Digest -> Recommendation\Llm (peer-names-sub-module-cycle.php:9) '
-                . '-> Digest (peer-names-sub-module-cycle.php:20)',
+                'Briefing\Digest -> Curation\Recommendation\Llm (peer-names-sub-module-cycle.php:9) '
+                . '-> Briefing\Digest (peer-names-sub-module-cycle.php:20)',
             ), 20]],
         );
     }
@@ -152,8 +180,8 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse(
             [self::fixture('recommendation-sub-module-alias')],
             [[self::message(
-                'Recommendation\Llm -> Schedule (recommendation-sub-module-alias.php:21) '
-                . '-> Recommendation\Llm (recommendation-sub-module-alias.php:9)',
+                'Curation\Recommendation\Llm -> Fixture\Schedule (recommendation-sub-module-alias.php:21) '
+                . '-> Curation\Recommendation\Llm (recommendation-sub-module-alias.php:9)',
             ), 9]],
         );
     }

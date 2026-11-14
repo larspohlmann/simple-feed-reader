@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Ingestion\Parser\Support;
+
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+
+/**
+ * Reads a feed item's declared categories into a flat list, across RSS 2.0
+ * <category>, Atom <category term= scheme=>, and Dublin Core <dc:subject>.
+ */
+final class ItemCategoryExtractor
+{
+    /** @return list<ParsedCategoryModel> */
+    public static function extract(CoreElement $item): array
+    {
+        $categories = [];
+        foreach ($item->element->childNodes as $child) {
+            $category = self::fromChild($item, $child);
+            if ($category !== null) {
+                $categories[] = $category;
+            }
+        }
+
+        return $categories;
+    }
+
+    private static function fromChild(CoreElement $item, \DOMNode $child): ?ParsedCategoryModel
+    {
+        if (!$child instanceof \DOMElement) {
+            return null;
+        }
+        if ($item->isCore($child, 'category')) {
+            return self::fromCategoryElement($child);
+        }
+        if (XmlHelper::isElement($child, 'subject', FeedNamespace::DublinCore->value)) {
+            $label = trim($child->textContent);
+
+            return $label === '' ? null : new ParsedCategoryModel($label);
+        }
+
+        return null;
+    }
+
+    private static function fromCategoryElement(\DOMElement $element): ?ParsedCategoryModel
+    {
+        $term = trim($element->getAttribute('term'));
+        $label = $term !== '' ? $term : trim($element->textContent);
+        if ($label === '') {
+            return null;
+        }
+
+        $scheme = trim($element->getAttribute('scheme'));
+        if ($scheme === '') {
+            $scheme = trim($element->getAttribute('domain'));
+        }
+
+        return new ParsedCategoryModel($label, $scheme === '' ? null : $scheme);
+    }
+
+    private function __construct()
+    {
+    }
+}

@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\BodyCleaning\Pass;
+
+use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use Dom\HTMLDocument;
+
+/**
+ * One clean of one body: the document every step mutates, what the extraction knows about the article, and the
+ * one fact a step records for a later one.
+ */
+final class BodyCleaningPass
+{
+    private bool $embedsRecoveredInBody = false;
+
+    public function __construct(
+        public readonly HTMLDocument $document,
+        public readonly BodyCleaningInputModel $input,
+    ) {
+    }
+
+    public function recordEmbedsRecoveredInBody(): void
+    {
+        $this->embedsRecoveredInBody = true;
+    }
+
+    /** The page's media to place, so a video never shows twice. */
+    public function discoveredMedia(): ArticleMediaModel
+    {
+        $media = $this->embedsRecoveredInBody ? $this->input->media->withoutEmbeds() : $this->input->media;
+
+        return $this->bodyPlaysAVideo() ? $media->withoutVideos() : $media;
+    }
+
+    private function bodyPlaysAVideo(): bool
+    {
+        return $this->document->querySelector('video[controls][src], video[controls] > source[src]') !== null;
+    }
+}

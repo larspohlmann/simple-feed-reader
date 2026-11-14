@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http\Admin;
 
 use App\Http\Admin\SelfUpdateStatusJson;
-use App\Service\SelfUpdate\Model\SelfUpdatePhase;
-use App\Service\SelfUpdate\Model\SelfUpdateStatusModel;
-use App\Service\SelfUpdate\Model\UpdateRunModel;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdatePhase;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdateStatusModel;
+use App\Service\Operations\SelfUpdate\Model\UpdateRunModel;
 use PHPUnit\Framework\TestCase;
 
 final class SelfUpdateStatusJsonTest extends TestCase

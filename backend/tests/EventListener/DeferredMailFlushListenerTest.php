@@ -6,8 +6,8 @@ namespace App\Tests\EventListener;
 
 use App\EventListener\DeferredMailFlushListener;
 use App\Kernel;
-use App\Service\Auth\AltchaService;
-use App\Service\Mail\DeferredMailer;
+use App\Service\Identity\Auth\AltchaService;
+use App\Service\Outbound\Mail\DeferredMailer;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\InMemoryMailFailureRecorder;

@@ -1,0 +1,111 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Ingestion\Scraper;
+
+use App\Service\Ingestion\Scraper\ScrapeLayer\JsonLdLayer;
+use App\Tests\Support\ParsesHtml;
+use PHPUnit\Framework\TestCase;
+
+final class JsonLdLayerTest extends TestCase
+{
+    use ParsesHtml;
+
+    use ScrapedFixtures;
+
+    /** @return list<\App\Service\Ingestion\Scraper\Model\ScrapedItemModel> */
+    private function extract(string $fixture): array
+    {
+        $document = $this->document($this->scrapedFixture($fixture));
+
+        return new JsonLdLayer()->extract($document, 'https://news.test/section/');
+    }
+
+    public function testExtractsItemListWithFields(): void
+    {
+        $items = $this->extract('jsonld-list.html');
+        self::assertCount(4, $items);
+        self::assertSame('https://news.test/story-1', $items[0]->url);
+        self::assertNotNull($items[0]->teaser);
+        self::assertNotNull($items[0]->imageUrl);
+        self::assertSame('2026-07-20', $items[0]->publishedAt?->format('Y-m-d'));
+    }
+
+    public function testIgnoresPagesWithoutArticleStructures(): void
+    {
+        $document = $this->document(
+            '<html lang="en"><body><script type="application/ld+json">{"@type":"Organization","name":"X"}</script>'
+            . '</body></html>'
+        );
+        self::assertSame([], new JsonLdLayer()->extract($document, 'https://news.test/'));
+    }
+
+    /**
+     * An "abstract" teaser maps. Bare string entries in itemListElement and items referenced by URL string are
+     * skipped, without extracting the ListItem wrapper instead.
+     */
+    public function testAbstractTeaserFallbackAndNonArrayEntriesAreSkipped(): void
+    {
+        $json = json_encode([
+            '@context' => 'https://schema.org',
+            '@type' => 'ItemList',
+            'itemListElement' => [
+                'https://news.test/bare-string-entry',
+                [
+                    '@type' => 'ListItem',
+                    'url' => 'https://news.test/wrapper-url',
+                    'name' => 'Wrapper name that must not be extracted',
+                    'item' => 'https://news.test/item-as-string',
+                ],
+                [
+                    '@type' => 'ListItem',
+                    'item' => [
+                        '@type' => 'NewsArticle',
+                        'url' => '/abstract-story',
+                        'headline' => 'Story with an abstract instead of a description',
+                        'abstract' => 'Teaser text delivered via the schema.org abstract property,'
+                            . ' well over forty characters.',
+                    ],
+                ],
+            ],
+        ], \JSON_THROW_ON_ERROR);
+        $document = $this->document(
+            '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>'
+        );
+
+        $items = new JsonLdLayer()->extract($document, 'https://news.test/');
+
+        self::assertCount(1, $items);
+        self::assertSame('https://news.test/abstract-story', $items[0]->url);
+        self::assertStringContainsString('abstract property', (string) $items[0]->teaser);
+    }
+
+    /** A pathological @graph stops at MAX_COLLECT (200), keeping the first 200 nodes in document order. */
+    public function testGraphCollectionIsBoundedAtMaxCollect(): void
+    {
+        $nodes = [];
+        for ($index = 0; $index < 500; ++$index) {
+            $nodes[] = [
+                '@type' => 'Article',
+                'url' => '/a/' . $index,
+                'headline' => 'Headline number ' . $index,
+                'description' => 'A description for article number ' . $index
+                    . ' that is comfortably over forty characters long.',
+            ];
+        }
+        $json = json_encode([
+            '@context' => 'https://schema.org',
+            '@graph' => $nodes,
+        ], \JSON_THROW_ON_ERROR);
+        $document = $this->document(
+            '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>'
+        );
+
+        $items = new JsonLdLayer()->extract($document, 'https://x.test/');
+
+        self::assertCount(200, $items);
+        self::assertSame('https://x.test/a/0', $items[0]->url);
+        self::assertSame('https://x.test/a/199', $items[199]->url);
+    }
+}

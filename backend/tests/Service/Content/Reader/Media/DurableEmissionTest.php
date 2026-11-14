@@ -1,0 +1,104 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Content\Reader\Media;
+
+use App\Service\Content\Reader\Media\AudioClipFacts;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaCandidateSource\AttributeMediaSource;
+use App\Service\Content\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
+use App\Service\Content\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
+use App\Service\Content\Reader\Media\MediaCandidateSource\MetaMediaSource;
+use App\Service\Content\Reader\Media\MediaCandidateSource\SemanticMediaSource;
+use App\Service\Content\Reader\Media\MediaRelevance;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\NarrationSignals;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Media\PlayerPoster;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * A query-bearing (potentially signed) media url must never reach an emitted
+ * candidate, whichever layer finds it — MediaUrlKind::resolve() is the one
+ * place that strips it, so every file-emitting layer is proven here.
+ */
+final class DurableEmissionTest extends TestCase
+{
+    private function urlKind(): MediaUrlKind
+    {
+        return new MediaUrlKind(
+            new DurableMediaUrl(),
+            new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
+        );
+    }
+
+    /** @return iterable<string, array{0: string, 1: string, 2: string}> */
+    public static function layerProvider(): iterable
+    {
+        $signedUrl = 'https://x.test/episode.mp3?Expires=1&Signature=abc';
+        $pageUrl = 'https://x.test/episode-100.html';
+
+        yield 'JsonLd' => [
+            'jsonLd',
+            '<html lang="en"><body><script type="application/ld+json">'
+                . '{"@type":"AudioObject","contentUrl":"' . $signedUrl . '"}'
+                . '</script></body></html>',
+            $pageUrl,
+        ];
+
+        yield 'Meta' => [
+            'meta',
+            '<html lang="en"><head><meta property="og:audio" content="' . $signedUrl . '"></head></html>',
+            $pageUrl,
+        ];
+
+        yield 'Semantic' => [
+            'semantic',
+            '<body><audio src="' . $signedUrl . '"></audio></body>',
+            $pageUrl,
+        ];
+
+        yield 'Attribute' => [
+            'attribute',
+            '<body><div data-audio-src="' . $signedUrl . '"></div></body>',
+            $pageUrl,
+        ];
+    }
+
+    #[DataProvider('layerProvider')]
+    public function testEmitsNoQueryForASignedMediaUrl(string $layer, string $html, string $pageUrl): void
+    {
+        $source = $this->sourceFor($layer);
+
+        $found = $source->find(RawPageModel::parse($html, $pageUrl));
+
+        self::assertNotSame([], $found);
+        self::assertStringNotContainsString('?', $found[0]->url);
+    }
+
+    private function sourceFor(string $layer): MediaCandidateSourceInterface
+    {
+        $urlKind = $this->urlKind();
+        $providers = new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]);
+
+        return match ($layer) {
+            'jsonLd' => new JsonLdMediaSource($urlKind, $providers, new PageFurniture()),
+            'meta' => new MetaMediaSource($urlKind),
+            'semantic' => new SemanticMediaSource($urlKind, new PageFurniture(), new NarrationSignals()),
+            default => new AttributeMediaSource(
+                $urlKind,
+                new MediaRelevance(),
+                new PageFurniture(),
+                new NarrationSignals(),
+                new PlayerPoster(),
+                new AudioClipFacts(),
+            ),
+        };
+    }
+}

@@ -6,8 +6,8 @@ namespace App\Http;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\Model\BundledCatalogSummaryModel;
-use App\Service\Catalog\Model\CatalogImportResultModel;
+use App\Service\Sourcing\Catalog\Model\BundledCatalogSummaryModel;
+use App\Service\Sourcing\Catalog\Model\CatalogImportResultModel;
 
 /** The admin view of the catalog: every row, enabled or not. */
 final class AdminCatalogJson

@@ -7,10 +7,10 @@ namespace App\Http\Problem\ExceptionProblems;
 use App\Exception\InvalidCredentialsException;
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Auth\Exception\AccountNotActiveException;
-use App\Service\Auth\Exception\InvalidSetupSecretException;
-use App\Service\Auth\Exception\InvalidTokenException;
-use App\Service\Auth\Exception\SetupUnavailableException;
+use App\Service\Identity\Auth\Exception\AccountNotActiveException;
+use App\Service\Identity\Auth\Exception\InvalidSetupSecretException;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
+use App\Service\Identity\Auth\Exception\SetupUnavailableException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class AuthProblems implements ExceptionProblemsInterface

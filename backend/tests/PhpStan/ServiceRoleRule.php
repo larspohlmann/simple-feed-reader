@@ -25,6 +25,7 @@ final readonly class ServiceRoleRule implements Rule
     public function __construct(private ReflectionProvider $reflectionProvider, private ServiceModules $modules)
     {
         $this->checkers = [
+            new ModulePlacement($modules),
             new InterfacePlacement(),
             new RoleFolderNames(),
             new RoleFolderInterfaces(),

@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Enum\FeedGroup;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
-use App\Service\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueriesDueFeeds;

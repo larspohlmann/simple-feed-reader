@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

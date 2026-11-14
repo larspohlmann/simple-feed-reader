@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\ImageRendition;
-use App\Service\Image\ProbedLadder\ProbedLadderInterface;
+use App\Service\Outbound\Image\ProbedLadder\ProbedLadderInterface;
 
 final class StubProbedLadders implements ProbedLadderInterface
 {

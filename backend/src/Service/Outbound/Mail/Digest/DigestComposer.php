@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Outbound\Mail\Digest;
+
+use App\Entity\SavedSearch;
+use App\Entity\User;
+use App\Repository\EntryListRow;
+use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestSearchMatchesModel;
+use App\Service\Foundation\Text\Support\ClippedText;
+use App\Service\Foundation\Text\Support\PlainText;
+
+/**
+ * One group per `includeInDigest` saved search with new matches, in the user's saved-search order. A user with nothing
+ * to report gets null, not an empty digest, so the mailer never sends a blank email.
+ */
+final readonly class DigestComposer
+{
+    private const int SUMMARY_MAX = 200;
+
+    public function __construct(
+        private DigestSavedSearchesInterface $savedSearches,
+        private DigestEntryFinder $finder,
+        private DigestLinkBuilder $links,
+    ) {
+    }
+
+    public function compose(User $user, \DateTimeImmutable $since): ?DigestModel
+    {
+        $userId = $user->requireId();
+        $groups = [];
+        $total = 0;
+
+        foreach ($this->savedSearches->findIncludedInDigestForUser($userId) as $search) {
+            $matches = $this->finder->matchesSince($search, $userId, $since);
+            if ($matches->totalCount === 0) {
+                continue;
+            }
+
+            $groups[] = $this->group($search, $matches);
+            $total += $matches->totalCount;
+        }
+
+        return $groups === [] ? null : new DigestModel($groups, $total);
+    }
+
+    private function group(SavedSearch $search, DigestSearchMatchesModel $matches): DigestGroupModel
+    {
+        $entries = array_map(fn (EntryListRow $row): DigestEntryModel => $this->entry($row), $matches->entries);
+
+        return new DigestGroupModel(
+            $search->getTerm(),
+            $matches->totalCount,
+            $entries,
+            $matches->totalCount > \count($entries),
+            $this->links->savedSearchUrl($search->getTerm(), $search->isWholeWord()),
+        );
+    }
+
+    private function entry(EntryListRow $row): DigestEntryModel
+    {
+        $entry = $row->entry;
+
+        return new DigestEntryModel(
+            $entry->getTitle(),
+            $row->subscription->title,
+            $this->shortDescription($row),
+            $this->links->entryUrl($entry->requireId()),
+            $entry->getPublishedAt(),
+            $entry->getImageUrl(),
+            $entry->getFeed()->getFaviconUrl(),
+        );
+    }
+
+    private function shortDescription(EntryListRow $row): string
+    {
+        // PlainText strips markup AND decodes the entity-escaped HTML feed
+        // summaries routinely carry ("&amp;#8220;"), which a bare strip_tags
+        // would leak into the mail; then cap for one email line.
+        $text = PlainText::from($row->entry->getSummary()) ?? '';
+
+        return ClippedText::trimmedOf($text, self::SUMMARY_MAX);
+    }
+}

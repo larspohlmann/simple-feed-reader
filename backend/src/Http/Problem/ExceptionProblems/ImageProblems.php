@@ -6,8 +6,8 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Image\Exception\ImageUnavailableException;
-use App\Service\Image\Exception\InvalidImageUrlException;
+use App\Service\Outbound\Image\Exception\ImageUnavailableException;
+use App\Service\Outbound\Image\Exception\InvalidImageUrlException;
 use Symfony\Component\HttpFoundation\Response;
 
 /** A publisher refusing an image is an expected outcome, so never a 5xx the SPA would report as breakage. */

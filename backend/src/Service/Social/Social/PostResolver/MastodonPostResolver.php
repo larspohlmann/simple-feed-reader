@@ -1,0 +1,80 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Social\Social\PostResolver;
+
+use App\Entity\SocialAccount;
+use App\Enum\SocialNetwork;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\Model\PostPreviewModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\MastodonAuthor;
+use App\Service\Social\Social\Support\MastodonCard;
+use App\Service\Social\Social\Support\MastodonQuoting;
+use App\Service\Social\Social\Support\MastodonVisibility;
+use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Foundation\Text\Support\PlainText;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
+
+/** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */
+#[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
+final readonly class MastodonPostResolver implements PostResolverInterface
+{
+    private const string SEARCH = '/api/v2/search?q=%s&resolve=true&type=statuses&limit=1';
+    private const string STATUS_ID = '/^[A-Za-z0-9]{1,64}$/D';
+
+    public function __construct(private MastodonAccountApi $mastodon)
+    {
+    }
+
+    public function resolve(SocialAccount $account, string $address): SocialPostModel
+    {
+        $search = sprintf(self::SEARCH, rawurlencode($address));
+        $status = JsonNodeModel::of($this->mastodon->askAboutPost($account, $search)->json())->first('statuses');
+        $statusId = $status->string('id')
+            ?? throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
+        if (1 !== preg_match(self::STATUS_ID, $statusId)) {
+            throw new SocialNetworkUnreachableException('The Mastodon instance named a status id it cannot mean.');
+        }
+
+        $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(PostCounts::ofMastodonStatus($status));
+
+        return self::withViewer($post, $status, $statusId)->inResponseContext(self::responseContextOf($status));
+    }
+
+    private static function responseContextOf(JsonNodeModel $status): ResponseContextModel
+    {
+        return new ResponseContextModel(
+            authorIdentity: MastodonAuthor::identity($status->node('account')),
+            visibility: $status->string('visibility'),
+            canQuote: MastodonQuoting::allows($status),
+            preview: self::previewOf($status),
+        );
+    }
+
+    private static function previewOf(JsonNodeModel $status): PostPreviewModel
+    {
+        $author = $status->node('account');
+        $handle = MastodonAuthor::handle($author);
+
+        return new PostPreviewModel(
+            MastodonAuthor::name($author),
+            null === $handle ? null : '@' . $handle,
+            PlainText::fromHtmlBlocks($status->string('content')) ?? '',
+            MastodonCard::of($status->node('card')),
+        );
+    }
+
+    private static function withViewer(SocialPostModel $post, JsonNodeModel $status, string $statusId): SocialPostModel
+    {
+        $liked = $status->isTrue('favourited') ? $post->alreadyLikedAs($statusId) : $post;
+        $reposted = $status->isTrue('reblogged') ? $liked->alreadyRepostedAs($statusId) : $liked;
+
+        return MastodonVisibility::allowsReblog($status) ? $reposted : $reposted->notRepostable();
+    }
+}

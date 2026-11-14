@@ -1,0 +1,105 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Sourcing\Discovery;
+
+use App\Service\Sourcing\Discovery\BotChallengePage;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery;
+use App\Service\Sourcing\Discovery\FeedLinkScanner;
+use App\Service\Sourcing\Discovery\FeedOffer\MixcloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\SoundCloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Sourcing\Discovery\FeedOffer\YouTubeVideoChannelFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\SubstackProfileFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\YouTubePlaylistFeed;
+use App\Service\Sourcing\Discovery\WellKnownFeedProbe;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Parser\FeedParser;
+use App\Service\Ingestion\Scraper\HtmlItemExtractor;
+use App\Tests\Support\StubFeedFetcher;
+
+/** Wires a FeedDiscovery around a stub fetcher, so a test names the behaviour it exercises, not the constructor. */
+trait BuildsFeedDiscovery
+{
+    private function discovery(StubFeedFetcher $fetcher): FeedDiscovery
+    {
+        return $this->discoveryResolving(
+            $fetcher,
+            [
+                new SubstackProfileFeed($fetcher),
+                new ApplePodcastShowFeed($fetcher),
+                new GitHubRepositoryFeed(),
+                new YouTubePlaylistFeed(),
+                new FediverseRemoteProfileFeed(),
+            ],
+        );
+    }
+
+    /** @param list<ShareLinkFeedInterface> $shareLinks */
+    private function discoveryResolving(StubFeedFetcher $fetcher, array $shareLinks): FeedDiscovery
+    {
+        $parser = self::getContainer()->get(FeedParser::class);
+        self::assertInstanceOf(FeedParser::class, $parser);
+        $extractor = self::getContainer()->get(HtmlItemExtractor::class);
+        self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
+
+        return new FeedDiscovery(
+            $fetcher,
+            $parser,
+            $extractor,
+            new FeedLinkScanner(),
+            new WellKnownFeedProbe($fetcher, $parser),
+            new BotChallengePage(),
+            $shareLinks,
+            [
+                new WordPressRestProbe($fetcher),
+                new SoundCloudProfileFeed(),
+                new YouTubeVideoChannelFeed(),
+                new MixcloudProfileFeed(),
+            ],
+        );
+    }
+
+    /**
+     * A site serving only the URLs a test stubs: discovery guesses addresses, so a test says "nothing else is out
+     * there" once instead of listing every guess.
+     */
+    private function fetcher(): StubFeedFetcher
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrowForEverythingElse(new FeedUnreachableException('x: HTTP 404', 404));
+
+        return $fetcher;
+    }
+
+    private function rss2BasicXml(): string
+    {
+        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($xml);
+
+        return $xml;
+    }
+
+    private function fetcherReturning(string $url, string $finalUrl, string $body): StubFeedFetcher
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willReturn(
+            $url,
+            FetchResponseModel::fetched(
+                $finalUrl,
+                permanentRedirect: false,
+                body: $body,
+                etag: null,
+                lastModified: null,
+            ),
+        );
+
+        return $fetcher;
+    }
+}

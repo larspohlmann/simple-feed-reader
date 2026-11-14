@@ -6,8 +6,8 @@ namespace App\Tests\EventListener;
 
 use App\Enum\MailKind;
 use App\Repository\MailSendFailureRepository;
-use App\Service\Mail\DeferredMailer;
-use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
+use App\Service\Outbound\Mail\DeferredMailer;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailDeliveryHealth;
 use App\Tests\DbTestCase;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;

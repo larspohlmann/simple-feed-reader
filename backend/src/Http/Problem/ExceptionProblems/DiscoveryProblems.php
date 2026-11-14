@@ -6,8 +6,8 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Discovery\Exception\ScrapingDisabledException;
-use App\Service\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class DiscoveryProblems implements ExceptionProblemsInterface

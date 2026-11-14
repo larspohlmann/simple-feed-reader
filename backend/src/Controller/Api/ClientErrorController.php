@@ -6,8 +6,8 @@ namespace App\Controller\Api;
 
 use App\Dto\ClientError\ClientErrorReportRequest;
 use App\Entity\User;
-use App\Service\ClientError\ClientErrorRecorder;
-use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Operations\ClientError\ClientErrorRecorder;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

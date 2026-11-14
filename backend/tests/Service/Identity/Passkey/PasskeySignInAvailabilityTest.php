@@ -1,0 +1,154 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Identity\Passkey;
+
+use App\Entity\UserPasskey;
+use App\Service\Identity\Passkey\Exception\PasskeySignInDisabledException;
+use App\Service\Identity\Passkey\PasskeySignInAvailability;
+use App\Service\Operations\Settings\InstanceSettings;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Operations\Settings\RelyingPartyIdRule;
+use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\PasskeyRegistrations;
+use App\Tests\Support\TogglesPasskeySignIn;
+
+/**
+ * Passkey sign-in needs the toggle and a workable relying-party id, and neither check reads a credential or an
+ * account. Real services, as InstanceSettings is final readonly and cannot be doubled.
+ */
+final class PasskeySignInAvailabilityTest extends ApiTestCase
+{
+    use TogglesPasskeySignIn;
+
+    private InstanceSettings $settings;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        self::bootKernel();
+        $this->settings = self::getContainer()->get(InstanceSettings::class);
+    }
+
+    /**
+     * Off by default: a fresh instance with no row, and no explicit enable call, must read as unavailable even with a
+     * perfectly valid relying party.
+     */
+    public function testUnavailableByDefault(): void
+    {
+        $availability = $this->availabilityFor('example.test');
+
+        self::assertFalse($availability->isAvailable());
+    }
+
+    public function testAvailableOnceEnabledWithAValidRelyingParty(): void
+    {
+        $this->enablePasskeySignIn();
+        $availability = $this->availabilityFor('example.test');
+
+        self::assertTrue($availability->isAvailable());
+    }
+
+    public function testUnavailableWhenTheToggleIsOff(): void
+    {
+        $this->disablePasskeySignIn();
+        $availability = $this->availabilityFor('example.test');
+
+        self::assertFalse($availability->isAvailable());
+    }
+
+    /** The toggle is on, but an IP can never be a relying-party id. */
+    public function testUnavailableWhenTheRelyingPartyIdCouldNeverWork(): void
+    {
+        $this->enablePasskeySignIn();
+        $availability = $this->availabilityFor('203.0.113.5');
+
+        self::assertFalse($availability->isAvailable());
+    }
+
+    /**
+     * The proxied case: the id names a host this server cannot see, and sign-in
+     * is offered anyway. Judging it against a guessed host hid the feature.
+     */
+    public function testAvailableForADomainThisServerCannotSee(): void
+    {
+        $this->enablePasskeySignIn();
+        $availability = $this->availabilityFor('green-tara.aardvark-koi.ts.net');
+
+        self::assertTrue($availability->isAvailable());
+    }
+
+    /**
+     * No enumeration: the flag is derived purely from instance configuration.
+     * Enrolling real credentials for real accounts must never move it.
+     */
+    public function testTheAnswerNeverVariesWithHowManyCredentialsOrAccountsExist(): void
+    {
+        $this->enablePasskeySignIn();
+        $availability = $this->availabilityFor('example.test');
+        self::assertTrue($availability->isAvailable());
+
+        $owner = $this->factory()->create('passkey-owner@example.test');
+        $this->entityManager()->persist(new UserPasskey(
+            $owner,
+            registration: PasskeyRegistrations::any(
+                credentialId: bin2hex(random_bytes(16)),
+                userHandle: bin2hex(random_bytes(16)),
+                label: 'Test passkey',
+                registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            ),
+        ));
+        $this->entityManager()->flush();
+        $this->factory()->create('another-user@example.test');
+
+        self::assertTrue($this->availabilityFor('example.test')->isAvailable());
+    }
+
+    public function testGuardIsANoOpWhenAvailable(): void
+    {
+        $this->enablePasskeySignIn();
+        $availability = $this->availabilityFor('example.test');
+        $this->expectNotToPerformAssertions();
+
+        $availability->guard();
+    }
+
+    public function testGuardThrowsWhenUnavailable(): void
+    {
+        $this->disablePasskeySignIn();
+        $availability = $this->availabilityFor('example.test');
+
+        $this->expectException(PasskeySignInDisabledException::class);
+
+        $availability->guard();
+    }
+
+    private function availabilityFor(string $relyingPartyId): PasskeySignInAvailability
+    {
+        return new PasskeySignInAvailability(
+            $this->settings,
+            $this->relyingPartyOf($relyingPartyId),
+            new RelyingPartyIdRule(),
+        );
+    }
+
+    private function relyingPartyOf(string $id): PasskeyRelyingPartyInterface
+    {
+        return new class ($id) implements PasskeyRelyingPartyInterface {
+            public function __construct(private string $id)
+            {
+            }
+
+            public function id(): string
+            {
+                return $this->id;
+            }
+
+            public function name(): string
+            {
+                return 'Simple Feed Reader';
+            }
+        };
+    }
+}

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\OAuth;
 
-use App\Service\OAuth\LoginCodeStore;
-use App\Service\OAuth\OAuthStateStore;
+use App\Service\Identity\OAuth\LoginCodeStore;
+use App\Service\Identity\OAuth\OAuthStateStore;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;

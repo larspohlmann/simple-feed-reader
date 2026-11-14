@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Reader\Factory\DateFormatterFactoryInterface;
-use App\Service\Reader\Factory\StrictDateFormatterFactory;
+use App\Service\Content\Reader\Factory\DateFormatterFactoryInterface;
+use App\Service\Content\Reader\Factory\StrictDateFormatterFactory;
 
 final class RecordingDateFormatterFactory implements DateFormatterFactoryInterface
 {

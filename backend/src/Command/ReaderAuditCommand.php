@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\ReaderAudit\AuditSampler;
-use App\Service\ReaderAudit\AuditUserResolver;
-use App\Service\ReaderAudit\Model\AuditSampleModel;
-use App\Service\ReaderAudit\Model\AuditShardModel;
-use App\Service\ReaderAudit\Model\ReaderLinkModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
-use App\Service\ReaderAudit\Pass\AuditFindingsFile;
-use App\Service\ReaderAudit\ReaderAuditRunner;
+use App\Service\Content\ReaderAudit\AuditSampler;
+use App\Service\Content\ReaderAudit\AuditUserResolver;
+use App\Service\Content\ReaderAudit\Model\AuditSampleModel;
+use App\Service\Content\ReaderAudit\Model\AuditShardModel;
+use App\Service\Content\ReaderAudit\Model\ReaderLinkModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\ReaderAudit\Pass\AuditFindingsFile;
+use App\Service\Content\ReaderAudit\ReaderAuditRunner;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;

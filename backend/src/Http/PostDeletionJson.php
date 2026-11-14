@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Social\Model\PostDeletion;
+use App\Service\Social\Social\Model\PostDeletion;
 
 final class PostDeletionJson
 {

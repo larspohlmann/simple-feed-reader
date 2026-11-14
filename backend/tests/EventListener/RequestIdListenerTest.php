@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\RequestIdListener;
-use App\Service\Logging\RequestIdProvider;
+use App\Service\Operations\Logging\RequestIdProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;

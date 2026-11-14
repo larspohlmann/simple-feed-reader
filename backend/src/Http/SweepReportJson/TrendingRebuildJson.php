@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 
 final readonly class TrendingRebuildJson implements SweepReportJsonInterface
 {

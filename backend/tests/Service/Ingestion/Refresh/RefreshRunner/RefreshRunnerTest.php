@@ -1,0 +1,1280 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Ingestion\Refresh\RefreshRunner;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\SubscriptionDay;
+use App\Entity\User;
+use App\Enum\FeedStatus;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
+use App\Tests\DbTestCase;
+use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\DuplicateKeyViolation;
+use App\Tests\Support\FlushFailingEntityManager;
+use App\Tests\Support\RecordingContentChangeMarker;
+use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\RefreshRunners;
+use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\StubPassFetcher;
+use App\Tests\Support\TtlRecordingLockFactory;
+use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\OptimisticLockException;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\Store\InMemoryStore;
+
+final class RefreshRunnerTest extends DbTestCase
+{
+    use ScrapedFixtures;
+
+    private MockClock $clock;
+    private StubPassFetcher $fetcher;
+    private StubFeedFetcher $faviconFetcher;
+    private TtlRecordingLockFactory $lockFactory;
+    private User $subscriber;
+    private RecordingSearchIndexWriter $indexWriter;
+    private RecordingContentChangeMarker $changeMarker;
+    private RecordingLogger $logger;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
+        $this->changeMarker = new RecordingContentChangeMarker();
+        $this->logger = new RecordingLogger();
+        $this->fetcher = new StubPassFetcher($this->clock);
+        // Favicon resolution has its own fetcher so homepage fetches never
+        // pollute assertions on which FEEDS the runner fetched.
+        $this->faviconFetcher = new StubFeedFetcher();
+        $this->lockFactory = new TtlRecordingLockFactory(new InMemoryStore());
+        $this->indexWriter = new RecordingSearchIndexWriter();
+        // dueFeed() subscribes every fixture feed to this user so the orphan sweep never deletes it;
+        // RefreshRunnerOrphanSweepTest covers orphans.
+        $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
+        $this->entityManager->persist($this->subscriber);
+    }
+
+    private function runner(?EntityManagerInterface $runnerEntityManager = null): RefreshRunner
+    {
+        return $this->runners()
+            ->flushingThrough($runnerEntityManager ?? $this->entityManager)
+            ->build($this->fetcher, $this->faviconFetcher);
+    }
+
+    private function runners(): RefreshRunners
+    {
+        return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->lockingWith($this->lockFactory)
+            ->markingChangesOn($this->changeMarker)
+            ->indexingInto($this->indexWriter)
+            ->loggingTo($this->logger);
+    }
+
+    private function scrapedDueFeed(string $url): Feed
+    {
+        $feed = $this->dueFeed($url);
+        $feed->setSourceFormat('scraped');
+
+        return $feed;
+    }
+
+    private function dueFeed(string $url): Feed
+    {
+        $feed = new Feed($url);
+        $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour'));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
+
+        // Every due feed lacks a favicon, so a successful refresh fetches its homepage in the favicon pass; this bland
+        // default spares the tests that do not care, and a later willReturn() overrides it.
+        $origin = 'https://' . (string) parse_url($url, \PHP_URL_HOST);
+        $this->faviconFetcher->willReturn(
+            $origin,
+            FetchResponseModel::fetched($origin, false, '<html lang="en"></html>', null, null),
+        );
+
+        return $feed;
+    }
+
+    private function effectiveDateOf(Feed $feed, string $guid): string
+    {
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid.value' => $guid]);
+        self::assertNotNull($entry);
+
+        return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
+    }
+
+    private function rss(string $title, string $guid): string
+    {
+        return /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>{$title}</title>
+            <item><title>Post</title><link>https://example.com/p</link><guid>{$guid}</guid></item>
+            </channel></rss>
+            XML;
+    }
+
+    public function testRefreshesDueFeedsAndReports(): void
+    {
+        $feedA = $this->dueFeed('https://a.example.com/feed');
+        $feedB = $this->dueFeed('https://b.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feedA->getUrl(),
+            FetchResponseModel::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+        $this->fetcher->willReturn(
+            $feedB->getUrl(),
+            FetchResponseModel::notModified($feedB->getUrl(), false, null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(2, $report->total);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(1, $report->notModified);
+        self::assertSame(0, $report->failed);
+        self::assertSame(0, $report->remaining);
+
+        self::assertSame('"etag-a"', $feedA->getEtag());
+        self::assertSame('A', $feedA->getTitle());
+        self::assertNotNull($feedA->getNextFetchAt());
+        self::assertGreaterThan($this->clock->now(), $feedA->getNextFetchAt());
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findAll());
+    }
+
+    /**
+     * A fatal never reaches the finally that releases the lock, so the TTL is
+     * what frees the next tick: well under the cron cadence, above the longest
+     * run budget (25 s).
+     */
+    public function testHoldsTheRefreshLockForOneMinute(): void
+    {
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(60.0, $this->lockFactory->lastTtlFor('feed-refresh'));
+    }
+
+    public function testMovesTheChangeMarkerWhenAnImportStoredNewEntries(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $this->changeMarker->marks);
+    }
+
+    public function testMovesTheMarkerWhenAnEarlierFeedImportedButTheLastDidNot(): void
+    {
+        // The run-wide total must ACCUMULATE across feeds: a feed that imported
+        // then a NotModified feed still means new content this run. A total that
+        // only remembered the last feed would leave the marker unmoved here.
+        $feedA = $this->dueFeed('https://a.example.com/feed');
+        $feedB = $this->dueFeed('https://b.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feedA->getUrl(),
+            FetchResponseModel::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+        $this->fetcher->willReturn(
+            $feedB->getUrl(),
+            FetchResponseModel::notModified($feedB->getUrl(), false, null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $this->changeMarker->marks);
+    }
+
+    public function testLeavesTheChangeMarkerWhenTheSweepStoredNoNewEntries(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(0, $this->changeMarker->marks);
+    }
+
+    /**
+     * Only the flush assigns ids, so indexing before it would send the index an id of 0: this pins the id the index
+     * received to the one the database assigned.
+     */
+    public function testIndexesFetchedEntriesWithTheirRealIdsAfterFlush(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'a-1']);
+        self::assertNotNull($entry);
+        self::assertNotNull($entry->getId());
+
+        self::assertSame(['configure', 'upsert'], $this->indexWriter->calls);
+        self::assertCount(1, $this->indexWriter->upserts);
+        $indexed = $this->indexWriter->upserts[0][0];
+        self::assertSame($entry->getId(), $indexed->id);
+        self::assertSame('Post', $indexed->title);
+        self::assertSame('A', $indexed->feedTitle);
+    }
+
+    public function testAllEntriesInOneRefreshRunShareTheRunStartAsCreatedAt(): void
+    {
+        $feedA = $this->dueFeed('https://a.example.com/feed');
+        $feedB = $this->dueFeed('https://b.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feedA->getUrl(),
+            FetchResponseModel::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+        $this->fetcher->willReturn(
+            $feedB->getUrl(),
+            FetchResponseModel::fetched($feedB->getUrl(), false, $this->rss('B', 'b-1'), '"etag-b"', null),
+        );
+
+        $runStart = $this->clock->now();
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        $entries = $this->entityManager->getRepository(Entry::class)->findAll();
+        self::assertCount(2, $entries);
+        foreach ($entries as $entry) {
+            self::assertSame($runStart->getTimestamp(), $entry->getCreatedAt()->getTimestamp());
+        }
+    }
+
+    /**
+     * FeedIngestContext's previous fetch time is read before recordSuccess() stamps the new one; read after, every
+     * article, however old, would look published since the last fetch.
+     */
+    public function testARefreshSinksAnArticleTheFeedServedBeforeTheLastFetch(): void
+    {
+        $feed = $this->dueFeed('https://old-news.example.com/feed');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 06:00:00'), 60);
+        $this->entityManager->flush();
+
+        $body = /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>T</title>
+            <item><title>Old</title><link>https://old-news.example.com/old</link><guid>old</guid>
+            <pubDate>Sun, 01 Mar 2020 00:00:00 GMT</pubDate></item>
+            <item><title>New</title><link>https://old-news.example.com/new</link><guid>new</guid>
+            <pubDate>Tue, 21 Jul 2026 09:00:00 GMT</pubDate></item>
+            </channel></rss>
+            XML;
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        // Pruning disabled: an entry this old would otherwise be swept by the
+        // same run, which is not what this test is about.
+        $this->runner()->run(RefreshRequestModel::allDue(300)->withoutPruning());
+
+        self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'old'));
+        self::assertSame(
+            $this->clock->now()->format('Y-m-d H:i:s'),
+            $this->effectiveDateOf($feed, 'new'),
+        );
+    }
+
+    /**
+     * FeedScheduler::recordFailure() also stamps lastFetchedAt, so after an outage the previous fetch must come from
+     * lastSuccessfulFetchAt; otherwise everything published during the outage sinks to its own date.
+     */
+    public function testARefreshSurfacesBacklogPublishedDuringAFeedOutage(): void
+    {
+        $feed = $this->dueFeed('https://recovered.example.com/feed');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-12 06:00:00'), 60);
+        $feed->recordFailedFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 'HTTP 503', 30);
+        $this->entityManager->flush();
+
+        $body = /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>T</title>
+            <item><title>Backlog</title><link>https://recovered.example.com/backlog</link><guid>backlog</guid>
+            <pubDate>Wed, 15 Jul 2026 00:00:00 GMT</pubDate></item>
+            </channel></rss>
+            XML;
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300)->withoutPruning());
+
+        self::assertSame(
+            $this->clock->now()->format('Y-m-d H:i:s'),
+            $this->effectiveDateOf($feed, 'backlog'),
+        );
+    }
+
+    public function testRefreshBackfillsTheImageOntoAnAlreadyStoredEntryThatLacksOne(): void
+    {
+        // FillMissingImagesTest calls the ingestor directly; this proves the refresh calls it too, inside
+        // FeedOutcomePersister's unit of work, by serving an already stored guid with a media image.
+        $feed = $this->dueFeed('https://img.example.com/feed');
+        $stored = new Entry(
+            $feed,
+            'has-image',
+            'https://img.example.com/p',
+            'Post',
+            $this->clock->now(),
+            $this->clock->now(),
+        );
+        $this->entityManager->persist($stored);
+        $this->entityManager->flush();
+        self::assertNull($stored->getImageUrl());
+
+        $body = /** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>T</title>
+            <item><title>Post</title><link>https://img.example.com/p</link><guid>has-image</guid>
+            <media:content url="https://img.example.com/big.jpg" medium="image" width="800" height="450"/>
+            </item></channel></rss>
+            XML;
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        // No NEW entry — the guid already existed, so this is pure backfill.
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findAll());
+        self::assertSame('https://img.example.com/big.jpg', $stored->getImageUrl());
+        self::assertSame(800, $stored->getImageWidth());
+        self::assertSame(450, $stored->getImageHeight());
+    }
+
+    public function testFailedFeedIsRecordedAndOthersContinue(): void
+    {
+        $bad = $this->dueFeed('https://bad.example.com/feed');
+        $good = $this->dueFeed('https://good.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willThrow($bad->getUrl(), new FeedUnreachableException('connection refused'));
+        $this->fetcher->willReturn(
+            $good->getUrl(),
+            FetchResponseModel::fetched($good->getUrl(), false, $this->rss('G', 'g-1'), null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Erroring, $bad->getStatus());
+        self::assertSame(1, $bad->getConsecutiveFailures());
+        self::assertStringContainsString('connection refused', (string) $bad->getLastErrorMessage());
+        // A failed feed has nothing new to show an icon beside, and its homepage may never answer again, so it stays
+        // out of the favicon pass.
+        self::assertNotContains('https://bad.example.com', $this->faviconFetcher->fetchedUrls);
+    }
+
+    /**
+     * A rationing site answers a healthy feed with 429 when asked twice in a row (#290). Recording that as a failure
+     * would mark the feed erroring and back it off for hours, for a document the next attempt would get.
+     */
+    public function testAThrottledFeedKeepsItsHealthAndIsAskedAgainShortly(): void
+    {
+        $feed = $this->dueFeed('https://www.reddit.com/r/Bitwig/.rss');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 30);
+        $this->entityManager->flush();
+
+        $this->fetcher->willThrow(
+            $feed->getUrl(),
+            new FeedThrottledException('https://www.reddit.com/r/Bitwig/.rss: HTTP 429', 90),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        // Its own bucket: a throttled feed is healthy, not failed.
+        self::assertSame(1, $report->throttled);
+        self::assertSame(0, $report->failed);
+        self::assertSame(0, $report->fetched);
+        // The scheduler owns what a throttle does to the feed (FeedSchedulerTest);
+        // what matters here is that a 429 reaches it at all instead of being
+        // recorded as a failure.
+        self::assertSame(FeedStatus::Active, $feed->getStatus());
+        self::assertSame(
+            $this->clock->now()->modify('+90 seconds')->format('Y-m-d H:i:s'),
+            $feed->getNextFetchAt()?->format('Y-m-d H:i:s'),
+        );
+        // Chasing its icon would be one more request to a host that just
+        // asked us for fewer.
+        self::assertNotContains('https://www.reddit.com', $this->faviconFetcher->fetchedUrls);
+    }
+
+    public function testUnparseableBodyIsRecordedAsFailure(): void
+    {
+        $feed = $this->dueFeed('https://junk.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, 'this is not xml at all', null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Erroring, $feed->getStatus());
+    }
+
+    /**
+     * An empty 200 body is a per-feed failure, not an uncaught ValueError from loadXML() that fails the whole run and
+     * every feed queued after it.
+     */
+    public function testEmptyBodyIsRecordedAsFailureAndOthersContinue(): void
+    {
+        $empty = $this->dueFeed('https://empty.example.com/feed');
+        $good = $this->dueFeed('https://good.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $empty->getUrl(),
+            FetchResponseModel::fetched($empty->getUrl(), false, '', null, null),
+        );
+        $this->fetcher->willReturn(
+            $good->getUrl(),
+            FetchResponseModel::fetched($good->getUrl(), false, $this->rss('G', 'g-1'), null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Erroring, $empty->getStatus());
+        // The good feed queued after the empty one still ingested its entry.
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findAll());
+    }
+
+    public function testRefreshResolvesAndStoresTheFeedFavicon(): void
+    {
+        $feed = $this->dueFeed('https://blog.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('Blog', 'b-1'), null, null),
+        );
+        // The favicon fetcher, not the feed fetcher, serves the homepage's icon.
+        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponseModel::fetched(
+            'https://blog.example.com/',
+            false,
+            /** @lang TEXT */
+            '<!doctype html><html><head><link rel="icon" href="/icon.png"></head><body>x</body></html>',
+            null,
+            null,
+        ));
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('https://blog.example.com/icon.png', $feed->getFaviconUrl());
+    }
+
+    public function testNotModifiedRefreshStillResolvesAMissingFavicon(): void
+    {
+        $feed = $this->dueFeed('https://blog.example.com/feed');
+        $this->entityManager->flush();
+
+        // The feed answers 304 (its entries are unchanged) but has no favicon
+        // yet — resolution must not be gated on a full-body fetch.
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
+        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponseModel::fetched(
+            'https://blog.example.com/',
+            false,
+            /** @lang TEXT */
+            '<!doctype html><html><head><link rel="icon" href="/icon.png"></head><body>x</body></html>',
+            null,
+            null,
+        ));
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('https://blog.example.com/icon.png', $feed->getFaviconUrl());
+    }
+
+    public function testFaviconsAreResolvedForFeedsThatLackOne(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+        $this->faviconFetcher->willReturn(
+            'https://one.example.com',
+            FetchResponseModel::fetched(
+                'https://one.example.com',
+                false,
+                /** @lang TEXT */ '<link rel="icon" href="/i.png">',
+                null,
+                null,
+            ),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('https://one.example.com/i.png', $feed->getFaviconUrl());
+    }
+
+    public function testAnAbortedRunResolvesNoFavicons(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            thrown: DuplicateKeyViolation::exception(),
+        );
+
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        // The EntityManager is closed; the favicon pass never ran.
+        self::assertSame([], $this->faviconFetcher->fetchedUrls);
+    }
+
+    public function testGoneFeedIsMarkedGone(): void
+    {
+        $feed = $this->dueFeed('https://dead.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willThrow($feed->getUrl(), new FeedGoneException('HTTP 410 Gone'));
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Gone, $feed->getStatus());
+        self::assertNull($feed->getNextFetchAt());
+    }
+
+    /** With concurrency 1 the engine starts one feed per wave, so the deadline is re-checked before each start. */
+    public function testBudgetExhaustionSkipsFeedsThatWereNeverStarted(): void
+    {
+        $first = $this->dueFeed('https://one.example.com/feed');
+        $second = $this->dueFeed('https://two.example.com/feed');
+        $third = $this->dueFeed('https://three.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
+        foreach ([$first, $second, $third] as $index => $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::fetched(
+                    $feed->getUrl(),
+                    false,
+                    $this->rss('F' . $index, 'g-' . $index),
+                    null,
+                    null,
+                ),
+            );
+        }
+        $this->fetcher->secondsPerFetch = 100;
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(205));
+
+        // 100 s + 100 s spent leaves 5 s — below the 10 s safety margin, so the
+        // third feed never starts and stays due for the next run.
+        self::assertSame('partial', $report->status);
+        self::assertSame(2, $report->fetched);
+        self::assertSame(1, $report->skippedForBudget);
+        self::assertSame(1, $report->remaining);
+        self::assertCount(2, $this->fetcher->fetchedUrls());
+        // The third feed never started, so the favicon pass must not spend the refused time on its homepage.
+        self::assertNotContains('https://three.example.com', $this->faviconFetcher->fetchedUrls);
+    }
+
+    /** At a realistic concurrency the same three feeds fit one wave, so the budget that skips one above completes. */
+    public function testAConcurrentWaveCompletesWithinABudgetThatSerialWouldExhaust(): void
+    {
+        foreach (['one', 'two', 'three'] as $index => $name) {
+            $feed = $this->dueFeed(sprintf('https://%s.example.com/feed', $name));
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::fetched(
+                    $feed->getUrl(),
+                    false,
+                    $this->rss('F' . $index, 'g-' . $index),
+                    null,
+                    null,
+                ),
+            );
+        }
+        $this->entityManager->flush();
+        $this->fetcher->secondsPerFetch = 100;
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(205));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(3, $report->fetched);
+        self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(0, $report->remaining);
+    }
+
+    /**
+     * The user endpoint polls until `remaining` reaches 0. A run that processes
+     * nothing leaves `remaining` unchanged, so a budget at or below the safety
+     * margin would spin the client forever. Guarantee one feed of progress.
+     */
+    public function testBudgetSmallerThanTheSafetyMarginStillProcessesOneFeed(): void
+    {
+        $first = $this->dueFeed('https://one.example.com/feed');
+        $second = $this->dueFeed('https://two.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
+        foreach ([$first, $second] as $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+            );
+        }
+        $this->fetcher->secondsPerFetch = 5;
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(3));
+
+        self::assertSame(1, $report->notModified);
+        self::assertSame(1, $report->skippedForBudget);
+        self::assertSame([$first->getUrl()], $this->fetcher->fetchedUrls());
+        // Progress was made, so a polling caller converges instead of looping.
+        self::assertSame(1, $report->remaining);
+    }
+
+    public function testBusyWhenLockIsHeld(): void
+    {
+        $lock = $this->lockFactory->createLock('feed-refresh');
+        self::assertTrue($lock->acquire());
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('busy', $report->status);
+        // Every counter is zero: the lock was held, so no slice ran at all.
+        self::assertSame(0, $report->total);
+        self::assertSame(0, $report->fetched);
+        self::assertSame(0, $report->notModified);
+        self::assertSame(0, $report->failed);
+        self::assertSame(0, $report->throttled);
+        self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(0, $report->remaining);
+        self::assertSame(0, $report->pruned);
+        self::assertSame([], $this->fetcher->fetchedUrls());
+        $lock->release();
+    }
+
+    public function testLockIsReleasedAfterRun(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        $lock = $this->lockFactory->createLock('feed-refresh');
+        self::assertTrue($lock->acquire(), 'lock should be free after a completed run');
+        $lock->release();
+    }
+
+    public function testPermanentRedirectUpdatesFeedUrl(): void
+    {
+        $feed = $this->dueFeed('https://old.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
+        );
+        // The redirect adopts the new URL before the favicon pass, so the homepage fetch targets the new origin.
+        $this->faviconFetcher->willReturn(
+            'https://new.example.com',
+            FetchResponseModel::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('https://new.example.com/feed', $feed->getUrl());
+    }
+
+    public function testOversizedRemoteHeadersAreTruncatedToColumnLimits(): void
+    {
+        $feed = $this->dueFeed('https://verbose.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn($feed->getUrl(), FetchResponseModel::fetched(
+            $feed->getUrl(),
+            false,
+            $this->rss('Verbose', 'v-1'),
+            '"' . str_repeat('e', 900) . '"',
+            str_repeat('m', 600),
+        ));
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        // Without truncation MySQL's strict mode rejects the row, the flush
+        // throws, and the whole run aborts.
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(512, mb_strlen((string) $feed->getEtag()));
+        self::assertSame(255, mb_strlen((string) $feed->getLastModified()));
+    }
+
+    public function testOverlongRedirectTargetIsNotAdopted(): void
+    {
+        $feed = $this->dueFeed('https://old.example.com/feed');
+        $this->entityManager->flush();
+
+        $tooLong = 'https://new.example.com/' . str_repeat('p', 800);
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($tooLong, true, $this->rss('Moved', 'm-1'), null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        self::assertSame('https://old.example.com/feed', $feed->getUrl());
+    }
+
+    public function testPermanentRedirectIsAdoptedOnNotModifiedResponses(): void
+    {
+        $feed = $this->dueFeed('https://old.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified('https://new.example.com/feed', true, null, null),
+        );
+        // The redirect adopts the new URL before the favicon pass, so the homepage fetch targets the new origin.
+        $this->faviconFetcher->willReturn(
+            'https://new.example.com',
+            FetchResponseModel::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->notModified);
+        self::assertSame('https://new.example.com/feed', $feed->getUrl());
+    }
+
+    public function testPermanentRedirectToAnAlreadyKnownUrlIsIgnored(): void
+    {
+        $existing = $this->dueFeed('https://new.example.com/feed');
+        $existing->scheduleNextFetchAt($this->clock->now()->modify('+1 day'));
+        $moving = $this->dueFeed('https://old.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $moving->getUrl(),
+            FetchResponseModel::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('https://old.example.com/feed', $moving->getUrl());
+    }
+
+    public function testUserScopedRunOnlyTouchesThatUsersFeeds(): void
+    {
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->entityManager->persist($user);
+        $mine = $this->dueFeed('https://mine.example.com/feed');
+        $this->dueFeed('https://other.example.com/feed');
+        $this->entityManager->persist(new Subscription($user, $mine, $this->clock->now()));
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $mine->getUrl(),
+            FetchResponseModel::notModified($mine->getUrl(), false, null, null),
+        );
+
+        $userId = $user->getId();
+        self::assertNotNull($userId);
+        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), 60));
+
+        self::assertSame([$mine->getUrl()], $this->fetcher->fetchedUrls());
+        self::assertSame(1, $report->total);
+    }
+
+    /**
+     * A single-feed scope matches on id alone, so countDue would keep answering
+     * 1 even after a successful refresh. `remaining` must still reach 0 or a
+     * polling caller never stops.
+     */
+    public function testSingleFeedRunReportsNothingRemaining(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('One', 'o-1'), null, null),
+        );
+
+        $feedId = $feed->getId();
+        self::assertNotNull($feedId);
+        $report = $this->runner()->run(RefreshRequestModel::forFeed($feedId, 60));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->total);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(0, $report->remaining);
+    }
+
+    public function testARequestLimitedToOneFeedLeavesTheOtherDueFeedRemaining(): void
+    {
+        $first = $this->dueFeed('https://first.example.com/feed');
+        $second = $this->dueFeed('https://second.example.com/feed');
+        $this->entityManager->flush();
+        foreach ([$first, $second] as $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+            );
+        }
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(60)->limitedTo(1));
+
+        self::assertSame(1, $report->total);
+        self::assertSame(1, $report->remaining);
+    }
+
+    /**
+     * A 429 leaves lastFetchedAt untouched, so `remaining` must not be derived from it: the feed would stay due and
+     * the client's poll loop would hammer the site that asked for less (89 requests to one feed in production, #302).
+     */
+    public function testThrottledFeedIsNotCountedAsRemaining(): void
+    {
+        $feed = $this->dueFeed('https://rationing.example.com/feed');
+        $this->entityManager->flush();
+
+        $this->fetcher->willThrow($feed->getUrl(), new FeedThrottledException('429 Too Many Requests', 60));
+
+        $userId = $this->subscriber->getId();
+        self::assertNotNull($userId);
+        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), 60));
+
+        self::assertSame(1, $report->throttled);
+        self::assertSame(0, $report->remaining, 'a feed this run handled is not remaining');
+        self::assertSame('completed', $report->status);
+    }
+
+    public function testAllDueRunPrunesOldEntries(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+
+        // Twenty recent filler entries hold the feed above EntryPruner's
+        // per-feed floor, so the ancient entry below falls beyond the
+        // newest-twenty boundary and is eligible for the age pass.
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($index = 0; $index < 20; ++$index) {
+            $filler = new Entry($feed, 'filler-' . $index, null, 'Filler ' . $index, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->entityManager->persist($filler);
+        }
+
+        $ancientDate = $this->clock->now()->modify('-200 days');
+        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
+        $ancient->setPublishedAt($ancientDate);
+        $this->entityManager->persist($ancient);
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->pruned);
+    }
+
+    public function testAMaintenanceRunRecordsTheDayBeforeTheCapPassPrunesIt(): void
+    {
+        $feed = $this->dueFeed('https://cap.example.com/feed');
+        $reader = new User('cap-reader@example.com', $this->clock->now());
+        $subscription = new Subscription($reader, $feed, new \DateTimeImmutable('2026-07-15 00:00:00'));
+        $this->entityManager->persist($reader);
+        $this->entityManager->persist($subscription);
+        $arrivedAt = new \DateTimeImmutable('2026-07-20 10:00:00');
+        for ($index = 0; $index < 25; ++$index) {
+            $this->entityManager->persist(new Entry($feed, 'cap-' . $index, null, 'Cap', $arrivedAt, $arrivedAt));
+        }
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
+
+        $report = $this->runners()
+            ->cappingFeedsAt(20)
+            ->build($this->fetcher, $this->faviconFetcher)
+            ->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(5, $report->pruned);
+        $subscriptionId = $subscription->requireId();
+        $stored = $this->entityManager->getRepository(SubscriptionDay::class)->since([$subscriptionId], '2026-07-20');
+        self::assertSame(25, $stored->of($subscriptionId, '2026-07-20')->arrived);
+    }
+
+    public function testUserScopedRunDoesNotPrune(): void
+    {
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->entityManager->persist($user);
+        $feed = $this->dueFeed('https://a.example.com/feed');
+
+        // Twenty recent fillers hold the feed above EntryPruner's floor, so the ancient entry below is prunable and
+        // only the run's scope decides whether it goes.
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($index = 0; $index < 20; ++$index) {
+            $filler = new Entry($feed, 'filler-' . $index, null, 'Filler ' . $index, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->entityManager->persist($filler);
+        }
+
+        $ancientDate = $this->clock->now()->modify('-200 days');
+        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
+        $ancient->setPublishedAt($ancientDate);
+        $this->entityManager->persist($ancient);
+        $this->entityManager->persist(new Subscription($user, $feed, $this->clock->now()));
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
+
+        $userId = $user->getId();
+        self::assertNotNull($userId);
+        $report = $this->runner()->run(RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), 60));
+
+        self::assertSame(0, $report->pruned);
+        self::assertCount(21, $this->entityManager->getRepository(Entry::class)->findAll());
+    }
+
+    public function testScrapedFeedSynthesizesEntriesFromTheListingPage(): void
+    {
+        $feed = $this->scrapedDueFeed('https://www.tagesschau.de/');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched(
+                $feed->getUrl(),
+                false,
+                $this->scrapedFixture('tagesschau-2026-07-23.html'),
+                null,
+                null,
+            ),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        self::assertSame(0, $report->failed);
+        /** @var list<Entry> $entries */
+        $entries = $this->entityManager->getRepository(Entry::class)->findAll();
+        self::assertGreaterThanOrEqual(20, \count($entries));
+        foreach ($entries as $entry) {
+            // A scraped page has no publisher guids: the article URL is the
+            // stable identity that re-fetches dedupe on.
+            self::assertMatchesRegularExpression('#^https?://#', $entry->getGuid());
+            self::assertSame($entry->getUrl(), $entry->getGuid());
+        }
+        $teasered = array_values(array_filter(
+            $entries,
+            static fn (Entry $entry): bool => $entry->getContentHtml() !== null,
+        ));
+        self::assertNotSame([], $teasered, 'the tagesschau snapshot carries card teasers');
+        self::assertStringStartsWith('<p>', (string) $teasered[0]->getContentHtml());
+    }
+
+    public function testSecondScrapedRefreshOfTheSameBodyCreatesNoDuplicates(): void
+    {
+        $feed = $this->scrapedDueFeed('https://www.tagesschau.de/');
+        $this->entityManager->flush();
+
+        $body = $this->scrapedFixture('tagesschau-2026-07-23.html');
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(300));
+        $countAfterFirst = \count($this->entityManager->getRepository(Entry::class)->findAll());
+
+        $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour')); // due again
+        $this->entityManager->flush();
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->fetched);
+        self::assertCount($countAfterFirst, $this->entityManager->getRepository(Entry::class)->findAll());
+    }
+
+    public function testScrapedFeedWithAnArticleFreePageIsRecordedAsFailure(): void
+    {
+        $feed = $this->scrapedDueFeed('https://nav.example.com/');
+        $this->entityManager->flush();
+
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->scrapedFixture('nav-only.html'), null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(300));
+
+        // HtmlExtractionException extends FeedParseException, so the scraped
+        // path reports through the exact failure channel xml feeds use.
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Erroring, $feed->getStatus());
+        self::assertStringContainsString('article list', (string) $feed->getLastErrorMessage());
+    }
+
+    /**
+     * A failed flush closes the EntityManager, so the run aborts instead of failing every remaining feed with
+     * "EntityManager is closed", and never touches the EntityManager again (no countDue, no prune).
+     */
+    public function testEntityManagerFailureAbortsRunWithoutCascading(): void
+    {
+        $first = $this->dueFeed('https://one.example.com/feed');
+        $second = $this->dueFeed('https://two.example.com/feed');
+        $third = $this->dueFeed('https://three.example.com/feed');
+        $this->entityManager->flush();
+
+        // Concurrency 1 makes "the third feed is never started" deterministic
+        // rather than a race against however many feeds a wave happens to fit.
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
+        foreach ([$first, $second, $third] as $index => $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::fetched(
+                    $feed->getUrl(),
+                    false,
+                    $this->rss('F' . $index, 'g-' . $index),
+                    null,
+                    null,
+                ),
+            );
+        }
+
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            failingFlush: 2,
+            thrown: DuplicateKeyViolation::exception(),
+        );
+
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        // The run stopped: the third feed's outcome was never processed.
+        self::assertCount(2, $this->fetcher->fetchedUrls());
+        self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls());
+        // The first feed's entries were committed before the second flush failed.
+        self::assertSame(1, $this->changeMarker->marks);
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable}>
+     */
+    public static function exceptionsTheFaviconFlushDegradesToAborted(): iterable
+    {
+        yield 'unique constraint violation' => [DuplicateKeyViolation::exception()];
+        yield 'optimistic lock exception' => [OptimisticLockException::lockFailed(Feed::class)];
+    }
+
+    /**
+     * The favicon flush must degrade to an aborted report, never escape run(): RefreshController promises the
+     * client JSON with a `status` field, not a 500 its poll loop has no branch for.
+     */
+    #[DataProvider('exceptionsTheFaviconFlushDegradesToAborted')]
+    public function testFaviconFlushFailureIsReportedAsAbortedNotThrown(\Throwable $thrown): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        // Flush 1 is the feed's own fetch outcome; flush 2 is the favicon
+        // phase's — the one this test targets.
+        $failingEntityManager = new FlushFailingEntityManager($this->entityManager, failingFlush: 2, thrown: $thrown);
+
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(1, $report->total);
+        // The feed's own fetch and flush already succeeded before the favicon
+        // phase failed, so that outcome is not lost.
+        self::assertSame(1, $report->fetched);
+        self::assertSame(0, $report->pruned);
+        self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(0, $report->remaining);
+        self::assertCount(1, $this->logger->records);
+        self::assertSame('error', $this->logger->records[0]['level']);
+        self::assertSame(
+            'Refresh aborted: persistence failed while resolving favicons',
+            $this->logger->records[0]['message'],
+        );
+        self::assertSame(['exception' => $thrown], $this->logger->records[0]['context']);
+    }
+
+    /**
+     * A feed whose last subscriber leaves mid-fetch is reclaimed without the refresh lock, so the flush fails on the
+     * foreign key, not a unique key; that too degrades to `aborted` instead of escaping run().
+     */
+    public function testForeignKeyViolationFromAVanishedFeedAbortsTheRunWithoutThrowing(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            thrown: new ForeignKeyConstraintViolationException(
+                new class ('a foreign key constraint fails', '23000', 1452) extends DriverAbstractException {
+                },
+                null,
+            ),
+        );
+
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(1, $report->total);
+    }
+
+    public function testAnAbortCarriesEveryCountTheRunReachedAndLeavesTheUnprocessedRemaining(): void
+    {
+        $unchanged = $this->dueFeed('https://one.example.com/feed');
+        $rationed = $this->dueFeed('https://two.example.com/feed');
+        $failing = $this->dueFeed('https://three.example.com/feed');
+        $untouched = $this->dueFeed('https://four.example.com/feed');
+        $this->entityManager->flush();
+
+        // Concurrency 1 fixes the order, so the third flush is the fetched feed's.
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
+        $this->fetcher->willReturn(
+            $unchanged->getUrl(),
+            FetchResponseModel::notModified($unchanged->getUrl(), false, null, null),
+        );
+        $this->fetcher->willThrow($rationed->getUrl(), new FeedThrottledException('HTTP 429', 60));
+        $this->fetcher->willReturn(
+            $failing->getUrl(),
+            FetchResponseModel::fetched($failing->getUrl(), false, $this->rss('F', 'f-1'), null, null),
+        );
+        $this->fetcher->willReturn(
+            $untouched->getUrl(),
+            FetchResponseModel::notModified($untouched->getUrl(), false, null, null),
+        );
+
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            failingFlush: 3,
+            thrown: DuplicateKeyViolation::exception(),
+        );
+
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(4, $report->total);
+        self::assertSame(0, $report->fetched);
+        self::assertSame(1, $report->notModified);
+        self::assertSame(1, $report->failed);
+        self::assertSame(1, $report->throttled);
+        self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(2, $report->remaining);
+        self::assertSame(0, $report->pruned);
+        self::assertNotContains($untouched->getUrl(), $this->fetcher->fetchedUrls());
+    }
+
+    public function testAForcedRefreshSkipsAFeedFetchedWithinTheCooldown(): void
+    {
+        $recent = $this->dueFeed('https://recent.example.com/feed');
+        $recent->recordSuccessfulFetch($this->clock->now()->modify('-4 minutes'), 60);
+        $stale = $this->dueFeed('https://stale.example.com/feed');
+        $stale->recordSuccessfulFetch($this->clock->now()->modify('-6 minutes'), 60);
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $stale->getUrl(),
+            FetchResponseModel::notModified($stale->getUrl(), false, null, null),
+        );
+
+        $report = $this->runner()->run(RefreshRequestModel::forUser(
+            $this->subscriber->requireId(),
+            new EveryFeedTargetModel(),
+            60,
+        ));
+
+        self::assertSame([$stale->getUrl()], $this->fetcher->fetchedUrls());
+        self::assertSame(1, $report->total);
+        self::assertSame(1, $report->notModified);
+    }
+
+    public function testLockIsReleasedAfterAnAbortedRun(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            thrown: DuplicateKeyViolation::exception(),
+        );
+
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        $lock = $this->lockFactory->createLock('feed-refresh');
+        self::assertTrue($lock->acquire(), 'lock should be free after an aborted run');
+        $lock->release();
+    }
+}

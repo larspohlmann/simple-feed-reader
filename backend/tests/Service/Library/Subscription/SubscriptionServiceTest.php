@@ -1,0 +1,573 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Library\Subscription;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\Headline;
+use App\Entity\ReadingSettings;
+use App\Entity\Subscription;
+use App\Entity\SubscriptionTag;
+use App\Entity\Tag;
+use App\Enum\SourceFormat;
+use App\Repository\OrphanedFeedRepository;
+use App\Repository\ReadingSettingsRepository;
+use App\Service\Sourcing\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Library\SavedPosts\SavedPostRescue;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\NotAFeedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Library\Subscription\FirstFetchRecorder;
+use App\Service\Library\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Library\Subscription\Model\SubscribeRequestModel;
+use App\Service\Library\Subscription\SubscribeRoute\SubscribeRouteInterface;
+use App\Service\Library\Subscription\SubscriptionCreator;
+use App\Service\Library\Subscription\SubscriptionLimitResolver;
+use App\Service\Library\Subscription\SubscriptionService;
+use App\Tests\DbTestCase;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\EntryIndexers;
+use App\Tests\Support\EntryIngestors;
+use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\RecordingFeedDiscovery;
+use App\Tests\Support\RecordingSubscribeRoute;
+use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\ThrottledFeedDiscovery;
+use App\Tests\Support\UserFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
+final class SubscriptionServiceTest extends DbTestCase
+{
+    private function factory(): UserFactory
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+
+        return new UserFactory($this->entityManager, $hasher);
+    }
+
+    private function discoveryReturning(FeedDiscoveryResultModel $result): FeedDiscoveryInterface
+    {
+        return new class ($result) implements FeedDiscoveryInterface {
+            public function __construct(private readonly FeedDiscoveryResultModel $result)
+            {
+            }
+
+            public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
+            {
+                return $this->result;
+            }
+        };
+    }
+
+    /** The document a real discovery would carry back, with one entry to ingest. */
+    private function discovered(string $url, string $title = 'Discovered'): FeedDiscoveryResultModel
+    {
+        $entry = new ParsedEntryModel(
+            guid: $url . '#1',
+            headline: Headline::fromFeed('First post'),
+            url: $url . '/1',
+            author: null,
+            publishedAt: new \DateTimeImmutable('2026-05-31T12:00:00Z'),
+            contentHtml: '<p>Hello.</p>',
+            summary: null,
+        );
+
+        return FeedDiscoveryResultModel::directFeed(new DiscoveredFeedModel(
+            $url,
+            new ParsedFeedModel($title, null, null, null, [$entry]),
+        ));
+    }
+
+    /** @param list<SubscribeRouteInterface> $routes */
+    private function service(FeedDiscoveryInterface $discovery, array $routes = []): SubscriptionService
+    {
+        $clock = new MockClock('2026-06-01T00:00:00Z');
+        $readingSettings = $this->entityManager->getRepository(ReadingSettings::class);
+        self::assertInstanceOf(ReadingSettingsRepository::class, $readingSettings);
+
+        return new SubscriptionService(
+            $discovery,
+            new SubscriptionCreator(
+                $this->entityManager->getRepository(Subscription::class),
+                $this->entityManager->getRepository(Feed::class),
+                $this->entityManager->getRepository(SubscriptionTag::class),
+                $this->entityManager,
+                $clock,
+                new SubscriptionLimitResolver(),
+                new FeedFactory(),
+            ),
+            new ScrapeFallbackPolicy($readingSettings),
+            new FirstFetchRecorder(
+                EntryIngestors::build($this->entityManager, $clock),
+                FeedSchedulers::build($clock),
+                $this->entityManager,
+                $clock,
+                EntryIndexers::with(new RecordingSearchIndexWriter()),
+                PostEnrichers::queue($this->entityManager, $clock),
+            ),
+            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
+            $this->savedPostRescue(),
+            $this->entityManager,
+            $routes,
+        );
+    }
+
+    private function savedPostRescue(): SavedPostRescue
+    {
+        $rescue = self::getContainer()->get(SavedPostRescue::class);
+        self::assertInstanceOf(SavedPostRescue::class, $rescue);
+
+        return $rescue;
+    }
+
+    public function testDirectFeedCreatesFeedAndSubscription(): void
+    {
+        $user = $this->factory()->create('sub@example.com');
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed');
+
+        self::assertSame('https://example.com/feed.xml', $outcome->subscription->getFeed()->getUrl());
+    }
+
+    /** Discovery's document is stored as the feed's first fetch: its entries arrive and the feed gets a schedule. */
+    public function testANewSubscriptionArrivesWithTheEntriesDiscoveryAlreadyRead(): void
+    {
+        $user = $this->factory()->create('seeded@example.com');
+
+        $service = $this->service($this->discoveryReturning($this->discovered(
+            'https://example.com/feed.xml',
+            'Discovered Feed',
+        )));
+
+        $feed = $service->subscribe($user, 'https://example.com/feed')->subscription->getFeed();
+
+        self::assertSame('Discovered Feed', $feed->getTitle());
+        $entries = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]);
+        self::assertCount(1, $entries);
+        // The recorder's clock-now is the entry's createdAt (the run-start for
+        // the list's run-first sort — a first-subscribe fetch is a one-feed run).
+        self::assertSame(
+            (new \DateTimeImmutable('2026-06-01T00:00:00Z'))->getTimestamp(),
+            $entries[0]->getCreatedAt()->getTimestamp(),
+        );
+        self::assertNotNull($feed->getLastFetchedAt());
+        self::assertNotNull($feed->getNextFetchAt());
+    }
+
+    public function testAnAlreadyFetchedFeedKeepsItsSchedule(): void
+    {
+        $fetchedAt = new \DateTimeImmutable('2026-05-30T09:00:00Z');
+        $shared = new Feed('https://example.com/feed.xml');
+        $shared->recordSuccessfulFetch($fetchedAt, 60);
+        $this->entityManager->persist($shared);
+        $this->entityManager->flush();
+
+        $service = $this->service($this->discoveryReturning($this->discovered('https://example.com/feed.xml')));
+        $service->subscribe($this->factory()->create('second@example.com'), 'https://example.com/feed');
+
+        self::assertSame($fetchedAt->format('c'), $shared->getLastFetchedAt()?->format('c'));
+        self::assertSame([], $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $shared]));
+    }
+
+    public function testSecondSubscriptionToSameFeedIsRejected(): void
+    {
+        $user = $this->factory()->create('dupe@example.com');
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+        );
+
+        $service->subscribe($user, 'https://example.com/feed');
+
+        $this->expectException(AlreadySubscribedException::class);
+        $service->subscribe($user, 'https://example.com/feed');
+    }
+
+    /** A shared row poisoned as 'scraped' heals to 'xml' once discovery proves the URL is a feed. */
+    public function testDiscoveryVerifiedSubscribeHealsAScrapedPoisonedFeed(): void
+    {
+        $user = $this->factory()->create('healer@example.com');
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setSourceFormat('scraped');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed.xml');
+
+        self::assertSame('xml', $feed->getSourceFormat());
+    }
+
+    /**
+     * An existing subscriber re-adding the poisoned feed gets AlreadySubscribedException, and the heal still sticks:
+     * the row re-read from the database says 'xml'.
+     */
+    public function testHealPersistsEvenWhenTheUserIsAlreadySubscribed(): void
+    {
+        $user = $this->factory()->create('reheal@example.com');
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setSourceFormat('scraped');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-06-01T00:00:00Z')));
+        $this->entityManager->flush();
+        $feedId = $feed->requireId();
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+        );
+
+        try {
+            $service->subscribe($user, 'https://example.com/feed.xml');
+            self::fail('Expected AlreadySubscribedException');
+        } catch (AlreadySubscribedException) {
+            // expected: the user already holds this subscription
+        }
+
+        // Re-read from the database, not the identity map: without the in-step
+        // flush the heal would be discarded here and the row would read 'scraped'.
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(Feed::class)->find($feedId);
+        self::assertNotNull($reloaded);
+        self::assertSame('xml', $reloaded->getSourceFormat());
+    }
+
+    public function testScrapedSubscribeNeverDowngradesAnXmlFeed(): void
+    {
+        $user = $this->factory()->create('downgrader@example.com');
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed.xml', 'scraped');
+
+        self::assertSame('xml', $feed->getSourceFormat());
+    }
+
+    public function testDirectFeedSubscribeAttachesTheGivenTags(): void
+    {
+        $user = $this->factory()->create('tagger@example.com');
+        $news = new Tag($user, 'News');
+        $tech = new Tag($user, 'Tech');
+        $this->entityManager->persist($news);
+        $this->entityManager->persist($tech);
+        $this->entityManager->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/feed', null, [$news, $tech]);
+
+        $tagNames = array_map(
+            static fn (Tag $tag): string => $tag->getName(),
+            $outcome->subscription->getTags()->toArray(),
+        );
+        self::assertSame(['News', 'Tech'], $tagNames);
+    }
+
+    public function testScrapedSubscribeAttachesTheGivenTags(): void
+    {
+        $user = $this->factory()->create('scrapedtagger@example.com');
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $blog = new Tag($user, 'Blogs');
+        $this->entityManager->persist($blog);
+        $this->entityManager->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/unused.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://example.com/page', 'scraped', [$blog]);
+
+        self::assertSame(
+            ['Blogs'],
+            array_map(static fn (Tag $tag): string => $tag->getName(), $outcome->subscription->getTags()->toArray()),
+        );
+    }
+
+    public function testAScrapedSubscribeIsRefusedWhenTheUserHasScrapingDisabled(): void
+    {
+        $user = $this->factory()->create('scrape-off@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+
+        $this->expectException(ScrapingDisabledException::class);
+
+        $service->subscribe($user, 'https://example.com/blog', SourceFormat::SCRAPED);
+    }
+
+    public function testAScrapedSubscribeSucceedsWhenTheUserHasScrapingEnabled(): void
+    {
+        $user = $this->factory()->create('scrape-on@example.com');
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+
+        $outcome = $service->subscribe($user, 'https://example.com/blog', SourceFormat::SCRAPED);
+    }
+
+    public function testWpJsonSubscribeStoresTheFormatVerbatimWithoutDiscovery(): void
+    {
+        $user = $this->factory()->create('wpjson@example.com');
+        // Discovery must NOT run: hand it a result that would fail the assertion if used.
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+
+        $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=20'
+            . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
+        $outcome = $service->subscribe($user, $url, SourceFormat::WP_JSON, [], 'WordPress Example');
+
+        self::assertSame($url, $outcome->subscription->getFeed()->getUrl());
+        self::assertSame(SourceFormat::WP_JSON, $outcome->subscription->getFeed()->getSourceFormat());
+        self::assertSame('WordPress Example', $outcome->subscription->getFeed()->getTitle());
+    }
+
+    public function testAVerbatimSubscribeIsStoredByTheTimeItReturns(): void
+    {
+        $user = $this->factory()->create('wpjson-stored@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+
+        $outcome = $service->subscribe($user, 'https://wp.example/wp-json/wp/v2/posts', SourceFormat::WP_JSON);
+        $this->entityManager->clear();
+
+        self::assertInstanceOf(
+            Subscription::class,
+            $this->entityManager->find(Subscription::class, $outcome->subscription->requireId()),
+        );
+    }
+
+    public function testWpJsonSubscribeDoesNotChangeTheTitleOfAnExistingSharedFeed(): void
+    {
+        $shared = new Feed('https://wp.example/wp-json/wp/v2/posts');
+        $this->entityManager->persist($shared);
+        $this->entityManager->flush();
+
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+        $outcome = $service->subscribe(
+            $this->factory()->create('second-wpjson@example.com'),
+            'https://wp.example/wp-json/wp/v2/posts',
+            SourceFormat::WP_JSON,
+            [],
+            'WordPress Example',
+        );
+
+        self::assertNull($shared->getTitle());
+    }
+
+    public function testScrapedSubscribeDoesNotSeedTheCandidateTitle(): void
+    {
+        $user = $this->factory()->create('scraped-title@example.com');
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+
+        $outcome = $service->subscribe(
+            $user,
+            'https://example.com/blog',
+            SourceFormat::SCRAPED,
+            [],
+            'Scraped Example',
+        );
+
+        self::assertNull($outcome->subscription->getFeed()->getTitle());
+    }
+
+    public function testWpJsonSubscribeNeedsNoScrapingPermission(): void
+    {
+        // A user with scraping disabled (the default) must still be able to
+        // subscribe a wp-json candidate — the scrape gate is scraped-only.
+        $user = $this->factory()->create('wpjson-nopref@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+
+        $outcome = $service->subscribe(
+            $user,
+            'https://wp.example/wp-json/wp/v2/posts?per_page=20'
+                . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url',
+            SourceFormat::WP_JSON,
+        );
+    }
+
+    public function testNewlyTaggedFeedAppendsWithinTheTag(): void
+    {
+        $user = $this->factory()->create('appender@example.com');
+        $tag = new Tag($user, 'Daily');
+        $existingFeed = new Feed('https://existing.example.com/feed.xml');
+        $existing = new Subscription($user, $existingFeed, new \DateTimeImmutable('2026-05-01T00:00:00Z'));
+        $existing->addTag($tag, 0);
+        $this->entityManager->persist($tag);
+        $this->entityManager->persist($existingFeed);
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
+
+        $service = $this->service(
+            $this->discoveryReturning($this->discovered('https://fresh.example.com/feed.xml')),
+        );
+
+        $outcome = $service->subscribe($user, 'https://fresh.example.com/feed', null, [$tag]);
+
+        $joins = $outcome->subscription->getSubscriptionTags();
+        self::assertCount(1, $joins);
+        self::assertSame(1, $joins[0]->getPosition());
+    }
+
+    public function testAPageIsRefusedAsNotAFeed(): void
+    {
+        $user = $this->factory()->create('cand@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([
+            new FeedCandidateModel('https://example.com/rss.xml', 'Main', 'rss'),
+        ])));
+
+        $this->expectException(NotAFeedException::class);
+        $service->subscribe($user, 'https://example.com/blog');
+    }
+
+    public function testAnUnreachableAddressIsRefusedAsNotAFeed(): void
+    {
+        $user = $this->factory()->create('unreachable@example.com');
+        $service = $this->service($this->discoveryReturning(
+            FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Unreachable),
+        ));
+
+        $this->expectException(NotAFeedException::class);
+        $service->subscribe($user, 'https://gone.example.com/feed');
+    }
+
+    public function testAThrottledSiteIsReportedAsThrottledNotAsNotAFeed(): void
+    {
+        $user = $this->factory()->create('throttled@example.com');
+        $service = $this->service(new ThrottledFeedDiscovery());
+
+        $this->expectException(SiteThrottledException::class);
+        $service->subscribe($user, 'https://slow.example.com/feed');
+    }
+
+    public function testSubscribeNeverAsksDiscoveryForAScrapedFallback(): void
+    {
+        $user = $this->factory()->create('no-scrape-ask@example.com');
+        StoredUserSettings::reading($this->entityManager, $user)->setScrapeFallbackEnabled(true);
+        $this->entityManager->flush();
+        $discovery = new RecordingFeedDiscovery($this->discovered('https://example.com/feed.xml'));
+
+        $this->service($discovery)->subscribe($user, 'https://example.com/feed');
+
+        self::assertSame([ScrapeFallback::Disabled], $discovery->fallbacks);
+    }
+
+    public function testPerUserCapOverridesTheGlobalDefault(): void
+    {
+        $user = $this->factory()->create('capped@example.com', maxSubscriptions: 1);
+        $service = $this->service($this->discoveryReturning(
+            $this->discovered('https://example.com/a.xml'),
+        ));
+
+        $service->subscribe($user, 'https://example.com/a.xml');
+
+        $this->expectException(SubscriptionLimitReachedException::class);
+        $service->subscribe($user, 'https://example.com/b.xml');
+    }
+
+    private function discoveryNeverAsked(): FeedDiscoveryInterface
+    {
+        return new class () implements FeedDiscoveryInterface {
+            public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
+            {
+                throw new \LogicException('Discovery must not run for a URL a route took.');
+            }
+        };
+    }
+
+    public function testARouteThatTakesTheUrlAnswersInsteadOfDiscovery(): void
+    {
+        $user = $this->factory()->create('routed@example.com');
+        $tag = new Tag($user, 'People');
+        $taken = SubscribeOutcomeModel::subscribed(new Subscription(
+            $user,
+            new Feed('https://bsky.app/profile/rusty-17.bsky.social'),
+            new \DateTimeImmutable('2026-06-01T00:00:00Z'),
+        ));
+        $route = new RecordingSubscribeRoute($taken);
+
+        $outcome = $this->service($this->discoveryNeverAsked(), [$route])
+            ->subscribe($user, 'https://bsky.app/profile/rusty-17.bsky.social', null, [$tag]);
+
+        self::assertSame($taken, $outcome);
+        self::assertEquals(
+            [new SubscribeRequestModel($user, 'https://bsky.app/profile/rusty-17.bsky.social', [$tag])],
+            $route->requests,
+        );
+    }
+
+    public function testADecliningRouteLeavesTheUrlToDiscovery(): void
+    {
+        $user = $this->factory()->create('declined@example.com');
+
+        $outcome = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+            [new RecordingSubscribeRoute(null)],
+        )->subscribe($user, 'https://example.com/feed');
+
+        self::assertSame('https://example.com/feed.xml', $outcome->subscription->getFeed()->getUrl());
+    }
+
+    public function testAVerbatimFormatNeverAsksTheRoutes(): void
+    {
+        $user = $this->factory()->create('verbatim-route@example.com');
+        $route = new RecordingSubscribeRoute(null);
+
+        $outcome = $this->service($this->discoveryNeverAsked(), [$route])
+            ->subscribe($user, 'https://example.com/wp-json/wp/v2/posts', SourceFormat::WP_JSON);
+
+        self::assertSame([], $route->requests);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function publishedSources(): iterable
+    {
+        yield 'a WordPress REST endpoint' => [SourceFormat::WP_JSON, 'https://wp.example/wp-json/wp/v2/posts'];
+        yield 'a Mixcloud cloudcasts list' => [
+            SourceFormat::MIXCLOUD_API,
+            'https://api.mixcloud.com/johndigweed/cloudcasts/',
+        ];
+    }
+
+    /** Neither is a page scrape, so a user with scraping off (the default) subscribes them too. */
+    #[DataProvider('publishedSources')]
+    public function testAPublishedSourceIsStoredVerbatimWithItsTitleAndNoDiscovery(string $format, string $url): void
+    {
+        $user = $this->factory()->create($format . '-verbatim@example.com');
+
+        $outcome = $this->service($this->discoveryNeverAsked())
+            ->subscribe($user, $url, $format, [], 'Candidate Title');
+
+        $feed = $outcome->subscription->getFeed();
+        self::assertSame($url, $feed->getUrl());
+        self::assertSame($format, $feed->getSourceFormat());
+        self::assertSame('Candidate Title', $feed->getTitle());
+    }
+}

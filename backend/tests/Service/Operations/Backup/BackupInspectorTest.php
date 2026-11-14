@@ -1,0 +1,323 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Operations\Backup;
+
+use App\Service\Operations\Backup\BackupInspector;
+use App\Service\Operations\Backup\BackupReader;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+final class BackupInspectorTest extends TestCase
+{
+    private const string FEED_URL = 'https://f.example/feed.xml';
+
+    /** @param list<array<string, mixed>> $lines */
+    private static function gzipOf(array $lines): string
+    {
+        $ndjson = implode("\n", array_map(
+            static fn (array $line): string => json_encode($line, \JSON_THROW_ON_ERROR),
+            $lines,
+        )) . "\n";
+
+        return (string) gzencode($ndjson);
+    }
+
+    /**
+     * @param array{entries?: int, entryStates?: int} $totals
+     *
+     * @return array<string, mixed>
+     */
+    private static function foundationHeader(int $schemaVersion = 3, array $totals = []): array
+    {
+        return [
+            'kind' => 'header',
+            'schemaVersion' => $schemaVersion,
+            'createdAt' => '2026-08-17T09:00:00+00:00',
+            'sourceUrl' => 'https://source.example',
+            'sourceEmail' => 'source@example.com',
+            'backupId' => 'backup-1',
+            'part' => 0,
+            'parts' => 1,
+            'totals' => ['entries' => $totals['entries'] ?? 0, 'entryStates' => $totals['entryStates'] ?? 0],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entryPartHeader(int $part = 1): array
+    {
+        return [
+            'kind' => 'header',
+            'schemaVersion' => 3,
+            'createdAt' => '2026-08-17T09:00:00+00:00',
+            'sourceUrl' => 'https://source.example',
+            'sourceEmail' => 'source@example.com',
+            'backupId' => 'backup-1',
+            'part' => $part,
+            'parts' => null,
+            'totals' => null,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function account(): array
+    {
+        return [
+            'kind' => 'account',
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'recommendationSettings' => null,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function tag(string $name, ?string $parent = null): array
+    {
+        return [
+            'kind' => 'tag', 'name' => $name, 'color' => null, 'icon' => null, 'position' => 0, 'parent' => $parent,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function savedSearch(string $term): array
+    {
+        return ['kind' => 'savedSearch', 'term' => $term, 'wholeWord' => false, 'phrase' => false, 'position' => 0];
+    }
+
+    /** @return array<string, mixed> */
+    private static function feed(string $url): array
+    {
+        return ['kind' => 'feed', 'url' => $url, 'siteUrl' => null, 'title' => null,
+            'description' => null, 'faviconUrl' => null, 'imageUrl' => null, 'sourceFormat' => 'xml'];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $tags
+     *
+     * @return array<string, mixed>
+     */
+    private static function subscription(string $feedUrl, array $tags = []): array
+    {
+        return ['kind' => 'subscription', 'feedUrl' => $feedUrl, 'customTitle' => null,
+            'position' => 0, 'markedReadUntil' => null, 'createdAt' => '2026-07-01T00:00:00+00:00',
+            'tags' => $tags, 'includeInAllItems' => true, 'includeInForYou' => true];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entry(string $feedUrl, string $guidHash = 'h'): array
+    {
+        return ['kind' => 'entry', 'feedUrl' => $feedUrl, 'guid' => 'g-' . $guidHash, 'guidHash' => $guidHash,
+            'url' => null, 'title' => 'One', 'author' => null, 'summary' => null,
+            'contentHtml' => null, 'imageUrl' => null, 'imageWidth' => null, 'imageHeight' => null,
+            'publishedAt' => null, 'createdAt' => '2026-08-01T00:00:00+00:00',
+            'effectiveDate' => '2026-08-01T00:00:00+00:00'];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entryState(string $feedUrl, string $guidHash = 'h'): array
+    {
+        return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => $guidHash, 'isHidden' => true,
+            'isFavorite' => false, 'isKept' => false, 'hiddenAt' => null, 'isViewed' => false,
+            'viewedAt' => null];
+    }
+
+    /**
+     * @param array<string, int> $counts
+     *
+     * @return array<string, mixed>
+     */
+    private static function footer(array $counts = []): array
+    {
+        return ['kind' => 'footer', 'counts' => $counts + [
+            'tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 0, 'entryState' => 0,
+        ]];
+    }
+
+    private static function inspector(): BackupInspector
+    {
+        return new BackupInspector(new BackupReader());
+    }
+
+    public function testCountsEveryKind(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('A'), self::tag('B'),
+            self::savedSearch('term'),
+            self::feed(self::FEED_URL),
+            self::subscription(self::FEED_URL),
+            self::footer(['tag' => 2, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1]),
+        ]);
+
+        $inventory = self::inspector()->inspect($gzip);
+
+        self::assertSame(2, $inventory->tags);
+        self::assertSame(1, $inventory->savedSearches);
+        self::assertSame(1, $inventory->feeds);
+        self::assertSame(1, $inventory->subscriptions);
+        self::assertSame(0, $inventory->entries);
+        self::assertSame('source@example.com', $inventory->source->sourceEmail);
+    }
+
+    public function testABrokenFileRefusesInsteadOfCounting(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+
+        self::inspector()->inspect((string) gzencode("{\"kind\":\"header\"}\n"));
+    }
+
+    /**
+     * Every foundation reference must resolve inside the file, and pass 1 is where refusing costs nothing: pass 2 runs
+     * after the wipe.
+     *
+     * @return iterable<string, array{list<array<string, mixed>>, array<string, int>}>
+     */
+    public static function danglingReferences(): iterable
+    {
+        yield 'a subscription to an undeclared feed' => [
+            [self::subscription(self::FEED_URL)],
+            ['subscription' => 1],
+        ];
+
+        yield 'a subscription naming an undeclared tag' => [
+            [self::feed(self::FEED_URL), self::subscription(self::FEED_URL, [['name' => 'Ghost', 'position' => 0]])],
+            ['feed' => 1, 'subscription' => 1],
+        ];
+
+        yield 'the same tag name twice' => [
+            [self::tag('A'), self::tag('A')],
+            ['tag' => 2],
+        ];
+
+        yield 'a tag naming a parent the file declares only later' => [
+            [self::tag('Long reads', 'Reading'), self::tag('Reading')],
+            ['tag' => 2],
+        ];
+
+        yield 'the same feed url twice' => [
+            [self::feed(self::FEED_URL), self::feed(self::FEED_URL)],
+            ['feed' => 2],
+        ];
+
+        yield 'the same subscription feed url twice' => [
+            [
+                self::feed(self::FEED_URL),
+                self::subscription(self::FEED_URL),
+                self::subscription(self::FEED_URL),
+            ],
+            ['feed' => 1, 'subscription' => 2],
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $body
+     * @param array<string, int>         $counts
+     */
+    #[DataProvider('danglingReferences')]
+    public function testAReferenceTheFileNeverDeclaresIsRefusedInPassOne(array $body, array $counts): void
+    {
+        $gzip = self::gzipOf([self::foundationHeader(), self::account(), ...$body, self::footer($counts)]);
+
+        $this->expectException(InvalidBackupException::class);
+
+        self::inspector()->inspect($gzip);
+    }
+
+    public function testAFullyResolvedFileIsAccepted(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('A'),
+            self::feed(self::FEED_URL),
+            self::subscription(self::FEED_URL, [['name' => 'A', 'position' => 0]]),
+            self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1]),
+        ]);
+
+        $inventory = self::inspector()->inspect($gzip);
+
+        self::assertSame(1, $inventory->tags);
+        self::assertSame(1, $inventory->feeds);
+        self::assertSame(1, $inventory->subscriptions);
+    }
+
+    public function testAChildDeclaredAfterItsParentCounts(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Reading'), self::tag('Long reads', 'Reading'),
+            self::footer(['tag' => 2]),
+        ]);
+
+        self::assertSame(2, self::inspector()->inspect($gzip)->tags);
+    }
+
+    public function testAParentNamedBeforeItIsDeclaredIsRefusedByName(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Long reads', 'Reading'), self::tag('Reading'),
+            self::footer(['tag' => 2]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The backup names parent tag "Reading" before declaring it.');
+
+        self::inspector()->inspect($gzip);
+    }
+
+    public function testAGrandchildTagIsAccepted(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Reading'), self::tag('Long reads', 'Reading'), self::tag('Essays', 'Long reads'),
+            self::footer(['tag' => 3]),
+        ]);
+
+        self::assertSame(3, self::inspector()->inspect($gzip)->tags);
+    }
+
+    public function testATagNestedPastTheLimitIsRefusedByName(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Reading'), self::tag('Long reads', 'Reading'), self::tag('Essays', 'Long reads'),
+            self::tag('Short essays', 'Essays'),
+            self::footer(['tag' => 4]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The backup nests tag "Short essays" more than 2 levels below the top.');
+
+        self::inspector()->inspect($gzip);
+    }
+
+    public function testAFoundationReportsItsClaimedTotalsAsEntryCounts(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(totals: ['entries' => 3, 'entryStates' => 2]), self::account(),
+            self::footer(),
+        ]);
+
+        $inventory = self::inspector()->inspect($gzip);
+
+        self::assertSame(3, $inventory->entries);
+        self::assertSame(2, $inventory->entryStates);
+    }
+
+    public function testAnEntryPartIsRefused(): void
+    {
+        $gzip = self::gzipOf([
+            self::entryPartHeader(),
+            self::entry(self::FEED_URL, 'a'),
+            self::entryState(self::FEED_URL, 'a'),
+            self::footer(['entry' => 1, 'entryState' => 1]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The restore starts with part 0, the foundation.');
+
+        self::inspector()->inspect($gzip);
+    }
+}

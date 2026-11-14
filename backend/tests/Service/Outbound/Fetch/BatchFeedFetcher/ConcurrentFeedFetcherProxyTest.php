@@ -1,0 +1,244 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Outbound\Fetch\BatchFeedFetcher;
+
+use App\Enum\ProxyType;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Tests\Support\FetchWiring;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
+
+final class ConcurrentFeedFetcherProxyTest extends TestCase
+{
+    /**
+     * @param callable|iterable<MockResponse> $responses
+     * @param array<string, list<string>>     $dnsOverrides
+     */
+    private function fetcher(
+        callable|iterable $responses,
+        ?ProxyConfigModel $egressProxy,
+        array $dnsOverrides = [],
+    ): ConcurrentFeedFetcher {
+        $resolver = $this->dns($dnsOverrides);
+
+        $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
+        $egressProxySource->method('egressProxy')->willReturn($egressProxy);
+
+        $urlGuard = new UrlGuard($resolver, new IpValidator());
+
+        return new ConcurrentFeedFetcher(
+            FetchWiring::requestEngine(new MockHttpClient($responses), $urlGuard, $egressProxySource),
+            100,
+            new PassThroughSettler(),
+        );
+    }
+
+    /** @param array<string, list<string>> $dnsOverrides */
+    private function dns(array $dnsOverrides = []): DnsResolverInterface
+    {
+        return new class ($dnsOverrides) implements DnsResolverInterface {
+            /** @param array<string, list<string>> $overrides */
+            public function __construct(private readonly array $overrides)
+            {
+            }
+
+            public function resolve(string $hostname): array
+            {
+                return $this->overrides[$hostname] ?? ['93.184.216.34'];
+            }
+        };
+    }
+
+    /**
+     * @param iterable<int|string, \App\Service\Outbound\Fetch\Model\FetchOutcomeModel> $outcomes
+     *
+     * @return array<int|string, \App\Service\Outbound\Fetch\Model\FetchOutcomeModel>
+     */
+    private function collect(iterable $outcomes): array
+    {
+        $collected = [];
+        foreach ($outcomes as $key => $outcome) {
+            $collected[$key] = $outcome;
+        }
+
+        return $collected;
+    }
+
+    public function testAnUnreadableProxyPasswordFailsEveryFeedInsteadOfAbortingTheSweep(): void
+    {
+        $seen = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen[] = $url;
+
+            return new MockResponse('ok');
+        });
+        $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
+        $egressProxySource->method('egressProxy')->willThrowException(
+            new SecretUnreadableException('The stored secret failed its integrity check.'),
+        );
+        $urlGuard = new UrlGuard($this->dns(), new IpValidator());
+        $fetcher = new ConcurrentFeedFetcher(
+            FetchWiring::requestEngine($client, $urlGuard, $egressProxySource),
+            100,
+            new PassThroughSettler(),
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([
+            7 => new FetchTicketModel('https://one.example/feed'),
+            9 => new FetchTicketModel('https://two.example/feed'),
+        ]));
+
+        self::assertSame([7, 9], array_keys($outcomes));
+        foreach ($outcomes as $outcome) {
+            self::assertNotNull($outcome->failure());
+        }
+        self::assertSame([], $seen, 'nothing may go out while the egress is unusable');
+    }
+
+    public function testEnabledEgressProxyProxiesPlainTickets(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+            $proxy,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNull($outcomes[1]->failure());
+        self::assertCount(1, $seenOptions);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
+        self::assertArrayNotHasKey('resolve', $seenOptions[0]);
+    }
+
+    public function testProxiedFailureRetriesExactlyOneDirectAttempt(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return isset($options['proxy'])
+                    ? new MockResponse('', ['error' => 'Connection reset by peer'])
+                    : new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+            $proxy,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNull($outcomes[1]->failure());
+        self::assertCount(2, $seenOptions);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
+        self::assertArrayNotHasKey('resolve', $seenOptions[0]);
+        self::assertArrayNotHasKey('proxy', $seenOptions[1]);
+        self::assertArrayHasKey('resolve', $seenOptions[1]);
+    }
+
+    public function testProxiedFailureIsTerminalWhenDirectFallbackIsDisabled(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, false);
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return new MockResponse('', ['error' => 'Connection reset by peer']);
+            },
+            $proxy,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNotNull($outcomes[1]->failure());
+        self::assertCount(1, $seenOptions);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
+    }
+
+    /** SECURITY: a cross-family retry must never put a still-proxied attempt back on the wire. */
+    public function testProxiedFailureOnADualStackHostIsTerminalWhenDirectFallbackIsDisabled(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, false);
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return new MockResponse('', ['error' => 'Connection reset by peer']);
+            },
+            $proxy,
+            dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://dual.example.com/feed')]));
+
+        self::assertNotNull($outcomes[1]->failure());
+        self::assertCount(1, $seenOptions);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
+    }
+
+    public function testDirectWhenEgressProxyReturnsNull(): void
+    {
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+            null,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNull($outcomes[1]->failure());
+        self::assertCount(1, $seenOptions);
+        self::assertArrayHasKey('resolve', $seenOptions[0]);
+        self::assertArrayNotHasKey('proxy', $seenOptions[0]);
+    }
+
+    public function testAProxiedTooManyRequestsAnswerIsNotRetriedDirectly(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+            },
+            $proxy,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertInstanceOf(FeedThrottledException::class, $outcomes[1]->failure());
+        self::assertCount(1, $seenOptions);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
+    }
+}

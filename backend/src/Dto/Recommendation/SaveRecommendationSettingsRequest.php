@@ -7,7 +7,7 @@ namespace App\Dto\Recommendation;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettingsValues;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
+use App\Service\Curation\Recommendation\Settings\Support\RecommendationSettingsBounds;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

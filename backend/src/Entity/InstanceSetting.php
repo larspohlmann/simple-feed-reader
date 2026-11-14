@@ -29,14 +29,15 @@ final class InstanceSetting
     /**
      * The externally reachable base URL used to build links in outgoing email.
      * Null means "no override" — email links fall back to the
-     * APP_FRONTEND_URL deploy env. See {@see \App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface}.
+     * APP_FRONTEND_URL deploy env. See {@see \App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface}.
      */
     #[ORM\Column(name: 'public_base_url', length: 255, nullable: true)]
     private ?string $publicBaseUrl = null;
 
     /**
      * Every passkey is bound to this relying-party id at registration, so changing it invalidates them all; the write
-     * goes through {@see \App\Service\Settings\RelyingPartyChangeGuard}. Null takes the public base URL's host.
+     * goes through {@see \App\Service\Operations\Settings\RelyingPartyChangeGuard}. Null takes the public base URL's
+     * host.
      */
     #[ORM\Column(name: 'passkey_rp_id', length: 255, nullable: true)]
     private ?string $passkeyRpId = null;

@@ -1,0 +1,206 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
+
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\DateLineRecognizer;
+use App\Service\Content\Reader\LeadingBlockJudge;
+use App\Service\Content\Reader\LeadingEngagementRules;
+use App\Service\Content\Reader\Model\LeadingBlockModel;
+use App\Service\Content\Reader\Pass\LeadingFurniture;
+use App\Service\Content\Reader\Support\LeadingEngagementBlocks;
+use App\Service\Foundation\Text\Support\Whitespace;
+use Dom\Element;
+use Dom\HTMLDocument;
+use Dom\Node;
+
+final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterface
+{
+    private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
+
+    public function __construct(
+        private DateLineRecognizer $dateLines,
+        private LeadingBlockJudge $judge,
+        private LeadingEngagementRules $rules,
+    ) {
+    }
+
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->removeFrom($pass->document, $pass->input->entryAuthor);
+    }
+
+    private function removeFrom(HTMLDocument $document, ?string $entryAuthor): void
+    {
+        if ($document->body === null) {
+            return;
+        }
+
+        $furniture = new LeadingFurniture($entryAuthor, $this->dateLines, $this->judge, $this->rules);
+        $root = $this->contentRoot($document->body);
+        $blocks = LeadingEngagementBlocks::in($root);
+        $anchor = $furniture->bodyStart($blocks);
+        if ($anchor === null) {
+            return;
+        }
+
+        $anchorElement = $blocks[$anchor]->element;
+        $removedFurniture = $this->removeMatchedFurniture(array_slice($blocks, 0, $anchor), $furniture);
+        $removedBadges = $this->removeMastheadBadges($root, $anchorElement);
+        $removedIcons = $this->removeDecorativeIcons($root, $anchorElement);
+
+        // Only text furniture in front of the body can leave a duplicate byline behind it.
+        $followingByline = $blocks[$anchor + 1] ?? null;
+        if (
+            $removedFurniture
+            && $followingByline !== null
+            && $this->isDuplicateByline($followingByline, $entryAuthor)
+        ) {
+            $followingByline->element->remove();
+        }
+
+        if ($removedFurniture || $removedBadges || $removedIcons) {
+            $this->removeRemaindersBefore($root, $anchorElement);
+        }
+    }
+
+    /** @param list<LeadingBlockModel> $leading */
+    private function removeMatchedFurniture(array $leading, LeadingFurniture $furniture): bool
+    {
+        $removed = false;
+        foreach ($leading as $block) {
+            if ($furniture->matches($block)) {
+                $block->element->remove();
+                $removed = true;
+            }
+        }
+
+        return $removed;
+    }
+
+    /**
+     * An image-only link in a leading <header> is a masthead promo badge, never a poster: the poster link
+     * SubstackGatedVideoPlaceholder inserts does not sit in a <header>.
+     */
+    private function removeMastheadBadges(Element $root, Element $anchor): bool
+    {
+        $removed = false;
+        foreach ($root->getElementsByTagName('header') as $header) {
+            if (!$this->precedes($header, $anchor)) {
+                continue;
+            }
+            foreach (iterator_to_array($header->getElementsByTagName('a')) as $link) {
+                if ($this->isBadgeLink($link)) {
+                    $link->remove();
+                    $removed = true;
+                }
+            }
+        }
+
+        return $removed;
+    }
+
+    private function isBadgeLink(Element $link): bool
+    {
+        return $link->getElementsByTagName('img')->length >= 1
+            && Whitespace::collapse($link->textContent) === '';
+    }
+
+    /** Bare decorative icons (more-articles, enlarge, share glyphs) in the head region. */
+    private function removeDecorativeIcons(Element $root, Element $anchor): bool
+    {
+        $removed = false;
+        foreach (iterator_to_array($root->getElementsByTagName('img')) as $image) {
+            if (
+                $this->precedes($image, $anchor)
+                && $this->judge->isDecorativeIcon($image)
+                && !$this->judge->isProtectedContent($image)
+            ) {
+                $image->remove();
+                $removed = true;
+            }
+        }
+
+        return $removed;
+    }
+
+    private function contentRoot(Element $body): Element
+    {
+        $root = $body;
+        while (($child = $this->soleContainerChild($root)) !== null) {
+            $root = $child;
+        }
+
+        return $root;
+    }
+
+    private function soleContainerChild(Element $element): ?Element
+    {
+        $children = $this->elementChildren($element);
+
+        return count($children) === 1
+            && trim((string) $element->firstChild?->textContent) === trim((string) $element->textContent)
+            && in_array($children[0]->localName, ['div', 'article', 'section', 'main'], true)
+            ? $children[0]
+            : null;
+    }
+
+    /** @return list<Element> */
+    private function elementChildren(Element $element): array
+    {
+        $children = [];
+        foreach ($element->childNodes as $child) {
+            if ($child instanceof Element) {
+                $children[] = $child;
+            }
+        }
+
+        return $children;
+    }
+
+    private function removeRemaindersBefore(Element $element, Element $anchor): void
+    {
+        foreach ($this->elementChildren($element) as $child) {
+            $this->removeRemaindersBefore($child, $anchor);
+        }
+
+        if ($element->parentNode !== null && $this->precedes($element, $anchor) && $this->isRemainder($element)) {
+            $element->remove();
+        }
+    }
+
+    private function precedes(Element $element, Element $anchor): bool
+    {
+        return ($element->compareDocumentPosition($anchor) & Node::DOCUMENT_POSITION_FOLLOWING) !== 0;
+    }
+
+    /**
+     * A byline block sitting right after the first prose block still duplicates
+     * the reader meta line. Guard on non-prose so a real paragraph that merely
+     * opens with "Von"/"By" is never mistaken for the byline and deleted.
+     */
+    private function isDuplicateByline(LeadingBlockModel $block, ?string $entryAuthor): bool
+    {
+        return $this->rules->hasAuthor($entryAuthor)
+            && !$this->judge->isProse($block)
+            && $this->rules->isByline($block->text);
+    }
+
+    private function isRemainder(Element $element): bool
+    {
+        return $element->localName === 'hr'
+            || (Whitespace::collapse($element->textContent) === '' && !$this->hasMedia($element));
+    }
+
+    /** The element itself or any descendant: a bare <img> has no text and no children. */
+    private function hasMedia(Element $element): bool
+    {
+        return in_array($element->localName, self::MEDIA_TAGS, true)
+            || array_any(
+                self::MEDIA_TAGS,
+                static fn (string $tag): bool => $element->getElementsByTagName($tag)->length > 0,
+            );
+    }
+}

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\SavedSearch;
 
-use App\Service\Search\Model\SavedSearchDefinitionModel;
+use App\Service\Library\Search\Model\SavedSearchDefinitionModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CreateSavedSearchRequest

@@ -7,9 +7,9 @@ namespace App\Http;
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
-use App\Service\Ai\Support\AiReadiness;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Ai\Support\AiReadiness;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
  * The client's view of the account's AI provider configurations. Hand-built,

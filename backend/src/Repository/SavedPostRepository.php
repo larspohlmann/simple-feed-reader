@@ -11,7 +11,7 @@ use App\Entity\EntryOrigin;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
-use App\Service\SavedPosts\Model\SavedCopyModel;
+use App\Service\Library\SavedPosts\Model\SavedCopyModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;

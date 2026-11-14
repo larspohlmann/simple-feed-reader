@@ -53,7 +53,7 @@ app logs.
 | Path | What |
 |---|---|
 | `backend/src/Controller/Api`, `Controller/Admin` | HTTP entry points; thin, they delegate to services |
-| `backend/src/Service/**` | The domain work, one module per concern (`Fetch`, `Parser`, `Scraper`, `Reader`, `Reading`, `Refresh`, `OAuth`, `Auth`, `Opml`, `Preview`, `Discovery`, `Subscription`, `Mail`); inside a module the folder names the role: services in the root, `Model/`, `Dto/`, `Factory/`, `Pass/`, `Support/`, `Exception/`, and a folder per interface ([docs/architecture.md](docs/architecture.md) §10) |
+| `backend/src/Service/<Group>/<Module>` | The domain work, one module per concern, in ten groups that carry no rule (`Foundation`, `Outbound`, `Sourcing`, `Ingestion`, `Content`, `Library`, `Social`, `Curation`, `Identity`, `Operations`; table in [docs/architecture.md](docs/architecture.md) §9); inside a module the folder names the role: services in the root, `Model/`, `Dto/`, `Factory/`, `Pass/`, `Support/`, `Exception/`, and a folder per interface ([docs/architecture.md](docs/architecture.md) §10) |
 | `backend/src/Dto/**` | Request/response shapes, grouped by feature |
 | `backend/src/Http/**` | Outbound response shapes (`*Json` mappers), problem mapping, and the helpers that read a `Request` or build a `Response` |
 | `backend/src/Pagination/**` | The keyset cursors repositories, services and `src/Http` share |
@@ -108,18 +108,18 @@ Non-negotiables:
   `ResetInterface` or carries `#[ProcessLifetimeState]`.
 - **Depend on interfaces, inject them.** No service locators in domain code, no
   `new` on a collaborator inside a method. Strategies get a tag + keyed locator
-  (see `Service/Refresh/FeedBodyParser.php` for the pattern).
+  (see `Service/Ingestion/Refresh/FeedBodyParser.php` for the pattern).
 - **Queries live in `src/Repository/`** — DQL, QueryBuilder, native SQL and
   DBAL alike; services orchestrate and own the unit of work
   ([docs/architecture.md](docs/architecture.md) §7, `QueriesLiveInRepositoriesRule`).
 - **Errors are exceptions**, typed and namespaced next to their service
-  (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
+  (`Service/*/*/Exception/`). Never signal failure with `null` or a magic value.
   Map a new one to HTTP by adding an arm to its module's
   `src/Http/Problem/ExceptionProblems/*Problems` mapper.
 - **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*`,
   anything in `App\Dto\*`, and Symfony's HttpFoundation and HTTP-exception classes,
   class names in strings included, in `Service`, `Repository`, `Entity`, `Enum`,
-  `Doctrine`, `Exception` and `Pagination`. A controller hands a service a `Service/<Module>` value
+  `Doctrine`, `Exception` and `Pagination`. A controller hands a service a `Service/<Group>/<Module>` value
   (`$request->toChange()`) or a plain field, never the DTO (#1182). Services build no
   response arrays either: a `src/Http/*Json` mapper shapes every response, and a value
   that serialises for a store names the method after it (`toLogContext()`,
@@ -129,12 +129,13 @@ Non-negotiables:
   extension uses lives with them, so persistence never imports a service: `App\Entity`
   for what an entity stores, embeds, takes or returns, `App\Enum` for enums an entity or
   a repository uses, `App\Doctrine` for the persistence plumbing the ORM extensions
-  share. Module enums, including ones several `Service/*` modules share, stay in the
+  share. Module enums, including ones several `Service/*/*` modules share, stay in the
   module that owns their meaning ([docs/architecture.md](docs/architecture.md) §8,
   `PersistenceKnowsNoServiceRule`). A repository names only Service values (a model, a
   helper, an exception) and the interfaces it implements.
-- **Service modules form no cycle.** A module is the first directory under
-  `src/Service`, and every service belongs to one. When two modules need each other,
+- **Service modules form no cycle.** A module is the second directory under
+  `src/Service`, below one of ten navigation-only groups (`Content/Reader`), and every
+  service belongs to one; no class sits loose in a group or the root. When two modules need each other,
   the class moves to the module that owns it, or the lower module owns an interface
   the higher one implements ([docs/architecture.md](docs/architecture.md) §9).
 - **Default to no comment, and mean it.** A clear name, a smaller method, a
@@ -211,15 +212,15 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`InvocationMatchersOnThisRule`** (`tests/PhpStan/InvocationMatchersOnThisRule.php`) — PHPUnit's invocation matchers are called on `$this`
   (`$this->once()`, `$this->never()`); PhpStorm's EA warning on `self::once()` blocks the lint gate.
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
-  `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
+  `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out
   three dependencies decided against (`Reader → Search`, `Recommendation → Reader`,
   `Reading → Recommendation`); each message names its issue.
 - **`ServiceRoleRule`** (`tests/PhpStan/ServiceRoleRule.php`, with
   `ServiceRoleClassCollector` and `ServiceRoleInstantiationCollector`, run by
   `composer stan`) — fails on every class in `src/Service`, `src/Http` and
-  every event listener anywhere in `src` that sits outside its role, and names
-  the folder it belongs in.
+  every event listener anywhere in `src` that sits outside its role, and on every
+  service class outside a `<Group>/<Module>` folder, and names the folder it belongs in.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design
@@ -237,7 +238,7 @@ Enforced mechanically by `composer check` and `composer md`:
   decomposition, and counting it buries the real tunnels. Tramp data means the
   value has no home: the fix is a context object or a per-pass collaborator that
   holds it as a field, not a longer signature (see
-  `Service/Fetch/Pass/PageUrls.php` and `Service/Scraper/Pass/JsonLdArticles.php`).
+  `Service/Outbound/Fetch/Pass/PageUrls.php` and `Service/Ingestion/Scraper/Pass/JsonLdArticles.php`).
   A ratchet like `minMsi` — tighten it
   as the tree catches up, never loosen it to make a branch pass, and never add a
   `--baseline` to a clean tree.
@@ -312,7 +313,7 @@ no `text/html` fallback. Run the design-time checklist in
 [docs/architecture.md](docs/architecture.md) §6 against any new client-facing
 endpoint; flag browser-coupled patterns rather than baking them in.
 
-The OIDC boundary (`IdTokenModel` and friends in `Service/OAuth/Oidc/`) is a security
+The OIDC boundary (`IdTokenModel` and friends in `Service/Identity/OAuth/Oidc/`) is a security
 control, not ceremony — do not "simplify" it away, and do not delete
 `OidcBoundaryTest`.
 

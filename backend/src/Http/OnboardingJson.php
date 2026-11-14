@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\Tag;
-use App\Service\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
 
 final class OnboardingJson
 {

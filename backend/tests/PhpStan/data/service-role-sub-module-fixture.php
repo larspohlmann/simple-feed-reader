@@ -5,7 +5,7 @@ declare(strict_types=1);
 // A fixture for ServiceRoleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Recommendation\Probe\ProbeCatalog {
+namespace App\Service\Curation\Recommendation\Probe\ProbeCatalog {
     /** @noinspection AutoloadingIssuesInspection */
     interface ProbeCatalogInterface
     {
@@ -13,8 +13,8 @@ namespace App\Service\Recommendation\Probe\ProbeCatalog {
     }
 }
 
-namespace App\Service\Recommendation\Llm {
-    use App\Service\Recommendation\Probe\ProbeCatalog\ProbeCatalogInterface;
+namespace App\Service\Curation\Recommendation\Llm {
+    use App\Service\Curation\Recommendation\Probe\ProbeCatalog\ProbeCatalogInterface;
 
     /** @noinspection AutoloadingIssuesInspection */
     final readonly class LlmProbeCatalog implements ProbeCatalogInterface
@@ -26,7 +26,7 @@ namespace App\Service\Recommendation\Llm {
     }
 }
 
-namespace App\Service\Atlas\Projection {
+namespace App\Service\Fixture\Atlas\Projection {
     /** @noinspection AutoloadingIssuesInspection */
     interface ProjectionInterface
     {
@@ -34,8 +34,8 @@ namespace App\Service\Atlas\Projection {
     }
 }
 
-namespace App\Service\Atlas\Maps {
-    use App\Service\Atlas\Projection\ProjectionInterface;
+namespace App\Service\Fixture\Atlas\Maps {
+    use App\Service\Fixture\Atlas\Projection\ProjectionInterface;
 
     /** @noinspection AutoloadingIssuesInspection */
     final readonly class MercatorProjection implements ProjectionInterface

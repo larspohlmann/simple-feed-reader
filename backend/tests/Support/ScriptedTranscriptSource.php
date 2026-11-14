@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\TranscriptSource\TranscriptSourceInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Answers every transcript URL with one body, or refuses it, and remembers what it was asked for. */

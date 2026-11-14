@@ -1,0 +1,642 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Operations\Backup;
+
+use App\Entity\Entry;
+use App\Entity\EntryShare;
+use App\Entity\EntryState;
+use App\Entity\Feed;
+use App\Entity\RecommendationPoolLimits;
+use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
+use App\Entity\SavedSearch;
+use App\Entity\StoredProfile;
+use App\Entity\Subscription;
+use App\Entity\Tag;
+use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
+use App\Enum\SourceFormat;
+use App\Service\Operations\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\BackupReader;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Model\BackupPartModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
+use App\Tests\Support\FullyPopulatedAccount;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\UserFactory;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
+final class AccountBackupExporterTest extends DbTestCase
+{
+    private function hasher(): UserPasswordHasherInterface
+    {
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
+
+        return $hasher;
+    }
+
+    private function makeUser(string $email): User
+    {
+        return (new UserFactory($this->entityManager, $this->hasher()))->create($email, locale: 'de');
+    }
+
+    private function exporter(): AccountBackupExporter
+    {
+        $exporter = self::getContainer()->get(AccountBackupExporter::class);
+        self::assertInstanceOf(AccountBackupExporter::class, $exporter);
+
+        return $exporter;
+    }
+
+    /** @return list<list<array<string, mixed>>> decoded lines per part, in yield order */
+    private function decodedParts(User $user, ?string $sourceUrl = 'https://source.example'): array
+    {
+        $parts = [];
+        foreach ($this->exporter()->parts($user, $sourceUrl) as $part) {
+            $parts[] = $this->decodedLinesOf($part);
+        }
+
+        return $parts;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function decodedLinesOf(BackupPartModel $part): array
+    {
+        $lines = [];
+        foreach (explode("\n", rtrim((string) gzdecode($part->gzipBytes), "\n")) as $line) {
+            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            /** @var array<string, mixed> $decoded */
+            $lines[] = $decoded;
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $part
+     *
+     * @return array<string, mixed>
+     */
+    private static function footerOf(array $part): array
+    {
+        $footer = array_last($part);
+
+        return \is_array($footer) ? $footer : throw new \LogicException('The part has no footer line.');
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     */
+    private static function entryIdentityKey(array $line): string
+    {
+        $feedUrl = $line['feedUrl'];
+        $guidHash = $line['guidHash'];
+        if (!\is_string($feedUrl) || !\is_string($guidHash)) {
+            throw new \LogicException('feedUrl and guidHash must be strings.');
+        }
+
+        return $feedUrl . '|' . $guidHash;
+    }
+
+    public function testExportsEveryKindInFileOrderWithAClosingFooter(): void
+    {
+        $user = $this->makeUser('export-order@example.com');
+        $feed = new Feed('https://one.example/feed.xml');
+        $feed->setTitle('One');
+        $feed->setSiteUrl('https://one.example');
+        $this->entityManager->persist($feed);
+        $tag = new Tag($user, 'Tech');
+        $tag->setColor('#a1b2c3');
+        $tag->setPosition(1);
+        $this->entityManager->persist($tag);
+        $savedSearch = new SavedSearch($user, 'climate policy', true);
+        $savedSearch->setPosition(3);
+        $this->entityManager->persist($savedSearch);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $subscription->setCustomTitle('My One');
+        $subscription->setPosition(4);
+        $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
+        $subscription->addTag($tag, 3);
+        $this->entityManager->persist($subscription);
+        $entry = new Entry(
+            $feed,
+            'guid-1',
+            'https://one.example/a',
+            'Article',
+            new \DateTimeImmutable('2026-08-02T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-02T00:00:00Z'),
+        );
+        $entry->setContentHtml('<p>body</p>');
+        $this->entityManager->persist($entry);
+        $state = new EntryState($user, $entry);
+        $state->markFavorite();
+        $state->markViewed(new \DateTimeImmutable('2026-08-03T00:00:00Z'));
+        $this->entityManager->persist($state);
+        $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-04T00:00:00Z')));
+        $this->entityManager->flush();
+
+        $parts = $this->decodedParts($user);
+        self::assertCount(2, $parts);
+        [$entriesPart, $foundationPart] = $parts;
+
+        self::assertSame(
+            ['header', 'entry', 'entryState', 'entryShare', 'footer'],
+            array_column($entriesPart, 'kind'),
+        );
+        self::assertSame(
+            ['header', 'account', 'tag', 'savedSearch', 'feed', 'subscription', 'footer'],
+            array_column($foundationPart, 'kind'),
+        );
+
+        self::assertSame(3, $entriesPart[0]['schemaVersion']);
+        self::assertSame('export-order@example.com', $entriesPart[0]['sourceEmail']);
+        self::assertSame('https://source.example', $entriesPart[0]['sourceUrl']);
+        self::assertSame('de', $foundationPart[1]['locale']);
+        self::assertSame('Tech', $foundationPart[2]['name']);
+        self::assertSame(1, $foundationPart[2]['position']);
+        self::assertSame('savedSearch', $foundationPart[3]['kind']);
+        self::assertSame('climate policy', $foundationPart[3]['term']);
+        self::assertTrue($foundationPart[3]['wholeWord']);
+        self::assertFalse($foundationPart[3]['phrase']);
+        self::assertSame(3, $foundationPart[3]['position']);
+        self::assertSame('https://one.example/feed.xml', $foundationPart[4]['url']);
+        self::assertArrayNotHasKey('etag', $foundationPart[4]);
+        self::assertArrayNotHasKey('status', $foundationPart[4]);
+        self::assertSame('My One', $foundationPart[5]['customTitle']);
+        self::assertSame(4, $foundationPart[5]['position']);
+        self::assertSame([['name' => 'Tech', 'position' => 3]], $foundationPart[5]['tags']);
+        self::assertSame('guid-1', $entriesPart[1]['guid']);
+        self::assertSame(hash('sha256', 'guid-1'), $entriesPart[1]['guidHash']);
+        self::assertSame('<p>body</p>', $entriesPart[1]['contentHtml']);
+        self::assertTrue($entriesPart[2]['isFavorite']);
+        self::assertTrue($entriesPart[2]['isViewed']);
+        self::assertSame(hash('sha256', 'guid-1'), $entriesPart[3]['guidHash']);
+        self::assertSame('2026-08-04T00:00:00+00:00', $entriesPart[3]['sharedAt']);
+        self::assertSame(
+            [
+                'tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0,
+                'entry' => 1, 'entryState' => 1, 'entryShare' => 1,
+            ],
+            self::footerOf($entriesPart)['counts'],
+        );
+        self::assertSame(
+            [
+                'tag' => 1, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1,
+                'entry' => 0, 'entryState' => 0, 'entryShare' => 0,
+            ],
+            self::footerOf($foundationPart)['counts'],
+        );
+    }
+
+    public function testExportsOnlyTheGivenUsersRows(): void
+    {
+        $user = $this->makeUser('export-mine@example.com');
+        $other = $this->makeUser('export-other@example.com');
+        $feed = new Feed('https://shared.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist(new Subscription($other, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $otherTag = new Tag($other, 'Not yours');
+        $this->entityManager->persist($otherTag);
+        $entry = new Entry(
+            $feed,
+            'g',
+            null,
+            'A',
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        );
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new EntryState($other, $entry));
+        $this->entityManager->flush();
+
+        $allLines = array_merge(...$this->decodedParts($user));
+
+        /** @var list<string> $kindList */
+        $kindList = array_column($allLines, 'kind');
+        $kinds = array_count_values($kindList);
+        self::assertSame(1, $kinds['subscription']);
+        self::assertSame(1, $kinds['entry']);
+        self::assertArrayNotHasKey('tag', $kinds);
+        self::assertArrayNotHasKey('entryState', $kinds);
+    }
+
+    public function testEntryStateForAnUnsubscribedFeedIsNotExported(): void
+    {
+        $user = $this->makeUser('export-orphan@example.com');
+
+        $subscribedFeed = new Feed('https://subscribed.example/feed.xml');
+        $this->entityManager->persist($subscribedFeed);
+        $this->entityManager->persist(
+            new Subscription($user, $subscribedFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $subscribedEntry = new Entry(
+            $subscribedFeed,
+            'kept-guid',
+            null,
+            'Kept',
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        );
+        $this->entityManager->persist($subscribedEntry);
+        $subscribedState = new EntryState($user, $subscribedEntry);
+        $subscribedState->markFavorite();
+        $this->entityManager->persist($subscribedState);
+
+        // No subscription for this feed: the state SubscriptionService::unsubscribe() leaves, which keeps entry_state.
+        $orphanFeed = new Feed('https://unsubscribed.example/feed.xml');
+        $this->entityManager->persist($orphanFeed);
+        $orphanEntry = new Entry(
+            $orphanFeed,
+            'orphan-guid',
+            null,
+            'Orphan',
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        );
+        $this->entityManager->persist($orphanEntry);
+        $orphanState = new EntryState($user, $orphanEntry);
+        $orphanState->markFavorite();
+        $this->entityManager->persist($orphanState);
+
+        $this->entityManager->flush();
+
+        $parts = $this->decodedParts($user);
+        $allLines = array_merge(...$parts);
+
+        /** @var list<string> $kindList */
+        $kindList = array_column($allLines, 'kind');
+        $kinds = array_count_values($kindList);
+        self::assertSame(1, $kinds['feed']);
+        self::assertSame(1, $kinds['subscription']);
+        self::assertSame(1, $kinds['entry']);
+        self::assertSame(1, $kinds['entryState']);
+
+        $entryStateLines = array_values(
+            array_filter($allLines, static fn (array $line): bool => 'entryState' === $line['kind']),
+        );
+        self::assertSame(hash('sha256', 'kept-guid'), $entryStateLines[0]['guidHash']);
+
+        /** @var array<string, int> $footerCounts */
+        $footerCounts = self::footerOf($parts[0])['counts'];
+        self::assertSame(1, $footerCounts['entryState']);
+    }
+
+    public function testTheAccountLineCarriesNoRecommendationSettings(): void
+    {
+        $user = $this->makeUser('no-recommendation-settings@example.com');
+        $settings = new RecommendationSettings($user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: 'Only long reads.',
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            poolLimits: new RecommendationPoolLimits(1000, 2, 50),
+            contextWindow: null,
+            batchSize: RecommendationBatchSize::Large,
+            debugEnabled: false,
+        ));
+        $settings->storeProfile(new StoredProfile('Reads long-form essays about urban planning.', null, null, null));
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
+
+        [$foundationPart] = $this->decodedParts($user);
+        $accountLine = $foundationPart[0];
+
+        self::assertArrayNotHasKey('recommendationSettings', $accountLine);
+    }
+
+    public function testASmallAccountYieldsEntryPartsThenTheFoundationLast(): void
+    {
+        $user = (new FullyPopulatedAccount($this->entityManager, $this->hasher()))->create('small-account@example.com');
+
+        $memberNames = [];
+        $headers = [];
+        foreach ($this->exporter()->parts($user, 'https://source.example') as $part) {
+            $memberNames[] = $part->memberName;
+            $headers[] = $this->decodedLinesOf($part)[0];
+        }
+
+        self::assertSame(['001-entries.ndjson.gz', '000-foundation.ndjson.gz'], $memberNames);
+        self::assertSame(1, $headers[0]['part']);
+        self::assertNull($headers[0]['parts']);
+        self::assertNull($headers[0]['totals']);
+        self::assertSame(0, $headers[1]['part']);
+        self::assertSame(2, $headers[1]['parts']);
+        self::assertSame(['entries' => 1, 'entryStates' => 1], $headers[1]['totals']);
+        self::assertSame($headers[0]['backupId'], $headers[1]['backupId']);
+        self::assertSame($headers[0]['createdAt'], $headers[1]['createdAt']);
+    }
+
+    public function testEveryEntryStateTravelsInTheSamePartAsItsEntry(): void
+    {
+        $user = (new FullyPopulatedAccount($this->entityManager, $this->hasher()))->create('states-travel@example.com');
+
+        foreach ($this->decodedParts($user) as $part) {
+            $entryKeys = [];
+            foreach ($part as $line) {
+                if ('entry' === $line['kind']) {
+                    $entryKeys[self::entryIdentityKey($line)] = true;
+                }
+            }
+
+            foreach ($part as $line) {
+                if ('entryState' === $line['kind']) {
+                    self::assertArrayHasKey(self::entryIdentityKey($line), $entryKeys);
+                }
+            }
+        }
+    }
+
+    public function testTheEntryBudgetSplitsALargeFeedAcrossPartsWithBoundedEntryHydration(): void
+    {
+        $user = $this->makeUser('export-budget@example.com');
+        $feed = new Feed('https://budget.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        for ($index = 0; $index < 2001; ++$index) {
+            $entry = new Entry(
+                $feed,
+                'guid-' . $index,
+                null,
+                'Entry ' . $index,
+                new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+                new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            );
+            $this->entityManager->persist($entry);
+            if (0 === $index % 500) {
+                $this->entityManager->flush();
+            }
+        }
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+        $user = $this->entityManager->find(User::class, $user->getId());
+        self::assertInstanceOf(User::class, $user);
+
+        $entryCountsPerPart = [];
+        $headers = [];
+        foreach ($this->exporter()->parts($user, null) as $part) {
+            $identityMap = $this->entityManager->getUnitOfWork()->getIdentityMap();
+            $held = \count($identityMap[Entry::class] ?? []);
+            self::assertLessThanOrEqual(500, $held, 'entry hydration is not batched');
+
+            $lines = $this->decodedLinesOf($part);
+            $headers[] = $lines[0];
+            $entryCountsPerPart[] = \count(array_filter(
+                $lines,
+                static fn (array $line): bool => 'entry' === $line['kind'],
+            ));
+        }
+
+        self::assertSame([2000, 1, 0], $entryCountsPerPart);
+        self::assertSame(1, $headers[0]['part']);
+        self::assertSame(2, $headers[1]['part']);
+        self::assertSame(0, $headers[2]['part']);
+        self::assertSame(3, $headers[2]['parts']);
+        self::assertSame(['entries' => 2001, 'entryStates' => 0], $headers[2]['totals']);
+    }
+
+    public function testAParentTagIsWrittenBeforeAChildOrderedAheadOfIt(): void
+    {
+        $user = $this->makeUser('export-roots-first@example.com');
+        $parent = new Tag($user, 'Reading');
+        $parent->setPosition(5);
+        $child = new Tag($user, 'Long reads');
+        $child->setPosition(1);
+        $child->setParent($parent);
+        $this->entityManager->persist($parent);
+        $this->entityManager->persist($child);
+        $this->entityManager->flush();
+
+        [$foundationPart] = $this->decodedParts($user);
+        $tagLines = array_values(
+            array_filter($foundationPart, static fn (array $line): bool => $line['kind'] === 'tag'),
+        );
+
+        self::assertSame(
+            [['Reading', null], ['Long reads', 'Reading']],
+            array_map(static fn (array $line): array => [$line['name'], $line['parent']], $tagLines),
+        );
+    }
+
+    public function testEachTagIsWrittenAfterItsParentAtEveryDepth(): void
+    {
+        $user = $this->makeUser('export-depth-first@example.com');
+        $reading = new Tag($user, 'Reading');
+        $reading->setPosition(9);
+        $longReads = new Tag($user, 'Long reads');
+        $longReads->setPosition(5);
+        $longReads->setParent($reading);
+        $essays = new Tag($user, 'Essays');
+        $essays->setPosition(1);
+        $essays->setParent($longReads);
+        $this->entityManager->persist($reading);
+        $this->entityManager->persist($longReads);
+        $this->entityManager->persist($essays);
+        $this->entityManager->flush();
+
+        [$foundationPart] = $this->decodedParts($user);
+        $tagLines = array_values(
+            array_filter($foundationPart, static fn (array $line): bool => $line['kind'] === 'tag'),
+        );
+
+        self::assertSame(
+            [['Reading', null], ['Long reads', 'Reading'], ['Essays', 'Long reads']],
+            array_map(static fn (array $line): array => [$line['name'], $line['parent']], $tagLines),
+        );
+    }
+
+    public function testAnAccountWithNoEntriesYieldsOnlyTheFoundation(): void
+    {
+        $user = $this->makeUser('export-no-entries@example.com');
+        $feed = new Feed('https://empty.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
+
+        $parts = $this->decodedParts($user);
+
+        self::assertCount(1, $parts);
+        $header = $parts[0][0];
+        self::assertSame(0, $header['part']);
+        self::assertSame(1, $header['parts']);
+        self::assertSame(['entries' => 0, 'entryStates' => 0], $header['totals']);
+    }
+
+    public function testTheFoundationStaysConsistentWithEntryPartsWhenAFeedUrlChangesMidExport(): void
+    {
+        $user = $this->makeUser('mid-export-rewrite@example.com');
+        $feed = new Feed('https://original.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist(new Entry(
+            $feed,
+            'g-1',
+            'https://original.example/a',
+            'A',
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        ));
+        $this->entityManager->flush();
+        $feedId = $feed->requireId();
+
+        $parts = [];
+        $rewritten = false;
+        foreach ($this->exporter()->parts($user, null) as $part) {
+            $parts[] = $this->decodedLinesOf($part);
+            if (!$rewritten) {
+                $this->rewriteFeedUrl($feedId, 'https://rewritten.example/feed.xml');
+                $rewritten = true;
+            }
+        }
+
+        $entryFeedUrls = self::feedUrlsOfKind($parts, 'entry');
+        self::assertNotEmpty($entryFeedUrls);
+        foreach ($entryFeedUrls as $feedUrl) {
+            self::assertContains($feedUrl, self::foundationFeedUrls($parts));
+        }
+    }
+
+    private function rewriteFeedUrl(int $feedId, string $url): void
+    {
+        $feed = $this->entityManager->find(Feed::class, $feedId);
+        self::assertInstanceOf(Feed::class, $feed);
+        $feed->setUrl($url);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @param list<list<array<string, mixed>>> $parts
+     *
+     * @return list<string>
+     */
+    private static function feedUrlsOfKind(array $parts, string $kind): array
+    {
+        $urls = [];
+        foreach ($parts as $part) {
+            foreach ($part as $line) {
+                if ($kind === $line['kind'] && \is_string($line['feedUrl'])) {
+                    $urls[$line['feedUrl']] = true;
+                }
+            }
+        }
+
+        return array_keys($urls);
+    }
+
+    /**
+     * @param list<list<array<string, mixed>>> $parts
+     *
+     * @return list<string>
+     */
+    private static function foundationFeedUrls(array $parts): array
+    {
+        $urls = [];
+        foreach ($parts as $part) {
+            foreach ($part as $line) {
+                if ('feed' === $line['kind'] && \is_string($line['url'])) {
+                    $urls[] = $line['url'];
+                }
+            }
+        }
+
+        return $urls;
+    }
+
+    public function testEveryYieldedPartIsAValidDocumentThatTheReaderAccepts(): void
+    {
+        $user = (new FullyPopulatedAccount($this->entityManager, $this->hasher()))->create(
+            'reader-round-trip@example.com',
+        );
+
+        foreach ($this->exporter()->parts($user, 'https://source.example') as $part) {
+            $lineCount = 0;
+            foreach ((new BackupReader())->read($part->gzipBytes) as $line) {
+                ++$lineCount;
+            }
+            self::assertGreaterThan(0, $lineCount);
+        }
+    }
+
+    public function testAPrivateSocialFeedAndItsPostsStayOutOfTheBackup(): void
+    {
+        $user = $this->makeUser('backup-social@example.test');
+        $rss = new Feed('https://example.com/feed.xml');
+        $private = new Feed('social:bluesky:1:home');
+        $private->setSourceFormat(SourceFormat::BLUESKY_API);
+        $now = new \DateTimeImmutable('2026-10-12 10:00:00');
+        foreach ([$rss, $private] as $feed) {
+            $this->entityManager->persist($feed);
+            $this->entityManager->persist(new Subscription($user, $feed, $now));
+            $entry = new Entry($feed, $feed->getUrl() . '#post', null, 'Post', $now, $now);
+            $entry->getImage()->storePending(null, null, null);
+            $this->entityManager->persist($entry);
+        }
+        $this->entityManager->flush();
+
+        $exported = json_encode($this->decodedParts($user), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES);
+
+        self::assertStringContainsString('https://example.com/feed.xml', $exported);
+        self::assertStringNotContainsString('social:', $exported);
+    }
+
+    public function testAnAuthorFeedTravelsAsItsProfilesPublicRssWithItsTagsTitleAndPosts(): void
+    {
+        $user = $this->makeUser('backup-author@example.test');
+        $tag = new Tag($user, 'People');
+        $tag->setPosition(0);
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $subscription = $privateFeeds
+            ->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), [$tag]);
+        $subscription->setCustomTitle('Rusty, the person');
+        $now = new \DateTimeImmutable('2026-10-12 10:00:00');
+        $guid = 'at://' . BlueskyProfiles::RUSTY . '/post/1';
+        $entry = new Entry($subscription->getFeed(), $guid, null, 'Post', $now, $now);
+        $entry->getImage()->storePending(null, null, null);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        [$entriesPart, $foundationPart] = $this->decodedParts($user);
+
+        $rss = 'https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss';
+        $feedLine = $foundationPart[3];
+        self::assertSame(
+            ['feed', $rss, SourceFormat::XML],
+            [$feedLine['kind'], $feedLine['url'], $feedLine['sourceFormat']],
+        );
+        self::assertSame($rss, FeedLine::fromLine($feedLine)->url);
+        self::assertSame($rss, $foundationPart[4]['feedUrl']);
+        self::assertSame('Rusty, the person', $foundationPart[4]['customTitle']);
+        self::assertSame([['name' => 'People', 'position' => 0]], $foundationPart[4]['tags']);
+        self::assertSame($rss, $entriesPart[1]['feedUrl']);
+        $exported = json_encode([$entriesPart, $foundationPart], \JSON_THROW_ON_ERROR);
+        self::assertStringNotContainsString('social:', $exported);
+    }
+
+    public function testAnAuthorFeedAndTheRefusedRssFeedItReplacesTravelAsOneFeed(): void
+    {
+        $user = $this->makeUser('backup-author-twice@example.test');
+        $rss = new Feed('https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss');
+        $this->entityManager->persist($rss);
+        $this->entityManager->persist(new Subscription($user, $rss, new \DateTimeImmutable('2026-10-12 10:00:00')));
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $privateFeeds->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), []);
+
+        $foundationPart = $this->decodedParts($user)[0];
+
+        self::assertSame(
+            ['header', 'account', 'feed', 'subscription', 'footer'],
+            array_column($foundationPart, 'kind'),
+        );
+    }
+}

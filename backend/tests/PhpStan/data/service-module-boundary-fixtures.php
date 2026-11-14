@@ -5,8 +5,8 @@ declare(strict_types=1);
 // Fixtures for ServiceModuleBoundaryRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Reader\Fixtures {
-    use App\Service\Search\SearchTerms;
+namespace App\Service\Content\Reader\Fixtures {
+    use App\Service\Library\Search\SearchTerms;
 
     final class ReaderSearches
     {
@@ -16,18 +16,18 @@ namespace App\Service\Reader\Fixtures {
     }
 }
 
-namespace App\Service\Recommendation\Run\Fixtures {
+namespace App\Service\Curation\Recommendation\Run\Fixtures {
     final class RecommendationReads
     {
         public function extractor(): string
         {
-            return \App\Service\Reader\ArticleExtractor::class;
+            return \App\Service\Content\Reader\ArticleExtractor::class;
         }
     }
 }
 
-namespace App\Service\Reading\Fixtures {
-    use App\Service\Search\SearchTerms;
+namespace App\Service\Library\Reading\Fixtures {
+    use App\Service\Library\Search\SearchTerms;
 
     final class ReadingMaySearch
     {
@@ -37,8 +37,8 @@ namespace App\Service\Reading\Fixtures {
     }
 }
 
-namespace App\Service\ReaderAudit\Fixtures {
-    use App\Service\Search\SearchTerms;
+namespace App\Service\Content\ReaderAudit\Fixtures {
+    use App\Service\Library\Search\SearchTerms;
 
     final class TheAuditIsNotTheReader
     {
@@ -48,8 +48,8 @@ namespace App\Service\ReaderAudit\Fixtures {
     }
 }
 
-namespace App\Service\Recommendation\Feed\Fixtures {
-    use App\Service\ReaderAudit\ReaderAuditRunner;
+namespace App\Service\Curation\Recommendation\Feed\Fixtures {
+    use App\Service\Content\ReaderAudit\ReaderAuditRunner;
 
     final class RecommendationMayNameALookalike
     {
@@ -59,12 +59,12 @@ namespace App\Service\Recommendation\Feed\Fixtures {
     }
 }
 
-namespace App\Service\Reading\Fixtures\TimeZone {
+namespace App\Service\Library\Reading\Fixtures\TimeZone {
     final class ReadingKnowsRecommendations
     {
         public function zone(): string
         {
-            return \App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel::class;
+            return \App\Service\Curation\Recommendation\Feed\Model\ViewerTimeZoneModel::class;
         }
     }
 }

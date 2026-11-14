@@ -9,7 +9,7 @@ use App\Entity\EntryChapter;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Chapter\ChapterFileSource\ChapterFileSourceInterface;
+use App\Service\Content\Chapter\ChapterFileSource\ChapterFileSourceInterface;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;

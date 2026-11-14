@@ -1,0 +1,281 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Ingestion\Refresh;
+
+use App\Enum\FeedGroup;
+use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\TagTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRunProgressModel;
+use App\Service\Ingestion\Refresh\RefreshRunStore;
+use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+
+final class RefreshRunStoreTest extends TestCase
+{
+    private const int BUDGET = 25;
+
+    private RefreshRunStore $store;
+
+    protected function setUp(): void
+    {
+        $this->store = new RefreshRunStore(new ArrayAdapter());
+    }
+
+    public function testAnUnknownRunOpensAtZero(): void
+    {
+        $progress = $this->store->open($this->sweepRequest());
+
+        self::assertSame(0, $progress->done);
+        self::assertSame(0, $progress->total);
+    }
+
+    public function testASavedRunIsHandedBackToTheNextSlice(): void
+    {
+        $request = $this->sweepRequest();
+        $this->store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
+
+        $resumed = $this->store->open($request);
+
+        self::assertSame(20, $resumed->done);
+        self::assertSame(200, $resumed->total);
+    }
+
+    /** One user's sweep must never be handed to another's. */
+    public function testRunsAreKeptApartByUser(): void
+    {
+        $this->store->save($this->sweepRequest(), RefreshRunProgressModel::start()->advancedBy(20, 180));
+
+        self::assertSame(0, $this->store->open($this->sweepRequest(2))->done);
+    }
+
+    /**
+     * Refreshing one feed while a whole sweep is in flight is a different run with
+     * a different denominator; sharing a key would make each corrupt the other.
+     */
+    public function testRunsAreKeptApartByScope(): void
+    {
+        $userId = 1;
+        $this->store->save($this->sweepRequest($userId), RefreshRunProgressModel::start()->advancedBy(20, 180));
+
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            $userId,
+            new FeedTargetModel(7),
+            self::BUDGET,
+        ))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            $userId,
+            new TagTargetModel(7),
+            self::BUDGET,
+        ))->done);
+    }
+
+    /** A feed scope and a tag scope with the same id are still two runs. */
+    public function testAFeedScopeAndATagScopeWithTheSameIdDoNotCollide(): void
+    {
+        $userId = 1;
+        $this->store->save(
+            RefreshRequestModel::forUser($userId, new FeedTargetModel(7), self::BUDGET),
+            RefreshRunProgressModel::start()->advancedBy(1, 0),
+        );
+
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(
+            $userId,
+            new TagTargetModel(7),
+            self::BUDGET,
+        ))->done);
+    }
+
+    public function testNetworkRunsAreKeptApartFromEachOtherAndFromTheSweep(): void
+    {
+        $bluesky = $this->networkRequest(SocialNetwork::Bluesky);
+        $this->store->save($bluesky, RefreshRunProgressModel::start()->advancedBy(1, 2));
+
+        $mastodon = $this->networkRequest(SocialNetwork::Mastodon);
+        self::assertSame(0, $this->store->open($mastodon)->done);
+        self::assertSame(0, $this->store->open($this->sweepRequest())->done);
+        self::assertSame(1, $this->store->open($bluesky)->done);
+    }
+
+    public function testFeedGroupRunsAreKeptApartFromEachOtherAndFromTheSweep(): void
+    {
+        $tags = RefreshRequestModel::forUser(1, new FeedGroupTargetModel(FeedGroup::Tags), self::BUDGET);
+        $this->store->save($tags, RefreshRunProgressModel::start()->advancedBy(1, 2));
+
+        self::assertSame(
+            0,
+            $this->store->open(RefreshRequestModel::forUser(
+                1,
+                new FeedGroupTargetModel(FeedGroup::Feeds),
+                self::BUDGET,
+            ))->done,
+        );
+        self::assertSame(0, $this->store->open($this->sweepRequest())->done);
+        self::assertSame(1, $this->store->open($tags)->done);
+    }
+
+    public function testANeverFetchedRunIsKeptApartFromTheSweep(): void
+    {
+        $neverFetched = RefreshRequestModel::forUser(1, new NeverFetchedTargetModel(), self::BUDGET);
+        $this->store->save($neverFetched, RefreshRunProgressModel::start()->advancedBy(1, 2));
+
+        self::assertSame(0, $this->store->open($this->sweepRequest())->done);
+        self::assertSame(1, $this->store->open($neverFetched)->done);
+    }
+
+    private function sweepRequest(int $userId = 1): RefreshRequestModel
+    {
+        return RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), self::BUDGET);
+    }
+
+    private function networkRequest(SocialNetwork $network): RefreshRequestModel
+    {
+        return RefreshRequestModel::forUser(1, new NetworkTargetModel(NetworkScope::whole($network)), self::BUDGET);
+    }
+
+    public function testAForgottenRunStartsOverNextTime(): void
+    {
+        $request = $this->sweepRequest();
+        $this->store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
+
+        $this->store->forget($request);
+
+        self::assertSame(0, $this->store->open($request)->done);
+    }
+
+    /**
+     * A cache file is not a contract. A truncated or stale-shaped entry must open
+     * a fresh run rather than reach into an array that is not there.
+     */
+    public function testAMalformedEntryOpensAFreshRun(): void
+    {
+        self::assertSame(0, $this->openAfterCorrupting('not an array')->done);
+    }
+
+    /**
+     * The CLI and maintenance sweeps build requests with no user and call
+     * RefreshRunner directly. Reaching this store without a user is a wiring
+     * mistake, and a silent shared key would pool every user's run into one.
+     */
+    public function testARequestWithNoUserIsAProgrammingError(): void
+    {
+        $this->expectException(\LogicException::class);
+
+        $this->store->open(RefreshRequestModel::allDue(self::BUDGET));
+    }
+
+    /**
+     * A string entry degrades to null on `['done']` and so never reaches the
+     * `is_array` guard — only the `is_int` ones. An object throws instead, which
+     * is what makes this the case that guard exists for.
+     */
+    public function testAnEntryOfTheWrongTypeEntirelyOpensAFreshRun(): void
+    {
+        self::assertSame(0, $this->openAfterCorrupting(new \stdClass())->done);
+    }
+
+    /**
+     * `is_array` passing is not enough on its own: each field is checked
+     * independently, so a shape with exactly one bad field must still open fresh
+     * rather than hand a non-int through to `RefreshRunProgressModel::resumed()`.
+     */
+    public function testAnEntryWithOnlyDoneOfTheWrongTypeOpensAFreshRun(): void
+    {
+        self::assertSame(0, $this->openAfterCorrupting(['done' => 'twenty', 'total' => 200])->done);
+    }
+
+    public function testAnEntryWithOnlyTotalOfTheWrongTypeOpensAFreshRun(): void
+    {
+        self::assertSame(0, $this->openAfterCorrupting(['done' => 20, 'total' => 'two-hundred'])->done);
+    }
+
+    public function testSavingSetsATtlSoAnAbandonedRunEventuallyExpires(): void
+    {
+        $item = $this->createMock(CacheItemInterface::class);
+        $item->method('set')->willReturnSelf();
+        $item->expects($this->once())->method('expiresAfter')->with(600);
+
+        $cache = $this->createStub(CacheItemPoolInterface::class);
+        $cache->method('getItem')->willReturn($item);
+
+        $store = new RefreshRunStore($cache);
+        $store->save($this->sweepRequest(), RefreshRunProgressModel::start());
+    }
+
+    /**
+     * `keyFor()` is private, so the key is observed the way the real cache backend would see it: by asking
+     * the pool for its stored keys. Each scope must produce its own distinct string, not merely A distinct string.
+     */
+    public function testTheCacheKeyEncodesTheUserAndTheRequestsScope(): void
+    {
+        self::assertSame(['refresh_run_3.all'], $this->rawKeyFor($this->sweepRequest(3)));
+        self::assertSame(
+            ['refresh_run_3.feed-7'],
+            $this->rawKeyFor(RefreshRequestModel::forUser(3, new FeedTargetModel(7), self::BUDGET)),
+        );
+        self::assertSame(
+            ['refresh_run_3.tag-9'],
+            $this->rawKeyFor(RefreshRequestModel::forUser(3, new TagTargetModel(9), self::BUDGET)),
+        );
+        self::assertSame(
+            ['refresh_run_3.set-network-bluesky'],
+            $this->rawKeyFor(
+                RefreshRequestModel::forUser(
+                    3,
+                    new NetworkTargetModel(NetworkScope::whole(SocialNetwork::Bluesky)),
+                    self::BUDGET,
+                ),
+            ),
+        );
+        self::assertSame(
+            ['refresh_run_3.set-network-bluesky-profile'],
+            $this->rawKeyFor(
+                RefreshRequestModel::forUser(
+                    3,
+                    new NetworkTargetModel(NetworkScope::profiles(SocialNetwork::Bluesky)),
+                    self::BUDGET,
+                ),
+            ),
+        );
+    }
+
+    /**
+     * Saves a good run, replaces whatever the pool holds with $storedValue, and
+     * reopens. The four tests above differ only in that value, so the
+     * save-corrupt-reopen dance lives here once rather than four times over.
+     */
+    private function openAfterCorrupting(mixed $storedValue): RefreshRunProgressModel
+    {
+        $cache = new ArrayAdapter();
+        $store = new RefreshRunStore($cache);
+        $request = $this->sweepRequest();
+        $store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
+
+        foreach (array_keys($cache->getValues()) as $key) {
+            $item = $cache->getItem($key);
+            $item->set($storedValue);
+            $cache->save($item);
+        }
+
+        return $store->open($request);
+    }
+
+    /** @return list<string> */
+    private function rawKeyFor(RefreshRequestModel $request): array
+    {
+        $cache = new ArrayAdapter();
+        (new RefreshRunStore($cache))->save($request, RefreshRunProgressModel::start());
+
+        return array_keys($cache->getValues());
+    }
+}

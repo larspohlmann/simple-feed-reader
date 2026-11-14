@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\ProxyServerSettings;
-use App\Service\Proxy\ConfiguredProxySource\StoredProxy;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
-use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
+use App\Service\Outbound\Proxy\ConfiguredProxySource\StoredProxy;
+use App\Service\Outbound\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Outbound\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 
 trait StoredProxies
 {

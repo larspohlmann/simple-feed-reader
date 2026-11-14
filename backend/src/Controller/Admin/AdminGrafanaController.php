@@ -7,7 +7,7 @@ namespace App\Controller\Admin;
 use App\Dto\Admin\GrafanaSettingsRequest;
 use App\Http\Admin\GrafanaSettingsJson;
 use App\Http\FullReplacePayload;
-use App\Service\Grafana\GrafanaSettings;
+use App\Service\Operations\Grafana\GrafanaSettings;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;

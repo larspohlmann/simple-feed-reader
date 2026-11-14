@@ -1,0 +1,114 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Social\Social;
+
+use App\Entity\Entry;
+use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\PostCountsSource\PostCountsSourceInterface;
+use App\Service\Social\Social\Support\SocialPostAddress;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+
+/** A post's live counts: from the cache, else its network's public source, else the user's acting account. */
+final readonly class SocialCounts
+{
+    public function __construct(
+        private SocialCountsCache $cache,
+        private SocialPostFinder $posts,
+        private ConfirmedDeletion $confirmedDeletion,
+        #[AutowireLocator('app.social_post_counts_source')]
+        private ContainerInterface $publicSources,
+    ) {
+    }
+
+    /**
+     * @throws NotASocialPostException
+     * @throws SocialPostNotFoundException
+     * @throws SocialPostRemovedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialCredentialsRejectedException
+     */
+    public function of(User $user, Entry $entry): SocialCountsModel
+    {
+        $post = SocialPostAddress::ofOrRefuse($entry);
+        $cached = $this->cache->find($post);
+        if (null !== $cached) {
+            return $cached;
+        }
+
+        try {
+            $counts = $this->lookedUp($user, $entry, $post);
+        } catch (SocialPostNotFoundException $notFound) {
+            $this->confirmedDeletion->removeIfConfirmed($entry);
+
+            throw $notFound;
+        }
+        $this->cache->remember($post, $counts);
+
+        return $counts;
+    }
+
+    /**
+     * @throws NotASocialPostException
+     * @throws SocialPostNotFoundException
+     * @throws SocialPostRemovedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialCredentialsRejectedException
+     */
+    public function refreshed(User $user, Entry $entry): SocialCountsModel
+    {
+        $post = SocialPostAddress::ofOrRefuse($entry);
+        $this->cache->forget($post);
+
+        return $this->of($user, $entry);
+    }
+
+    private function lookedUp(User $user, Entry $entry, SocialPostAddressModel $post): SocialCountsModel
+    {
+        try {
+            return $this->publicSourceOn($post->network)->countsOf($post->address);
+        } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $publicFailure) {
+            return $this->actingAccountCountsOf($user, $entry, $publicFailure);
+        }
+    }
+
+    private function actingAccountCountsOf(
+        User $user,
+        Entry $entry,
+        SocialPostNotFoundException|SocialNetworkUnreachableException $publicFailure,
+    ): SocialCountsModel {
+        try {
+            $resolved = $this->posts->find($user, $entry);
+        } catch (NoSocialAccountForNetworkException) {
+            throw $publicFailure;
+        }
+
+        return $resolved->counts
+            ?? throw new SocialNetworkUnreachableException('The network answered the post without its counts.');
+    }
+
+    private function publicSourceOn(SocialNetwork $network): PostCountsSourceInterface
+    {
+        $source = $this->publicSources->get($network->value);
+        \assert($source instanceof PostCountsSourceInterface);
+
+        return $source;
+    }
+}

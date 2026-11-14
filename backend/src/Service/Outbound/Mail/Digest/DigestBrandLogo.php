@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Outbound\Mail\Digest;
+
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+
+/** The digest header's brand mark, read from disk: unlike thumbnails and favicons it is never fetched or resized. */
+final readonly class DigestBrandLogo
+{
+    public function __construct(
+        #[Autowire('%kernel.project_dir%')]
+        private string $projectDir,
+    ) {
+    }
+
+    public function bytes(): string
+    {
+        $bytes = file_get_contents($this->projectDir . '/resources/mail/digest-logo.png');
+        if ($bytes === false) {
+            throw new ImageProcessingException('The digest brand logo asset is missing.');
+        }
+
+        return $bytes;
+    }
+
+    public function contentType(): string
+    {
+        return 'image/png';
+    }
+}

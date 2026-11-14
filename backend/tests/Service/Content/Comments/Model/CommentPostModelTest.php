@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Content\Comments\Model;
+
+use App\Service\Content\Comments\Model\CommentCountsModel;
+use App\Service\Content\Comments\Model\CommentPostModel;
+use App\Service\Content\Comments\Model\CommentViewerModel;
+use PHPUnit\Framework\TestCase;
+
+final class CommentPostModelTest extends TestCase
+{
+    public function testOwningAPostKeepsEverythingElseTheViewerKnew(): void
+    {
+        $counts = new CommentCountsModel(1, 2, 3, null);
+        $viewer = new CommentViewerModel(true, false, true, canReply: false, canQuote: false);
+        $post = new CommentPostModel('at://x', $counts, $viewer, 'did:x');
+
+        $owned = $post->ownedByViewer();
+
+        self::assertEquals(
+            new CommentPostModel(
+                'at://x',
+                $counts,
+                new CommentViewerModel(true, false, true, canReply: false, canQuote: false, isOwn: true),
+                'did:x',
+            ),
+            $owned,
+        );
+        self::assertFalse($post->viewer->isOwn);
+    }
+}

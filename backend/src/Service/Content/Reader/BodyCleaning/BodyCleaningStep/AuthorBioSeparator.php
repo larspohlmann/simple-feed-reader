@@ -1,0 +1,130 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
+
+use App\Service\Content\Reader\AuthorBio\AuthorProfileLink;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\SubstantialProseDetector;
+use Dom\Element;
+use Dom\HTMLDocument;
+
+/**
+ * Wraps the author-bio furniture trailing an article in a marked figure. The body is the child holding a majority of
+ * the substantial paragraphs; its following siblings count as a bio only when one links to an author-profile page.
+ */
+final readonly class AuthorBioSeparator implements BodyCleaningStepInterface
+{
+    public function __construct(
+        private AuthorProfileLink $authorProfileLink,
+        private SubstantialProseDetector $prose,
+    ) {
+    }
+
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->separateIn($pass->document);
+    }
+
+    private function separateIn(HTMLDocument $document): void
+    {
+        if ($document->body === null) {
+            return;
+        }
+
+        $articleBody = $this->dominantProseBlock($document->body);
+        if ($articleBody === null) {
+            return;
+        }
+
+        $tail = $this->followingElements($articleBody);
+        if ($tail === [] || !$this->isAuthorBioTail($tail)) {
+            return;
+        }
+
+        $this->wrap($document, $tail);
+    }
+
+    private function dominantProseBlock(Element $root): ?Element
+    {
+        $node = $root;
+        while (($denser = $this->majorityProseChild($node)) !== null) {
+            $node = $denser;
+        }
+
+        return $node === $root ? null : $node;
+    }
+
+    /** The child that holds a strict majority of this node's substantial paragraphs, if any. */
+    private function majorityProseChild(Element $node): ?Element
+    {
+        $total = $this->substantialParagraphCount($node);
+        if ($total < 2) {
+            return null;
+        }
+
+        return array_find(
+            $this->elementChildren($node),
+            fn (Element $child): bool => $this->substantialParagraphCount($child) * 2 > $total,
+        );
+    }
+
+    /** @return list<Element> */
+    private function elementChildren(Element $element): array
+    {
+        $children = [];
+        foreach ($element->childNodes as $child) {
+            if ($child instanceof Element) {
+                $children[] = $child;
+            }
+        }
+
+        return $children;
+    }
+
+    private function substantialParagraphCount(Element $element): int
+    {
+        $count = 0;
+        foreach ($element->getElementsByTagName('p') as $paragraph) {
+            if ($this->prose->isSubstantial($paragraph)) {
+                ++$count;
+            }
+        }
+
+        return $count;
+    }
+
+    /** @return list<Element> */
+    private function followingElements(Element $block): array
+    {
+        $elements = [];
+        for ($sibling = $block->nextElementSibling; $sibling !== null; $sibling = $sibling->nextElementSibling) {
+            $elements[] = $sibling;
+        }
+
+        return $elements;
+    }
+
+    /** @param list<Element> $tail */
+    private function isAuthorBioTail(array $tail): bool
+    {
+        if (array_any($tail, fn (Element $block): bool => $this->substantialParagraphCount($block) >= 2)) {
+            return false;
+        }
+
+        return array_any($tail, $this->authorProfileLink->isPresentIn(...));
+    }
+
+    /** @param non-empty-list<Element> $tail */
+    private function wrap(HTMLDocument $document, array $tail): void
+    {
+        $figure = $document->createElement('figure');
+        $figure->setAttribute('class', 'reader-author-bio');
+        $tail[0]->parentNode?->insertBefore($figure, $tail[0]);
+
+        foreach ($tail as $block) {
+            $figure->appendChild($block);
+        }
+    }
+}

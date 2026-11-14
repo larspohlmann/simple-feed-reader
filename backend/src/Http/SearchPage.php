@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\EntryListSort;
-use App\Service\Search\Model\EntrySearchResultModel;
+use App\Service\Library\Search\Model\EntrySearchResultModel;
 
 /**
  * The `{entries, nextCursor, matchedWords}` shape a search response returns.

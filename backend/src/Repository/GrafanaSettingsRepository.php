@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\GrafanaSettings;
-use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
+use App\Service\Operations\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\User;
-use App\Service\Ai\Support\AiReadiness;
+use App\Service\Curation\Ai\Support\AiReadiness;
 
 /** The `ai` block of /api/me: the active connection's readiness, model and engine capabilities. */
 final readonly class ActiveAiJson

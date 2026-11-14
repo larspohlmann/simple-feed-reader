@@ -1,0 +1,124 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Identity\Account;
+
+use App\Entity\ReadingSettingsChange;
+use App\Enum\DigestCadence;
+use App\Enum\DigestFormat;
+use App\Enum\Handedness;
+use App\Enum\MagazineStyle;
+use App\Enum\SupportedLocale;
+use App\Service\Identity\Account\AccountPreferencesWriter;
+use App\Service\Identity\Account\Model\SharingSettingsModel;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestConfigurationModel;
+use App\Tests\DbTestCase;
+use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\StoredUserSettings;
+
+final class AccountPreferencesWriterTest extends DbTestCase
+{
+    use ReloadsEntities;
+    use SeedsUsers;
+
+    public function testChangeLocalePersists(): void
+    {
+        $user = $this->user('prefs-locale@example.com');
+
+        $this->writer()->changeLocale($user, SupportedLocale::GERMAN);
+
+        self::assertSame(SupportedLocale::GERMAN, $this->reload($user)->getLocale());
+    }
+
+    public function testChangeReadingSettingsPersistsTheGivenOnes(): void
+    {
+        $user = $this->user('prefs-reading@example.com');
+
+        $this->writer()->changeReadingSettings(
+            $user,
+            new ReadingSettingsChange(scrapeFallbackEnabled: true, handedness: Handedness::Left),
+        );
+
+        $reloaded = StoredUserSettings::reading($this->entityManager, $this->reload($user));
+        self::assertTrue($reloaded->isScrapeFallbackEnabled());
+        self::assertSame(Handedness::Left, $reloaded->getHandedness());
+        self::assertSame(MagazineStyle::Boxed, $reloaded->getMagazineStyle());
+        self::assertTrue($reloaded->isTrendingEnabled());
+    }
+
+    public function testChangeSharingPersistsAllThreeValues(): void
+    {
+        $user = $this->user('prefs-sharing@example.com');
+
+        $this->writer()->changeSharing($user, new SharingSettingsModel(false, ['x', 'Not An Id', 'x'], false));
+
+        $reloaded = StoredUserSettings::sharing($this->entityManager, $this->reload($user));
+        self::assertFalse($reloaded->isEnabled());
+        self::assertSame(['x'], $reloaded->getHiddenTargets());
+        self::assertFalse($reloaded->isRememberingShares());
+    }
+
+    public function testChangeFeedDirectoryScopePersistsBothLists(): void
+    {
+        $user = $this->user('prefs-scope@example.com');
+
+        $this->writer()->changeFeedDirectoryScope($user, new FeedDirectoryScopeModel(['DE', 'AT'], ['de']));
+
+        $reloaded = StoredUserSettings::feedDirectoryScope($this->entityManager, $this->reload($user));
+        self::assertSame(['DE', 'AT'], $reloaded->getCountries());
+        self::assertSame(['de'], $reloaded->getLanguages());
+    }
+
+    public function testAnUnknownCodeLeavesTheScopeAsItWas(): void
+    {
+        $user = $this->user('prefs-scope-unknown@example.com');
+        $this->writer()->changeFeedDirectoryScope($user, new FeedDirectoryScopeModel(['DE'], ['de']));
+
+        try {
+            $this->writer()->changeFeedDirectoryScope($user, new FeedDirectoryScopeModel(['FR'], ['de']));
+            self::fail('An unknown country must be rejected.');
+        } catch (InvalidFeedDirectoryScopeException) {
+            $reloaded = StoredUserSettings::feedDirectoryScope($this->entityManager, $this->reload($user));
+            self::assertSame(['DE'], $reloaded->getCountries());
+            self::assertSame(['de'], $reloaded->getLanguages());
+        }
+    }
+
+    public function testChangeDigestPersistsTheConfiguration(): void
+    {
+        $user = $this->user('prefs-digest@example.com');
+
+        $this->writer()->changeDigest(
+            $user,
+            new DigestConfigurationModel(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
+        );
+
+        $settings = StoredUserSettings::digest($this->entityManager, $this->reload($user));
+        self::assertTrue($settings->isEnabled());
+        self::assertSame(DigestCadence::Weekly, $settings->getCadence());
+        self::assertSame(7, $settings->getSendHour());
+        self::assertSame(3, $settings->getWeekday());
+        self::assertSame(DigestFormat::Text, $settings->getFormat());
+    }
+
+    public function testAnswerPasskeyOfferPersistsTheAnswer(): void
+    {
+        $user = $this->user('prefs-passkey@example.com');
+
+        $this->writer()->answerPasskeyOffer($user);
+
+        self::assertNotNull($this->reload($user)->getPasskeyOfferAnsweredAt());
+    }
+
+    private function writer(): AccountPreferencesWriter
+    {
+        $writer = self::getContainer()->get(AccountPreferencesWriter::class);
+        self::assertInstanceOf(AccountPreferencesWriter::class, $writer);
+
+        return $writer;
+    }
+}

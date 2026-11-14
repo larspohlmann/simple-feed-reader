@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Grafana\Model\GrafanaSettingsOverviewModel;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsOverviewModel;
 
 /**
  * The token is absent by construction: only hasToken and the last-four tokenHint cross the wire, never the secret.

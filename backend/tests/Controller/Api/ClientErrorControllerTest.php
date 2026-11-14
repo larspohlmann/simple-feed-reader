@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
+use App\Service\Operations\Logging\Loki\LokiClient;
+use App\Service\Operations\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 use App\Tests\Support\ApiTestCase;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;

@@ -10,8 +10,8 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\RecommendationFeedRow;
-use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
-use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
+use App\Service\Curation\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
+use App\Service\Curation\Recommendation\Feed\Model\ForYouFeedPageModel;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 

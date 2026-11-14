@@ -5,14 +5,14 @@ declare(strict_types=1);
 // Fixtures for ServiceModuleCycleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Recommendation\LlmTools {
+namespace App\Service\Curation\Recommendation\LlmTools {
     final class FixtureTokenCounter
     {
     }
 }
 
-namespace App\Service\Recommendation {
-    use App\Service\Recommendation\LlmTools\FixtureTokenCounter;
+namespace App\Service\Curation\Recommendation {
+    use App\Service\Curation\Recommendation\LlmTools\FixtureTokenCounter;
 
     final class FixtureBudget
     {
@@ -22,8 +22,8 @@ namespace App\Service\Recommendation {
     }
 }
 
-namespace App\Service\Recommendation\Llm {
-    use App\Service\Recommendation\FixtureBudget;
+namespace App\Service\Curation\Recommendation\Llm {
+    use App\Service\Curation\Recommendation\FixtureBudget;
 
     final class FixtureLlmEngine
     {

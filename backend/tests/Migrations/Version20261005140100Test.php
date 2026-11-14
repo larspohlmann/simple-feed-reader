@@ -6,7 +6,7 @@ namespace App\Tests\Migrations;
 
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\RecommendationRunFixtures;

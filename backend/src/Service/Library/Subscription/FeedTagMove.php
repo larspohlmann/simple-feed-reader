@@ -1,0 +1,158 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Library\Subscription;
+
+use App\Entity\Subscription;
+use App\Entity\SubscriptionTag;
+use App\Entity\Tag;
+use App\Enum\SubscriptionSet;
+use App\Exception\InvalidSelectionException;
+use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionTagRepository;
+use App\Repository\TagRepository;
+use App\Service\Library\Subscription\Model\FeedMoveModel;
+
+/**
+ * Moves one feed between the sidebar's lists the way a drag does: out of the source tag, into the destination tag
+ * or, once it has no tag left, the untagged "Feeds" list, at the dropped position. The destination renumbers densely.
+ */
+final readonly class FeedTagMove
+{
+    public function __construct(
+        private TagRepository $tags,
+        private SubscriptionTagRepository $subscriptionTags,
+        private SubscriptionRepository $subscriptions,
+    ) {
+    }
+
+    public function move(Subscription $subscription, FeedMoveModel $move): void
+    {
+        // A same-list drop is a reorder, which the reorder endpoints own.
+        if ($move->fromTagId === $move->toTagId) {
+            return;
+        }
+
+        $userId = $subscription->getUser()->requireId();
+        $fromTag = $this->ownedTagOrNull($move->fromTagId, $userId);
+        $toTag = $this->ownedTagOrNull($move->toTagId, $userId);
+
+        if (null !== $fromTag) {
+            $subscription->removeTag($fromTag);
+        }
+
+        if (null !== $toTag) {
+            $this->placeInTag($subscription, $toTag, $move->position);
+
+            return;
+        }
+
+        if ($subscription->getTags()->isEmpty()) {
+            $this->placeInUntaggedList($subscription, $userId, $move->position);
+        }
+    }
+
+    private function ownedTagOrNull(?int $tagId, int $userId): ?Tag
+    {
+        if (null === $tagId) {
+            return null;
+        }
+
+        return $this->tags->findOneForUser($userId, $tagId)
+            ?? throw new InvalidSelectionException('The tag must be one of yours.');
+    }
+
+    private function placeInTag(Subscription $subscription, Tag $tag, ?int $position): void
+    {
+        $others = $this->tagFeedsExcept($tag, $subscription->requireId());
+        $subscription->addTag($tag);
+        $ordered = $this->spliceIn($others, $this->tagJoin($subscription, $tag), $position);
+
+        foreach ($ordered as $index => $join) {
+            $join->setPosition($index);
+        }
+    }
+
+    private function placeInUntaggedList(Subscription $subscription, int $userId, ?int $position): void
+    {
+        $others = $this->untaggedFeedsExcept($userId, $subscription->requireId());
+        $ordered = $this->spliceIn($others, $subscription, $position);
+
+        foreach ($ordered as $index => $feed) {
+            $feed->setPosition($index);
+        }
+    }
+
+    /**
+     * The tag's feeds in per-tag order, without the moved feed — the siblings
+     * the moved feed is inserted among.
+     *
+     * @return list<SubscriptionTag>
+     */
+    private function tagFeedsExcept(Tag $tag, int $subscriptionId): array
+    {
+        $joins = $this->subscriptionTags->forTagBySubscriptionId($tag);
+        unset($joins[$subscriptionId]);
+        $ordered = array_values($joins);
+        usort(
+            $ordered,
+            static fn (SubscriptionTag $left, SubscriptionTag $right): int
+                => $left->getPosition() <=> $right->getPosition(),
+        );
+
+        return $ordered;
+    }
+
+    /**
+     * The user's untagged feeds in "Feeds" list order, without the moved feed —
+     * the siblings it joins when it loses its last tag. Derived from the feeds
+     * the sidebar already loads rather than a query of its own.
+     *
+     * @return list<Subscription>
+     */
+    private function untaggedFeedsExcept(int $userId, int $subscriptionId): array
+    {
+        $untagged = array_filter(
+            $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::All),
+            static fn (Subscription $feed): bool => $feed->getTags()->isEmpty()
+                && $feed->requireId() !== $subscriptionId,
+        );
+        usort(
+            $untagged,
+            static fn (Subscription $left, Subscription $right): int
+                => $left->getPosition() <=> $right->getPosition(),
+        );
+
+        return $untagged;
+    }
+
+    private function tagJoin(Subscription $subscription, Tag $tag): SubscriptionTag
+    {
+        foreach ($subscription->getSubscriptionTags() as $join) {
+            if ($join->getTag() === $tag) {
+                return $join;
+            }
+        }
+        throw new \LogicException('The tag was just added; its join must exist.');
+    }
+
+    /**
+     * Insert one item into an ordered list at the given index, clamped into
+     * range; a null index appends.
+     *
+     * @template T of object
+     *
+     * @param list<T> $items
+     * @param T       $item
+     *
+     * @return list<T>
+     */
+    private function spliceIn(array $items, object $item, ?int $position): array
+    {
+        $index = null === $position ? \count($items) : max(0, min($position, \count($items)));
+        array_splice($items, $index, 0, [$item]);
+
+        return $items;
+    }
+}

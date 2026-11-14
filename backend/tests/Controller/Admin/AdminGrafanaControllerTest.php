@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\GrafanaSettings;
 use App\Entity\User;
-use App\Service\Grafana\GrafanaSettingsCache;
+use App\Service\Operations\Grafana\GrafanaSettingsCache;
 use App\Tests\Support\ApiTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;

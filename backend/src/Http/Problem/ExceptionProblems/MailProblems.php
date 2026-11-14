@@ -6,8 +6,8 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
-use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Outbound\Mail\Digest\Exception\TestDigestUnavailableException;
+use App\Service\Outbound\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MailProblems implements ExceptionProblemsInterface

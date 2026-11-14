@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
+use App\Service\Sourcing\Catalog\Exception\InvalidCatalogDocumentException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class CatalogProblems implements ExceptionProblemsInterface

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
 
 /** A batch call's outcome as a test scripts it: a reply, a spoiled reply that names its cause, or an endpoint failure. */
 final readonly class ScriptedBatchOutcome implements BatchCallOutcomeInterface

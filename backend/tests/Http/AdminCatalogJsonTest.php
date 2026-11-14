@@ -7,10 +7,10 @@ namespace App\Tests\Http;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Http\AdminCatalogJson;
-use App\Service\Catalog\Model\BundledCatalogSummaryModel;
-use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
-use App\Service\Catalog\Model\CatalogDocumentFeedModel;
-use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Sourcing\Catalog\Model\BundledCatalogSummaryModel;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentCategoryModel;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
 use PHPUnit\Framework\TestCase;
 
 final class AdminCatalogJsonTest extends TestCase

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Image\GuessedSizeRungs;
-use App\Service\Image\RenditionProbe;
-use App\Service\Image\ResizerRungs;
+use App\Service\Outbound\Image\GuessedSizeRungs;
+use App\Service\Outbound\Image\RenditionProbe;
+use App\Service\Outbound\Image\ResizerRungs;
 
 final class RenditionProbes
 {

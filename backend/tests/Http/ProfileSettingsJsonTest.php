@@ -9,7 +9,7 @@ use App\Entity\ProfileSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Http\ProfileSettingsJson;
-use App\Service\Recommendation\Profile\Model\ProfileSettingsModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileSettingsModel;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 

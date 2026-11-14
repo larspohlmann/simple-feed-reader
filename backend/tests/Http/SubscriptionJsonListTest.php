@@ -10,9 +10,9 @@ use App\Entity\User;
 use App\Enum\TrendingWindow;
 use App\Http\SubscriptionJson;
 use App\Http\UnreadTotalsJson;
-use App\Service\Subscription\Model\SubscriptionTalliesModel;
-use App\Service\Subscription\Model\UnreadTotalsModel;
-use App\Service\Trending\Model\TrendingUnopenedModel;
+use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
+use App\Service\Library\Subscription\Model\UnreadTotalsModel;
+use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 

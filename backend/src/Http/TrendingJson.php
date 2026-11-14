@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Trending\Model\TrendingPageModel;
-use App\Service\Trending\Model\TrendingStoryCardModel;
+use App\Service\Curation\Trending\Model\TrendingPageModel;
+use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 
 final readonly class TrendingJson
 {

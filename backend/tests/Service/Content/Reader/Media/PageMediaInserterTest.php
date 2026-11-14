@@ -1,0 +1,416 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Content\Reader\Media;
+
+use App\Service\Content\Reader\Media\AudioPlayerMarkup;
+use App\Service\Content\Reader\Media\MediaMarkup;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\PageMediaInserter;
+use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\ProseParagraphs;
+use Dom\HTMLDocument;
+use PHPUnit\Framework\TestCase;
+
+final class PageMediaInserterTest extends TestCase
+{
+    use ParsesHtml;
+
+    private PageMediaInserter $inserter;
+
+    protected function setUp(): void
+    {
+        $this->inserter = new PageMediaInserter(new MediaMarkup(), new AudioPlayerMarkup());
+    }
+
+    private function insert(string $html, ArticleMediaModel $media): string
+    {
+        $document = $this->document($html);
+        $plan = $this->inserter->plan($document, $media);
+        $this->inserter->apply($document, $plan);
+
+        return $document->saveHtml();
+    }
+
+    public function testAnAudioPlayerCarriesTheClipsTitleAndDuration(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                label: 'Ohne echte Lobby',
+                durationSeconds: 2871,
+            ),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString(
+            '<audio controls="" preload="none" src="https://x.test/a.mp3"'
+            . ' title="Ohne echte Lobby"><time datetime="PT2871S">47:51</time></audio>',
+            $out,
+        );
+    }
+
+    public function testAFeedDeclaredAudioTypeStillPlaysFromOneSource(): void
+    {
+        $media = new ArticleMediaModel([
+            (new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3'))->withMimeType('audio/mpeg'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('<audio controls="" preload="none" src="https://x.test/a.mp3">', $out);
+        self::assertStringNotContainsString('<source', $out);
+    }
+
+    public function testPutsAudioAtTheTopAboveTheTeaser(): void
+    {
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('<audio controls="" preload="none" src="https://x.test/a.mp3">', $out);
+        self::assertLessThan(strpos($out, 'Teaser'), strpos($out, '<audio'));
+    }
+
+    public function testSeatsATopPlacedPlayerBelowARestoredHero(): void
+    {
+        // A restored hero figure is handed in as the anchor, so the top-placed narration player lands under the
+        // picture, not above it.
+        $document = $this->document('<body><figure><img src="https://x.test/hero.jpg"></figure>'
+            . '<p>Prose</p></body>');
+        $hero = $document->querySelector('figure');
+        self::assertNotNull($hero);
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        $plan = $this->inserter->plan($document, $media);
+        $this->inserter->apply($document, $plan, $hero);
+        $out = $document->saveHtml();
+
+        self::assertLessThan(strpos($out, '<audio'), strpos($out, '<img'));
+        self::assertLessThan(strpos($out, 'Prose'), strpos($out, '<audio'));
+    }
+
+    public function testANarratedAudioPlayerCarriesTheNarrationClass(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/full.mp3', null, null, null, true),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('class="reader-narration"', $out);
+    }
+
+    public function testAnOrdinaryAudioPlayerCarriesNoClass(): void
+    {
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        self::assertStringNotContainsString('class=', $this->insert('<body><p>Teaser</p></body>', $media));
+    }
+
+    public function testVideoCarriesItsPoster(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('poster="https://x.test/p.jpg"', $out);
+        self::assertStringContainsString('preload="none"', $out);
+        self::assertStringContainsString('src="https://x.test/v.mp4"', $out);
+    }
+
+    public function testAFeedDeclaredMimeTypePlaysThroughATypedSource(): void
+    {
+        $media = new ArticleMediaModel([
+            (new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg'))
+                ->withMimeType('video/mp4'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('<source src="https://x.test/v.mp4" type="video/mp4"', $out);
+        // The file plays through the typed <source>, so the <video> carries no bare src.
+        self::assertStringNotContainsString('poster="https://x.test/p.jpg" src=', $out);
+    }
+
+    /** A stream is the same <video> a file is — Safari and AVPlayer play it natively; hls.js covers the rest. */
+    public function testAStreamBecomesAVideoElementWithItsPoster(): void
+    {
+        $html = $this->insert(
+            '<html><body><p>Teaser.</p></body></html>',
+            new ArticleMediaModel([
+                new MediaCandidateModel(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
+            ]),
+        );
+
+        self::assertStringContainsString(
+            '<video controls="" preload="none" src="https://x.test/master.m3u8" poster="https://x.test/p.jpg">',
+            $html,
+        );
+    }
+
+    public function testAudioNeverCarriesAPosterAttribute(): void
+    {
+        // <audio> has no poster attribute, so even a candidate that carries a posterUrl must not render one.
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', 'https://x.test/p.jpg'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringNotContainsString('poster', $out);
+    }
+
+    public function testAnEmbedBecomesTheSameLinkShapeAsAnInBodyOne(): void
+    {
+        $media = new ArticleMediaModel([new MediaCandidateModel(
+            MediaKind::Embed,
+            'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1',
+            null,
+            'Listen on SoundCloud',
+        )]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('Listen on SoundCloud', $out);
+        self::assertStringContainsString('w.soundcloud.com/player/', $out);
+    }
+
+    public function testEmptyMediaLeavesTheBodyAlone(): void
+    {
+        $out = $this->insert('<body><p>Teaser</p></body>', ArticleMediaModel::none());
+
+        self::assertStringNotContainsString('<audio', $out);
+        self::assertStringContainsString('Teaser', $out);
+    }
+
+    public function testADocumentWithoutABodyPlansNothing(): void
+    {
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        $plan = $this->inserter->plan(HTMLDocument::createEmpty(), $media);
+
+        self::assertSame([], $plan->reconcilePairs);
+        self::assertSame([], $plan->anchoredPairs);
+        self::assertSame([], $plan->topPlaced);
+    }
+
+    public function testKeepsSourceOrder(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/first.mp3'),
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/second.mp3'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertLessThan(strpos($out, 'second.mp3'), strpos($out, 'first.mp3'));
+    }
+
+    public function testReconcilesAMatchingBodyImageInPlace(): void
+    {
+        // The same asset UUID, a different rendition.
+        $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
+        $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
+        $html = '<body><p>Intro</p><figure><img src="' . $bodyImg . '" alt=""></figure><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertStringNotContainsString('<img', $out);
+        self::assertStringContainsString('<video', $out);
+        self::assertStringContainsString('poster="' . $poster . '"', $out);
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<video'));
+        self::assertLessThan(strpos($out, '<video'), strpos($out, 'Intro'));
+    }
+
+    public function testDoesNotReconcileAnImageInsideAnAnchor(): void
+    {
+        // The <a> guard: protects embed poster anchors, SubstackPosterLink's output and
+        // SubstackGatedVideoPlaceholder's poster link, even when the asset matches.
+        $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
+        $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
+        $html = '<body><p>Intro</p><a href="https://x.test"><img src="' . $bodyImg . '" alt=""></a></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertStringContainsString('<img', $out);
+        self::assertStringContainsString('<video', $out);
+    }
+
+    public function testACandidateWithNoMatchingImageIsTopPlaced(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/no-match-poster.jpg'),
+        ]);
+        $html = '<body><p>Intro</p><figure><img src="https://x.test/unrelated-photo.jpg" alt=""></figure></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertStringContainsString('<img', $out);
+        self::assertLessThan(strpos($out, 'Intro'), strpos($out, '<video'));
+    }
+
+    public function testTwoCandidatesOneMatchingImageReconcilesOneAndTopPlacesTheOther(): void
+    {
+        // A mix: video1 reconciles, video2 has no match and goes to the top, and an unrelated map img is left
+        // untouched.
+        $video1Poster = 'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
+        $video1Body = 'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
+        $video2Poster = 'https://media.tagesschau.de/image/58e272fd-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
+        $mapImg = 'https://media.tagesschau.de/image/deadbeef-0000-0000-0000-000000000000/A/map.jpg';
+
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v1.mp4', $video1Poster),
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v2.mp4', $video2Poster),
+        ]);
+        $html = '<body><p>Intro</p>'
+            . '<figure><img src="' . $video1Body . '" alt=""></figure>'
+            . '<figure><img src="' . $mapImg . '" alt=""></figure>'
+            . '</body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertSame(2, substr_count($out, '<video'));
+        self::assertSame(1, substr_count($out, '<img'));
+        self::assertStringContainsString($mapImg, $out);
+        self::assertStringContainsString('v2.mp4', $out);
+        self::assertStringContainsString($video1Poster, $out);
+        self::assertLessThan(strpos($out, 'v1.mp4'), strpos($out, 'v2.mp4'), 'the top-placed video leads');
+    }
+
+    public function testPlacesACandidateAfterTheBlockItFollowedOnThePage(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Video,
+                'https://x.test/v.mp4',
+                'https://x.test/p.jpg',
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
+        ]);
+        $html = '<body><p>Intro</p><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertGreaterThan(strpos($out, ProseParagraphs::BEFORE_A_PLAYER), strpos($out, '<video'));
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<video'));
+    }
+
+    public function testMatchesTheBlockOnCollapsedText(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
+        ]);
+        $html = '<body><p>Intro</p><p>  The paragraph the player followed on the source page,' . "
+"
+            . '   long enough to be prose.  </p><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<audio'));
+        self::assertGreaterThan(strpos($out, 'Intro'), strpos($out, '<audio'));
+    }
+
+    public function testTwoCandidatesAfterTheSameBlockKeepSourceOrder(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/first.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/second.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
+        ]);
+        $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertGreaterThan(strpos($out, ProseParagraphs::BEFORE_A_PLAYER), strpos($out, 'first.mp3'));
+        self::assertLessThan(strpos($out, 'second.mp3'), strpos($out, 'first.mp3'));
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, 'second.mp3'));
+    }
+
+    public function testFollowsAListItemBlockWithTheWholeList(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
+        ]);
+        $html = '<body><ul><li>' . ProseParagraphs::BEFORE_A_PLAYER
+            . '</li><li>Second item</li></ul><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertGreaterThan(strpos($out, '</ul>'), strpos($out, '<audio'));
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<audio'));
+    }
+
+    public function testACandidateWhoseBlockTheBodyLostIsTopPlaced(): void
+    {
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                null,
+                null,
+                'A block readability removed',
+            ),
+        ]);
+
+        $out = $this->insert('<body><p>Intro</p></body>', $media);
+
+        self::assertLessThan(strpos($out, 'Intro'), strpos($out, '<audio'));
+    }
+
+    public function testAMatchingBodyImageBeatsTheTextAnchor(): void
+    {
+        $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
+        $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Video,
+                'https://x.test/v.mp4',
+                $poster,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
+        ]);
+        $html = '<body><figure><img src="' . $bodyImg . '" alt=""></figure><p>' . ProseParagraphs::BEFORE_A_PLAYER
+            . '</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertSame(1, substr_count($out, '<video'));
+        self::assertStringNotContainsString('<img', $out);
+        self::assertLessThan(strpos($out, ProseParagraphs::BEFORE_A_PLAYER), strpos($out, '<video'));
+    }
+}

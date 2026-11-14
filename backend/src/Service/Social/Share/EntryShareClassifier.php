@@ -1,0 +1,112 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Social\Share;
+
+use App\Entity\Entry;
+use App\Enum\ShareKind;
+use App\Service\Ingestion\Parser\Support\VisualMedium;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Social\Share\Model\SharedLinksModel;
+use App\Service\Social\Share\PendingEmbed\PendingEmbedInterface;
+use App\Service\Social\Share\Support\SharedLinks;
+use App\Service\Social\Share\Support\TitledShareTarget;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
+
+/**
+ * Whether an entry is a shared link or a shared picture or video, so it takes the matching card. Only a short entry
+ * shares: more of its own text than a Mastodon post holds makes it an article. The body's shape never decides media,
+ * since a news teaser looks the same; the target does.
+ */
+final readonly class EntryShareClassifier
+{
+    public const int OWN_PROSE_MAX = 500;
+
+    public function __construct(
+        private PendingEmbedInterface $pendingEmbed,
+        private EntrySanitizer $sanitizer,
+    ) {
+    }
+
+    public function classify(Entry $entry): void
+    {
+        $body = SharedLinks::of($entry->getContentHtml() ?? $entry->getSummary() ?? '');
+        $shareKind = $this->orProvisionalLink($entry, $this->shareKindOf($entry, $body));
+        $entry->setShareKind($shareKind);
+        if ($shareKind === null) {
+            return;
+        }
+
+        if ($entry->isTitleDerived() || $entry->isDiscussionThread()) {
+            $this->linkBareUrls($entry, $body);
+
+            return;
+        }
+        $this->describeTitledShare($entry, $shareKind, $body->ownProse);
+    }
+
+    private function shareKindOf(Entry $entry, SharedLinksModel $body): ?ShareKind
+    {
+        if (YouTubeUrl::isShort($entry->getUrl())) {
+            return ShareKind::Media;
+        }
+        if ($entry->isDiscussionThread()) {
+            return $this->threadShareKind($body);
+        }
+        if (mb_strlen($body->ownProse) > self::OWN_PROSE_MAX) {
+            return null;
+        }
+
+        return $entry->isTitleDerived() ? $this->postShareKind($entry, $body) : $this->titledShareKind($entry);
+    }
+
+    private function orProvisionalLink(Entry $entry, ?ShareKind $shareKind): ?ShareKind
+    {
+        return $shareKind === null && $this->pendingEmbed->awaitsEmbed($entry) ? ShareKind::Link : $shareKind;
+    }
+
+    private function postShareKind(Entry $entry, SharedLinksModel $body): ?ShareKind
+    {
+        if ($body->urls !== []) {
+            return ShareKind::Link;
+        }
+
+        return $entry->getMedia() === [] ? null : ShareKind::Media;
+    }
+
+    private function threadShareKind(SharedLinksModel $body): ?ShareKind
+    {
+        return $body->urls === [] ? null : ShareKind::Link;
+    }
+
+    private function titledShareKind(Entry $entry): ?ShareKind
+    {
+        $target = TitledShareTarget::of($entry);
+        if ($target === null) {
+            return null;
+        }
+
+        return VisualMedium::at($target) === null ? ShareKind::Link : ShareKind::Media;
+    }
+
+    private function linkBareUrls(Entry $entry, SharedLinksModel $body): void
+    {
+        $contentHtml = $entry->getContentHtml();
+        if ($contentHtml === null || $body->linkedHtml === $contentHtml || $this->pendingEmbed->awaitsEmbed($entry)) {
+            return;
+        }
+
+        $entry->setContentHtml($this->sanitizer->sanitize($body->linkedHtml));
+    }
+
+    private function describeTitledShare(Entry $entry, ShareKind $shareKind, string $ownProse): void
+    {
+        $entry->setSummary($ownProse === '' ? null : mb_substr($ownProse, 0, self::OWN_PROSE_MAX));
+        $target = $shareKind === ShareKind::Media ? TitledShareTarget::of($entry) : null;
+        $medium = $target === null ? null : VisualMedium::at($target);
+        if ($medium !== null) {
+            $entry->putMediumFirst($medium);
+        }
+    }
+}

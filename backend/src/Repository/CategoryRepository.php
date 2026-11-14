@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Category;
-use App\Service\Category\Model\NormalizedCategoryModel;
+use App\Service\Ingestion\Category\Model\NormalizedCategoryModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

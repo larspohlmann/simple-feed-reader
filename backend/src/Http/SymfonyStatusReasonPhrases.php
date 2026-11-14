@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
+use App\Service\Content\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SymfonyStatusReasonPhrases implements StatusReasonPhrasesInterface

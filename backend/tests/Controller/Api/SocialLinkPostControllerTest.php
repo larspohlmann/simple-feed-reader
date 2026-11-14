@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Dto\Social\LinkTargetQuery;
 use App\Entity\LinkCardContent;
-use App\Service\Social\PostWriter\BlueskyPostWriter;
+use App\Service\Social\Social\PostWriter\BlueskyPostWriter;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\SocialAccounts;

@@ -6,19 +6,19 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Social\Exception\BlueskyProfileHiddenException;
-use App\Service\Social\Exception\InvalidInstanceUrlException;
-use App\Service\Social\Exception\InvalidSocialImportFeedException;
-use App\Service\Social\Exception\NotAnAppPasswordException;
-use App\Service\Social\Exception\NotASearchFeedException;
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
-use App\Service\Social\Exception\SocialAccountMismatchException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialAccountNotFoundException;
-use App\Service\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\TooManySocialAccountsException;
+use App\Service\Social\Social\Exception\BlueskyProfileHiddenException;
+use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
+use App\Service\Social\Social\Exception\NotAnAppPasswordException;
+use App\Service\Social\Social\Exception\NotASearchFeedException;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Exception\SocialAccountAlreadyConnectedException;
+use App\Service\Social\Social\Exception\SocialAccountMismatchException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\TooManySocialAccountsException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SocialProblems implements ExceptionProblemsInterface

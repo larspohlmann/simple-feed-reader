@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\Ai\ModelCatalog;
+
+use App\Entity\ModelDescriptor;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+
+interface ModelCatalogInterface
+{
+    /**
+     * @return list<ModelDescriptor> sorted by id, unique ids, never empty
+     *
+     * @throws CredentialsRejectedException  the provider refused the key
+     * @throws ProviderUnreachableException  the provider did not answer usably
+     */
+    public function listModels(ProviderCredentialsModel $credentials): array;
+}

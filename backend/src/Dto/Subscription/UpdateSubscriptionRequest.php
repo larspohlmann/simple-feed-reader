@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Subscription;
 
 use App\Entity\InclusionChange;
-use App\Service\Subscription\Model\SubscriptionChangeModel;
+use App\Service\Library\Subscription\Model\SubscriptionChangeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class UpdateSubscriptionRequest

@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\Media\EmbedProvider;
+
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+
+/**
+ * The SoundCloud widget. The track id is permanent and the src is unsigned, so
+ * the player survives a cache with no TTL. Only the track is kept: rebuilding
+ * the URL from the id alone is what guarantees `auto_play=true` cannot survive.
+ */
+final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
+{
+    private const string HOST = 'w.soundcloud.com';
+    /** Some widgets store the id as a double-encoded `soundcloud%3Atracks%3A` URN, not a bare id. */
+    private const string TRACK_PATTERN = '#^https?://api\.soundcloud\.com/tracks/(?:soundcloud%3Atracks%3A)?(\d+)$#i';
+    private const string LABEL = 'Listen on SoundCloud';
+
+    public function target(string $url): ?EmbedTargetModel
+    {
+        $id = $this->trackId($url);
+        if ($id === null) {
+            return null;
+        }
+        $embedUrl = 'https://w.soundcloud.com/player/?url=' . rawurlencode('https://api.soundcloud.com/tracks/' . $id);
+
+        return new EmbedTargetModel($embedUrl, null, self::LABEL);
+    }
+
+    public function frames(): array
+    {
+        return [new EmbedFrameModel(
+            '^https://' . preg_quote(self::HOST, '#')
+                . '/player/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$',
+            EmbedKind::Audio,
+            EmbedShape::Strip,
+        )];
+    }
+
+    public function sourceHosts(): array
+    {
+        return [self::HOST];
+    }
+
+    private function trackId(string $url): ?string
+    {
+        $parts = parse_url($url);
+        if (strtolower($parts['host'] ?? '') !== self::HOST || !isset($parts['query'])) {
+            return null;
+        }
+
+        parse_str($parts['query'], $queryParameters);
+        $track = $queryParameters['url'] ?? null;
+
+        return \is_string($track) && preg_match(self::TRACK_PATTERN, $track, $matches) === 1 ? $matches[1] : null;
+    }
+}

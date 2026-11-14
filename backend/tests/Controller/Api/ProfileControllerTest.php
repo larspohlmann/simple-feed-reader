@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\ScoringProtocol;
 use App\Repository\ProfileRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use Doctrine\ORM\EntityManagerInterface;

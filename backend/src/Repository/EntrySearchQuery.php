@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 
 /**
  * The parameter object for a search read. Sits beside EntryQuery because it is

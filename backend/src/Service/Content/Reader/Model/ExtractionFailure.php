@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\Model;
+
+/** Why an extraction failed. The values are wire vocabulary the reader client switches on. */
+enum ExtractionFailure: string
+{
+    case NoUrl = 'no_url';
+    /** The page could not be retrieved: network, SSRF-blocked, oversized. */
+    case Fetch = 'fetch';
+    /** The page could not be parsed, or readability found no article in it. */
+    case Unextractable = 'unextractable';
+    /** The extraction held too little to show, before or after sanitising. */
+    case Empty = 'empty';
+    /** The extraction did not reflect the article the feed carries. */
+    case Mismatch = 'mismatch';
+    /** The page is a video or audio player; the feed body carries it. */
+    case PlayerPage = 'player_page';
+    /** The entry is a post whose feed body is the whole of it; there is no page to extract. */
+    case FeedBodyIsPost = 'feed_body_is_post';
+}

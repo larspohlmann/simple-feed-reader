@@ -1,0 +1,145 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Content\Reader\Media;
+
+use App\Service\Content\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+
+/**
+ * Runs every source over the raw page, highest priority first, and merges by URL: the first to name a URL sets the
+ * candidate, later ones fill its gaps (see mayAdd()). Raw, because FetchedPageNormalizer's document drops elements.
+ */
+final readonly class PageMediaScanner
+{
+    /** @param iterable<MediaCandidateSourceInterface> $sources */
+    public function __construct(
+        #[AutowireIterator('app.media_candidate_source')]
+        private iterable $sources,
+    ) {
+    }
+
+    public function scan(RawPageModel $page, ?FeedMediaModel $feedMedia = null): ArticleMediaModel
+    {
+        $feedMedia ??= FeedMediaModel::none();
+        $byUrl = [];
+        foreach ($this->sources as $source) {
+            $this->mergeSource($source->find($page), $byUrl);
+        }
+
+        $reconciled = $this->reconciledWithFeed(array_values($byUrl), $feedMedia);
+
+        // Every source has spoken, so a video still without a poster has none on the page: the feed-declared still
+        // rescues it, or it is dropped before it reaches the client.
+        $withPosters = $this->withResolvedPosters($reconciled, $feedMedia->posterFallback());
+
+        return new ArticleMediaModel(\array_slice($withPosters, 0, ArticleMediaModel::MAX_ITEMS))
+            ->withoutRedundantStreams();
+    }
+
+    /**
+     * A candidate whose URL the feed enumerated takes the feed-declared MIME over the extension sniff; the rest keep
+     * their guessed kind.
+     *
+     * @param list<MediaCandidateModel> $candidates
+     *
+     * @return list<MediaCandidateModel>
+     */
+    private function reconciledWithFeed(array $candidates, FeedMediaModel $feedMedia): array
+    {
+        return array_map(
+            static fn (MediaCandidateModel $candidate): MediaCandidateModel => $candidate->withMimeType(
+                $feedMedia->declaredAttachmentFor($candidate->url)?->mimeType,
+            ),
+            $candidates,
+        );
+    }
+
+    /**
+     * @param list<MediaCandidateModel> $candidates
+     *
+     * @return list<MediaCandidateModel>
+     */
+    private function withResolvedPosters(array $candidates, ?string $fallbackPoster): array
+    {
+        $resolved = [];
+        foreach ($candidates as $candidate) {
+            $rescued = $candidate->resolvePoster($fallbackPoster);
+            if ($rescued !== null) {
+                $resolved[] = $rescued;
+            }
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * @param list<MediaCandidateModel>          $candidates
+     * @param array<string, MediaCandidateModel> $byUrl
+     */
+    private function mergeSource(array $candidates, array &$byUrl): void
+    {
+        $claimedKinds = $this->kinds($byUrl);
+        $reconfirmedKinds = $this->reconfirmedKinds($candidates, $byUrl);
+        foreach ($candidates as $candidate) {
+            if (isset($byUrl[$candidate->url])) {
+                $byUrl[$candidate->url] = $byUrl[$candidate->url]->completedBy($candidate);
+                continue;
+            }
+            if ($this->mayAdd($candidate, $claimedKinds, $reconfirmedKinds)) {
+                $byUrl[$candidate->url] = $candidate;
+            }
+        }
+    }
+
+    /**
+     * A new URL joins when no earlier source claimed its kind, or this source re-confirms that kind — proof
+     * it sees this article's media, not a rendition or an unrelated file of an already-claimed kind.
+     *
+     * @param array<string, true> $claimedKinds
+     * @param array<string, true> $reconfirmedKinds
+     */
+    private function mayAdd(MediaCandidateModel $candidate, array $claimedKinds, array $reconfirmedKinds): bool
+    {
+        return !isset($claimedKinds[$candidate->kind->value])
+            || isset($reconfirmedKinds[$candidate->kind->value]);
+    }
+
+    /**
+     * @param array<string, MediaCandidateModel> $byUrl
+     *
+     * @return array<string, true> the kinds an earlier source has already set
+     */
+    private function kinds(array $byUrl): array
+    {
+        $kinds = [];
+        foreach ($byUrl as $candidate) {
+            $kinds[$candidate->kind->value] = true;
+        }
+
+        return $kinds;
+    }
+
+    /**
+     * @param list<MediaCandidateModel>          $candidates
+     * @param array<string, MediaCandidateModel> $byUrl
+     *
+     * @return array<string, true> the kinds this source re-confirms by naming an already-set URL
+     */
+    private function reconfirmedKinds(array $candidates, array $byUrl): array
+    {
+        $kinds = [];
+        foreach ($candidates as $candidate) {
+            if (isset($byUrl[$candidate->url])) {
+                $kinds[$candidate->kind->value] = true;
+            }
+        }
+
+        return $kinds;
+    }
+}

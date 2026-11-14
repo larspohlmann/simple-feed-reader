@@ -11,7 +11,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Service\Search\Model\SavedSearchEntriesResultModel;
+use App\Service\Library\Search\Model\SavedSearchEntriesResultModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;

@@ -6,17 +6,17 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialLikeResultModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostLiker\PostLikerInterface;
-use App\Service\Social\PostWriter\PostWriterInterface;
-use App\Service\Social\PostReposter\PostReposterInterface;
-use App\Service\Social\PostResolver\PostResolverInterface;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialLikeResultModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostLiker\PostLikerInterface;
+use App\Service\Social\Social\PostWriter\PostWriterInterface;
+use App\Service\Social\Social\PostReposter\PostReposterInterface;
+use App\Service\Social\Social\PostResolver\PostResolverInterface;
 
 /** A Mastodon that resolves every address to status 110, records each call and can be told to fail. */
 final class FakeMastodonNetwork implements

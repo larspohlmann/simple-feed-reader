@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\DependencyInjection;
 
 use App\Kernel;
-use App\Service\Worker\Handler\RefreshDueFeedsHandler;
+use App\Service\Operations\Worker\Handler\RefreshDueFeedsHandler;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 

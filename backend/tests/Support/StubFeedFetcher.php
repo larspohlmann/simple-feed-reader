@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
 
 final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInterface
 {

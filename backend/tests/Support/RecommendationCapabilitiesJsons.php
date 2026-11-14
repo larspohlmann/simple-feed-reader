@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Http\RecommendationCapabilitiesJson;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class RecommendationCapabilitiesJsons

@@ -20,7 +20,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Support\BackupSchema;
 
 /**
  * The backed-up fields, checked both ways from this one list: BackupSchemaCoverageTest proves the exporter writes each,

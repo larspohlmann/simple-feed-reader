@@ -1,0 +1,200 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Operations\Version\LatestReleaseReader;
+
+use App\Service\Operations\Version\LatestReleaseReader\GitHubLatestReleaseReader;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+
+final class GitHubLatestReleaseReaderTest extends TestCase
+{
+    private const string REPOSITORY = 'larspohlmann/simple-feed-reader';
+
+    private MockClock $clock;
+
+    protected function setUp(): void
+    {
+        $this->clock = new MockClock();
+    }
+
+    public function testReadsTheTagAndNotesUrlFromTheLatestRelease(): void
+    {
+        $client = new MockHttpClient(new MockResponse((string) json_encode([
+            'tag_name' => 'v1.4.2',
+            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
+        ])));
+
+        $latest = $this->reader($client)->read();
+
+        self::assertInstanceOf(LatestReleaseModel::class, $latest);
+        self::assertSame('v1.4.2', $latest->version);
+        self::assertSame(
+            'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
+            $latest->notesUrl,
+        );
+    }
+
+    public function testReturnsNullWhenNoReleaseHasBeenCut(): void
+    {
+        $client = new MockHttpClient(new MockResponse('{"message":"Not Found"}', ['http_code' => 404]));
+
+        self::assertNull($this->reader($client)->read());
+    }
+
+    public function testReturnsNullWhenTheReleaseIsMissingItsTag(): void
+    {
+        $client = new MockHttpClient(new MockResponse((string) json_encode([
+            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
+        ])));
+
+        self::assertNull($this->reader($client)->read());
+    }
+
+    public function testReturnsNullWhenTheReleaseIsMissingItsNotesUrl(): void
+    {
+        $client = new MockHttpClient(new MockResponse((string) json_encode([
+            'tag_name' => 'v1.4.2',
+        ])));
+
+        self::assertNull($this->reader($client)->read());
+    }
+
+    public function testReturnsNullWhenGitHubCannotBeReached(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            throw new TransportException('network down');
+        });
+
+        self::assertNull($this->reader($client)->read());
+    }
+
+    public function testDoesNotReachGitHubWhenNoRepositoryIsConfigured(): void
+    {
+        $client = new MockHttpClient();
+
+        $latest = $this->reader($client, gitHubRepository: '')->read();
+
+        self::assertNull($latest);
+        self::assertSame(0, $client->getRequestsCount());
+    }
+
+    public function testCachesTheResultSoASecondReadMakesNoRequest(): void
+    {
+        $client = new MockHttpClient(new MockResponse((string) json_encode([
+            'tag_name' => 'v1.4.2',
+            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
+        ])));
+        $reader = $this->reader($client);
+
+        $reader->read();
+        $second = $reader->read();
+
+        self::assertInstanceOf(LatestReleaseModel::class, $second);
+        self::assertSame('v1.4.2', $second->version);
+        self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testASuccessIsReadAgainOnlyAfterAnHour(): void
+    {
+        $client = new MockHttpClient([self::release(), self::release()]);
+        $reader = $this->reader($client);
+
+        $reader->read();
+        $this->clock->sleep(3590);
+        $reader->read();
+        self::assertSame(1, $client->getRequestsCount());
+
+        $this->clock->sleep(20);
+        $reader->read();
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    public function testAFailedReadIsRetriedOnlyAfterFiveMinutes(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('', ['error' => 'network down']),
+            self::release(),
+        ]);
+        $reader = $this->reader($client);
+
+        self::assertNull($reader->read());
+        $this->clock->sleep(290);
+        self::assertNull($reader->read());
+        self::assertSame(1, $client->getRequestsCount());
+
+        $this->clock->sleep(20);
+        self::assertInstanceOf(LatestReleaseModel::class, $reader->read());
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    public function testRefreshingReadsGitHubDespiteACachedRelease(): void
+    {
+        $client = new MockHttpClient([self::release('v1.4.2'), self::release('v1.4.3')]);
+        $reader = $this->reader($client);
+
+        $reader->read();
+        $refreshed = $reader->refresh();
+
+        self::assertSame('v1.4.3', $refreshed?->version);
+        self::assertSame('v1.4.3', $reader->read()?->version);
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    public function testAFailedRefreshKeepsTheCachedRelease(): void
+    {
+        $client = new MockHttpClient([self::release('v1.4.2'), new MockResponse('', ['error' => 'network down'])]);
+        $reader = $this->reader($client);
+
+        $reader->read();
+
+        self::assertSame('v1.4.2', $reader->refresh()?->version);
+        self::assertSame('v1.4.2', $reader->read()?->version);
+    }
+
+    public function testAFailedRefreshWithNothingCachedIsRetriedOnlyAfterFiveMinutes(): void
+    {
+        $client = new MockHttpClient([new MockResponse('', ['error' => 'network down']), self::release('v1.4.2')]);
+        $reader = $this->reader($client);
+
+        self::assertNull($reader->refresh());
+        self::assertNull($reader->read());
+        self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testRefreshingDoesNotReachGitHubWhenNoRepositoryIsConfigured(): void
+    {
+        $client = new MockHttpClient();
+
+        self::assertNull($this->reader($client, gitHubRepository: '')->refresh());
+        self::assertSame(0, $client->getRequestsCount());
+    }
+
+    private static function release(string $tag = 'v1.4.2'): MockResponse
+    {
+        return new MockResponse((string) json_encode([
+            'tag_name' => $tag,
+            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/' . $tag,
+        ]));
+    }
+
+    private function reader(
+        MockHttpClient $client,
+        string $gitHubRepository = self::REPOSITORY,
+    ): GitHubLatestReleaseReader {
+        return new GitHubLatestReleaseReader(
+            $client,
+            new ArrayAdapter(clock: $this->clock),
+            new NullLogger(),
+            $gitHubRepository,
+            'SimpleFeedReader/1.0',
+        );
+    }
+}

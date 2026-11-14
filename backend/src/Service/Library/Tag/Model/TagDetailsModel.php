@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Library\Tag\Model;
+
+final readonly class TagDetailsModel
+{
+    public function __construct(
+        public string $name,
+        public ?string $color = null,
+        public ?string $icon = null,
+        public ?int $parentId = null,
+    ) {
+    }
+}

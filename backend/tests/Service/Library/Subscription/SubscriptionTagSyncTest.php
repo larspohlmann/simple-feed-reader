@@ -1,0 +1,177 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Library\Subscription;
+
+use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\Tag;
+use App\Entity\User;
+use App\Service\Library\Subscription\SubscriptionTagSync;
+use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\TagJoins;
+
+final class SubscriptionTagSyncTest extends DbTestCase
+{
+    use SeedsUsers;
+
+    public function testKeepsAKeptTagAtItsPositionAndAppendsANewTag(): void
+    {
+        $user = $this->user('keeper@example.com');
+        $news = $this->tag($user, 'News');
+        $tech = $this->tag($user, 'Tech');
+
+        // Two feeds already sit under News: the one under test at 0, another at
+        // 1, so News' next append position is 2. A clear-and-re-add would move
+        // the kept feed to 2; a diff must leave it at 0.
+        $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
+        $this->taggedSubscription($user, 'https://b.example.com/rss', [[$news, 1]]);
+
+        $this->sync()->sync($feed, [$news->requireId(), $tech->requireId()], $user->requireId());
+        $this->entityManager->flush();
+
+        self::assertSame(0, TagJoins::positionOf($feed, $news));
+        self::assertSame(0, TagJoins::positionOf($feed, $tech));
+    }
+
+    public function testRemovesATagNoLongerRequested(): void
+    {
+        $user = $this->user('remover@example.com');
+        $news = $this->tag($user, 'News');
+        $tech = $this->tag($user, 'Tech');
+        $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0], [$tech, 0]]);
+
+        $this->sync()->sync($feed, [$news->requireId()], $user->requireId());
+        $this->entityManager->flush();
+
+        $tagNames = array_map(static fn (Tag $tag): string => $tag->getName(), $feed->getTags()->toArray());
+        self::assertSame(['News'], $tagNames);
+    }
+
+    public function testAppendsToTheFeedsListWhenTheFeedLosesItsLastTag(): void
+    {
+        $user = $this->user('lastclearer@example.com');
+        $news = $this->tag($user, 'News');
+        $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
+        $feed->setPosition(0); // stale untagged position
+        // An untagged sibling at 3 makes the user's next feeds-list slot 4.
+        $sibling = new Subscription($user, $this->feed('https://sibling.example.com/rss'), $this->now());
+        $sibling->setPosition(3);
+        $this->entityManager->persist($sibling);
+        $this->entityManager->flush();
+
+        $this->sync()->sync($feed, [], $user->requireId());
+        $this->entityManager->flush();
+
+        self::assertTrue($feed->getTags()->isEmpty());
+        self::assertSame(4, $feed->getPosition());
+    }
+
+    public function testLeavesTheFeedsListPositionAloneWhenTheFeedWasAlreadyUntagged(): void
+    {
+        $user = $this->user('stayput@example.com');
+        $feed = new Subscription($user, $this->feed('https://a.example.com/rss'), $this->now());
+        $feed->setPosition(0);
+        $this->entityManager->persist($feed);
+        // A sibling at 7 would push a wrongful append to 8.
+        $sibling = new Subscription($user, $this->feed('https://sibling.example.com/rss'), $this->now());
+        $sibling->setPosition(7);
+        $this->entityManager->persist($sibling);
+        $this->entityManager->flush();
+
+        $this->sync()->sync($feed, [], $user->requireId());
+        $this->entityManager->flush();
+
+        self::assertSame(0, $feed->getPosition());
+    }
+
+    /**
+     * An already-attached tag must skip nextForTag() too, since addTag() is
+     * idempotent and would absorb a wrong re-add silently. That skip is only
+     * observable via the shared counter, so this syncs a second feed after.
+     */
+    public function testResyncingAnAlreadyTaggedFeedNeverConsumesTheTagsPositionCounter(): void
+    {
+        $user = $this->user('no-spurious-position@example.com');
+        $news = $this->tag($user, 'News');
+        $alreadyTagged = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
+
+        $this->sync()->sync($alreadyTagged, [$news->requireId()], $user->requireId());
+        $this->entityManager->flush();
+
+        $freshlyTagged = new Subscription($user, $this->feed('https://b.example.com/rss'), $this->now());
+        $this->entityManager->persist($freshlyTagged);
+        $this->entityManager->flush();
+
+        $this->sync()->sync($freshlyTagged, [$news->requireId()], $user->requireId());
+        $this->entityManager->flush();
+
+        self::assertSame(
+            1,
+            TagJoins::positionOf($freshlyTagged, $news),
+            'the no-op resync above must not have advanced the shared News position counter.',
+        );
+    }
+
+    public function testIgnoresTagIdsOwnedByAnotherUser(): void
+    {
+        $user = $this->user('owner@example.com');
+        $stranger = $this->user('stranger@example.com');
+        $strangerTag = $this->tag($stranger, 'Theirs');
+        $feed = new Subscription($user, $this->feed('https://a.example.com/rss'), $this->now());
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+
+        $this->sync()->sync($feed, [$strangerTag->requireId()], $user->requireId());
+        $this->entityManager->flush();
+
+        self::assertTrue($feed->getTags()->isEmpty());
+    }
+
+    private function sync(): SubscriptionTagSync
+    {
+        $sync = self::getContainer()->get(SubscriptionTagSync::class);
+        self::assertInstanceOf(SubscriptionTagSync::class, $sync);
+
+        return $sync;
+    }
+
+    private function tag(User $user, string $name): Tag
+    {
+        $tag = new Tag($user, $name);
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
+
+        return $tag;
+    }
+
+    private function feed(string $url): Feed
+    {
+        $feed = new Feed($url);
+        $this->entityManager->persist($feed);
+
+        return $feed;
+    }
+
+    /**
+     * @param list<array{0: Tag, 1: int}> $tagPositions Tag with its join position
+     */
+    private function taggedSubscription(User $user, string $url, array $tagPositions): Subscription
+    {
+        $subscription = new Subscription($user, $this->feed($url), $this->now());
+        $this->entityManager->persist($subscription);
+        foreach ($tagPositions as [$tag, $position]) {
+            $subscription->addTag($tag, $position);
+        }
+        $this->entityManager->flush();
+
+        return $subscription;
+    }
+
+    private function now(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('2026-01-01T00:00:00Z');
+    }
+}

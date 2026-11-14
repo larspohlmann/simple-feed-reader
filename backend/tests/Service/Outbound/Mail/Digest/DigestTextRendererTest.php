@@ -1,0 +1,110 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Outbound\Mail\Digest;
+
+use App\Service\Outbound\Mail\Digest\DigestTextRenderer;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Translation\Loader\YamlFileLoader;
+use Symfony\Component\Translation\Translator;
+
+/**
+ * Runs against the shipped `emails` translation files, not a stub translator, so a missing or misspelled catalog key
+ * fails instead of echoing the key.
+ */
+final class DigestTextRendererTest extends TestCase
+{
+    private DigestTextRenderer $renderer;
+
+    protected function setUp(): void
+    {
+        $translator = new Translator('en');
+        $translator->addLoader('yaml', new YamlFileLoader());
+        $translationsDirectory = \dirname(__DIR__, 5) . '/translations';
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.en.yaml", 'en', 'emails');
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.de.yaml", 'de', 'emails');
+
+        $this->renderer = new DigestTextRenderer($translator);
+    }
+
+    public function testTwoGroupModelRendersSubjectAndBodyInEnglish(): void
+    {
+        $model = $this->twoGroupModel();
+
+        $rendered = $this->renderer->render($model, 'en');
+
+        self::assertStringContainsString('7', $rendered->subject);
+
+        self::assertStringStartsWith('These are new entries matching your saved searches', $rendered->body);
+
+        self::assertStringContainsString('rust (5)', $rendered->body);
+        self::assertStringContainsString('golang (2)', $rendered->body);
+
+        self::assertStringContainsString(
+            "Rust 1.80 released — Rust Blog\n  A short summary.\n  https://example.com/1",
+            $rendered->body,
+        );
+        self::assertStringContainsString("Second post — Rust Blog\n  https://example.com/2", $rendered->body);
+
+        self::assertStringContainsString('+ more', $rendered->body);
+        self::assertStringContainsString('https://reader.example/digest?q=rust', $rendered->body);
+
+        self::assertStringContainsString('Settings', $rendered->body);
+    }
+
+    public function testGermanLocaleTranslatesFixedStrings(): void
+    {
+        $model = $this->twoGroupModel();
+
+        $rendered = $this->renderer->render($model, 'de');
+
+        self::assertStringStartsWith('Das sind neue Einträge', $rendered->body);
+        self::assertStringContainsString('Einstellungen', $rendered->body);
+    }
+
+    public function testBodyContainsNoLiteralBackslashN(): void
+    {
+        $rendered = $this->renderer->render($this->twoGroupModel(), 'en');
+
+        self::assertStringNotContainsString('\\n', $rendered->body);
+    }
+
+    public function testUntitledEntryIsListedByItsFeedName(): void
+    {
+        $entry = new DigestEntryModel('', 'Rust Blog', '', 'https://example.com/1', null, null, null);
+        $group = new DigestGroupModel('rust', 1, [$entry], false, '');
+
+        $rendered = $this->renderer->render(new DigestModel([$group], 1), 'en');
+
+        self::assertStringContainsString("• Rust Blog\n", $rendered->body);
+        self::assertStringNotContainsString('—', $rendered->body);
+    }
+
+    private function twoGroupModel(): DigestModel
+    {
+        $rustEntries = [
+            new DigestEntryModel(
+                'Rust 1.80 released',
+                'Rust Blog',
+                'A short summary.',
+                'https://example.com/1',
+                null,
+                null,
+                null,
+            ),
+            new DigestEntryModel('Second post', 'Rust Blog', '', 'https://example.com/2', null, null, null),
+        ];
+        $rust = new DigestGroupModel('rust', 5, $rustEntries, true, 'https://reader.example/digest?q=rust');
+
+        $golangEntries = [
+            new DigestEntryModel('Golang release', 'Go Blog', '', 'https://example.com/3', null, null, null),
+        ];
+        $golang = new DigestGroupModel('golang', 2, $golangEntries, false, '');
+
+        return new DigestModel([$rust, $golang], 7);
+    }
+}

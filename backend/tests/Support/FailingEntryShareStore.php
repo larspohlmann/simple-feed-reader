@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Reading\EntryShareStore\EntryShareStoreInterface;
+use App\Service\Library\Reading\EntryShareStore\EntryShareStoreInterface;
 
 /** A share store whose every write fails the way a lost database connection or a duplicate key does. */
 final class FailingEntryShareStore implements EntryShareStoreInterface

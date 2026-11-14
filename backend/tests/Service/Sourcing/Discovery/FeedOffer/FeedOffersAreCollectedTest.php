@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Sourcing\Discovery\FeedOffer;
+
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery;
+use App\Service\Sourcing\Discovery\FeedOffer\FeedOfferInterface;
+use App\Service\Sourcing\Discovery\FeedOffer\MixcloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\SoundCloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Sourcing\Discovery\FeedOffer\YouTubeVideoChannelFeed;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+
+/** An untagged interface leaves #[AutowireIterator] empty without an error; this reads what discovery really got. */
+final class FeedOffersAreCollectedTest extends KernelTestCase
+{
+    public function testTheContainerHandsDiscoveryEveryFeedOffer(): void
+    {
+        $discovery = self::getContainer()->get(FeedDiscovery::class);
+        self::assertInstanceOf(FeedDiscovery::class, $discovery);
+
+        $offers = (new \ReflectionProperty($discovery, 'offers'))->getValue($discovery);
+        self::assertIsIterable($offers);
+
+        $classes = [];
+        foreach ($offers as $offer) {
+            self::assertInstanceOf(FeedOfferInterface::class, $offer);
+            $classes[] = $offer::class;
+        }
+
+        self::assertContains(WordPressRestProbe::class, $classes);
+        self::assertContains(SoundCloudProfileFeed::class, $classes);
+        self::assertContains(YouTubeVideoChannelFeed::class, $classes);
+        self::assertContains(MixcloudProfileFeed::class, $classes);
+    }
+}

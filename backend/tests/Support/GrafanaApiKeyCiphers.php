@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Operations\Grafana\Crypto\GrafanaApiKeyCipher;
 
 final class GrafanaApiKeyCiphers
 {

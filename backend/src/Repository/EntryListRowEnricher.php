@@ -9,11 +9,11 @@ use App\Entity\SocialAccount;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Comments\Support\SubstackPostAddress;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Support\OwnInstancePostUrl;
-use App\Service\Social\Support\PostAuthor;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Content\Comments\Support\SubstackPostAddress;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\Support\OwnInstancePostUrl;
+use App\Service\Social\Social\Support\PostAuthor;
+use App\Service\Social\Social\Support\SocialPostAddress;
 
 /**
  * Gives a page of rows their categories, saved searches, link cards, thread posts, pending flag, social state,

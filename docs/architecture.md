@@ -56,7 +56,7 @@ These are **load-bearing invariants: do not regress them.**
 | Access token is returned in the **JSON body** and read back from the **`Authorization: Bearer`** header — never an httpOnly auth cookie | `json_login` in `config/packages/security.yaml` uses Lexik's default success handler; no `set_cookies` / `token_extractors` override in `config/packages/lexik_jwt_authentication.yaml` | A native app posts credentials and attaches the bearer header. This is *the* decision that would otherwise close the door. |
 | Firewalls are **`stateless: true`**; `framework.session` is enabled but nothing reads or writes it, so no `SESSION` cookie is issued in practice | `security.yaml` firewalls; `OAuthStateStore` stores flow state in a filesystem cache pool, not the session | No hidden server-side session state a client must carry. |
 | **No CSRF token** is required on the JSON API | `framework.csrf_protection` is not set; `json_login` leaves `enable_csrf` off | Nothing expects a browser-supplied CSRF token. |
-| **ALTCHA is algorithmic** sha256 proof-of-work over JSON — no browser widget is required server-side | `App\Service\Auth\AltchaService`; required only on `POST /api/auth/register` and `POST /api/auth/password-reset-request` | A native client computes the proof with CryptoKit; the widget is a web convenience, not a protocol requirement. |
+| **ALTCHA is algorithmic** sha256 proof-of-work over JSON — no browser widget is required server-side | `App\Service\Identity\Auth\AltchaService`; required only on `POST /api/auth/register` and `POST /api/auth/password-reset-request` | A native client computes the proof with CryptoKit; the widget is a web convenience, not a protocol requirement. |
 | Errors are **`application/problem+json` regardless of `Accept`**; no `text/html` fallback | `App\Http\Problem\ProblemCatalog` (one mapping for every error path), used by `App\EventListener\ApiExceptionListener`, `JwtFailureResponseListener` and `App\Security\LoginFailureHandler` | A native client parses one content type for every outcome. |
 | **No `Origin` / `Referer` / `Sec-Fetch-*` gating** on the API | none present: `App\EventListener\CorsListener` reads `Origin` only to choose the CORS response headers, and rejects no request | Requests are not rejected for lacking browser-set headers. |
 | Request bodies write `/` as **`\/`** — standard JSON escaping, which the backend's `json_decode` reads unchanged | `escapeJsonSlashesInterceptor` in `frontend/src/app/core/http/` | The production host's content filter drops any body holding a raw `https://bsky.app/…`-style URL and misses the escaped form (#1638). Swift's `JSONEncoder` escapes slashes by default — a native client must not opt into `.withoutEscapingSlashes`. |
@@ -74,7 +74,7 @@ these is on the critical path for a first native release.
 
 ### 4.1 The OAuth handoff is browser/SPA-only
 
-The Google/Apple flow (custom OIDC in `src/Service/OAuth/`, see
+The Google/Apple flow (custom OIDC in `src/Service/Identity/OAuth/`, see
 [oauth-sign-in.md](oauth-sign-in.md)) is bound to a browser in three ways:
 
 - a **fixed web `redirect_uri`** built from `APP_BACKEND_URL`, one per provider;
@@ -96,8 +96,8 @@ additive.
 
 Verify-email, password-reset, and approval links are all web URLs on the public
 base URL — the admin's setting, else `APP_FRONTEND_URL`
-(`App\Service\Mail\AccountMailer\AccountMailer`, through
-`App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface`). The **tokens themselves
+(`App\Service\Outbound\Mail\AccountMailer\AccountMailer`, through
+`App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface`). The **tokens themselves
 are generic**; only the URL base is web. Native reuse means universal links /
 associated domains, or a configurable deep-link base — again additive, and it does
 not change how the tokens are minted or verified.
@@ -222,7 +222,7 @@ and ORM extensions — never imports a service. Decided in #1182.
   `MagazineStyle`, `MailKind`, `RecommendationBatchSize`…). It does not fold into `App\Entity`: several of its enums
   never touch an entity: it also holds the value sets a stored column is limited to when no entity type names them
   (`SupportedLocale`, the locales `User::$locale` may hold, which the request DTO, `translation.yaml` and the signup
-  factory all read; `SourceFormat`). Module enums, including ones several `Service/*` modules share, stay in the
+  factory all read; `SourceFormat`). Module enums, including ones several `Service/*/*` modules share, stay in the
   module that owns their meaning (`ScrapeFallback`, `SocksReplyCode`, `CatalogImportMode`, `CommentsStatus`,
   `TickDriver`, `RecommendationDriverKind`, `ScrapeFailureReason`, `VisualMediaKind`): `ServiceModuleCycleRule`
   guarantees sharing one closes no cycle, and an enum that returns a Service value (`TickDriver::retryPlan()`)
@@ -242,22 +242,45 @@ Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` o
 
 ## 9. Service modules form no cycle
 
-A `Service/*` module is the first directory under `backend/src/Service`: `Reader` with all its feature folders
-(`ArticleExtractor/`, `Paywall/`, `Media/`, …) is one module. Every service belongs to a module, and the modules depend
-on each other without a cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+A `Service/*/*` module is the second directory under `backend/src/Service`, below its group: `Content/Reader` with all
+its feature folders (`ArticleExtractor/`, `Paywall/`, `Media/`, …) is one module. Every service belongs to a module, and
+the modules depend on each other without a cycle, so each one can be read, tested and moved without the others.
+Decided in #1161.
+
+The ten **groups** are for navigation only (#2219). A group is a folder and a namespace segment and carries no rule:
+the module stays the unit of every rule below and of §10, no rule orders the groups, and a dependency between two groups
+may run either way (`Ingest → Reader` and `LinkCard → Ingest` both cross `Ingestion`/`Content`).
+
+| Group | Modules |
+|---|---|
+| `Foundation` | Clock, Crypto, Html, Text, Url, Sanitize, Ordering, RateLimit, Process |
+| `Outbound` | Fetch, Proxy, Image, Mail |
+| `Sourcing` (finding feeds) | Discovery, Preview, Catalog, FeedDirectory |
+| `Ingestion` (feed to entries) | Feed, Parser, Category, Scraper, Ingest, Refresh, Retention |
+| `Content` (what an entry shows) | Reader, ReaderAudit, LinkCard, Comments, Transcript, Chapter |
+| `Library` (the user's own state) | Subscription, SubscriptionHistory, Tag, Reading, SavedPosts, Search, Opml |
+| `Social` | Social, Bluesky, Completion, Share |
+| `Curation` | Recommendation, Ai, Trending |
+| `Identity` | Account, Auth, OAuth, Passkey |
+| `Operations` | Admin, Backup, Maintenance, SelfUpdate, Version, Grafana, Logging, ClientError, Settings, Worker, Queue |
+
+A new module goes into the group whose concern it serves. A class loose in a group folder or in the `Service` root, or
+below a group not listed in `serviceGroups` (`backend/phpstan.dist.neon`), is rejected (`ServiceRoleRule`'s
+`moduleHome`).
 
 A directory below a module can be declared a **sub-module** by adding it, relative to `Service/`, to
-`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Recommendation\Llm` and `Recommendation\Scoring`). A
+`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Curation\Recommendation\Llm` and
+`Curation\Recommendation\Scoring`). A
 sub-module is a module of its own wherever a rule asks for one: it is its own node in the cycle graph, and a class in
 it implementing its parent's interface is another module's implementation (§10). It may depend on its parent; the
 reverse closes a cycle, and when a cycle runs through a parent's import of its own sub-module, that import is the one
 reported; a cycle between peers is reported where it closes. Each hop of the reported cycle names its first site. The
 longest declared directory wins, so a sub-module may declare one of its own. The boundaries below are prefixes, so
 they cover a module's sub-modules too.
-So `Service/Recommendation/Llm` holds the LLM engine, which depends on `Recommendation` and `Ai`, while
+So `Service/Curation/Recommendation/Llm` holds the LLM engine, which depends on `Recommendation` and `Ai`, while
 `Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai`.
-`Service/Recommendation/Scoring` holds the scoring engine the same way (`Recommendation\Scoring → Recommendation → Ai`);
-the two sub-modules never name each other.
+`Service/Curation/Recommendation/Scoring` holds the scoring engine the same way
+(`Recommendation\Scoring → Recommendation → Ai`); the two sub-modules never name each other.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
@@ -267,12 +290,11 @@ the two sub-modules never name each other.
   implemented by `Recommendation\Llm`'s `LlmProfileRunDistiller`, the only way a profile run reaches the LLM).
 - **Kept out on purpose.** `Reader → Search`, `Recommendation → Reader` and `Reading → Recommendation` close no
   cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
-  it needs and mark-read live in `Service/Reading`, and the viewer time zone lives in `Service/Clock`.
+  it needs and mark-read live in `Service/Library/Reading`, and the viewer time zone lives in `Service/Foundation/Clock`.
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
 strings, not comments), and the cycle rule fails while any cycle is left, naming the path of each one it reports.
-A class loose in the `Service` root counts as a module of its own.
 
 ## 10. Class roles
 
@@ -282,7 +304,7 @@ Decided in #1202.
 
 | Folder, inside a module or area | Holds | Contract |
 |---|---|---|
-| the area root (`Service/Refresh/`) | services | `final readonly`; the constructor takes only collaborators (services, interfaces, `#[Autowire]` configuration); no mutable property |
+| the area root (`Service/Ingestion/Refresh/`) | services | `final readonly`; the constructor takes only collaborators (services, interfaces, `#[Autowire]` configuration); no mutable property |
 | `Model/` | domain data (class names end in `Model`) and the module's enums (plain names) | `final readonly` or an enum; takes no service; imports no `Dto/`; never injected |
 | `Dto/` | transfer shapes whose form something outside the module dictates (the backup file's lines) | `final readonly`, data only, no domain rule, never named `…Model`; mapped to and from models at the boundary |
 | `Factory/` | factories (class names end in `Factory`) | stateless services that build and return an object and never persist it |

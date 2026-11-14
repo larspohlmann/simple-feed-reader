@@ -1,0 +1,92 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Ingestion\Ingest;
+
+use App\Entity\Feed;
+use App\Entity\Headline;
+use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Tests\DbTestCase;
+use App\Tests\Support\EntryIngestors;
+use Symfony\Component\Clock\MockClock;
+
+final class EntryIngestorCategoriesTest extends DbTestCase
+{
+    private EntryIngestor $ingestor;
+    private Feed $feed;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->ingestor = EntryIngestors::build($this->entityManager, new MockClock('2026-09-21 12:00:00'));
+
+        $this->feed = new Feed('https://example.com/feed');
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->flush();
+    }
+
+    public function testIngestWritesCategoriesForNewEntriesAndDoesNotChurnOnReingest(): void
+    {
+        $parsed = $this->parsedFeedWithEntry('guid-1', [
+            new ParsedCategoryModel('Politics'),
+            new ParsedCategoryModel('World'),
+        ]);
+
+        $this->ingestor->ingest($this->feed, $parsed, $this->context());
+        $this->entityManager->flush();
+
+        self::assertSame(2, $this->categoryCount());
+        self::assertSame(2, $this->entryCategoryCount());
+
+        $this->ingestor->ingest($this->feed, $parsed, $this->context());
+        $this->entityManager->flush();
+
+        self::assertSame(2, $this->categoryCount());
+        self::assertSame(2, $this->entryCategoryCount());
+    }
+
+    /**
+     * @param list<ParsedCategoryModel> $categories
+     */
+    private function parsedFeedWithEntry(string $guid, array $categories): ParsedFeedModel
+    {
+        return new ParsedFeedModel(null, null, null, null, [
+            new ParsedEntryModel(
+                guid: $guid,
+                url: 'https://example.com/' . $guid,
+                headline: Headline::fromFeed('Title'),
+                author: null,
+                summary: null,
+                contentHtml: '<p>body</p>',
+                publishedAt: null,
+                categories: $categories,
+            ),
+        ]);
+    }
+
+    private function context(): FeedIngestContext
+    {
+        return new FeedIngestContext(new \DateTimeImmutable('2026-07-21T12:00:00Z'), null);
+    }
+
+    private function categoryCount(): int
+    {
+        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM category');
+        self::assertIsNumeric($count);
+
+        return (int) $count;
+    }
+
+    private function entryCategoryCount(): int
+    {
+        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM entry_category');
+        self::assertIsNumeric($count);
+
+        return (int) $count;
+    }
+}

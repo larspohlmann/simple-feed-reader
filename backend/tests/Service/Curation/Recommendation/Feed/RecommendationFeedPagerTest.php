@@ -1,0 +1,72 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Curation\Recommendation\Feed;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\RecommendationItem;
+use App\Entity\RecommendationRun;
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
+use App\Repository\ForYouFeedQuery;
+use App\Repository\RecommendationItemRepository;
+use App\Service\Curation\Recommendation\Feed\RecommendationFeedPager;
+use App\Tests\DbTestCase;
+
+final class RecommendationFeedPagerTest extends DbTestCase
+{
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = new User('pager@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($this->user);
+
+        $feed = new Feed('https://example.com/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $this->entityManager->persist($run);
+
+        foreach (['a', 'b'] as $position => $guid) {
+            $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+            $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $createdAt, $createdAt);
+            $this->entityManager->persist($entry);
+            $this->entityManager->persist(new RecommendationItem($run, $entry, $position + 1, 'reason ' . $guid));
+        }
+        $this->entityManager->flush();
+    }
+
+    public function testAMalformedCursorYieldsTheFirstPageInsteadOfAnError(): void
+    {
+        $page = $this->pager()->page(new ForYouFeedQuery($this->user, 'not-a-cursor', 50));
+
+        self::assertCount(2, $page->rows);
+        self::assertSame('a', $page->rows[0]->row->entry->getGuid());
+    }
+
+    public function testTheLimitIsClampedToAtLeastOne(): void
+    {
+        $page = $this->pager()->page(new ForYouFeedQuery($this->user, null, 0));
+
+        self::assertCount(1, $page->rows);
+    }
+
+    private function pager(): RecommendationFeedPager
+    {
+        $repository = $this->entityManager->getRepository(RecommendationItem::class);
+        self::assertInstanceOf(RecommendationItemRepository::class, $repository);
+
+        return new RecommendationFeedPager($repository);
+    }
+}

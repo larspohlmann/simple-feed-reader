@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Repository\CatalogCategoryRepository;
-use App\Service\Catalog\BundledCatalog;
-use App\Service\Catalog\CatalogDocument;
-use App\Service\Catalog\CatalogImporter;
-use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
-use App\Service\Catalog\Model\CatalogImportMode;
-use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Sourcing\Catalog\BundledCatalog;
+use App\Service\Sourcing\Catalog\CatalogDocument;
+use App\Service\Sourcing\Catalog\CatalogImporter;
+use App\Service\Sourcing\Catalog\Exception\InvalidCatalogDocumentException;
+use App\Service\Sourcing\Catalog\Model\CatalogImportMode;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Http\Admin\QueueDepthsJson;
-use App\Service\Queue\QueueDepths;
+use App\Service\Operations\Queue\QueueDepths;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 

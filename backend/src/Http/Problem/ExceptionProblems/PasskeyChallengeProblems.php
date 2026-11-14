@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Passkey\Exception\UnknownChallengeException;
+use App\Service\Identity\Passkey\Exception\UnknownChallengeException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class PasskeyChallengeProblems implements ExceptionProblemsInterface

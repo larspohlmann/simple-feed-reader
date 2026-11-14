@@ -1,0 +1,258 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Content\Reader\Media\MediaCandidateSource;
+
+use App\Service\Content\Reader\Media\AudioClipFacts;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaCandidateSource\AttributeMediaSource;
+use App\Service\Content\Reader\Media\MediaRelevance;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\NarrationSignals;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Media\PlayerPoster;
+use App\Tests\Support\ProseParagraphs;
+use PHPUnit\Framework\TestCase;
+
+final class AttributeMediaSourceTest extends TestCase
+{
+    use FindsMediaInRawPage;
+
+    private function source(): AttributeMediaSource
+    {
+        $providers = new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]);
+
+        return new AttributeMediaSource(
+            new MediaUrlKind(new DurableMediaUrl(), $providers),
+            new MediaRelevance(),
+            new PageFurniture(),
+            new NarrationSignals(),
+            new PlayerPoster(),
+            new AudioClipFacts(),
+        );
+    }
+
+    /** A data-audio-src attribute, found without naming its publisher. */
+    public function testFindsAMediaUrlInAnyAttribute(): void
+    {
+        $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Audio, $found[0]->kind);
+    }
+
+    /** The narration mp3 hides in data-src on an audio inside a tts wrapper. */
+    public function testFlagsNarrationFromTheFileHostOrTheHoldingElement(): void
+    {
+        $html = '<body><div data-audio-type="tts">'
+            . '<audio data-src="https://zon-speechbert-production.test/a/full.mp3"></audio></div></body>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertTrue($found[0]->narrated);
+    }
+
+    public function testDoesNotFlagAnOrdinaryPodcastFile(): void
+    {
+        $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertFalse($found[0]->narrated);
+    }
+
+    /** Renditions in a data-v attribute, with the poster in og:image. */
+    public function testFindsAVideoInAnAttributeAndTakesTheOgImagePoster(): void
+    {
+        $html = '<html><head><meta property="og:image" content="https://x.test/p.jpg"></head>'
+            . '<body><div data-v="https://x.test/webxxl.mp4"></div></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
+    }
+
+    public function testEmitsAVideoWithNoPosterForTheScannerToResolve(): void
+    {
+        $html = '<body><div data-v="https://x.test/clip.mp4"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertNull($found[0]->posterUrl);
+    }
+
+    /** No og:image: the still sits in the player wrapper beside the URL holder. */
+    public function testTakesTheStillBesideThePlayerWhenThePageHasNoOgImage(): void
+    {
+        $html = '<body><div class="wrapper"><picture><img src="https://x.test/sendungsbild.jpg"></picture>'
+            . '<div data-v="https://x.test/clip.mp4"></div></div></body>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertSame('https://x.test/sendungsbild.jpg', $found[0]->posterUrl);
+    }
+
+    public function testPrefersTheOgImageOverTheStillBesideThePlayer(): void
+    {
+        $html = '<html><head><meta property="og:image" content="https://x.test/share.jpg"></head>'
+            . '<body><div><img src="https://x.test/still.jpg"><div data-v="https://x.test/clip.mp4"></div></div>'
+            . '</body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertSame('https://x.test/share.jpg', $found[0]->posterUrl);
+    }
+
+    /** The live stream sits beside the episode on the same page; it must lose. */
+    public function testExcludesALiveStreamBesideAnEpisode(): void
+    {
+        $html = '<body><div data-x="https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3"></div>'
+            . '<div data-y="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertStringContainsString('bildung-episode', $found[0]->url);
+    }
+
+    /** Ranked, not first-come: the teaser appears first in source order and loses. */
+    public function testPrefersTheFileWhoseNameEchoesTheSlug(): void
+    {
+        $html = '<body><div data-a="https://x.test/teaser-other.mp3"></div>'
+            . '<div data-b="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertStringContainsString('bildung-episode', $found[0]->url);
+    }
+
+    /** The durable url has one home: a query-bearing attribute url is stripped before it is cached. */
+    public function testStripsAQueryFromTheAttributeUrlBeforeEmitting(): void
+    {
+        $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3?utm=x"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertStringNotContainsString('?', $found[0]->url);
+        self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
+    }
+
+    public function testFindsTheEpisodeInTheCapturedDeutschlandradioPage(): void
+    {
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/deutschlandradio-audio.html');
+        self::assertIsString($html);
+
+        $found = $this->find($html, 'https://www.deutschlandfunkkultur.de/bildung-100.html');
+
+        self::assertNotSame([], $found);
+        self::assertStringContainsString('.mp3', $found[0]->url);
+        self::assertStringNotContainsString('sslstream', $found[0]->url);
+        self::assertStringContainsString('bildung', $found[0]->url);
+    }
+
+    public function testFindsTheVideoInTheCapturedArdPage(): void
+    {
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/ard-video.html');
+        self::assertIsString($html);
+
+        $found = $this->find($html, 'https://www.tagesschau.de/ausland/beispiel-100.html');
+
+        self::assertNotSame([], $found);
+        self::assertStringContainsString('.mp4', $found[0]->url);
+        self::assertNotNull($found[0]->posterUrl);
+    }
+
+    public function testNamesTheProseBlockTheChosenPlayerFollows(): void
+    {
+        // The first (teaser) player sits earlier; the anchor belongs to the winner.
+        $html = '<body><p>Teaser line, long enough to be a prose block on its own terms.</p>'
+            . '<div data-audio-src="https://x.test/teaser-episode.mp3"></div>'
+            . '<p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
+            . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
+    }
+
+    public function testAnchorsARepeatedUrlWhereItFirstAppears(): void
+    {
+        // The same rendition sits in the player and again in a download menu.
+        $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
+            . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div>'
+            . '<p>A download menu paragraph, long enough to be a prose block of its own.</p>'
+            . '<a data-download="https://x.test/bildung-episode.mp3">Download</a></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
+    }
+
+    public function testYieldsAudioAndVideoFromTheSamePage(): void
+    {
+        $html = '<html lang="de"><head><meta property="og:image" content="https://x.test/p.jpg"></head>'
+            . '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div>'
+            . '<div data-v="https://x.test/bildung-episode.mp4"></div></body></html>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(2, $found);
+    }
+
+    public function testSkipsAPlayerInsideAnAside(): void
+    {
+        $html = '<body><aside><div data-audio-src="https://x.test/teaser-episode.mp3"></div></aside>'
+            . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
+    }
+
+    /** A related-content teaser hides its clip in a config blob; it is not the article's media. */
+    public function testSkipsAClipInsideARelatedContentTeaser(): void
+    {
+        $html = '<body><article>'
+            . '<div class="teaser" data-config=\'{"url":"https://x.test/related-clip.mp4"}\'></div>'
+            . '<video src="https://x.test/the-article-clip.mp4"></video></article></body>';
+
+        $found = $this->find($html, 'https://x.test/story-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/the-article-clip.mp4', $found[0]->url);
+    }
+
+    /** Deutschlandfunk's shape: the episode beside a live stream, named and timed on its play button. */
+    public function testAnAudioCandidateCarriesTheClipsTitleAndDurationAndNeverTheLiveStream(): void
+    {
+        $html = '<body><button data-audio-src="https://ondemand-mp3.test/file/2026/11/07/lobby_dlf.mp3"'
+            . ' data-audio-title="Ohne echte Lobby" data-audio-duration="2871"></button>'
+            . '<button data-audio-src="https://st01.sslstream.test/dlf/01/128/mp3/stream.mp3?aggregator=web"'
+            . ' data-audio-title="Deutschlandfunk live"></button></body>';
+
+        $found = $this->find($html, 'https://www.x.test/ohne-echte-lobby-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://ondemand-mp3.test/file/2026/11/07/lobby_dlf.mp3', $found[0]->url);
+        self::assertSame('Ohne echte Lobby', $found[0]->label);
+        self::assertSame(2871, $found[0]->durationSeconds);
+    }
+}

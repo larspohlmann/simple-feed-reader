@@ -28,8 +28,8 @@
 
 declare(strict_types=1);
 
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\WorkerPresence;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
 
 // Absolute, not relative to __DIR__: the file is mounted into the image's bin
 // directory, not into the project, so its own location says nothing about

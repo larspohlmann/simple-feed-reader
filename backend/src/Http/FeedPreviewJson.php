@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Preview\Model\FeedPreviewItemModel;
-use App\Service\Preview\Model\FeedPreviewModel;
+use App\Service\Sourcing\Preview\Model\FeedPreviewItemModel;
+use App\Service\Sourcing\Preview\Model\FeedPreviewModel;
 
 final class FeedPreviewJson
 {

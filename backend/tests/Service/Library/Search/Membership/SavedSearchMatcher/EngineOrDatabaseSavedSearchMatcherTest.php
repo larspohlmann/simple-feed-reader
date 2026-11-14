@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Library\Search\Membership\SavedSearchMatcher;
+
+use App\Repository\DatabaseSavedSearchMatcher;
+use App\Repository\IndexSearchPredicates;
+use App\Repository\LikeSearchPredicates;
+use App\Repository\SearchTermsPredicateBuilder;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\EngineOrDatabaseSavedSearchMatcher;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\IndexedSavedSearchMatcher;
+use App\Service\Library\Search\Model\SavedSearchTermModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\SearchEngineCapability;
+use App\Tests\Service\Library\Search\FakeMultiSearchReader;
+use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\TestCase;
+
+final class EngineOrDatabaseSavedSearchMatcherTest extends TestCase
+{
+    public function testAnUnconfiguredEngineMeansTheDatabaseMatcherAnswers(): void
+    {
+        $engine = new FakeMultiSearchReader([], new SearchEngineUnavailableException('never asked'));
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+
+        $matcher = new EngineOrDatabaseSavedSearchMatcher(
+            new IndexedSavedSearchMatcher($engine),
+            new DatabaseSavedSearchMatcher($entityManager, self::predicateBuilder()),
+            new SearchEngineCapability('', ''),
+        );
+
+        self::assertSame([1 => []], $matcher->matchingIds([$this->search(1)], []));
+        self::assertSame([], $engine->receivedRounds);
+    }
+
+    public function testAConfiguredEngineAnswersAndItsFailurePropagatesWithoutFallback(): void
+    {
+        $engine = new FakeMultiSearchReader([], new SearchEngineUnavailableException('down'));
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+
+        $matcher = new EngineOrDatabaseSavedSearchMatcher(
+            new IndexedSavedSearchMatcher($engine),
+            new DatabaseSavedSearchMatcher($entityManager, self::predicateBuilder()),
+            new SearchEngineCapability('http://meilisearch:7700', 'key'),
+        );
+
+        $this->expectException(SearchEngineUnavailableException::class);
+
+        $matcher->matchingIds([$this->search(1)], [10]);
+    }
+
+    private function search(int $id): SavedSearchTermModel
+    {
+        return new SavedSearchTermModel($id, SearchTermsModel::fromInput('climate'));
+    }
+
+    private static function predicateBuilder(): SearchTermsPredicateBuilder
+    {
+        return new SearchTermsPredicateBuilder(new LikeSearchPredicates(), new IndexSearchPredicates());
+    }
+}

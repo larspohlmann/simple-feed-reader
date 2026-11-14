@@ -8,7 +8,7 @@ use App\Dto\Entry\MarkReadRequest;
 use App\Enum\SocialNetwork;
 use App\Exception\ValidationException;
 use App\Repository\NetworkScope;
-use App\Service\Reading\Model\ReadScopeKind;
+use App\Service\Library\Reading\Model\ReadScopeKind;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

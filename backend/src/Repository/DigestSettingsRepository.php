@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\DigestSettings;
-use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
+use App\Service\Outbound\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

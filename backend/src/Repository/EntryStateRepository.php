@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\EntryState;
 use App\Entity\Subscription;
-use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
+use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;

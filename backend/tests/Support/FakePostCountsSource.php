@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\PostCountsSource\PostCountsSourceInterface;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\PostCountsSource\PostCountsSourceInterface;
 
 /** A public Mastodon counts source that answers the counts it was given, or fails as told; it records each ask. */
 final class FakePostCountsSource implements PostCountsSourceInterface

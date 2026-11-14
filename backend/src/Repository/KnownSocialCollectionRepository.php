@@ -7,7 +7,7 @@ namespace App\Repository;
 use App\Entity\KnownSocialCollection;
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

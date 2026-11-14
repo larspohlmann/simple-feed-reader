@@ -7,7 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Onboarding\OnboardingSubscribeRequest;
 use App\Entity\User;
 use App\Http\OnboardingJson;
-use App\Service\Catalog\CatalogSubscriber;
+use App\Service\Sourcing\Catalog\CatalogSubscriber;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;

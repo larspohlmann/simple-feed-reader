@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Outbound\Mail;
+
+use App\Service\Outbound\Mail\MailCapability;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+
+/**
+ * MailCapabilityTest constructs the service by hand, so it can never catch a
+ * container-wiring regression. This test drives the REAL container to prove
+ * the service still constructs and resolves its MailSendingSettingsInterface collaborator.
+ */
+final class MailCapabilityWiringTest extends KernelTestCase
+{
+    public function testResolvesFromTheContainer(): void
+    {
+        self::bootKernel();
+        $capability = self::getContainer()->get(MailCapability::class);
+
+        // The test env fallback is null://null and no row exists: derived off.
+        self::assertFalse($capability->isEnabled());
+    }
+}

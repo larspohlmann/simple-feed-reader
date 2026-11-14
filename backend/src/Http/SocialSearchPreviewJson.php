@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Text\Support\PlainText;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Foundation\Text\Support\PlainText;
 
 final readonly class SocialSearchPreviewJson
 {

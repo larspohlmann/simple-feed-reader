@@ -1,0 +1,112 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Content\Reader\Media\Teaser;
+
+use App\Service\Content\Reader\Media\AudioPlayerMarkup;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
+use App\Service\Content\Reader\Media\Teaser\TeaserPlayerMarkup;
+use Dom\HTMLDocument;
+use PHPUnit\Framework\TestCase;
+
+final class TeaserPlayerMarkupTest extends TestCase
+{
+    private TeaserPlayerMarkup $markup;
+    private HTMLDocument $document;
+
+    protected function setUp(): void
+    {
+        $this->markup = new TeaserPlayerMarkup(new AudioPlayerMarkup());
+        $this->document = HTMLDocument::createEmpty();
+    }
+
+    private function html(TeaserPlayerModel $teaser): string
+    {
+        $figure = $this->markup->figureFor($this->document, $teaser);
+
+        return (string) $this->document->saveHtml($figure);
+    }
+
+    public function testAVideoTeaserIsAFigureWithAPosteredControllablePlayer(): void
+    {
+        $teaser = new TeaserPlayerModel(
+            MediaKind::Video,
+            'https://x.test/clip.mp4',
+            'https://x.test/still.jpg',
+            'The headline',
+            'https://x.test/related.html',
+        );
+
+        $html = $this->html($teaser);
+
+        self::assertStringContainsString('<figure class="reader-teaser">', $html);
+        self::assertStringContainsString('<video', $html);
+        self::assertStringContainsString('controls=""', $html);
+        self::assertStringContainsString('preload="none"', $html);
+        self::assertStringContainsString('src="https://x.test/clip.mp4"', $html);
+        self::assertStringContainsString('poster="https://x.test/still.jpg"', $html);
+        self::assertStringContainsString('<figcaption>', $html);
+        self::assertStringContainsString('<a href="https://x.test/related.html">The headline</a>', $html);
+    }
+
+    public function testAnAudioTeaserKeepsItsStillAndLabelsItWithTheCaption(): void
+    {
+        $teaser = new TeaserPlayerModel(
+            MediaKind::Audio,
+            'https://x.test/ep.mp3',
+            'https://x.test/still.jpg',
+            'The headline',
+            null,
+        );
+
+        $html = $this->html($teaser);
+
+        self::assertStringContainsString('<img src="https://x.test/still.jpg" alt="The headline"', $html);
+        self::assertStringContainsString('loading="lazy"', $html);
+        self::assertStringContainsString('<audio', $html);
+        self::assertStringContainsString('src="https://x.test/ep.mp3"', $html);
+        // The audio player carries no poster attribute of its own.
+        self::assertStringNotContainsString('poster=', $html);
+    }
+
+    public function testAnAudioTeaserNamesItsClipAfterItsHeadline(): void
+    {
+        $html = $this->html(new TeaserPlayerModel(
+            MediaKind::Audio,
+            'https://x.test/clip.mp3',
+            'https://x.test/still.jpg',
+            'The headline',
+            'https://x.test/related.html',
+        ));
+
+        self::assertStringContainsString(
+            '<audio controls="" preload="none" src="https://x.test/clip.mp3" title="The headline">',
+            $html,
+        );
+    }
+
+    public function testAPlainCaptionHasNoLink(): void
+    {
+        $teaser = new TeaserPlayerModel(
+            MediaKind::Video,
+            'https://x.test/c.mp4',
+            'https://x.test/s.jpg',
+            'Just text',
+            null,
+        );
+
+        $html = $this->html($teaser);
+
+        self::assertStringContainsString('<figcaption>Just text</figcaption>', $html);
+        self::assertStringNotContainsString('<a ', $html);
+    }
+
+    public function testNoCaptionMeansNoFigcaption(): void
+    {
+        $teaser = new TeaserPlayerModel(MediaKind::Video, 'https://x.test/c.mp4', 'https://x.test/s.jpg', null, null);
+
+        self::assertStringNotContainsString('<figcaption', $this->html($teaser));
+    }
+}

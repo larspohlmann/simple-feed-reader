@@ -12,18 +12,18 @@ use Symfony\Component\Filesystem\Filesystem;
 final class ReaderOutputSourcesTest extends TestCase
 {
     private const array TREE = [
-        'src/Service/Reader/Extractor.php' =>
-            "<?php\nuse App\\Service\\Html\\Support\\Walker;\nuse App\\Entity\\Entry;\n",
-        'src/Service/Reader/Model/Article.php' => "<?php\nuse App\\Entity\\Entry;\n",
-        'src/Service/Reader/README.md' => "Notes\n",
-        'src/Service/Html/Support/Walker.php' => "<?php\nuse App\\Service\\Text\\Normalizer;\n",
-        'src/Service/Text/Normalizer.php' => "<?php\n",
-        'src/Service/Unrelated/Mailer.php' => "<?php\nuse App\\Service\\Reader\\Extractor;\n",
+        'src/Service/Content/Reader/Extractor.php' =>
+            "<?php\nuse App\\Service\\Foundation\\Html\\Support\\Walker;\nuse App\\Entity\\Entry;\n",
+        'src/Service/Content/Reader/Model/Article.php' => "<?php\nuse App\\Entity\\Entry;\n",
+        'src/Service/Content/Reader/README.md' => "Notes\n",
+        'src/Service/Foundation/Html/Support/Walker.php' => "<?php\nuse App\\Service\\Foundation\\Text\\Normalizer;\n",
+        'src/Service/Foundation/Text/Normalizer.php' => "<?php\n",
+        'src/Service/Operations/Unrelated/Mailer.php' => "<?php\nuse App\\Service\\Content\\Reader\\Extractor;\n",
         'src/Entity/Entry.php' => "<?php\nuse App\\Entity\\Feed;\n",
         'src/Entity/Feed.php' => "<?php\n",
-        'src/Http/ReaderJson.php' => "<?php\nuse App\\Service\\Image\\DeclaredImage;\nuse App\\Enum\\Kind;\n",
+        'src/Http/ReaderJson.php' => "<?php\nuse App\\Service\\Outbound\\Image\\DeclaredImage;\nuse App\\Enum\\Kind;\n",
         'src/Enum/Kind.php' => "<?php\n",
-        'src/Service/Image/DeclaredImage.php' => "<?php\n",
+        'src/Service/Outbound/Image/DeclaredImage.php' => "<?php\n",
         'config/services.yaml' => "services: ~\n",
         'vendor/composer/installed.php' => "<?php return [];\n",
     ];
@@ -48,7 +48,12 @@ final class ReaderOutputSourcesTest extends TestCase
         $sources = ReaderOutputSources::under($this->projectDir);
 
         self::assertSame(
-            ['src/Service/Html', 'src/Service/Image', 'src/Service/Reader', 'src/Service/Text'],
+            [
+                'src/Service/Content/Reader',
+                'src/Service/Foundation/Html',
+                'src/Service/Foundation/Text',
+                'src/Service/Outbound/Image',
+            ],
             $this->relative($sources->moduleDirectories),
         );
     }
@@ -90,10 +95,10 @@ final class ReaderOutputSourcesTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function sources(): iterable
     {
-        yield 'the reader module' => ['src/Service/Reader/Model/Article.php'];
-        yield 'a module the reader imports' => ['src/Service/Html/Support/Walker.php'];
-        yield 'a module reached through another' => ['src/Service/Text/Normalizer.php'];
-        yield 'a module only the response mapper imports' => ['src/Service/Image/DeclaredImage.php'];
+        yield 'the reader module' => ['src/Service/Content/Reader/Model/Article.php'];
+        yield 'a module the reader imports' => ['src/Service/Foundation/Html/Support/Walker.php'];
+        yield 'a module reached through another' => ['src/Service/Foundation/Text/Normalizer.php'];
+        yield 'a module only the response mapper imports' => ['src/Service/Outbound/Image/DeclaredImage.php'];
         yield 'a class the reader imports' => ['src/Entity/Entry.php'];
         yield 'a class the response mapper imports' => ['src/Enum/Kind.php'];
         yield 'the response mapper' => ['src/Http/ReaderJson.php'];
@@ -121,8 +126,8 @@ final class ReaderOutputSourcesTest extends TestCase
         $before = ReaderOutputSources::under($this->projectDir)->fingerprint();
 
         (new Filesystem())->rename(
-            $this->projectDir . '/src/Service/Text/Normalizer.php',
-            $this->projectDir . '/src/Service/Text/Collapser.php',
+            $this->projectDir . '/src/Service/Foundation/Text/Normalizer.php',
+            $this->projectDir . '/src/Service/Foundation/Text/Collapser.php',
         );
 
         self::assertNotSame($before, ReaderOutputSources::under($this->projectDir)->fingerprint());
@@ -132,7 +137,7 @@ final class ReaderOutputSourcesTest extends TestCase
     {
         $before = ReaderOutputSources::under($this->projectDir)->fingerprint();
 
-        (new Filesystem())->dumpFile($this->projectDir . '/src/Service/Html/Support/Cleaner.php', "<?php\n");
+        (new Filesystem())->dumpFile($this->projectDir . '/src/Service/Foundation/Html/Support/Cleaner.php', "<?php\n");
 
         self::assertNotSame($before, ReaderOutputSources::under($this->projectDir)->fingerprint());
     }
@@ -150,9 +155,9 @@ final class ReaderOutputSourcesTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function nonSources(): iterable
     {
-        yield 'a module that imports the reader' => ['src/Service/Unrelated/Mailer.php'];
+        yield 'a module that imports the reader' => ['src/Service/Operations/Unrelated/Mailer.php'];
         yield 'a class only an imported class imports' => ['src/Entity/Feed.php'];
-        yield 'a file in a reached module that is not PHP' => ['src/Service/Reader/README.md'];
+        yield 'a file in a reached module that is not PHP' => ['src/Service/Content/Reader/README.md'];
     }
 
     /**

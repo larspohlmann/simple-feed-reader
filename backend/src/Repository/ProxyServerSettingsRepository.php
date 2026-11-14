@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\ProxyServerSettings;
-use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
+use App\Service\Outbound\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

@@ -22,6 +22,7 @@ enum ServiceRoleCheck: string
     case StatefulService = 'statefulService';
     case ListenerName = 'listenerName';
     case HandlerName = 'handlerName';
+    case ModuleHome = 'moduleHome';
 
     public function identifier(): string
     {

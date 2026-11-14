@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Ingestion\Parser\Model;
+
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+
+final readonly class ParsedEntryMediaModel
+{
+    public function __construct(
+        public ?DeclaredImageModel $image = null,
+        public ?ParsedMediaBundleModel $mediaBundle = null,
+    ) {
+    }
+
+    /** An episode without artwork of its own shows the show's; any other item stays without an image. */
+    #[\NoDiscard]
+    public function withShowArtwork(?DeclaredImageModel $showArtwork): self
+    {
+        if ($this->image !== null || !($this->mediaBundle?->isEpisode() ?? false)) {
+            return $this;
+        }
+
+        return clone($this, ['image' => $showArtwork]);
+    }
+}

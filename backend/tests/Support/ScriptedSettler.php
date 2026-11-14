@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Model\SettlementModel;
+use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Model\SettlementModel;
 
 /**
  * An engine test's settler: it admits `$openings` sends and never a refused key, answers a key's scripted follow-ups

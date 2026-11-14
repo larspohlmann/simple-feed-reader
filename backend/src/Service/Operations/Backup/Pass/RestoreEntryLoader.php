@@ -1,0 +1,315 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Operations\Backup\Pass;
+
+use App\Entity\Entry;
+use App\Entity\EntryState;
+use App\Entity\User;
+use App\Repository\EntryBatchInserter;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryShareLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Exception\BackupLoadFailedException;
+use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
+use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
+use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
+use App\Service\Operations\Backup\Support\PrivateFeedRefusal;
+use App\Service\Library\Search\EntryIndexer;
+use Doctrine\DBAL\Exception as DbalException;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * Loads one entry part's entries, entry states and shares. Constructed per request,
+ * never shared: every field is per-run working state, and the User is a
+ * reference re-acquired after every clear().
+ */
+final class RestoreEntryLoader
+{
+    private const int BATCH = 500;
+
+    private readonly RestoreFeedTargets $targets;
+
+    private User $user;
+
+    private string $bufferedFeedUrl = '';
+
+    /** @var list<EntryLine> */
+    private array $bufferedLines = [];
+
+    /** @var list<array{EntryStateLine, int}> states resolved to an entry id, not yet persisted */
+    private array $heldStates = [];
+
+    /** @var array<int, \DateTimeImmutable> shares resolved to an entry id, not yet written */
+    private array $heldShares = [];
+
+    /** @var array<int, true> ids this restore created, as a set */
+    private array $createdEntryIds = [];
+
+    private int $entriesCreated = 0;
+
+    private int $entryStatesCreated = 0;
+
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly RestoreEntriesInterface $entries,
+        private readonly RestoreEntryStatesInterface $entryStates,
+        private readonly RestoreEntrySharesInterface $entryShares,
+        private readonly EntryBatchInserter $inserter,
+        private readonly EntryIndexer $indexer,
+        private readonly RestoredEntryStateFactory $stateFactory,
+        RestoreDestination $destination,
+    ) {
+        $this->targets = $destination->feeds;
+        $this->user = $destination->user;
+    }
+
+    public function bufferEntry(EntryLine $line): void
+    {
+        PrivateFeedRefusal::ofUrl($line->feedUrl);
+        if ($line->feedUrl !== $this->bufferedFeedUrl) {
+            $this->closeBufferedFeed();
+            $this->bufferedFeedUrl = $line->feedUrl;
+        }
+
+        $this->bufferedLines[] = $line;
+        if (\count($this->bufferedLines) >= self::BATCH) {
+            $this->insertBufferedEntries();
+        }
+    }
+
+    public function loadState(EntryStateLine $line): void
+    {
+        PrivateFeedRefusal::ofUrl($line->feedUrl);
+        // Every entry the file carries is written before the first state is
+        // read, so the hash maps below are final by now.
+        $this->closeBufferedFeed();
+
+        $entryId = $this->target($line->feedUrl)->entryId($line->guidHash);
+        if (null === $entryId) {
+            // The entry was withheld — a shared feed the restore may not add
+            // to. Its state has nothing to attach to and is dropped with it.
+            return;
+        }
+
+        $this->heldStates[] = [$line, $entryId];
+        if (\count($this->heldStates) >= self::BATCH) {
+            $this->writeHeldStates();
+        }
+    }
+
+    public function loadShare(EntryShareLine $line): void
+    {
+        PrivateFeedRefusal::ofUrl($line->feedUrl);
+        $this->closeBufferedFeed();
+
+        $entryId = $this->target($line->feedUrl)->entryId($line->guidHash);
+        if (null === $entryId) {
+            return;
+        }
+
+        $this->heldShares[$entryId] = $line->sharedAt;
+        if (\count($this->heldShares) >= self::BATCH) {
+            $this->writeHeldShares();
+        }
+    }
+
+    public function finish(): void
+    {
+        $this->closeBufferedFeed();
+        $this->writeHeldStates();
+        $this->writeHeldShares();
+        $this->indexCreatedEntries();
+    }
+
+    public function entriesCreated(): int
+    {
+        return $this->entriesCreated;
+    }
+
+    public function entryStatesCreated(): int
+    {
+        return $this->entryStatesCreated;
+    }
+
+    private function stateFor(EntryStateLine $line, int $entryId): EntryState
+    {
+        $entry = $this->entityManager->getReference(Entry::class, $entryId)
+            ?? throw new \LogicException('An entry this restore just wrote has no reference.');
+
+        return $this->stateFactory->create($this->user, $entry, $line);
+    }
+
+    private function target(string $feedUrl): RestoreFeedTarget
+    {
+        return $this->targets->for($feedUrl);
+    }
+
+    private function closeBufferedFeed(): void
+    {
+        if ('' === $this->bufferedFeedUrl) {
+            return;
+        }
+
+        $this->insertBufferedEntries();
+        $this->bufferedFeedUrl = '';
+    }
+
+    private function insertBufferedEntries(): void
+    {
+        $lines = $this->bufferedLines;
+        $this->bufferedLines = [];
+        if ([] === $lines) {
+            return;
+        }
+
+        $target = $this->target($this->bufferedFeedUrl);
+        if (!$target->acceptsNewEntries) {
+            return;
+        }
+
+        $fresh = $this->unknownOf($lines, $target);
+        if ([] === $fresh) {
+            return;
+        }
+
+        try {
+            $this->inserter->insert($target->feedId, $fresh);
+            $createdIds = $this->recordCreatedIds($target, $fresh);
+            $this->inserter->insertLinkCards($createdIds, $fresh);
+            $this->inserter->insertOrigins($createdIds, $fresh, $this->bufferedFeedUrl);
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::duringEntries($exception);
+        }
+
+        $this->entriesCreated += \count($fresh);
+    }
+
+    /**
+     * EntryBatchInserter's contract puts de-duplication on its caller, so this
+     * drops both the hashes the feed already holds and any the file repeats.
+     *
+     * @param list<EntryLine> $lines
+     *
+     * @return list<EntryLine>
+     */
+    private function unknownOf(array $lines, RestoreFeedTarget $target): array
+    {
+        $freshByHash = [];
+        foreach ($lines as $line) {
+            if (!$target->knowsEntry($line->guidHash)) {
+                $freshByHash[$line->guidHash] = $line;
+            }
+        }
+
+        return array_values($freshByHash);
+    }
+
+    /**
+     * The multi-row INSERT yields no per-row lastInsertId, so the ids are read
+     * back by the hashes just written — at most one batch of them.
+     *
+     * @param non-empty-list<EntryLine> $inserted
+     *
+     * @return array<string, int>
+     */
+    private function recordCreatedIds(RestoreFeedTarget $target, array $inserted): array
+    {
+        $idsByHash = $this->entries->entryIdsByGuidHash($target->feedId, array_column($inserted, 'guidHash'));
+        if (\count($idsByHash) !== \count($inserted)) {
+            throw new \LogicException('An entry this restore just wrote cannot be read back.');
+        }
+
+        $target->learn($idsByHash);
+        foreach ($idsByHash as $entryId) {
+            $this->createdEntryIds[$entryId] = true;
+        }
+
+        return $idsByHash;
+    }
+
+    /**
+     * An existing state row wins over the file: that keeps a retried part
+     * idempotent and a click made mid-restore intact.
+     */
+    private function writeHeldStates(): void
+    {
+        $held = $this->heldStates;
+        $this->heldStates = [];
+        if ([] === $held) {
+            return;
+        }
+
+        $entryIds = array_map(static fn (array $pair): int => $pair[1], $held);
+        $userId = $this->user->requireId();
+        $alreadyStated = array_flip($this->entryStates->entryIdsWithStateForUser($userId, $entryIds));
+        foreach ($held as [$line, $entryId]) {
+            if (isset($alreadyStated[$entryId])) {
+                continue;
+            }
+
+            $this->entityManager->persist($this->stateFor($line, $entryId));
+            ++$this->entryStatesCreated;
+        }
+
+        $this->flushStates();
+    }
+
+    private function writeHeldShares(): void
+    {
+        $held = $this->heldShares;
+        $this->heldShares = [];
+        if ([] === $held) {
+            return;
+        }
+
+        try {
+            $this->entryShares->addMissingForUser($this->user->requireId(), $held);
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::duringEntries($exception);
+        }
+    }
+
+    private function flushStates(): void
+    {
+        try {
+            $this->entityManager->flush();
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::duringEntries($exception);
+        }
+
+        $userId = $this->user->requireId();
+        $this->entityManager->clear();
+        $this->user = $this->entityManager->getReference(User::class, $userId)
+            ?? throw new \LogicException('A user just referenced by id cannot be re-acquired after clear().');
+    }
+
+    /**
+     * Hands the created entries to the search index in the same keyset batches
+     * app:search:reindex walks in, so a restore of any size costs one batch of
+     * hydrated entities at a time. Nothing created means nothing to walk.
+     */
+    private function indexCreatedEntries(): void
+    {
+        if ([] === $this->createdEntryIds) {
+            return;
+        }
+
+        $lastId = min(array_keys($this->createdEntryIds)) - 1;
+        do {
+            $batch = $this->entries->entriesAfterId($lastId, self::BATCH);
+            $created = [];
+            foreach ($batch as $entry) {
+                $lastId = $entry->requireId();
+                if (isset($this->createdEntryIds[$lastId])) {
+                    $created[] = $entry;
+                }
+            }
+            $this->indexer->index($created);
+            $batchSize = \count($batch);
+            $this->entityManager->clear();
+        } while (self::BATCH === $batchSize);
+    }
+}

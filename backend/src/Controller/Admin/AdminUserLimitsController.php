@@ -8,7 +8,7 @@ use App\Dto\Admin\SetSubscriptionLimitRequest;
 use App\Dto\Admin\StartTrialRequest;
 use App\Http\AdminUserLimitsJson;
 use App\Repository\UserRepository;
-use App\Service\Admin\UserLimits;
+use App\Service\Operations\Admin\UserLimits;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;

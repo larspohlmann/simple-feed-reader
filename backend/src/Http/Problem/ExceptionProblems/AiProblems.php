@@ -6,14 +6,14 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Ai\Exception\ConfigurationNotFoundException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ModelNotOfferedException;
-use App\Service\Ai\Exception\ModelRequiredForActivationException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\TooManyConfigurationsException;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ModelNotOfferedException;
+use App\Service\Curation\Ai\Exception\ModelRequiredForActivationException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\TooManyConfigurationsException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class AiProblems implements ExceptionProblemsInterface

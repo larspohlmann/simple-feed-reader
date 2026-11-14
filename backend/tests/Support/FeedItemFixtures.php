@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 use PHPUnit\Framework\Assert;
 
 trait FeedItemFixtures

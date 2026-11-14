@@ -19,7 +19,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SeedsFeedEntries;
 use App\Tests\Support\RecommendationRunFixtures;

@@ -10,8 +10,8 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\StoredPostModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\StoredPostModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

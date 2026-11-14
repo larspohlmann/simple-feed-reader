@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Controller\Admin\AdminUpdateController;
-use App\Service\SelfUpdate\SelfUpdater;
-use App\Service\Version\Model\LatestReleaseModel;
-use App\Service\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\SelfUpdate\SelfUpdater;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\InMemoryUpdateStateStore;
 use App\Tests\Support\VersionReporters;

@@ -6,10 +6,10 @@ namespace App\Tests\Support;
 
 use App\Entity\RecommendationRun;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 
 trait BuildsTickContexts
 {

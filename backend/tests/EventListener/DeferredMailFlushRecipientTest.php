@@ -6,7 +6,7 @@ namespace App\Tests\EventListener;
 
 use App\Enum\MailKind;
 use App\EventListener\DeferredMailFlushListener;
-use App\Service\Mail\DeferredMailer;
+use App\Service\Outbound\Mail\DeferredMailer;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;

@@ -6,9 +6,9 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\ComposerDefaults\ComposerDefaultsInterface;
-use App\Service\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Social\ComposerDefaults\ComposerDefaultsInterface;
+use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 
 /** Asks for the thread's starter every time and mentions the post ids it was given. */
 final class FakeComposerDefaults implements ComposerDefaultsInterface

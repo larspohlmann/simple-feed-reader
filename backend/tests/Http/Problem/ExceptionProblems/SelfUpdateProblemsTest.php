@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\SelfUpdateProblems;
-use App\Service\SelfUpdate\Exception\MalformedUpdateStateException;
-use App\Service\SelfUpdate\Exception\NoUpdateAvailableException;
-use App\Service\SelfUpdate\Exception\UpdateInProgressException;
-use App\Service\SelfUpdate\Exception\UpdateRequestNotSavedException;
-use App\Service\SelfUpdate\Exception\UpdaterUnavailableException;
+use App\Service\Operations\SelfUpdate\Exception\MalformedUpdateStateException;
+use App\Service\Operations\SelfUpdate\Exception\NoUpdateAvailableException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateInProgressException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateRequestNotSavedException;
+use App\Service\Operations\SelfUpdate\Exception\UpdaterUnavailableException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;

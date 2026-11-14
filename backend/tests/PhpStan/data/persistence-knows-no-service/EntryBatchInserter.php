@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 namespace App\Repository\Fixtures;
 
-use App\Service\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryLine;
 
 final readonly class EntryBatchInserter
 {

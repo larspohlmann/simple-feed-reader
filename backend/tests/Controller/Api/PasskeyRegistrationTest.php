@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
-use App\Service\Passkey\PasskeyChallengeStore;
+use App\Service\Identity\Passkey\PasskeyChallengeStore;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\PasskeyAttestationFixture;

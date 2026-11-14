@@ -7,8 +7,8 @@ namespace App\Dto\Admin;
 use App\Entity\MailConnection;
 use App\Enum\MailEncryption;
 use App\Http\FullReplacePayload;
-use App\Service\Crypto\Model\SecretChangeModel;
-use App\Service\Mail\Settings\Model\MailSettingsUpdateModel;
+use App\Service\Foundation\Crypto\Model\SecretChangeModel;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsUpdateModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

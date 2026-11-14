@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use Psr\Clock\ClockInterface;
 
 /** Stamps the clock's reading under "sync" at the first question, then reports the network unreachable. */

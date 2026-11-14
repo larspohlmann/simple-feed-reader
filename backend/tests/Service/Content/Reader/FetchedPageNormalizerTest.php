@@ -1,0 +1,404 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Content\Reader;
+
+use App\Service\Foundation\Html\DesktopViewport;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
+use App\Service\Foundation\Html\PictureSources;
+use App\Service\Content\Reader\EmptiedWrapperRemover;
+use App\Service\Content\Reader\FetchedPageNormalizer;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\PageRepair\CommentThreadRemover;
+use App\Service\Content\Reader\PageRepair\CustomElementUnwrapper;
+use App\Service\Content\Reader\PageRepair\HeadingClassRemover;
+use App\Service\Content\Reader\PageRepair\HiddenClassElementRemover;
+use App\Service\Content\Reader\PageRepair\HorizontalRuleUnwrapper;
+use App\Service\Content\Reader\PageRepair\ImageButtonUnwrapper;
+use App\Service\Content\Reader\PageRepair\ImageWrapperClassRemover;
+use App\Service\Content\Reader\PageRepair\LazyImageSources;
+use App\Service\Content\Reader\PageRepair\NoscriptImageUnwrapper;
+use App\Service\Content\Reader\PageRepair\OrphanIconGlyphRemover;
+use App\Service\Content\Reader\PageRepair\PageRepairInterface;
+use App\Service\Content\Reader\PageRepair\ScreenReaderOnlyElementRemover;
+use App\Service\Content\Reader\PageRepair\ShareIntentLinkRemover;
+use App\Service\Content\Reader\PageRepair\ShareWidgetRemover;
+use App\Service\Content\Reader\PageRepair\StylesheetHiddenElementRemover;
+use App\Service\Content\Reader\PageRepair\SubstackGatedVideoPlaceholder;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+final class FetchedPageNormalizerTest extends TestCase
+{
+    private FetchedPageNormalizer $normalizer;
+
+    protected function setUp(): void
+    {
+        $this->normalizer = new FetchedPageNormalizer(self::repairs());
+    }
+
+    /** @return list<PageRepairInterface> the repair pipeline in the order services.yaml wires. */
+    public static function repairs(): array
+    {
+        return [
+            new StylesheetHiddenElementRemover(),
+            new CustomElementUnwrapper(),
+            new NoscriptImageUnwrapper(),
+            new LazyImageSources(new PictureSources(new DesktopViewport())),
+            new ImageButtonUnwrapper(),
+            new ShareWidgetRemover(),
+            new ShareIntentLinkRemover(),
+            new CommentThreadRemover(),
+            new SubstackGatedVideoPlaceholder(),
+            new ScreenReaderOnlyElementRemover(),
+            new HiddenClassElementRemover(),
+            new OrphanIconGlyphRemover(new EmptiedWrapperRemover()),
+            new ImageWrapperClassRemover(new PageFurniture()),
+            new HeadingClassRemover(),
+            new HorizontalRuleUnwrapper(),
+        ];
+    }
+
+    public function testCollapsesSingleChildDivChains(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><div class="a"><div class="b"><div class="c"><p>Text</p></div></div></div></body></html>';
+
+        $collapsed = $this->collapsed($html);
+
+        // The two outer wrappers are gone; the innermost div (whose child is a
+        // <p>, not a <div>) survives as the direct parent of the paragraph.
+        self::assertStringNotContainsString('class="a"', $collapsed);
+        self::assertStringNotContainsString('class="b"', $collapsed);
+        self::assertStringContainsString('<div class="c"><p>Text</p></div>', $collapsed);
+    }
+
+    public function testCollapsesWrapperChainsIndentedWithWhitespace(): void
+    {
+        // Indented markup puts whitespace text between each <div> and its single child; it is not the wrapper's
+        // own content, so the chain still collapses.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = "<html><body><div class=\"a\">\n<div class=\"b\">\n"
+            . "<div class=\"c\">\n<p>Text</p>\n</div>\n</div>\n</div></body></html>";
+
+        $collapsed = $this->collapsed($html);
+
+        self::assertStringNotContainsString('class="a"', $collapsed);
+        self::assertStringNotContainsString('class="b"', $collapsed);
+        self::assertStringContainsString('<p>Text</p>', $collapsed);
+    }
+
+    public function testKeepsDivWithOwnText(): void
+    {
+        // The div carries its own text, so it is content, not a wrapper: no chain to collapse.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><div class="keep">intro <div>nested</div></div></body></html>';
+
+        self::assertNull($this->normalizer->collapseWrapperChains($html));
+    }
+
+    public function testHeadingSurvivesWrapperCollapse(): void
+    {
+        // HeadingClassRemover strips the id, so the heading survives the collapse without it.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><div><div><h2 id="s1">Section</h2></div></div></body></html>';
+
+        self::assertStringContainsString('<h2>Section</h2>', $this->collapsed($html));
+    }
+
+    public function testStripsAHeadingClassSoReadabilityKeepsIt(): void
+    {
+        // A heading classed `header-anchor-post`: readability's unlikely-candidate regex matches "header" and
+        // drops it.
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><p>Body text long enough to be real content.</p>'
+            . '<h2 class="header-anchor-post" id="anchor"><strong>Section</strong></h2></article></body></html>'
+        );
+
+        self::assertStringContainsString('<h2><strong>Section</strong></h2>', $normalized);
+        self::assertStringNotContainsString('header-anchor-post', $normalized);
+    }
+
+    public function testPromotesAHorizontalRuleOutOfAnEmptyWrapperDiv(): void
+    {
+        // A section break wrapped as <div><hr></div>: readability reads the div as empty and removes it, rule
+        // and all.
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><p>One.</p><div><hr></div><p>Two.</p></article></body></html>'
+        );
+
+        self::assertStringContainsString('<p>One.</p><hr><p>Two.</p>', $normalized);
+    }
+
+    public function testCollapseReturnsNullWhenNoWrapperChains(): void
+    {
+        // Several element children make a real container, not a single-child wrapper: there is no chain, and
+        // ArticleReadability runs one extraction.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><div class="keep"><p>One</p><p>Two</p></div></body></html>';
+
+        self::assertNull($this->normalizer->collapseWrapperChains($html));
+    }
+
+    public function testRemovesScreenReaderOnlyElements(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body>'
+            . '<span class="visually-hidden">Image source,</span>'
+            . '<span class="ssrcss-1f39n02-VisuallyHidden e16en2lz0">Image caption,</span>'
+            . '<span class="sr-only">skip</span>'
+            . '<p class="visible">Body</p>'
+            . '</body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString('Image source,', $normalized);
+        self::assertStringNotContainsString('Image caption,', $normalized);
+        self::assertStringNotContainsString('skip', $normalized);
+        self::assertStringContainsString('Body', $normalized);
+    }
+
+    public function testStripsAShareWidgetBeforeReadabilitySeesIt(): void
+    {
+        // A Shariff bar in the raw page is gone after normalize(), so its "teilen" labels never reach
+        // readability or lead the article.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><article><div class="shariff">'
+            . '<ul class="shariff-buttons"><li>Facebook teilen</li></ul></div>'
+            . '<p>Body text long enough to be real content.</p></article></body></html>';
+
+        $normalized = $this->normalizer->normalize($html)->saveHtml();
+
+        self::assertStringNotContainsString('teilen', $normalized);
+        self::assertStringContainsString('Body text', $normalized);
+    }
+
+    public function testStripsANoScriptCommentThreadBeforeReadabilitySeesIt(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><noscript><article><img src="https://i1.sndcdn.com/artwork.jpg" alt="">'
+            . '<p>Body text long enough to be real content.</p><section class="comments">'
+            . '<h2>Comment by <a href="/pedro">Pedro</a></h2><p>super set</p></section></article></noscript>'
+            . '</body></html>';
+
+        $normalized = $this->normalizer->normalize($html)->saveHtml();
+
+        self::assertStringNotContainsString('Comment by', $normalized);
+        self::assertStringContainsString('Body text', $normalized);
+    }
+
+    public function testStripsAShareIntentLinkBeforeReadabilitySeesIt(): void
+    {
+        // A hand-rolled Bluesky share link carrying the page's own URL is gone after normalize(); it is no plugin
+        // widget, so ShareWidgetRemover alone would leave it for readability to keep.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><article><p>Body text long enough to be real content.</p>'
+            . '<a href="https://bsky.app/intent/compose?text=https://canarymedia.com/x">Share</a>'
+            . '</article></body></html>';
+
+        $normalized = $this->normalizer->normalize($html)->saveHtml();
+
+        self::assertStringNotContainsString('bsky.app', $normalized);
+        self::assertStringContainsString('Body text', $normalized);
+    }
+
+    #[DataProvider('blankPages')]
+    public function testABlankPageIsUnparseable(string $html): void
+    {
+        $this->expectException(UnparseableHtmlException::class);
+
+        $this->normalizer->normalize($html);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function blankPages(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'whitespace' => ['   '];
+    }
+
+    public function testUmlautsSurviveNormalization(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><div><div><p>Grüße from Köln</p></div></div></body></html>';
+
+        $normalized = $this->normalized($html);
+
+        // The HTML5 serializer keeps non-ASCII as UTF-8; html_entity_decode is a
+        // harmless no-op that also covers an entity-encoding serializer.
+        self::assertStringContainsString('Grüße from Köln', html_entity_decode($normalized));
+    }
+
+    public function testRemovesAnOrphanIconGlyphAndPrunesTheHoldersItEmpties(): void
+    {
+        // The icon-font glyph goes with the three holders it alone filled; the paragraphs around them stay.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><section><p>Intro paragraph.</p>'
+            . "<div><p> <span>\u{E80F}</span> </p></div>"
+            . '<p>Quote body</p></section></body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString("\u{E80F}", $normalized);
+        self::assertStringNotContainsString('<span>', $normalized);
+        self::assertStringNotContainsString('<div>', $normalized);
+        self::assertDoesNotMatchRegularExpression('/<p>\s*<\/p>/', $normalized);
+        self::assertStringContainsString('Intro paragraph.', $normalized);
+        self::assertStringContainsString('Quote body', $normalized);
+    }
+
+    public function testKeepsAnEmptiedHolderThatStillCarriesAnImage(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = "<html><body><span>\u{E80F}"
+            . '<img src="https://images.example.com/a.png" alt=""></span></body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString("\u{E80F}", $normalized);
+        self::assertStringContainsString('images.example.com/a.png', $normalized);
+        self::assertStringContainsString('<img', $normalized);
+    }
+
+    public function testStripsAGlyphButKeepsTheTextAroundIt(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = "<html><body><p>Before\u{E80F}After</p></body></html>";
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString("\u{E80F}", $normalized);
+        self::assertStringContainsString('BeforeAfter', html_entity_decode($normalized));
+    }
+
+    public function testStripsAnInlineScriptThatBuildsAnHtmlString(): void
+    {
+        // The script's JavaScript builds an HTML string ('<div>…</div>', a
+        // paywall or banner injector). Removed from the raw source — bounded by
+        // the real </script> — none of it can reach the extraction.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><p>Real body.</p>'
+            . '<script>var banner = \'<div class="ad">Buy now</div>\';'
+            . ' document.currentScript.insertAdjacentHTML("beforebegin", banner);</script>'
+            . '</body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString('currentScript', $normalized);
+        self::assertStringNotContainsString('insertAdjacentHTML', $normalized);
+        self::assertStringNotContainsString('Buy now', $normalized);
+        self::assertStringContainsString('Real body.', $normalized);
+    }
+
+    public function testStripsAStyleBlock(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><style>.ad{color:red}</style><p>Body</p></body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString('color:red', $normalized);
+        self::assertStringContainsString('Body', $normalized);
+    }
+
+    public function testRestoresTheSourceOfALazyLoadedImage(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><figure><img src="data:image/gif;base64,R0lGOD"'
+            . ' data-lazy-src="https://images.example.com/photo.jpg"></figure></body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringContainsString('<img src="https://images.example.com/photo.jpg"', $normalized);
+        self::assertStringNotContainsString('data:image', $normalized);
+    }
+
+    public function testNormalizeReplacesTheSubstackGatedPlayerWithThePoster(): void
+    {
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><head>'
+            . '<meta property="og:image" content="https://cdn.test/og.jpg">'
+            . '<meta property="og:url" content="https://x.substack.com/p/a">'
+            . '</head><body>'
+            . '<div class="single-post-container" aria-label="Post" role="main">'
+            . '<article class="typography podcast-post post shows-post">'
+            . '<div class="shows-video-player-container container-abc">'
+            . '<div class="settingsControlsContainer-x"><p>Playback speed</p><p>Share post</p></div></div>'
+            . '<p>An ancient intuition is that plants have souls and participate in the wider life of the world.</p>'
+            . '<div data-testid="paywall" role="region" aria-label="Paywall">'
+            . '<h2>Continue reading this post for free.</h2></div>'
+            . '</article></div></body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString('Playback speed', $normalized);
+        self::assertStringNotContainsString('Continue reading this post for free', $normalized);
+        self::assertStringContainsString('<a href="https://x.substack.com/p/a">', $normalized);
+        self::assertStringContainsString('src="https://cdn.test/og.jpg"', $normalized);
+        self::assertStringContainsString('An ancient intuition', $normalized);
+    }
+
+    public function testUnwrapsACustomElementSoItsPhotoReachesReadability(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><sh-background-transition>'
+            . '<div><img src="https://x.test/a.jpg" alt=""></div>'
+            . '</sh-background-transition><p>Caption.</p></article></body></html>',
+        );
+
+        self::assertStringNotContainsString('sh-background-transition', $normalized);
+        self::assertStringContainsString('<img src="https://x.test/a.jpg" alt="">', $normalized);
+    }
+
+    public function testPromotesAContentPhotoOutOfItsLightboxButtonSoReadabilityKeepsIt(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><figure>'
+            . '<button type="button" class="lightbox-trigger">'
+            . '<img src="https://x.test/a.jpg" width="992" height="558" alt="A"></button>'
+            . '<figcaption>Caption.</figcaption></figure></article></body></html>',
+        );
+
+        $photo = '<img src="https://x.test/a.jpg" width="992" height="558" alt="A">';
+        self::assertStringNotContainsString('<button', $normalized);
+        self::assertStringContainsString($photo, $normalized);
+    }
+
+    public function testStripsTheClassOfATextlessPictureWrapperBeforeReadabilityScoresIt(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><div class="Theme-Layer-ResponsiveMedia">'
+            . '<div class="ResponsiveMedia--image__inner"><img src="https://x.test/a.jpg" alt=""></div></div>'
+            . '<p>Caption.</p></article></body></html>'
+        );
+
+        self::assertStringNotContainsString('ResponsiveMedia', $normalized);
+        self::assertStringContainsString('<img src="https://x.test/a.jpg" alt="">', $normalized);
+    }
+
+    /** Order matters: the share-widget fingerprint is read before the picture wrapper's class goes. */
+    public function testAShareWidgetThatHoldsOnlyAnIconIsStillRemoved(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><p>Text.</p><div class="sharedaddy">'
+            . '<img src="https://x.test/icon.png" alt=""></div></article></body></html>'
+        );
+
+        self::assertStringNotContainsString('icon.png', $normalized);
+    }
+
+    private function normalized(string $html): string
+    {
+        return $this->normalizer->normalize($html)->saveHtml();
+    }
+
+    /** collapseWrapperChains() then serialize; used only where a chain collapses. */
+    private function collapsed(string $html): string
+    {
+        $document = $this->normalizer->collapseWrapperChains($html);
+        self::assertNotNull($document);
+
+        return $document->saveHtml();
+    }
+}

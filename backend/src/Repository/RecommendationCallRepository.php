@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\CallVerdict;
-use App\Service\Ai\Model\ProviderCallReceiptModel;
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Recommendation\Run\Model\RequestAdjustmentModel;
 use Doctrine\DBAL\Connection;
 
 /**

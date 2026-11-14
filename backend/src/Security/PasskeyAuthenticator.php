@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Entity\User;
-use App\Service\Passkey\AssertionVerifier;
-use App\Service\Passkey\Exception\PasskeySignInFailureExceptionInterface;
+use App\Service\Identity\Passkey\AssertionVerifier;
+use App\Service\Identity\Passkey\Exception\PasskeySignInFailureExceptionInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

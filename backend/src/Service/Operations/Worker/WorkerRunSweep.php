@@ -1,0 +1,113 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Operations\Worker;
+
+use App\Entity\RecommendationRun;
+use App\Repository\RecommendationRunRepository;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
+use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
+
+/**
+ * One worker-regime sweep over every active run, profile runs included, for the worker's firing and the drain
+ * command. ForYouSweep must not
+ * call it: the cron pass runs inside a web request, so it advances at TickDriver::Sweep, clamped like a poll.
+ */
+final readonly class WorkerRunSweep
+{
+    public function __construct(
+        private RecommendationRunRepository $runs,
+        private RecommendationRunAdvancer $advancer,
+        private ProfileRunSweep $profileRuns,
+        private WorkerPresence $presence,
+        private SweepStreamHeartbeat $heartbeat,
+        private EntityManagerInterface $entityManager,
+        private LoggerInterface $logger,
+    ) {
+    }
+
+    /**
+     * Counts attempted runs, failed ones included: the drain command loops until a sweep attempts none, and a failed
+     * run drops out of findAllActive() once it reaches its failure ceiling.
+     */
+    public function sweep(RecommendationDriverKind $kind): int
+    {
+        // Arms the mid-call heartbeat: one provider call can outlast the freshness window between two marks.
+        $this->heartbeat->sweepStarted($kind);
+
+        try {
+            $attemptedRuns = $this->advanceEveryRun($kind) + $this->advanceEveryProfileRun($kind);
+            if (0 === $attemptedRuns) {
+                // Marked with nothing to do as well: the heartbeat is the
+                // liveness signal the poll driver defers to, not a work log,
+                // and an idle worker is still a worker.
+                $this->presence->mark($kind);
+            }
+        } finally {
+            // Per-sweep state: cleared in `finally`, so even a failure past advanceOne()'s floor never leaves the
+            // map dirty for the next sweep of a long-running caller.
+            $this->entityManager->clear();
+            $this->heartbeat->sweepEnded();
+        }
+
+        return $attemptedRuns;
+    }
+
+    private function advanceEveryRun(RecommendationDriverKind $kind): int
+    {
+        $activeRuns = $this->runs->findAllActive();
+        foreach ($activeRuns as $run) {
+            // Before each run: a sweep lasts the sum of its runs, and one run can spend a whole provider
+            // timeout, so one mark per sweep goes stale and the client takes the working worker for dead.
+            $this->presence->mark($kind);
+            $this->advanceOne($run);
+        }
+
+        return \count($activeRuns);
+    }
+
+    private function advanceEveryProfileRun(RecommendationDriverKind $kind): int
+    {
+        $activeProfileRuns = $this->profileRuns->activeRuns();
+        foreach ($activeProfileRuns as $profileRun) {
+            $this->presence->mark($kind);
+            $this->profileRuns->advanceOne($profileRun, TickDriver::Worker);
+        }
+
+        return \count($activeProfileRuns);
+    }
+
+    private function advanceOne(RecommendationRun $run): void
+    {
+        try {
+            $this->advancer->advance($run->getUser(), TickDriver::Worker);
+        } catch (AiNotConfiguredException | AiKeyUnreadableException) {
+            // Already failed and flushed by RecommendationRunAdvancer::tick(); nothing to do.
+        } catch (ProviderUnreachableException | CredentialsRejectedException $exception) {
+            // Already counted against the run's transport-failure ceiling; the next firing retries. One user's dead
+            // provider must not fail the message and starve every other user's run.
+            $this->logger->warning('Recommendation sweep: provider call failed.', [
+                'runId' => $run->getId(),
+                'exception' => $exception,
+            ]);
+        } catch (\Throwable $exception) {
+            // The floor: nothing that goes wrong with one run may abort the sweep for the runs after it. Error level,
+            // because unlike the typed cases above nothing has recorded this failure yet.
+            $this->logger->error('Recommendation sweep: unexpected failure advancing a run.', [
+                'runId' => $run->getId(),
+                'exception' => $exception,
+            ]);
+        }
+    }
+}

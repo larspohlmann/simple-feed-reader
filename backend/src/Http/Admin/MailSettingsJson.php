@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Mail\Settings\Model\MailSettingsOverviewModel;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsOverviewModel;
 
 /**
  * The admin mail payload. The password never crosses the wire — only a

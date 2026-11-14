@@ -6,8 +6,8 @@ namespace App\Repository;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\Service\Passkey\PasskeyCount\PasskeyCountInterface;
-use App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
+use App\Service\Identity\Passkey\PasskeyCount\PasskeyCountInterface;
+use App\Service\Operations\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

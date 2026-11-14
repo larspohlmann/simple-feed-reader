@@ -1,0 +1,376 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Curation\Recommendation\Run;
+
+use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
+use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
+use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\RecommendationEngineKind;
+use App\Enum\RunStatus;
+use App\Repository\RecommendationRunLogRepository;
+use App\Repository\RecommendationRunRepository;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Curation\Recommendation\Run\RecommendationRunStarter;
+use App\Tests\DbTestCase;
+use App\Tests\Support\UserFactory;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
+/**
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
+ */
+final class RecommendationRunStarterTest extends DbTestCase
+{
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('run-starter@example.test');
+    }
+
+    public function testNotConfiguredThrows(): void
+    {
+        $this->expectException(AiNotConfiguredException::class);
+
+        $this->starter()->start($this->user);
+    }
+
+    public function testFirstStartPersistsAPendingRun(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        $report = $this->starter()->start($this->user);
+
+        self::assertSame('pending', $report->status);
+        self::assertNotNull($this->runs()->findActiveForUser($this->user));
+    }
+
+    public function testSecondStartWhileActiveReturnsTheSameRun(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        $this->starter()->start($this->user);
+        $firstRun = $this->runs()->findActiveForUser($this->user);
+        self::assertNotNull($firstRun);
+
+        $this->starter()->start($this->user);
+        $secondRun = $this->runs()->findActiveForUser($this->user);
+
+        self::assertSame($firstRun->getId(), $secondRun?->getId());
+        self::assertSame(1, $this->countRuns());
+    }
+
+    public function testStartAlwaysBeginsAFreshRunEvenWithAFailedRunPresent(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $failed = $this->failedRunFor($this->user);
+
+        // Resuming a failed run is the user's choice, made in the client: start() always begins fresh.
+        $report = $this->starter()->start($this->user);
+
+        self::assertSame('pending', $report->status);
+        self::assertSame(0, $report->batchesDone);
+        self::assertSame(2, $this->countRuns());
+        $active = $this->runs()->findActiveForUser($this->user);
+        self::assertNotNull($active);
+        self::assertNotSame($failed->getId(), $active->getId());
+    }
+
+    public function testResumeContinuesTheLatestFailedRunInPlace(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $failed = $this->failedRunFor($this->user);
+
+        $report = $this->starter()->resume($this->user);
+
+        self::assertSame('running', $report->status);
+        self::assertNull($report->error);
+        self::assertSame(1, $report->batchesDone);
+        self::assertSame($failed->getId(), $this->runs()->findActiveForUser($this->user)?->getId());
+        self::assertSame(1, $this->countRuns());
+    }
+
+    public function testResumeWithNoFailedRunThrows(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+
+        $this->expectException(NoResumableRecommendationRunException::class);
+
+        $this->starter()->resume($this->user);
+    }
+
+    public function testARunThatFailedBeforeItsSnapshotIsNotResumed(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $run->fail('Profile generation failed: gone', new \DateTimeImmutable('2026-10-03 09:05:00'));
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
+
+        $this->expectException(NoResumableRecommendationRunException::class);
+        $this->starter()->resume($this->user);
+    }
+
+    public function testStampsTheProviderAndModelOnANewRun(): void
+    {
+        $user = $this->userWithProvider('https://openrouter.ai/api/v1', 'x-ai/grok-4-fast');
+
+        $report = $this->starter()->start($user);
+
+        $run = $this->runs()->findActiveForUser($user);
+        self::assertNotNull($run);
+        self::assertSame('openrouter.ai', $run->getProviderHost());
+        self::assertSame('x-ai/grok-4-fast', $run->getModel());
+        self::assertSame(RunStatus::Pending->value, $report->status);
+    }
+
+    public function testRestampsAResumedRunWithTheProviderItWillNowCall(): void
+    {
+        $user = $this->userWithProvider('https://openrouter.ai/api/v1', 'x-ai/grok-4-fast');
+        $failed = $this->failedRunFor($user);
+        $failed->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
+        $this->switchProvider($user, 'http://localhost:1234/v1', 'bonsai-27b');
+
+        $this->starter()->resume($user);
+
+        self::assertSame('localhost', $failed->getProviderHost());
+        self::assertSame('bonsai-27b', $failed->getModel());
+    }
+
+    public function testStampsNoHostWhenTheBaseUrlHasNone(): void
+    {
+        $user = $this->userWithProvider('not a url', 'some-model');
+
+        $this->starter()->start($user);
+
+        self::assertNull($this->runs()->findActiveForUser($user)?->getProviderHost());
+    }
+
+    /** parse_url() returns false, not null, for a URL this malformed: a different falsy value than the no-host case. */
+    public function testStampsNoHostWhenTheBaseUrlIsMalformed(): void
+    {
+        $user = $this->userWithProvider('http:///v1', 'some-model');
+
+        $this->starter()->start($user);
+
+        self::assertNull($this->runs()->findActiveForUser($user)?->getProviderHost());
+    }
+
+    /** '0' is a valid host, but PHP treats the string '0' as falsy: `parse_url(...) ?: null` would drop it. */
+    public function testStampsTheHostZeroRatherThanTreatingItAsNoHost(): void
+    {
+        $user = $this->userWithProvider('http://0/v1', 'some-model');
+
+        $this->starter()->start($user);
+
+        self::assertSame('0', $this->runs()->findActiveForUser($user)?->getProviderHost());
+    }
+
+    public function testANewRunKeepsThePreviousRunsDebugLog(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $previous = $this->seedCompletedRunWithLog('old request', 1);
+        $this->entityManager->flush();
+
+        $this->starter()->start($this->user);
+
+        self::assertSame([$previous->getId()], $this->runIdsHoldingLogs());
+    }
+
+    /**
+     * Eleven runs, each with a log row, then a twelfth starts. The window
+     * counts the new run too, so the two oldest lose their rows and nine
+     * seeded runs keep theirs.
+     */
+    public function testOnlyTheNewestRunsInsideTheWindowKeepTheirDebugLog(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $seeded = [];
+        foreach (range(1, 11) as $index) {
+            $seeded[] = $this->seedCompletedRunWithLog('request ' . $index, $index);
+        }
+        $this->entityManager->flush();
+
+        $this->starter()->start($this->user);
+
+        $survivingRunIds = $this->runIdsHoldingLogs();
+        $expected = array_map(
+            static fn (RecommendationRun $run): int => $run->requireId(),
+            \array_slice($seeded, 2),
+        );
+
+        self::assertSame($expected, $survivingRunIds);
+    }
+
+    private function seedCompletedRunWithLog(string $requestBody, int $minute): RecommendationRun
+    {
+        $startedAt = new \DateTimeImmutable(\sprintf('2026-08-08T09:%02d:00Z', $minute));
+        $run = new RecommendationRun($this->user, $startedAt);
+        $run->snapshot(RecommendationEngineKind::Llm, []);
+        $run->complete($startedAt->modify('+30 seconds'));
+        $this->entityManager->persist($run);
+        $this->entityManager->persist(RecommendationRunLog::forRun(
+            $run,
+            CallPhase::Batch,
+            1,
+            1,
+            $requestBody,
+            $startedAt->modify('+10 seconds'),
+        ));
+
+        return $run;
+    }
+
+    public function testResumingAFailedRunKeepsItsDebugLog(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
+        $failed->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
+        $failed->fail('provider gone', new \DateTimeImmutable('2026-08-08T09:01:00Z'));
+        $this->entityManager->persist($failed);
+        $this->entityManager->persist(RecommendationRunLog::forRun(
+            $failed,
+            CallPhase::Batch,
+            1,
+            1,
+            'kept request',
+            new \DateTimeImmutable('2026-08-08T09:00:30Z'),
+        ));
+        $this->entityManager->flush();
+
+        $report = $this->starter()->resume($this->user);
+
+        self::assertSame(RunStatus::Running->value, $report->status);
+        // The wipe is bulk DQL when it runs, so clear before asserting survival.
+        $this->entityManager->clear();
+        self::assertCount(1, $this->logRowsOfLatestRun());
+    }
+
+    /**
+     * Every run of the account that still holds debug rows, oldest first —
+     * the retention window seen from the outside. Read across runs on
+     * purpose: what the window drops is invisible from any single run.
+     *
+     * @return list<int>
+     */
+    private function runIdsHoldingLogs(): array
+    {
+        /** @var list<array{runId: int|string}> $rows */
+        $rows = $this->entityManager->createQuery(
+            'SELECT IDENTITY(l.run) AS runId FROM App\\Entity\\RecommendationRunLog l '
+                . 'JOIN l.run r WHERE r.user = :user ORDER BY l.id ASC',
+        )->setParameter('user', $this->user)->getArrayResult();
+
+        return array_values(array_unique(array_map(
+            static fn (array $row): int => (int) $row['runId'],
+            $rows,
+        )));
+    }
+
+    /**
+     * @return list<DebugLogRow>
+     */
+    private function logRowsOfLatestRun(): array
+    {
+        $run = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($run);
+
+        return $this->runLogs()->listForRun($this->user, $run->requireId());
+    }
+
+    private function runLogs(): RecommendationRunLogRepository
+    {
+        /** @var RecommendationRunLogRepository $repository */
+        $repository = self::getContainer()->get(RecommendationRunLogRepository::class);
+
+        return $repository;
+    }
+
+    private function seedReadyAiSettings(
+        User $user,
+        string $baseUrl = 'https://api.example.test/v1',
+        string $model = 'm',
+    ): AiProviderSettings {
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $userId = $user->getId();
+        self::assertNotNull($userId);
+        $sealed = $cipher->seal($userId, 'sk-throwaway1234');
+        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
+
+        $settings = new AiProviderSettings($user, null, $baseUrl, $sealed, '1234', $now);
+        $this->entityManager->persist($settings);
+        $settings->chooseModel(new ModelDescriptor($model, 32768), $now);
+        $user->setActiveAiProviderSettings($settings);
+        $this->entityManager->flush();
+
+        return $settings;
+    }
+
+    /** Gives $this->user a ready configuration at the given endpoint, for the provider-stamping tests. */
+    private function userWithProvider(string $baseUrl, string $model): User
+    {
+        $this->seedReadyAiSettings($this->user, $baseUrl, $model);
+
+        return $this->user;
+    }
+
+    /** Replaces $user's active configuration with a fresh one at a different
+     *  endpoint — the account "changed providers" between two starter calls. */
+    private function switchProvider(User $user, string $baseUrl, string $model): void
+    {
+        $this->seedReadyAiSettings($user, $baseUrl, $model);
+    }
+
+    /** A failed run with one batch already ranked, so resume() has a partial
+     *  result to continue from and start() has a run to leave as history. */
+    private function failedRunFor(User $user): RecommendationRun
+    {
+        $failed = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07 09:00:00'));
+        $failed->snapshot(RecommendationEngineKind::Llm, [[1, 2], [3]]);
+        $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
+        $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
+        $this->entityManager->persist($failed);
+        $this->entityManager->flush();
+
+        return $failed;
+    }
+
+    private function countRuns(): int
+    {
+        /** @var int $count */
+        $count = $this->entityManager->createQueryBuilder()
+            ->select('COUNT(r.id)')
+            ->from(RecommendationRun::class, 'r')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $count;
+    }
+
+    private function runs(): RecommendationRunRepository
+    {
+        /** @var RecommendationRunRepository $repository */
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
+
+        return $repository;
+    }
+
+    private function starter(): RecommendationRunStarter
+    {
+        /** @var RecommendationRunStarter $starter */
+        $starter = self::getContainer()->get(RecommendationRunStarter::class);
+
+        return $starter;
+    }
+}

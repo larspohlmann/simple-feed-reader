@@ -10,7 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\ORM\EntityManagerInterface;

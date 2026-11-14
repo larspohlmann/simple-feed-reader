@@ -1,0 +1,260 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Outbound\Mail\Digest;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\InclusionChange;
+use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
+use App\Entity\SavedSearchNetworkInclusion;
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Repository\EntryListRepository;
+use App\Repository\SavedSearchEntryRepository;
+use App\Service\Outbound\Mail\Digest\DigestComposer;
+use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
+use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
+use App\Tests\DbTestCase;
+use App\Tests\Support\FixedPublicBaseUrl;
+use PHPUnit\Framework\MockObject\Stub;
+
+/** A search with no matches contributes no group, and a user with nothing to report gets no digest at all. */
+final class DigestComposerTest extends DbTestCase
+{
+    private DigestSavedSearchesInterface&Stub $savedSearches;
+    private User $user;
+    private \DateTimeImmutable $since;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
+
+        $this->user = new User('digest@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($this->user);
+        $this->entityManager->flush();
+
+        $this->since = new \DateTimeImmutable('2026-08-01T00:00:00Z');
+    }
+
+    public function testOneMatchingSearchAndOneEmptySearchYieldsOneCappedGroup(): void
+    {
+        $rust = $this->search('rust');
+        $golang = $this->search('golang');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust, $golang]);
+
+        $newestId = null;
+        for ($index = 1; $index <= 12; ++$index) {
+            $effectiveDate = new \DateTimeImmutable('2026-08-15T12:00:00Z');
+            $entry = $this->member(
+                $rust,
+                'Entry ' . $index,
+                'Feed ' . $index,
+                $effectiveDate->modify('-' . $index . ' minutes'),
+            );
+            $newestId ??= $entry->getId();
+        }
+
+        $model = $this->composer()->compose($this->user, $this->since);
+
+        self::assertNotNull($model);
+        self::assertSame(12, $model->totalCount);
+        self::assertCount(1, $model->groups, 'The empty "golang" search must not contribute a group.');
+
+        $group = $model->groups[0];
+        self::assertSame('rust', $group->term);
+        self::assertSame(12, $group->totalCount);
+        self::assertTrue($group->hasMore);
+        self::assertCount(DigestEntryFinder::PER_SEARCH, $group->entries);
+        self::assertStringEndsWith('?q=rust', $group->moreUrl);
+
+        self::assertSame('Entry 1', $group->entries[0]->title);
+        self::assertSame('Feed 1', $group->entries[0]->feedName);
+        self::assertStringEndsWith('?entry=' . $newestId, $group->entries[0]->url);
+    }
+
+    public function testShortDescriptionStripsTagsAndCapsLength(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $entry = $this->member($rust, 'Title', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
+        $entry->setSummary('<p>' . str_repeat('word ', 60) . '</p>');
+        $this->entityManager->flush();
+
+        $model = $this->composer()->compose($this->user, $this->since);
+
+        self::assertNotNull($model);
+        $description = $model->groups[0]->entries[0]->shortDescription;
+        self::assertStringNotContainsString('<p>', $description);
+        self::assertLessThanOrEqual(201, mb_strlen($description), 'Capped text plus the ellipsis character.');
+        self::assertStringEndsWith('…', $description);
+    }
+
+    public function testAllSearchesEmptyReturnsNull(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+
+        self::assertNull($this->composer()->compose($this->user, $this->since));
+    }
+
+    public function testUserWithNoIncludedSearchesReturnsNull(): void
+    {
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
+
+        self::assertNull($this->composer()->compose($this->user, $this->since));
+    }
+
+    public function testEntryCarriesImagePublishedDateAndFavicon(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $entry = $this->member($rust, 'Title', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
+        $entry->setPublishedAt(new \DateTimeImmutable('2026-08-15T09:48:00Z'));
+        $entry->getImage()->storePending('https://cdn.example.com/1.jpg', 1200, 900);
+        $entry->getFeed()->setFaviconUrl('https://example.com/favicon.ico');
+        $this->entityManager->flush();
+
+        $model = $this->composer()->compose($this->user, $this->since);
+
+        self::assertNotNull($model);
+        $entryModel = $model->groups[0]->entries[0];
+        self::assertSame('https://cdn.example.com/1.jpg', $entryModel->imageUrl);
+        self::assertSame('https://example.com/favicon.ico', $entryModel->faviconUrl);
+        self::assertEquals(new \DateTimeImmutable('2026-08-15T09:48:00Z'), $entryModel->publishedAt);
+    }
+
+    public function testAnExcludedFeedLeavesTheDigestAndTheCount(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $this->member($rust, 'Kept', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
+        $dropped = $this->member($rust, 'Dropped', 'Feed B', new \DateTimeImmutable('2026-08-15T01:00:00Z'));
+        $this->subscriptionOf($dropped)->changeInclusions(new InclusionChange(savedSearches: false));
+        $this->entityManager->flush();
+
+        $model = $this->composer()->compose($this->user, $this->since);
+
+        self::assertNotNull($model);
+        self::assertSame(1, $model->totalCount);
+        self::assertSame(
+            ['Kept'],
+            array_map(static fn ($entry): string => $entry->title, $model->groups[0]->entries),
+        );
+    }
+
+    public function testADigestWhoseOnlyMatchesAreExcludedIsNotComposed(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $dropped = $this->member($rust, 'Dropped', 'Feed B', new \DateTimeImmutable('2026-08-15T01:00:00Z'));
+        $this->subscriptionOf($dropped)->changeInclusions(new InclusionChange(savedSearches: false));
+        $this->entityManager->flush();
+
+        self::assertNull($this->composer()->compose($this->user, $this->since));
+    }
+
+    public function testASocialPostStaysOutOfTheDigestUntilItsNetworkIsIncluded(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $post = $this->member(
+            $rust,
+            'Post',
+            'Bluesky',
+            new \DateTimeImmutable('2026-08-15T01:00:00Z'),
+            'https://bsky.app/profile/someone.bsky.social/rss',
+        );
+        self::assertSame(
+            SocialNetwork::Bluesky,
+            $post->getFeed()->getNetwork(),
+            'the URL classifies the feed on flush',
+        );
+
+        self::assertNull($this->composer()->compose($this->user, $this->since));
+
+        $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, SocialNetwork::Bluesky));
+        $this->entityManager->flush();
+
+        self::assertNotNull($this->composer()->compose($this->user, $this->since));
+    }
+
+    private function subscriptionOf(Entry $entry): Subscription
+    {
+        $subscription = $this->entityManager->getRepository(Subscription::class)
+            ->findOneBy(['feed' => $entry->getFeed(), 'user' => $this->user]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+
+        return $subscription;
+    }
+
+    private function search(string $term): SavedSearch
+    {
+        $search = new SavedSearch($this->user, $term, false);
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
+
+        return $search;
+    }
+
+    private function member(
+        SavedSearch $search,
+        string $title,
+        string $feedTitle,
+        \DateTimeImmutable $effectiveDate,
+        ?string $feedUrl = null,
+    ): Entry {
+        $feed = new Feed($feedUrl ?? 'https://example.com/feed-' . uniqid('', true) . '.xml');
+        $feed->setTitle($feedTitle);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+
+        $entry = new Entry(
+            $feed,
+            'guid-' . uniqid('', true),
+            'https://example.com/' . uniqid('', true),
+            $title,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $effectiveDate,
+        );
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')),
+        );
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private function composer(): DigestComposer
+    {
+        return new DigestComposer(
+            $this->savedSearches,
+            new DigestEntryFinder($this->members(), $this->entryListRepository()),
+            new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
+        );
+    }
+
+    private function members(): SavedSearchEntryRepository
+    {
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function entryListRepository(): EntryListRepository
+    {
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
+
+        return $repository;
+    }
+}

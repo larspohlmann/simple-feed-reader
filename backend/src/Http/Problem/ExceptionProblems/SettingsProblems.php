@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
+use App\Service\Operations\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SettingsProblems implements ExceptionProblemsInterface

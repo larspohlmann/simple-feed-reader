@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Social\Model\CollectionCandidateModel;
-use App\Service\Social\Model\ImportCandidateModel;
-use App\Service\Social\Model\ImportCandidatesModel;
-use App\Service\Social\Model\SocialImportResultModel;
+use App\Service\Social\Social\Model\CollectionCandidateModel;
+use App\Service\Social\Social\Model\ImportCandidateModel;
+use App\Service\Social\Social\Model\ImportCandidatesModel;
+use App\Service\Social\Social\Model\SocialImportResultModel;
 
 final readonly class SocialImportJson
 {

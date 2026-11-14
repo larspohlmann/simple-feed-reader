@@ -5,10 +5,10 @@ declare(strict_types=1);
 // Fixtures for ServiceModuleCycleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Alpha {
-    use App\Service\Alpha\Parts\AlphaPart;
-    use App\Service\Beta\BetaThing;
-    use App\Service\Gamma\GammaThing;
+namespace App\Service\Fixture\Alpha {
+    use App\Service\Fixture\Alpha\Parts\AlphaPart;
+    use App\Service\Fixture\Beta\BetaThing;
+    use App\Service\Fixture\Gamma\GammaThing;
 
     final class AlphaThing
     {
@@ -18,8 +18,8 @@ namespace App\Service\Alpha {
     }
 }
 
-namespace App\Service\Beta {
-    use App\Service\Gamma\GammaThing;
+namespace App\Service\Fixture\Beta {
+    use App\Service\Fixture\Gamma\GammaThing;
 
     final class BetaThing
     {
@@ -29,14 +29,14 @@ namespace App\Service\Beta {
     }
 }
 
-namespace App\Service\Gamma {
+namespace App\Service\Fixture\Gamma {
     final class GammaThing
     {
     }
 }
 
 namespace App\Command\Gamma {
-    use App\Service\Alpha\AlphaThing;
+    use App\Service\Fixture\Alpha\AlphaThing;
 
     final class GammaCommand
     {

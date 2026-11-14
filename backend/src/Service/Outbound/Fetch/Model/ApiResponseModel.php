@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Outbound\Fetch\Model;
+
+use Symfony\Component\HttpFoundation\Response;
+
+final readonly class ApiResponseModel
+{
+    /** @param array<array<string>> $headers keyed by lower-cased name, as Symfony's HttpClient returns them */
+    public function __construct(
+        public int $status,
+        public string $body,
+        public array $headers = [],
+    ) {
+    }
+
+    public function header(string $name): ?string
+    {
+        return $this->headers[strtolower($name)][0] ?? null;
+    }
+
+    public function isSuccessful(): bool
+    {
+        return $this->status >= Response::HTTP_OK && $this->status < Response::HTTP_MULTIPLE_CHOICES;
+    }
+
+    /** A server error, a request timeout or a rate limit: the same request may succeed later. */
+    public function isTransientFailure(): bool
+    {
+        return $this->status >= Response::HTTP_INTERNAL_SERVER_ERROR
+            || $this->status === Response::HTTP_REQUEST_TIMEOUT
+            || $this->status === Response::HTTP_TOO_MANY_REQUESTS;
+    }
+
+    /** @return array<mixed> */
+    public function json(): array
+    {
+        $decoded = json_decode($this->body, true);
+
+        return \is_array($decoded) ? $decoded : [];
+    }
+}

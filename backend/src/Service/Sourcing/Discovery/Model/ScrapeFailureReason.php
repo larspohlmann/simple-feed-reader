@@ -1,0 +1,14 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Sourcing\Discovery\Model;
+
+enum ScrapeFailureReason: string
+{
+    case Blocked = 'blocked';
+    case Throttled = 'throttled';
+    case Unreachable = 'unreachable';
+    case NotScrapable = 'not_scrapable';
+    case TooLarge = 'too_large';
+}

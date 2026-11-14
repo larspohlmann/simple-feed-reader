@@ -1,0 +1,88 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Social\Bluesky\Model;
+
+/** One object of an AppView answer, read field by field: a field of the wrong type reads as absent. */
+final readonly class JsonNodeModel
+{
+    /** @param array<mixed> $fields */
+    private function __construct(private array $fields)
+    {
+    }
+
+    public static function of(mixed $value): self
+    {
+        return new self(\is_array($value) ? $value : []);
+    }
+
+    public function type(): ?string
+    {
+        return $this->string('$type');
+    }
+
+    public function string(string $key): ?string
+    {
+        $value = $this->fields[$key] ?? null;
+        if (!\is_string($value)) {
+            return null;
+        }
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    /** The string as sent: Bluesky facets index its UTF-8 bytes, which trimming would shift. */
+    public function text(string $key): ?string
+    {
+        $value = $this->fields[$key] ?? null;
+
+        return \is_string($value) ? $value : null;
+    }
+
+    public function has(string $key): bool
+    {
+        return null !== ($this->fields[$key] ?? null);
+    }
+
+    public function isTrue(string $key): bool
+    {
+        return true === ($this->fields[$key] ?? null);
+    }
+
+    public function int(string $key): ?int
+    {
+        $value = $this->fields[$key] ?? null;
+
+        return \is_int($value) ? $value : null;
+    }
+
+    public function node(string $key): self
+    {
+        return self::of($this->fields[$key] ?? null);
+    }
+
+    public function first(string $key): self
+    {
+        return $this->nodes($key)[0] ?? self::of(null);
+    }
+
+    /** @return list<self> */
+    public function nodes(string $key): array
+    {
+        return $this->listAt($key) ?? [];
+    }
+
+    /** @return list<self>|null null when the field is no list */
+    public function listAt(string $key): ?array
+    {
+        return self::listOf($this->fields[$key] ?? null);
+    }
+
+    /** @return list<self>|null null when the value is no list */
+    public static function listOf(mixed $value): ?array
+    {
+        return \is_array($value) && array_is_list($value) ? array_map(self::of(...), $value) : null;
+    }
+}

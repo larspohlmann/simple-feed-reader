@@ -6,12 +6,12 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Pass\ReplyNode;
-use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Social\Pass\ReplyNode;
+use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
 
 /** A Mastodon reply thread source that answers or fails as told, per direction; it records each ask. */
 final class FakeReplyThreadSource implements ReplyThreadSourceInterface
