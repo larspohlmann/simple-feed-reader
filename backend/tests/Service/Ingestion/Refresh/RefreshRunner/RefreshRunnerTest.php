@@ -341,7 +341,7 @@ final class RefreshRunnerTest extends DbTestCase
 
     public function testRefreshBackfillsTheImageOntoAnAlreadyStoredEntryThatLacksOne(): void
     {
-        // FillMissingImagesTest calls the ingestor directly; this proves the refresh calls it too, inside
+        // RefreshStoredEntriesTest calls the ingestor directly; this proves the refresh calls it too, inside
         // FeedOutcomePersister's unit of work, by serving an already stored guid with a media image.
         $feed = $this->dueFeed('https://img.example.com/feed');
         $stored = new Entry(
