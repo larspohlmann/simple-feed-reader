@@ -1543,6 +1543,12 @@
       "throttledNow": "Die Seite drosselt Anfragen. Jetzt erneut versuchen.",
       "failed": "Kommentare konnten nicht geladen werden."
     },
+    "discussionCounts": {
+      "pointsOne": "{{count}} Punkt",
+      "pointsOther": "{{count}} Punkte",
+      "commentsOne": "{{count}} Kommentar",
+      "commentsOther": "{{count}} Kommentare"
+    },
     "socialCounts": {
       "likesOne": "{{count}} Like",
       "likesOther": "{{count}} Likes",

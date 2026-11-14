@@ -1547,6 +1547,12 @@
       "throttledNow": "Le site limite les requêtes. Réessayez maintenant.",
       "failed": "Les commentaires n'ont pas pu être chargés."
     },
+    "discussionCounts": {
+      "pointsOne": "{{count}} point",
+      "pointsOther": "{{count}} points",
+      "commentsOne": "{{count}} commentaire",
+      "commentsOther": "{{count}} commentaires"
+    },
     "socialCounts": {
       "likesOne": "{{count}} j'aime",
       "likesOther": "{{count}} j'aime",

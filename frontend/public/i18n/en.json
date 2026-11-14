@@ -1543,6 +1543,12 @@
       "throttledNow": "The site is rate-limiting. Try again now.",
       "failed": "Comments could not be loaded."
     },
+    "discussionCounts": {
+      "pointsOne": "{{count}} point",
+      "pointsOther": "{{count}} points",
+      "commentsOne": "{{count}} comment",
+      "commentsOther": "{{count}} comments"
+    },
     "socialCounts": {
       "likesOne": "{{count}} like",
       "likesOther": "{{count}} likes",

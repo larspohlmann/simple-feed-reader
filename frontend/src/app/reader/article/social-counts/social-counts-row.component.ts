@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { LanguageService } from '../../../core/i18n/language.service';
+import { CompactCount } from '../../../core/i18n/compact-count';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { SocialNetworkName } from '../../../core/social-network';
 import { PostActionsView, SocialCountsDto } from '../../entry-social';
@@ -54,10 +54,7 @@ export class SocialCountsRowComponent {
   readonly replyRequested = output<void>();
   readonly quoteRequested = output<void>();
 
-  private readonly language = inject(LanguageService);
-  private readonly compact = computed(
-    () => new Intl.NumberFormat(this.language.lang(), { notation: 'compact' }),
-  );
+  private readonly compactCount = inject(CompactCount);
 
   protected readonly shown = computed(
     () => this.liked() !== null || this.actions() !== null || this.counts() !== null,
@@ -111,7 +108,7 @@ export class SocialCountsRowComponent {
   }
 
   protected format(count: number): string {
-    return this.compact().format(count);
+    return this.compactCount.format(count);
   }
 
   protected labelKey(kind: CountKind, count: number): string {

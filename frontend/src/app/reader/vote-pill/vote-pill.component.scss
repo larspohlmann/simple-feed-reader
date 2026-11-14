@@ -1,0 +1,38 @@
+@use '../../theme/glass-rim';
+
+:host {
+  display: inline-flex;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+
+  @include glass-rim.ring(var(--border-strong), control);
+}
+
+.arrow {
+  display: inline-flex;
+  padding: var(--space-1) var(--space-2);
+  opacity: 0.7;
+}
+
+.number {
+  padding: 0 var(--space-0);
+  font-variant-numeric: tabular-nums;
+}
+
+:host(.bare) .pill {
+  border: 0;
+
+  &::after {
+    display: none;
+  }
+
+  .arrow {
+    padding: 0 var(--space-1);
+  }
+}

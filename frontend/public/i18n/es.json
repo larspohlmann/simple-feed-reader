@@ -1547,6 +1547,12 @@
       "throttledNow": "El sitio está limitando las solicitudes. Vuelve a intentarlo ahora.",
       "failed": "No se pudieron cargar los comentarios."
     },
+    "discussionCounts": {
+      "pointsOne": "{{count}} punto",
+      "pointsOther": "{{count}} puntos",
+      "commentsOne": "{{count}} comentario",
+      "commentsOther": "{{count}} comentarios"
+    },
     "socialCounts": {
       "likesOne": "{{count}} me gusta",
       "likesOther": "{{count}} me gusta",
