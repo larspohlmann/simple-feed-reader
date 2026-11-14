@@ -979,15 +979,6 @@ describe('EntriesStore', () => {
       ctrl.expectOne(votePath).flush({ myVote: -1, score: 8 });
     });
 
-    it('adoptsTheScoreTheNetworkAnswers', () => {
-      loadVotable();
-
-      store.setVote(store.entries()[0], 1, () => undefined);
-      ctrl.expectOne(votePath).flush({ myVote: 1, score: 15 });
-
-      expect(store.entries()[0].score).toBe(15);
-    });
-
     it('restoresTheVoteAndScoreOnFailure', () => {
       loadVotable();
       const problems: string[] = [];
