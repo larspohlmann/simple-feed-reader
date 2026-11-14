@@ -38,7 +38,7 @@ final readonly class EntryShareClassifier
             return;
         }
 
-        if ($entry->isTitleDerived()) {
+        if ($entry->isTitleDerived() || $entry->isDiscussionThread()) {
             $this->linkBareUrls($entry, $body);
 
             return;
@@ -50,6 +50,9 @@ final readonly class EntryShareClassifier
     {
         if (YouTubeUrl::isShort($entry->getUrl())) {
             return ShareKind::Media;
+        }
+        if ($entry->isDiscussionThread()) {
+            return $this->threadShareKind($body);
         }
         if (mb_strlen($body->ownProse) > self::OWN_PROSE_MAX) {
             return null;
@@ -70,6 +73,11 @@ final readonly class EntryShareClassifier
         }
 
         return $entry->getMedia() === [] ? null : ShareKind::Media;
+    }
+
+    private function threadShareKind(SharedLinksModel $body): ?ShareKind
+    {
+        return $body->urls === [] ? null : ShareKind::Link;
     }
 
     private function titledShareKind(Entry $entry): ?ShareKind

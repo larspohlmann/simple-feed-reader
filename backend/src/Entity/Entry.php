@@ -277,6 +277,11 @@ final class Entry
         return $this->discussion->read();
     }
 
+    public function isDiscussionThread(): bool
+    {
+        return $this->getUrl() === null && $this->getDiscussion()->url !== null;
+    }
+
     public function setDiscussion(Discussion $discussion): void
     {
         $this->discussion->store($discussion);

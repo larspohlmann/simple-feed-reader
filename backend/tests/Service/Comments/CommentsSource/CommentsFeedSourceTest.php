@@ -22,7 +22,7 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\RateLimit\Exception\RateLimitedException;
-use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\BuildsCommentsSources;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -30,6 +30,8 @@ use Symfony\Component\Clock\MockClock;
 
 final class CommentsFeedSourceTest extends KernelTestCase
 {
+    use BuildsCommentsSources;
+
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
     private const string FEED = self::THREAD . '.rss';
     private const string THREAD_GUID = 't3_1woq4he';
@@ -38,28 +40,11 @@ final class CommentsFeedSourceTest extends KernelTestCase
     /** Must match framework.rate_limiter.comments.limit in rate_limiter.yaml. */
     private const int COMMENTS_BUDGET = 30;
 
-    private StubFeedFetcher $fetcher;
-    private MockClock $clock;
-    private HostThrottle $throttle;
-    private User $user;
     private CommentsFeedSource $source;
 
     protected function setUp(): void
     {
-        self::bootKernel();
-        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
-        $rateLimiterCache->clear();
-        $this->fetcher = new StubFeedFetcher();
-        $this->clock = new MockClock('2026-09-24 12:00:00');
-        $this->throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
-        $this->user = new User('reader@example.com', $this->clock->now());
-        $container = self::getContainer();
-        $container->set(FeedFetcherInterface::class, $this->fetcher);
-        $container->set(HostThrottle::class, $this->throttle);
-        $source = $container->get(CommentsFeedSource::class);
-        self::assertInstanceOf(CommentsFeedSource::class, $source);
-        $this->source = $source;
+        $this->source = $this->bootCommentsSource(CommentsFeedSource::class, '2026-09-24 12:00:00');
     }
 
     private function fetch(Entry $entry): CommentsAnswerModel
@@ -319,10 +304,5 @@ final class CommentsFeedSourceTest extends KernelTestCase
         } finally {
             self::assertCount(self::COMMENTS_BUDGET, $this->fetcher->fetchedUrls);
         }
-    }
-
-    private function requestFor(Entry $entry): CommentsRequest
-    {
-        return new CommentsRequest($this->source, $this->user, $entry);
     }
 }

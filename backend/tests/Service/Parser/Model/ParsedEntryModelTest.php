@@ -63,4 +63,25 @@ final class ParsedEntryModelTest extends TestCase
         self::assertSame('https://example.com/avatar.png', $copy->authorAvatarUrl);
         self::assertSame('Old summary', $entry->withContentHtml('<p>x</p>')->summary);
     }
+
+    public function testWithAuthorReplacesTheAuthorAndKeepsTheRest(): void
+    {
+        $entry = new ParsedEntryModel(
+            'guid',
+            'https://example.test/a',
+            Headline::fromFeed('Title'),
+            'old',
+            null,
+            '<p>x</p>',
+            null,
+        );
+
+        $result = $entry->withAuthor('new', 'https://example.test/u/new');
+
+        self::assertSame('new', $result->author);
+        self::assertSame('https://example.test/u/new', $result->authorUrl);
+        self::assertSame('guid', $result->guid);
+        self::assertSame('https://example.test/a', $result->url);
+        self::assertSame('<p>x</p>', $result->contentHtml);
+    }
 }

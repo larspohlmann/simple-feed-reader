@@ -40,39 +40,19 @@ final readonly class ParsedEntryModel
     #[\NoDiscard]
     public function asDiscussionThread(Discussion $thread): self
     {
-        return new self(
-            guid: $this->guid,
-            url: null,
-            headline: $this->headline,
-            author: $this->author,
-            summary: $this->summary,
-            contentHtml: $this->contentHtml,
-            publishedAt: $this->publishedAt,
-            media: $this->media,
-            categories: $this->categories,
-            discussion: $thread,
-            authorUrl: $this->authorUrl,
-            authorAvatarUrl: $this->authorAvatarUrl,
-        );
+        return clone($this, ['url' => null, 'discussion' => $thread]);
     }
 
     #[\NoDiscard]
     public function withPostText(Headline $headline, ?string $summary, ?string $contentHtml): self
     {
-        return new self(
-            guid: $this->guid,
-            url: $this->url,
-            headline: $headline,
-            author: $this->author,
-            summary: $summary,
-            contentHtml: $contentHtml,
-            publishedAt: $this->publishedAt,
-            media: $this->media,
-            categories: $this->categories,
-            discussion: $this->discussion,
-            authorUrl: $this->authorUrl,
-            authorAvatarUrl: $this->authorAvatarUrl,
-        );
+        return clone($this, ['headline' => $headline, 'summary' => $summary, 'contentHtml' => $contentHtml]);
+    }
+
+    #[\NoDiscard]
+    public function withAuthor(string $author, string $authorUrl): self
+    {
+        return clone($this, ['author' => $author, 'authorUrl' => $authorUrl]);
     }
 
     #[\NoDiscard]
@@ -84,19 +64,6 @@ final readonly class ParsedEntryModel
     #[\NoDiscard]
     private function withMedia(ParsedEntryMediaModel $media): self
     {
-        return $media === $this->media ? $this : new self(
-            guid: $this->guid,
-            url: $this->url,
-            headline: $this->headline,
-            author: $this->author,
-            summary: $this->summary,
-            contentHtml: $this->contentHtml,
-            publishedAt: $this->publishedAt,
-            media: $media,
-            categories: $this->categories,
-            discussion: $this->discussion,
-            authorUrl: $this->authorUrl,
-            authorAvatarUrl: $this->authorAvatarUrl,
-        );
+        return $media === $this->media ? $this : clone($this, ['media' => $media]);
     }
 }

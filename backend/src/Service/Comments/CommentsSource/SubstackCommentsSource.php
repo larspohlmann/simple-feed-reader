@@ -7,31 +7,24 @@ namespace App\Service\Comments\CommentsSource;
 use App\Entity\Entry;
 use App\Entity\User;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Exception\CommentsThrottledException;
+use App\Service\Comments\CommentsEndpointFetcher;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentsAnswerModel;
 use App\Service\Comments\Model\CommentsAudienceModel;
+use App\Service\Comments\Model\CommentsEndpointModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\SubstackPostModel;
 use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\Comments\Pass\SubstackThread;
 use App\Service\Comments\Support\SubstackPostAddress;
-use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
-use App\Service\RateLimit\RateLimitGuard;
-use Symfony\Component\DependencyInjection\Attribute\Target;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final readonly class SubstackCommentsSource implements CommentsSourceInterface
 {
     public function __construct(
         private FeedFetcherInterface $fetcher,
-        private HostThrottle $hostThrottle,
-        private RateLimitGuard $rateLimitGuard,
-        #[Target]
-        private RateLimiterFactoryInterface $commentsLimiter,
+        private CommentsEndpointFetcher $endpointFetcher,
     ) {
     }
 
@@ -48,21 +41,14 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
         $post = self::postOf($request->entry);
-        $wait = $this->hostThrottle->remainingSeconds($post->url());
-        if ($wait > 0) {
-            throw new CommentsThrottledException('Substack asked us to wait.', $wait);
-        }
-        $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $request->user);
+        $endpoint = new CommentsEndpointModel(
+            $post->url(),
+            'Substack asked us to wait.',
+            'Substack could not be reached.',
+        );
+        $commentsOf = fn (): string => $this->body($post->commentsApiUrl($this->postIdOf($post)));
 
-        try {
-            return CommentsAnswerModel::settled($this->body($post->commentsApiUrl($this->postIdOf($post))));
-        } catch (FeedThrottledException $exception) {
-            $wait = $this->hostThrottle->record($post->url(), $exception->retryAfterSeconds);
-
-            throw new CommentsThrottledException('Substack asked us to wait.', $wait, $exception);
-        } catch (FetchException $exception) {
-            throw new CommentsUnavailableException('Substack could not be reached.', previous: $exception);
-        }
+        return CommentsAnswerModel::settled($this->endpointFetcher->guarded($endpoint, $request->user, $commentsOf));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel

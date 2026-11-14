@@ -36,6 +36,18 @@ final class EntryDiscussionTest extends TestCase
         self::assertSame('https://t.example/1', $stored->read()->url);
     }
 
+    public function testAStoredPlatformThreadReadsBackAutomatic(): void
+    {
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::platformThread('https://lemmy.world/post/1'));
+
+        $read = $stored->read();
+
+        self::assertSame('https://lemmy.world/post/1', $read->url);
+        self::assertNull($read->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Auto, $read->commentsLoad);
+    }
+
     public function testEmptyByDefault(): void
     {
         self::assertEquals(Discussion::none(), (new EntryDiscussion())->read());
@@ -64,7 +76,7 @@ final class EntryDiscussionTest extends TestCase
         $stored->store(Discussion::withCommentsFeed(
             'https://t.example/1',
             str_repeat('a', 2049),
-            CommentsLoad::Auto,
+            CommentsLoad::Manual,
         ));
 
         $read = $stored->read();
@@ -84,5 +96,13 @@ final class EntryDiscussionTest extends TestCase
 
         self::assertSame($commentsFeedUrl, $read->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $read->commentsLoad);
+    }
+
+    public function testAnOverlongPlatformThreadAddressLeavesNoAutomaticLoad(): void
+    {
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::platformThread(str_repeat('a', 2049)));
+
+        self::assertEquals(Discussion::none(), $stored->read());
     }
 }

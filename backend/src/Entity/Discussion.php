@@ -27,6 +27,13 @@ final readonly class Discussion
 
     public static function of(?string $pageUrl, ?string $commentsFeedUrl, CommentsLoad $load): self
     {
-        return new self($pageUrl, $commentsFeedUrl, $commentsFeedUrl === null ? null : $load);
+        $keepsLoad = $commentsFeedUrl !== null || ($pageUrl !== null && $load !== CommentsLoad::Manual);
+
+        return new self($pageUrl, $commentsFeedUrl, $keepsLoad ? $load : null);
+    }
+
+    public static function platformThread(string $pageUrl): self
+    {
+        return new self($pageUrl, null, CommentsLoad::Auto);
     }
 }

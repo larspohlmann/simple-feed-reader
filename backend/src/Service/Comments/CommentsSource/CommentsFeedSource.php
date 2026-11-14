@@ -6,36 +6,26 @@ namespace App\Service\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\Exception\CommentsThrottledException;
+use App\Service\Comments\CommentsEndpointFetcher;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
 use App\Service\Comments\Model\CommentsAudienceModel;
+use App\Service\Comments\Model\CommentsEndpointModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Comments\Pass\CommentsRequest;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Sanitize\EntrySanitizer;
-use Symfony\Component\DependencyInjection\Attribute\Target;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final readonly class CommentsFeedSource implements CommentsSourceInterface
 {
     public function __construct(
-        private FeedFetcherInterface $fetcher,
+        private CommentsEndpointFetcher $endpointFetcher,
         private FeedParser $parser,
         private EntrySanitizer $sanitizer,
-        private HostThrottle $hostThrottle,
-        private RateLimitGuard $rateLimitGuard,
-        #[Target]
-        private RateLimiterFactoryInterface $commentsLimiter,
     ) {
     }
 
@@ -52,21 +42,13 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
         $feedUrl = self::feedUrlOf($request->entry);
-        $wait = $this->hostThrottle->remainingSeconds($feedUrl);
-        if ($wait > 0) {
-            throw new CommentsThrottledException('The comments feed host asked us to wait.', $wait);
-        }
-        $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $request->user);
+        $endpoint = new CommentsEndpointModel(
+            $feedUrl,
+            'The comments feed host asked us to wait.',
+            'The comments feed could not be fetched.',
+        );
 
-        try {
-            return CommentsAnswerModel::settled($this->fetcher->fetch($feedUrl)->modifiedBody());
-        } catch (FeedThrottledException $exception) {
-            $wait = $this->hostThrottle->record($feedUrl, $exception->retryAfterSeconds);
-
-            throw new CommentsThrottledException('The comments feed host asked us to wait.', $wait, $exception);
-        } catch (FetchException $exception) {
-            throw new CommentsUnavailableException('The comments feed could not be fetched.', previous: $exception);
-        }
+        return CommentsAnswerModel::settled($this->endpointFetcher->body($feedUrl, $endpoint, $request->user));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel

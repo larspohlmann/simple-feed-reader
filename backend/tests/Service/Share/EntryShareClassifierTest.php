@@ -66,6 +66,16 @@ final class EntryShareClassifierTest extends TestCase
         return $entry;
     }
 
+    /** @param list<EntryMedium> $media */
+    private static function discussionThread(string $body, array $media = []): Entry
+    {
+        $entry = self::entry('https://lemmy.world/c/politics', 'https://lemmy.world/post/1', null, $body);
+        $entry->setDiscussion(Discussion::platformThread('https://lemmy.world/post/1'));
+        $entry->setMedia($media, []);
+
+        return $entry;
+    }
+
     private static function blueskyPost(string $body): Entry
     {
         $guid = 'at://did:plc:test/app.bsky.feed.post/3abc';
@@ -243,6 +253,45 @@ final class EntryShareClassifierTest extends TestCase
         $article = 'https://www.zeit.de/a';
         $entry = self::entry('https://www.zeit.de/', $article, $article, '<p>Teaser.</p>');
         $entry->setMedia([new EntryMedium('https://img.zeit.de/a.jpg', 'image')], []);
+
+        self::assertNull($this->classified($entry)->getShareKind());
+    }
+
+    public function testADiscussionThreadSharingALinkIsALinkShare(): void
+    {
+        $entry = $this->classified(
+            self::discussionThread('<a href="https://news.example/a">https://news.example/a</a>'),
+        );
+
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+    }
+
+    public function testADiscussionThreadQuotingAtLengthStillSharesItsLink(): void
+    {
+        $body = '<a href="https://news.example/a">https://news.example/a</a>'
+            . '<blockquote>' . str_repeat('word ', 160) . '</blockquote>';
+
+        self::assertSame(ShareKind::Link, $this->classified(self::discussionThread($body))->getShareKind());
+    }
+
+    public function testADiscussionThreadWithoutALinkSharesNothing(): void
+    {
+        self::assertNull($this->classified(self::discussionThread('<p>Just text</p>'))->getShareKind());
+    }
+
+    public function testADiscussionThreadWithAPictureAndNoLinkSharesNothing(): void
+    {
+        $entry = self::discussionThread('<p>Just text</p>', [new EntryMedium('https://img.example/a.jpg', 'image')]);
+
+        self::assertNull($this->classified($entry)->getShareKind());
+    }
+
+    public function testARedditThreadSharesNothing(): void
+    {
+        $body = ' &#32; submitted by &#32; <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
+            . ' <span><a href="https://example.com/x.jpg">[link]</a></span> &#32; <span>'
+            . '<a href="https://www.reddit.com/r/a/comments/1/t/">[comments]</a></span>';
+        $entry = self::discussionThread($body, [new EntryMedium('https://example.com/x.jpg', 'image')]);
 
         self::assertNull($this->classified($entry)->getShareKind());
     }

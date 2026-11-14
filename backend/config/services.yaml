@@ -312,6 +312,14 @@ services:
     App\Service\Logging\Loki\LokiSink\LokiSinkInterface:
         factory: ['@App\Service\Logging\Loki\Factory\LokiSinkFactory', 'create']
 
+    app.untrusted_markdown_converter:
+        class: League\CommonMark\CommonMarkConverter
+        arguments:
+            - html_input: escape
+              allow_unsafe_links: false
+              max_nesting_level: 20
+              max_delimiters_per_line: 1000
+
     App\Service\Logging\Loki\LokiPushHandler:
         arguments:
             $appLabel: 'simple-feed-reader'

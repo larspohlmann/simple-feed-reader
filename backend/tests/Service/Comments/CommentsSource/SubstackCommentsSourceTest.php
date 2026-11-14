@@ -20,7 +20,7 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\RateLimit\Exception\RateLimitedException;
-use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\BuildsCommentsSources;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -29,6 +29,8 @@ use Symfony\Component\Clock\MockClock;
 
 final class SubstackCommentsSourceTest extends KernelTestCase
 {
+    use BuildsCommentsSources;
+
     private const string FIXTURES = __DIR__ . '/../../../Fixtures/substack';
     private const string POST = 'https://joe.substack.com/p/one-post';
     private const string POST_API = 'https://joe.substack.com/api/v1/posts/one-post';
@@ -38,27 +40,11 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     /** Must match framework.rate_limiter.comments.limit in rate_limiter.yaml. */
     private const int COMMENTS_BUDGET = 30;
 
-    private StubFeedFetcher $fetcher;
-    private MockClock $clock;
-    private User $user;
     private SubstackCommentsSource $source;
 
     protected function setUp(): void
     {
-        self::bootKernel();
-        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
-        $rateLimiterCache->clear();
-        $this->fetcher = new StubFeedFetcher();
-        $this->clock = new MockClock('2026-10-21 12:00:00');
-        $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
-        $this->user = new User('reader@example.com', $this->clock->now());
-        $container = self::getContainer();
-        $container->set(FeedFetcherInterface::class, $this->fetcher);
-        $container->set(HostThrottle::class, $throttle);
-        $source = $container->get(SubstackCommentsSource::class);
-        self::assertInstanceOf(SubstackCommentsSource::class, $source);
-        $this->source = $source;
+        $this->source = $this->bootCommentsSource(SubstackCommentsSource::class, '2026-10-21 12:00:00');
     }
 
     private static function entry(?string $author = 'Joe Writer'): Entry
@@ -275,10 +261,5 @@ final class SubstackCommentsSourceTest extends KernelTestCase
             static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
             $comments,
         );
-    }
-
-    private function requestFor(Entry $entry): CommentsRequest
-    {
-        return new CommentsRequest($this->source, $this->user, $entry);
     }
 }
