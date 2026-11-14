@@ -159,7 +159,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $entry->setSummary($summary);
+        $entry->recordText($entry->getText()->withSummary($summary));
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 

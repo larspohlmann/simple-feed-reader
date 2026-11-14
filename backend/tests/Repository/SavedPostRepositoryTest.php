@@ -124,8 +124,8 @@ final class SavedPostRepositoryTest extends DbTestCase
         $source = $this->subscribedFeed('https://copied.example/feed.xml');
         $saved = $this->savedFeed();
         $entry = $this->entry($source, 'guid-1', 'https://copied.example/1');
-        $entry->setSummary('Summary');
-        $entry->setContentHtml('<p>Body</p>');
+        $entry->recordText($entry->getText()->withSummary('Summary'));
+        $entry->recordText($entry->getText()->withContentHtml('<p>Body</p>'));
         $entry->setAuthor(new EntryAuthor('Jane', 'https://jane.example', null));
         $this->entityManager->flush();
 
@@ -140,8 +140,8 @@ final class SavedPostRepositoryTest extends DbTestCase
         self::assertSame($saved->requireId(), $copy->getFeed()->requireId());
         self::assertSame('guid-1', $copy->getGuid());
         self::assertSame('https://copied.example/1', $copy->getUrl());
-        self::assertSame('Summary', $copy->getSummary());
-        self::assertSame('<p>Body</p>', $copy->getContentHtml());
+        self::assertSame('Summary', $copy->getText()->getSummary());
+        self::assertSame('<p>Body</p>', $copy->getText()->getContentHtml());
         self::assertSame('Jane', $copy->getAuthor());
         self::assertEquals($entry->getEffectiveDate(), $copy->getEffectiveDate());
         self::assertSame(

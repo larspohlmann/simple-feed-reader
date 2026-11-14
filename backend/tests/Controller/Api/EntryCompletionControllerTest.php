@@ -430,7 +430,11 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $feed->setSiteUrl('https://news.ycombinator.com/');
         $createdAt = new \DateTimeImmutable('-1 hour', new \DateTimeZone('UTC'));
         $item = new Entry($feed, $itemUrl, $target, 'A real headline', $createdAt, $createdAt);
-        $item->setContentHtml('<p>Article URL: <a href="' . $target . '">' . $target . '</a></p><p>Points: 110</p>');
+        $item->recordText(
+            $item->getText()->withContentHtml(
+                '<p>Article URL: <a href="' . $target . '">' . $target . '</a></p><p>Points: 110</p>',
+            ),
+        );
         $item->setDiscussion(Discussion::of($itemUrl, null, CommentsLoad::Manual));
         $this->entityManager()->persist($item);
         $queue = self::getContainer()->get(ShareEnrichmentQueue::class);
@@ -459,7 +463,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
     {
         $createdAt = new \DateTimeImmutable('-1 hour', new \DateTimeZone('UTC'));
         $post = new Entry($feed, $guid, null, 'Post', $createdAt, $createdAt);
-        $post->setContentHtml($contentHtml);
+        $post->recordText($post->getText()->withContentHtml($contentHtml));
         $post->setHeadline(Headline::derived('Post'));
         $post->getImage()->storePending(null, null, null);
         $this->entityManager()->persist($post);

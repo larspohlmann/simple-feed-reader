@@ -42,10 +42,12 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
             return $this->fillFromText($entry, $post);
         }
 
-        $body = self::sharedBody($entry->getContentHtml() ?? '', $embed);
+        $body = self::sharedBody($entry->getText()->getContentHtml() ?? '', $embed);
         $this->linkCards->append($entry, $embed->linkCards);
-        $entry->setContentHtml($this->sanitizer->sanitize($body->linkedHtml . $embed->html));
-        $entry->setSummary(EntrySnippet::from($body->linkedHtml));
+        $entry->recordText(
+            $entry->getText()->withContentHtml($this->sanitizer->sanitize($body->linkedHtml . $embed->html)),
+        );
+        $entry->recordText($entry->getText()->withSummary(EntrySnippet::from($body->linkedHtml)));
         if ($embed->leadImage !== null && $entry->getImageUrl() === null) {
             $this->imageWriter->write($entry, $embed->leadImage);
         }
@@ -72,8 +74,8 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
             return FillOutcome::Unfilled;
         }
 
-        $entry->setContentHtml($this->sanitizer->sanitize($shared->linkedHtml));
-        $entry->setSummary(EntrySnippet::from($shared->linkedHtml));
+        $entry->recordText($entry->getText()->withContentHtml($this->sanitizer->sanitize($shared->linkedHtml)));
+        $entry->recordText($entry->getText()->withSummary(EntrySnippet::from($shared->linkedHtml)));
         $entry->setShareKind(ShareKind::Link);
 
         return FillOutcome::AwaitingLinkCards;
@@ -82,7 +84,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
     /** An RSS body shows a link shortened; the post's own facets know where it goes. */
     private static function textBodyOf(Entry $entry, JsonNodeModel $post): string
     {
-        $body = $entry->getContentHtml() ?? '';
+        $body = $entry->getText()->getContentHtml() ?? '';
         $record = $post->node('record');
         if (!BlueskyRichText::linksAWebPage($record->nodes('facets'))) {
             return $body;

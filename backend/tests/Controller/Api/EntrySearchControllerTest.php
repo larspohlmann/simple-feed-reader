@@ -93,7 +93,7 @@ final class EntrySearchControllerTest extends ApiTestCase
         $entityManager = $this->entityManager();
         $entry = $entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Angular Post 1']);
         self::assertInstanceOf(Entry::class, $entry);
-        $entry->setContentHtml('<p>Angular body text.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Angular body text.</p>'));
         $entityManager->flush();
 
         $client->request('GET', '/api/entries/search?q=angular', server: $headers);

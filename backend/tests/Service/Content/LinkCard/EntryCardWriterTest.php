@@ -72,35 +72,35 @@ final class EntryCardWriterTest extends DbTestCase
     public function testACardedQuoteLeavesTheBodyAndTheSummaryIsDerivedAgain(): void
     {
         $post = $this->post(self::QUOTE . '<p>Reposting for the morning crew</p>');
-        $post->setSummary('RE: https://q.example/@a/1 Reposting for the morning crew');
+        $post->recordText($post->getText()->withSummary('RE: https://q.example/@a/1 Reposting for the morning crew'));
 
         $this->writeFlushed($post, new EntryCardsModel([], [self::pageCard('https://q.example/@a/1')]));
 
-        self::assertSame('<p>Reposting for the morning crew</p>', $post->getContentHtml());
-        self::assertSame('Reposting for the morning crew', $post->getSummary());
+        self::assertSame('<p>Reposting for the morning crew</p>', $post->getText()->getContentHtml());
+        self::assertSame('Reposting for the morning crew', $post->getText()->getSummary());
     }
 
     public function testAQuoteOnlyPostEndsWithNoBodyAndNoSummary(): void
     {
         $post = $this->post(self::QUOTE);
-        $post->setSummary('RE: https://q.example/@a/1');
+        $post->recordText($post->getText()->withSummary('RE: https://q.example/@a/1'));
 
         $this->writeFlushed($post, new EntryCardsModel([], [self::pageCard('https://q.example/@a/1')]));
 
-        self::assertNull($post->getContentHtml());
-        self::assertNull($post->getSummary());
+        self::assertNull($post->getText()->getContentHtml());
+        self::assertNull($post->getText()->getSummary());
     }
 
     public function testAQuoteWithoutACardKeepsItsLine(): void
     {
         $body = self::QUOTE . '<p>Look.</p>';
         $post = $this->post($body);
-        $post->setSummary('RE: https://q.example/@a/1 Look.');
+        $post->recordText($post->getText()->withSummary('RE: https://q.example/@a/1 Look.'));
 
         $this->writeFlushed($post, new EntryCardsModel([], []));
 
-        self::assertSame($body, $post->getContentHtml());
-        self::assertSame('RE: https://q.example/@a/1 Look.', $post->getSummary());
+        self::assertSame($body, $post->getText()->getContentHtml());
+        self::assertSame('RE: https://q.example/@a/1 Look.', $post->getText()->getSummary());
     }
 
     public function testAQuotedPostLeavesItsQuoteLineUnderItsAddressAndMakesTheShareAQuote(): void
@@ -111,8 +111,8 @@ final class EntryCardWriterTest extends DbTestCase
 
         $this->writeFlushed($post, EntryCardsModel::quoting(new QuotedTargetModel($address, $quote)));
 
-        self::assertSame('<p>Wow</p>', $post->getContentHtml());
-        self::assertSame('Wow', $post->getSummary());
+        self::assertSame('<p>Wow</p>', $post->getText()->getContentHtml());
+        self::assertSame('Wow', $post->getText()->getSummary());
         self::assertSame(ShareKind::Quote, $post->getShareKind());
         self::assertEquals($quote, $post->getQuotedPost());
         self::assertSame([], $this->cardUrls($post));
@@ -186,7 +186,7 @@ final class EntryCardWriterTest extends DbTestCase
         $now = new \DateTimeImmutable('2026-10-11 12:00:00');
         $guid = 'https://mastodon.example/@someone/' . ++$this->posts;
         $entry = new Entry($this->feed, $guid, $url, 'Post', $now, $now);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);

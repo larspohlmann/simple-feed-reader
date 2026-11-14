@@ -22,7 +22,7 @@ final class ShareTargets
             return \in_array($target, $cardedUrls, true) ? [] : [$target];
         }
 
-        return SharedLinks::of((string) $entry->getContentHtml())->uncardedBy($cardedUrls);
+        return SharedLinks::of((string) $entry->getText()->getContentHtml())->uncardedBy($cardedUrls);
     }
 
     public static function isCardableShare(Entry $entry): bool

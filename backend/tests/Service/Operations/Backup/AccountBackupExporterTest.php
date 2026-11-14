@@ -133,7 +133,7 @@ final class AccountBackupExporterTest extends DbTestCase
             new \DateTimeImmutable('2026-08-02T00:00:00Z'),
             new \DateTimeImmutable('2026-08-02T00:00:00Z'),
         );
-        $entry->setContentHtml('<p>body</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>body</p>'));
         $this->entityManager->persist($entry);
         $state = new EntryState($user, $entry);
         $state->markFavorite();

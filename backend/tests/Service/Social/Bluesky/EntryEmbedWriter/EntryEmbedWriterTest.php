@@ -42,8 +42,8 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame(FillOutcome::Filled, $this->writer()->fill($entry, Bluesky::post('external')));
         $this->entityManager->flush();
 
-        self::assertSame('<p>Read this.</p>', $entry->getContentHtml());
-        self::assertSame('Read this.', $entry->getSummary());
+        self::assertSame('<p>Read this.</p>', $entry->getText()->getContentHtml());
+        self::assertSame('Read this.', $entry->getText()->getSummary());
         self::assertSame(self::CARD_THUMB, $entry->getImageUrl());
         self::assertEquals([new EntryMedium(self::CARD_THUMB, 'image')], $entry->getMedia());
         self::assertSame('Post', $entry->getTitle());
@@ -67,9 +67,9 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame(ShareKind::Link, $entry->getShareKind());
         self::assertStringContainsString(
             '<a href="https://github.com/webx-ui/module-blog"',
-            (string) $entry->getContentHtml(),
+            (string) $entry->getText()->getContentHtml(),
         );
-        self::assertStringStartsWith('v0.69.0', (string) $entry->getSummary());
+        self::assertStringStartsWith('v0.69.0', (string) $entry->getText()->getSummary());
     }
 
     public function testAPostWhoseFacetsLinkNoWebPageKeepsTheRssBodyAndItsLink(): void
@@ -87,7 +87,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         ]);
 
         self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, $post));
-        self::assertStringContainsString('https://example.com/a', (string) $entry->getContentHtml());
+        self::assertStringContainsString('https://example.com/a', (string) $entry->getText()->getContentHtml());
     }
 
     public function testABareUrlInTheTextOfAPostWithoutAnEmbedIsLinkedAndAwaitsItsCard(): void
@@ -99,7 +99,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame(ShareKind::Link, $entry->getShareKind());
         self::assertStringContainsString(
             '<a href="https://github.com/webx-ui/module-blog"',
-            (string) $entry->getContentHtml(),
+            (string) $entry->getText()->getContentHtml(),
         );
     }
 
@@ -113,9 +113,9 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame(ShareKind::Link, $entry->getShareKind());
         self::assertStringContainsString(
             '<a href="https://github.com/webx-ui/module-blog"',
-            (string) $entry->getContentHtml(),
+            (string) $entry->getText()->getContentHtml(),
         );
-        self::assertStringContainsString('github.com/webx-ui/mod…</a>', (string) $entry->getContentHtml());
+        self::assertStringContainsString('github.com/webx-ui/mod…</a>', (string) $entry->getText()->getContentHtml());
     }
 
     public function testALinkFacetThatIsNoWebPageSharesNothing(): void
@@ -146,7 +146,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertNull($entry->getShareKind());
         self::assertSame(
             '<p>Just words, and a <a href="https://bsky.app/hashtag/php">#php</a> tag.</p>',
-            $entry->getContentHtml(),
+            $entry->getText()->getContentHtml(),
         );
     }
 
@@ -159,9 +159,9 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame(
             '<p>See <a href="https://example.com/other" rel="noopener noreferrer" target="_blank">'
             . 'https://example.com/other</a></p>',
-            $entry->getContentHtml(),
+            $entry->getText()->getContentHtml(),
         );
-        self::assertSame('See https://example.com/other', $entry->getSummary());
+        self::assertSame('See https://example.com/other', $entry->getText()->getSummary());
     }
 
     public function testTheCardedUrlLinkedInsideTheTextNeedsNoFurtherCard(): void
@@ -170,7 +170,10 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         self::assertSame(FillOutcome::Filled, $this->writer()->fill($entry, Bluesky::post('external')));
 
-        self::assertStringContainsString('<a href="' . Bluesky::CARD . '"', (string) $entry->getContentHtml());
+        self::assertStringContainsString(
+            '<a href="' . Bluesky::CARD . '"',
+            (string) $entry->getText()->getContentHtml(),
+        );
     }
 
     public function testAnHttpLinkCardReplacesTheTrailingUrlToo(): void
@@ -186,8 +189,8 @@ final class EntryEmbedWriterTest extends DbTestCase
         ]));
         $this->entityManager->flush();
 
-        self::assertSame('<p>Scores tonight.</p>', $entry->getContentHtml());
-        self::assertSame('Scores tonight.', $entry->getSummary());
+        self::assertSame('<p>Scores tonight.</p>', $entry->getText()->getContentHtml());
+        self::assertSame('Scores tonight.', $entry->getText()->getSummary());
         self::assertEquals(
             [new LinkCardContent('http://spr.ly/6018AbCdE', 'Scores', null, null, 'spr.ly')],
             $this->storedCards($entry),
@@ -203,9 +206,9 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         self::assertSame(
             '<p>Read this.<br />' . self::STORY_LINK . '</p>',
-            $entry->getContentHtml(),
+            $entry->getText()->getContentHtml(),
         );
-        self::assertSame('Read this. https://example.com/story', $entry->getSummary());
+        self::assertSame('Read this. https://example.com/story', $entry->getText()->getSummary());
         self::assertSame([], $this->storedCards($entry));
     }
 
@@ -217,9 +220,9 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         self::assertSame(
             '<p>Read this: example.com/sto…</p><p>' . self::STORY_LINK . '</p>',
-            $entry->getContentHtml(),
+            $entry->getText()->getContentHtml(),
         );
-        self::assertSame('Read this: example.com/sto… https://example.com/story', $entry->getSummary());
+        self::assertSame('Read this: example.com/sto… https://example.com/story', $entry->getText()->getSummary());
     }
 
     public function testAPostThatIsOnlyTheLinkLeavesNoBody(): void
@@ -228,8 +231,8 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('external'));
 
-        self::assertNull($entry->getContentHtml());
-        self::assertNull($entry->getSummary());
+        self::assertNull($entry->getText()->getContentHtml());
+        self::assertNull($entry->getText()->getSummary());
     }
 
     public function testAQuoteLeavesTheBodyAloneAndStoresOnlyThePostsOwnCard(): void
@@ -239,7 +242,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         $this->writer()->fill($entry, Bluesky::post('record-with-media'));
         $this->entityManager->flush();
 
-        self::assertSame('<p>Look.</p>', $entry->getContentHtml());
+        self::assertSame('<p>Look.</p>', $entry->getText()->getContentHtml());
         self::assertSame(['From the IAmA community on Reddit'], $this->storedTitles($entry));
     }
 
@@ -271,7 +274,7 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('video'));
 
-        self::assertSame('<p>Watch.</p>', $entry->getContentHtml());
+        self::assertSame('<p>Watch.</p>', $entry->getText()->getContentHtml());
         self::assertSame(self::VIDEO . 'thumbnail.jpg', $entry->getImageUrl());
         self::assertSame([1080, 1920], [$entry->getImageWidth(), $entry->getImageHeight()]);
         self::assertEquals(
@@ -306,9 +309,9 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('images'));
 
-        self::assertSame('', (string) $entry->getContentHtml());
+        self::assertSame('', (string) $entry->getText()->getContentHtml());
         self::assertSame(self::FULLSIZE, $entry->getMedia()[0]->url ?? null);
-        self::assertNull($entry->getSummary());
+        self::assertNull($entry->getText()->getSummary());
         self::assertSame(self::FULLSIZE, $entry->getImageUrl());
     }
 
@@ -318,7 +321,7 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('images'));
 
-        $stored = (string) $entry->getContentHtml();
+        $stored = (string) $entry->getText()->getContentHtml();
         self::assertSame('<p>Hi.</p>', $stored);
         self::assertStringNotContainsString('script', $stored);
         self::assertStringNotContainsString('onclick', $stored);
@@ -327,15 +330,15 @@ final class EntryEmbedWriterTest extends DbTestCase
     public function testAPostWithoutAnEmbedLeavesTheEntryAlone(): void
     {
         $entry = $this->entry('<p>Plain.</p>');
-        $entry->setSummary('Plain.');
+        $entry->recordText($entry->getText()->withSummary('Plain.'));
 
         self::assertSame(
             FillOutcome::Unfilled,
             $this->writer()->fill($entry, JsonNodeModel::of(['uri' => 'at://did:plc:a/app.bsky.feed.post/b'])),
         );
 
-        self::assertSame('<p>Plain.</p>', $entry->getContentHtml());
-        self::assertSame('Plain.', $entry->getSummary());
+        self::assertSame('<p>Plain.</p>', $entry->getText()->getContentHtml());
+        self::assertSame('Plain.', $entry->getText()->getSummary());
         self::assertNull($entry->getImageUrl());
         self::assertSame([], $entry->getMedia());
     }
@@ -448,7 +451,7 @@ final class EntryEmbedWriterTest extends DbTestCase
             new \DateTimeImmutable('2026-10-10 12:00:00'),
             new \DateTimeImmutable('2026-10-10 12:00:00'),
         );
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();

@@ -182,7 +182,7 @@ final class SearchFeedEditorTest extends DbTestCase
         $fetchedAt = new \DateTimeImmutable(self::NOW);
         for ($index = 0; $index < 501; ++$index) {
             $entry = new Entry($subscription->getFeed(), 'atom-' . $index, null, 'atom', $fetchedAt, $fetchedAt);
-            $entry->setContentHtml('<p>atom</p>');
+            $entry->recordText($entry->getText()->withContentHtml('<p>atom</p>'));
             $this->entityManager->persist($entry);
         }
         $this->entityManager->flush();
@@ -271,7 +271,7 @@ final class SearchFeedEditorTest extends DbTestCase
     {
         $fetchedAt = new \DateTimeImmutable(self::NOW);
         $entry = new Entry($subscription->getFeed(), $guid, null, $guid, $fetchedAt, $fetchedAt);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->setAuthor(new EntryAuthor('Someone', $authorUrl));
         $this->entityManager->persist($entry);
         $this->entityManager->flush();

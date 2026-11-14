@@ -187,7 +187,11 @@ final class E2eSeedAdminSubscriptionCommand extends Command
             $createdAt,
         );
         $entry->setPublishedAt($createdAt);
-        $entry->setContentHtml('<p>Fixture entry body; this feed never resolves, the row is seeded for smokes.</p>');
+        $entry->recordText(
+            $entry->getText()->withContentHtml(
+                '<p>Fixture entry body; this feed never resolves, the row is seeded for smokes.</p>',
+            ),
+        );
 
         return $entry;
     }

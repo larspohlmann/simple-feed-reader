@@ -52,7 +52,7 @@ final readonly class EntryCardWriter
     /** @param list<string> $urls */
     private function dropQuoteLines(Entry $entry, array $urls): void
     {
-        $html = (string) $entry->getContentHtml();
+        $html = (string) $entry->getText()->getContentHtml();
         $withoutQuotes = $html;
         foreach ($urls as $url) {
             $withoutQuotes = QuoteLine::removedFrom($withoutQuotes, $url);
@@ -62,7 +62,7 @@ final readonly class EntryCardWriter
         }
 
         $sanitized = $this->sanitizer->sanitize($withoutQuotes);
-        $entry->setContentHtml($sanitized);
-        $entry->setSummary(EntrySnippet::from($sanitized));
+        $entry->recordText($entry->getText()->withContentHtml($sanitized));
+        $entry->recordText($entry->getText()->withSummary(EntrySnippet::from($sanitized)));
     }
 }

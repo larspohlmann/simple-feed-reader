@@ -82,7 +82,7 @@ final readonly class DigestComposer
         // PlainText strips markup AND decodes the entity-escaped HTML feed
         // summaries routinely carry ("&amp;#8220;"), which a bare strip_tags
         // would leak into the mail; then cap for one email line.
-        $text = PlainText::from($row->entry->getSummary()) ?? '';
+        $text = PlainText::from($row->entry->getText()->getSummary()) ?? '';
 
         return ClippedText::trimmedOf($text, self::SUMMARY_MAX);
     }

@@ -218,7 +218,7 @@ final class RecommendationPipelineTest extends DbTestCase
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
         $entries = $this->fixtures->seedFeedWithEntries($this->user, $entryCount);
         foreach ($entries as $entry) {
-            $entry->setSummary($summary);
+            $entry->recordText($entry->getText()->withSummary($summary));
         }
         $this->entityManager->flush();
 

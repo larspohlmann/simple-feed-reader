@@ -44,7 +44,7 @@ final class EntryReaderControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $entry->setContentHtml('<p>The feed body.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>The feed body.</p>'));
         $entry->getImage()->storePending('https://example.com/feed.jpg', 800, 450);
         $entityManager->persist($entry);
         $entityManager->flush();
@@ -254,7 +254,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $entry->setContentHtml($html);
+        $entry->recordText($entry->getText()->withContentHtml($html));
         $entityManager->flush();
     }
 

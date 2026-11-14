@@ -72,7 +72,7 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
-        $body = (string) $entry->getContentHtml();
+        $body = (string) $entry->getText()->getContentHtml();
         self::assertStringContainsString('href="https://www.youtube-nocookie.com/embed/Xic3faS00Qs"', $body);
         self::assertStringContainsString('<p>Description</p>', $body);
     }
@@ -103,8 +103,8 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
-        self::assertSame('<p>a masterclass in alt text</p>', $entry->getContentHtml());
-        self::assertSame('a masterclass in alt text', $entry->getSummary());
+        self::assertSame('<p>a masterclass in alt text</p>', $entry->getText()->getContentHtml());
+        self::assertSame('a masterclass in alt text', $entry->getText()->getSummary());
     }
 
     public function testTheContainersIngestorHashesABlueskyRssPostLikeItsTimelineCopy(): void

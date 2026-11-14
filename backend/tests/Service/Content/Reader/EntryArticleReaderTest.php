@@ -88,7 +88,7 @@ final class EntryArticleReaderTest extends TestCase
     public function testAnExtractionThatMissesTheFullFeedArticleFailsAsMismatch(): void
     {
         $entry = $this->entry('https://example.com/article');
-        $entry->setContentHtml('<p>' . $this->fullFeedArticle() . '</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>' . $this->fullFeedArticle() . '</p>'));
         $this->extractor->willReturn($this->extraction('<p>+++ neu im shop eingetroffen +++</p>'));
 
         $result = $this->reader->read($entry);

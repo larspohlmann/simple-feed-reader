@@ -66,7 +66,7 @@ final class RefreshPassRecorderBlueskyTest extends DbTestCase
         $repost = $this->entry(self::IMAGE_POST);
         self::assertSame('', $repost->getTitle());
         self::assertTrue($repost->isTitleDerived());
-        self::assertStringContainsString('Reposted by', $repost->getContentHtml() ?? '');
+        self::assertStringContainsString('Reposted by', $repost->getText()->getContentHtml() ?? '');
         $link = $this->entry(self::LINK_POST);
         self::assertSame(ShareKind::Link, $link->getShareKind());
         $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$link->requireId()]);

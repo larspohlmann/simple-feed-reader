@@ -610,7 +610,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
         foreach ($this->fixtures->seedFeedWithEntries($user, $entryCount) as $entry) {
-            $entry->setSummary($summary);
+            $entry->recordText($entry->getText()->withSummary($summary));
         }
         $this->entityManager->flush();
 

@@ -531,9 +531,9 @@ final class EntryIngestorTest extends DbTestCase
         self::assertCount(2, $entries);
 
         $first = $entries[0];
-        self::assertStringContainsString('<p>Body</p>', (string) $first->getContentHtml());
-        self::assertStringNotContainsString('script', (string) $first->getContentHtml());
-        self::assertSame('A & B summary', $first->getSummary());
+        self::assertStringContainsString('<p>Body</p>', (string) $first->getText()->getContentHtml());
+        self::assertStringNotContainsString('script', (string) $first->getText()->getContentHtml());
+        self::assertSame('A & B summary', $first->getText()->getSummary());
         self::assertSame('Feed Title', $feed->getTitle());
         self::assertSame('https://example.com/', $feed->getSiteUrl());
     }
@@ -602,7 +602,7 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(1024, mb_strlen($entry->getTitle()));
         self::assertSame(255, mb_strlen((string) $entry->getAuthor()));
         self::assertSame(2048, mb_strlen((string) $entry->getUrl()));
-        self::assertLessThanOrEqual(500, mb_strlen((string) $entry->getSummary()));
+        self::assertLessThanOrEqual(500, mb_strlen((string) $entry->getText()->getSummary()));
         self::assertSame(512, mb_strlen((string) $feed->getTitle()));
     }
 
@@ -874,7 +874,7 @@ final class EntryIngestorTest extends DbTestCase
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'fallback-summary']);
         self::assertNotNull($entry);
-        self::assertSame('Body text here.', $entry->getSummary());
+        self::assertSame('Body text here.', $entry->getText()->getSummary());
     }
 
     public function testJunkContentHtmlYieldsNullSummaryNotTheJunkToken(): void
@@ -897,7 +897,7 @@ final class EntryIngestorTest extends DbTestCase
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'junk-summary']);
         self::assertNotNull($entry);
-        self::assertNull($entry->getSummary());
+        self::assertNull($entry->getText()->getSummary());
     }
 
     public function testEmptyParsedFeedStillUpdatesMetadata(): void

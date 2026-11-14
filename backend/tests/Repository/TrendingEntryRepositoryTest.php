@@ -22,7 +22,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         $tooOld = $fixtures->entry($feed, 'Too old', '2031-05-13 11:59:59');
         $first = $fixtures->article($feed, 'First', '2031-05-13 12:00:00', 'https://news.example.com/first');
         $second = $fixtures->entry($feed, 'Second', '2031-05-14 09:00:00');
-        $second->setSummary('<p>Body</p>');
+        $second->recordText($second->getText()->withSummary('<p>Body</p>'));
         $fixtures->flush();
         $this->entityManager->persist(new LinkCard($second, 1, self::card('https://later.example.com/b')));
         $this->entityManager->persist(new LinkCard($second, 0, self::card('https://shared.example.com/a')));

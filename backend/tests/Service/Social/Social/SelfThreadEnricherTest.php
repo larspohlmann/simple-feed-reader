@@ -80,7 +80,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     {
         $entry = $this->queuedEntry();
         $entry->setShareKind(ShareKind::Link);
-        $entry->setContentHtml(self::LINKED_TEXT);
+        $entry->recordText($entry->getText()->withContentHtml(self::LINKED_TEXT));
         $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
 
         $this->enricher()->enrich($this->feed);
@@ -94,7 +94,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     {
         $entry = $this->queuedEntry();
         $entry->setShareKind(ShareKind::Quote);
-        $entry->setContentHtml(self::LINKED_TEXT);
+        $entry->recordText($entry->getText()->withContentHtml(self::LINKED_TEXT));
         $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
 
         $this->enricher()->enrich($this->feed);
@@ -107,7 +107,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     public function testARootThatSharesNothingIsDroppedThoughItsTextLinksAPage(): void
     {
         $entry = $this->queuedEntry();
-        $entry->setContentHtml(self::LINKED_TEXT);
+        $entry->recordText($entry->getText()->withContentHtml(self::LINKED_TEXT));
         $this->entityManager->flush();
         $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
 
@@ -151,7 +151,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     {
         $entry = $this->queuedEntry();
         $entry->setShareKind(ShareKind::Link);
-        $entry->setContentHtml(self::LINKED_TEXT);
+        $entry->recordText($entry->getText()->withContentHtml(self::LINKED_TEXT));
         PostEnrichers::linkCards($this->entityManager)->append($entry, [
             new LinkCardContent(self::LINKED_PAGE, 'Story', null, null, 'example.com'),
         ]);
@@ -167,7 +167,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     {
         $entry = $this->queuedEntry('-4 days');
         $entry->setShareKind(ShareKind::Link);
-        $entry->setContentHtml(self::LINKED_TEXT);
+        $entry->recordText($entry->getText()->withContentHtml(self::LINKED_TEXT));
         $this->entityManager->flush();
 
         $this->enricher()->enrich($this->feed);
@@ -192,7 +192,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     {
         $entry = $this->queuedEntry(guid: 'https://example.com/not-a-post');
         $entry->setShareKind(ShareKind::Link);
-        $entry->setContentHtml(self::LINKED_TEXT);
+        $entry->recordText($entry->getText()->withContentHtml(self::LINKED_TEXT));
         $this->entityManager->flush();
 
         $this->enricher()->enrich($this->feed);

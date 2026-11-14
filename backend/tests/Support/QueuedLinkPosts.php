@@ -26,7 +26,7 @@ final class QueuedLinkPosts
         \DateTimeImmutable $queuedAt,
     ): Entry {
         $entry = new Entry($feed, $guid, null, 'Post', $queuedAt, $queuedAt);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
         $entityManager->persist($entry);

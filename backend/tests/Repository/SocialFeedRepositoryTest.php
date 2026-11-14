@@ -363,7 +363,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
     {
         $fetchedAt = new \DateTimeImmutable(self::FETCHED_AT);
         $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $fetchedAt, $fetchedAt);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->setAuthor(new EntryAuthor('Someone', $authorUrl));
         $this->entityManager->persist($entry);
         $this->entityManager->flush();

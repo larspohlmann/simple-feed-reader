@@ -214,7 +214,7 @@ final class AuditSamplerTest extends DbTestCase
         $feed = $this->feedWithEntries('body', 0);
         $moment = new \DateTimeImmutable(self::MOMENT);
         $article = new Entry($feed, 'article', 'https://body.example.com/a', 'T', $moment, $moment);
-        $article->setContentHtml('<p>The article.</p>');
+        $article->recordText($article->getText()->withContentHtml('<p>The article.</p>'));
         $this->entityManager->persist($article);
         $this->entityManager->flush();
 

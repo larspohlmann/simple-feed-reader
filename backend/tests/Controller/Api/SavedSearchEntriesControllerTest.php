@@ -113,7 +113,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-        $entry->setContentHtml('<p>Climate body text.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Climate body text.</p>'));
         $search = new SavedSearch($user, 'climate', false);
         $this->entityManager()->persist($search);
         $this->entityManager()->flush();

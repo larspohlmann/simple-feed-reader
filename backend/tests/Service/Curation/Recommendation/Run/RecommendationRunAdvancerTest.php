@@ -2797,7 +2797,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
                 sprintf('entry-%02d', $index),
                 1440 - $index,
             );
-            $entry->setSummary($summary);
+            $entry->recordText($entry->getText()->withSummary($summary));
         }
         $this->entityManager->flush();
 
@@ -2855,7 +2855,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
                 sprintf('entry-%02d', $index),
                 1440 - $index,
             );
-            $entry->setSummary($summary);
+            $entry->recordText($entry->getText()->withSummary($summary));
         }
         $this->entityManager->flush();
 

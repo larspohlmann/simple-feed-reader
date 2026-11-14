@@ -121,10 +121,10 @@ final readonly class EntryJson
         return [
             'id' => $entry->getId(),
             'pending' => $row->enrichment->pending,
-            'summary' => $entry->getSummary(),
+            'summary' => $entry->getText()->getSummary(),
             'excerpt' => EntryExcerpt::of(
-                $entry->getSummary(),
-                $entry->bodyStandsInForSummary() ? $entry->getContentHtml() : null,
+                $entry->getText()->getSummary(),
+                $entry->bodyStandsInForSummary() ? $entry->getText()->getContentHtml() : null,
             ),
             'imageUrl' => $entry->getImageUrl(),
             'imageWidth' => $entry->getImageWidth(),

@@ -49,8 +49,10 @@ final readonly class IngestedEntryFactory
             AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH),
             AbsoluteHttpUrl::orNullWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
         ));
-        $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
-        $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
+        $entry->recordText(
+            $entry->getText()->withSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml)),
+        );
+        $entry->recordText($entry->getText()->withContentHtml($this->sanitizer->sanitize($parsed->contentHtml)));
         $entry->setPublishedAt($parsed->publishedAt);
         $entry->setDiscussion($parsed->discussion);
         $entry->recordDiscussionCounts($parsed->discussionCounts);

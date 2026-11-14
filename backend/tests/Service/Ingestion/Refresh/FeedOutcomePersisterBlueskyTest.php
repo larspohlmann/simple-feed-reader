@@ -68,13 +68,13 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
         $tisch = $this->entry(self::TISCH);
         self::assertStringStartsWith(
             'Billionaire heiress Jessica Tisch',
-            (string) $tisch->getContentHtml(),
+            (string) $tisch->getText()->getContentHtml(),
         );
-        self::assertStringEndsWith('leave the city.', (string) $tisch->getContentHtml());
-        self::assertSame(self::TISCH_TEXT, $tisch->getSummary());
+        self::assertStringEndsWith('leave the city.', (string) $tisch->getText()->getContentHtml());
+        self::assertSame(self::TISCH_TEXT, $tisch->getText()->getSummary());
         $video = $this->entry(self::VIDEO_POST);
-        self::assertStringNotContainsString('[contains quote post', (string) $video->getContentHtml());
-        self::assertStringNotContainsString('<video', (string) $video->getContentHtml());
+        self::assertStringNotContainsString('[contains quote post', (string) $video->getText()->getContentHtml());
+        self::assertStringNotContainsString('<video', (string) $video->getText()->getContentHtml());
         self::assertSame('video', $video->getMedia()[1]->kind ?? null);
         self::assertSame(0, $this->pendingCount());
         self::assertCount(2, $this->indexWriter->upserts);
@@ -92,7 +92,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
         $this->appView->failsWith(new FeedUnreachableException('connection reset'));
         $this->persistFetched();
         self::assertSame(2, $this->pendingCount());
-        self::assertStringEndsWith(self::CARD, (string) $this->entry(self::TISCH)->getContentHtml());
+        self::assertStringEndsWith(self::CARD, (string) $this->entry(self::TISCH)->getText()->getContentHtml());
         $this->feed = $this->reloadedFeed();
 
         $this->appView->recovers();
@@ -105,7 +105,10 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
 
         self::assertSame(FeedOutcome::NotModified, $result->outcome);
         self::assertSame(0, $this->pendingCount());
-        self::assertStringNotContainsString(self::CARD, (string) $this->entry(self::TISCH)->getContentHtml());
+        self::assertStringNotContainsString(
+            self::CARD,
+            (string) $this->entry(self::TISCH)->getText()->getContentHtml(),
+        );
         self::assertCount(2, array_slice($this->indexWriter->upserts, -1)[0]);
     }
 

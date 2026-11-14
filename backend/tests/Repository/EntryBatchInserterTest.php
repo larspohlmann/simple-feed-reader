@@ -118,8 +118,8 @@ final class EntryBatchInserterTest extends DbTestCase
         self::assertSame('https://batch.example/one-guid', $entry->getUrl());
         self::assertSame('One', $entry->getTitle());
         self::assertSame('Ann Author', $entry->getAuthor());
-        self::assertSame('sum', $entry->getSummary());
-        self::assertSame('<p>body</p>', $entry->getContentHtml());
+        self::assertSame('sum', $entry->getText()->getSummary());
+        self::assertSame('<p>body</p>', $entry->getText()->getContentHtml());
         self::assertNull($entry->getImageUrl());
         self::assertSame(640, $entry->getImageWidth());
         self::assertNull($entry->getImageHeight());

@@ -27,7 +27,7 @@ final readonly class ArticleLineModel
             title: $entry->getTitle(),
             feedName: $titled->feedName,
             date: $entry->getEffectiveDate()->format('Y-m-d'),
-            description: PlainText::from($entry->getSummary() ?? $entry->getContentHtml()),
+            description: PlainText::from($entry->getText()->getSummary() ?? $entry->getText()->getContentHtml()),
         );
     }
 }
