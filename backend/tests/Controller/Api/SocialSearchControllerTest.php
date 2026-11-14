@@ -101,6 +101,27 @@ final class SocialSearchControllerTest extends ApiTestCase
         );
     }
 
+    public function testAPreviewPostWithItsOwnLinkKeepsItOverItsThread(): void
+    {
+        $post = new ParsedEntryModel(
+            'guid-1',
+            'https://bsky.app/profile/amy/post/1',
+            Headline::derived('Post 1'),
+            '@amy.bsky.social',
+            null,
+            self::postHtml(1),
+            new \DateTimeImmutable(self::publishedAt(1)),
+            discussion: Discussion::platformThread('https://lemmy.example/post/7'),
+            authorAvatarUrl: 'https://cdn.test/amy.jpg',
+        );
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageWith([$post])));
+        $user = $this->signIn($client, 'search-own-link@example.test');
+
+        $this->requestSearchPreview($client, $this->blueskyAccountOf($user), 'rss');
+
+        self::assertSame([self::previewPost(1)], $this->payload($client)['posts']);
+    }
+
     public function testABlankSearchPreviewQueryIsRefused(): void
     {
         $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));

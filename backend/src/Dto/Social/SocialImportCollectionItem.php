@@ -21,7 +21,7 @@ final readonly class SocialImportCollectionItem
     ) {
     }
 
-    /** @return list<string> */
+    /** @return array<int, string> */
     public static function clientKinds(): array
     {
         $collectionKinds = array_filter(
@@ -29,7 +29,7 @@ final readonly class SocialImportCollectionItem
             static fn (SocialFeedKind $kind): bool => !$kind->followsOnePerson(),
         );
 
-        return array_values(array_map(static fn (SocialFeedKind $kind): string => $kind->value, $collectionKinds));
+        return array_map(static fn (SocialFeedKind $kind): string => $kind->value, $collectionKinds);
     }
 
     public function toPrivateFeed(): PrivateFeedModel
