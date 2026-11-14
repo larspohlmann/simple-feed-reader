@@ -37,12 +37,12 @@ final readonly class LemmyPosts
     {
         $path = '/api/v3/post?id=' . $post->postId;
         if (self::isHomeInstance($account, $post)) {
-            $own = JsonNodeModel::of($this->account->get($account, $path)->json());
+            $homeView = JsonNodeModel::of($this->account->get($account, $path)->json());
 
-            return LemmyView::ofPost($own->node('post_view'));
+            return LemmyView::ofPost($homeView->node('post_view'));
         }
-        $seen = $this->lemmy->send(ApiRequestModel::get($post->instanceUrl . $path));
-        $origin = JsonNodeModel::of($seen->json())->node('post_view')->node('post')->string('ap_id');
+        $feedInstanceView = $this->lemmy->send(ApiRequestModel::get($post->instanceUrl . $path));
+        $origin = JsonNodeModel::of($feedInstanceView->json())->node('post_view')->node('post')->string('ap_id');
 
         return LemmyView::ofPost($this->resolve($account, $origin)->node('post'));
     }

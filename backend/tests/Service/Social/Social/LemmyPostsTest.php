@@ -43,6 +43,15 @@ final class LemmyPostsTest extends TestCase
         self::assertSame(VoteScore::None, $target->myVote);
     }
 
+    public function testAHomeInstanceHostDifferingOnlyInCaseIsStillTheHomeInstance(): void
+    {
+        $http = new RoutedHttpClient([self::HOME_POST => self::fixture('post-as-account.json')]);
+
+        $this->posts($http)->postOn($this->account(), new LemmyPostModel('https://Lemmy.Example', 42));
+
+        self::assertSame([self::HOME_POST], $http->requestLines());
+    }
+
     public function testAFederatedCopyResolvesItsOriginOnTheHomeInstance(): void
     {
         $http = $this->federated(self::fixture('resolve-post.json'));
