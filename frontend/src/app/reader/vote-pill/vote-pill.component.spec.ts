@@ -94,6 +94,21 @@ describe('VotePillComponent', () => {
       expect(button(host, 'Downvote').classList).not.toContain('voted');
     });
 
+    it('tintsTheWholePillAndFillsTheVotedArrow', () => {
+      const host = render(12, undefined, 1);
+
+      expect(host.querySelector('.pill')?.classList).toContain('up');
+      expect(button(host, 'Upvote').querySelector('app-icon')?.classList).toContain('filled');
+      expect(button(host, 'Downvote').querySelector('app-icon')?.classList).not.toContain('filled');
+    });
+
+    it('tintsTheWholePillDangerOnADownvote', () => {
+      const host = render(12, undefined, -1);
+
+      expect(host.querySelector('.pill')?.classList).toContain('down');
+      expect(button(host, 'Downvote').querySelector('app-icon')?.classList).toContain('filled');
+    });
+
     it('marksTheDownvote', () => {
       const host = render(12, undefined, -1);
 

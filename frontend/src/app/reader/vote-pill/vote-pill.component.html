@@ -1,6 +1,8 @@
 @let vote = myVote();
 <span
   class="pill"
+  [class.up]="vote === 1"
+  [class.down]="vote === -1"
   [attr.role]="vote === null ? 'img' : 'group'"
   [attr.aria-label]="pointsKey() | transloco: { count: score() }"
 >
@@ -17,7 +19,7 @@
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >
-      <app-icon name="arrow_upward" size="sm" aria-hidden="true" />
+      <app-icon name="arrow_upward" size="sm" [fill]="vote === 1" aria-hidden="true" />
     </button>
   }
   <span class="number">{{ compactScore() }}</span>
@@ -34,7 +36,7 @@
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >
-      <app-icon name="arrow_downward" size="sm" aria-hidden="true" />
+      <app-icon name="arrow_downward" size="sm" [fill]="vote === -1" aria-hidden="true" />
     </button>
   }
 </span>
