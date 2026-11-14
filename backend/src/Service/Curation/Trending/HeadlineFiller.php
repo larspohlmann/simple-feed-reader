@@ -11,7 +11,7 @@ final readonly class HeadlineFiller
     private const int FEED_MINIMUM_ENTRIES = 4;
     private const float FEED_SHARE = 0.5;
 
-    /** Already in HeadlineStems' form: casefolded, without diacritics, cut to six characters. */
+    /** German, English, French and Spanish; already in HeadlineStems' form: casefolded, without diacritics, cut to six characters. */
     private const array SEED_STEMS = [
         'the' => true, 'and' => true, 'for' => true, 'with' => true, 'from' => true, 'that' => true,
         'this' => true, 'these' => true, 'those' => true, 'are' => true, 'was' => true, 'were' => true,
@@ -35,6 +35,22 @@ final readonly class HeadlineFiller
         'bis' => true, 'unter' => true, 'gegen' => true, 'durch' => true, 'ins' => true, 'vom' => true,
         'seit' => true, 'beim' => true, 'ohne' => true, 'sein' => true, 'seine' => true, 'diese' => true,
         'dieser' => true, 'dieses' => true, 'kann' => true, 'soll' => true, 'alle' => true,
+        'les' => true, 'une' => true, 'aux' => true, 'dans' => true, 'sur' => true, 'sous' => true, 'pour' => true,
+        'par' => true, 'avec' => true, 'sans' => true, 'que' => true, 'qui' => true, 'quoi' => true, 'dont' => true,
+        'est' => true, 'sont' => true, 'etre' => true, 'ont' => true, 'pas' => true, 'plus' => true, 'cet' => true,
+        'cette' => true, 'ces' => true, 'ses' => true, 'leur' => true, 'leurs' => true, 'elle' => true,
+        'ils' => true, 'elles' => true, 'nous' => true, 'vous' => true, 'mais' => true, 'donc' => true,
+        'apres' => true, 'avant' => true, 'entre' => true, 'chez' => true, 'vers' => true, 'selon' => true,
+        'contre' => true, 'depuis' => true, 'lors' => true, 'tres' => true, 'aussi' => true, 'deja' => true,
+        'encore' => true, 'comme' => true, 'tout' => true, 'tous' => true, 'toute' => true, 'fait' => true,
+        'los' => true, 'las' => true, 'una' => true, 'unos' => true, 'unas' => true, 'del' => true, 'por' => true,
+        'para' => true, 'con' => true, 'como' => true, 'mas' => true, 'sus' => true, 'pero' => true,
+        'sobre' => true, 'hasta' => true, 'desde' => true, 'tras' => true, 'ante' => true, 'este' => true,
+        'esta' => true, 'estos' => true, 'estas' => true, 'ese' => true, 'esa' => true, 'eso' => true,
+        'esos' => true, 'esas' => true, 'muy' => true, 'tambie' => true, 'fue' => true, 'ser' => true,
+        'han' => true, 'hay' => true, 'sido' => true, 'segun' => true, 'cuando' => true, 'donde' => true,
+        'porque' => true, 'tiene' => true, 'todo' => true, 'todos' => true, 'toda' => true, 'otro' => true,
+        'otra' => true, 'durant' => true, 'contra' => true,
     ];
 
     public function isSeed(string $stem): bool
