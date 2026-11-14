@@ -1,6 +1,7 @@
 import { EntryMediumDto } from './entry-medium';
 import { SocialCountsDto } from './entry-social';
 import { LinkCardDto } from './link-card/link-card';
+import { VoteValue } from './vote-pill/vote';
 import { QuotedPostDto } from './quoted-post/quoted-post';
 
 export interface EntryCommentDto {
@@ -20,6 +21,14 @@ export interface EntryCommentDto {
   quote: QuotedPostDto | null;
   /** The network post the comment is; null for a comment from a feed. */
   post: EntryCommentPostDto | null;
+  /** The Lemmy comment the linked account votes on and replies to; null for any other source or without an account. */
+  vote: EntryCommentVoteDto | null;
+}
+
+export interface EntryCommentVoteDto {
+  address: string;
+  myVote: VoteValue;
+  canReply: boolean;
 }
 
 export interface EntryCommentPostDto {

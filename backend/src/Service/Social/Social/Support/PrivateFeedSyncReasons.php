@@ -49,6 +49,7 @@ final class PrivateFeedSyncReasons
         return match ($account->getNetwork()) {
             SocialNetwork::Mastodon => true,
             SocialNetwork::Bluesky => str_starts_with($collection->remoteId, 'at://' . $account->getIdentity() . '/'),
+            SocialNetwork::Lemmy => false,
         };
     }
 

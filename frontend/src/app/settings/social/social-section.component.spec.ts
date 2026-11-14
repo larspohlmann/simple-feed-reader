@@ -263,7 +263,7 @@ describe('SocialSectionComponent', () => {
     const fixture = mount([]);
 
     expect(byTestId(fixture, 'social-import-section')).toBeNull();
-    expect(root(fixture).querySelectorAll('app-settings-group')).toHaveLength(2);
+    expect(root(fixture).querySelectorAll('app-settings-group')).toHaveLength(3);
   });
 
   it('opens the picker for the account and reloads the accounts when it closes', () => {
@@ -293,12 +293,12 @@ describe('SocialSectionComponent', () => {
     ]);
 
     const groups = root(fixture).querySelectorAll('app-settings-group');
-    expect(groups).toHaveLength(3);
+    expect(groups).toHaveLength(4);
     expect(groups[0].textContent).toContain('alice.bsky.social');
     expect(groups[0].textContent).not.toContain('alice@example.social');
     expect(groups[1].textContent).toContain('alice@example.social');
-    expect(groups[2].textContent).toContain('alice.bsky.social');
-    expect(groups[2].textContent).toContain('alice@example.social');
+    expect(groups[3].textContent).toContain('alice.bsky.social');
+    expect(groups[3].textContent).toContain('alice@example.social');
   });
 
   it('says so when a network has no account', () => {
@@ -368,7 +368,7 @@ describe('SocialSectionComponent', () => {
     press(fixture, 'social-reconnect-1');
 
     const put = http.expectOne(`${ENDPOINT}/1/credential`);
-    expect(put.request.body).toEqual({ secret: 'fresh-secret' });
+    expect(put.request.body).toEqual({ secret: 'fresh-secret', totpToken: null });
     put.flush(account({ status: 'connected' }));
     fixture.detectChanges();
     expect(byTestId(fixture, 'social-reconnect-secret-1')).toBeNull();
@@ -589,6 +589,114 @@ describe('SocialSectionComponent', () => {
     fixture.detectChanges();
     press(fixture, 'social-mastodon-add');
     expect(byTestId<HTMLInputElement>(fixture, 'social-mastodon-token')?.value).toBe('');
+  });
+
+  describe('Lemmy', () => {
+    const lemmy = (over: Partial<SocialAccount> = {}): SocialAccount =>
+      account({
+        id: 7,
+        network: 'lemmy',
+        handle: 'lars@lemmy.example',
+        serviceUrl: 'https://lemmy.example',
+        ...over,
+      });
+
+    it('showsALemmyGroup', () => {
+      const fixture = mount([]);
+
+      const group = byTestId(fixture, 'social-lemmy-instance')?.closest('app-settings-group');
+      expect(group?.getAttribute('icon')).toBe('forum');
+      expect(group?.textContent).toContain('Lemmy');
+      expect(byTestId(fixture, 'social-lemmy-username')).not.toBeNull();
+      expect(
+        byTestId(fixture, 'social-lemmy-password')?.closest('app-password-input'),
+      ).not.toBeNull();
+      expect(byTestId<HTMLInputElement>(fixture, 'social-lemmy-password')?.type).toBe('password');
+      expect(byTestId(fixture, 'social-lemmy-totp')).not.toBeNull();
+      expect(group?.textContent).toContain('Only if your account asks for one.');
+
+      const connect = () =>
+        byTestId(fixture, 'social-lemmy-connect')?.querySelector('button') as HTMLButtonElement;
+      expect(connect().disabled).toBe(true);
+      type(fixture, 'social-lemmy-instance', 'lemmy.example');
+      type(fixture, 'social-lemmy-username', 'lars');
+      expect(connect().disabled).toBe(true);
+      type(fixture, 'social-lemmy-password', 'pw');
+      expect(connect().disabled).toBe(false);
+    });
+
+    it('connectsALemmyAccount', () => {
+      const fixture = mount([]);
+
+      type(fixture, 'social-lemmy-instance', 'lemmy.example');
+      type(fixture, 'social-lemmy-username', 'lars');
+      type(fixture, 'social-lemmy-password', 'pw');
+      type(fixture, 'social-lemmy-totp', '123456');
+      press(fixture, 'social-lemmy-connect');
+
+      const post = http.expectOne(`${ENDPOINT}/lemmy`);
+      expect(post.request.body).toEqual({
+        instanceUrl: 'lemmy.example',
+        username: 'lars',
+        password: 'pw',
+        totpToken: '123456',
+      });
+      post.flush(lemmy());
+      fixture.detectChanges();
+      press(fixture, 'social-lemmy-add');
+      expect(byTestId<HTMLInputElement>(fixture, 'social-lemmy-password')?.value).toBe('');
+      expect(byTestId<HTMLInputElement>(fixture, 'social-lemmy-totp')?.value).toBe('');
+    });
+
+    it('connects without a two-factor code when none is typed', () => {
+      const fixture = mount([]);
+
+      type(fixture, 'social-lemmy-instance', 'lemmy.example');
+      type(fixture, 'social-lemmy-username', 'lars');
+      type(fixture, 'social-lemmy-password', 'pw');
+      press(fixture, 'social-lemmy-connect');
+
+      const post = http.expectOne(`${ENDPOINT}/lemmy`);
+      expect(post.request.body).toEqual({
+        instanceUrl: 'lemmy.example',
+        username: 'lars',
+        password: 'pw',
+        totpToken: null,
+      });
+      post.flush(lemmy());
+    });
+
+    it('offers a Lemmy account Manage feeds', () => {
+      const fixture = mount([lemmy()]);
+
+      const button = byTestId(fixture, 'social-import-7')?.querySelector('button');
+      expect(button?.textContent).toContain('Manage feeds…');
+      expect(button?.closest('app-settings-row')?.textContent).toContain('Lemmy');
+    });
+
+    it('reconnectingLemmyAsksForThePasswordAndCode', () => {
+      const fixture = mount([lemmy({ status: 'needs_reconnect' })]);
+
+      expect(byTestId<HTMLInputElement>(fixture, 'social-reconnect-secret-7')?.type).toBe(
+        'password',
+      );
+      expect(byTestId(fixture, 'social-reconnect-totp-7')).not.toBeNull();
+      expect(root(fixture).textContent).toContain('Password');
+
+      type(fixture, 'social-reconnect-secret-7', 'pw');
+      type(fixture, 'social-reconnect-totp-7', '123456');
+      press(fixture, 'social-reconnect-7');
+
+      const put = http.expectOne(`${ENDPOINT}/7/credential`);
+      expect(put.request.body).toEqual({ secret: 'pw', totpToken: '123456' });
+      put.flush(lemmy());
+    });
+
+    it('offers no two-factor field when reconnecting a Bluesky account', () => {
+      const fixture = mount([account({ status: 'needs_reconnect' })]);
+
+      expect(byTestId(fixture, 'social-reconnect-totp-1')).toBeNull();
+    });
   });
 
   it('shows the app-password refusal in the banner and keeps the typed password', () => {

@@ -186,6 +186,12 @@ describe("ListHeading for a network's combined view", () => {
     expect(heading.title()).toBe('Mastodon · Feeds');
   });
 
+  it('titles a Lemmy profile group as Communities', () => {
+    const heading = networkHeading(true, { network: 'lemmy', feedKind: 'profile' });
+
+    expect(heading.title()).toBe('Lemmy · Communities');
+  });
+
   it("counts only the network's profile feeds when narrowed to them", () => {
     const selected = { network: 'mastodon', feedKind: 'profile' } as const;
 

@@ -112,6 +112,64 @@ describe('CommentsService', () => {
     });
   });
 
+  describe('vote', () => {
+    const address = 'https://origin.example/comment/5';
+    let answer: Subject<{ myVote: number; score: number }>;
+    let voteComment: jest.Mock;
+
+    beforeEach(() => {
+      answer = new Subject();
+      voteComment = jest.fn(() => answer);
+      Object.assign(api, { voteComment });
+      api.comments.mockReturnValue(
+        of({
+          ...ok,
+          comments: [anEntryComment({ score: 3, vote: { address, myVote: -1, canReply: true } })],
+        }),
+      );
+      service.load(1);
+    });
+
+    const shown = () => {
+      const state = service.state(1)();
+      return state.status === 'ok' ? state.comments[0] : undefined;
+    };
+
+    it('votesOnACommentAtOnce', () => {
+      service.vote(1, shown()!, 1);
+
+      expect(voteComment).toHaveBeenCalledWith(1, address, 1);
+      expect(shown()?.score).toBe(5);
+      expect(shown()?.vote?.myVote).toBe(1);
+    });
+
+    it('adoptsTheAnswerScore', () => {
+      service.vote(1, shown()!, 1);
+      answer.next({ myVote: 1, score: 9 });
+      answer.complete();
+
+      expect(shown()?.score).toBe(9);
+      expect(shown()?.vote?.myVote).toBe(1);
+    });
+
+    it('revertsAFailedCommentVote', () => {
+      service.vote(1, shown()!, 1);
+
+      answer.error(new HttpErrorResponse({ status: 409, error: { title: 'No account' } }));
+
+      expect(shown()?.score).toBe(3);
+      expect(shown()?.vote?.myVote).toBe(-1);
+      expect(toast.showProblem).toHaveBeenCalledTimes(1);
+    });
+
+    it('dropsASecondVoteOnTheSameComment', () => {
+      service.vote(1, shown()!, 1);
+      service.vote(1, shown()!, 0);
+
+      expect(voteComment).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('toggleRepost', () => {
     const address = 'https://hachyderm.io/users/ann/statuses/200';
     const post: EntryCommentPostDto = {

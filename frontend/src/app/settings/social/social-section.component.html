@@ -44,27 +44,34 @@
     </app-settings-row>
 
     @if (account.status === 'needs_reconnect') {
-      <app-settings-row
-        [stackable]="true"
-        [title]="
-          (network === 'bluesky' ? 'settings.social.appPassword' : 'settings.social.accessToken')
-            | transloco
-        "
-      >
+      <app-settings-row [stackable]="true" [title]="reconnectTitleKey(account) | transloco">
         <app-password-input class="secret-field">
           <input
             type="password"
             autocomplete="off"
             [attr.data-testid]="'social-reconnect-secret-' + account.id"
-            [value]="reconnectSecret(account.id)"
+            [value]="reconnectDraft(account.id).secret"
             (input)="setReconnectSecret(account.id, inputValue($event))"
           />
         </app-password-input>
+        @if (account.network === 'lemmy') {
+          <input
+            type="text"
+            class="text-field"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            [attr.aria-label]="'settings.social.twoFactorCode' | transloco"
+            [attr.placeholder]="'settings.social.twoFactorCode' | transloco"
+            [attr.data-testid]="'social-reconnect-totp-' + account.id"
+            [value]="reconnectDraft(account.id).totp"
+            (input)="setReconnectTotp(account.id, inputValue($event))"
+          />
+        }
         <app-button
           size="sm"
           variant="primary"
           [attr.data-testid]="'social-reconnect-' + account.id"
-          [disabled]="svc.busy() || reconnectSecret(account.id) === ''"
+          [disabled]="svc.busy() || reconnectDraft(account.id).secret === ''"
           (click)="reconnect(account)"
         >
           {{ 'settings.social.reconnect' | transloco }}
@@ -222,14 +229,100 @@
       }
     </app-settings-group>
 
-    @if (svc.accounts()?.length) {
+    <app-settings-group icon="forum" [title]="'settings.social.lemmy' | transloco">
+      <ng-container
+        [ngTemplateOutlet]="accountRows"
+        [ngTemplateOutletContext]="{ $implicit: lemmyAccounts(), network: 'lemmy' }"
+      />
+
+      @if (lemmyAccounts().length === 0 || lemmyFormOpen()) {
+        <app-settings-row [stackable]="true" [title]="'settings.social.instanceUrl' | transloco">
+          <input
+            type="url"
+            class="text-field"
+            autocomplete="off"
+            autocapitalize="none"
+            data-testid="social-lemmy-instance"
+            [value]="lemmyInstance()"
+            (input)="lemmyInstance.set(inputValue($event))"
+          />
+        </app-settings-row>
+        <app-settings-row [stackable]="true" [title]="'settings.social.lemmyUsername' | transloco">
+          <input
+            type="text"
+            class="text-field"
+            autocomplete="off"
+            autocapitalize="none"
+            data-testid="social-lemmy-username"
+            [value]="lemmyUsername()"
+            (input)="lemmyUsername.set(inputValue($event))"
+          />
+        </app-settings-row>
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.social.lemmyPassword' | transloco"
+          [description]="'settings.social.lemmyPasswordHint' | transloco"
+        >
+          <app-password-input class="secret-field">
+            <input
+              type="password"
+              autocomplete="off"
+              data-testid="social-lemmy-password"
+              [value]="lemmyPassword()"
+              (input)="lemmyPassword.set(inputValue($event))"
+            />
+          </app-password-input>
+        </app-settings-row>
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.social.twoFactorCode' | transloco"
+          [description]="'settings.social.twoFactorHint' | transloco"
+        >
+          <input
+            type="text"
+            class="text-field"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            data-testid="social-lemmy-totp"
+            [value]="lemmyTotp()"
+            (input)="lemmyTotp.set(inputValue($event))"
+          />
+          <app-button
+            variant="primary"
+            data-testid="social-lemmy-connect"
+            [disabled]="
+              svc.busy() ||
+              lemmyInstance() === '' ||
+              lemmyUsername() === '' ||
+              lemmyPassword() === ''
+            "
+            (click)="connectLemmy()"
+          >
+            {{ 'settings.social.connect' | transloco }}
+          </app-button>
+          @if (lemmyAccounts().length > 0) {
+            <app-button data-testid="social-lemmy-cancel" (click)="resetLemmyForm()">
+              {{ 'common.cancel' | transloco }}
+            </app-button>
+          }
+        </app-settings-row>
+      } @else {
+        <p class="add-another">
+          <app-button size="sm" data-testid="social-lemmy-add" (click)="lemmyFormOpen.set(true)">
+            {{ 'settings.social.connectAnother' | transloco }}
+          </app-button>
+        </p>
+      }
+    </app-settings-group>
+
+    @if (importableAccounts().length) {
       <app-settings-group
         icon="group_add"
         data-testid="social-import-section"
         [title]="'settings.social.importSectionTitle' | transloco"
         [caption]="'settings.social.importSectionCaption' | transloco"
       >
-        @for (account of svc.accounts(); track account.id) {
+        @for (account of importableAccounts(); track account.id) {
           <app-settings-row
             [stackable]="true"
             [title]="account.handle"

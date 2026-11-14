@@ -13,6 +13,8 @@ use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\RequestTicketModel;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\LemmyAccountApi;
+use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\TimelinePageModel;
@@ -32,6 +34,8 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
         private AnswerSettlerInterface $settler,
         private ActingAccountGuard $guard,
         private TimelineRounds $timelineRounds,
+        private LemmyAccountApi $lemmy,
+        private LemmyPostEntries $lemmyEntries,
     ) {
     }
 
@@ -49,6 +53,10 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                 $query,
             ),
             SocialNetwork::Mastodon => MastodonSearchPage::of($this->mastodonAnswers($account, $query), $query),
+            SocialNetwork::Lemmy => $this->lemmyEntries->page(
+                $account,
+                $this->lemmy->get($account, SocialSearchPaths::lemmy($query)),
+            ),
         };
     }
 

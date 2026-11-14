@@ -50,6 +50,18 @@ final class SocialAccountSyncRepositoryTest extends DbTestCase
         self::assertSame([$never->requireId()], $this->syncs()->findIdsDueForSync($now, 1));
     }
 
+    public function testALemmyAccountIsDueForSync(): void
+    {
+        $now = new \DateTimeImmutable('2026-10-17 12:00:00');
+        $lemmy = SocialAccounts::lemmyOf($this->owner);
+        $mastodon = SocialAccounts::mastodonOf($this->owner);
+        $this->entityManager->persist($lemmy);
+        $this->entityManager->persist($mastodon);
+        $this->entityManager->flush();
+
+        self::assertSame([$lemmy->requireId(), $mastodon->requireId()], $this->syncs()->findIdsDueForSync($now, 10));
+    }
+
     public function testAnAccountCheckedExactlyAtTheCutoffIsNotYetDue(): void
     {
         $now = new \DateTimeImmutable('2026-10-17 12:00:00');

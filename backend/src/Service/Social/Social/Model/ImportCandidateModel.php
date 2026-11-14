@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
+use App\Enum\SocialNetwork;
+
 final readonly class ImportCandidateModel
 {
     private function __construct(
@@ -23,12 +25,12 @@ final readonly class ImportCandidateModel
         return new self($follow, ImportCandidateState::Subscribed, $subscriptionId);
     }
 
-    public static function noLongerFollowed(ProfileFeedSubscriptionModel $profileFeed): self
+    public static function noLongerFollowed(ProfileFeedSubscriptionModel $profileFeed, SocialNetwork $network): self
     {
         return new self(
             new FollowedAccountModel(
                 $profileFeed->identity,
-                $profileFeed->handle(),
+                $profileFeed->handleOn($network),
                 $profileFeed->title,
                 $profileFeed->feedUrl,
                 $profileFeed->imageUrl,

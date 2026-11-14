@@ -20,6 +20,7 @@ use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Enum\VoteScore;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnrichment;
@@ -372,6 +373,20 @@ final class EntryJsonTest extends TestCase
         );
     }
 
+    public function testTheReadersDownVoteIsSentAsMinusOne(): void
+    {
+        $row = $this->row($this->entryTitled('Post'), new EntryListRowEnrichment(myVote: VoteScore::Down));
+
+        self::assertSame(-1, JsonMappers::entryJson()->listRow($row)['myVote']);
+    }
+
+    public function testAnEntryTheReaderCannotVoteOnSendsNoVote(): void
+    {
+        $row = $this->row($this->entryTitled('Article'));
+
+        self::assertNull(JsonMappers::entryJson()->listRow($row)['myVote']);
+    }
+
     public function testMyOwnPostSaysItIsMine(): void
     {
         $row = $this->row(
@@ -488,7 +503,7 @@ final class EntryJsonTest extends TestCase
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',
-                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'duplicates',
+                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'myVote', 'duplicates',
             ],
             array_keys($json),
         );
@@ -738,6 +753,40 @@ final class EntryJsonTest extends TestCase
         $entry->getFeed()->classifyAs(null);
 
         self::assertNull(JsonMappers::entryJson()->listRow($this->row($entry))['poster']);
+    }
+
+    public function testACommunityFeedShowsThePostsOwnAuthor(): void
+    {
+        $entry = $this->communityFeedEntry(SocialNetwork::Lemmy);
+        $entry->setAuthor(new EntryAuthor('ada', 'https://feddit.example/u/ada'));
+
+        self::assertSame(
+            ['name' => 'ada', 'url' => 'https://feddit.example/u/ada', 'imageUrl' => null],
+            JsonMappers::entryJson()->listRow($this->row($entry))['poster'],
+        );
+    }
+
+    public function testAMastodonProfileFeedStillShowsTheSubscriptionTitle(): void
+    {
+        $entry = $this->communityFeedEntry(SocialNetwork::Mastodon);
+        $entry->setAuthor(new EntryAuthor('ada', 'https://feddit.example/u/ada'));
+
+        self::assertSame('Source', JsonMappers::entryJson()->listRow($this->row($entry))['poster']['name'] ?? null);
+    }
+
+    private function communityFeedEntry(SocialNetwork $network): Entry
+    {
+        $feed = new Feed('https://feddit.example/feeds/c/rss.xml');
+        $feed->classifyAs($network);
+
+        return new Entry(
+            $feed,
+            'guid',
+            'https://feddit.example/post/1',
+            'Post',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
     }
 
     private function profileFeedEntry(?string $feedImageUrl): Entry

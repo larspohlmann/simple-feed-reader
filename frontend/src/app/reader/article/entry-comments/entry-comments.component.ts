@@ -24,13 +24,14 @@ import { PostActions } from '../composer/post-actions.service';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
-import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
+import { EntryCommentDto, EntryCommentPostDto, EntryCommentVoteDto } from '../../entry-comment';
+import { VoteValue } from '../../vote-pill/vote';
 import { likeableSocial } from '../../entry-social';
 import { mediumRatio } from '../../entry-medium';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
-import { VotePillComponent } from '../../vote-pill/vote-pill.component';
+import { CommentActionsComponent } from './comment-actions.component';
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
@@ -52,7 +53,7 @@ const DEEPEST_INDENT = 5;
     QuotedPostComponent,
     LinkCardComponent,
     SocialCountsRowComponent,
-    VotePillComponent,
+    CommentActionsComponent,
   ],
   templateUrl: './entry-comments.component.html',
   styleUrl: './entry-comments.component.scss',
@@ -120,6 +121,14 @@ export class EntryCommentsComponent {
 
   reply(network: SocialNetworkName, post: EntryCommentPostDto): void {
     this.responses.reply(this.entryId(), network, post.address);
+  }
+
+  vote(comment: EntryCommentDto, to: VoteValue): void {
+    this.service.vote(this.entryId(), comment, to);
+  }
+
+  replyOnLemmy(vote: EntryCommentVoteDto): void {
+    this.responses.reply(this.entryId(), 'lemmy', vote.address);
   }
 
   quote(network: SocialNetworkName, post: EntryCommentPostDto): void {

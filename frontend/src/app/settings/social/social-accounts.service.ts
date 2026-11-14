@@ -35,6 +35,13 @@ export interface SocialAccount {
   readonly sync: SocialAccountSync;
 }
 
+export interface LemmyCredentials {
+  readonly instanceUrl: string;
+  readonly username: string;
+  readonly password: string;
+  readonly totpToken: string | null;
+}
+
 interface SocialAccountList {
   readonly accounts: SocialAccount[];
 }
@@ -68,9 +75,17 @@ export class SocialAccountsService {
     );
   }
 
-  reconnect(id: number, secret: string): Observable<SocialAccount> {
+  connectLemmy(credentials: LemmyCredentials): Observable<SocialAccount> {
+    return this.upserting(this.http.post<SocialAccount>(`${this.endpoint}/lemmy`, credentials));
+  }
+
+  reconnect(
+    id: number,
+    secret: string,
+    totpToken: string | null = null,
+  ): Observable<SocialAccount> {
     return this.upserting(
-      this.http.put<SocialAccount>(`${this.endpoint}/${id}/credential`, { secret }),
+      this.http.put<SocialAccount>(`${this.endpoint}/${id}/credential`, { secret, totpToken }),
     );
   }
 

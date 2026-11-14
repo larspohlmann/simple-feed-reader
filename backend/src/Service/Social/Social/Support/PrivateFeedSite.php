@@ -18,6 +18,7 @@ final class PrivateFeedSite
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::bluesky($account, $privateFeed),
             SocialNetwork::Mastodon => self::mastodon($account, $privateFeed),
+            SocialNetwork::Lemmy => self::lemmy($account, $privateFeed),
         };
     }
 
@@ -40,7 +41,28 @@ final class PrivateFeedSite
             SocialFeedKind::Tag => $instance . '/tags/' . rawurlencode($privateFeed->remoteId),
             SocialFeedKind::Trending => $instance . '/explore',
             SocialFeedKind::Search => $instance . '/search?q=' . rawurlencode($privateFeed->remoteId),
-            SocialFeedKind::Home, SocialFeedKind::Author, SocialFeedKind::CustomFeed => $instance,
+            SocialFeedKind::Home,
+            SocialFeedKind::Author,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Local,
+            SocialFeedKind::All => $instance,
+        };
+    }
+
+    private static function lemmy(SocialAccount $account, PrivateFeedModel $privateFeed): string
+    {
+        $instance = rtrim($account->getServiceUrl(), '/');
+
+        return match ($privateFeed->kind) {
+            SocialFeedKind::Home => $instance . '/?listingType=Subscribed',
+            SocialFeedKind::Local => $instance . '/?listingType=Local',
+            SocialFeedKind::All => $instance . '/?listingType=All',
+            SocialFeedKind::Search => $instance . '/search?q=' . rawurlencode($privateFeed->remoteId) . '&type=Posts',
+            SocialFeedKind::UserList,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Author,
+            SocialFeedKind::Tag,
+            SocialFeedKind::Trending => $instance,
         };
     }
 

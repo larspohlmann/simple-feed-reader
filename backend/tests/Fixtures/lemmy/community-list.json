@@ -1,0 +1,44 @@
+{
+  "communities": [
+    {
+      "community": {
+        "id": 5,
+        "name": "rss",
+        "title": "RSS",
+        "icon": "https://feddit.example/pictrs/image/rss.png",
+        "removed": false,
+        "deleted": false,
+        "actor_id": "https://feddit.example/c/rss",
+        "local": false
+      },
+      "subscribed": "Subscribed",
+      "blocked": false
+    },
+    {
+      "community": {
+        "id": 6,
+        "name": "Linux",
+        "title": "Linux",
+        "removed": false,
+        "deleted": false,
+        "actor_id": "https://lemmy.example/c/Linux",
+        "local": true
+      },
+      "subscribed": "Subscribed",
+      "blocked": false
+    },
+    {
+      "community": {
+        "id": 7,
+        "name": "x",
+        "title": "Plain",
+        "removed": false,
+        "deleted": false,
+        "actor_id": "http://plain.example/c/x",
+        "local": false
+      },
+      "subscribed": "Subscribed",
+      "blocked": false
+    }
+  ]
+}

@@ -16,6 +16,7 @@ const entryActions = {
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
+  vote: jest.fn(),
 };
 
 beforeEach(() => {
@@ -50,6 +51,15 @@ function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imag
 }
 
 describe('EntryMetaComponent', () => {
+  it('votesFromTheRow', () => {
+    const votable = anEntry({ score: 5, myVote: 0 });
+    const element = mount([], votable).nativeElement as HTMLElement;
+
+    (element.querySelector('button[aria-label="Downvote"]') as HTMLButtonElement).click();
+
+    expect(entryActions.vote).toHaveBeenCalledWith(votable, -1);
+  });
+
   describe('discussion counts', () => {
     const discussionMeta = (overrides: Partial<EntryDto>) =>
       mount([], anEntry(overrides)).nativeElement as HTMLElement;

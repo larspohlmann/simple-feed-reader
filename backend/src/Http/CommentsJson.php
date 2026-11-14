@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Service\Content\Comments\Model\CommentPostModel;
+use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\CommentsResultModel;
 use App\Service\Content\Comments\Model\CommentsStatus;
 use App\Service\Content\Comments\Model\EntryCommentModel;
@@ -49,6 +50,7 @@ final readonly class CommentsJson
             'linkCard' => $this->linkCardJson->ofOrNull($comment->embeds->linkCard),
             'quote' => $this->quotedPostJson->ofOrNull($comment->embeds->quote),
             'score' => $comment->score,
+            'vote' => null === $comment->vote ? null : self::vote($comment->vote),
             'post' => null === $comment->post ? null : self::post($comment->post),
         ];
     }
@@ -77,5 +79,11 @@ final readonly class CommentsJson
             'canQuote' => $post->viewer->canQuote,
             'isOwn' => $post->viewer->isOwn,
         ];
+    }
+
+    /** @return array{address: string, myVote: int, canReply: bool} */
+    private static function vote(CommentVoteModel $vote): array
+    {
+        return ['address' => $vote->address, 'myVote' => $vote->myVote->value, 'canReply' => $vote->canReply];
     }
 }

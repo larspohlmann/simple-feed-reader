@@ -362,6 +362,11 @@ are left out of backups (docs/backup.md §6.2).
 - The app-password format check refuses a main password, which would grant far more than the app needs. It runs in
   the domain model (`SocialCredentialsModel`) on connect and on reconnect, before the rate limit and any network call.
 - The Mastodon token needs only `read` and `write:favourites`.
+- Lemmy connects with a username and password, once (#2218). Only the JWT the instance returns is sealed; the password
+  is neither stored nor hinted at in any answer or log. The JWT goes only to the account's own instance: the anonymous
+  `ap_id` lookup on a feed's instance carries none. Post, comment and parent ids reach a URL or a body only as
+  integers. A disconnect deletes the stored JWT but does not sign the session out on the instance, so the token stays
+  valid there until it expires or the user logs out in Lemmy.
 - The stored credential is read back to load the import picker (#1598): Bluesky opens one session per load
   (`BlueskySessionOpener`), Mastodon sends the token as a bearer header. A load is rate-limited per user
   (`social_import`, 10 per 15 minutes). A refused or unreadable credential marks the account as needing a reconnect,

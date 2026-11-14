@@ -42,6 +42,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     discussionUrl: null,
     comments: null,
     score: null,
+    myVote: null,
     commentCount: null,
     ...overrides,
   };
@@ -107,6 +108,7 @@ export function anEntryComment(overrides: Partial<EntryCommentDto> = {}): EntryC
     linkCard: null,
     quote: null,
     post: null,
+    vote: null,
     ...overrides,
   };
 }

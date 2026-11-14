@@ -1,3 +1,4 @@
+import { SocialNetworkName } from '../../../core/social-network';
 import {
   CollectionCandidate,
   CollectionKind,
@@ -10,6 +11,12 @@ export type ImportTab = 'accounts' | 'lists' | 'customFeeds' | 'tags';
 export type DialogTab = ImportTab | 'search';
 export type StateFilter = 'all' | ImportCandidateState;
 export type Translate = (key: string, params?: Record<string, string>) => string;
+
+/** How a row reads: the user's language, and the network whose singletons it names. */
+export interface RowNaming {
+  readonly translate: Translate;
+  readonly network: SocialNetworkName;
+}
 
 export interface ImportRow {
   readonly key: string;
@@ -49,6 +56,8 @@ export const FILTER_KEYS: Readonly<Record<StateFilter, string>> = {
 
 const COLLECTION_ICONS: Readonly<Record<CollectionKind, string>> = {
   home: 'home',
+  local: 'location_city',
+  all: 'public',
   trending: 'trending_up',
   list: 'list',
   custom_feed: 'dynamic_feed',
@@ -56,9 +65,23 @@ const COLLECTION_ICONS: Readonly<Record<CollectionKind, string>> = {
   search: 'search',
 };
 
-const SINGLETON_NAME_KEYS: Readonly<Partial<Record<CollectionKind, string>>> = {
+const LEMMY_NAME_KEYS: Readonly<Partial<Record<CollectionKind, string>>> = {
+  home: 'settings.social.importLemmySubscribed',
+  local: 'settings.social.importLemmyLocal',
+  all: 'settings.social.importLemmyAll',
+};
+
+const DEFAULT_NAME_KEYS: Readonly<Partial<Record<CollectionKind, string>>> = {
   home: 'settings.social.importHome',
   trending: 'settings.social.importTrending',
+};
+
+const SINGLETON_NAME_KEYS: Readonly<
+  Record<SocialNetworkName, Readonly<Partial<Record<CollectionKind, string>>>>
+> = {
+  bluesky: DEFAULT_NAME_KEYS,
+  mastodon: DEFAULT_NAME_KEYS,
+  lemmy: LEMMY_NAME_KEYS,
 };
 
 export const TAB_TEST_IDS: Readonly<Record<ImportTab, string>> = {
@@ -95,7 +118,7 @@ export interface Removal {
 export function removals(
   candidates: ImportCandidates | null,
   chosen: ReadonlySet<string>,
-  translate: Translate,
+  naming: RowNaming,
 ): Removal[] {
   const follows = (candidates?.follows ?? [])
     .filter((follow) => isSubscribed(follow.state) && chosen.has(followKey(follow)))
@@ -106,7 +129,7 @@ export function removals(
   const collections = collectionsOf(candidates)
     .filter((collection) => isSubscribed(collection.state) && chosen.has(collectionKey(collection)))
     .map((collection) => ({
-      name: collectionName(collection, translate),
+      name: collectionName(collection, naming),
       subscriptionId: collection.subscriptionId,
     }));
   return [...follows, ...collections].flatMap(({ name, subscriptionId }) =>
@@ -118,10 +141,10 @@ export function followKey(follow: FollowCandidate): string {
   return `follow:${follow.feedUrl}`;
 }
 
-export function buildRows(candidates: ImportCandidates | null, translate: Translate): RowsByTab {
-  const collectionRow = (collection: CollectionCandidate) => toCollectionRow(collection, translate);
+export function buildRows(candidates: ImportCandidates | null, naming: RowNaming): RowsByTab {
+  const collectionRow = (collection: CollectionCandidate) => toCollectionRow(collection, naming);
   return {
-    accounts: (candidates?.follows ?? []).map((follow) => toFollowRow(follow, translate)),
+    accounts: (candidates?.follows ?? []).map((follow) => toFollowRow(follow, naming.translate)),
     lists: (candidates?.lists ?? []).map(collectionRow),
     customFeeds: (candidates?.customFeeds ?? []).map(collectionRow),
     tags: (candidates?.tags ?? []).map(collectionRow),
@@ -167,13 +190,14 @@ function followName(follow: FollowCandidate): string {
   return follow.displayName ?? follow.handle;
 }
 
-function collectionName(collection: CollectionCandidate, translate: Translate): string {
-  const key = SINGLETON_NAME_KEYS[collection.kind];
-  return key === undefined ? collection.name : translate(key);
+function collectionName(collection: CollectionCandidate, naming: RowNaming): string {
+  const key = SINGLETON_NAME_KEYS[naming.network][collection.kind];
+  return key === undefined ? collection.name : naming.translate(key);
 }
 
-function toCollectionRow(collection: CollectionCandidate, translate: Translate): ImportRow {
-  const name = collectionName(collection, translate);
+function toCollectionRow(collection: CollectionCandidate, naming: RowNaming): ImportRow {
+  const { translate } = naming;
+  const name = collectionName(collection, naming);
   const removable = isSubscribed(collection.state);
   return {
     key: collectionKey(collection),

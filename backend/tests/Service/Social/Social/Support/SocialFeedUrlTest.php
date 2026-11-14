@@ -32,7 +32,7 @@ final class SocialFeedUrlTest extends TestCase
     /** @return iterable<string, array{PrivateFeedModel, string}> */
     public static function blueskyFeeds(): iterable
     {
-        yield 'home' => [PrivateFeedModel::home(), 'social:bluesky:12:home'];
+        yield 'home' => [PrivateFeedModel::timeline(SocialFeedKind::Home), 'social:bluesky:12:home'];
         yield 'list' => [PrivateFeedModel::userList(self::LIST, 'Writers'), 'social:bluesky:12:list:' . self::LIST];
         yield 'feed' => [PrivateFeedModel::customFeed(self::FEED, 'News'), 'social:bluesky:12:feed:' . self::FEED];
         yield 'author' => [
@@ -64,7 +64,10 @@ final class SocialFeedUrlTest extends TestCase
     {
         self::assertSame(
             'social:mastodon:4:trending',
-            SocialFeedUrl::of(self::withId(SocialAccounts::mastodon(), 4), PrivateFeedModel::trending()),
+            SocialFeedUrl::of(
+                self::withId(SocialAccounts::mastodon(), 4),
+                PrivateFeedModel::timeline(SocialFeedKind::Trending),
+            ),
         );
     }
 
@@ -102,6 +105,26 @@ final class SocialFeedUrlTest extends TestCase
         yield 'an unknown kind' => ['social:bluesky:4:starter-pack:x', null];
         yield 'the stored kind, not its segment' => ['social:bluesky:4:custom_feed:x', null];
         yield 'no account id' => ['social:bluesky:alice:home', null];
+    }
+
+    #[DataProvider('lemmyTimelines')]
+    public function testALemmyTimelineAddressRoundTrips(PrivateFeedModel $timeline, string $url): void
+    {
+        $account = self::withId(SocialAccounts::lemmyOf(SocialAccounts::owner()), 7);
+
+        self::assertSame($url, SocialFeedUrl::of($account, $timeline));
+        self::assertEquals(
+            new SocialFeedAddressModel(SocialNetwork::Lemmy, 7, $timeline->kind, ''),
+            SocialFeedUrl::addressOf($url),
+        );
+    }
+
+    /** @return iterable<string, array{PrivateFeedModel, string}> */
+    public static function lemmyTimelines(): iterable
+    {
+        yield 'subscribed' => [PrivateFeedModel::timeline(SocialFeedKind::Home), 'social:lemmy:7:home'];
+        yield 'local' => [PrivateFeedModel::timeline(SocialFeedKind::Local), 'social:lemmy:7:local'];
+        yield 'all' => [PrivateFeedModel::timeline(SocialFeedKind::All), 'social:lemmy:7:all'];
     }
 
     public function testEveryKindIsReadBackFromItsOwnUrl(): void

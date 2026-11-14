@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
+use App\Enum\VoteScore;
 use App\Service\Social\Social\Model\ThreadPostModel;
 
 final readonly class EntryListRowEnrichment
@@ -27,6 +28,8 @@ final readonly class EntryListRowEnrichment
         public ?EntryOrigin $origin = null,
         /** @var list<ThreadPostModel> the author's own replies folded into this entry, in thread order */
         public array $threadPosts = [],
+        /** null unless the entry is a Lemmy post and the reader has a Lemmy account; None for every one they can vote on */
+        public ?VoteScore $myVote = null,
     ) {
     }
 }

@@ -342,6 +342,13 @@ describe('SidebarSocialSectionComponent', () => {
     expect(root.querySelectorAll('app-sidebar-feed-row').length).toBe(2);
   });
 
+  it("heads Lemmy's community feeds as Communities", () => {
+    const root = element(mount({ ...WITH_PROFILES, network: 'lemmy' }));
+
+    expect(feedsRow(root)?.textContent).toContain('Communities');
+    expect(feedsRow(root)?.textContent).not.toContain('Feeds');
+  });
+
   it('lists the profiles under the row once its chevron opens it, and remembers that', () => {
     const fixture = mount(WITH_PROFILES);
 

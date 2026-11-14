@@ -59,7 +59,19 @@
   <ng-container pageHead>
     <div class="head-line">
       @if (e.score !== null) {
-        <app-vote-pill [score]="e.score" />
+        <app-vote-pill [score]="e.score" [myVote]="e.myVote" (voted)="actions.vote(e, $event)" />
+      }
+      @if (e.myVote !== null && lemmyConnected()) {
+        <button
+          appIconButton
+          type="button"
+          class="reply-action"
+          [attr.aria-label]="'reader.reply.lemmy' | transloco"
+          [title]="'reader.reply.lemmy' | transloco"
+          (click)="replyToPost(e)"
+        >
+          <app-icon name="reply" size="sm" />
+        </button>
       }
       <app-entry-pills
         [tags]="tags()"

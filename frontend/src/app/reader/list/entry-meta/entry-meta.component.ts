@@ -1,6 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
+import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
@@ -33,6 +34,7 @@ export class EntryMetaComponent {
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly imageShown = input(false);
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
+  protected readonly actions = inject(EntryActionHandler);
   private readonly compactCount = inject(CompactCount);
   protected readonly comments = computed(() => {
     const count = this.entry().commentCount;

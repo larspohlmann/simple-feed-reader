@@ -10,6 +10,7 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Entity\Category;
 use App\Entity\DigestSettings;
+use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Entity\EntryShare;
@@ -171,6 +172,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'They belong to an account a backup drops; the export leaves their feeds and posts out too.',
         SocialLike::class => 'Likes given through a connected account (#1600). They belong to an account a backup '
             . 'drops, and a restore cannot give them back without it.',
+        DiscussionVote::class => 'Votes cast through a connected Lemmy account (#2218). They belong to an account a '
+            . 'backup drops, and a restore cannot give them back without it.',
         KnownSocialCollection::class => 'What the hourly sync remembers of a connected account (#1666). It belongs '
             . 'to an account a backup drops.',
         PrivateFeedSyncChange::class => 'The recent automatic changes to a connected account\'s lists and feeds '

@@ -1,0 +1,20 @@
+{
+  "post": {
+    "post": {
+      "id": 990,
+      "name": "A post title",
+      "ap_id": "https://origin.example/post/3",
+      "locked": false,
+      "deleted": false,
+      "removed": false
+    },
+    "creator": {
+      "name": "ada",
+      "display_name": "Ada",
+      "actor_id": "https://origin.example/u/ada"
+    },
+    "counts": {
+      "score": 42
+    }
+  }
+}

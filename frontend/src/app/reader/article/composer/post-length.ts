@@ -8,9 +8,16 @@ const REMOTE_MENTION = /(^|[^\w/])@(\w+)@[\w.-]*\w/g;
 
 let graphemes: Intl.Segmenter | null | undefined;
 
-/** How long a post's text counts on its network: Bluesky counts graphemes, Mastodon code points. */
+/** How long a post's text counts on its network: Bluesky counts graphemes, Mastodon and Lemmy code points. */
 export function postLength(text: string, network: SocialNetworkName): number {
-  return network === 'bluesky' ? graphemeCount(text) : mastodonLength(text);
+  switch (network) {
+    case 'bluesky':
+      return graphemeCount(text);
+    case 'mastodon':
+      return mastodonLength(text);
+    case 'lemmy':
+      return [...text].length;
+  }
 }
 
 function graphemeCount(text: string): number {

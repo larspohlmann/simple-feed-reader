@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Comments\Pass;
 
+use App\Enum\VoteScore;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\MarkdownHtml;
@@ -18,6 +21,7 @@ final readonly class LemmyThread
         private ?string $entryAuthorUrl,
         private MarkdownHtml $markdown,
         private EntrySanitizer $sanitizer,
+        private bool $carriesVotes,
     ) {
     }
 
@@ -94,25 +98,35 @@ final readonly class LemmyThread
         $creator = $node->node('creator');
         $profileUrl = $creator->string('actor_id');
 
-        return new EntryCommentModel(
+        $address = $comment->string('ap_id');
+        $entryComment = new EntryCommentModel(
             self::author($creator, $profileUrl),
-            $comment->string('ap_id'),
+            $address,
             DateParser::parse($comment->string('published')),
             $html,
             null !== $profileUrl && $profileUrl === $this->entryAuthorUrl,
             score: $node->node('counts')->int('score'),
         )->atDepth($depth);
+
+        return $this->carriesVotes && null !== $address
+            ? $entryComment->withVote(self::vote($node, $address))
+            : $entryComment;
+    }
+
+    private static function vote(JsonNodeModel $node, string $address): CommentVoteModel
+    {
+        return new CommentVoteModel(
+            $address,
+            VoteScore::ofNetworkValue($node->int('my_vote')),
+            !$node->node('post')->isTrue('locked'),
+        );
     }
 
     private static function author(JsonNodeModel $creator, ?string $profileUrl): CommentAuthorModel
     {
-        $account = $creator->string('name');
-        $host = null === $profileUrl ? null : parse_url($profileUrl, \PHP_URL_HOST);
-        $hasHandle = null !== $account && \is_string($host);
-
         return new CommentAuthorModel(
-            $creator->string('display_name') ?? $account,
-            $hasHandle ? '@' . $account . '@' . $host : null,
+            $creator->string('display_name') ?? $creator->string('name'),
+            LemmyAuthor::handle($creator->string('name'), $profileUrl),
             $profileUrl,
             $creator->string('avatar'),
         );

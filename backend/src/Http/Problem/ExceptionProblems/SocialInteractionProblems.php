@@ -25,7 +25,7 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
         return match (true) {
             $exception instanceof NotASocialPostException => new ResolvedProblem(new ApiProblem(
                 'social_post_unsupported',
-                'Not a Bluesky or Mastodon post',
+                'Not a post this reader can act on',
                 Response::HTTP_CONFLICT,
                 $exception->getMessage(),
             )),

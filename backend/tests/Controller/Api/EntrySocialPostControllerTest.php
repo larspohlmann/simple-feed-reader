@@ -13,6 +13,9 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\StoredUserSettings;
+use App\Service\Content\Comments\CommentsCache;
+use App\Service\Content\Comments\CommentsSource\LemmyCommentsSource;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -23,7 +26,13 @@ final class EntrySocialPostControllerTest extends ApiTestCase
 {
     use RoutesSocialApis;
 
-    private const array ROUTED_HOSTS = ['mastodon.example'];
+    private const array ROUTED_HOSTS = ['mastodon.example', 'lemmy.example'];
+    private const string LEMMY_FIXTURES = __DIR__ . '/../../Fixtures/lemmy/';
+    private const string LEMMY_POST = 'GET https://lemmy.example/api/v3/post?id=42';
+    private const string LEMMY_COMMENT = 'POST https://lemmy.example/api/v3/comment';
+    private const string LEMMY_COMMENT_ADDRESS = 'https://origin.example/comment/5';
+    private const string LEMMY_RESOLVE_COMMENT = 'GET https://lemmy.example/api/v3/resolve_object?q='
+        . 'https%3A%2F%2Forigin.example%2Fcomment%2F5';
     private const string SEARCH = 'GET https://mastodon.example/api/v2/search?q='
         . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
     private const string INSTANCE = 'GET https://mastodon.example/api/v2/instance';
@@ -130,6 +139,128 @@ final class EntrySocialPostControllerTest extends ApiTestCase
 
         $client->request('GET', sprintf('/api/entries/%d/social/composer?kind=boost', $entryId));
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+    }
+
+    public function testTheComposerOpensForALemmyPost(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::LEMMY_POST => self::lemmyFixture('post-as-account.json'),
+        ]);
+        $user = $this->signIn($client, 'composer-lemmy@example.test');
+        $account = $this->lemmyAccountOf($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/social/composer', $this->lemmyPostFor($user)));
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertSame([['id' => $account->requireId(), 'handle' => '@lars@lemmy.example']], $payload['accounts']);
+        self::assertSame('reply', $payload['kind']);
+        self::assertTrue($payload['canSend']);
+        self::assertSame(10000, $payload['maxCharacters']);
+        self::assertNull($payload['visibility']);
+        self::assertSame('', $payload['text']);
+        self::assertIsArray($payload['target']);
+        self::assertSame('Ada', $payload['target']['authorName']);
+        self::assertSame([self::LEMMY_POST], $this->routesAsked());
+    }
+
+    public function testRepliesToALemmyPost(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::LEMMY_POST => self::lemmyFixture('post-as-account.json'),
+            self::LEMMY_COMMENT => self::lemmyFixture('comment-create.json'),
+        ]);
+        $user = $this->signIn($client, 'reply-lemmy-post@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->postReply($client, $this->lemmyPostFor($user), ['text' => 'Hello **there**']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(
+            ['address' => 'https://lemmy.example/comment/9001', 'url' => 'https://lemmy.example/comment/9001'],
+            $this->payload($client),
+        );
+        self::assertSame('{"content":"Hello **there**","post_id":42}', $this->http->requests[1]['body']);
+    }
+
+    public function testRepliesToALemmyComment(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::LEMMY_RESOLVE_COMMENT => self::lemmyFixture('resolve-comment.json'),
+            self::LEMMY_COMMENT => self::lemmyFixture('comment-create.json'),
+        ]);
+        $user = $this->signIn($client, 'reply-lemmy-comment@example.test');
+        $this->lemmyAccountOf($user);
+        $entryId = $this->lemmyPostFor($user);
+
+        $this->send(
+            $client,
+            'POST',
+            sprintf('/api/entries/%d/social/replies?address=%s', $entryId, rawurlencode(self::LEMMY_COMMENT_ADDRESS)),
+            ['text' => 'Agreed'],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame('{"content":"Agreed","post_id":990,"parent_id":77}', $this->http->requests[1]['body']);
+    }
+
+    public function testALockedPostCannotBeAnswered(): void
+    {
+        $locked = (string) file_get_contents(self::LEMMY_FIXTURES . 'post-as-account.json');
+        $locked = str_replace('"locked": false', '"locked": true', $locked);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::LEMMY_POST => new MockResponse($locked)]);
+        $user = $this->signIn($client, 'reply-lemmy-locked@example.test');
+        $this->lemmyAccountOf($user);
+        $entryId = $this->lemmyPostFor($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/social/composer', $entryId));
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($client)['canSend']);
+
+        $this->postReply($client, $entryId, ['text' => 'Hello']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('social_post_refused', $this->payload($client)['type']);
+    }
+
+    public function testALemmyPostCannotBeQuoted(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::LEMMY_POST => self::lemmyFixture('post-as-account.json'),
+        ]);
+        $user = $this->signIn($client, 'quote-lemmy@example.test');
+        $this->lemmyAccountOf($user);
+        $entryId = $this->lemmyPostFor($user);
+
+        $this->send($client, 'POST', $this->quotePath($entryId), ['text' => 'Worth reading']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('social_post_refused', $this->payload($client)['type']);
+    }
+
+    public function testAReplyForgetsTheCachedThread(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::LEMMY_POST => self::lemmyFixture('post-as-account.json'),
+            self::LEMMY_COMMENT => self::lemmyFixture('comment-create.json'),
+        ]);
+        $user = $this->signIn($client, 'reply-lemmy-cache@example.test');
+        $accountId = $this->lemmyAccountOf($user)->requireId();
+        $entryId = $this->lemmyPostFor($user);
+        $cache = self::getContainer()->get(CommentsCache::class);
+        self::assertInstanceOf(CommentsCache::class, $cache);
+        $key = LemmyCommentsSource::class . ' https://lemmy.example/post/42 account:' . $accountId;
+        $cache->remember($key, CommentsAnswerModel::settled('{}'), new \DateTimeImmutable());
+
+        $this->postReply($client, $entryId, ['text' => 'Hello']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertNull($cache->find($key));
+    }
+
+    private static function lemmyFixture(string $name): MockResponse
+    {
+        return new MockResponse((string) file_get_contents(self::LEMMY_FIXTURES . $name));
     }
 
     public function testAReplyIsPublishedOnceWithTheComposersKey(): void

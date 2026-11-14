@@ -25,6 +25,7 @@ final class SavedFeedUrlTest extends TestCase
         yield 'mastodon' => ['saved:42:mastodon', SocialNetwork::Mastodon];
         yield 'feeds' => ['saved:42', null];
         yield 'unknown network' => ['saved:42:myspace', null];
+        yield 'lemmy' => ['saved:42:lemmy', SocialNetwork::Lemmy];
         yield 'no user' => ['saved::bluesky', null];
         yield 'a private feed' => ['social:bluesky:42:home', null];
         yield 'a web feed naming a network' => ['https://example.com/saved:42:bluesky', null];

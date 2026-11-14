@@ -54,7 +54,7 @@ final class RefreshPassRecorderTest extends DbTestCase
         $this->entityManager->persist($this->account);
         $this->entityManager->flush();
         PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
-            ->create($this->account, PrivateFeedModel::home());
+            ->create($this->account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $home = SocialFeeds::repository($this->entityManager)->findOneFor($this->account, SocialFeedKind::Home, '');
         self::assertNotNull($home);
         $this->home = $home;

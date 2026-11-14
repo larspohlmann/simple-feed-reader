@@ -189,6 +189,8 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         yield 'author' => [SocialFeedKind::Author];
         yield 'custom feed' => [SocialFeedKind::CustomFeed];
+        yield 'local' => [SocialFeedKind::Local];
+        yield 'all' => [SocialFeedKind::All];
     }
 
     #[DataProvider('kindsMastodonHasNoTimelineFor')]

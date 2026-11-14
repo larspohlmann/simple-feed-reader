@@ -226,6 +226,18 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
+    public function testTheLinkComposerTakesNoLemmyNetwork(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-lemmy@example.test');
+        $this->lemmyAccountOf($user);
+
+        $client->request('GET', '/api/social/link-composer?url=' . rawurlencode(self::ARTICLE_URL) . '&network=lemmy');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame([], $this->http->requests);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function missingNetworks(): iterable
     {

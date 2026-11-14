@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
+use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 
 final readonly class MastodonSessionModel
@@ -31,8 +32,6 @@ final readonly class MastodonSessionModel
 
     public function host(): string
     {
-        $port = parse_url($this->instanceUrl, \PHP_URL_PORT);
-
-        return (string) parse_url($this->instanceUrl, \PHP_URL_HOST) . (null === $port ? '' : ':' . $port);
+        return UrlOrigin::hostWithPort($this->instanceUrl) ?? '';
     }
 }

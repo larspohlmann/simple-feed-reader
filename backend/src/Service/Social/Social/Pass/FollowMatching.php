@@ -74,7 +74,7 @@ final class FollowMatching
                 : ImportCandidateModel::subscribed($follow, $subscriptionId);
         }
         foreach ($this->unmatched as $profileFeed) {
-            $candidates[] = ImportCandidateModel::noLongerFollowed($profileFeed);
+            $candidates[] = ImportCandidateModel::noLongerFollowed($profileFeed, $this->network);
         }
 
         return $candidates;

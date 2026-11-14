@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
+use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 
 final readonly class ProfileFeedSubscriptionModel
@@ -17,8 +18,12 @@ final readonly class ProfileFeedSubscriptionModel
     ) {
     }
 
-    public function handle(): string
+    public function handleOn(SocialNetwork $network): string
     {
-        return BlueskyActorKey::isDid($this->identity) ? $this->identity : '@' . $this->identity;
+        return match ($network) {
+            SocialNetwork::Bluesky => BlueskyActorKey::isDid($this->identity) ? $this->identity : '@' . $this->identity,
+            SocialNetwork::Mastodon => '@' . $this->identity,
+            SocialNetwork::Lemmy => '!' . $this->identity,
+        };
     }
 }

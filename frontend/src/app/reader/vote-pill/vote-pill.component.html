@@ -1,5 +1,38 @@
-<span class="pill" role="img" [attr.aria-label]="pointsKey() | transloco: { count: score() }">
-  <span class="arrow"><app-icon name="arrow_upward" size="sm" aria-hidden="true" /></span>
+@let vote = myVote();
+<ng-template #arrow let-direction="direction" let-icon="icon" let-pressedValue="pressedValue">
+  @if (vote === null) {
+    <span class="arrow"><app-icon [name]="icon" size="sm" aria-hidden="true" /></span>
+  } @else {
+    <button
+      type="button"
+      class="arrow"
+      [class.up]="direction === 'up'"
+      [class.down]="direction === 'down'"
+      [class.voted]="vote === pressedValue"
+      [attr.aria-pressed]="vote === pressedValue"
+      [attr.aria-label]="'reader.vote.' + direction | transloco"
+      (click)="press(direction, $event)"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    >
+      <app-icon [name]="icon" size="sm" [fill]="vote === pressedValue" aria-hidden="true" />
+    </button>
+  }
+</ng-template>
+<span
+  class="pill"
+  [class.up]="vote === 1"
+  [class.down]="vote === -1"
+  [attr.role]="vote === null ? 'img' : 'group'"
+  [attr.aria-label]="pointsKey() | transloco: { count: score() }"
+>
+  <ng-container
+    [ngTemplateOutlet]="arrow"
+    [ngTemplateOutletContext]="{ direction: 'up', icon: 'arrow_upward', pressedValue: 1 }"
+  />
   <span class="number">{{ compactScore() }}</span>
-  <span class="arrow"><app-icon name="arrow_downward" size="sm" aria-hidden="true" /></span>
+  <ng-container
+    [ngTemplateOutlet]="arrow"
+    [ngTemplateOutletContext]="{ direction: 'down', icon: 'arrow_downward', pressedValue: -1 }"
+  />
 </span>

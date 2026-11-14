@@ -16,6 +16,7 @@ final readonly class EntryCommentModel
         public int $depth = 0,
         public ?CommentPostModel $post = null,
         public ?int $score = null,
+        public ?CommentVoteModel $vote = null,
     ) {
     }
 
@@ -29,5 +30,11 @@ final readonly class EntryCommentModel
     public function atDepth(int $depth): self
     {
         return clone($this, ['depth' => $depth]);
+    }
+
+    #[\NoDiscard]
+    public function withVote(CommentVoteModel $vote): self
+    {
+        return clone($this, ['vote' => $vote]);
     }
 }

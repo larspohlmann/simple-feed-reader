@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryMedia;
 use App\Entity\EntryTranscript;
 use App\Entity\ImageRendition;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
@@ -49,6 +50,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   quote: QuoteRow|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
  *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null,
+ *   myVote: int|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
  *   score: int|null, commentCount: int|null,
@@ -107,6 +109,7 @@ final readonly class EntryJson
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
             'social' => self::socialOf($row),
+            'myVote' => $row->enrichment->myVote?->value,
             'duplicates' => array_map($this->listRow(...), $row->duplicates),
         ];
     }
@@ -170,12 +173,17 @@ final readonly class EntryJson
     {
         $social = $row->enrichment->social;
 
-        if (null === $social) {
+        $network = match ($social?->network) {
+            SocialNetwork::Bluesky => 'bluesky',
+            SocialNetwork::Mastodon => 'mastodon',
+            SocialNetwork::Lemmy, null => null,
+        };
+        if (null === $social || null === $network) {
             return null;
         }
 
         return [
-            'network' => $social->network->value,
+            'network' => $network,
             'isLiked' => $social->isLiked,
             'canLike' => $social->canLike,
             'isOwn' => $social->isOwn,
@@ -199,6 +207,9 @@ final readonly class EntryJson
             return null === $feed->getNetwork() ? self::originPosterOf($row) : self::authorPosterOf($entry);
         }
         if (SourceFormat::isSocial($sourceFormat)) {
+            return self::authorPosterOf($entry);
+        }
+        if (SocialNetwork::Lemmy === $feed->getNetwork()) {
             return self::authorPosterOf($entry);
         }
         if (null !== $feed->getNetwork()) {

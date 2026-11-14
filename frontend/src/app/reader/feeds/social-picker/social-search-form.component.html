@@ -12,7 +12,7 @@
 </app-field>
 
 <p class="example">
-  {{ 'settings.social.search.example' | transloco }} <code>{{ exampleQuery }}</code>
+  {{ 'settings.social.search.example' | transloco }} <code>{{ exampleQuery() }}</code>
 </p>
 
 <app-disclosure
@@ -28,17 +28,19 @@
       <dd>{{ rule.key | transloco }}</dd>
     }
   </dl>
-  <p class="combined" data-testid="social-search-combined">
-    {{ 'settings.social.search.syntaxCombined' | transloco }}
-    <code>
-      @for (term of combinedExample.split(' '); track $index; let last = $last) {
-        <span class="term">{{ term }}</span>
-        @if (!last) {
-          {{ ' ' }}
+  @if (combinedExample(); as combined) {
+    <p class="combined" data-testid="social-search-combined">
+      {{ 'settings.social.search.syntaxCombined' | transloco }}
+      <code>
+        @for (term of combined.split(' '); track $index; let last = $last) {
+          <span class="term">{{ term }}</span>
+          @if (!last) {
+            {{ ' ' }}
+          }
         }
-      }
-    </code>
-  </p>
+      </code>
+    </p>
+  }
   @if (network() === 'mastodon') {
     <p class="note">{{ 'settings.social.search.syntaxMastodonNote' | transloco }}</p>
     <p class="note">{{ 'settings.social.search.syntaxMastodonAlternatives' | transloco }}</p>

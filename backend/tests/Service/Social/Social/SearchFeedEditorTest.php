@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
@@ -148,7 +149,7 @@ final class SearchFeedEditorTest extends DbTestCase
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
         $privateFeeds = PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock);
-        $home = $privateFeeds->subscribe($account, PrivateFeedModel::home(), []);
+        $home = $privateFeeds->subscribe($account, PrivateFeedModel::timeline(SocialFeedKind::Home), []);
 
         $this->expectException(NotASearchFeedException::class);
 
@@ -231,6 +232,26 @@ final class SearchFeedEditorTest extends DbTestCase
         $this->editor()->requery($subscription, 'rss -from:amy -from:ben@other.example -from:cy@mastodon.example');
 
         self::assertSame(['remote'], $this->remainingGuids($subscription));
+    }
+
+    public function testRequeryingALemmySearchKeepsItsPosts(): void
+    {
+        $account = $this->stored(SocialAccounts::lemmyOf($this->user));
+        $subscription = $this->searchFor($account, 'rss reader');
+        $this->post($subscription, 'https://lemmy.example/post/1', '<p>rss reader</p>', 'https://lemmy.example/u/ada');
+        $this->post($subscription, 'https://feddit.example/post/2', '<p>An RSS gazette</p>', null);
+
+        $this->editor()->requery($subscription, 'atom');
+
+        self::assertSame(
+            sprintf('social:lemmy:%d:search:atom', $account->requireId()),
+            $subscription->getFeed()->getUrl(),
+        );
+        self::assertEqualsCanonicalizing(
+            ['https://lemmy.example/post/1', 'https://feddit.example/post/2'],
+            $this->remainingGuids($subscription),
+        );
+        self::assertSame([], $this->indexWriter->forgets);
     }
 
     private function editor(): SearchFeedEditor

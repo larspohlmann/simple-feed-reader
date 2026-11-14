@@ -8,10 +8,12 @@ import { DEFAULT_TRENDING_WINDOW } from '../trending/trending-window';
 import { TrendingApi } from '../trending/trending-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
+import { VoteValue, steppedScore } from '../vote-pill/vote';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { ExclusionSurface, SURFACE_DESCRIPTOR } from '../feed-exclusions';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withPatchedRow } from './entry-rows';
+import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -27,15 +29,6 @@ function unionMatchedWords(existing: string[], incoming: string[]): string[] {
   }
   return union;
 }
-
-/** A row flag change still on the wire — a state PATCH or a like — kept so a list reload that lands meanwhile
- *  can lay the row's optimistic state back over the server's stale copy. */
-interface InFlightPatch {
-  entryId: number;
-  patch: RowPatch;
-}
-
-type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
@@ -54,7 +47,7 @@ export class EntriesStore {
   private readonly rawEntries = accountSignal<EntryDto[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
   private readonly unlisted = accountSignal<EntryDto | null>(null);
-  private readonly inFlightPatches = new Set<InFlightPatch>();
+  private readonly inFlight = new InFlightPatches();
   readonly entries = this.rawEntries.asReadonly();
   readonly nextCursor = accountSignal<string | null>(null);
   readonly loading = accountSignal(false);
@@ -82,7 +75,7 @@ export class EntriesStore {
   constructor() {
     onIdentityChange(() => {
       this.listRequest?.unsubscribe();
-      this.inFlightPatches.clear();
+      this.inFlight.clear();
     });
   }
 
@@ -101,7 +94,7 @@ export class EntriesStore {
     this.listRequest?.unsubscribe();
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
-        this.rawEntries.set(this.withInFlightPatches(page.entries));
+        this.rawEntries.set(this.inFlight.overlayAll(page.entries));
         this.nextCursor.set(page.nextCursor);
         this.matchedWords.set(page.matchedWords ?? []);
         this.loading.set(false);
@@ -153,7 +146,7 @@ export class EntriesStore {
       next: (page) => {
         this.rawEntries.update((current) => [
           ...current,
-          ...this.withInFlightPatches(page.entries),
+          ...this.inFlight.overlayAll(page.entries),
         ]);
         this.nextCursor.set(page.nextCursor);
         // Unioned, not replaced: the previous page's rows are still on
@@ -172,24 +165,6 @@ export class EntriesStore {
     });
   }
 
-  /** The server's page with every still-in-flight optimistic patch laid back over
-   *  it: a reload landing mid-PATCH carries the row's not-yet-updated copy. */
-  private withInFlightPatches(entries: EntryDto[]): EntryDto[] {
-    if (this.inFlightPatches.size === 0) return entries;
-    return entries.map((entry) => this.withInFlightPatch(entry));
-  }
-
-  private withInFlightPatch(entry: EntryDto): EntryDto {
-    let patched = entry;
-    for (const inFlight of this.inFlightPatches) {
-      patched = withPatchedRow(patched, new Set([inFlight.entryId]), (target) => ({
-        ...target,
-        ...inFlight.patch,
-      }));
-    }
-    return patched;
-  }
-
   /** The entry with `id`: its listed row, else the unlisted one held for it. */
   entry(id: number): EntryDto | null {
     const listed = this.rawEntries().find((entry) => entry.id === id);
@@ -199,7 +174,7 @@ export class EntriesStore {
   }
 
   holdUnlisted(entry: EntryDto): void {
-    this.unlisted.set(this.withInFlightPatch(entry));
+    this.unlisted.set(this.inFlight.overlay(entry));
   }
 
   releaseUnlisted(): void {
@@ -244,44 +219,70 @@ export class EntriesStore {
   /** Optimistic like apart from `setState`; dropped unless the post can be liked and no like is on the wire. */
   setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
     const social = likeableSocial(entry);
-    if (!social || this.likeInFlight(entry.id)) return;
+    if (!social || this.inFlight.onTheWire(entry.id, 'social')) return;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
     this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
   }
 
+  /** Optimistic vote on a Lemmy post, its score stepped with it; dropped unless the account can vote and no vote is on the wire. */
+  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
+    const from = entry.myVote;
+    if (from === null || entry.score === null || this.inFlight.onTheWire(entry.id, 'myVote'))
+      return;
+    const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
+    this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
+      next: (answer) => this.patchEntries([entry.id], (row) => ({ ...row, myVote: answer.myVote })),
+      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+    });
+  }
+
   /** The like the network reports, laid over entries still showing `from`; a click made since wins. */
   adoptLike(entryId: number, change: { from: boolean; to: boolean }): void {
-    if (change.from === change.to || this.likeInFlight(entryId)) return;
-    this.patchEntries([entryId], (entry) =>
+    if (change.from === change.to) return;
+    this.adoptReported(entryId, 'social', (entry) =>
       entry.social?.isLiked === change.from
         ? { ...entry, social: { ...entry.social, isLiked: change.to } }
         : entry,
     );
   }
 
-  /** Lays `patch` over `target` and its copies until `request$` settles, and puts the old values back if it fails. */
-  private optimistic(
-    target: EntryDto,
-    patch: RowPatch,
-    request$: Observable<unknown>,
-  ): Observable<unknown> {
-    const inFlight: InFlightPatch = { entryId: target.id, patch };
-    const before = valuesBefore(target, patch);
-    this.inFlightPatches.add(inFlight);
-    this.patchEntries([target.id], (entry) => ({ ...entry, ...patch }));
-    return request$.pipe(
-      tap({ error: () => this.patchEntries([target.id], (entry) => ({ ...entry, ...before })) }),
-      finalize(() => this.inFlightPatches.delete(inFlight)),
+  /** Asks the network which vote the account holds on a Lemmy post and adopts it; a failure is silent. */
+  refreshVote(entry: EntryDto): void {
+    const from = entry.myVote;
+    if (from === null) return;
+    this.socialPosts.myVote(entry.id).subscribe({
+      next: (answer) => this.adoptVote(entry.id, { from, to: answer.myVote }),
+      error: () => undefined,
+    });
+  }
+
+  /** The vote the network reports, laid over entries still showing `from`; a click made since wins. */
+  adoptVote(entryId: number, change: { from: VoteValue; to: VoteValue }): void {
+    if (change.from === change.to) return;
+    this.adoptReported(entryId, 'myVote', (entry) =>
+      entry.myVote === change.from ? { ...entry, myVote: change.to } : entry,
     );
   }
 
-  private likeInFlight(entryId: number): boolean {
-    for (const inFlight of this.inFlightPatches) {
-      if (inFlight.entryId === entryId && inFlight.patch.social) return true;
-    }
-    return false;
+  private adoptReported(
+    entryId: number,
+    field: keyof RowPatch,
+    adopt: (entry: EntryDto) => EntryDto,
+  ): void {
+    if (!this.inFlight.onTheWire(entryId, field)) this.patchEntries([entryId], adopt);
+  }
+
+  /** Lays `patch` over `target` and its copies until `request$` settles, and puts the old values back if it fails. */
+  private optimistic<T>(target: EntryDto, patch: RowPatch, request$: Observable<T>): Observable<T> {
+    const before = valuesBefore(target, patch);
+    const release = this.inFlight.add(target.id, patch);
+    this.patchEntries([target.id], (entry) => ({ ...entry, ...patch }));
+    return request$.pipe(
+      tap({ error: () => this.patchEntries([target.id], (entry) => ({ ...entry, ...before })) }),
+      finalize(release),
+    );
   }
 
   /** The entry with `id`, or its copy inside a row's `duplicates`, which the footer popover acts on. */
@@ -369,12 +370,6 @@ export class EntriesStore {
     this.error.set(null);
     this.failedOperation.set(null);
   }
-}
-
-/** What `entry` held under the keys `patch` changes, for a failed request to put back. */
-function valuesBefore(entry: EntryDto, patch: RowPatch): RowPatch {
-  const keys = Object.keys(patch) as (keyof RowPatch)[];
-  return Object.fromEntries(keys.map((key) => [key, entry[key]]));
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

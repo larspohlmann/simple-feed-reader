@@ -1,11 +1,14 @@
-export const SOCIAL_NETWORKS = ['bluesky', 'mastodon'] as const;
+export const SOCIAL_NETWORKS = ['bluesky', 'mastodon', 'lemmy'] as const;
 
 export type SocialNetworkName = (typeof SOCIAL_NETWORKS)[number];
 
 export const SOCIAL_NETWORK_NAMES: Record<SocialNetworkName, string> = {
   bluesky: 'Bluesky',
   mastodon: 'Mastodon',
+  lemmy: 'Lemmy',
 };
+
+export const LINK_POST_NETWORKS: readonly SocialNetworkName[] = ['bluesky', 'mastodon'];
 
 const NETWORK_FEED_KINDS = ['profile', 'search'] as const;
 

@@ -1,9 +1,9 @@
-import { EntryCommentDto } from '../../entry-comment';
+import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { SentPost } from './composed-post';
 
 /** The reader's reply as the panel shows it until the network's thread includes it. */
 export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto {
-  return {
+  const shared = {
     author: null,
     authorHandle: sent.authorHandle,
     authorUrl: null,
@@ -13,20 +13,31 @@ export function sentComment(sent: SentPost, publishedAt: Date): EntryCommentDto 
     html: paragraphsOf(sent.text),
     byEntryAuthor: false,
     depth: 0,
-    score: null,
     media: [],
     linkCard: null,
     quote: null,
-    post: {
-      address: sent.address,
-      counts: { likes: 0, reposts: 0, replies: 0, quotes: null },
-      isLiked: false,
-      isReposted: false,
-      canRepost: true,
-      canReply: true,
-      canQuote: true,
-      isOwn: true,
-    },
+  };
+  if (sent.network === 'lemmy') {
+    return {
+      ...shared,
+      score: 1,
+      post: null,
+      vote: { address: sent.address, myVote: 1, canReply: true },
+    };
+  }
+  return { ...shared, score: null, post: sentPost(sent), vote: null };
+}
+
+function sentPost(sent: SentPost): EntryCommentPostDto {
+  return {
+    address: sent.address,
+    counts: { likes: 0, reposts: 0, replies: 0, quotes: null },
+    isLiked: false,
+    isReposted: false,
+    canRepost: true,
+    canReply: true,
+    canQuote: true,
+    isOwn: true,
   };
 }
 

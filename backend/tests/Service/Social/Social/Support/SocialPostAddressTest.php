@@ -11,6 +11,7 @@ use App\Enum\SourceFormat;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\Support\SocialPostAddress;
+use App\Tests\Support\LemmyPostEntries;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -114,9 +115,57 @@ final class SocialPostAddressTest extends TestCase
 
     public function testAnEntryThatIsNoPostIsRefused(): void
     {
-        $this->expectExceptionObject(new NotASocialPostException('This entry is not a Bluesky or Mastodon post.'));
+        $this->expectExceptionObject(new NotASocialPostException('This entry is not a post this reader can act on.'));
 
         SocialPostAddress::ofOrRefuse(self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null));
+    }
+
+    public function testALemmyPostIsRespondableButNoLikeablePost(): void
+    {
+        $entry = self::lemmyPost();
+
+        self::assertNull(SocialPostAddress::of($entry));
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/42'),
+            SocialPostAddress::respondableOf($entry),
+        );
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/42'),
+            SocialPostAddress::respondableOrRefuse($entry),
+        );
+    }
+
+    public function testAnEntryThatIsNoPostIsNotRespondable(): void
+    {
+        $entry = self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null);
+
+        self::assertNull(SocialPostAddress::respondableOf($entry));
+        $this->expectException(NotASocialPostException::class);
+
+        SocialPostAddress::respondableOrRefuse($entry);
+    }
+
+    public function testAReplyUnderALemmyPostIsAnHttpsAddress(): void
+    {
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://origin.example/comment/5'),
+            SocialPostAddress::respondableReplyOrRefuse(self::lemmyPost(), 'https://origin.example/comment/5'),
+        );
+    }
+
+    public function testAReplyUnderALemmyPostThatIsNoUrlIsRefused(): void
+    {
+        $this->expectException(NotASocialPostException::class);
+
+        SocialPostAddress::respondableReplyOrRefuse(self::lemmyPost(), '77');
+    }
+
+    public function testAReplyUnderAMastodonPostIsAddressedAsBefore(): void
+    {
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URI),
+            SocialPostAddress::respondableReplyOrRefuse(self::postOn(SocialNetwork::Mastodon), self::STATUS_URI),
+        );
     }
 
     #[DataProvider('replies')]
@@ -185,6 +234,11 @@ final class SocialPostAddressTest extends TestCase
         ];
         yield 'an article' => ['https://news.example/article?id=7', null];
         yield 'a mastodon profile' => ['https://mastodon.social/@Gargron', null];
+    }
+
+    private static function lemmyPost(): Entry
+    {
+        return LemmyPostEntries::on(new Feed('https://lemmy.example/feeds/a.xml'));
     }
 
     private static function postOn(SocialNetwork $network): Entry

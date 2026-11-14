@@ -24,9 +24,10 @@ trait BuildsCommentsSources
     /**
      * @template TSource of object
      * @param class-string<TSource> $sourceClass
+     * @param array<string, object> $services set on the container before the source is built, by service id
      * @return TSource
      */
-    private function bootCommentsSource(string $sourceClass, string $now): object
+    private function bootCommentsSource(string $sourceClass, string $now, array $services = []): object
     {
         self::bootKernel();
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
@@ -39,6 +40,9 @@ trait BuildsCommentsSources
         $container = self::getContainer();
         $container->set(FeedFetcherInterface::class, $this->fetcher);
         $container->set(HostThrottle::class, $this->throttle);
+        foreach ($services as $id => $service) {
+            $container->set($id, $service);
+        }
         $source = $container->get($sourceClass);
         self::assertInstanceOf($sourceClass, $source);
 

@@ -33,6 +33,18 @@ final class UrlOrigin
         return self::fromParts($scheme, $host, self::isDefaultPort($scheme, $port) ? null : $port);
     }
 
+    /** @return string|null the host as written, followed by `:port` when the URL names one */
+    public static function hostWithPort(string $url): ?string
+    {
+        $parts = parse_url($url);
+        $host = $parts['host'] ?? '';
+        if ('' === $host) {
+            return null;
+        }
+
+        return isset($parts['port']) ? $host . ':' . $parts['port'] : $host;
+    }
+
     public static function isDefaultPort(string $scheme, ?int $port): bool
     {
         return null !== $port && $port === (self::DEFAULT_PORTS[$scheme] ?? null);

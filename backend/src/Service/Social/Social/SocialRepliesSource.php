@@ -27,6 +27,7 @@ use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
+use App\Service\Social\Social\Support\CommentsFailures;
 use App\Service\Social\Social\Support\OwnReplies;
 use App\Service\Social\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
@@ -38,8 +39,6 @@ use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 #[AsTaggedItem(priority: 10)]
 final readonly class SocialRepliesSource implements CommentsSourceInterface
 {
-    private const int RETRY_AFTER_UNNAMED_WAIT = 60;
-
     public function __construct(
         private ActingAccountChooser $accounts,
         private ActingAccountGuard $guard,
@@ -129,13 +128,9 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         try {
             return $thread->inPublic($address);
         } catch (SocialNetworkThrottledException $exception) {
-            throw new CommentsThrottledException(
-                $exception->getMessage(),
-                $exception->retryAfterSeconds ?? self::RETRY_AFTER_UNNAMED_WAIT,
-                $exception,
-            );
+            throw CommentsFailures::throttled($exception);
         } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $exception) {
-            throw new CommentsUnavailableException($exception->getMessage(), previous: $exception);
+            throw CommentsFailures::unavailable($exception);
         }
     }
 
@@ -173,6 +168,6 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     private static function postOf(Entry $entry): SocialPostAddressModel
     {
         return SocialPostAddress::of($entry)
-            ?? throw new CommentsUnavailableException('The entry is not a Bluesky or Mastodon post.');
+            ?? throw new CommentsUnavailableException('The entry is not a post this reader can act on.');
     }
 }

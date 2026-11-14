@@ -39,6 +39,7 @@ final readonly class TrendingFixtures
         $feed = new Feed(match ($network) {
             SocialNetwork::Bluesky => \sprintf('https://bsky.app/profile/%s.bsky.social/rss', $name),
             SocialNetwork::Mastodon => \sprintf('https://mastodon.example.com/@%s.rss', $name),
+            SocialNetwork::Lemmy => \sprintf('https://lemmy.example.com/feeds/c/%s.xml', $name),
             null => \sprintf('https://%s.example.com/feed', $name),
         });
         $this->entityManager->persist($feed);

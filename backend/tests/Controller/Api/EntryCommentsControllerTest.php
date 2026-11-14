@@ -133,7 +133,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertSame(
             [
                 'author', 'authorHandle', 'authorUrl', 'authorAvatarUrl', 'url', 'publishedAt', 'html',
-                'byEntryAuthor', 'depth', 'media', 'linkCard', 'quote', 'score', 'post',
+                'byEntryAuthor', 'depth', 'media', 'linkCard', 'quote', 'score', 'vote', 'post',
             ],
             array_keys($firstComment),
         );

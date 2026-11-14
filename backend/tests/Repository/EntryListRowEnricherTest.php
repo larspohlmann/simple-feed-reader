@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Category;
+use App\Entity\Discussion;
+use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Entity\EntryOrigin;
@@ -26,6 +28,7 @@ use App\Enum\FeedPlatform;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Enum\VoteScore;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnricher;
@@ -35,6 +38,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\LinkCardRepository;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
@@ -456,6 +460,89 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertSame([], $recorder->queriesMatching('social_like'));
     }
 
+    public function testALemmyPostCarriesTheReadersStoredVote(): void
+    {
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
+        $entry = $this->lemmyPost('up', 11);
+        $this->voteOn($entry, $account, VoteScore::Up);
+
+        self::assertSame(VoteScore::Up, $this->enrich([$this->row($entry)])[0]->enrichment->myVote);
+    }
+
+    public function testALemmyPostTheReaderHasNotVotedOnCarriesNone(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
+
+        $rows = $this->enrich([$this->row($this->lemmyPost('unvoted', 12))]);
+
+        self::assertSame(VoteScore::None, $rows[0]->enrichment->myVote);
+    }
+
+    public function testWithoutALemmyAccountALemmyPostCarriesNoVote(): void
+    {
+        $rows = $this->enrich([$this->row($this->lemmyPost('no-account', 13))]);
+
+        self::assertNull($rows[0]->enrichment->myVote);
+    }
+
+    public function testAPlainArticleCarriesNoVoteEvenWithALemmyAccount(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
+
+        $rows = $this->enrich([$this->row($this->entry('article-for-voter'))]);
+
+        self::assertNull($rows[0]->enrichment->myVote);
+    }
+
+    public function testAnAccountThatNeedsReconnectingStillCarriesTheVote(): void
+    {
+        $account = SocialAccounts::lemmyOf($this->user);
+        $account->markNeedsReconnect();
+        SocialFeeds::persistedAccount($this->entityManager, $account);
+        $entry = $this->lemmyPost('reconnect', 14);
+        $this->voteOn($entry, $account, VoteScore::Down);
+
+        self::assertSame(VoteScore::Down, $this->enrich([$this->row($entry)])[0]->enrichment->myVote);
+    }
+
+    public function testAnotherUsersVoteIsNotTheReaders(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
+        $other = $this->user('other-voter@example.com');
+        $otherAccount = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($other));
+        $entry = $this->lemmyPost('shared-post', 15);
+        $this->voteOn($entry, $otherAccount, VoteScore::Up, $other);
+
+        self::assertSame(VoteScore::None, $this->enrich([$this->row($entry)])[0]->enrichment->myVote);
+    }
+
+    public function testTheVotesOfAPageAreOneQueryHoweverManyLemmyPostsItHolds(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
+        $rows = [
+            $this->row($this->lemmyPost('page-one', 21)),
+            $this->row($this->lemmyPost('page-two', 22)),
+            $this->row($this->lemmyPost('page-three', 23)),
+        ];
+        $recorder = $this->recorder();
+
+        $this->enrich($rows);
+
+        self::assertCount(1, $recorder->queriesMatching('discussion_vote'));
+        self::assertCount(1, $recorder->queriesMatching('social_account'));
+    }
+
+    public function testAPageWithoutLemmyPostsAsksForNoVotes(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
+        $recorder = $this->recorder();
+
+        $rows = $this->enrich([$this->row($this->entry('no-lemmy-here'))]);
+
+        self::assertSame([], $recorder->queriesMatching('discussion_vote'));
+        self::assertNull($rows[0]->enrichment->myVote);
+    }
+
     public function testNoRowsStayNoRowsWithoutAQuery(): void
     {
         $recorder = $this->recorder();
@@ -533,6 +620,27 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function lemmyPost(string $guid, int $postId): Entry
+    {
+        $entry = LemmyPostEntries::on($this->feed, 'https://lemmy.example/post/' . $postId, $guid);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private function voteOn(Entry $entry, SocialAccount $account, VoteScore $score, ?User $voter = null): void
+    {
+        $this->entityManager->persist(new DiscussionVote(
+            $voter ?? $this->user,
+            $entry,
+            $account,
+            $score,
+            new \DateTimeImmutable('2026-11-14 10:00:00'),
+        ));
+        $this->entityManager->flush();
     }
 
     private function likeOf(SocialAccount $account, User $user, Entry $entry): void
