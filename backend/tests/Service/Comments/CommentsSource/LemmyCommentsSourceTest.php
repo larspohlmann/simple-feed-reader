@@ -21,7 +21,7 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\RateLimit\Exception\RateLimitedException;
-use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\BuildsCommentsSources;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -30,6 +30,8 @@ use Symfony\Component\Clock\MockClock;
 
 final class LemmyCommentsSourceTest extends KernelTestCase
 {
+    use BuildsCommentsSources;
+
     private const string FIXTURE = __DIR__ . '/../../../Fixtures/lemmy/comment-list.json';
     private const string POST = 'https://lemmy.world/post/54385737';
     private const string COMMENTS_API =
@@ -39,27 +41,11 @@ final class LemmyCommentsSourceTest extends KernelTestCase
     /** Must match framework.rate_limiter.comments.limit in rate_limiter.yaml. */
     private const int COMMENTS_BUDGET = 30;
 
-    private StubFeedFetcher $fetcher;
-    private MockClock $clock;
-    private User $user;
     private LemmyCommentsSource $source;
 
     protected function setUp(): void
     {
-        self::bootKernel();
-        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
-        $rateLimiterCache->clear();
-        $this->fetcher = new StubFeedFetcher();
-        $this->clock = new MockClock('2026-11-14 12:00:00');
-        $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
-        $this->user = new User('reader@example.com', $this->clock->now());
-        $container = self::getContainer();
-        $container->set(FeedFetcherInterface::class, $this->fetcher);
-        $container->set(HostThrottle::class, $throttle);
-        $source = $container->get(LemmyCommentsSource::class);
-        self::assertInstanceOf(LemmyCommentsSource::class, $source);
-        $this->source = $source;
+        $this->source = $this->bootCommentsSource(LemmyCommentsSource::class, '2026-11-14 12:00:00');
     }
 
     private static function entry(?string $url = null, ?Discussion $discussion = null): Entry
@@ -350,10 +336,5 @@ final class LemmyCommentsSourceTest extends KernelTestCase
             static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
             $comments,
         );
-    }
-
-    private function requestFor(Entry $entry): CommentsRequest
-    {
-        return new CommentsRequest($this->source, $this->user, $entry);
     }
 }
