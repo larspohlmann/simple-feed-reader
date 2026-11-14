@@ -195,3 +195,138 @@ The week window must not lose real stories net (anti-goal above).
 - Class names and module placement within the house rules.
 - Whether the parser reads `xml:lang` on `<channel>`/`<feed>` only or also falls back to the document root attribute.
 - Where the social-feed exclusion sits (the language service or the ingest call site).
+
+## Outcome
+
+Measured 2026-11-14/15 on the dev stack, as "Success measure" asks. Baseline is this branch with `feed.language` and
+`entry.language` both NULL, so every entry takes the six-character cut. Branch is the same code with both columns
+filled by the branch's own rules: `FeedLanguageResolver` over each feed's stored last 20 entries plus its declared tag,
+and `SocialEntryLanguage` over each stored social entry. The two runs went back to back on the same data.
+
+The measurement validates the mechanism only. **No table was curated from it** (Lars, 2026-11-15): a week's news says
+little about the news in three months. Two edits tried during the run were reverted or never committed (see Rulings).
+
+### Coverage, pairs, cost
+
+| | Day base | Day branch | Week base | Week branch |
+|---|---|---|---|---|
+| Entries | 4,284 | 4,284 | 28,709 | 28,714 |
+| Languages | all none | de 1,320, en 2,270, fr 307, es 314, none 73 | all none | de 11,027, en 16,354, fr 408, es 602, none 323 |
+| Coverage | – | 98.3 % | – | 98.9 % |
+| Groups | 561 | 562 | 3,735 | 3,686 |
+| Grouped pairs | 1,721 | 1,719 (new 160, lost 162, **net −2**) | 15,889 | 16,355 (new 2,629, lost 2,163, **net +466**) |
+| Wall time | 2.1 s | 4.2 s | 57 s | 75 s |
+| Peak RSS | 86.7 MB | 87.1 MB | 234.5 MB | 237.5 MB |
+
+Four runs over the same evening show how much the window drifts. Day net was +51, +44, +31 and −2; week net was +584,
++617, +625 and +466. **The week is a clear net gain. The day is about even.** Task 6's first run, before the per-entry
+and once-guessed languages, was −223 (day) and −2,029 (week).
+
+The language boundary is gone as a loss. Pairs with a language-less member lost 7 and gained 7 over the week (it was
+about 1,800 lost against 160 gained). Cross-language pairs, such as de–en, lost 128 and gained 15 over the week, and
+lost 12 and gained 4 over the day. German within German is still net negative: lost 741 and gained 541 over the week,
+lost 81 and gained 40 over the day. English is net positive: en–en and en–social lost 1,191 and gained 1,967 over the
+week.
+
+### Eye check
+
+The largest new and grown groups are real stories joined more completely. Examples: the FAA ground stop (33 → 39), the
+Scott Colom win, the Nvidia/Jensen Huang affair and resignation, the Hegseth Tomb incident, Mecklenburg-Vorpommern's
+coalition, Aigner for Bundespräsidentin, the Brooklyn collapse, and Italy fining Meta.
+
+Wrong merges found:
+- *Norway v Wales: Nations League – live* joined *Portugal vs Denmark LIVE: UEFA Nations League* (day).
+- heise's *Hier ein paar zuletzt häufig geteilte #News:* digest post joined the Microsoft outage story (day and week).
+
+The largest splits are real stories losing members:
+- *Dreiertreffen / Dreiergipfel* (8 → 5 + 3)
+- *Landesparteitag / Landesspitze* for BSW Sachsen-Anhalt (8 → 6 + 1 + 1)
+- *Trauerakt / Trauerstaatsakt / Trauerfeier* for Aiwanger
+- *Kandidatur / kandidiert* for Heil (13 → 11 + 2)
+- *Ukraine-Verhandlungen / -Gespräche* in Abu Dhabi (14 → 5 + 5 + 3 + …)
+- *Stacy Keach / Mike Hammer*, which splits into an English and a German group
+
+### What the losses are
+
+For each lost week pair, the classifier looked at the words that shared a cut stem under the baseline and share no
+stem under the branch, and classified them by a heuristic (`t6e-bridges.php` in the task scratchpad; the labels are
+approximate). The counts below are pairs, and one pair can fall in more than one class. Of the 2,163 lost pairs:
+- 1,331 (62 %) have no lost shared word. They split through transitivity (a group is a connected component, so one
+  missing link drops many pairs) or through shifted weights: `deutsch` and `deutschland` were one window-filler stem
+  under the cut and are now two linking stems below the 3 % line.
+- 705 pairs have only structural bridges.
+- 66 pairs have only news-specific bridges.
+- 61 pairs have both.
+
+| Class | Kind | Week pairs | Examples |
+|---|---|---|---|
+| Inflection or derivation the stemmer splits (mostly German verb *-t*, English derivations) | structural | 306 + 102 | *national/nationwide* 87, *leader/leadership* 32, *verhandeln/verhandelt/Verhandlungen* 23, *nominiert/Nominierung*, *kündigt/kündigen* |
+| German compounds | structural | 255 (day 35) | *Spionage/Spionageverdacht* 12, *Polizei/Polizeieinsatz* 10, *Sonntagmittag/-vormittag* 8, *Cyberangriff/Cyberattacke* 7, *Regierung/Regierungsbildung* 6, *Landesparteitag/Landesspitze* 5, *Dreiergipfel/Dreiertreffen* 4 |
+| A name stemmed by two languages' stemmers | news-specific | 104 | *Mike/Stacy (Keach)* 24/20, *Manchester United* 10, *Booker* 9, *Wenger* 6 |
+| Same ordinary word, two stemmers (de vs en) | structural | 77 | *Hammer* 24, *Prize*, *Fridays* |
+| Demonym and country, as a class | structural | 66 | *Australia/Australian* 13, *Europe/European* 8, *Ukraine/Ukrainian* 6, *Russia/Russian* 5, *Europas/europäische* |
+| A name in two spellings | news-specific | 34 | mostly misfiled (*democrats/democracy*); real transliteration losses (*Selenskyj/Selenskij*) are about 0 |
+| Function word that the branch now seeds | structural, a false link removed | 29 | *sollen*, *mehrere*, *seiner*, *ihre*, *wurden* |
+| Cognates across languages | structural | 23 | *humanitaire/humanitarian*, *immédiat/immediate* |
+
+**German compounds cost about 255 week pairs and 35 day pairs** (heuristic, upper bound: some derivations such as
+*Kandidaten/kandidiert* fall in this class). The worst cases are listed above. No compound splitting was built.
+
+The name-spelling loss is small. Transliterations that the cut joined share six letters, and few did. The real name
+loss is one name stemmed by two stemmers (*Hammer* → de `hamm`, en `hammer`), at about 100–130 week pairs.
+
+The top shared stems that are still no seed are function words: de *was, doch, nun, ich, uns, kein, muss, war, viel,
+wieder, gibt, könnte*; en *now, one, here, back, like, get, make*; fr *son, été, avoir*; es *han, hace, solo, durante,
+dos, puede*. Others are web boilerplate: *www, https, com, ots, lesen*. And de `and` (*andere*) collides with English
+*and*.
+
+### Sources that do not depend on the news (proposals, not built)
+
+- **Function words:** the Snowball project's stopword lists for de/en/fr/es.
+  - Replace `HeadlineFiller::SEED_WORDS` and the cut `SEED_STEMS`.
+  - They cover the function words above.
+- **German compounds and verb forms:** a general German decompounder and lemmatizer driven by a dictionary, not by
+  feeds, such as the LibreOffice/Hunspell `de_DE` dictionary with its compound flags, or a lemma list.
+  - This adds the head and modifier stems; no table is replaced.
+  - Estimated gain: up to the about 255 compound pairs, plus part of the 306 inflection pairs.
+- **Demonyms, countries and capitals:** CLDR's territory names for de/en/fr/es, Wikidata's demonym property (P1549),
+  and the names of capitals in each language.
+  - Replace the country and capital entries of `CUT_STEMS` and `STEMS_BY_LANGUAGE`, the country entries of
+    `EXACT_WORDS` (*Schweiz, Austria, Niederlande, Großbritannien, Francia*), and the country phrases.
+  - An uncommitted trial of English and German demonym pairs, done one by one, measured day −8 / week +121 on the same
+    data. That is the order of gain a class-wide source would give.
+- **Names across stemmers and in other spellings:** a general rule applied to every word.
+  - A proper-noun guard: a word written capitalised mid-sentence in an en/fr/es entry keeps its bare form instead of a
+    stem.
+  - A transliteration fold on top of it (z/s, w/v, ck/k, and final -yj/-yy/-ij/-iy/-i). The fold would replace every
+    Zelensky entry.
+  - Estimated gain: about 100–130 week pairs for the guard. The fold gains little against the baseline, because the
+    cut never joined those spellings, so its gain beyond the baseline is unmeasured.
+
+### The #2225 tables
+
+These entries are news-specific (a person or an event):
+- every Zelensky spelling: `zelens` in `CUT_STEMS`, de `selenskyj`, en `zelenski`/`zelenskyy`, fr `zelensky`,
+  es `zelenski`/`zelensky`;
+- `WM` and de `weltmeisterschaft`;
+- arguably `kreml`/`kremlin`.
+
+The rest is geography (countries, capitals, the EU and the UN) and general by nature, though chosen from one week's
+collisions. A CLDR-style source would fill it. The exact words *Schweiz, Austria, Niederlande, Großbritannien* are not
+made redundant by Snowball: they run before stemming in every language and carry the cross-language join.
+
+### Rulings during the measurement
+
+- A German `zelensky` entry was committed, then reverted. Per-name spelling entries do not scale, and no test may pin
+  one name's spellings (Lars).
+- The within-language demonym joins that were tried were never committed. Curation from the current window was dropped
+  altogether (Lars): "you are using todays data for testing. It might look completely different in 3 months".
+- No seeds, exact words or compounds were changed.
+
+### Limitation
+
+Stored entries do not keep the post's stated language (Bluesky `langs`, Mastodon `language`, Lemmy `language_id`). The
+fill therefore fell back to `LanguageGuess` for every social entry, whereas live ingest prefers the stated language
+(`SocialEntryLanguage`). Some guesses were wrong; English Bluesky posts tagged `fr` show up in the Eurovision group,
+for example. Posts were not fetched again. New social entries ingested by the running develop app during the runs
+carry no language, so the numbers drift by a few pairs from run to run.
