@@ -239,6 +239,7 @@ final class HeadlineEquivalentsTest extends TestCase
     public static function spellingsByLanguage(): iterable
     {
         yield 'de Selenskyj' => [FeedLanguage::German, 'Selenskyj', 'selens'];
+        yield 'de Zelensky' => [FeedLanguage::German, 'Zelensky', 'selens'];
         yield 'de Russlands' => [FeedLanguage::German, 'Russlands', 'russia'];
         yield 'de Polen' => [FeedLanguage::German, 'Polen', 'poland'];
         yield 'de Österreich' => [FeedLanguage::German, 'Österreich', 'osterr'];
