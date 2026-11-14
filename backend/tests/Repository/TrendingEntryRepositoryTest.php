@@ -100,6 +100,29 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         self::assertSame(FeedLanguage::French, $rows[0]->language);
     }
 
+    public function testAWindowEntryReadsItsOwnLanguageBeforeItsFeeds(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $feed = $fixtures->feed('timeline');
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
+        $own = $fixtures->entry($feed, 'Own', '2031-05-14 09:00:00');
+        $own->recordText($own->getText()->withLanguage(FeedLanguage::German));
+        $fixtures->entry($feed, 'Inherited', '2031-05-14 10:00:00');
+        $fixtures->flush();
+
+        $rows = iterator_to_array(
+            (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
+            ),
+            false,
+        );
+
+        self::assertSame(
+            [FeedLanguage::German, FeedLanguage::French],
+            array_map(static fn (WindowEntryModel $row): ?FeedLanguage => $row->language, $rows),
+        );
+    }
+
     private static function card(string $url): LinkCardContent
     {
         return new LinkCardContent($url, 'Card', null, null, 'example.com');

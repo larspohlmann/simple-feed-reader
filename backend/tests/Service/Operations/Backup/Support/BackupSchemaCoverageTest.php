@@ -308,6 +308,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'still lists the post; a restored one would be stale before the reader saw it.',
             'discussion.commentCount' => 'A Lemmy post\'s comment count (#2217), rewritten on every fetch '
                 . 'while its feed still lists the post; a restored one would be stale before the reader saw it.',
+            'text.language' => 'Guessed at ingest for a social timeline entry only (#2227), and a timeline feed '
+                . 'is never in the file; every other entry stores none.',
         ],
         LinkCard::class => [
             'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',

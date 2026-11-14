@@ -9,10 +9,14 @@ use App\Entity\Entry;
 use App\Entity\EntryChapter;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Enum\FeedLanguage;
+use App\Enum\SourceFormat;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
+use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Parser\Model\ParsedChaptersModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
@@ -261,11 +265,46 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertEquals(DiscussionCounts::of(7, 2), $entry->getDiscussionCounts());
     }
 
+    public function testASocialTimelineEntryStoresItsGuessedLanguage(): void
+    {
+        $feed = new Feed('bluesky://timeline');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        $entry = $this->factory()->create($feed, self::incomingGerman(), self::context());
+
+        self::assertSame(FeedLanguage::German, $entry->getText()->getLanguage());
+    }
+
+    public function testAnEntryOfAnOrdinaryFeedStoresNoLanguage(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+
+        $entry = $this->factory()->create($feed, self::incomingGerman(), self::context());
+
+        self::assertNull($entry->getText()->getLanguage());
+    }
+
+    private static function incomingGerman(): IncomingEntryModel
+    {
+        $parsed = new ParsedEntryModel(
+            'g-de',
+            null,
+            Headline::fromFeed('Die Bundesregierung kündigt neue Maßnahmen an'),
+            null,
+            '<p>Der Kanzler sagte am Montag, dass die Regierung weitere Hilfen für die Menschen vorbereitet.</p>',
+            null,
+            null,
+        );
+
+        return new IncomingEntryModel($parsed, hash('sha256', 'g-de'), null);
+    }
+
     private function factory(): IngestedEntryFactory
     {
         return new IngestedEntryFactory(
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
+            new LanguageGuess(new LanguageDetectionFactory()->create()),
         );
     }
 

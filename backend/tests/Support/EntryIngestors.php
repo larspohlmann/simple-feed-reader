@@ -49,7 +49,11 @@ final class EntryIngestors
             EntryUrlHashes::production(),
             new EntryCategoryWriter($entityManager, $categoryRepository, new CategoryNormalizer()),
             $platformRules,
-            new IngestedEntryFactory(new EntrySanitizer(new TrailingBlankRemover()), $imageWriter),
+            new IngestedEntryFactory(
+                new EntrySanitizer(new TrailingBlankRemover()),
+                $imageWriter,
+                new LanguageGuess(new LanguageDetectionFactory()->create()),
+            ),
             $imageWriter,
             new ProfileFeedTitle(),
             new EntryTranscriptWriter($entityManager),

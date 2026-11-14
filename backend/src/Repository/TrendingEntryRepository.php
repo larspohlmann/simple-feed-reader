@@ -70,7 +70,8 @@ final readonly class TrendingEntryRepository
          */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
             \sprintf(
-                'SELECT e.id, e.feed_id, f.language, e.title, e.title_derived, SUBSTR(e.summary, 1, %d) AS summary,'
+                'SELECT e.id, e.feed_id, COALESCE(e.language, f.language) AS language, e.title, e.title_derived,'
+                . ' SUBSTR(e.summary, 1, %d) AS summary,'
                 . ' e.effective_date, e.url_hash,'
                 . ' (SELECT card.url FROM link_card card WHERE card.entry_id = e.id AND card.thread_post_id IS NULL'
                 . ' ORDER BY card.position LIMIT 1) AS link_card_url'
