@@ -1,14 +1,14 @@
 import { Signal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, anEntryComment } from '../../../../testing/entry-testing';
 import { EntryDto } from '../../models';
 import { CommentsService, CommentsState } from './comments.service';
 import { EntryDiscussionLinkComponent } from './entry-discussion-link.component';
 
 const OK_STATE: CommentsState = {
   status: 'ok',
-  comments: [{ id: 1 }, { id: 2 }] as never,
+  comments: [anEntryComment(), anEntryComment()],
   omitted: 1,
   fetchedAt: '2026-09-24T12:00:00Z',
   loadedAt: 0,
