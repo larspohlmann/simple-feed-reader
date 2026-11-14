@@ -66,11 +66,12 @@ final class NetworkExclusionsControllerTest extends ApiTestCase
     }
 
     #[DataProvider('surfaces')]
-    public function testANetworkWithoutFeedsCannotBeSwitched(string $surface): void
+    public function testLemmyCanBeSwitched(string $surface): void
     {
         $this->client->request('PUT', '/api/' . $surface . '/excluded-networks/lemmy', server: $this->headers);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['lemmy'], $this->excludedNetworks($surface));
     }
 
     public function testAnUnknownSurfaceIsNotFound(): void

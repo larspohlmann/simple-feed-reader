@@ -209,6 +209,9 @@ final readonly class EntryJson
         if (SourceFormat::isSocial($sourceFormat)) {
             return self::authorPosterOf($entry);
         }
+        if (SocialNetwork::Lemmy === $feed->getNetwork()) {
+            return self::authorPosterOf($entry);
+        }
         if (null !== $feed->getNetwork()) {
             return [
                 'name' => $row->subscription->title,

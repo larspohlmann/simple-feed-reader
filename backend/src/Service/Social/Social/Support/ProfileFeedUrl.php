@@ -12,6 +12,7 @@ final class ProfileFeedUrl
 {
     private const string BLUESKY_PROFILE_PAGE = '#^/profile/(?<actor>[^/@]+)(?<rss>/rss)?/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
+    private const string LEMMY_COMMUNITY_PATH = '#^/feeds/c/([^/]+)\.xml$#';
 
     public static function bluesky(string $did): string
     {
@@ -23,13 +24,18 @@ final class ProfileFeedUrl
         return 'https://' . $domain . '/@' . $user . '.rss';
     }
 
+    public static function lemmy(string $community, string $host): string
+    {
+        return 'https://' . $host . '/feeds/c/' . $community . '.xml';
+    }
+
     /** @return string|null the profile feed of $identity on $network; null when $identity names no account there */
     public static function of(SocialNetwork $network, string $identity): ?string
     {
         $url = match ($network) {
             SocialNetwork::Bluesky => self::bluesky($identity),
-            SocialNetwork::Mastodon => self::mastodonOf($identity),
-            SocialNetwork::Lemmy => null,
+            SocialNetwork::Mastodon => self::accountOf($identity, self::mastodon(...)),
+            SocialNetwork::Lemmy => self::accountOf($identity, self::lemmy(...)),
         };
         $builtIdentity = null === $url ? null : self::identityOf($network, $url);
 
@@ -92,15 +98,16 @@ final class ProfileFeedUrl
         return match ($network) {
             SocialNetwork::Bluesky => self::blueskyIdentity($host, $path),
             SocialNetwork::Mastodon => self::mastodonIdentity($host, $path),
-            SocialNetwork::Lemmy => null,
+            SocialNetwork::Lemmy => self::lemmyIdentity($host, $path),
         };
     }
 
-    private static function mastodonOf(string $identity): ?string
+    /** @param callable(string, string): string $feedOf */
+    private static function accountOf(string $identity, callable $feedOf): ?string
     {
         $parts = explode('@', $identity);
 
-        return 2 === \count($parts) ? self::mastodon($parts[0], $parts[1]) : null;
+        return 2 === \count($parts) ? $feedOf($parts[0], $parts[1]) : null;
     }
 
     private static function isWeb(string $scheme): bool
@@ -129,6 +136,11 @@ final class ProfileFeedUrl
     private static function mastodonIdentity(string $host, string $path): ?string
     {
         return 1 === preg_match(self::MASTODON_PATH, $path, $match) ? $match[1] . '@' . $host : null;
+    }
+
+    private static function lemmyIdentity(string $host, string $path): ?string
+    {
+        return 1 === preg_match(self::LEMMY_COMMUNITY_PATH, $path, $match) ? strtolower($match[1]) . '@' . $host : null;
     }
 
     private function __construct()

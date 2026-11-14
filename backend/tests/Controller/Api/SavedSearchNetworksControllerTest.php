@@ -42,11 +42,12 @@ final class SavedSearchNetworksControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
-    public function testANetworkWithoutFeedsCannotBeIncluded(): void
+    public function testLemmyCanBeIncluded(): void
     {
         $this->client->request('PUT', '/api/saved-searches/included-networks/lemmy', server: $this->headers);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['lemmy'], $this->includedNetworks());
     }
 
     /** @return list<string> */

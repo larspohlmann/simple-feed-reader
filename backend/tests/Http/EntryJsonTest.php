@@ -755,6 +755,40 @@ final class EntryJsonTest extends TestCase
         self::assertNull(JsonMappers::entryJson()->listRow($this->row($entry))['poster']);
     }
 
+    public function testACommunityFeedShowsThePostsOwnAuthor(): void
+    {
+        $entry = $this->communityFeedEntry(SocialNetwork::Lemmy);
+        $entry->setAuthor(new EntryAuthor('ada', 'https://feddit.example/u/ada'));
+
+        self::assertSame(
+            ['name' => 'ada', 'url' => 'https://feddit.example/u/ada', 'imageUrl' => null],
+            JsonMappers::entryJson()->listRow($this->row($entry))['poster'],
+        );
+    }
+
+    public function testAMastodonProfileFeedStillShowsTheSubscriptionTitle(): void
+    {
+        $entry = $this->communityFeedEntry(SocialNetwork::Mastodon);
+        $entry->setAuthor(new EntryAuthor('ada', 'https://feddit.example/u/ada'));
+
+        self::assertSame('Source', JsonMappers::entryJson()->listRow($this->row($entry))['poster']['name'] ?? null);
+    }
+
+    private function communityFeedEntry(SocialNetwork $network): Entry
+    {
+        $feed = new Feed('https://feddit.example/feeds/c/rss.xml');
+        $feed->classifyAs($network);
+
+        return new Entry(
+            $feed,
+            'guid',
+            'https://feddit.example/post/1',
+            'Post',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+    }
+
     private function profileFeedEntry(?string $feedImageUrl): Entry
     {
         $feed = new Feed('https://bsky.app/profile/politico.eu/rss');

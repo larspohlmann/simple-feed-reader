@@ -83,6 +83,38 @@ final class ProfileFeedUrlTest extends TestCase
         self::assertSame($identity, ProfileFeedUrl::identityOf($network, $url));
     }
 
+    /** @return iterable<string, array{string, ?string}> */
+    public static function communityFeeds(): iterable
+    {
+        yield 'a community feed' => ['https://feddit.example/feeds/c/rss.xml', 'rss@feddit.example'];
+        yield 'upper case and a query' => ['https://Feddit.Example/feeds/c/RSS.xml?sort=New', 'rss@feddit.example'];
+        yield 'over http' => ['http://feddit.example/feeds/c/rss.xml', 'rss@feddit.example'];
+        yield 'a user feed' => ['https://feddit.example/feeds/u/ada.xml', null];
+        yield 'no extension' => ['https://feddit.example/feeds/c/rss', null];
+        yield 'a nested path' => ['https://feddit.example/feeds/c/a/b.xml', null];
+        yield 'over ftp' => ['ftp://feddit.example/feeds/c/rss.xml', null];
+    }
+
+    #[DataProvider('communityFeeds')]
+    public function testACommunityFeedIsALemmyProfileFeed(string $url, ?string $identity): void
+    {
+        self::assertSame($identity, ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $url));
+        self::assertSame(null === $identity ? null : SocialNetwork::Lemmy, ProfileFeedUrl::networkOf($url));
+    }
+
+    public function testOfBuildsTheCommunityFeed(): void
+    {
+        self::assertSame(
+            'https://feddit.example/feeds/c/rss.xml',
+            ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss@feddit.example'),
+        );
+        self::assertSame(
+            'https://feddit.example/feeds/c/rss.xml',
+            ProfileFeedUrl::lemmy('rss', 'feddit.example'),
+        );
+        self::assertNull(ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss'));
+    }
+
     public function testNetworkOfNamesTheNetworkWhoseProfileFeedTheUrlIs(): void
     {
         $bluesky = ProfileFeedUrl::networkOf('https://bsky.app/profile/bob.bsky.social/rss');

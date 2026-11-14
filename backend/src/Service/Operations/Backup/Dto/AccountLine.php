@@ -146,7 +146,7 @@ final readonly class AccountLine
     private static function networks(array $line, string $key): array
     {
         return array_values(array_filter(
-            array_map(SocialNetwork::tryFromFeed(...), array_unique(LineFieldWithDefault::stringList($line, $key))),
+            array_map(SocialNetwork::tryFrom(...), array_unique(LineFieldWithDefault::stringList($line, $key))),
         ));
     }
 }

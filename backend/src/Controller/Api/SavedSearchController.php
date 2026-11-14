@@ -70,7 +70,7 @@ final readonly class SavedSearchController
     #[Route(
         '/included-networks/{network}',
         name: 'api_saved_searches_include_network',
-        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        requirements: ['network' => SocialNetwork::ROUTE_REQUIREMENT],
         methods: ['PUT'],
     )]
     public function includeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse
@@ -83,7 +83,7 @@ final readonly class SavedSearchController
     #[Route(
         '/included-networks/{network}',
         name: 'api_saved_searches_exclude_network',
-        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        requirements: ['network' => SocialNetwork::ROUTE_REQUIREMENT],
         methods: ['DELETE'],
     )]
     public function excludeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse

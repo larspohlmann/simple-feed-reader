@@ -46,7 +46,7 @@ final class SavedFeedUrl
     /** @param array<int, string> $parts */
     private static function networkIn(array $parts): ?SocialNetwork
     {
-        return SocialNetwork::tryFromFeed($parts[1] ?? '');
+        return SocialNetwork::tryFrom($parts[1] ?? '');
     }
 
     private function __construct()

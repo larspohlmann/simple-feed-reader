@@ -188,15 +188,15 @@ final class AccountLineTest extends TestCase
         );
     }
 
-    public function testARestoreDropsNetworksWithoutFeeds(): void
+    public function testARestoreKeepsLemmy(): void
     {
         $line = AccountLine::fromLine([
             'locale' => 'de',
             'scrapeFallbackEnabled' => true,
-            'savedSearchIncludedNetworks' => ['bluesky', 'lemmy'],
+            'savedSearchIncludedNetworks' => ['bluesky', 'lemmy', 'myspace'],
         ]);
 
-        self::assertSame([SocialNetwork::Bluesky], $line->networks->savedSearchIncludedNetworks);
+        self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Lemmy], $line->networks->savedSearchIncludedNetworks);
     }
 
     public function testAForYouExcludedNetworkListedTwiceIsExcludedOnce(): void

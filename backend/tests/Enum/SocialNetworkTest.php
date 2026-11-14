@@ -36,11 +36,11 @@ final class SocialNetworkTest extends TestCase
         self::assertFalse(SocialNetwork::Lemmy->takesLinkPosts());
     }
 
-    public function testTheFeedNetworkRequirementListsTheFeedNetworks(): void
+    public function testTheRouteRequirementNamesEveryNetwork(): void
     {
         self::assertSame(
-            implode('|', SocialNetwork::valuesOf(SocialNetwork::feedNetworks())),
-            SocialNetwork::FEED_NETWORK_REQUIREMENT,
+            implode('|', SocialNetwork::valuesOf(SocialNetwork::cases())),
+            SocialNetwork::ROUTE_REQUIREMENT,
         );
     }
 
@@ -79,17 +79,15 @@ final class SocialNetworkTest extends TestCase
             SocialNetwork::fromRequestValue('myspace');
             self::fail('Expected a ValidationException.');
         } catch (ValidationException $exception) {
-            self::assertSame(['network' => ['Unknown network. Use one of: bluesky, mastodon.']], $exception->errors);
+            self::assertSame(
+                ['network' => ['Unknown network. Use one of: bluesky, mastodon, lemmy.']],
+                $exception->errors,
+            );
         }
     }
 
-    public function testAnAccountOnlyNetworkIsNotARequestValue(): void
+    public function testLemmyIsARequestValue(): void
     {
-        try {
-            SocialNetwork::fromRequestValue('lemmy');
-            self::fail('Expected a ValidationException.');
-        } catch (ValidationException $exception) {
-            self::assertSame(['network' => ['Unknown network. Use one of: bluesky, mastodon.']], $exception->errors);
-        }
+        self::assertSame(SocialNetwork::Lemmy, SocialNetwork::fromRequestValue('lemmy'));
     }
 }

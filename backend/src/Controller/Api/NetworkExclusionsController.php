@@ -44,7 +44,7 @@ final readonly class NetworkExclusionsController
     #[Route(
         '/{network}',
         name: 'api_exclude_network',
-        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        requirements: ['network' => SocialNetwork::ROUTE_REQUIREMENT],
         methods: ['PUT'],
     )]
     public function excludeNetwork(
@@ -60,7 +60,7 @@ final readonly class NetworkExclusionsController
     #[Route(
         '/{network}',
         name: 'api_include_network',
-        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        requirements: ['network' => SocialNetwork::ROUTE_REQUIREMENT],
         methods: ['DELETE'],
     )]
     public function includeNetwork(

@@ -14,7 +14,7 @@ enum SocialNetwork: string
     case Mastodon = 'mastodon';
     case Lemmy = 'lemmy';
 
-    public const string FEED_NETWORK_REQUIREMENT = 'bluesky|mastodon';
+    public const string ROUTE_REQUIREMENT = 'bluesky|mastodon|lemmy';
 
     /**
      * @throws ValidationException when the value names no network
@@ -49,12 +49,6 @@ enum SocialNetwork: string
     public static function feedNetworks(): array
     {
         return array_values(array_filter(self::cases(), static fn (self $network): bool => $network->carriesFeeds()));
-    }
-
-    /** @return list<self> */
-    private static function requestCases(): array
-    {
-        return self::feedNetworks();
     }
 
     public function carriesFeeds(): bool
