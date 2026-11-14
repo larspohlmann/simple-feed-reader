@@ -49,7 +49,7 @@ The code becomes general over the three networks. The capability split added in 
 
 ## Non-goals
 
-- Lemmy search (the picker shows no search tab for Lemmy), link-sharing a post to Lemmy (it needs a community
+- Link-sharing a post to Lemmy (it needs a community
   to post in; the share menu stays Bluesky + Mastodon by an explicit capability), Lemmy likes/reposts via
   `entry.social` (votes stay on the vote pill), subscribing to or leaving communities from the reader, user
   (`/feeds/u/`) feeds, PieFed/Mbin.
@@ -95,8 +95,7 @@ The code becomes general over the three networks. The capability split added in 
   firehose.
 - **Ruling — source format:** a new `SourceFormat::LEMMY_API` joins `SOCIAL` and `NOT_PROFILES`. Every
   `isSocial` / `NetworkWithoutFeedsException` site gets a deliberate Lemmy arm. `NetworkWithoutFeedsException`
-  goes away if no site keeps throwing it for Lemmy; Lemmy search throws a search-specific "not supported"
-  instead.
+  goes away: every network now has feeds and search.
 - **Ruling — poster name:** a network RSS feed normally shows the subscription title as the poster
   (`EntryJson`). For Lemmy, the post's own author (already set by `LemmyEntryRule`) is shown, because a
   community feed has many authors. *If wrong:* a one-line switch.
@@ -130,12 +129,24 @@ The code becomes general over the three networks. The capability split added in 
   only when ticked. Disconnect removes the account's private feeds through the existing path.
 - **The cursor:** `newestSeenId` is recorded but not sent; the existing refresh limits apply, with no
   extra cap.
-- **Search:** a saved search's network filter matches stored entries only. A Lemmy social search keeps
-  the HTTP status today's `NetworkWithoutFeedsException` maps to, under a search-specific exception.
+- **Search:** a saved search's network filter matches stored entries only (unchanged).
 - **Entry building:** `LemmyTimelineSource` builds each `ParsedEntryModel` itself: author, counts and
   discussion thread. It renders the Markdown body with the renderer the Lemmy comment path already uses;
   no second renderer. `LemmyEntryRule` (RSS only) is unchanged.
 - **Commits:** ordered, each green on its own. The generalisation comes first and changes no behaviour.
   Lemmy behaviour follows in later commits.
-- **Capabilities:** explicit per-network methods on `SocialNetwork` (e.g. `supportsSearch()`,
-  `takesLinkPosts()`) are the intended shape.
+- **Capabilities:** explicit per-network methods on `SocialNetwork` (e.g. `takesLinkPosts()`) are the
+  intended shape.
+
+## Search subscriptions (Lars, 2026-11-14: "i also want to be able to subscribe to a search, if that is possible")
+
+- Lemmy joins social search subscriptions (#2086) like the others: the search tab in "Manage feeds…", the
+  preview of results, and subscribing as a `SocialFeedKind::Search` private feed.
+- API: `GET /api/v3/search?q=<query>&type_=Posts&sort=New&listing_type=All&limit=50`, bearer auth, on the
+  account's home instance. The response's `posts[]` are PostViews, mapped by the same entry builder as the
+  timelines. The plan's API-check task verifies the `Search` / `SearchResponse` types in lemmy-js-client 0.19.
+- **Ruling — syntax:** Lemmy search is plain text. No `||` alternatives (that is Mastodon's #2104 split);
+  only the existing length cap applies (`SocialSearchQuery::MAX_LENGTH`). The search form shows a
+  Lemmy-specific syntax hint ("plain words; matches post titles and bodies"). *If wrong:* a hint text.
+- **Ruling — scope:** `listing_type=All`, so a search covers everything the home instance knows, not only
+  subscribed communities. *If wrong:* one parameter.
