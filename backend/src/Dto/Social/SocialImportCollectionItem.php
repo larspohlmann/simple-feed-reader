@@ -11,14 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class SocialImportCollectionItem
 {
     public function __construct(
-        #[Assert\Choice(choices: [
-            SocialFeedKind::Home->value,
-            SocialFeedKind::UserList->value,
-            SocialFeedKind::CustomFeed->value,
-            SocialFeedKind::Tag->value,
-            SocialFeedKind::Trending->value,
-            SocialFeedKind::Search->value,
-        ])]
+        #[Assert\Choice(callback: 'clientKinds')]
         public string $kind = '',
         #[Assert\Length(max: 512)]
         public ?string $id = null,
@@ -26,6 +19,17 @@ final readonly class SocialImportCollectionItem
         #[Assert\Length(max: 512)]
         public string $name = '',
     ) {
+    }
+
+    /** @return list<string> */
+    public static function clientKinds(): array
+    {
+        $collectionKinds = array_filter(
+            SocialFeedKind::cases(),
+            static fn (SocialFeedKind $kind): bool => !$kind->followsOnePerson(),
+        );
+
+        return array_values(array_map(static fn (SocialFeedKind $kind): string => $kind->value, $collectionKinds));
     }
 
     public function toPrivateFeed(): PrivateFeedModel

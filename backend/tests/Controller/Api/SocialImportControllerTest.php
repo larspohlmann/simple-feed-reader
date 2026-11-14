@@ -21,6 +21,7 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubSocialCandidates;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -181,6 +182,29 @@ final class SocialImportControllerTest extends ApiTestCase
             ['imported' => 1, 'alreadySubscribed' => 0, 'invalid' => 0, 'skippedOverLimit' => 0, 'removed' => 0],
             $this->payload($client),
         );
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function lemmyTimelines(): iterable
+    {
+        yield 'Local' => ['local', 'Local'];
+        yield 'All' => ['all', 'All'];
+    }
+
+    #[DataProvider('lemmyTimelines')]
+    public function testALemmyAccountSubscribesToItsInstanceTimeline(string $kind, string $name): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $owner = $this->signIn($client, sprintf('import-lemmy-%s@example.test', $kind));
+        $account = $this->stored(SocialAccounts::lemmyOf($owner));
+
+        $this->postImport($client, $account, ['collections' => [['kind' => $kind, 'id' => null, 'name' => $name]]]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(1, $this->payload($client)['imported']);
+        self::assertNotNull($this->entityManager()->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('social:lemmy:%d:%s', $account->requireId(), $kind),
+        ]));
     }
 
     public function testAnAccountThatNeedsReconnectingIsRefusedBeforeTheBudgetAndTheNetwork(): void
