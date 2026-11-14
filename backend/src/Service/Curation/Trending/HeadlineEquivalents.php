@@ -153,7 +153,9 @@ final readonly class HeadlineEquivalents
 
     private static function exactWordPattern(): string
     {
-        return '/(?<![\p{L}\p{N}])(?:' . implode('|', array_keys([...self::EXACT_WORDS, ...self::SHOUTABLE_WORDS])) . ')(?![\p{L}\p{N}])/u';
+        $alternatives = implode('|', array_keys([...self::EXACT_WORDS, ...self::SHOUTABLE_WORDS]));
+
+        return '/(?<![\p{L}\p{N}])(?:' . $alternatives . ')(?![\p{L}\p{N}])/u';
     }
 
     /** @return array<string, list<array{list<string>, string}>> */

@@ -77,7 +77,9 @@ final class HeadlineFillerTest extends TestCase
 
     public function testAWordThatCarriesMeaningInAnotherLanguageIsNotASeed(): void
     {
-        foreach (['son', 'sin', 'fin', 'plus', 'con', 'han', 'sans', 'contra', 'contre', 'durant', 'esa', 'ces', 'como'] as $word) {
+        $meaningful = ['son', 'sin', 'fin', 'plus', 'con', 'han', 'sans'];
+        $names = ['contra', 'contre', 'durant', 'esa', 'ces', 'como'];
+        foreach ([...$meaningful, ...$names] as $word) {
             self::assertFalse($this->filler->isSeed($word), $word);
         }
     }
