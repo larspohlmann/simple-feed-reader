@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryMedia;
 use App\Entity\EntryTranscript;
 use App\Entity\ImageRendition;
-use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
