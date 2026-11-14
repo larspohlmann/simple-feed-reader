@@ -13,7 +13,6 @@ use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Enum\TrendingWindow;
 use App\Service\Foundation\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -40,7 +39,7 @@ final readonly class TrendingFixtures
         $feed = new Feed(match ($network) {
             SocialNetwork::Bluesky => \sprintf('https://bsky.app/profile/%s.bsky.social/rss', $name),
             SocialNetwork::Mastodon => \sprintf('https://mastodon.example.com/@%s.rss', $name),
-            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
+            SocialNetwork::Lemmy => \sprintf('https://lemmy.example.com/feeds/c/%s.xml', $name),
             null => \sprintf('https://%s.example.com/feed', $name),
         });
         $this->entityManager->persist($feed);

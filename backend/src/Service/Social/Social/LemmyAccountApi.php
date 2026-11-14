@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
@@ -31,7 +32,13 @@ final readonly class LemmyAccountApi
      */
     public function get(SocialAccount $account, string $pathAndQuery): ApiResponseModel
     {
-        return $this->lemmy->send($this->session($account)->get($pathAndQuery));
+        return $this->lemmy->send($this->authorizedGet($account, $pathAndQuery));
+    }
+
+    /** @throws SocialCredentialsRejectedException when the stored token no longer opens */
+    public function authorizedGet(SocialAccount $account, string $pathAndQuery): ApiRequestModel
+    {
+        return $this->session($account)->get($pathAndQuery);
     }
 
     /**

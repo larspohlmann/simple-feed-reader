@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -292,7 +293,7 @@ final class SocialImporterTest extends DbTestCase
         $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
 
         $result = $this->importer()->import($account, new SocialImportModel([], [], [
-            PrivateFeedModel::home(),
+            PrivateFeedModel::timeline(SocialFeedKind::Home),
             PrivateFeedModel::customFeed(self::NEWS, 'News'),
         ]));
 
@@ -306,9 +307,9 @@ final class SocialImporterTest extends DbTestCase
     public function testAnAlreadyAddedCollectionCountsAsAlreadySubscribed(): void
     {
         $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
-        $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+        $this->importer()->import($account, self::homeImport());
 
-        $result = $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+        $result = $this->importer()->import($account, self::homeImport());
 
         self::assertSame(0, $result->imported);
         self::assertSame(1, $result->alreadySubscribed);
@@ -319,7 +320,7 @@ final class SocialImporterTest extends DbTestCase
         $this->user->setMaxSubscriptions(0);
         $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
 
-        $result = $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+        $result = $this->importer()->import($account, self::homeImport());
 
         self::assertSame(0, $result->imported);
         self::assertSame(1, $result->skippedOverLimit);
@@ -329,11 +330,11 @@ final class SocialImporterTest extends DbTestCase
     {
         $this->user->setMaxSubscriptions(1);
         $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
-        $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+        $this->importer()->import($account, self::homeImport());
 
         $result = $this->importer()->import($account, new SocialImportModel([], [], [
             PrivateFeedModel::customFeed(self::NEWS, 'News'),
-            PrivateFeedModel::home(),
+            PrivateFeedModel::timeline(SocialFeedKind::Home),
         ]));
 
         self::assertSame(0, $result->imported);
@@ -408,7 +409,7 @@ final class SocialImporterTest extends DbTestCase
         try {
             $this->importer()->import(
                 $account,
-                new SocialImportModel([], [], [PrivateFeedModel::home(), $collection]),
+                new SocialImportModel([], [], [PrivateFeedModel::timeline(SocialFeedKind::Home), $collection]),
             );
             self::fail('A collection of the wrong shape must refuse the import.');
         } catch (InvalidSocialImportFeedException $exception) {
@@ -464,7 +465,7 @@ final class SocialImporterTest extends DbTestCase
         $result = $this->importer()->import($account, new SocialImportModel(
             [new SocialImportFeedModel('did:plc:rusty', 'Rusty'), new SocialImportFeedModel('did:plc:carol', 'Carol')],
             [],
-            [PrivateFeedModel::home()],
+            [PrivateFeedModel::timeline(SocialFeedKind::Home)],
         ));
 
         self::assertSame(3, $result->imported);
@@ -540,5 +541,10 @@ final class SocialImporterTest extends DbTestCase
         $this->entityManager->flush();
 
         return $account;
+    }
+
+    private static function homeImport(): SocialImportModel
+    {
+        return new SocialImportModel([], [], [PrivateFeedModel::timeline(SocialFeedKind::Home)]);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
@@ -148,7 +149,7 @@ final class SearchFeedEditorTest extends DbTestCase
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
         $privateFeeds = PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock);
-        $home = $privateFeeds->subscribe($account, PrivateFeedModel::home(), []);
+        $home = $privateFeeds->subscribe($account, PrivateFeedModel::timeline(SocialFeedKind::Home), []);
 
         $this->expectException(NotASearchFeedException::class);
 

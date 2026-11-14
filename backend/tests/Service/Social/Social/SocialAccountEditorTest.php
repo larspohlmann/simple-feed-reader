@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -100,7 +101,7 @@ final class SocialAccountEditorTest extends DbTestCase
     public function testDisconnectingRemovesThePrivateFeedsAndKeepsTheImportedFollows(): void
     {
         $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
-        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $follow = (new ProfileFeedSubscriptions($this->entityManager))
             ->subscribe($this->user, 'https://bsky.app/profile/did:plc:bob/rss');
         $homeUrl = sprintf('social:bluesky:%d:home', $account->requireId());
@@ -116,7 +117,7 @@ final class SocialAccountEditorTest extends DbTestCase
     public function testDisconnectingLeavesAnotherUsersSubscriptionToTheSameFeed(): void
     {
         $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
-        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $home = $this->entityManager->getRepository(SocialFeed::class)->findOneBy(['socialAccount' => $account]);
         self::assertNotNull($home);
         /** @var UserPasswordHasherInterface $hasher */
@@ -146,7 +147,7 @@ final class SocialAccountEditorTest extends DbTestCase
     public function testDisconnectingMovesKeptPostsToSavedFromBluesky(): void
     {
         $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
-        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $home = $this->entityManager->getRepository(SocialFeed::class)->findOneBy(['socialAccount' => $account]);
         self::assertNotNull($home);
         $guid = 'at://did:plc:x/app.bsky.feed.post/1';

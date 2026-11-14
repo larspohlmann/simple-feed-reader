@@ -126,7 +126,7 @@ final class RefreshPassRecorderBlueskyTest extends DbTestCase
         $this->entityManager->flush();
         $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
         PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $clock)
-            ->create($account, PrivateFeedModel::home());
+            ->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $home = SocialFeeds::repository($this->entityManager)->findOneFor($account, SocialFeedKind::Home, '');
         self::assertNotNull($home);
 

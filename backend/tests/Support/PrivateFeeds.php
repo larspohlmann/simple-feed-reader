@@ -9,10 +9,9 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Enum\SourceFormat;
 
-/** In-memory private Mastodon and Bluesky feeds of one account, for unit tests that never reach a network. */
+/** In-memory private Mastodon, Bluesky and Lemmy feeds of one account, for unit tests that never reach a network. */
 final class PrivateFeeds
 {
     use AssignsEntityIds;
@@ -33,7 +32,7 @@ final class PrivateFeeds
         return match ($account->getNetwork()) {
             SocialNetwork::Mastodon => self::mastodon($account, $feedId, $kind, $remoteId),
             SocialNetwork::Bluesky => self::bluesky($account, $feedId, $kind, $remoteId),
-            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
+            SocialNetwork::Lemmy => new SocialFeed($account, self::lemmyFeed($feedId), $kind, $remoteId),
         };
     }
 
@@ -63,6 +62,11 @@ final class PrivateFeeds
     public static function blueskyFeed(int $feedId): Feed
     {
         return self::feed('bluesky', SourceFormat::BLUESKY_API, $feedId);
+    }
+
+    public static function lemmyFeed(int $feedId): Feed
+    {
+        return self::feed('lemmy', SourceFormat::LEMMY_API, $feedId);
     }
 
     private static function feed(string $network, string $sourceFormat, int $feedId): Feed

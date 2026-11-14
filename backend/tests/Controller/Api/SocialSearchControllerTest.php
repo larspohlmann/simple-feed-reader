@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\Headline;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
@@ -239,7 +240,11 @@ final class SocialSearchControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->signIn($client, 'requery-home@example.test');
-        $home = $this->privateFeeds()->subscribe($this->accountOf($user), PrivateFeedModel::home(), []);
+        $home = $this->privateFeeds()->subscribe(
+            $this->accountOf($user),
+            PrivateFeedModel::timeline(SocialFeedKind::Home),
+            [],
+        );
 
         $this->putQuery($client, $home, 'rss');
 

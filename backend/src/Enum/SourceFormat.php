@@ -31,14 +31,17 @@ final class SourceFormat
     /** A Mastodon home or list timeline, read with the account's token (#1599). */
     public const string MASTODON_API = 'mastodon-api';
 
+    /** A Lemmy Subscribed, Local or All timeline, read with the account's session token (#2218). */
+    public const string LEMMY_API = 'lemmy-api';
+
     /** The formats of private feeds: read through an account, never fetched by URL, never exported. */
-    public const array SOCIAL = [self::BLUESKY_API, self::MASTODON_API];
+    public const array SOCIAL = [self::BLUESKY_API, self::MASTODON_API, self::LEMMY_API];
 
     /** A user's "Saved from …" feed of favourites and kept posts from feeds they left (#1666); never fetched. */
     public const string SAVED = 'saved';
 
     /** Formats whose networked feed is no person's profile. */
-    public const array NOT_PROFILES = [self::BLUESKY_API, self::MASTODON_API, self::SAVED];
+    public const array NOT_PROFILES = [self::BLUESKY_API, self::MASTODON_API, self::LEMMY_API, self::SAVED];
 
     /** Formats an OPML export leaves out, author feeds aside: private, saved and scraped feeds are this reader's own. */
     public const array NOT_IN_OPML = [...self::NOT_PROFILES, self::SCRAPED];

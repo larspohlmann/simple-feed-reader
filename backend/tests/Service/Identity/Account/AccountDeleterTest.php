@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Identity\Account;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
 use App\Entity\ProfileSettingsValues;
@@ -209,7 +210,7 @@ final class AccountDeleterTest extends DbTestCase
             $this->entityManager,
             new MockClock('2026-10-12 12:00:00', 'UTC'),
         );
-        $privateFeeds->create($account, PrivateFeedModel::home());
+        $privateFeeds->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $feed = $this->entityManager->getRepository(Feed::class)->findOneBy([
             'url' => sprintf('social:bluesky:%d:home', $account->requireId()),
         ]);

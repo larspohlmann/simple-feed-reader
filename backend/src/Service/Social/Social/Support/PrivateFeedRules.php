@@ -15,21 +15,10 @@ final class PrivateFeedRules
 
     public static function allows(SocialNetwork $network, PrivateFeedModel $privateFeed): bool
     {
-        return match ($privateFeed->kind) {
-            SocialFeedKind::Home => true,
-            SocialFeedKind::UserList => SocialNetwork::Bluesky === $network
-                ? BlueskyRecordUri::isList($privateFeed->remoteId)
-                : self::matches(self::MASTODON_LIST, $privateFeed->remoteId),
-            SocialFeedKind::CustomFeed => SocialNetwork::Bluesky === $network
-                && BlueskyRecordUri::isFeedGenerator($privateFeed->remoteId),
-            SocialFeedKind::Author => SocialNetwork::Bluesky === $network
-                && BlueskyActor::isDid($privateFeed->remoteId),
-            SocialFeedKind::Tag => SocialNetwork::Mastodon === $network
-                && self::isMastodonTagName($privateFeed->remoteId),
-            SocialFeedKind::Trending => SocialNetwork::Mastodon === $network,
-            SocialFeedKind::Search => '' !== $privateFeed->remoteId
-                && mb_strlen($privateFeed->remoteId) <= SocialSearchQuery::MAX_LENGTH
-                && (SocialNetwork::Bluesky === $network || MastodonSearchQueries::fits($privateFeed->remoteId)),
+        return match ($network) {
+            SocialNetwork::Bluesky => self::bluesky($privateFeed),
+            SocialNetwork::Mastodon => self::mastodon($privateFeed),
+            SocialNetwork::Lemmy => self::lemmy($privateFeed),
         };
     }
 
@@ -41,6 +30,51 @@ final class PrivateFeedRules
     public static function isMastodonTagName(string $tagName): bool
     {
         return self::matches(self::MASTODON_TAG, $tagName);
+    }
+
+    private static function bluesky(PrivateFeedModel $privateFeed): bool
+    {
+        $remoteId = $privateFeed->remoteId;
+
+        return match ($privateFeed->kind) {
+            SocialFeedKind::Home => true,
+            SocialFeedKind::UserList => BlueskyRecordUri::isList($remoteId),
+            SocialFeedKind::CustomFeed => BlueskyRecordUri::isFeedGenerator($remoteId),
+            SocialFeedKind::Author => BlueskyActor::isDid($remoteId),
+            SocialFeedKind::Search => self::isSearchQuery($remoteId),
+            SocialFeedKind::Tag, SocialFeedKind::Trending, SocialFeedKind::Local, SocialFeedKind::All => false,
+        };
+    }
+
+    private static function mastodon(PrivateFeedModel $privateFeed): bool
+    {
+        $remoteId = $privateFeed->remoteId;
+
+        return match ($privateFeed->kind) {
+            SocialFeedKind::Home, SocialFeedKind::Trending => true,
+            SocialFeedKind::UserList => self::isMastodonListId($remoteId),
+            SocialFeedKind::Tag => self::isMastodonTagName($remoteId),
+            SocialFeedKind::Search => self::isSearchQuery($remoteId) && MastodonSearchQueries::fits($remoteId),
+            SocialFeedKind::CustomFeed, SocialFeedKind::Author, SocialFeedKind::Local, SocialFeedKind::All => false,
+        };
+    }
+
+    private static function lemmy(PrivateFeedModel $privateFeed): bool
+    {
+        return match ($privateFeed->kind) {
+            SocialFeedKind::Home, SocialFeedKind::Local, SocialFeedKind::All => true,
+            SocialFeedKind::UserList,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Author,
+            SocialFeedKind::Tag,
+            SocialFeedKind::Trending,
+            SocialFeedKind::Search => false,
+        };
+    }
+
+    private static function isSearchQuery(string $query): bool
+    {
+        return '' !== $query && mb_strlen($query) <= SocialSearchQuery::MAX_LENGTH;
     }
 
     private static function matches(string $pattern, string $remoteId): bool

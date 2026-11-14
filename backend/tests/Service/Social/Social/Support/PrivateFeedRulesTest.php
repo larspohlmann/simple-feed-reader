@@ -47,6 +47,33 @@ final class PrivateFeedRulesTest extends TestCase
         self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Mastodon, $fits));
     }
 
+    #[DataProvider('lemmyVerdicts')]
+    public function testLemmyAllowsItsTimelinesOnly(
+        SocialNetwork $network,
+        PrivateFeedModel $privateFeed,
+        bool $allowed,
+    ): void {
+        self::assertSame($allowed, PrivateFeedRules::allows($network, $privateFeed));
+    }
+
+    /** @return iterable<string, array{SocialNetwork, PrivateFeedModel, bool}> */
+    public static function lemmyVerdicts(): iterable
+    {
+        yield 'lemmy subscribed' => [SocialNetwork::Lemmy, PrivateFeedModel::timeline(SocialFeedKind::Home), true];
+        yield 'lemmy local' => [SocialNetwork::Lemmy, PrivateFeedModel::timeline(SocialFeedKind::Local), true];
+        yield 'lemmy all' => [SocialNetwork::Lemmy, PrivateFeedModel::timeline(SocialFeedKind::All), true];
+        yield 'lemmy list' => [SocialNetwork::Lemmy, PrivateFeedModel::userList('1', 'Friends'), false];
+        yield 'lemmy custom feed' => [SocialNetwork::Lemmy, PrivateFeedModel::customFeed(self::FEED, 'News'), false];
+        yield 'lemmy author' => [SocialNetwork::Lemmy, PrivateFeedModel::author('did:plc:rusty', 'Rusty'), false];
+        yield 'lemmy tag' => [SocialNetwork::Lemmy, PrivateFeedModel::followedTag('caturday', '#caturday'), false];
+        yield 'lemmy trending' => [SocialNetwork::Lemmy, PrivateFeedModel::timeline(SocialFeedKind::Trending), false];
+        yield 'lemmy search' => [SocialNetwork::Lemmy, PrivateFeedModel::search('rss reader'), false];
+        yield 'bluesky local' => [SocialNetwork::Bluesky, PrivateFeedModel::timeline(SocialFeedKind::Local), false];
+        yield 'bluesky all' => [SocialNetwork::Bluesky, PrivateFeedModel::timeline(SocialFeedKind::All), false];
+        yield 'mastodon local' => [SocialNetwork::Mastodon, PrivateFeedModel::timeline(SocialFeedKind::Local), false];
+        yield 'mastodon all' => [SocialNetwork::Mastodon, PrivateFeedModel::timeline(SocialFeedKind::All), false];
+    }
+
     #[DataProvider('mastodonListIds')]
     public function testAMastodonListIdIsDigitsOnly(string $listId, bool $allowed): void
     {
@@ -114,10 +141,11 @@ final class PrivateFeedRulesTest extends TestCase
             PrivateFeedModel::followedTag('caturday', '#caturday'),
             false,
         ];
-        yield 'trending on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::trending(), true];
-        yield 'trending on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::trending(), false];
-        yield 'home on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::home(), true];
-        yield 'home on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::home(), true];
+        $trending = PrivateFeedModel::timeline(SocialFeedKind::Trending);
+        yield 'trending on mastodon' => [SocialNetwork::Mastodon, $trending, true];
+        yield 'trending on bluesky' => [SocialNetwork::Bluesky, $trending, false];
+        yield 'home on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::timeline(SocialFeedKind::Home), true];
+        yield 'home on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::timeline(SocialFeedKind::Home), true];
         yield 'bluesky list' => [SocialNetwork::Bluesky, PrivateFeedModel::userList(self::LIST, 'Writers'), true];
         yield 'bluesky list named by a feed uri' => [
             SocialNetwork::Bluesky,

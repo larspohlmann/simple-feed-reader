@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
+use App\Enum\SocialFeedKind;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
@@ -90,11 +91,8 @@ final readonly class SocialAccountConnector
 
     private function createHome(SocialAccount $account): void
     {
-        if (!$account->getNetwork()->carriesFeeds()) {
-            return;
-        }
         try {
-            $this->privateFeeds->create($account, PrivateFeedModel::home());
+            $this->privateFeeds->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         } catch (SubscriptionLimitReachedException) {
             // A full account still connects; the import picker offers Home again once a slot is free.
         }

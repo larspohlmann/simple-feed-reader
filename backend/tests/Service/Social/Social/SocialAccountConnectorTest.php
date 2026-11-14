@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Repository\SocialAccountRepository;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
 use App\Service\Social\Social\Crypto\SocialCredentialCipher;
@@ -268,14 +269,17 @@ final class SocialAccountConnectorTest extends DbTestCase
         self::assertNull($socialFeeds->findOneFor($account, SocialFeedKind::Home, ''));
     }
 
-    public function testConnectingLemmyCreatesNoFeed(): void
+    public function testConnectingLemmyCreatesItsHomeFeed(): void
     {
         $account = $this->connector($this->lemmy())->connect($this->user, $this->lemmyCredentials());
 
-        self::assertSame(SocialNetwork::Lemmy, $account->getNetwork());
-        $socialFeeds = SocialFeeds::repository($this->entityManager);
-        self::assertNull($socialFeeds->findOneFor($account, SocialFeedKind::Home, ''));
-        self::assertSame(0, $this->entityManager->getRepository(Subscription::class)->count([]));
+        $home = SocialFeeds::repository($this->entityManager)->findOneFor($account, SocialFeedKind::Home, '');
+        self::assertNotNull($home);
+        self::assertSame(1, $this->entityManager->getRepository(Subscription::class)->count([]));
+        $feed = $home->getFeed();
+        self::assertSame(sprintf('social:lemmy:%d:home', $account->requireId()), $feed->getUrl());
+        self::assertSame(SourceFormat::LEMMY_API, $feed->getSourceFormat());
+        self::assertSame(SocialNetwork::Lemmy, $feed->getNetwork());
     }
 
     public function testALemmyConnectSealsTheTokenNotThePassword(): void

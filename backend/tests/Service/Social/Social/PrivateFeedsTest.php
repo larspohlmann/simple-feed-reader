@@ -50,7 +50,7 @@ final class PrivateFeedsTest extends DbTestCase
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
 
-        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
 
         self::assertSame(PrivateFeedOutcome::Created, $outcome);
         $subscription = $this->onlySubscription();
@@ -73,9 +73,9 @@ final class PrivateFeedsTest extends DbTestCase
     public function testCreatingItAgainChangesNothing(): void
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
-        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
 
-        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
 
         self::assertSame(PrivateFeedOutcome::AlreadySubscribed, $outcome);
         self::assertSame(1, $this->entityManager->getRepository(Subscription::class)->count([]));
@@ -112,7 +112,7 @@ final class PrivateFeedsTest extends DbTestCase
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
 
         try {
-            $this->privateFeeds()->create($account, PrivateFeedModel::home());
+            $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
             self::fail('The subscription cap must hold for private feeds too.');
         } catch (SubscriptionLimitReachedException) {
             self::assertSame(0, $this->entityManager->getRepository(Feed::class)->count([]));
@@ -127,7 +127,7 @@ final class PrivateFeedsTest extends DbTestCase
         $privateFeeds = PrivateFeedsWiring::build(self::getContainer(), $failing, $this->clock);
 
         try {
-            $privateFeeds->create($account, PrivateFeedModel::home());
+            $privateFeeds->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
             self::fail('The failing flush must surface.');
         } catch (\RuntimeException) {
             self::assertSame(0, $this->entityManager->getRepository(Feed::class)->count([]));
@@ -141,14 +141,14 @@ final class PrivateFeedsTest extends DbTestCase
         $this->user->setMaxSubscriptions(0);
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
         try {
-            $this->privateFeeds()->create($account, PrivateFeedModel::home());
+            $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
             self::fail('The cap must hold.');
         } catch (SubscriptionLimitReachedException) {
             self::assertTrue($this->entityManager->isOpen());
         }
         $this->user->setMaxSubscriptions(5);
 
-        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
 
         self::assertSame(PrivateFeedOutcome::Created, $outcome);
     }
@@ -159,7 +159,7 @@ final class PrivateFeedsTest extends DbTestCase
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
 
         $this->entityManager->wrapInTransaction(function () use ($account): void {
-            $this->privateFeeds()->create($account, PrivateFeedModel::home());
+            $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
             try {
                 $this->privateFeeds()->create(
                     $account,
@@ -179,7 +179,7 @@ final class PrivateFeedsTest extends DbTestCase
     public function testRemovingAnAccountsPrivateFeedsKeepsItsOtherSubscriptions(): void
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
-        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeeds()->create(
             $account,
             PrivateFeedModel::customFeed('at://did:plc:bob/app.bsky.feed.generator/news', 'News'),
@@ -202,7 +202,7 @@ final class PrivateFeedsTest extends DbTestCase
     public function testResumingMakesEveryPrivateFeedDueNow(): void
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
-        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $feed = $this->onlySubscription()->getFeed();
         $feed->scheduleNextFetchAt(new \DateTimeImmutable('2026-10-12 18:00:00'));
         $this->entityManager->flush();
@@ -219,7 +219,7 @@ final class PrivateFeedsTest extends DbTestCase
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
 
-        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create($account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $this->privateFeeds()->create(
             $account,
             PrivateFeedModel::userList('at://did:plc:alice/app.bsky.graph.list/1', 'One'),
@@ -292,11 +292,12 @@ final class PrivateFeedsTest extends DbTestCase
     public function testACollectionIsTheUsersOnlyThroughTheAccountThatReadsIt(): void
     {
         $second = $this->stored(SocialAccounts::secondBlueskyOf($this->user));
-        $subscription = $this->privateFeeds()->subscribe($second, PrivateFeedModel::home(), []);
+        $subscription = $this->privateFeeds()->subscribe($second, PrivateFeedModel::timeline(SocialFeedKind::Home), []);
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
 
-        self::assertNull($this->privateFeeds()->subscriptionOf($account, PrivateFeedModel::home()));
-        self::assertSame($subscription, $this->privateFeeds()->subscriptionOf($second, PrivateFeedModel::home()));
+        $home = PrivateFeedModel::timeline(SocialFeedKind::Home);
+        self::assertNull($this->privateFeeds()->subscriptionOf($account, $home));
+        self::assertSame($subscription, $this->privateFeeds()->subscriptionOf($second, $home));
     }
 
     public function testAFullAccountGetsNoAuthorFeedAndTheEntityManagerStaysOpen(): void

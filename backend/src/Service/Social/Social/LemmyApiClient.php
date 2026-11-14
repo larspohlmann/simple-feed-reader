@@ -7,6 +7,7 @@ namespace App\Service\Social\Social;
 use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
@@ -44,13 +45,46 @@ final readonly class LemmyApiClient
      */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        $answer = $this->answer($request);
+        return self::accepted($this->answer($request));
+    }
+
+    /**
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialPostRefusedException
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public static function accepted(ApiResponseModel $answer): ApiResponseModel
+    {
         if ($answer->isSuccessful()) {
             return $answer;
         }
         SocialNetworkThrottledException::throwIfThrottled($answer, self::THROTTLED);
         $code = JsonNodeModel::of($answer->json())->string('error');
         throw self::failure($answer->status, $code);
+    }
+
+    /**
+     * A timeline round knows no refused or missing post: either reads as the instance being unreachable.
+     *
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public static function acceptedInRound(ApiResponseModel $answer): ApiResponseModel
+    {
+        try {
+            return self::accepted($answer);
+        } catch (SocialPostRefusedException | SocialPostNotFoundException $exception) {
+            throw new SocialNetworkUnreachableException($exception->getMessage(), previous: $exception);
+        }
+    }
+
+    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    public static function answerOf(FetchOutcomeModel $outcome): ApiResponseModel
+    {
+        return NetworkAnswer::orUnreachable($outcome->answerOrThrow(...), self::NETWORK);
     }
 
     private static function failure(int $status, ?string $code): \RuntimeException
