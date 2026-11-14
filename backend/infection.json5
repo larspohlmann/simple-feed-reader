@@ -20,7 +20,7 @@
         // never hit; the cast is for PHPStan.
         CastString: {
             ignore: [
-                'App\\Service\\Sourcing\\Discovery\\SubstackProfileFeed::feedUrl',
+                'App\\Service\\Sourcing\\Discovery\\ShareLinkFeed\\SubstackProfileFeed::feedUrl',
                 'App\\Service\\Operations\\ClientError\\ClientErrorScrubber::redact',
             ],
         },
