@@ -11,11 +11,6 @@ export const ACCOUNT_NETWORKS = [...SOCIAL_NETWORKS, 'lemmy'] as const;
 
 export type AccountNetworkName = (typeof ACCOUNT_NETWORKS)[number];
 
-export const ACCOUNT_NETWORK_NAMES: Record<AccountNetworkName, string> = {
-  ...SOCIAL_NETWORK_NAMES,
-  lemmy: 'Lemmy',
-};
-
 const NETWORK_FEED_KINDS = ['profile', 'search'] as const;
 
 export type NetworkFeedKind = (typeof NETWORK_FEED_KINDS)[number];
