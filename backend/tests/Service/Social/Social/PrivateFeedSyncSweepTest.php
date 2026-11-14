@@ -65,7 +65,7 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
         self::assertSame('2026-10-17 11:30:00', $this->reloaded($recent)->getLastCheckedAt()?->format('Y-m-d H:i:s'));
     }
 
-    public function testALemmyAccountsCheckCompletesWithNothingToFollow(): void
+    public function testALemmyAccountIsCheckedWithNothingToFollow(): void
     {
         $lemmy = SocialAccounts::lemmyOf($this->user);
         $this->entityManager->persist($lemmy);
