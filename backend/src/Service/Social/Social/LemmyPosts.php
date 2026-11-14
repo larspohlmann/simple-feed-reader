@@ -7,6 +7,7 @@ namespace App\Service\Social\Social;
 use App\Entity\SocialAccount;
 use App\Service\Content\Comments\Model\LemmyPostModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -86,8 +87,8 @@ final readonly class LemmyPosts
 
     private static function isHomeInstance(SocialAccount $account, LemmyPostModel $post): bool
     {
-        $host = parse_url($post->instanceUrl, \PHP_URL_HOST);
+        $postInstance = UrlOrigin::canonical($post->instanceUrl);
 
-        return \is_string($host) && mb_strtolower($host) === mb_strtolower($account->getServiceHost() ?? '');
+        return null !== $postInstance && UrlOrigin::canonical($account->getServiceUrl()) === $postInstance;
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
@@ -34,7 +35,9 @@ final class LemmyCommunity
 
     private static function httpsHostOf(string $actorId): ?string
     {
-        return 'https' === parse_url($actorId, \PHP_URL_SCHEME) ? UrlOrigin::hostWithPort($actorId) : null;
+        $httpsActorId = AbsoluteHttpUrl::httpsOrNull($actorId);
+
+        return null === $httpsActorId ? null : UrlOrigin::hostWithPort($httpsActorId);
     }
 
     private function __construct()

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Bluesky\Support\BlueskyWeb;
 
@@ -93,7 +94,7 @@ final class ProfileFeedUrl
 
         return [
             'host' => $host,
-            'hostWithPort' => isset($parts['port']) ? $host . ':' . $parts['port'] : $host,
+            'hostWithPort' => strtolower((string) UrlOrigin::hostWithPort($url)),
             'path' => $parts['path'] ?? '',
         ];
     }

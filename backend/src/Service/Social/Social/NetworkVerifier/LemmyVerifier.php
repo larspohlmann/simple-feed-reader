@@ -37,7 +37,7 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
         $actorId = $person->string('actor_id');
         $identity = LemmyAuthor::identity($person->string('name'), $actorId)
             ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);
-        if (!self::sameHost((string) $actorId, $credentials->address)) {
+        if (!self::sameOrigin((string) $actorId, $credentials->address)) {
             throw new SocialCredentialsRejectedException(self::OTHER_INSTANCE);
         }
 
@@ -56,10 +56,10 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
             ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);
     }
 
-    private static function sameHost(string $left, string $right): bool
+    private static function sameOrigin(string $left, string $right): bool
     {
-        $leftHost = (string) UrlOrigin::hostWithPort($left);
+        $leftOrigin = UrlOrigin::canonical($left);
 
-        return strtolower($leftHost) === strtolower((string) UrlOrigin::hostWithPort($right));
+        return null !== $leftOrigin && $leftOrigin === UrlOrigin::canonical($right);
     }
 }
