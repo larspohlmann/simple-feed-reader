@@ -56,6 +56,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
             FeedImageExtractor::fromRss1Root($root),
             $entries,
             syntax: FeedSyntax::Rss,
+            declaredLanguage: $channel->in(FeedNamespace::DublinCore)->text('language'),
         );
     }
 

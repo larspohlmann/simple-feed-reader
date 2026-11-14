@@ -19,6 +19,7 @@ final readonly class ParsedFeedModel
         public array $entries,
         public ?string $generator = null,
         public ?FeedSyntax $syntax = null,
+        public ?string $declaredLanguage = null,
     ) {
     }
 

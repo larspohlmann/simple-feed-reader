@@ -66,6 +66,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             $entries,
             $channel->text('generator'),
             syntax: FeedSyntax::Rss,
+            declaredLanguage: $channel->text('language'),
         )->withShowArtwork(PodcastArtwork::of($channelElement));
     }
 

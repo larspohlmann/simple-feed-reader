@@ -586,4 +586,28 @@ final class Atom10ParserTest extends TestCase
         self::assertSame('Real', $entry->headline->text);
         self::assertFalse($entry->headline->derived);
     }
+
+    public function testTheFeedXmlLangIsCarriedRaw(): void
+    {
+        $feed = $this->parse('<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="es"><title>F</title></feed>');
+
+        self::assertSame('es', $feed->declaredLanguage);
+    }
+
+    public function testAFeedWithoutXmlLangDeclaresNone(): void
+    {
+        $feed = $this->parse('<feed xmlns="http://www.w3.org/2005/Atom"><title>F</title></feed>');
+
+        self::assertNull($feed->declaredLanguage);
+    }
+
+    public function testAnEntryXmlLangIsNotTheFeedLanguage(): void
+    {
+        $feed = $this->parse(
+            '<feed xmlns="http://www.w3.org/2005/Atom"><title>F</title>'
+            . '<entry xml:lang="es"><title>E</title></entry></feed>',
+        );
+
+        self::assertNull($feed->declaredLanguage);
+    }
 }

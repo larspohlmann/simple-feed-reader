@@ -87,4 +87,28 @@ final class Atom03ParserTest extends TestCase
         self::assertCount(1, $bundle->attachments);
         self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
     }
+
+    public function testTheFeedXmlLangIsCarriedRaw(): void
+    {
+        $feed = $this->parse('<feed xmlns="http://purl.org/atom/ns#" xml:lang="es"><title>F</title></feed>');
+
+        self::assertSame('es', $feed->declaredLanguage);
+    }
+
+    public function testAFeedWithoutXmlLangDeclaresNone(): void
+    {
+        $feed = $this->parse('<feed xmlns="http://purl.org/atom/ns#"><title>F</title></feed>');
+
+        self::assertNull($feed->declaredLanguage);
+    }
+
+    public function testAnEntryXmlLangIsNotTheFeedLanguage(): void
+    {
+        $feed = $this->parse(
+            '<feed xmlns="http://purl.org/atom/ns#"><title>F</title>'
+            . '<entry xml:lang="es"><title>E</title></entry></feed>',
+        );
+
+        self::assertNull($feed->declaredLanguage);
+    }
 }

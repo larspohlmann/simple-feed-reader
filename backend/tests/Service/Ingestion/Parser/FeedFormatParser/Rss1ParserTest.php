@@ -341,4 +341,27 @@ final class Rss1ParserTest extends TestCase
         self::assertSame('Hello from the fediverse.', $entry->headline->text);
         self::assertTrue($entry->headline->derived);
     }
+
+    public function testTheChannelDublinCoreLanguageIsCarriedRaw(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
+                     xmlns:dc="http://purl.org/dc/elements/1.1/">
+              <channel rdf:about="https://rss1.example.com/"><title>Feed</title><dc:language>fr</dc:language></channel>
+            </rdf:RDF>
+            XML);
+
+        self::assertSame('fr', $feed->declaredLanguage);
+    }
+
+    public function testAChannelWithoutALanguageDeclaresNone(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/">
+              <channel rdf:about="https://rss1.example.com/"><title>Feed</title></channel>
+            </rdf:RDF>
+            XML);
+
+        self::assertNull($feed->declaredLanguage);
+    }
 }

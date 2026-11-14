@@ -86,6 +86,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             FeedImageExtractor::fromAtomFeed($feed),
             $entries,
             syntax: FeedSyntax::Atom,
+            declaredLanguage: self::xmlLang($root),
         )->withShowArtwork(PodcastArtwork::of($root));
     }
 
@@ -123,6 +124,13 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             discussion: AtomDiscussion::from($atomEntry),
             authorUrl: AbsoluteHttpUrl::orNull(self::authorChildText($atomEntry, 'uri')),
         );
+    }
+
+    private static function xmlLang(\DOMElement $root): ?string
+    {
+        $language = trim($root->getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang'));
+
+        return $language === '' ? null : $language;
     }
 
     private function core(\DOMElement $element): CoreElement
