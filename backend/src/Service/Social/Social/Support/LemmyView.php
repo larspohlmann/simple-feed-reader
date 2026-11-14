@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\Support;
 
 use App\Enum\VoteScore;
+use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\LemmyTargetModel;
@@ -47,8 +48,7 @@ final class LemmyView
     ): LemmyTargetModel {
         $creator = $view->node('creator');
         $name = $creator->string('name');
-        $host = parse_url($creator->string('actor_id') ?? '', \PHP_URL_HOST);
-        $identity = null !== $name && \is_string($host) ? mb_strtolower($name . '@' . $host) : null;
+        $identity = LemmyAuthor::identity($name, $creator->string('actor_id'));
 
         return new LemmyTargetModel(
             $postId,

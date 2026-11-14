@@ -9,6 +9,7 @@ use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\MarkdownHtml;
@@ -129,13 +130,9 @@ final readonly class LemmyThread
 
     private static function author(JsonNodeModel $creator, ?string $profileUrl): CommentAuthorModel
     {
-        $account = $creator->string('name');
-        $host = null === $profileUrl ? null : parse_url($profileUrl, \PHP_URL_HOST);
-        $hasHandle = null !== $account && \is_string($host);
-
         return new CommentAuthorModel(
-            $creator->string('display_name') ?? $account,
-            $hasHandle ? '@' . $account . '@' . $host : null,
+            $creator->string('display_name') ?? $creator->string('name'),
+            LemmyAuthor::handle($creator->string('name'), $profileUrl),
             $profileUrl,
             $creator->string('avatar'),
         );

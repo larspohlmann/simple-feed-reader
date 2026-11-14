@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\NetworkVerifier;
 
 use App\Enum\SocialNetwork;
+use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
@@ -33,15 +34,12 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
         $site = JsonNodeModel::of($this->lemmy->send($session->get('/api/v3/site'))->json());
         $person = $site->node('my_user')->node('local_user_view')->node('person');
 
-        $name = $person->string('name');
-        $host = UrlOrigin::hostWithPort($person->string('actor_id') ?? '');
-        if (null === $name || null === $host) {
-            throw new SocialCredentialsRejectedException(self::NO_SESSION);
-        }
-        if (strtolower($host) !== strtolower((string) UrlOrigin::hostWithPort($credentials->address))) {
+        $actorId = $person->string('actor_id');
+        $identity = LemmyAuthor::identity($person->string('name'), $actorId)
+            ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);
+        if (!self::sameHost((string) $actorId, $credentials->address)) {
             throw new SocialCredentialsRejectedException(self::OTHER_INSTANCE);
         }
-        $identity = strtolower($name . '@' . $host);
 
         return new VerifiedAccountModel($identity, '@' . $identity, $credentials->address, $token);
     }
@@ -56,5 +54,12 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
 
         return JsonNodeModel::of($answer->json())->string('jwt')
             ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);
+    }
+
+    private static function sameHost(string $left, string $right): bool
+    {
+        $leftHost = (string) UrlOrigin::hostWithPort($left);
+
+        return strtolower($leftHost) === strtolower((string) UrlOrigin::hostWithPort($right));
     }
 }
