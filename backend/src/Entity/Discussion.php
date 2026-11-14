@@ -27,7 +27,7 @@ final readonly class Discussion
 
     public static function of(?string $pageUrl, ?string $commentsFeedUrl, CommentsLoad $load): self
     {
-        $keepsLoad = $commentsFeedUrl !== null || $load !== CommentsLoad::Manual;
+        $keepsLoad = $commentsFeedUrl !== null || ($pageUrl !== null && $load !== CommentsLoad::Manual);
 
         return new self($pageUrl, $commentsFeedUrl, $keepsLoad ? $load : null);
     }

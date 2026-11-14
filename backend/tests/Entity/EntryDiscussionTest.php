@@ -97,4 +97,12 @@ final class EntryDiscussionTest extends TestCase
         self::assertSame($commentsFeedUrl, $read->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $read->commentsLoad);
     }
+
+    public function testAnOverlongPlatformThreadAddressLeavesNoAutomaticLoad(): void
+    {
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::platformThread(str_repeat('a', 2049)));
+
+        self::assertEquals(Discussion::none(), $stored->read());
+    }
 }

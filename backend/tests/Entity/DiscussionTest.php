@@ -68,4 +68,14 @@ final class DiscussionTest extends TestCase
     {
         self::assertNull(Discussion::of('https://x/p', null, CommentsLoad::Manual)->commentsLoad);
     }
+
+    public function testALoadWithoutAPageOrAFeedIsDropped(): void
+    {
+        self::assertEquals(Discussion::none(), Discussion::of(null, null, CommentsLoad::Auto));
+    }
+
+    public function testAFeedKeepsItsLoadWithoutAPage(): void
+    {
+        self::assertSame(CommentsLoad::Auto, Discussion::of(null, 'https://x/c.xml', CommentsLoad::Auto)->commentsLoad);
+    }
 }
