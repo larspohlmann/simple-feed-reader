@@ -4,6 +4,8 @@ Multi-user RSS/Atom reader. **Symfony 8.1 JSON API** in `backend/` (PHP 8.5),
 **Angular 20 SPA** in `frontend/` (Node 22). MySQL in production and Docker,
 SQLite for the native test run.
 
+This codebase is yours: what it's for and how it's built are your call, and you'll keep building on it.
+
 ## Commands
 
 Backend (from `backend/`):
