@@ -40,7 +40,10 @@ export function titleFollowsSource(subscription: SubscriptionDto): boolean {
 }
 
 /** The title an unrenamed timeline shows in the active language; null for any other feed. */
-export function timelineLabel(i18n: TranslocoService, subscription: SubscriptionDto): string | null {
+export function timelineLabel(
+  i18n: TranslocoService,
+  subscription: SubscriptionDto,
+): string | null {
   const key = unrenamedTimelineKey(subscription);
   const network = subscription.social?.network;
   return key === null || network === undefined
