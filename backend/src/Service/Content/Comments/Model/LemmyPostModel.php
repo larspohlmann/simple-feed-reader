@@ -17,7 +17,11 @@ final readonly class LemmyPostModel
 
     public function commentsApiUrl(): string
     {
-        return $this->instanceUrl . '/api/v3/comment/list?post_id=' . $this->postId
-            . '&sort=Hot&type_=All&max_depth=8&limit=50';
+        return $this->instanceUrl . self::commentsApiPath($this->postId);
+    }
+
+    public static function commentsApiPath(int $postId): string
+    {
+        return '/api/v3/comment/list?post_id=' . $postId . '&sort=Hot&type_=All&max_depth=8&limit=50';
     }
 }

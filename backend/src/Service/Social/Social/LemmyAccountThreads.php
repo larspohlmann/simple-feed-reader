@@ -49,14 +49,10 @@ final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
         try {
             $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $account->getUser());
 
-
             return $this->guard->actAs($account, function () use ($account, $post): string {
                 $localPostId = $this->posts->postOn($account, $post)->postId;
 
-                return $this->accountApi->get(
-                    $account,
-                    '/api/v3/comment/list?post_id=' . $localPostId . '&sort=Hot&type_=All&max_depth=8&limit=50',
-                )->body;
+                return $this->accountApi->get($account, LemmyPostModel::commentsApiPath($localPostId))->body;
             });
         } catch (SocialNetworkThrottledException $exception) {
             throw new CommentsThrottledException(
