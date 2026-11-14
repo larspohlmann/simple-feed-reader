@@ -48,6 +48,7 @@ final readonly class CommentsJson
             'media' => EntryMedia::toJsonList($comment->embeds->media),
             'linkCard' => $this->linkCardJson->ofOrNull($comment->embeds->linkCard),
             'quote' => $this->quotedPostJson->ofOrNull($comment->embeds->quote),
+            'score' => $comment->score,
             'post' => null === $comment->post ? null : self::post($comment->post),
         ];
     }

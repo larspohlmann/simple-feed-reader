@@ -15,6 +15,7 @@ final readonly class EntryCommentModel
         public CommentEmbedsModel $embeds = new CommentEmbedsModel(),
         public int $depth = 0,
         public ?CommentPostModel $post = null,
+        public ?int $score = null,
     ) {
     }
 
@@ -22,6 +23,12 @@ final readonly class EntryCommentModel
     public function withPost(CommentPostModel $post): self
     {
         return clone($this, ['post' => $post]);
+    }
+
+    #[\NoDiscard]
+    public function withScore(int $score): self
+    {
+        return clone($this, ['score' => $score]);
     }
 
     #[\NoDiscard]
