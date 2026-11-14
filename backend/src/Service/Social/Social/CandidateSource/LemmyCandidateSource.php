@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyCandidateSource implements CandidateSourceInterface
 {
-    private const string COMMUNITIES = '/api/v3/community/list?type_=Subscribed&sort=Old&limit=50&page=';
+    private const string COMMUNITIES = '/api/v3/community/list?';
     private const int PAGE_SIZE = 50;
 
     public function __construct(private LemmyAccountApi $lemmy)
@@ -58,9 +58,14 @@ final readonly class LemmyCandidateSource implements CandidateSourceInterface
     /** @return list<JsonNodeModel> */
     private function pageOf(SocialAccount $account, int $page): array
     {
-        $answer = $this->lemmy->get($account, self::COMMUNITIES . $page);
+        $answer = $this->lemmy->get($account, self::COMMUNITIES . http_build_query([
+            'type_' => 'Subscribed',
+            'sort' => 'Old',
+            'limit' => self::PAGE_SIZE,
+            'page' => $page,
+        ]));
 
-        return JsonNodeModel::of(json_decode($answer->body, true))->listAt('communities')
+        return JsonNodeModel::of($answer->json())->listAt('communities')
             ?? throw new SocialNetworkUnreachableException('The Lemmy instance answered without communities.');
     }
 
