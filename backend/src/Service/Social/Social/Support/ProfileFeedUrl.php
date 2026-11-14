@@ -51,7 +51,7 @@ final class ProfileFeedUrl
         if (null === $parts) {
             return null;
         }
-        foreach (SocialNetwork::feedNetworks() as $network) {
+        foreach (SocialNetwork::cases() as $network) {
             if (null !== self::identityIn($network, $parts['host'], $parts['path'])) {
                 return $network;
             }

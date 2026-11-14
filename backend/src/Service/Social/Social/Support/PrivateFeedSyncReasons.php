@@ -8,7 +8,6 @@ use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncReason;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 
@@ -50,7 +49,7 @@ final class PrivateFeedSyncReasons
         return match ($account->getNetwork()) {
             SocialNetwork::Mastodon => true,
             SocialNetwork::Bluesky => str_starts_with($collection->remoteId, 'at://' . $account->getIdentity() . '/'),
-            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
+            SocialNetwork::Lemmy => false,
         };
     }
 

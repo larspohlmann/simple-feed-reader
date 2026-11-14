@@ -6,7 +6,6 @@ namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
@@ -14,13 +13,15 @@ use App\Service\Social\Social\Model\SocialPostAddressModel;
 /** What a delete names one of the account's own posts by: a Bluesky AT URI, or the status id on its own server. */
 final class OwnPostIds
 {
+    public const string LEMMY_NOT_DELETED = 'Lemmy posts are not deleted from this reader.';
+
     /** @throws SocialPostRefusedException */
     public static function ofAddress(SocialPostAddressModel $post, SocialAccount $account): string
     {
         return match ($post->network) {
             SocialNetwork::Bluesky => $post->address,
             SocialNetwork::Mastodon => self::mastodonStatusId($post->address, $account),
-            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
+            SocialNetwork::Lemmy => throw new SocialPostRefusedException(self::LEMMY_NOT_DELETED),
         };
     }
 
@@ -30,7 +31,7 @@ final class OwnPostIds
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyPost($url, $account),
             SocialNetwork::Mastodon => self::mastodonStatusId($url, $account),
-            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
+            SocialNetwork::Lemmy => throw new SocialPostRefusedException(self::LEMMY_NOT_DELETED),
         };
     }
 

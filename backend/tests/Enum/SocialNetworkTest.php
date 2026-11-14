@@ -29,6 +29,13 @@ final class SocialNetworkTest extends TestCase
         self::assertFalse(SocialNetwork::Lemmy->carriesFeeds());
     }
 
+    public function testOnlyLemmyTakesNoLinkPosts(): void
+    {
+        self::assertTrue(SocialNetwork::Bluesky->takesLinkPosts());
+        self::assertTrue(SocialNetwork::Mastodon->takesLinkPosts());
+        self::assertFalse(SocialNetwork::Lemmy->takesLinkPosts());
+    }
+
     public function testTheFeedNetworkRequirementListsTheFeedNetworks(): void
     {
         self::assertSame(

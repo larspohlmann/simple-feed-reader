@@ -62,6 +62,11 @@ enum SocialNetwork: string
         return self::Lemmy !== $this;
     }
 
+    public function takesLinkPosts(): bool
+    {
+        return self::Lemmy !== $this;
+    }
+
     public function displayName(): string
     {
         return match ($this) {

@@ -33,4 +33,12 @@ final class OwnReplyGuidsTest extends TestCase
 
         OwnReplyGuids::ofUrl('https://mastodon.example/@alice', SocialAccounts::mastodon());
     }
+
+    public function testALemmyReplyIsRefused(): void
+    {
+        $this->expectException(SocialPostRefusedException::class);
+        $this->expectExceptionMessage('Lemmy posts are not deleted from this reader.');
+
+        OwnReplyGuids::ofUrl('https://lemmy.example/comment/5', SocialAccounts::lemmyOf(SocialAccounts::owner()));
+    }
 }

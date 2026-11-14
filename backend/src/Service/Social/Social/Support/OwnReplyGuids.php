@@ -6,7 +6,6 @@ namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 
 /** Every guid a feed may store one of the account's own thread replies under: a timeline page's and an RSS item's. */
@@ -22,7 +21,7 @@ final class OwnReplyGuids
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => [OwnPostIds::ofReplyUrl($url, $account)],
             SocialNetwork::Mastodon => [self::mastodonUri($url), $url],
-            SocialNetwork::Lemmy => throw new NetworkWithoutFeedsException(),
+            SocialNetwork::Lemmy => throw new SocialPostRefusedException(OwnPostIds::LEMMY_NOT_DELETED),
         };
     }
 

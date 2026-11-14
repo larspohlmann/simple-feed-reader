@@ -71,4 +71,23 @@ final class OwnPostIdsTest extends TestCase
         yield 'no Mastodon status' => ['https://mastodon.example/@alice', false];
         yield 'no Bluesky post' => ['https://bsky.app/profile/did:plc:alice', true];
     }
+
+    public function testALemmyPostIsRefused(): void
+    {
+        $account = SocialAccounts::lemmyOf(SocialAccounts::owner());
+        $post = new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/7');
+
+        $this->expectException(SocialPostRefusedException::class);
+        $this->expectExceptionMessage('Lemmy posts are not deleted from this reader.');
+
+        OwnPostIds::ofAddress($post, $account);
+    }
+
+    public function testALemmyReplyUrlIsRefused(): void
+    {
+        $this->expectException(SocialPostRefusedException::class);
+        $this->expectExceptionMessage('Lemmy posts are not deleted from this reader.');
+
+        OwnPostIds::ofReplyUrl('https://lemmy.example/comment/5', SocialAccounts::lemmyOf(SocialAccounts::owner()));
+    }
 }
