@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
@@ -17,7 +18,7 @@ final class TrendingRuns
 
     public static function of(TrendingWindow $window): TrendingRun
     {
-        return new TrendingRun($window, new HeadlineWindow(new HeadlineFiller()));
+        return new TrendingRun($window, new HeadlineWindow(new HeadlineFiller(), new HeadlineEquivalents()));
     }
 
     public static function entry(int $id, int $feedId, string $title, string $effectiveDate): WindowEntryModel
