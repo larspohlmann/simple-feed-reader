@@ -7,6 +7,7 @@ namespace App\Service\Curation\Trending\Pass;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Model\LanguageCoverageModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
@@ -48,6 +49,9 @@ final class HeadlineWindow
     /** @var array<int, float> */
     private array $totalWeights = [];
 
+    /** @var array<string, int> language value => entries stemmed in it */
+    private array $entriesByLanguage = [];
+
     public function __construct(
         private readonly HeadlineFiller $filler,
         private readonly HeadlineEquivalents $equivalents,
@@ -64,6 +68,15 @@ final class HeadlineWindow
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->entriesOfFeed[$entry->feedId][] = $entry->id;
         $this->post($entry->id, $headlineIds, $bodyIds);
+        $this->countLanguageOf($entry);
+    }
+
+    public function languageCoverage(): LanguageCoverageModel
+    {
+        return new LanguageCoverageModel(
+            $this->entriesByLanguage,
+            $this->entryCount() - array_sum($this->entriesByLanguage),
+        );
     }
 
     public function entryCount(): int
@@ -93,6 +106,15 @@ final class HeadlineWindow
         }
 
         return array_intersect_key($shared, $sharingAHeadline);
+    }
+
+    private function countLanguageOf(WindowEntryModel $entry): void
+    {
+        if (null === $entry->language) {
+            return;
+        }
+        $language = $entry->language->value;
+        $this->entriesByLanguage[$language] = ($this->entriesByLanguage[$language] ?? 0) + 1;
     }
 
     /** @return list<int> */
