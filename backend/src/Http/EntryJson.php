@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryMedia;
 use App\Entity\EntryTranscript;
 use App\Entity\ImageRendition;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
@@ -48,9 +49,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   share: 'link'|'media'|'quote'|null,
  *   quote: QuoteRow|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
- *   social: array{
- *     network: 'bluesky'|'lemmy'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null,
- *   }|null,
+ *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null,
  *   myVote: int|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
@@ -169,17 +168,22 @@ final readonly class EntryJson
         ];
     }
 
-    /** @return array{network: 'bluesky'|'lemmy'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null */
+    /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null */
     private static function socialOf(EntryListRow $row): ?array
     {
         $social = $row->enrichment->social;
 
-        if (null === $social) {
+        $network = match ($social?->network) {
+            SocialNetwork::Bluesky => 'bluesky',
+            SocialNetwork::Mastodon => 'mastodon',
+            SocialNetwork::Lemmy, null => null,
+        };
+        if (null === $social || null === $network) {
             return null;
         }
 
         return [
-            'network' => $social->network->value,
+            'network' => $network,
             'isLiked' => $social->isLiked,
             'canLike' => $social->canLike,
             'isOwn' => $social->isOwn,

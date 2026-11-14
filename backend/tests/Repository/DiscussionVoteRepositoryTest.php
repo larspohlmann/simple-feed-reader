@@ -141,9 +141,8 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
         self::assertNotNull($reloadedEntry);
         $this->entityManager->clear();
 
-        $this->repository()->store(
-            new DiscussionVote($owner, $reloadedEntry, $account, VoteScore::Down, new \DateTimeImmutable('2026-11-14 12:00:00')),
-        );
+        $votedAt = new \DateTimeImmutable('2026-11-14 12:00:00');
+        $this->repository()->store(new DiscussionVote($owner, $reloadedEntry, $account, VoteScore::Down, $votedAt));
         $this->entityManager->clear();
 
         self::assertSame(1, $this->repository()->count([]));

@@ -38,8 +38,8 @@ final class DiscussionVoteRepository extends ServiceEntityRepository
                 . ' score = excluded.score, voted_at = excluded.voted_at';
 
         $connection->executeStatement(
-            'INSERT INTO discussion_vote (user_id, entry_id, social_account_id, score, voted_at) VALUES (?, ?, ?, ?, ?) '
-                . $onConflict,
+            'INSERT INTO discussion_vote (user_id, entry_id, social_account_id, score, voted_at)'
+                . ' VALUES (?, ?, ?, ?, ?) ' . $onConflict,
             [
                 $vote->getUser()->requireId(),
                 $vote->getEntry()->requireId(),
