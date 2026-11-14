@@ -36,6 +36,9 @@ final class EntryVoteControllerTest extends ApiTestCase
     /** Must match framework.rate_limiter.social_like.limit in rate_limiter.yaml. */
     private const int LIKE_BUDGET = 60;
 
+    /** Must match framework.rate_limiter.social_viewer.limit in rate_limiter.yaml. */
+    private const int VIEWER_BUDGET = 120;
+
     protected function setUp(): void
     {
         self::bootKernel();
@@ -163,12 +166,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'vote-plain@example.test');
         $this->lemmyAccountOf($user);
-        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
-        $entryId = $fixtures->post(
-            $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN),
-            'https://example.com/plain',
-            '2026-10-12T10:00:00Z',
-        )->requireId();
+        $entryId = $this->plainEntryFor($user);
 
         $this->vote($client, $entryId, 1);
 
@@ -245,17 +243,45 @@ final class EntryVoteControllerTest extends ApiTestCase
         self::assertSame([], $this->storedScores());
     }
 
+    public function testAVoteRecastsTheStoredRowToTheNetworksAnswer(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::HOME_POST => self::fixture('post-as-account.json'),
+            self::LIKE => self::fixture('post-like-downvoted.json'),
+        ]);
+        $user = $this->signIn($client, 'vote-recast@example.test');
+        $account = $this->lemmyAccountOf($user);
+        $entryId = $this->lemmyPostFor($user);
+        $this->storeVote($user, $entryId, $account, VoteScore::Up);
+
+        $this->vote($client, $entryId, -1);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['myVote' => -1, 'score' => 43], $this->payload($client));
+        self::assertSame([VoteScore::Down], $this->storedScores());
+    }
+
+    public function testReadingTheVoteDrawsOnTheViewerBudget(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'vote-viewer-budget@example.test');
+        $this->lemmyAccountOf($user);
+        $path = sprintf('/api/entries/%d/vote', $this->plainEntryFor($user));
+        for ($attempt = 0; $attempt < self::VIEWER_BUDGET; ++$attempt) {
+            $client->request('GET', $path);
+        }
+
+        $client->request('GET', $path);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
     public function testVotesDrawOnTheLikeBudget(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'vote-budget@example.test');
         $this->lemmyAccountOf($user);
-        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
-        $entryId = $fixtures->post(
-            $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN),
-            'https://example.com/plain',
-            '2026-10-12T10:00:00Z',
-        )->requireId();
+        $entryId = $this->plainEntryFor($user);
         for ($attempt = 0; $attempt < self::LIKE_BUDGET; ++$attempt) {
             $this->vote($client, $entryId, 1);
         }
@@ -263,6 +289,17 @@ final class EntryVoteControllerTest extends ApiTestCase
         $this->vote($client, $entryId, 1);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    private function plainEntryFor(User $user): int
+    {
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
+
+        return $fixtures->post(
+            $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN),
+            'https://example.com/plain',
+            '2026-10-12T10:00:00Z',
+        )->requireId();
     }
 
     private function vote(KernelBrowser $client, int $entryId, int $score): void

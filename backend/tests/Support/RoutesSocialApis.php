@@ -72,8 +72,8 @@ trait RoutesSocialApis
 
     private function lemmyPostFor(User $user, string $page = 'https://lemmy.example/post/42'): int
     {
-        $post = (new NetworkFeedSubscriptions($this->entityManager()));
-        $subscription = $post->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
+        $subscription = $fixtures->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');
         $entry = new Entry(
             $subscription->getFeed(),
             $page,
