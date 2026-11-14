@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Exception\NoVoteToStoreException;
 use App\Enum\VoteScore;
 use App\Repository\DiscussionVoteRepository;
 use Doctrine\DBAL\Types\Types;
@@ -50,6 +51,7 @@ final class DiscussionVote
         VoteScore $score,
         \DateTimeImmutable $votedAt,
     ) {
+        self::refuseNone($score);
         $this->user = $user;
         $this->entry = $entry;
         $this->socialAccount = $socialAccount;
@@ -89,8 +91,16 @@ final class DiscussionVote
 
     public function recast(SocialAccount $account, VoteScore $score, \DateTimeImmutable $votedAt): void
     {
+        self::refuseNone($score);
         $this->socialAccount = $account;
         $this->score = $score;
         $this->votedAt = $votedAt;
+    }
+
+    private static function refuseNone(VoteScore $score): void
+    {
+        if (VoteScore::None === $score) {
+            throw new NoVoteToStoreException();
+        }
     }
 }
