@@ -108,9 +108,18 @@ milliseconds over a few KB of text.
 
 Stems share one id space, so a German news feed's *Bundestag* (`bundestag`) no longer matches a language-less feed's
 `bundes`: links across that boundary (mostly social posts to news) are lost on words longer than six letters whose
-Snowball stem differs from their first six letters. **Accepted and measured, no bridge now** (Lars, 2026-11-14): the
-measurement reports the cross-boundary links lost. If the week window shows real stories lost that way, the follow-up
-is per-entry detection for language-less entries (a whole post is longer than a headline), falling back to the cut.
+Snowball stem differs from their first six letters. The first ruling was to accept and measure the loss, with no
+bridge yet (Lars, 2026-11-14). The measurement failed that ruling. Over the week, about 1,800 grouped pairs were lost
+across the boundary against 160 gained, and in total 15,852 pairs fell to 13,823. Setting every language-less feed to
+`en` turned the result into a net gain.
+
+**Every entry is stemmed** (Lars, 2026-11-14, replacing the first ruling). When an entry's feed has no language,
+Trending guesses the entry's own language at build time from its headline and plain summary. The guess is always the
+detector's top language among the four, even when it is not confident, because a wrong guess costs little: names stem
+the same in every language. This applies to social timeline entries too. The feed column still stays empty for them,
+since their feeds mix languages. Only an entry with no letters to detect keeps the six-character cut. The guess is not
+stored, which costs about 0.16 ms per entry per run. German compounds that the cut used to join (*Dreiertreffen /
+Dreiergipfel*) are measured after this change and get an issue of their own if they matter.
 
 ### Stemming in Trending
 

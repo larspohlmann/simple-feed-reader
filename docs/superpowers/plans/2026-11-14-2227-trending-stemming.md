@@ -151,6 +151,22 @@ Rules (in this order):
 - [ ] **Step 5: Curate** from what Step 4 shows, one commit per ruling class: demonym and capital pairs Snowball keeps apart (*ukraine/ukrainian*, *rusia/ruso*, …), #2225 exact words now redundant under Snowball (*Schweiz*, *Niederlande*, *Großbritannien*, *Austria* — keep each only if a null-language feed still needs it), seeds that show up as top shared stems. Re-measure after each; eye-check every new, grown or split group.
 - [ ] **Step 6:** Record the outcome (coverage, day/week pairs, cross-boundary losses, rulings) in the spec under "Outcome"; commit `docs(#2227): record the measured outcome`.
 
+### Task 6b: Best-guess language per entry
+
+Inserted after Task 6's first measurement, which found a net loss (see the spec's "Feeds with and without a language").
+
+**Files:**
+- Create: a best-guess service that turns an entry's text into `?FeedLanguage`.
+- Modify: `TrendingRun` or `HeadlineWindow`, so that an entry whose feed has no language is stemmed in its guessed language.
+- Modify: `LanguageCoverageModel` and the explain line, so the guessed entries are visible.
+
+- [ ] **Step 1: Failing tests**
+  - A language-less entry with an English headline and lead links to an English-feed entry on a word longer than six letters whose Snowball stem differs from the cut (for example *airports*).
+  - An entry with no letters keeps the cut.
+  - The explain line counts the guessed entries.
+- [ ] **Step 2:** Implement, PASS, gates, commit.
+- [ ] **Step 3:** Re-run Task 6's day and week measurement, then go on with Task 6 Steps 5 and 6.
+
 ### Task 7: Gates and PR
 
 - [ ] `composer check`, `composer md`, `composer test:parallel`, `composer infection:diff` — all green; fix survivors with tests, not by lowering anything.
