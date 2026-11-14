@@ -325,3 +325,17 @@ Decided in #1202.
 
 Enforced by `ServiceRoleRule` (`backend/tests/PhpStan/`, with `ServiceRoleClassCollector` and
 `ServiceRoleInstantiationCollector`, run by `composer stan`), which names each misplaced class's home.
+
+## 11. Discussion threads: posts the feed carries in full
+
+An entry with a null `url` and a `Discussion` page URL is a discussion thread (`Entry::isDiscussionThread()`). A
+`PlatformEntryRuleInterface` rule builds it with `ParsedEntryModel::asDiscussionThread()` (`RedditEntryRule`,
+`LemmyEntryRule`). Three rules follow from the shape:
+
+- **No article extraction.** `EntryArticleReader` has no page URL to fetch, so the reader shows the feed body.
+- **Link cards.** `EntryShareClassifier` takes a thread's body links that read as their own address as a link share
+  (no prose limit, never media); `ShareEnrichmentQueue` then queues the existing link-card pass.
+- **Comments.** `Discussion::platformThread()` keeps `CommentsLoad::Auto` without a comments feed; a
+  `CommentsSourceInterface` serves it (`LemmyCommentsSource`, `CommentsFeedSource` for Reddit), sharing `CommentsEndpointFetcher`.
+
+A new source is a platform entry rule, plus a comments source when its comments are no feed.
