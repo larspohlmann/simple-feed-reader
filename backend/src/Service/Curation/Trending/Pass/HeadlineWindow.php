@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Pass;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
 final class HeadlineWindow
@@ -53,15 +55,15 @@ final class HeadlineWindow
     }
 
     /** Entries must arrive in ascending id order: the postings stay sorted. */
-    public function add(int $entryId, int $feedId, string $headline, string $body): void
+    public function add(WindowEntryModel $entry, string $body): void
     {
-        $headlineIds = $this->idsOf($this->equivalents->stemsOf($headline));
-        $bodyIds = array_values(array_diff($this->idsOf($this->equivalents->stemsOf($body)), $headlineIds));
-        $this->headlineStems[$entryId] = $headlineIds;
-        $this->bodyStems[$entryId] = $bodyIds;
-        $this->feedOfEntry[$entryId] = $feedId;
-        $this->entriesOfFeed[$feedId][] = $entryId;
-        $this->post($entryId, $headlineIds, $bodyIds);
+        $headlineIds = $this->idsOf($entry->title, $entry->language);
+        $bodyIds = array_values(array_diff($this->idsOf($body, $entry->language), $headlineIds));
+        $this->headlineStems[$entry->id] = $headlineIds;
+        $this->bodyStems[$entry->id] = $bodyIds;
+        $this->feedOfEntry[$entry->id] = $entry->feedId;
+        $this->entriesOfFeed[$entry->feedId][] = $entry->id;
+        $this->post($entry->id, $headlineIds, $bodyIds);
     }
 
     public function entryCount(): int
@@ -93,16 +95,12 @@ final class HeadlineWindow
         return array_intersect_key($shared, $sharingAHeadline);
     }
 
-    /**
-     * @param list<string> $stems
-     *
-     * @return list<int>
-     */
-    private function idsOf(array $stems): array
+    /** @return list<int> */
+    private function idsOf(string $text, ?FeedLanguage $language): array
     {
         $ids = [];
-        foreach ($stems as $stem) {
-            if (!$this->filler->isSeed($stem)) {
+        foreach ($this->equivalents->stemsOf($text, $language) as $stem) {
+            if (!$this->filler->isSeed($stem, $language)) {
                 $ids[] = $this->stemIds[$stem] ??= \count($this->stemIds);
             }
         }

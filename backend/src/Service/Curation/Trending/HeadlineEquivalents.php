@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Support\HeadlineStems;
 
 /** Spellings of one thing, across the four app languages, share one stem (#2225). */
 final readonly class HeadlineEquivalents
 {
-    /** Case-sensitive whole words: abbreviations, and long forms whose six-letter stem would catch unrelated words. */
+    /** Case-sensitive whole words: abbreviations, and long forms whose six-letter cut would catch unrelated words. */
     private const array EXACT_WORDS = [
         'EU' => 'eunion', 'UE' => 'eunion',
         'UN' => 'onu', 'UNO' => 'onu', 'ONU' => 'onu',
@@ -24,7 +25,7 @@ final readonly class HeadlineEquivalents
     /** Exact words that are also ordinary words in a shouted headline: French "UN PLAN", Spanish "UNO MÁS". */
     private const array SHOUTABLE_WORDS = ['UN' => true, 'UNO' => true];
 
-    /** Folded words joined by one space. */
+    /** Folded words without diacritics, joined by one space. */
     private const array PHRASES = [
         'united nations' => 'onu', 'vereinte nationen' => 'onu', 'nations unies' => 'onu',
         'naciones unidas' => 'onu', 'vereinten nationen' => 'onu',
@@ -35,7 +36,7 @@ final readonly class HeadlineEquivalents
     ];
 
     /** A key also merges every unrelated word sharing its six letters: check the window's words before adding one. */
-    private const array STEMS = [
+    private const array CUT_STEMS = [
         'zelens' => 'selens',
         'russla' => 'russia', 'russie' => 'russia', 'rusia' => 'russia',
         'ucrani' => 'ukrain',
@@ -59,26 +60,122 @@ final readonly class HeadlineEquivalents
         'brusel' => 'brusse', 'bruxel' => 'brusse',
     ];
 
+    /** Keyed by the language's Snowball stem without diacritics: a key merges every word of the language stemming to it. */
+    private const array STEMS_BY_LANGUAGE = [
+        'de' => [
+            'selenskyj' => 'selens',
+            'russland' => 'russia',
+            'chinas' => 'china',
+            'frankreich' => 'france',
+            'spani' => 'spain',
+            'itali' => 'italia',
+            'turkei' => 'turkey',
+            'pol' => 'poland',
+            'osterreich' => 'osterr',
+            'brasili' => 'brazil',
+            'mexiko' => 'mexico',
+            'indi' => 'india',
+            'syri' => 'syria',
+            'moskau' => 'moscow',
+            'peking' => 'beijin',
+            'kreml' => 'kremli',
+            'brussel' => 'brusse',
+            'weltmeisterschaft' => 'weltme',
+        ],
+        'en' => [
+            'zelenski' => 'selens', 'zelenskyy' => 'selens',
+            'itali' => 'italia',
+            'switzerland' => 'switze',
+            'britain' => 'britai',
+            'netherland' => 'nether',
+            'beij' => 'beijin',
+            'kremlin' => 'kremli',
+            'brussel' => 'brusse',
+        ],
+        'fr' => [
+            'zelensky' => 'selens',
+            'russ' => 'russia',
+            'chin' => 'china',
+            'espagn' => 'spain',
+            'ital' => 'italia',
+            'turqu' => 'turkey',
+            'japon' => 'japan',
+            'pologn' => 'poland',
+            'suiss' => 'switze',
+            'autrich' => 'osterr',
+            'bresil' => 'brazil',
+            'mexiqu' => 'mexico',
+            'inde' => 'india',
+            'otan' => 'nato',
+            'syr' => 'syria',
+            'moscou' => 'moscow',
+            'pekin' => 'beijin',
+            'kremlin' => 'kremli',
+            'bruxel' => 'brusse',
+        ],
+        'es' => [
+            'zelenski' => 'selens', 'zelensky' => 'selens',
+            'rusi' => 'russia',
+            'ucrani' => 'ukrain',
+            'espan' => 'spain',
+            'turqu' => 'turkey',
+            'japon' => 'japan',
+            'poloni' => 'poland',
+            'suiz' => 'switze',
+            'brasil' => 'brazil',
+            'otan' => 'nato',
+            'siri' => 'syria',
+            'moscu' => 'moscow',
+            'pekin' => 'beijin',
+            'kremlin' => 'kremli',
+            'brusel' => 'brusse',
+        ],
+    ];
+
     private string $exactWordPattern;
 
     /** @var array<string, list<array{list<string>, string}>> first word => phrase words and canonical */
     private array $phrasesByFirstWord;
 
-    public function __construct()
+    /** @var array<string, true> */
+    private array $canonicals;
+
+    public function __construct(private HeadlineStemmer $stemmer)
     {
         $this->exactWordPattern = self::exactWordPattern();
         $this->phrasesByFirstWord = self::phrasesByFirstWord();
+        $this->canonicals = self::canonicals();
     }
 
     /** @return list<string> distinct stems */
-    public function stemsOf(string $text): array
+    public function stemsOf(string $text, ?FeedLanguage $language): array
     {
-        $stems = HeadlineStems::ofWords($this->collapsePhrases(HeadlineStems::words($this->replaceExactWords($text))));
+        $stems = [];
+        foreach ($this->collapsePhrases(HeadlineStems::words($this->replaceExactWords($text))) as $word) {
+            if (HeadlineStems::isKept($word)) {
+                $stems[] = $this->stemOf($word, $language);
+            }
+        }
 
-        return array_values(array_unique(array_map(
-            static fn (string $stem): string => self::STEMS[$stem] ?? $stem,
-            $stems,
-        )));
+        return array_values(array_unique($stems));
+    }
+
+    /** A canonical is a stem already: stemming it in a language would split it from the others. */
+    private function stemOf(string $word, ?FeedLanguage $language): string
+    {
+        $bare = HeadlineStems::bare($word);
+        if (isset($this->canonicals[$bare])) {
+            return $bare;
+        }
+        $stem = $this->stemmer->stem($word, $language);
+
+        return self::stemsFor($language)[$stem] ?? $stem;
+    }
+
+    /** @return array<string, string> */
+    private static function stemsFor(?FeedLanguage $language): array
+    {
+        return $language === null ? self::CUT_STEMS : self::STEMS_BY_LANGUAGE[$language->value];
     }
 
     private function replaceExactWords(string $text): string
@@ -121,11 +218,12 @@ final readonly class HeadlineEquivalents
      */
     private function collapsePhrases(array $words): array
     {
+        $bareWords = array_map(HeadlineStems::bare(...), $words);
         $collapsed = [];
         $index = 0;
         while ($index < \count($words)) {
-            [$length, $word] = $this->wordOrPhraseAt($words, $index);
-            $collapsed[] = $word;
+            [$length, $canonical] = $this->phraseAt($bareWords, $index);
+            $collapsed[] = $canonical ?? $words[$index];
             $index += $length;
         }
 
@@ -133,24 +231,35 @@ final readonly class HeadlineEquivalents
     }
 
     /**
-     * @param list<string> $words
+     * @param list<string> $bareWords
      *
-     * @return array{int, string} how many words it covers, and the word or the phrase's canonical
+     * @return array{int, ?string} how many words it covers, and the phrase's canonical if one starts here
      */
-    private function wordOrPhraseAt(array $words, int $index): array
+    private function phraseAt(array $bareWords, int $index): array
     {
-        foreach ($this->phrasesByFirstWord[$words[$index]] ?? [] as [$phraseWords, $canonical]) {
-            if (\array_slice($words, $index, \count($phraseWords)) === $phraseWords) {
+        foreach ($this->phrasesByFirstWord[$bareWords[$index]] ?? [] as [$phraseWords, $canonical]) {
+            if (\array_slice($bareWords, $index, \count($phraseWords)) === $phraseWords) {
                 return [\count($phraseWords), $canonical];
             }
         }
 
-        return [1, $words[$index]];
+        return [1, null];
     }
 
     private static function exactWordPattern(): string
     {
         return '/(?<![\p{L}\p{N}])(?:' . implode('|', array_keys(self::EXACT_WORDS)) . ')(?![\p{L}\p{N}])/u';
+    }
+
+    /** @return array<string, true> */
+    private static function canonicals(): array
+    {
+        $canonicals = [];
+        foreach ([self::EXACT_WORDS, self::PHRASES, self::CUT_STEMS, ...self::STEMS_BY_LANGUAGE] as $table) {
+            $canonicals += array_fill_keys($table, true);
+        }
+
+        return $canonicals;
     }
 
     /** @return array<string, list<array{list<string>, string}>> */

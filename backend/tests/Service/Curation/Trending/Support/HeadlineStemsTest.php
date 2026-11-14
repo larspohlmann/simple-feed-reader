@@ -9,62 +9,66 @@ use PHPUnit\Framework\TestCase;
 
 final class HeadlineStemsTest extends TestCase
 {
-    public function testDiacriticsAndUmlautsAreStrippedAndSharpSIsCaseFolded(): void
+    public function testWordsAreCaseFoldedAndKeepTheirDiacritics(): void
     {
-        self::assertSame(['uber', 'die', 'strass'], self::stems('Über die Straße'));
-        self::assertSame(['cafe', 'resume', 'naive'], self::stems('Café Résumé naïve'));
+        self::assertSame(['äpfel', 'élu'], HeadlineStems::words('Äpfel élu'));
+        self::assertSame(['über', 'die', 'strasse'], HeadlineStems::words('Über die Straße'));
     }
 
-    public function testCompatibilityCharactersDecomposeToPlainLetters(): void
+    public function testADecomposedDiacriticStaysInsideItsWord(): void
     {
-        self::assertSame(['financ'], self::stems('ＦＩＮＡＮＣＩＡＬ'));
+        self::assertSame(['café'], HeadlineStems::words("Cafe\u{0301}"));
     }
 
-    public function testEveryWordIsCutToItsFirstSixCharacters(): void
+    public function testCompatibilityCharactersBecomePlainLetters(): void
     {
-        self::assertSame(['abcdef', 'ukrain'], self::stems('abcdef abcdefg Ukraine Ukrainian'));
+        self::assertSame(['financial'], HeadlineStems::words('ＦＩＮＡＮＣＩＡＬ'));
     }
 
-    public function testAWordInAnotherScriptIsCutAndMeasuredInCharacters(): void
-    {
-        self::assertSame(['αθηναι'], self::stems('Το Αθηναϊκό'));
-        self::assertSame(['zołtos'], self::stems('Żółtość'));
-    }
-
-    public function testWordsUnderThreeLettersAreDropped(): void
-    {
-        self::assertSame(['ban'], self::stems('EU to ban AI'));
-    }
-
-    public function testNumbersOfTwoOrMoreDigitsAreKeptAndShorterOnesDropped(): void
+    public function testWordsAreSplitButNotCut(): void
     {
         self::assertSame(
-            ['summit', '2026', 'deaths', '12', 'hurt'],
-            self::stems('G7 summit 2026: 9 deaths, 12 hurt'),
-        );
-    }
-
-    public function testStemsAreDistinctInReadingOrder(): void
-    {
-        self::assertSame(['fire', 'statio'], self::stems('Fire fire FIRE station'));
-    }
-
-    public function testTextWithoutWordsHasNoStems(): void
-    {
-        self::assertSame([], self::stems(' — !! '));
-    }
-
-    public function testWordsAreFoldedAndSplitButNotCut(): void
-    {
-        self::assertSame(
-            ['vereinigte', 'staaten', 'etats', 'unis'],
+            ['vereinigte', 'staaten', 'états', 'unis'],
             HeadlineStems::words('Vereinigte Staaten, États-Unis'),
         );
     }
 
-    /** @return list<string> */
-    private static function stems(string $text): array
+    public function testTextWithoutWordsHasNoWords(): void
     {
-        return HeadlineStems::ofWords(HeadlineStems::words($text));
+        self::assertSame([], HeadlineStems::words(' — !! '));
+    }
+
+    public function testBareStripsDiacriticsAndFoldsCase(): void
+    {
+        self::assertSame('elu', HeadlineStems::bare('élu'));
+        self::assertSame('elu', HeadlineStems::bare('ÉLU'));
+        self::assertSame('cafe resume naive', HeadlineStems::bare('café résumé naïve'));
+    }
+
+    public function testCutIsTheBareWordsFirstSixCharacters(): void
+    {
+        self::assertSame('bundes', HeadlineStems::cut('Bundesregierung'));
+        self::assertSame('abcdef', HeadlineStems::cut('abcdef'));
+        self::assertSame('uber', HeadlineStems::cut('über'));
+    }
+
+    public function testAWordInAnotherScriptIsCutAndMeasuredInCharacters(): void
+    {
+        self::assertSame('αθηναι', HeadlineStems::cut('αθηναϊκό'));
+        self::assertSame('zołtos', HeadlineStems::cut('żółtość'));
+    }
+
+    public function testWordsUnderThreeLettersAreNotKept(): void
+    {
+        self::assertTrue(HeadlineStems::isKept('ban'));
+        self::assertTrue(HeadlineStems::isKept('élu'));
+        self::assertFalse(HeadlineStems::isKept('to'));
+        self::assertFalse(HeadlineStems::isKept('ét'), 'two letters, though three bytes');
+    }
+
+    public function testNumbersOfTwoOrMoreDigitsAreKeptAndShorterOnesNot(): void
+    {
+        self::assertTrue(HeadlineStems::isKept('12'));
+        self::assertFalse(HeadlineStems::isKept('9'));
     }
 }

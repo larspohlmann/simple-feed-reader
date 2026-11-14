@@ -33,9 +33,7 @@ final class TrendingRun
             $this->entriesByUrlHash[$urlHash][] = $entry->id;
         }
         $this->headlines->add(
-            $entry->id,
-            $entry->feedId,
-            $entry->title,
+            $entry,
             $entry->titleDerived
                 ? EntryText::bodyAfterTitle($entry->title, $entry->summary)
                 : EntryText::body($entry->summary),

@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Enum\FeedLanguage;
 use App\Repository\TrendingEntryRepository;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Tests\DbTestCase;
@@ -43,6 +44,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
             array_map(static fn (WindowEntryModel $row): int => $row->id, $rows),
         );
         self::assertSame($feed->requireId(), $rows[0]->feedId);
+        self::assertNull($rows[0]->language);
         self::assertSame($first->getUrlHash(), $rows[0]->urlHash);
         self::assertNull($rows[0]->linkCardUrl);
         self::assertSame('https://shared.example.com/a', $rows[1]->linkCardUrl);
@@ -78,6 +80,24 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         }
 
         self::assertSame($expectedIds, $streamedIds);
+    }
+
+    public function testAWindowEntryCarriesItsFeedsLanguage(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $feed = $fixtures->feed('french');
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
+        $fixtures->entry($feed, 'Élections', '2031-05-14 09:00:00');
+        $fixtures->flush();
+
+        $rows = iterator_to_array(
+            (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
+            ),
+            false,
+        );
+
+        self::assertSame(FeedLanguage::French, $rows[0]->language);
     }
 
     private static function card(string $url): LinkCardContent

@@ -8,8 +8,10 @@ use App\Entity\TrendingSnapshot;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\HeadlineStemmer;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryGrouping;
 use App\Service\Curation\Trending\StoryLinks;
@@ -44,12 +46,27 @@ final class TrendingWiring
         return new TrendingGrouping(
             new TrendingEntryRepository($entityManager),
             new UrlNormalizer(),
-            new HeadlineFiller(),
-            new HeadlineEquivalents(),
+            self::filler(),
+            self::equivalents(),
             self::storyLinks(),
             new StoryGrouping(),
             new NaiveUtcClock($clock),
         );
+    }
+
+    public static function stemmer(): HeadlineStemmer
+    {
+        return new HeadlineStemmer(new SnowballStemmerFactory());
+    }
+
+    public static function filler(): HeadlineFiller
+    {
+        return new HeadlineFiller(self::stemmer());
+    }
+
+    public static function equivalents(): HeadlineEquivalents
+    {
+        return new HeadlineEquivalents(self::stemmer());
     }
 
     public static function storyLinks(): StoryLinks

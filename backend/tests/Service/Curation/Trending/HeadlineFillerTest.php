@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -15,7 +17,7 @@ final class HeadlineFillerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->filler = new HeadlineFiller();
+        $this->filler = TrendingWiring::filler();
     }
 
     public function testAQuietWindowIsCountedAsFifteenHundredEntries(): void
@@ -45,12 +47,12 @@ final class HeadlineFillerTest extends TestCase
 
     public function testTheSeedListHoldsEnglishAndGermanFunctionWordsAsStems(): void
     {
-        self::assertTrue($this->filler->isSeed('the'));
-        self::assertTrue($this->filler->isSeed('fur'));
-        self::assertTrue($this->filler->isSeed('uber'));
-        self::assertTrue($this->filler->isSeed('becaus'));
-        self::assertFalse($this->filler->isSeed('war'));
-        self::assertFalse($this->filler->isSeed('storm'));
+        self::assertTrue($this->filler->isSeed('the', null));
+        self::assertTrue($this->filler->isSeed('fur', null));
+        self::assertTrue($this->filler->isSeed('uber', null));
+        self::assertTrue($this->filler->isSeed('becaus', null));
+        self::assertFalse($this->filler->isSeed('war', null));
+        self::assertFalse($this->filler->isSeed('storm', null));
     }
 
     public function testRarityFollowsTheLogOfTheFlooredCountOverTheDocumentFrequency(): void
@@ -62,7 +64,7 @@ final class HeadlineFillerTest extends TestCase
     #[DataProvider('frenchAndSpanishFunctionWords')]
     public function testFrenchAndSpanishFunctionWordsAreSeeds(string $stem): void
     {
-        self::assertTrue($this->filler->isSeed($stem));
+        self::assertTrue($this->filler->isSeed($stem, null));
     }
 
     /** @return iterable<string, array{string}> */
@@ -80,16 +82,63 @@ final class HeadlineFillerTest extends TestCase
         $meaningful = ['son', 'sin', 'fin', 'plus', 'con', 'han', 'sans'];
         $names = ['contra', 'contre', 'durant', 'esa', 'ces', 'como'];
         foreach ([...$meaningful, ...$names] as $word) {
-            self::assertFalse($this->filler->isSeed($word), $word);
+            self::assertFalse($this->filler->isSeed($word, null), $word);
         }
     }
 
-    public function testEverySeedIsInStemForm(): void
+    public function testEverySeedWithoutALanguageIsInCutForm(): void
     {
         $seeds = new \ReflectionClassConstant(HeadlineFiller::class, 'SEED_STEMS')->getValue();
         self::assertIsArray($seeds);
         foreach (array_keys($seeds) as $seed) {
-            self::assertSame([(string) $seed], HeadlineStems::ofWords(HeadlineStems::words((string) $seed)));
+            self::assertSame((string) $seed, HeadlineStems::cut((string) $seed));
+            self::assertTrue(HeadlineStems::isKept((string) $seed), (string) $seed);
         }
+    }
+
+    public function testAWordThatCarriesMeaningElsewhereIsASeedInItsOwnLanguageOnly(): void
+    {
+        $stemmer = TrendingWiring::stemmer();
+
+        self::assertTrue($this->filler->isSeed($stemmer->stem('con', FeedLanguage::Spanish), FeedLanguage::Spanish));
+        self::assertFalse($this->filler->isSeed($stemmer->stem('con', FeedLanguage::English), FeedLanguage::English));
+        self::assertFalse($this->filler->isSeed('con', null));
+    }
+
+    #[DataProvider('seedWordsByLanguage')]
+    public function testEachLanguagesFunctionWordsAreSeedsThroughItsStemmer(FeedLanguage $language, string $word): void
+    {
+        self::assertTrue($this->filler->isSeed(TrendingWiring::stemmer()->stem($word, $language), $language));
+    }
+
+    /** @return iterable<string, array{FeedLanguage, string}> */
+    public static function seedWordsByLanguage(): iterable
+    {
+        $words = [
+            'de' => 'für über werden diese einen',
+            'en' => 'because against between the during',
+            'fr' => 'être après déjà plus sans contre durant ces',
+            'es' => 'también según más con sin son como esa contra',
+        ];
+        foreach ($words as $language => $list) {
+            foreach (explode(' ', $list) as $word) {
+                yield $language . ' ' . $word => [FeedLanguage::from($language), $word];
+            }
+        }
+    }
+
+    #[DataProvider('contentWordsByLanguage')]
+    public function testAContentWordIsNoSeedInItsLanguage(FeedLanguage $language, string $word): void
+    {
+        self::assertFalse($this->filler->isSeed(TrendingWiring::stemmer()->stem($word, $language), $language));
+    }
+
+    /** @return iterable<string, array{FeedLanguage, string}> */
+    public static function contentWordsByLanguage(): iterable
+    {
+        yield 'de Sturm' => [FeedLanguage::German, 'sturm'];
+        yield 'en con' => [FeedLanguage::English, 'con'];
+        yield 'fr guerre' => [FeedLanguage::French, 'guerre'];
+        yield 'es guerra' => [FeedLanguage::Spanish, 'guerra'];
     }
 }

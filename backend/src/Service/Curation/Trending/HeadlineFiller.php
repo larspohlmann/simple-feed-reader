@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending;
 
+use App\Enum\FeedLanguage;
+
 final readonly class HeadlineFiller
 {
     private const float WINDOW_SHARE = 0.03;
@@ -11,7 +13,39 @@ final readonly class HeadlineFiller
     private const int FEED_MINIMUM_ENTRIES = 4;
     private const float FEED_SHARE = 0.5;
 
-    /** Already in HeadlineStems' form: casefolded, without diacritics, cut to six characters. */
+    /** Function words as a reader writes them, casefolded; stemmed once, at construction, by their language. */
+    private const array SEED_WORDS = [
+        'de' => [
+            'der', 'die', 'das', 'und', 'mit', 'von', 'für', 'auf', 'ist', 'ein', 'eine', 'einen', 'einem', 'einer',
+            'eines', 'nicht', 'sich', 'auch', 'als', 'aus', 'bei', 'nach', 'wie', 'dem', 'den', 'des', 'zum', 'zur',
+            'über', 'noch', 'nur', 'wird', 'werden', 'wurde', 'sind', 'hat', 'haben', 'oder', 'aber', 'wenn',
+            'dass', 'sie', 'wir', 'ihr', 'jetzt', 'mehr', 'schon', 'vor', 'bis', 'unter', 'gegen', 'durch', 'ins',
+            'vom', 'seit', 'beim', 'ohne', 'sein', 'seine', 'diese', 'dieser', 'dieses', 'kann', 'soll', 'alle',
+        ],
+        'en' => [
+            'the', 'and', 'for', 'with', 'from', 'that', 'this', 'these', 'those', 'are', 'was', 'were', 'has',
+            'have', 'had', 'will', 'would', 'could', 'should', 'not', 'but', 'you', 'your', 'our', 'its', 'their',
+            'they', 'them', 'his', 'her', 'she', 'who', 'what', 'when', 'where', 'which', 'why', 'how', 'after',
+            'over', 'into', 'about', 'than', 'can', 'all', 'out', 'been', 'also', 'just', 'there', 'then', 'some',
+            'any', 'only', 'because', 'before', 'against', 'between', 'during', 'without', 'through', 'under',
+            'while', 'more',
+        ],
+        'fr' => [
+            'les', 'des', 'une', 'aux', 'dans', 'sur', 'sous', 'pour', 'par', 'avec', 'que', 'qui', 'quoi', 'dont',
+            'est', 'sont', 'être', 'ont', 'pas', 'cet', 'cette', 'ces', 'ses', 'leur', 'leurs', 'elle', 'ils',
+            'elles', 'nous', 'vous', 'mais', 'donc', 'après', 'avant', 'entre', 'chez', 'vers', 'selon', 'depuis',
+            'lors', 'très', 'aussi', 'déjà', 'encore', 'comme', 'tout', 'tous', 'toute', 'fait', 'fois', 'plus',
+            'sans', 'contre', 'durant',
+        ],
+        'es' => [
+            'los', 'las', 'una', 'unos', 'unas', 'del', 'por', 'para', 'que', 'más', 'sus', 'pero', 'entre',
+            'sobre', 'hasta', 'desde', 'tras', 'ante', 'este', 'esta', 'estos', 'estas', 'ese', 'esa', 'eso',
+            'esos', 'esas', 'muy', 'también', 'fue', 'ser', 'hay', 'sido', 'según', 'cuando', 'donde', 'porque',
+            'tiene', 'todo', 'todos', 'toda', 'otro', 'otra', 'con', 'sin', 'son', 'como', 'contra',
+        ],
+    ];
+
+    /** For a feed without a language, in HeadlineStems' cut form. */
     private const array SEED_STEMS = [
         'the' => true, 'and' => true, 'for' => true, 'with' => true, 'from' => true, 'that' => true,
         'this' => true, 'these' => true, 'those' => true, 'are' => true, 'was' => true, 'were' => true,
@@ -54,9 +88,27 @@ final readonly class HeadlineFiller
         'otra' => true,
     ];
 
-    public function isSeed(string $stem): bool
+    /** @var array<string, array<string, true>> language => its seed stems */
+    private array $seedStemsByLanguage;
+
+    public function __construct(HeadlineStemmer $stemmer)
     {
-        return isset(self::SEED_STEMS[$stem]);
+        $seedStems = [];
+        foreach (FeedLanguage::cases() as $language) {
+            $stems = array_map(
+                static fn (string $word): string => $stemmer->stem($word, $language),
+                self::SEED_WORDS[$language->value],
+            );
+            $seedStems[$language->value] = array_fill_keys($stems, true);
+        }
+        $this->seedStemsByLanguage = $seedStems;
+    }
+
+    public function isSeed(string $stem, ?FeedLanguage $language): bool
+    {
+        $seedStems = $language === null ? self::SEED_STEMS : $this->seedStemsByLanguage[$language->value];
+
+        return isset($seedStems[$stem]);
     }
 
     public function isWindowFiller(int $documentFrequency, int $entryCount): bool
