@@ -1,0 +1,34 @@
+{
+  "all_languages": [
+    {
+      "id": 0,
+      "code": "und",
+      "name": "Undetermined"
+    },
+    {
+      "id": 32,
+      "code": "de",
+      "name": "Deutsch"
+    },
+    {
+      "id": 37,
+      "code": "en",
+      "name": "English"
+    },
+    {
+      "id": 39,
+      "code": "es",
+      "name": "Español"
+    },
+    {
+      "id": 47,
+      "code": "fr",
+      "name": "Français"
+    },
+    {
+      "id": 130,
+      "code": "pt",
+      "name": "Português"
+    }
+  ]
+}

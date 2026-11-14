@@ -130,6 +130,7 @@ final class BlueskyTimelinePage
             publishedAt: DateParser::parse(self::postedAt($item)),
             authorUrl: BlueskyAuthor::profile($author),
             authorAvatarUrl: BlueskyAuthor::avatar($author),
+            statedLanguage: $record->node('langs')->string('0'),
         );
     }
 

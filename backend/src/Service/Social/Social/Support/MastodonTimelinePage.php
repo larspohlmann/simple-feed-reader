@@ -159,6 +159,7 @@ final class MastodonTimelinePage
             media: self::mediaOf($post->nodes('media_attachments')),
             authorUrl: MastodonAuthor::profile($account),
             authorAvatarUrl: MastodonAuthor::avatar($account),
+            statedLanguage: $post->string('language'),
         );
     }
 

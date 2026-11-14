@@ -34,6 +34,39 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertSame('UTC', $entry->publishedAt->getTimezone()->getName());
     }
 
+    public function testAPostStatesTheFirstOfItsLanguages(): void
+    {
+        $item = self::item([], ['record' => [
+            'text' => 'Hallo Welt',
+            'createdAt' => '2026-10-12T10:00:00+02:00',
+            'langs' => ['de-AT', 'en'],
+        ]]);
+
+        $entry = BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries[0];
+
+        self::assertSame('de-AT', $entry->statedLanguage);
+    }
+
+    public function testAPostWithoutLanguagesStatesNone(): void
+    {
+        $entry = BlueskyTimelinePage::of([self::item()], self::ALICE)->parsed->entries[0];
+
+        self::assertNull($entry->statedLanguage);
+    }
+
+    public function testAPostWithEmptyLanguagesStatesNone(): void
+    {
+        $item = self::item([], ['record' => [
+            'text' => 'Hallo Welt',
+            'createdAt' => '2026-10-12T10:00:00+02:00',
+            'langs' => [],
+        ]]);
+
+        $entry = BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries[0];
+
+        self::assertNull($entry->statedLanguage);
+    }
+
     public function testThePostViewIsKeptForItsEmbedAndThePageNamesNoTitle(): void
     {
         $page = BlueskyTimelinePage::of([self::item()], self::ALICE);

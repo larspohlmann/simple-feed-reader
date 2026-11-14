@@ -17,6 +17,7 @@ use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
+use App\Service\Ingestion\Language\SocialEntryLanguage;
 use App\Service\Ingestion\Parser\Model\ParsedChaptersModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
@@ -275,6 +276,27 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertSame(FeedLanguage::German, $entry->getText()->getLanguage());
     }
 
+    public function testASocialEntryPrefersTheLanguageItsAuthorStated(): void
+    {
+        $feed = new Feed('mastodon://timeline');
+        $feed->setSourceFormat(SourceFormat::MASTODON_API);
+        $parsed = new ParsedEntryModel(
+            'g-stated',
+            null,
+            Headline::derived('…'),
+            null,
+            null,
+            '<p>Der Kanzler</p>',
+            null,
+            statedLanguage: 'fr',
+        );
+        $incoming = new IncomingEntryModel($parsed, hash('sha256', 'g'), null);
+
+        $entry = $this->factory()->create($feed, $incoming, self::context());
+
+        self::assertSame(FeedLanguage::French, $entry->getText()->getLanguage());
+    }
+
     public function testAnEntryOfAnOrdinaryFeedStoresNoLanguage(): void
     {
         $feed = new Feed('https://example.com/feed');
@@ -304,7 +326,7 @@ final class IngestedEntryFactoryTest extends TestCase
         return new IngestedEntryFactory(
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
-            new LanguageGuess(new LanguageDetectionFactory()->create()),
+            new SocialEntryLanguage(new LanguageGuess(new LanguageDetectionFactory()->create())),
         );
     }
 

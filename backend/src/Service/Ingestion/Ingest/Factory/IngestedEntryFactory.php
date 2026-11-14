@@ -9,14 +9,13 @@ use App\Entity\EntryAuthor;
 use App\Entity\EntryChapters;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Foundation\Text\Support\EntryPlainText;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\Support\EntryEffectiveDate;
 use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingestion\Ingest\Support\EntrySnippet;
-use App\Service\Ingestion\Language\LanguageGuess;
+use App\Service\Ingestion\Language\SocialEntryLanguage;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
@@ -31,7 +30,7 @@ final readonly class IngestedEntryFactory
     public function __construct(
         private EntrySanitizer $sanitizer,
         private EntryImageWriter $imageWriter,
-        private LanguageGuess $languageGuess,
+        private SocialEntryLanguage $socialLanguage,
     ) {
     }
 
@@ -74,8 +73,7 @@ final readonly class IngestedEntryFactory
             return;
         }
 
-        $text = $parsed->headline->text . "\n" . (EntryPlainText::of($parsed->summary ?? $parsed->contentHtml) ?? '');
-        $entry->recordText($entry->getText()->withLanguage($this->languageGuess->bestFor($text)));
+        $entry->recordText($entry->getText()->withLanguage($this->socialLanguage->of($parsed)));
     }
 
     private static function cut(?string $value, int $maxLength): ?string

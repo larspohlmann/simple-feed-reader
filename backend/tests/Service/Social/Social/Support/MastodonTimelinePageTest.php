@@ -37,6 +37,34 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame('109', $page->newestId);
     }
 
+    public function testAStatusStatesItsLanguage(): void
+    {
+        $entry = MastodonTimelinePage::of([self::timelineStatus(['language' => 'fr'])])->parsed->entries[0];
+
+        self::assertSame('fr', $entry->statedLanguage);
+    }
+
+    public function testAStatusWithoutALanguageStatesNone(): void
+    {
+        $entry = MastodonTimelinePage::of([self::timelineStatus(['language' => null])])->parsed->entries[0];
+
+        self::assertNull($entry->statedLanguage);
+    }
+
+    public function testABoostStatesTheLanguageOfTheOriginal(): void
+    {
+        $boost = self::timelineStatus([
+            'id' => '200',
+            'uri' => 'https://mastodon.example/users/carol/statuses/200/activity',
+            'language' => 'en',
+            'reblog' => self::statusFields(['language' => 'es']),
+        ]);
+
+        $entry = MastodonTimelinePage::of([$boost])->parsed->entries[0];
+
+        self::assertSame('es', $entry->statedLanguage);
+    }
+
     public function testAContentWarningLeadsTheBody(): void
     {
         $status = self::timelineStatus(['spoiler_text' => 'Spoilers <3']);
