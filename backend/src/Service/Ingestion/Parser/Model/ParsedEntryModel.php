@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Parser\Model;
 
 use App\Entity\Discussion;
+use App\Entity\DiscussionCounts;
 use App\Entity\Headline;
 use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
@@ -12,6 +13,7 @@ use App\Service\Outbound\Image\Model\DeclaredImageModel;
 final readonly class ParsedEntryModel
 {
     public Discussion $discussion;
+    public DiscussionCounts $discussionCounts;
 
     public function __construct(
         public string $guid,
@@ -29,6 +31,7 @@ final readonly class ParsedEntryModel
         public ?string $authorAvatarUrl = null,
     ) {
         $this->discussion = $discussion ?? Discussion::none();
+        $this->discussionCounts = DiscussionCounts::unknown();
     }
 
     #[\NoDiscard]
@@ -41,6 +44,12 @@ final readonly class ParsedEntryModel
     public function asDiscussionThread(Discussion $thread): self
     {
         return clone($this, ['url' => null, 'discussion' => $thread]);
+    }
+
+    #[\NoDiscard]
+    public function withDiscussionCounts(DiscussionCounts $counts): self
+    {
+        return clone($this, ['discussionCounts' => $counts]);
     }
 
     #[\NoDiscard]

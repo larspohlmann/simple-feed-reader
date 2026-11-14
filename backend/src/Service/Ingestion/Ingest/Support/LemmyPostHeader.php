@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Ingest\Support;
 
+use App\Entity\DiscussionCounts;
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Ingestion\Ingest\Model\LemmyFeedPostModel;
 use Dom\Element;
@@ -14,7 +15,8 @@ final class LemmyPostHeader
 {
     private const string PROFILE_PATH = '#^/u/[^/]+/?$#';
     private const string COMMUNITY_PATH = '#^/c/[^/]+/?$#';
-    private const string SCORE = '#^\s*-?\d+ points? \|\s*$#';
+    private const string SCORE = '#^\s*(-?\d+) points? \|\s*$#';
+    private const string COMMENT_COUNT = '#^\s*(\d+) comments?\s*$#';
     private const int HEADER_LENGTH = 7;
 
     public static function read(string $html): ?LemmyFeedPostModel
@@ -36,6 +38,7 @@ final class LemmyPostHeader
             trim((string) $profile->textContent),
             (string) $profile->getAttribute('href'),
             $body->innerHTML,
+            self::counts($nodes),
         );
     }
 
@@ -51,6 +54,20 @@ final class LemmyPostHeader
             && self::isText($nodes[5], self::SCORE)
             && self::isLink($nodes[6], null)
             && $nodes[1] instanceof Element ? $nodes[1] : null;
+    }
+
+    /** @param list<Node> $nodes */
+    private static function counts(array $nodes): DiscussionCounts
+    {
+        return DiscussionCounts::of(
+            self::firstNumber(self::SCORE, (string) ($nodes[5] instanceof Text ? $nodes[5]->data : '')),
+            self::firstNumber(self::COMMENT_COUNT, (string) $nodes[6]->textContent),
+        );
+    }
+
+    private static function firstNumber(string $pattern, string $text): ?int
+    {
+        return preg_match($pattern, $text, $matches) === 1 ? (int) $matches[1] : null;
     }
 
     /** @param list<Node> $nodes */
