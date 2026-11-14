@@ -177,6 +177,10 @@ final class SocialImportControllerTest extends ApiTestCase
         ]);
 
         self::assertSame(Response::HTTP_OK, $client->getResponse()->getStatusCode());
+        self::assertSame(
+            ['imported' => 1, 'alreadySubscribed' => 0, 'invalid' => 0, 'skippedOverLimit' => 0, 'removed' => 0],
+            $this->payload($client),
+        );
     }
 
     public function testAnAccountThatNeedsReconnectingIsRefusedBeforeTheBudgetAndTheNetwork(): void

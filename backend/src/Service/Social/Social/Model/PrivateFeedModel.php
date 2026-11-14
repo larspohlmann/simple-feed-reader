@@ -82,7 +82,11 @@ final readonly class PrivateFeedModel
             SocialFeedKind::Trending => 'Trending',
             SocialFeedKind::Local => 'Local',
             SocialFeedKind::All => 'All',
-            default => throw new \InvalidArgumentException(
+            SocialFeedKind::UserList,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Author,
+            SocialFeedKind::Tag,
+            SocialFeedKind::Search => throw new \InvalidArgumentException(
                 sprintf('A %s feed is named by its remote id.', $kind->value),
             ),
         };

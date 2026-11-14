@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Social\CandidateSource;
 
 use App\Service\Social\Social\CandidateSource\LemmyCandidateSource;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CollectedItemsModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -18,6 +19,7 @@ final class LemmyCandidateSourceTest extends TestCase
     private const string FIXTURE = __DIR__ . '/../../../../Fixtures/lemmy/community-list.json';
     private const string PAGE = 'GET https://lemmy.example/api/v3/community/list'
         . '?type_=Subscribed&sort=Old&limit=50&page=';
+    private const int FULL_PAGE = 50;
 
     private function source(RoutedHttpClient $http): LemmyCandidateSource
     {
@@ -27,6 +29,27 @@ final class LemmyCandidateSourceTest extends TestCase
     private static function fixture(): MockResponse
     {
         return new MockResponse((string) file_get_contents(self::FIXTURE));
+    }
+
+    /** @param \Closure(int): int $sizeOfPage */
+    private static function pagesOfCommunities(\Closure $sizeOfPage): RoutedHttpClient
+    {
+        $answer = static function (string $method, string $url) use ($sizeOfPage): MockResponse {
+            $page = (int) substr($url, (int) strrpos($url, '=') + 1);
+            $size = $sizeOfPage($page);
+            $communities = array_map(
+                static fn (int $index): array => ['community' => [
+                    'name' => sprintf('p%dc%d', $page, $index),
+                    'title' => 'C' . $index,
+                    'actor_id' => sprintf('https://feddit.example/c/p%dc%d', $page, $index),
+                ]],
+                0 === $size ? [] : range(1, $size),
+            );
+
+            return new MockResponse(json_encode(['communities' => $communities], \JSON_THROW_ON_ERROR));
+        };
+
+        return RoutedHttpClient::answering($answer);
     }
 
     public function testTheNetworkKeyIsLemmy(): void
@@ -74,6 +97,29 @@ final class LemmyCandidateSourceTest extends TestCase
 
         self::assertCount(52, $candidates->follows);
         self::assertCount(2, $http->requests);
+    }
+
+    public function testPagingStopsPastTheCapAndMarksTheFollowsTruncated(): void
+    {
+        $http = self::pagesOfCommunities(static fn (int $page): int => self::FULL_PAGE);
+
+        $candidates = $this->source($http)->candidates(SocialAccounts::lemmyOf(SocialAccounts::owner()));
+
+        self::assertCount(CollectedItemsModel::MAX_ITEMS, $candidates->follows);
+        self::assertTrue($candidates->truncated);
+        self::assertCount(CollectedItemsModel::MAX_ITEMS / self::FULL_PAGE + 1, $http->requests);
+    }
+
+    public function testExactlyTheCapIsNotTruncated(): void
+    {
+        $lastFullPage = CollectedItemsModel::MAX_ITEMS / self::FULL_PAGE;
+        $http = self::pagesOfCommunities(static fn (int $page): int => $page <= $lastFullPage ? self::FULL_PAGE : 0);
+
+        $candidates = $this->source($http)->candidates(SocialAccounts::lemmyOf(SocialAccounts::owner()));
+
+        self::assertCount(CollectedItemsModel::MAX_ITEMS, $candidates->follows);
+        self::assertFalse($candidates->truncated);
+        self::assertCount($lastFullPage + 1, $http->requests);
     }
 
     public function testAnAnswerWithoutCommunitiesIsUnreachable(): void

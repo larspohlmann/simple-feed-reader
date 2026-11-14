@@ -65,6 +65,24 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
         self::assertSame('2026-10-17 11:30:00', $this->reloaded($recent)->getLastCheckedAt()?->format('Y-m-d H:i:s'));
     }
 
+    public function testALemmyAccountsCheckCompletesWithNothingToFollow(): void
+    {
+        $lemmy = SocialAccounts::lemmyOf($this->user);
+        $this->entityManager->persist($lemmy);
+        $this->entityManager->flush();
+        $network = self::getContainer()->get(SocialCandidatesInterface::class);
+        self::assertInstanceOf(SocialCandidatesInterface::class, $network);
+        $sweep = PrivateFeedSyncWiring::sweep(self::getContainer(), $this->entityManager, $this->clock, $network);
+
+        $report = $sweep->sweep(PrivateFeedSyncBudgetModel::accounts(10));
+
+        self::assertSame(1, $report->checked);
+        self::assertSame(0, $report->skipped);
+        $checked = $this->reloaded($lemmy);
+        self::assertSame(self::NOW, $checked->getLastCheckedAt()?->format('Y-m-d H:i:s'));
+        self::assertNull($checked->getLastSyncSkip());
+    }
+
     public function testAnEmptyBudgetAsksTheNetworkNothing(): void
     {
         $this->accountOf($this->user, 'did:plc:sweep-1');
