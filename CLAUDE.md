@@ -53,7 +53,7 @@ app logs.
 | Path | What |
 |---|---|
 | `backend/src/Controller/Api`, `Controller/Admin` | HTTP entry points; thin, they delegate to services |
-| `backend/src/Service/**` | The domain work, one module per concern (`Fetch`, `Parser`, `Scraper`, `Reader`, `Reading`, `Refresh`, `OAuth`, `Auth`, `Opml`, `Preview`, `Discovery`, `Subscription`, `Mail`); inside a module the folder names the role: services in the root, `Model/`, `Dto/`, `Factory/`, `Pass/`, `Support/`, `Exception/`, and a folder per interface ([docs/architecture.md](docs/architecture.md) §10) |
+| `backend/src/Service/<Group>/<Module>` | The domain work, one module per concern, in ten groups that carry no rule (`Foundation`, `Outbound`, `Sourcing`, `Ingestion`, `Content`, `Library`, `Social`, `Curation`, `Identity`, `Operations`; table in [docs/architecture.md](docs/architecture.md) §9); inside a module the folder names the role: services in the root, `Model/`, `Dto/`, `Factory/`, `Pass/`, `Support/`, `Exception/`, and a folder per interface ([docs/architecture.md](docs/architecture.md) §10) |
 | `backend/src/Dto/**` | Request/response shapes, grouped by feature |
 | `backend/src/Http/**` | Outbound response shapes (`*Json` mappers), problem mapping, and the helpers that read a `Request` or build a `Response` |
 | `backend/src/Pagination/**` | The keyset cursors repositories, services and `src/Http` share |
@@ -133,8 +133,9 @@ Non-negotiables:
   module that owns their meaning ([docs/architecture.md](docs/architecture.md) §8,
   `PersistenceKnowsNoServiceRule`). A repository names only Service values (a model, a
   helper, an exception) and the interfaces it implements.
-- **Service modules form no cycle.** A module is the first directory under
-  `src/Service`, and every service belongs to one. When two modules need each other,
+- **Service modules form no cycle.** A module is the second directory under
+  `src/Service`, below one of ten navigation-only groups (`Content/Reader`), and every
+  service belongs to one; no class sits loose in a group or the root. When two modules need each other,
   the class moves to the module that owns it, or the lower module owns an interface
   the higher one implements ([docs/architecture.md](docs/architecture.md) §9).
 - **Default to no comment, and mean it.** A clear name, a smaller method, a
@@ -218,8 +219,8 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`ServiceRoleRule`** (`tests/PhpStan/ServiceRoleRule.php`, with
   `ServiceRoleClassCollector` and `ServiceRoleInstantiationCollector`, run by
   `composer stan`) — fails on every class in `src/Service`, `src/Http` and
-  every event listener anywhere in `src` that sits outside its role, and names
-  the folder it belongs in.
+  every event listener anywhere in `src` that sits outside its role, and on every
+  service class outside a `<Group>/<Module>` folder, and names the folder it belongs in.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design

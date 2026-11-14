@@ -242,12 +242,34 @@ Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` o
 
 ## 9. Service modules form no cycle
 
-A `Service/*` module is the first directory under `backend/src/Service`: `Reader` with all its feature folders
-(`ArticleExtractor/`, `Paywall/`, `Media/`, …) is one module. Every service belongs to a module, and the modules depend
-on each other without a cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+A `Service/*` module is the second directory under `backend/src/Service`, below its group: `Content/Reader` with all
+its feature folders (`ArticleExtractor/`, `Paywall/`, `Media/`, …) is one module. Every service belongs to a module, and
+the modules depend on each other without a cycle, so each one can be read, tested and moved without the others.
+Decided in #1161.
+
+The ten **groups** are for navigation only (#2219). A group is a folder and a namespace segment and carries no rule:
+the module stays the unit of every rule below and of §10, no rule orders the groups, and a dependency between two groups
+may run either way (`Ingest → Reader` and `LinkCard → Ingest` both cross `Ingestion`/`Content`).
+
+| Group | Modules |
+|---|---|
+| `Foundation` | Clock, Crypto, Html, Text, Url, Sanitize, Ordering, RateLimit, Process |
+| `Outbound` | Fetch, Proxy, Image, Mail |
+| `Sourcing` (finding feeds) | Discovery, Preview, Catalog, FeedDirectory |
+| `Ingestion` (feed to entries) | Feed, Parser, Category, Scraper, Ingest, Refresh, Retention |
+| `Content` (what an entry shows) | Reader, ReaderAudit, LinkCard, Comments, Transcript, Chapter |
+| `Library` (the user's own state) | Subscription, SubscriptionHistory, Tag, Reading, SavedPosts, Search, Opml |
+| `Social` | Social, Bluesky, Completion, Share |
+| `Curation` | Recommendation, Ai, Trending |
+| `Identity` | Account, Auth, OAuth, Passkey |
+| `Operations` | Admin, Backup, Maintenance, SelfUpdate, Version, Grafana, Logging, ClientError, Settings, Worker, Queue |
+
+A new module goes into the group whose concern it serves; a class loose in a group folder or in the `Service` root is
+rejected (`ServiceRoleRule`'s `moduleHome`).
 
 A directory below a module can be declared a **sub-module** by adding it, relative to `Service/`, to
-`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Recommendation\Llm` and `Recommendation\Scoring`). A
+`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Curation\Recommendation\Llm` and
+`Curation\Recommendation\Scoring`). A
 sub-module is a module of its own wherever a rule asks for one: it is its own node in the cycle graph, and a class in
 it implementing its parent's interface is another module's implementation (§10). It may depend on its parent; the
 reverse closes a cycle, and when a cycle runs through a parent's import of its own sub-module, that import is the one
@@ -256,8 +278,8 @@ longest declared directory wins, so a sub-module may declare one of its own. The
 they cover a module's sub-modules too.
 So `Service/Curation/Recommendation/Llm` holds the LLM engine, which depends on `Recommendation` and `Ai`, while
 `Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai`.
-`Service/Curation/Recommendation/Scoring` holds the scoring engine the same way (`Recommendation\Scoring → Recommendation → Ai`);
-the two sub-modules never name each other.
+`Service/Curation/Recommendation/Scoring` holds the scoring engine the same way
+(`Recommendation\Scoring → Recommendation → Ai`); the two sub-modules never name each other.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
@@ -272,7 +294,6 @@ the two sub-modules never name each other.
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
 strings, not comments), and the cycle rule fails while any cycle is left, naming the path of each one it reports.
-A class loose in the `Service` root counts as a module of its own.
 
 ## 10. Class roles
 
