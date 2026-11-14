@@ -68,8 +68,8 @@ final class HeadlineFillerTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function frenchAndSpanishFunctionWords(): iterable
     {
-        $french = 'les pour que dans une sur avec est pas qui aux par plus';
-        $spanish = 'del los las para una por con como mas sus entre';
+        $french = 'les pour que dans une sur avec est pas qui aux par';
+        $spanish = 'del los las para una por como mas sus entre';
         foreach (explode(' ', $french . ' ' . $spanish) as $word) {
             yield $word => [$word];
         }
@@ -77,7 +77,7 @@ final class HeadlineFillerTest extends TestCase
 
     public function testAWordThatCarriesMeaningInAnotherLanguageIsNotASeed(): void
     {
-        foreach (['son', 'sin', 'fin'] as $word) {
+        foreach (['son', 'sin', 'fin', 'plus', 'con', 'han', 'sans'] as $word) {
             self::assertFalse($this->filler->isSeed($word), $word);
         }
     }
