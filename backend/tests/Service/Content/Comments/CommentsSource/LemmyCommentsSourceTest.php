@@ -215,16 +215,16 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         self::assertCount(7, $comments);
     }
 
-    public function testAThrottledAccountIsNotRetriedOnTheFeedInstance(): void
+    public function testAThrottledAccountFallsBackToTheFeedInstance(): void
     {
         $this->bootWithReader(new StubLemmyThreadReader(self::account(), new CommentsThrottledException('slow', 30)));
-        $this->expectException(CommentsThrottledException::class);
+        $this->fetcher->willReturnBody(self::COMMENTS_API, (string) file_get_contents(self::FIXTURE));
+        $request = $this->requestFor(self::entry());
 
-        try {
-            $this->fetch(self::entry());
-        } finally {
-            self::assertSame([], $this->fetcher->fetchedUrls);
-        }
+        $comments = $this->source->read($request, $this->source->fetch($request)->body)->comments;
+
+        self::assertSame([self::COMMENTS_API], $this->fetcher->fetchedUrls);
+        self::assertCount(7, $comments);
     }
 
     public function testTheAnonymousThreadCarriesNoVotes(): void

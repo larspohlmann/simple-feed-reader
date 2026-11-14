@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\User;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Content\Comments\CommentsEndpointFetcher;
+use App\Service\Content\Comments\Exception\CommentsThrottledException;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\LemmyThreadReader\LemmyThreadReaderInterface;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
@@ -53,7 +54,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
         if (null !== $account) {
             try {
                 return CommentsAnswerModel::settled($this->threadReader->threadAs($account, $post));
-            } catch (CommentsUnavailableException) {
+            } catch (CommentsUnavailableException | CommentsThrottledException) {
             }
         }
 
