@@ -102,6 +102,7 @@ export function anEntryComment(overrides: Partial<EntryCommentDto> = {}): EntryC
     html: '<p>x</p>',
     byEntryAuthor: false,
     depth: 0,
+    score: null,
     media: [],
     linkCard: null,
     quote: null,

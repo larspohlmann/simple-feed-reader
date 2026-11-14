@@ -74,6 +74,9 @@
                     <span class="when">{{ when(publishedAt) }}</span>
                   }
                 }
+                @if (c.score !== null) {
+                  <app-vote-pill class="score" variant="bare" [score]="c.score" />
+                }
                 @if (social && likeable() && c.post?.isOwn) {
                   <button
                     appIconButton

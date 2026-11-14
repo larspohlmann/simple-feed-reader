@@ -13,6 +13,8 @@ export interface EntryCommentDto {
   html: string;
   byEntryAuthor: boolean;
   depth: number;
+  /** A Lemmy comment's score; null for any other source. */
+  score: number | null;
   media: EntryMediumDto[];
   linkCard: LinkCardDto | null;
   quote: QuotedPostDto | null;

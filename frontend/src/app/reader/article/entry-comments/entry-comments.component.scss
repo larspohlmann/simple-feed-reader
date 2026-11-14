@@ -82,6 +82,14 @@
   text-decoration: none;
 }
 
+.score {
+  margin-inline-start: auto;
+}
+
+.score + .delete {
+  margin-inline-start: 0;
+}
+
 .delete {
   margin-inline-start: auto;
 }
