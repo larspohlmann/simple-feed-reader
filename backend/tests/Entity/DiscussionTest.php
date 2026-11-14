@@ -19,13 +19,13 @@ final class DiscussionTest extends TestCase
         self::assertNull($discussion->commentsLoad);
     }
 
-    public function testAPageWithoutACommentsFeedDropsTheLoadMode(): void
+    public function testAnAutomaticPageWithoutACommentsFeedKeepsTheLoadMode(): void
     {
         $discussion = Discussion::of('https://news.example/item?id=1', null, CommentsLoad::Auto);
 
         self::assertSame('https://news.example/item?id=1', $discussion->url);
         self::assertNull($discussion->commentsFeedUrl);
-        self::assertNull($discussion->commentsLoad);
+        self::assertSame(CommentsLoad::Auto, $discussion->commentsLoad);
     }
 
     public function testNothingAtAllIsNone(): void
@@ -53,5 +53,19 @@ final class DiscussionTest extends TestCase
         self::assertNull($discussion->url);
         self::assertSame('https://blog.example/post/feed/', $discussion->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $discussion->commentsLoad);
+    }
+
+    public function testAPlatformThreadLoadsItsCommentsAutomaticallyWithoutAFeed(): void
+    {
+        $discussion = Discussion::platformThread('https://lemmy.world/post/1');
+
+        self::assertSame('https://lemmy.world/post/1', $discussion->url);
+        self::assertNull($discussion->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Auto, $discussion->commentsLoad);
+    }
+
+    public function testAPageWithoutAFeedStillHasNoCommentsLoad(): void
+    {
+        self::assertNull(Discussion::of('https://x/p', null, CommentsLoad::Manual)->commentsLoad);
     }
 }
