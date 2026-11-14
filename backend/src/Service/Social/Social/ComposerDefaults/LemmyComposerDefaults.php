@@ -18,10 +18,15 @@ final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
 
     public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
-        return new ComposerDefaultsModel(self::MAX_CHARACTERS);
+        return self::defaults();
     }
 
     public function forAccount(SocialAccount $account): ComposerDefaultsModel
+    {
+        return self::defaults();
+    }
+
+    private static function defaults(): ComposerDefaultsModel
     {
         return new ComposerDefaultsModel(self::MAX_CHARACTERS);
     }
