@@ -73,6 +73,16 @@ describe('EntryMetaComponent', () => {
       expect(element.querySelector('.comments')).toBeNull();
     });
 
+    it('words a single comment in the singular', () => {
+      const comments = discussionMeta({ score: 5, commentCount: 1 }).querySelector('.comments');
+      expect(comments?.getAttribute('aria-label')).toBe('1 comment');
+    });
+
+    it('shows a zero comment count', () => {
+      const comments = discussionMeta({ score: 5, commentCount: 0 }).querySelector('.comments');
+      expect(comments?.textContent).toContain('0');
+    });
+
     it('shows nothing without a score', () => {
       expect(
         discussionMeta({ score: null, commentCount: 3 }).querySelector('.discussion'),

@@ -3,10 +3,9 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
-import { IconSize } from '../../../shared/icon/icon.component';
+import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { CompactCount } from '../../../core/i18n/compact-count';
 import { pluralKey } from '../../../core/i18n/plural-key';
-import { IconComponent } from '../../../shared/icon/icon.component';
 import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { showsShortPill } from '../preview-image';
 

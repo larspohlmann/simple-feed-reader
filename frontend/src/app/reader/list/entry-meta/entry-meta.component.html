@@ -5,6 +5,7 @@
     @if (compactCommentCount(); as commentCount) {
       <span
         class="comments"
+        role="img"
         [attr.aria-label]="commentsKey() | transloco: { count: entry().commentCount }"
       >
         <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ commentCount }}
