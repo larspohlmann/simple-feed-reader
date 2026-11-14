@@ -118,3 +118,19 @@ heads of government in the news). Kept small and reviewed; growth is a later edi
 - Phrase matcher implementation (index by first word is enough at this table size).
 - The exact FR/ES stop-word list and the table's entries, within the rules above.
 - Test layout, following the existing `tests/Service/Curation/Trending` mirror.
+
+## Outcome of the curation (Task 5, 2026-11-14)
+
+Measured on the dev windows (day ≈ 4,700 entries, week ≈ 28,400):
+
+- **Dropped** because the merged stem reaches the 3 % window share and would stop linking: `usa` (US/USA/United
+  States: 5.6 % of the day — *US* alone is in ~207 day entries), `deutsc` (Germany/Allemagne/Alemania: 3.1 % day,
+  4.0 % week), `europa` (Europe/European: 3.2 %). These spellings stay separate, as before #2225.
+- **EU is its own stem** (`eunion`), not Europe the continent: 1.5 %.
+- **Abbreviation boundary:** a hyphen counts as a word boundary, so *EU-Kommission*, *Eishockey-WM* and
+  *U-Haft-Antrag* match. An abbreviation is silenced only when every neighbour it has is all-caps (a shouted run),
+  not when one neighbour is (*WM: DEB-Frauen*).
+- Country, capital and alliance names across the four languages were added; the highest merged share is
+  `ukrain` at 2.6 % (day). Stems that would catch unrelated words became exact words instead
+  (*Schweiz* — `schwei` holds *schweigen*; *Austria* — `austri` holds *Austritt*; *Großbritannien* — `grossb`
+  holds *Großbrand*; *Niederlande* — `nieder` holds *Niederlage*; *Francia* — `franci` holds *Francisco*).
