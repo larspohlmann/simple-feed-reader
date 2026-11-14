@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryMedia;
 use App\Entity\EntryTranscript;
 use App\Entity\ImageRendition;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
@@ -172,12 +173,14 @@ final readonly class EntryJson
     {
         $social = $row->enrichment->social;
 
-        if (null === $social || !$social->network->carriesFeeds()) {
+        $network = match ($social?->network) {
+            SocialNetwork::Bluesky => 'bluesky',
+            SocialNetwork::Mastodon => 'mastodon',
+            SocialNetwork::Lemmy, null => null,
+        };
+        if (null === $social || null === $network) {
             return null;
         }
-
-        /** @var 'bluesky'|'mastodon' $network */
-        $network = $social->network->value;
 
         return [
             'network' => $network,
