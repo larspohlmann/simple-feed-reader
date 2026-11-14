@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
+use App\Service\Social\Social\Model\LemmyListing;
+
 final class SocialSearchPaths
 {
     private const int BLUESKY_PAGE_SIZE = 100;
     private const int MASTODON_PAGE_SIZE = 40;
-    private const int LEMMY_PAGE_SIZE = 50;
 
     public static function bluesky(string $query): string
     {
@@ -26,7 +27,7 @@ final class SocialSearchPaths
     public static function lemmy(string $query): string
     {
         return '/api/v3/search?q=' . rawurlencode($query)
-            . '&type_=Posts&sort=New&listing_type=All&limit=' . self::LEMMY_PAGE_SIZE;
+            . '&type_=Posts&sort=New&listing_type=All&limit=' . LemmyListing::PAGE_SIZE;
     }
 
     private function __construct()

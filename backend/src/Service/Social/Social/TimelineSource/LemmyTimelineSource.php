@@ -14,6 +14,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\LemmyAccountApi;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\LemmyPostEntries;
+use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Support\SocialSearchPaths;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -21,8 +22,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyTimelineSource implements TimelineSourceInterface
 {
-    private const int PAGE_SIZE = 50;
-
     public function __construct(
         private LemmyAccountApi $lemmy,
         private LemmyPostEntries $entries,
@@ -52,21 +51,13 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
 
     private static function pathOf(SocialFeed $socialFeed): string
     {
-        return match ($socialFeed->getKind()) {
-            SocialFeedKind::Home => self::listingPath('Subscribed'),
-            SocialFeedKind::Local => self::listingPath('Local'),
-            SocialFeedKind::All => self::listingPath('All'),
-            SocialFeedKind::Search => SocialSearchPaths::lemmy($socialFeed->getRemoteId()),
-            SocialFeedKind::UserList,
-            SocialFeedKind::CustomFeed,
-            SocialFeedKind::Author,
-            SocialFeedKind::Tag,
-            SocialFeedKind::Trending => throw new SocialNetworkUnreachableException('Lemmy has no such timeline.'),
-        };
-    }
+        $listing = LemmyListing::ofFeedKind($socialFeed->getKind());
+        if (null !== $listing) {
+            return '/api/v3/post/list?type_=' . $listing->value . '&sort=New&limit=' . LemmyListing::PAGE_SIZE;
+        }
 
-    private static function listingPath(string $listing): string
-    {
-        return '/api/v3/post/list?type_=' . $listing . '&sort=New&limit=' . self::PAGE_SIZE;
+        return SocialFeedKind::Search === $socialFeed->getKind()
+            ? SocialSearchPaths::lemmy($socialFeed->getRemoteId())
+            : throw new SocialNetworkUnreachableException('Lemmy has no such timeline.');
     }
 }

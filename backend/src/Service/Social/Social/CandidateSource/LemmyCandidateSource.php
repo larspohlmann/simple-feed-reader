@@ -11,6 +11,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\LemmyAccountApi;
 use App\Service\Social\Social\Model\CollectedItemsModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Social\Support\LemmyCommunity;
@@ -20,7 +21,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 final readonly class LemmyCandidateSource implements CandidateSourceInterface
 {
     private const string COMMUNITIES = '/api/v3/community/list?';
-    private const int PAGE_SIZE = 50;
 
     public function __construct(private LemmyAccountApi $lemmy)
     {
@@ -50,7 +50,7 @@ final readonly class LemmyCandidateSource implements CandidateSourceInterface
         do {
             $fresh = $this->pageOf($account, $page++);
             array_push($items, ...$fresh);
-        } while (self::PAGE_SIZE === \count($fresh) && \count($items) <= CollectedItemsModel::MAX_ITEMS);
+        } while (LemmyListing::PAGE_SIZE === \count($fresh) && \count($items) <= CollectedItemsModel::MAX_ITEMS);
 
         return CollectedItemsModel::capped($items);
     }
@@ -59,9 +59,9 @@ final readonly class LemmyCandidateSource implements CandidateSourceInterface
     private function pageOf(SocialAccount $account, int $page): array
     {
         $answer = $this->lemmy->get($account, self::COMMUNITIES . http_build_query([
-            'type_' => 'Subscribed',
+            'type_' => LemmyListing::Subscribed->value,
             'sort' => 'Old',
-            'limit' => self::PAGE_SIZE,
+            'limit' => LemmyListing::PAGE_SIZE,
             'page' => $page,
         ]));
 
