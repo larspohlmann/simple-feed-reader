@@ -484,7 +484,7 @@
       "importApplyCountOther": "Enregistrer {{count}} modifications",
       "importDone": "{{imported}} ajoutés, {{removed}} retirés, {{alreadySubscribed}} déjà abonnés.",
       "importOverLimit": "{{count}} non ajoutés : limite d'abonnements atteinte.",
-      "lemmyUsername": "Nom d’utilisateur ou e-mail",
+      "lemmyUsername": "Nom d'utilisateur ou e-mail",
       "lemmyPassword": "Mot de passe",
       "lemmyPasswordHint": "Envoyé une seule fois à votre instance pour vous connecter. Seule la session renvoyée est conservée.",
       "twoFactorCode": "Code à deux facteurs",

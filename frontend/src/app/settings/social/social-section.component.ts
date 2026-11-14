@@ -14,8 +14,14 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { AccountNetworkName, isSocialNetworkName } from '../../core/social-network';
+import {
+  AccountNetworkName,
+  SocialNetworkName,
+  isSocialNetworkName,
+} from '../../core/social-network';
 import { SocialAccount, SocialAccountsService, SyncChange } from './social-accounts.service';
+
+type FeedAccount = SocialAccount & { network: SocialNetworkName };
 
 @Component({
   selector: 'app-social-section',
@@ -47,7 +53,9 @@ export class SocialSectionComponent {
   protected readonly mastodonAccounts = this.accountsOf('mastodon');
   protected readonly lemmyAccounts = this.accountsOf('lemmy');
   protected readonly importableAccounts = computed(() =>
-    (this.svc.accounts() ?? []).filter((account) => isSocialNetworkName(account.network)),
+    (this.svc.accounts() ?? []).filter((account): account is FeedAccount =>
+      isSocialNetworkName(account.network),
+    ),
   );
 
   protected readonly blueskyFormOpen = signal(false);
@@ -193,7 +201,7 @@ export class SocialSectionComponent {
       });
   }
 
-  protected openImport(account: SocialAccount): void {
+  protected openImport(account: FeedAccount): void {
     this.picker.open(account).subscribe(() => this.svc.load());
   }
 

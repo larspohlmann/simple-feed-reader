@@ -14,7 +14,7 @@ import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SubscriptionDto, TagDto } from '../../models';
 import { ExclusionSurface, flipFeedFlag, isIncludedIn, surfaceChecks } from '../../feed-exclusions';
-import { SocialAccountRefDto } from '../../social-feed';
+import { FeedAccountRefDto } from '../../social-feed';
 import { NetworkSurfaceSwitches } from '../../state/network-surface-switches.service';
 import { SocialSection } from '../../state/social-sections';
 import { siblingIdsOf } from '../../state/subscription-derivations';
@@ -224,12 +224,12 @@ export class SidebarRowActions {
     }));
   }
 
-  manageSocialFeeds(account: SocialAccountRefDto): void {
+  manageSocialFeeds(account: FeedAccountRefDto): void {
     this.closeMenu();
     this.picker.open(account).subscribe();
   }
 
-  private socialAccountLabel(section: SocialSection, account: SocialAccountRefDto): string {
+  private socialAccountLabel(section: SocialSection, account: FeedAccountRefDto): string {
     if (account.status !== 'connected') {
       return this.transloco.translate('reader.reconnectSocialAccount', { handle: account.handle });
     }

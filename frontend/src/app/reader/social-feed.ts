@@ -19,3 +19,6 @@ export interface SocialAccountRefDto {
   handle: string;
   status: SocialAccountStatus;
 }
+
+/** A connected account of a network that has feeds to import (Lemmy has none). */
+export type FeedAccountRefDto = SocialAccountRefDto & { network: SocialNetworkName };

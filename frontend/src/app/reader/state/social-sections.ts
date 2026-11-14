@@ -1,5 +1,10 @@
 import { SubscriptionDto } from '../models';
-import { PrivateFeedRefDto, SocialAccountRefDto, SocialFeedRefDto } from '../social-feed';
+import {
+  FeedAccountRefDto,
+  PrivateFeedRefDto,
+  SocialAccountRefDto,
+  SocialFeedRefDto,
+} from '../social-feed';
 import { NetworkFeedKind, SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
 import type { UnreadTotals } from './unread-totals';
 
@@ -59,7 +64,7 @@ export interface SocialSection {
   readonly network: SocialNetworkName;
   readonly accounts: readonly SocialAccountGroup[];
   /** Every connected account of the network, by id: the head's menu opens each one's picker. */
-  readonly networkAccounts: readonly SocialAccountRefDto[];
+  readonly networkAccounts: readonly FeedAccountRefDto[];
   readonly groups: Readonly<Record<NetworkFeedKind, SocialFeedGroup>>;
   /** Shown only while it holds posts. */
   readonly saved: SubscriptionDto | null;
@@ -147,7 +152,7 @@ export function buildSocialSections(
       network,
       accounts,
       networkAccounts: socialAccounts
-        .filter((account) => account.network === network)
+        .filter((account): account is FeedAccountRefDto => account.network === network)
         .sort((left, right) => left.id - right.id),
       groups: {
         search: socialFeedGroup(
