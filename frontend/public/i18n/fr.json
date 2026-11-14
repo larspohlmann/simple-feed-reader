@@ -384,6 +384,7 @@
       "title": "Réseaux sociaux",
       "bluesky": "Bluesky",
       "mastodon": "Mastodon",
+      "lemmy": "Lemmy",
       "handle": "Identifiant",
       "appPassword": "Mot de passe d'application",
       "appPasswordHint": "Créez un mot de passe d'application dans Bluesky sous Paramètres → Confidentialité et sécurité → Mots de passe d'application. Il ressemble à xxxx-xxxx-xxxx-xxxx ; le mot de passe de votre compte est refusé.",
@@ -482,7 +483,12 @@
       "importApplyCountOne": "Enregistrer 1 modification",
       "importApplyCountOther": "Enregistrer {{count}} modifications",
       "importDone": "{{imported}} ajoutés, {{removed}} retirés, {{alreadySubscribed}} déjà abonnés.",
-      "importOverLimit": "{{count}} non ajoutés : limite d'abonnements atteinte."
+      "importOverLimit": "{{count}} non ajoutés : limite d'abonnements atteinte.",
+      "lemmyUsername": "Nom d’utilisateur ou e-mail",
+      "lemmyPassword": "Mot de passe",
+      "lemmyPasswordHint": "Envoyé une seule fois à votre instance pour vous connecter. Seule la session renvoyée est conservée.",
+      "twoFactorCode": "Code à deux facteurs",
+      "twoFactorHint": "Uniquement si votre compte en demande un."
     },
     "profile": {
       "title": "Profil",

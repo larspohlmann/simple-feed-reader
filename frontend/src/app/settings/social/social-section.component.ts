@@ -14,7 +14,7 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { SocialNetworkName } from '../../core/social-network';
+import { AccountNetworkName, isSocialNetworkName } from '../../core/social-network';
 import { SocialAccount, SocialAccountsService, SyncChange } from './social-accounts.service';
 
 @Component({
@@ -45,6 +45,10 @@ export class SocialSectionComponent {
 
   protected readonly blueskyAccounts = this.accountsOf('bluesky');
   protected readonly mastodonAccounts = this.accountsOf('mastodon');
+  protected readonly lemmyAccounts = this.accountsOf('lemmy');
+  protected readonly importableAccounts = computed(() =>
+    (this.svc.accounts() ?? []).filter((account) => isSocialNetworkName(account.network)),
+  );
 
   protected readonly blueskyFormOpen = signal(false);
   protected readonly mastodonFormOpen = signal(false);
@@ -53,7 +57,13 @@ export class SocialSectionComponent {
   protected readonly mastodonInstance = signal('');
   protected readonly mastodonToken = signal('');
   protected readonly mastodonHost = computed(() => hostOf(this.mastodonInstance()));
+  protected readonly lemmyFormOpen = signal(false);
+  protected readonly lemmyInstance = signal('');
+  protected readonly lemmyUsername = signal('');
+  protected readonly lemmyPassword = signal('');
+  protected readonly lemmyTotp = signal('');
   protected readonly reconnectSecrets = signal<Readonly<Record<number, string>>>({});
+  protected readonly reconnectTotps = signal<Readonly<Record<number, string>>>({});
   protected readonly inputValue = inputValue;
 
   constructor() {
@@ -86,14 +96,25 @@ export class SocialSectionComponent {
     });
   }
 
+  protected reconnectTitleKey(network: AccountNetworkName): string {
+    return RECONNECT_TITLE_KEYS[network];
+  }
+
   protected setReconnectSecret(id: number, secret: string): void {
     this.reconnectSecrets.update((current) => ({ ...current, [id]: secret }));
   }
 
+  protected setReconnectTotp(id: number, totp: string): void {
+    this.reconnectTotps.update((current) => ({ ...current, [id]: totp }));
+  }
+
+  protected reconnectTotp(id: number): string {
+    return this.reconnectTotps()[id] ?? '';
+  }
+
   private forgetReconnectSecret(id: number): void {
-    this.reconnectSecrets.update((current) =>
-      Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== id)),
-    );
+    this.reconnectSecrets.update((current) => without(current, id));
+    this.reconnectTotps.update((current) => without(current, id));
   }
 
   protected reconnectSecret(id: number): string {
@@ -120,6 +141,24 @@ export class SocialSectionComponent {
     });
   }
 
+  protected connectLemmy(): void {
+    const totp = this.lemmyTotp().trim();
+    this.svc
+      .connectLemmy({
+        instanceUrl: this.lemmyInstance(),
+        username: this.lemmyUsername(),
+        password: this.lemmyPassword(),
+        totpToken: totp === '' ? null : totp,
+      })
+      .subscribe({
+        next: () => {
+          this.resetLemmyForm();
+          this.announceConnected();
+        },
+        error: () => undefined,
+      });
+  }
+
   protected resetBlueskyForm(): void {
     this.blueskyHandle.set('');
     this.blueskyPassword.set('');
@@ -132,14 +171,26 @@ export class SocialSectionComponent {
     this.mastodonFormOpen.set(false);
   }
 
+  protected resetLemmyForm(): void {
+    this.lemmyInstance.set('');
+    this.lemmyUsername.set('');
+    this.lemmyPassword.set('');
+    this.lemmyTotp.set('');
+    this.lemmyFormOpen.set(false);
+  }
+
   protected reconnect(account: SocialAccount): void {
-    this.svc.reconnect(account.id, this.reconnectSecret(account.id)).subscribe({
-      next: () => {
-        this.setReconnectSecret(account.id, '');
-        this.announceConnected();
-      },
-      error: () => undefined,
-    });
+    const totp = account.network === 'lemmy' ? this.reconnectTotp(account.id).trim() : '';
+    this.svc
+      .reconnect(account.id, this.reconnectSecret(account.id), totp === '' ? null : totp)
+      .subscribe({
+        next: () => {
+          this.setReconnectSecret(account.id, '');
+          this.setReconnectTotp(account.id, '');
+          this.announceConnected();
+        },
+        error: () => undefined,
+      });
   }
 
   protected openImport(account: SocialAccount): void {
@@ -167,7 +218,7 @@ export class SocialSectionComponent {
     );
   }
 
-  private accountsOf(network: SocialNetworkName) {
+  private accountsOf(network: AccountNetworkName) {
     return computed(() =>
       (this.svc.accounts() ?? []).filter((account) => account.network === network),
     );
@@ -179,6 +230,19 @@ export class SocialSectionComponent {
       durationMs: CONFIRMATION_DURATION_MS,
     });
   }
+}
+
+const RECONNECT_TITLE_KEYS: Record<AccountNetworkName, string> = {
+  bluesky: 'settings.social.appPassword',
+  mastodon: 'settings.social.accessToken',
+  lemmy: 'settings.social.lemmyPassword',
+};
+
+function without(
+  current: Readonly<Record<number, string>>,
+  id: number,
+): Readonly<Record<number, string>> {
+  return Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== id));
 }
 
 function hostOf(instance: string): string | null {

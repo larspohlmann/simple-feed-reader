@@ -384,6 +384,7 @@
       "title": "Soziale Medien",
       "bluesky": "Bluesky",
       "mastodon": "Mastodon",
+      "lemmy": "Lemmy",
       "handle": "Handle",
       "appPassword": "App-Passwort",
       "appPasswordHint": "Lege in Bluesky unter Einstellungen → Datenschutz und Sicherheit → App-Passwörter ein App-Passwort an. Es sieht aus wie xxxx-xxxx-xxxx-xxxx; dein Konto-Passwort wird abgelehnt.",
@@ -482,7 +483,12 @@
       "importApplyCountOne": "1 Änderung speichern",
       "importApplyCountOther": "{{count}} Änderungen speichern",
       "importDone": "{{imported}} hinzugefügt, {{removed}} entfernt, {{alreadySubscribed}} schon abonniert.",
-      "importOverLimit": "{{count}} nicht hinzugefügt: Abo-Limit erreicht."
+      "importOverLimit": "{{count}} nicht hinzugefügt: Abo-Limit erreicht.",
+      "lemmyUsername": "Benutzername oder E-Mail",
+      "lemmyPassword": "Passwort",
+      "lemmyPasswordHint": "Wird einmal an deine Instanz gesendet, um dich anzumelden. Nur die zurückgegebene Sitzung wird gespeichert.",
+      "twoFactorCode": "Zwei-Faktor-Code",
+      "twoFactorHint": "Nur, wenn dein Konto danach fragt."
     },
     "profile": {
       "title": "Profil",

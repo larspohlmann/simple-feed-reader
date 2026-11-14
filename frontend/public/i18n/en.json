@@ -384,6 +384,7 @@
       "title": "Social Media",
       "bluesky": "Bluesky",
       "mastodon": "Mastodon",
+      "lemmy": "Lemmy",
       "handle": "Handle",
       "appPassword": "App password",
       "appPasswordHint": "Create an app password in Bluesky under Settings → Privacy and security → App passwords. It looks like xxxx-xxxx-xxxx-xxxx; your account password is refused.",
@@ -482,7 +483,12 @@
       "importApplyCountOne": "Save 1 change",
       "importApplyCountOther": "Save {{count}} changes",
       "importDone": "{{imported}} added, {{removed}} removed, {{alreadySubscribed}} already subscribed.",
-      "importOverLimit": "{{count}} not added: subscription limit reached."
+      "importOverLimit": "{{count}} not added: subscription limit reached.",
+      "lemmyUsername": "Username or email",
+      "lemmyPassword": "Password",
+      "lemmyPasswordHint": "Sent once to your instance to sign in. Only the session it returns is kept.",
+      "twoFactorCode": "Two-factor code",
+      "twoFactorHint": "Only if your account asks for one."
     },
     "profile": {
       "title": "Profile",

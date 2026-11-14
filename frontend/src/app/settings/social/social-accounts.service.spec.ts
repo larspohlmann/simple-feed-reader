@@ -105,6 +105,60 @@ describe('SocialAccountsService', () => {
     expect(service.accounts()).toEqual([healed, account({ id: 2, isDefault: false })]);
   });
 
+  it('connectLemmy() POSTs the instance, username and password, and omits an absent two-factor code', () => {
+    loadAccounts([]);
+
+    service
+      .connectLemmy({
+        instanceUrl: 'lemmy.example',
+        username: 'lars',
+        password: 'pw',
+        totpToken: null,
+      })
+      .subscribe();
+
+    const post = http.expectOne(`${ENDPOINT}/lemmy`);
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({
+      instanceUrl: 'lemmy.example',
+      username: 'lars',
+      password: 'pw',
+    });
+    post.flush(account({ network: 'lemmy' }));
+  });
+
+  it('connectLemmy() sends the two-factor code when there is one', () => {
+    loadAccounts([]);
+
+    service
+      .connectLemmy({
+        instanceUrl: 'lemmy.example',
+        username: 'lars',
+        password: 'pw',
+        totpToken: '123456',
+      })
+      .subscribe();
+
+    const post = http.expectOne(`${ENDPOINT}/lemmy`);
+    expect(post.request.body).toEqual({
+      instanceUrl: 'lemmy.example',
+      username: 'lars',
+      password: 'pw',
+      totpToken: '123456',
+    });
+    post.flush(account({ network: 'lemmy' }));
+  });
+
+  it('reconnect() sends the two-factor code when there is one', () => {
+    loadAccounts([account({ id: 3, status: 'needs_reconnect' })]);
+
+    service.reconnect(3, 'pw', '123456').subscribe();
+
+    const put = http.expectOne(`${ENDPOINT}/3/credential`);
+    expect(put.request.body).toEqual({ secret: 'pw', totpToken: '123456' });
+    put.flush(account({ id: 3 }));
+  });
+
   it('makeDefault() PUTs and replaces the list', () => {
     loadAccounts([account({ id: 1 }), account({ id: 2, isDefault: false })]);
     const swapped = [account({ id: 1, isDefault: false }), account({ id: 2, isDefault: true })];

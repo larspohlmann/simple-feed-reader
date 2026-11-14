@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem, problemMessage } from '../../core/problem';
-import { SocialNetworkName } from '../../core/social-network';
+import { AccountNetworkName } from '../../core/social-network';
 import { SocialAccountStatus } from '../../reader/social-feed';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
@@ -25,7 +25,7 @@ export interface SocialAccountSync {
 
 export interface SocialAccount {
   readonly id: number;
-  readonly network: SocialNetworkName;
+  readonly network: AccountNetworkName;
   readonly handle: string;
   readonly serviceUrl: string;
   readonly status: SocialAccountStatus;
@@ -33,6 +33,13 @@ export interface SocialAccount {
   readonly credentialHint: string;
   readonly connectedAt: string;
   readonly sync: SocialAccountSync;
+}
+
+export interface LemmyCredentials {
+  readonly instanceUrl: string;
+  readonly username: string;
+  readonly password: string;
+  readonly totpToken: string | null;
 }
 
 interface SocialAccountList {
@@ -68,9 +75,26 @@ export class SocialAccountsService {
     );
   }
 
-  reconnect(id: number, secret: string): Observable<SocialAccount> {
+  connectLemmy(credentials: LemmyCredentials): Observable<SocialAccount> {
+    const { totpToken, ...fields } = credentials;
     return this.upserting(
-      this.http.put<SocialAccount>(`${this.endpoint}/${id}/credential`, { secret }),
+      this.http.post<SocialAccount>(`${this.endpoint}/lemmy`, {
+        ...fields,
+        ...withTotp(totpToken),
+      }),
+    );
+  }
+
+  reconnect(
+    id: number,
+    secret: string,
+    totpToken: string | null = null,
+  ): Observable<SocialAccount> {
+    return this.upserting(
+      this.http.put<SocialAccount>(`${this.endpoint}/${id}/credential`, {
+        secret,
+        ...withTotp(totpToken),
+      }),
     );
   }
 
@@ -127,4 +151,8 @@ export class SocialAccountsService {
   private fail(error: HttpErrorResponse): void {
     this.failure.set(problemMessage(parseProblem(error)));
   }
+}
+
+function withTotp(totpToken: string | null): { totpToken?: string } {
+  return totpToken === null ? {} : { totpToken };
 }

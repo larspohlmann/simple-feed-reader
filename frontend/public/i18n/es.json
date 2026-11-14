@@ -384,6 +384,7 @@
       "title": "Redes sociales",
       "bluesky": "Bluesky",
       "mastodon": "Mastodon",
+      "lemmy": "Lemmy",
       "handle": "Usuario",
       "appPassword": "Contraseña de aplicación",
       "appPasswordHint": "Crea una contraseña de aplicación en Bluesky, en Ajustes → Privacidad y seguridad → Contraseñas de app. Tiene la forma xxxx-xxxx-xxxx-xxxx; la contraseña de tu cuenta no se acepta.",
@@ -482,7 +483,12 @@
       "importApplyCountOne": "Guardar 1 cambio",
       "importApplyCountOther": "Guardar {{count}} cambios",
       "importDone": "{{imported}} añadidos, {{removed}} quitados, {{alreadySubscribed}} ya suscritos.",
-      "importOverLimit": "{{count}} sin añadir: se alcanzó el límite de suscripciones."
+      "importOverLimit": "{{count}} sin añadir: se alcanzó el límite de suscripciones.",
+      "lemmyUsername": "Nombre de usuario o correo",
+      "lemmyPassword": "Contraseña",
+      "lemmyPasswordHint": "Se envía una sola vez a tu instancia para iniciar sesión. Solo se guarda la sesión que devuelve.",
+      "twoFactorCode": "Código de dos factores",
+      "twoFactorHint": "Solo si tu cuenta lo pide."
     },
     "profile": {
       "title": "Perfil",

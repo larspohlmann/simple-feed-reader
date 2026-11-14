@@ -1,4 +1,4 @@
-import { SocialNetworkName } from '../core/social-network';
+import { AccountNetworkName, SocialNetworkName } from '../core/social-network';
 
 /** Where a social feed comes from: the network, which of its feeds, and the connected account a private feed is read through. */
 export type SocialFeedRefDto = { network: SocialNetworkName } & (
@@ -15,7 +15,7 @@ export type SocialAccountStatus = 'connected' | 'needs_reconnect';
 /** A connected account, named once per subscriptions answer for the sidebar's account labels and menus. */
 export interface SocialAccountRefDto {
   id: number;
-  network: SocialNetworkName;
+  network: AccountNetworkName;
   handle: string;
   status: SocialAccountStatus;
 }
