@@ -22,20 +22,30 @@ final class Version20261114100000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->skipIf($schema->getTable(self::TABLE)->hasColumn(self::SCORE), 'Already applied.');
+        $table = $schema->getTable(self::TABLE);
+        $missing = array_filter(
+            [self::SCORE, self::COMMENT_COUNT],
+            static fn (string $column): bool => !$table->hasColumn($column),
+        );
+        $this->skipIf([] === $missing, 'Already applied.');
 
         $this->abortIfUnsupportedPlatform();
-        foreach ([self::SCORE, self::COMMENT_COUNT] as $column) {
+        foreach ($missing as $column) {
             $this->addSql(\sprintf('ALTER TABLE %s ADD COLUMN %s INT DEFAULT NULL', self::TABLE, $column));
         }
     }
 
     public function down(Schema $schema): void
     {
-        $this->skipIf(!$schema->getTable(self::TABLE)->hasColumn(self::SCORE), 'Not applied.');
+        $table = $schema->getTable(self::TABLE);
+        $present = array_filter(
+            [self::SCORE, self::COMMENT_COUNT],
+            static fn (string $column): bool => $table->hasColumn($column),
+        );
+        $this->skipIf([] === $present, 'Not applied.');
 
         $this->abortIfUnsupportedPlatform();
-        foreach ([self::SCORE, self::COMMENT_COUNT] as $column) {
+        foreach ($present as $column) {
             $this->addSql(\sprintf('ALTER TABLE %s DROP COLUMN %s', self::TABLE, $column));
         }
     }

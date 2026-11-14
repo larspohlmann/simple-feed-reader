@@ -115,8 +115,7 @@ final readonly class EntryIngestor
     }
 
     /**
-     * Writes the score and comment count a fresh parse carries onto the stored entries, matched by GUID hash. A parse
-     * that read no counts leaves the stored ones alone.
+     * A parse that read no counts leaves the stored ones alone.
      */
     public function refreshDiscussionCounts(Feed $feed, ParsedFeedModel $parsed): void
     {

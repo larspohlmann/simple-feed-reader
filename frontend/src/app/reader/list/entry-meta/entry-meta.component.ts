@@ -10,8 +10,8 @@ import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { showsShortPill } from '../preview-image';
 
 /**
- * The line a magazine card or a list row ends on: the entry's pills, with its
- * actions right-aligned against them. One component, not a row assembled per
+ * The line a magazine card or a list row ends on: the entry's pills, led by a Lemmy
+ * post's score and comment count, with its actions right-aligned against them. One component, not a row assembled per
  * host, so the wrap geometry has one definition everywhere. A grouped compact
  * entry has no pills, so its actions live on the kicker line.
  */

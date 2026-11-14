@@ -302,10 +302,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'image.verifyAttempts' => 'The queue marker and failure count of this instance\'s '
                 . 'check. A restored image is not put into the queue. The instance shows it as '
                 . 'the old instance did.',
-            'discussion.score' => 'A Lemmy post\'s score (#2217), rewritten on every fetch of its feed; '
-                . 'a restored one would be stale before the reader saw it.',
+            'discussion.score' => 'A Lemmy post\'s score (#2217), rewritten on every fetch while its feed '
+                . 'still lists the post; a restored one would be stale before the reader saw it.',
             'discussion.commentCount' => 'A Lemmy post\'s comment count (#2217), rewritten on every fetch '
-                . 'of its feed; a restored one would be stale before the reader saw it.',
+                . 'while its feed still lists the post; a restored one would be stale before the reader saw it.',
         ],
         LinkCard::class => [
             'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',
