@@ -71,8 +71,29 @@ final class HeadlineEquivalentsTest extends TestCase
     public static function allCapsTexts(): iterable
     {
         yield 'whole text in capitals' => ['THE EU AND THE UN'];
-        yield 'the abbreviation alone' => ['EU'];
-        yield 'next to an all-caps word' => ['Breaking: WHO EU NEWS today'];
+        yield 'between all-caps words' => ['Breaking: WHO EU NEWS today'];
+        yield 'at the start, before an all-caps word' => ['EU WILL FALL, critics say'];
+        yield 'next to a two-letter all-caps word' => ['THE EU UK DEAL is done'];
+    }
+
+    public function testAnAbbreviationStandingAloneFires(): void
+    {
+        self::assertSame(['eunion'], $this->equivalents->stemsOf('EU'));
+    }
+
+    public function testNeighboursWithLowerCaseLettersDoNotSilenceAnAbbreviation(): void
+    {
+        self::assertContains('eunion', $this->equivalents->stemsOf('Talks between OpenAI EU AstraZeneca'));
+    }
+
+    public function testSeveralAbbreviationsInOneTextAreAllMapped(): void
+    {
+        self::assertSame(['eunion', 'and', 'onu', 'agree'], $this->equivalents->stemsOf('EU and UN agree'));
+    }
+
+    public function testTwoSpellingsOfOneNameCountOnce(): void
+    {
+        self::assertSame(['russia', 'und'], $this->equivalents->stemsOf('Russland Russia und'));
     }
 
     public function testAnAbbreviationAtTheEdgesOfMixedTextFires(): void
@@ -127,6 +148,23 @@ final class HeadlineEquivalentsTest extends TestCase
                 self::assertSame([$canonical], HeadlineStems::ofWords(HeadlineStems::words($canonical)), $label);
                 self::assertFalse($filler->isSeed($canonical), $label);
                 self::assertArrayNotHasKey($canonical, $stemTable, $label);
+            }
+        }
+    }
+
+    public function testEveryExactWordIsLettersAndDigitsOnly(): void
+    {
+        foreach (array_keys(self::table('EXACT_WORDS')) as $word) {
+            self::assertMatchesRegularExpression('/^[\p{L}\p{N}]+$/u', $word);
+        }
+    }
+
+    public function testNoPhraseStartsAnotherPhrase(): void
+    {
+        $phrases = array_keys(self::table('PHRASES'));
+        foreach ($phrases as $phrase) {
+            foreach ($phrases as $other) {
+                self::assertFalse($phrase !== $other && str_starts_with($other, $phrase . ' '), $other);
             }
         }
     }

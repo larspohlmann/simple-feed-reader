@@ -58,7 +58,7 @@ final readonly class HeadlineEquivalents
 
     private string $exactWordPattern;
 
-    /** @var array<string, list<array{list<string>, string}>> first word => phrase words and canonical, longest first */
+    /** @var array<string, list<array{list<string>, string}>> first word => phrase words and canonical */
     private array $phrasesByFirstWord;
 
     public function __construct()
@@ -78,33 +78,28 @@ final readonly class HeadlineEquivalents
         )));
     }
 
-    /** All-caps text makes common words look like abbreviations (LET US GO), so it is left alone. */
     private function replaceExactWords(string $text): string
     {
-        if (preg_match('/\p{Ll}/u', $text) !== 1) {
-            return $text;
-        }
-
         preg_match_all($this->exactWordPattern, $text, $matches, \PREG_OFFSET_CAPTURE | \PREG_SET_ORDER);
         $replaced = $text;
         foreach (array_reverse($matches) as [[$word, $offset]]) {
             if (!self::isInAllCapsRun($text, $offset, \strlen($word))) {
-                $replaced = substr_replace($replaced, ' ' . self::EXACT_WORDS[$word] . ' ', $offset, \strlen($word));
+                $replaced = substr_replace($replaced, self::EXACT_WORDS[$word], $offset, \strlen($word));
             }
         }
 
         return $replaced;
     }
 
-    /** Every word next to it is all-caps: the abbreviation stands in a shouted run, not in a sentence. */
+    /** Every word next to it is all-caps: the abbreviation stands in a shouted run (LET US GO), not in a sentence. */
     private static function isInAllCapsRun(string $text, int $offset, int $length): bool
     {
         $neighbours = [];
-        if (preg_match('/([\p{L}\p{N}]+)[^\p{L}\p{N}]*$/u', substr($text, 0, $offset), $previous) === 1) {
-            $neighbours[] = $previous[1];
+        if (preg_match('/[\p{L}\p{N}]+(?=[^\p{L}\p{N}]*$)/u', substr($text, 0, $offset), $previous) === 1) {
+            $neighbours[] = $previous[0];
         }
-        if (preg_match('/^[^\p{L}\p{N}]*([\p{L}\p{N}]+)/u', substr($text, $offset + $length), $next) === 1) {
-            $neighbours[] = $next[1];
+        if (preg_match('/^[^\p{L}\p{N}]*\K[\p{L}\p{N}]+/u', substr($text, $offset + $length), $next) === 1) {
+            $neighbours[] = $next[0];
         }
 
         return $neighbours !== [] && array_filter($neighbours, self::isAllCaps(...)) === $neighbours;
@@ -112,7 +107,7 @@ final readonly class HeadlineEquivalents
 
     private static function isAllCaps(string $word): bool
     {
-        return preg_match('/\p{Ll}/u', $word) !== 1 && preg_match_all('/\p{Lu}/u', $word) >= 2;
+        return mb_strtoupper($word) === $word && preg_match_all('/\p{Lu}/u', $word) >= 2;
     }
 
     /**
@@ -151,11 +146,7 @@ final readonly class HeadlineEquivalents
 
     private static function exactWordPattern(): string
     {
-        $words = array_keys(self::EXACT_WORDS);
-        usort($words, static fn (string $left, string $right): int => \strlen($right) <=> \strlen($left));
-        $alternatives = implode('|', array_map(static fn (string $word): string => preg_quote($word, '/'), $words));
-
-        return '/(?<![\p{L}\p{N}])(?:' . $alternatives . ')(?![\p{L}\p{N}])/u';
+        return '/(?<![\p{L}\p{N}])(?:' . implode('|', array_keys(self::EXACT_WORDS)) . ')(?![\p{L}\p{N}])/u';
     }
 
     /** @return array<string, list<array{list<string>, string}>> */
@@ -165,9 +156,6 @@ final readonly class HeadlineEquivalents
         foreach (self::PHRASES as $phrase => $canonical) {
             $phraseWords = explode(' ', $phrase);
             $index[$phraseWords[0]][] = [$phraseWords, $canonical];
-        }
-        foreach ($index as &$phrases) {
-            usort($phrases, static fn (array $left, array $right): int => \count($right[0]) <=> \count($left[0]));
         }
 
         return $index;
