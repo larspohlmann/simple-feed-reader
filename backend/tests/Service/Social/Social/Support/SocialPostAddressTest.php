@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Support;
 
-use App\Entity\Discussion;
 use App\Entity\Entry;
-use App\Enum\CommentsLoad;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\Support\SocialPostAddress;
+use App\Tests\Support\LemmyPostEntries;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -239,12 +238,7 @@ final class SocialPostAddressTest extends TestCase
 
     private static function lemmyPost(): Entry
     {
-        $now = new \DateTimeImmutable('2026-10-13 10:00:00');
-        $feed = new Feed('https://lemmy.example/feeds/a.xml');
-        $entry = new Entry($feed, 'https://lemmy.example/post/42', null, 'Post', $now, $now);
-        $entry->setDiscussion(Discussion::of('https://lemmy.example/post/42', null, CommentsLoad::Auto));
-
-        return $entry;
+        return LemmyPostEntries::on(new Feed('https://lemmy.example/feeds/a.xml'));
     }
 
     private static function postOn(SocialNetwork $network): Entry

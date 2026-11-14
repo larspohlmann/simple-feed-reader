@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Entity\User;
-use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
@@ -74,15 +72,7 @@ trait RoutesSocialApis
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $subscription = $fixtures->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');
-        $entry = new Entry(
-            $subscription->getFeed(),
-            $page,
-            null,
-            'A post title',
-            new \DateTimeImmutable('2026-10-12T10:00:00Z'),
-            new \DateTimeImmutable('2026-10-12T10:00:00Z'),
-        );
-        $entry->setDiscussion(Discussion::of($page, null, CommentsLoad::Auto));
+        $entry = LemmyPostEntries::on($subscription->getFeed(), $page);
         $this->entityManager()->persist($entry);
         $this->entityManager()->flush();
 

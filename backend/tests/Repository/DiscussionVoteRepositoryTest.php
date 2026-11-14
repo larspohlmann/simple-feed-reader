@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Enum\VoteScore;
 use App\Repository\DiscussionVoteRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -166,8 +167,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
 
     private function entry(string $guid): Entry
     {
-        $now = new \DateTimeImmutable('2026-11-14 10:00:00');
-        $entry = new Entry($this->feed, $guid, 'https://lemmy.example/post/' . $guid, $guid, $now, $now);
+        $entry = LemmyPostEntries::on($this->feed, 'https://lemmy.example/post/' . $guid, $guid);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 

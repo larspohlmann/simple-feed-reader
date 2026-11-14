@@ -38,6 +38,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\LinkCardRepository;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
@@ -623,9 +624,7 @@ final class EntryListRowEnricherTest extends DbTestCase
 
     private function lemmyPost(string $guid, int $postId): Entry
     {
-        $now = new \DateTimeImmutable('2026-11-14T00:00:00Z');
-        $entry = new Entry($this->feed, $guid, null, $guid, $now, $now);
-        $entry->setDiscussion(Discussion::of('https://lemmy.example/post/' . $postId, null, CommentsLoad::Auto));
+        $entry = LemmyPostEntries::on($this->feed, 'https://lemmy.example/post/' . $postId, $guid);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 
