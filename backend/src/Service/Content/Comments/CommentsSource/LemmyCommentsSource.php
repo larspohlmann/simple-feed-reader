@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Content\Comments\CommentsEndpointFetcher;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\LemmyThreadReader\LemmyThreadReaderInterface;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Content\Comments\Model\CommentsAudienceModel;
 use App\Service\Content\Comments\Model\CommentsEndpointModel;
@@ -26,6 +27,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
         private CommentsEndpointFetcher $endpointFetcher,
         private MarkdownHtml $markdown,
         private EntrySanitizer $sanitizer,
+        private LemmyThreadReaderInterface $threadReader,
     ) {
     }
 
@@ -36,12 +38,31 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
 
     public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
     {
-        return new CommentsAudienceModel(self::postOf($entry)->pageUrl());
+        $pageUrl = self::postOf($entry)->pageUrl();
+        $account = $this->threadReader->readerFor($user);
+
+        return null === $account
+            ? new CommentsAudienceModel($pageUrl)
+            : new CommentsAudienceModel($pageUrl . ' account:' . $account->requireId(), $account);
     }
 
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
         $post = self::postOf($request->entry);
+        $account = $request->audience->actingAccount;
+        if (null !== $account) {
+            try {
+                return CommentsAnswerModel::settled($this->threadReader->threadAs($account, $post));
+            } catch (CommentsUnavailableException) {
+                return $this->anonymousThread($request, $post);
+            }
+        }
+
+        return $this->anonymousThread($request, $post);
+    }
+
+    private function anonymousThread(CommentsRequest $request, LemmyPostModel $post): CommentsAnswerModel
+    {
         $endpoint = new CommentsEndpointModel(
             $post->instanceUrl,
             'The Lemmy instance asked us to wait.',
@@ -58,6 +79,9 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
         $nodes = JsonNodeModel::of(json_decode($answer, true))->listAt('comments')
             ?? throw new CommentsUnavailableException('The Lemmy instance answered without a comment list.');
         $thread = new LemmyThread($request->entry->getAuthorUrl(), $this->markdown, $this->sanitizer);
+        if (null !== $request->audience->actingAccount) {
+            $thread = $thread->forVoter();
+        }
 
         return new CommentsPageModel($thread->comments($nodes));
     }

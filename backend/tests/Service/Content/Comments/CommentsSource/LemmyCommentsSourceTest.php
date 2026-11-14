@@ -8,8 +8,11 @@ use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\Feed;
+use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\VoteScore;
+use App\Service\Content\Comments\LemmyThreadReader\LemmyThreadReaderInterface;
 use App\Service\Content\Comments\CommentsSource\LemmyCommentsSource;
 use App\Service\Content\Comments\Exception\CommentsThrottledException;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
@@ -22,6 +25,8 @@ use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use App\Tests\Support\BuildsCommentsSources;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\StubLemmyThreadReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -41,11 +46,30 @@ final class LemmyCommentsSourceTest extends KernelTestCase
     /** Must match framework.rate_limiter.comments.limit in rate_limiter.yaml. */
     private const int COMMENTS_BUDGET = 30;
 
+    private const string ACCOUNT_FIXTURE = __DIR__ . '/../../../../Fixtures/lemmy/comment-list-as-account.json';
+
     private LemmyCommentsSource $source;
 
     protected function setUp(): void
     {
-        $this->source = $this->bootCommentsSource(LemmyCommentsSource::class, '2026-11-14 12:00:00');
+        $this->bootWithReader(new StubLemmyThreadReader());
+    }
+
+    private function bootWithReader(StubLemmyThreadReader $reader): void
+    {
+        $this->source = $this->bootCommentsSource(
+            LemmyCommentsSource::class,
+            '2026-11-14 12:00:00',
+            [LemmyThreadReaderInterface::class => $reader],
+        );
+    }
+
+    private static function account(): SocialAccount
+    {
+        $account = SocialAccounts::lemmyOf(SocialAccounts::owner());
+        (new \ReflectionProperty($account::class, 'id'))->setValue($account, 5);
+
+        return $account;
     }
 
     private static function entry(?string $url = null, ?Discussion $discussion = null): Entry
@@ -123,6 +147,78 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 
         self::assertSame(self::POST, $this->source->audienceOf($this->user, self::entry())->scope);
         self::assertSame(self::POST, $this->source->audienceOf($other, self::entry())->scope);
+    }
+
+    public function testAnAccountReadsItsOwnCacheScope(): void
+    {
+        $account = self::account();
+        $this->bootWithReader(new StubLemmyThreadReader($account));
+
+        $audience = $this->source->audienceOf($this->user, self::entry());
+
+        self::assertSame(self::POST . ' account:5', $audience->scope);
+        self::assertSame($account, $audience->actingAccount);
+    }
+
+    public function testWithoutAnAccountTheScopeStaysShared(): void
+    {
+        $audience = $this->source->audienceOf($this->user, self::entry());
+
+        self::assertSame(self::POST, $audience->scope);
+        self::assertNull($audience->actingAccount);
+    }
+
+    public function testAnAccountsThreadCarriesVotes(): void
+    {
+        $reader = new StubLemmyThreadReader(self::account(), (string) file_get_contents(self::ACCOUNT_FIXTURE));
+        $this->bootWithReader($reader);
+        $entry = self::entry();
+        $request = $this->requestFor($entry);
+
+        $comments = $this->source->read($request, $this->source->fetch($request)->body)->comments;
+
+        self::assertSame([], $this->fetcher->fetchedUrls);
+        $votes = [];
+        foreach ($comments as $comment) {
+            $vote = $comment->vote;
+            self::assertNotNull($vote);
+            $votes[$vote->address] = [$vote->myVote, $vote->canReply];
+        }
+        self::assertSame([VoteScore::Up, true], $votes['https://origin.example/comment/26860003']);
+        self::assertSame([VoteScore::None, true], $votes['https://lemmy.example/comment/26858564']);
+        self::assertCount(\count($comments), $votes);
+    }
+
+    public function testAThreadTheAccountCannotReadFallsBackToTheFeedInstance(): void
+    {
+        $this->bootWithReader(new StubLemmyThreadReader(self::account(), new CommentsUnavailableException('no')));
+        $this->fetcher->willReturnBody(self::COMMENTS_API, (string) file_get_contents(self::FIXTURE));
+        $request = $this->requestFor(self::entry());
+
+        $comments = $this->source->read($request, $this->source->fetch($request)->body)->comments;
+
+        self::assertSame([self::COMMENTS_API], $this->fetcher->fetchedUrls);
+        self::assertCount(7, $comments);
+    }
+
+    public function testAThrottledAccountIsNotRetriedOnTheFeedInstance(): void
+    {
+        $this->bootWithReader(new StubLemmyThreadReader(self::account(), new CommentsThrottledException('slow', 30)));
+        $this->expectException(CommentsThrottledException::class);
+
+        try {
+            $this->fetch(self::entry());
+        } finally {
+            self::assertSame([], $this->fetcher->fetchedUrls);
+        }
+    }
+
+    public function testTheAnonymousThreadCarriesNoVotes(): void
+    {
+        self::assertSame(
+            array_fill(0, 7, null),
+            array_map(static fn (EntryCommentModel $comment): mixed => $comment->vote, $this->comments()),
+        );
     }
 
     public function testAsksTheInstanceApi(): void
