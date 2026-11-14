@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { SocialNetworkName } from '../../core/social-network';
 
-/** A network's brand mark (Simple Icons, CC0; Lemmy's is drawn here), sized like a tag glyph at `xs`; the name beside it carries the meaning. */
+/** A network's brand mark (Simple Icons, CC0; Lemmy's drawn here). */
 @Component({
   selector: 'app-network-logo',
   templateUrl: './network-logo.component.html',
