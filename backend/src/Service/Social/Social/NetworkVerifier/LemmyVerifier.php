@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\NetworkVerifier;
 
 use App\Enum\SocialNetwork;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -33,11 +34,11 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
         $person = $site->node('my_user')->node('local_user_view')->node('person');
 
         $name = $person->string('name');
-        $host = self::hostOf($person->string('actor_id'));
+        $host = UrlOrigin::hostWithPort($person->string('actor_id') ?? '');
         if (null === $name || null === $host) {
             throw new SocialCredentialsRejectedException(self::NO_SESSION);
         }
-        if (strtolower($host) !== strtolower((string) self::hostOf($credentials->address))) {
+        if (strtolower($host) !== strtolower((string) UrlOrigin::hostWithPort($credentials->address))) {
             throw new SocialCredentialsRejectedException(self::OTHER_INSTANCE);
         }
         $identity = strtolower($name . '@' . $host);
@@ -55,15 +56,5 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
 
         return JsonNodeModel::of($answer->json())->string('jwt')
             ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);
-    }
-
-    private static function hostOf(?string $actorId): ?string
-    {
-        $parts = parse_url((string) $actorId);
-        if (!isset($parts['host']) || '' === $parts['host']) {
-            return null;
-        }
-
-        return isset($parts['port']) ? $parts['host'] . ':' . $parts['port'] : $parts['host'];
     }
 }
