@@ -184,10 +184,8 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 
     public function testACraftedAnswerKeepsTheFirstCommentOfARepeatedIdAndDropsOneWithoutAnId(): void
     {
-        $repeated = self::node(5, '0.9.5');
-        $repeated['comment']['content'] = 'Second';
-        $withoutId = self::node(6, '0.6');
-        unset($withoutId['comment']['id']);
+        $repeated = self::node(5, '0.9.5', ['content' => 'Second']);
+        $withoutId = self::node(6, '0.6', ['id' => null]);
         $answer = (string) json_encode(['comments' => [self::node(5, '0.5'), $repeated, $withoutId]]);
 
         $comments = $this->read($answer);
@@ -198,18 +196,15 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 
     public function testACommenterIsNamedByDisplayNameBeforeAccount(): void
     {
-        $node = self::node(5, '0.5');
-        $node['creator']['display_name'] = 'Display Name';
+        $node = self::node(5, '0.5', creator: ['display_name' => 'Display Name']);
 
         self::assertSame('Display Name', $this->read((string) json_encode(['comments' => [$node]]))[0]->author->name);
     }
 
     public function testACommenterWithoutAnAccountOrAProfileHasNoHandle(): void
     {
-        $noAccount = self::node(5, '0.5');
-        unset($noAccount['creator']['name']);
-        $noProfile = self::node(6, '0.6');
-        unset($noProfile['creator']['actor_id']);
+        $noAccount = self::node(5, '0.5', creator: ['name' => null]);
+        $noProfile = self::node(6, '0.6', creator: ['actor_id' => null]);
 
         $comments = $this->read((string) json_encode(['comments' => [$noAccount, $noProfile]]));
 
@@ -329,13 +324,18 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         $this->fetch(self::entry('https://example.org/article'));
     }
 
-    /** @return array<string, mixed> */
-    private static function node(int $id, string $path): array
+    /**
+     * @param array<string, string|int|null> $comment
+     * @param array<string, string|null>     $creator
+     *
+     * @return array<string, array<string, string|int|null>>
+     */
+    private static function node(int $id, string $path, array $comment = [], array $creator = []): array
     {
         return [
-            'comment' => ['id' => $id, 'path' => $path, 'ap_id' => 'https://lemmy.world/comment/' . $id,
+            'comment' => $comment + ['id' => $id, 'path' => $path, 'ap_id' => 'https://lemmy.world/comment/' . $id,
                 'content' => 'Text ' . $id],
-            'creator' => ['name' => 'a', 'actor_id' => 'https://lemmy.world/u/a'],
+            'creator' => $creator + ['name' => 'a', 'actor_id' => 'https://lemmy.world/u/a'],
         ];
     }
 
