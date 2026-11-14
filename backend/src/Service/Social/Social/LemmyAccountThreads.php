@@ -12,6 +12,7 @@ use App\Service\Content\Comments\Exception\CommentsThrottledException;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\LemmyThreadReader\LemmyThreadReaderInterface;
 use App\Service\Content\Comments\Model\LemmyPostModel;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use App\Service\Foundation\RateLimit\RateLimitGuard;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -45,9 +46,10 @@ final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
 
     public function threadAs(SocialAccount $account, LemmyPostModel $post): string
     {
-        $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $account->getUser());
-
         try {
+            $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $account->getUser());
+
+
             return $this->guard->actAs($account, function () use ($account, $post): string {
                 $localPostId = $this->posts->postOn($account, $post)->postId;
 
@@ -63,7 +65,8 @@ final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
                 $exception,
             );
         } catch (
-            SocialAccountNeedsReconnectException
+            RateLimitedException
+            | SocialAccountNeedsReconnectException
             | SocialCredentialsRejectedException
             | SocialPostRefusedException
             | SocialPostNotFoundException

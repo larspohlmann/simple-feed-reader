@@ -9,7 +9,6 @@ use App\Enum\SocialAccountStatus;
 use App\Service\Content\Comments\Exception\CommentsThrottledException;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\LemmyPostModel;
-use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use App\Service\Foundation\RateLimit\RateLimitGuard;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
@@ -81,6 +80,8 @@ final class LemmyAccountThreadsTest extends DbTestCase
 
         self::assertSame([self::FEDERATED_POST, self::RESOLVE, self::THREAD], $http->requestLines());
         self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[2]['headers']);
+        self::assertSame([], self::authorizationOf($http->requests[0]['headers']));
+        self::assertNotSame([], self::authorizationOf($http->requests[1]['headers']));
         self::assertSame(file_get_contents(self::FIXTURES . 'comment-list-as-account.json'), $body);
     }
 
@@ -151,7 +152,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         $this->threads($http)->threadAs($this->account, new LemmyPostModel('https://lemmy.example', 990));
     }
 
-    public function testAFetchSpendsOneUnitOfTheRepliesBudget(): void
+    public function testAnExhaustedRepliesBudgetIsUnavailableAfterOneUnitPerFetch(): void
     {
         $http = RoutedHttpClient::answering(static fn (string $method, string $url): MockResponse => new MockResponse(
             str_contains($url, '/post?') ? '{"post_view": {"post": {"id": 990}}}' : '{"comments": []}',
@@ -161,7 +162,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         for ($fetch = 0; $fetch < self::REPLIES_BUDGET; ++$fetch) {
             $threads->threadAs($this->account, $post);
         }
-        $this->expectException(RateLimitedException::class);
+        $this->expectException(CommentsUnavailableException::class);
 
         $threads->threadAs($this->account, $post);
     }
@@ -201,5 +202,18 @@ final class LemmyAccountThreadsTest extends DbTestCase
             new RateLimitGuard(new MockClock('2026-11-14 12:00:00')),
             $limiter,
         );
+    }
+
+    /**
+     * @param list<string> $headers
+     *
+     * @return list<string>
+     */
+    private static function authorizationOf(array $headers): array
+    {
+        return array_values(array_filter(
+            $headers,
+            static fn (string $header): bool => str_starts_with(mb_strtolower($header), 'authorization:'),
+        ));
     }
 }

@@ -189,6 +189,20 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         self::assertCount(\count($comments), $votes);
     }
 
+    public function testALockedPostsCommentsCannotBeRepliedTo(): void
+    {
+        $locked = (string) file_get_contents(__DIR__ . '/../../../../Fixtures/lemmy/comment-list-locked.json');
+        $this->bootWithReader(new StubLemmyThreadReader(self::account(), $locked));
+        $request = $this->requestFor(self::entry());
+
+        $comments = $this->source->read($request, $this->source->fetch($request)->body)->comments;
+
+        self::assertNotSame([], $comments);
+        foreach ($comments as $comment) {
+            self::assertFalse($comment->vote?->canReply);
+        }
+    }
+
     public function testAThreadTheAccountCannotReadFallsBackToTheFeedInstance(): void
     {
         $this->bootWithReader(new StubLemmyThreadReader(self::account(), new CommentsUnavailableException('no')));

@@ -54,7 +54,6 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
             try {
                 return CommentsAnswerModel::settled($this->threadReader->threadAs($account, $post));
             } catch (CommentsUnavailableException) {
-                return $this->anonymousThread($request, $post);
             }
         }
 

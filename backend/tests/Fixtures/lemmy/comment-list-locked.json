@@ -1,0 +1,198 @@
+{
+  "comments": [
+    {
+      "comment": {
+        "id": 26860003,
+        "path": "0.26860003",
+        "ap_id": "https://origin.example/comment/26860003",
+        "published": "2026-11-14T08:18:08.294711Z",
+        "deleted": false,
+        "removed": false,
+        "content": "Comment number 1"
+      },
+      "creator": {
+        "name": "ada",
+        "display_name": "Ada",
+        "actor_id": "https://origin.example/u/ada",
+        "avatar": "https://origin.example/pictrs/image/ada.png"
+      },
+      "counts": {
+        "score": 3,
+        "child_count": 0
+      },
+      "post": {
+        "locked": true
+      },
+      "my_vote": 1
+    },
+    {
+      "comment": {
+        "id": 26858771,
+        "path": "0.26858771",
+        "ap_id": "https://feddit.example/comment/26858771",
+        "published": "2026-11-14T05:49:37.239284Z",
+        "deleted": false,
+        "removed": true,
+        "content": "Comment number 2"
+      },
+      "creator": {
+        "name": "bob",
+        "display_name": null,
+        "actor_id": "https://feddit.example/u/bob",
+        "avatar": null
+      },
+      "counts": {
+        "score": 34,
+        "child_count": 2
+      },
+      "post": {
+        "locked": true
+      },
+      "my_vote": -1
+    },
+    {
+      "comment": {
+        "id": 26858564,
+        "path": "0.26858564",
+        "ap_id": "https://lemmy.example/comment/26858564",
+        "published": "2026-11-14T05:19:44.176034Z",
+        "deleted": false,
+        "removed": false,
+        "content": "Comment number 3"
+      },
+      "creator": {
+        "name": "cleo",
+        "display_name": "Cleo",
+        "actor_id": "https://lemmy.example/u/cleo",
+        "avatar": "https://lemmy.example/pictrs/image/cleo.png"
+      },
+      "counts": {
+        "score": 30,
+        "child_count": 1
+      },
+      "post": {
+        "locked": true
+      }
+    },
+    {
+      "comment": {
+        "id": 26858462,
+        "path": "0.26858462",
+        "ap_id": "https://origin.example/comment/26858462",
+        "published": "2026-11-14T05:05:19.164898Z",
+        "deleted": false,
+        "removed": false,
+        "content": "Comment number 4"
+      },
+      "creator": {
+        "name": "ada",
+        "display_name": "Ada",
+        "actor_id": "https://origin.example/u/ada",
+        "avatar": null
+      },
+      "counts": {
+        "score": 37,
+        "child_count": 2
+      },
+      "post": {
+        "locked": true
+      }
+    },
+    {
+      "comment": {
+        "id": 26860053,
+        "path": "0.26858462.26860053",
+        "ap_id": "https://feddit.example/comment/26860053",
+        "published": "2026-11-14T08:25:02.417542Z",
+        "deleted": false,
+        "removed": false,
+        "content": "Comment number 5"
+      },
+      "creator": {
+        "name": "bob",
+        "display_name": null,
+        "actor_id": "https://feddit.example/u/bob",
+        "avatar": "https://feddit.example/pictrs/image/bob.png"
+      },
+      "counts": {
+        "score": 1,
+        "child_count": 0
+      },
+      "post": {
+        "locked": true
+      }
+    },
+    {
+      "comment": {
+        "id": 26858813,
+        "path": "0.26858564.26858813",
+        "ap_id": "https://lemmy.example/comment/26858813",
+        "published": "2026-11-14T05:56:50.238746Z",
+        "deleted": false,
+        "removed": false,
+        "content": "Comment number 6"
+      },
+      "creator": {
+        "name": "cleo",
+        "display_name": "Cleo",
+        "actor_id": "https://lemmy.example/u/cleo",
+        "avatar": null
+      },
+      "counts": {
+        "score": 10,
+        "child_count": 0
+      },
+      "post": {
+        "locked": true
+      }
+    },
+    {
+      "comment": {
+        "id": 26859426,
+        "path": "0.26858771.26859426",
+        "ap_id": "https://origin.example/comment/26859426",
+        "published": "2026-11-14T07:12:58.279045Z",
+        "deleted": false,
+        "removed": false,
+        "content": "Comment number 7"
+      },
+      "creator": {
+        "name": "ada",
+        "display_name": "Ada",
+        "actor_id": "https://origin.example/u/ada",
+        "avatar": "https://origin.example/pictrs/image/ada.png"
+      },
+      "counts": {
+        "score": 4,
+        "child_count": 1
+      },
+      "post": {
+        "locked": true
+      }
+    },
+    {
+      "comment": {
+        "id": 26859960,
+        "path": "0.26858771.26859426.26859960",
+        "ap_id": "https://feddit.example/comment/26859960",
+        "published": "2026-11-14T08:11:43.535268Z",
+        "deleted": false,
+        "removed": false,
+        "content": "Comment number 8"
+      },
+      "creator": {
+        "name": "bob",
+        "display_name": null,
+        "actor_id": "https://feddit.example/u/bob",
+        "avatar": null
+      },
+      "counts": {
+        "score": 1,
+        "child_count": 0
+      },
+      "post": {
+        "locked": true
+      }
+    }
+  ]
+}
