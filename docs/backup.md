@@ -316,6 +316,7 @@ article mark, each included social network and each social network kept out of F
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
 | `discussion.score` | A Lemmy post's score, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
 | `discussion.commentCount` | A Lemmy post's comment count, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
+| `text.language` | The language a social timeline entry was guessed to be written in, for Trending's stemming. A timeline feed is never in the file, and every other entry stores none. |
 
 **On a link card.**
 
