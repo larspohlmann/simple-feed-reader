@@ -15,7 +15,6 @@ final readonly class HeadlineEquivalents
         'UN' => 'onu', 'UNO' => 'onu', 'ONU' => 'onu',
         'UK' => 'britai', 'Großbritannien' => 'britai', 'Großbritanniens' => 'britai',
         'WM' => 'weltme',
-        'U-Haft' => 'uhaft', 'Untersuchungshaft' => 'uhaft',
         'Schweiz' => 'switze', 'Schweizer' => 'switze',
         'Austria' => 'osterr', 'Austrian' => 'osterr',
         'Niederlande' => 'nether', 'Niederlanden' => 'nether',

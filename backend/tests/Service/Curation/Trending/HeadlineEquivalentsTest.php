@@ -85,7 +85,7 @@ final class HeadlineEquivalentsTest extends TestCase
     {
         self::assertContains('weltme', $this->equivalents->stemsOf('Eishockey-WM: DEB-Frauen scheitern'));
         self::assertContains('eunion', $this->equivalents->stemsOf('Die EU-Kommission legt nach'));
-        self::assertContains('uhaft', $this->equivalents->stemsOf('Der U-Haft-Antrag scheitert'));
+        self::assertContains('onu', $this->equivalents->stemsOf('Rede von UN-Generalsekretär Guterres'));
     }
 
     public function testAnAbbreviationInsideALongerWordDoesNotFire(): void
@@ -101,11 +101,14 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testALongFormWhoseStemCollidesIsAnExactWord(): void
     {
-        $stems = $this->equivalents->stemsOf('Wir unterstützen die Untersuchungshaft');
+        self::assertContains('britai', $this->equivalents->stemsOf('Großbritannien verschärft Regeln'));
+        self::assertSame(['grossb', 'hambur'], $this->equivalents->stemsOf('Großbrand Hamburg'));
+    }
 
-        self::assertContains('uhaft', $stems);
-        self::assertContains('unters', $stems);
-        self::assertNotContains('uhaft', $this->equivalents->stemsOf('Wir unterstützen'));
+    public function testAProceduralTermThatNamesNoStoryIsNotMapped(): void
+    {
+        self::assertNotContains('uhaft', $this->equivalents->stemsOf('Der Verdächtige sitzt in Untersuchungshaft'));
+        self::assertNotContains('uhaft', $this->equivalents->stemsOf('Richter verhängt U-Haft'));
     }
 
     public function testUnlistedWordsAreStemmedAsBefore(): void
