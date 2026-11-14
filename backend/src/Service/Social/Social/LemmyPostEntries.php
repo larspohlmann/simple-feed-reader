@@ -21,7 +21,6 @@ use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
 
-/** A Lemmy post listing as entries in the shape of the instance's RSS posts: each a thread to vote and comment on. */
 final readonly class LemmyPostEntries
 {
     public function __construct(private MarkdownHtml $markdown)

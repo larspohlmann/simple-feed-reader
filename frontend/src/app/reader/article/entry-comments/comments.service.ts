@@ -76,7 +76,6 @@ export class CommentsService {
     if (post.canRepost) this.toggle(entryId, post, 'isReposted');
   }
 
-  /** Optimistic vote on one Lemmy comment, its score stepping; dropped while a vote on the same comment is on the wire. */
   vote(entryId: number, comment: EntryCommentDto, to: VoteValue): void {
     if (comment.vote === null) return;
     const { address, myVote: from } = comment.vote;

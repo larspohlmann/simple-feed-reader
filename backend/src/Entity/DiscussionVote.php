@@ -10,7 +10,7 @@ use App\Repository\DiscussionVoteRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** A user's vote on a discussion post at its origin (#2218), cast through a connected account. */
+/** A user's vote on a discussion post at its origin, cast through a connected account. */
 #[ORM\Entity(repositoryClass: DiscussionVoteRepository::class)]
 #[ORM\Table(name: 'discussion_vote')]
 #[ORM\Index(name: 'idx_discussion_vote_entry', columns: ['entry_id'])]

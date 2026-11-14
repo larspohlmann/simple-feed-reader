@@ -31,7 +31,7 @@ final class SourceFormat
     /** A Mastodon home or list timeline, read with the account's token (#1599). */
     public const string MASTODON_API = 'mastodon-api';
 
-    /** A Lemmy Subscribed, Local or All timeline, read with the account's session token (#2218). */
+    /** A Lemmy Subscribed, Local or All timeline, read with the account's session token */
     public const string LEMMY_API = 'lemmy-api';
 
     /** The formats of private feeds: read through an account, never fetched by URL, never exported. */

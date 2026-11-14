@@ -14,7 +14,6 @@ use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\LemmySessionModel;
 
-/** Calls an account's own Lemmy instance with its session token. */
 final readonly class LemmyAccountApi
 {
     public function __construct(

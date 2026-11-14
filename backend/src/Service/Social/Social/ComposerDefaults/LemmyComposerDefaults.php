@@ -10,7 +10,6 @@ use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/** Lemmy's composer holds Markdown up to the comment limit and mentions nobody. */
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
 {

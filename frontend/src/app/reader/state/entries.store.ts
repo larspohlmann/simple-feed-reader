@@ -226,7 +226,6 @@ export class EntriesStore {
     });
   }
 
-  /** Optimistic vote on a Lemmy post, its score stepped with it; dropped unless the account can vote and no vote is on the wire. */
   setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
     const from = entry.myVote;
     if (from === null || entry.score === null || this.inFlight.onTheWire(entry.id, 'myVote'))
