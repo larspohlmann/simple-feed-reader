@@ -52,7 +52,10 @@ export class EntryStateActions implements EntryActionHandler {
     });
     effect(() => {
       if (this.openVotableId() === null) return;
-      untracked(() => this.refreshOpenVote());
+      untracked(() => {
+        const entry = this.routeState.openEntry();
+        if (entry !== null) this.entries.refreshVote(entry);
+      });
     });
     inject(RemovedPosts)
       .removed$.pipe(takeUntilDestroyed())
@@ -77,11 +80,6 @@ export class EntryStateActions implements EntryActionHandler {
 
   vote(entry: EntryDto, to: VoteValue): void {
     this.entries.setVote(entry, to, (problem) => this.toast.showProblem(problem));
-  }
-
-  private refreshOpenVote(): void {
-    const entry = this.routeState.openEntry();
-    if (entry !== null) this.entries.refreshVote(entry);
   }
 
   keep(entry: EntryDto): void {
