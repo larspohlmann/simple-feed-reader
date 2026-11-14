@@ -345,6 +345,63 @@ final class ImportCandidatesTest extends DbTestCase
         );
     }
 
+    public function testALemmyAccountOffersItsThreeTimelines(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::lemmyOf($this->user));
+        $network = new StubSocialCandidates(new NetworkCandidatesModel([], [], [], false));
+
+        $candidates = $this->importCandidates($network)->forAccount($account);
+
+        self::assertSame(
+            ['home', 'local', 'all'],
+            array_map(
+                static fn (CollectionCandidateModel $list): string => $list->privateFeed->kind->value,
+                $candidates->lists,
+            ),
+        );
+    }
+
+    public function testACommunityAlreadySubscribedByUrlIsSubscribed(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::lemmyOf($this->user));
+        $subscription = $this->subscribe('https://Feddit.Example/feeds/c/rss.xml?sort=New');
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [
+                self::community('rss', 'feddit.example'),
+                self::community('linux', 'lemmy.example'),
+            ],
+            [],
+            [],
+            false,
+        ));
+
+        $follows = $this->importCandidates($network)->forAccount($account)->follows;
+
+        self::assertSame(
+            [['!linux@lemmy.example', 'new', null], ['!rss@feddit.example', 'subscribed', $subscription->requireId()]],
+            self::summary($follows),
+        );
+    }
+
+    private static function community(string $name, string $host): FollowedAccountModel
+    {
+        return new FollowedAccountModel(
+            $name . '@' . $host,
+            '!' . $name . '@' . $host,
+            $name,
+            'https://' . $host . '/feeds/c/' . $name . '.xml',
+            null,
+        );
+    }
+
+    private function storedAccount(SocialAccount $account): SocialAccount
+    {
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+
+        return $account;
+    }
+
     public function testABlueskyAccountIsNotOfferedTrending(): void
     {
         $network = new StubSocialCandidates(new NetworkCandidatesModel([], [], [], false));

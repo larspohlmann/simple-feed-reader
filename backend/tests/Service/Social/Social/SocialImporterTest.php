@@ -304,6 +304,24 @@ final class SocialImporterTest extends DbTestCase
         self::assertSame('News', $feed->getTitle());
     }
 
+    public function testImportingACommunitySubscribesItsRssFeed(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::lemmyOf($this->user));
+
+        $result = $this->importer()->import($account, new SocialImportModel(
+            [new SocialImportFeedModel('rss@feddit.example', 'RSS')],
+            [],
+            [PrivateFeedModel::timeline(SocialFeedKind::Local)],
+        ));
+
+        self::assertSame(2, $result->imported);
+        $community = $this->feedAt('https://feddit.example/feeds/c/rss.xml');
+        self::assertSame(SocialNetwork::Lemmy, $community?->getNetwork());
+        self::assertSame(SourceFormat::XML, $community->getSourceFormat());
+        $timeline = $this->feedAt(sprintf('social:lemmy:%d:local', $account->requireId()));
+        self::assertSame(SourceFormat::LEMMY_API, $timeline?->getSourceFormat());
+    }
+
     public function testAnAlreadyAddedCollectionCountsAsAlreadySubscribed(): void
     {
         $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
