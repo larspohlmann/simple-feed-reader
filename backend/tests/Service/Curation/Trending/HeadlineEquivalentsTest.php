@@ -216,6 +216,16 @@ final class HeadlineEquivalentsTest extends TestCase
         }
     }
 
+    public function testEveryStemKeyIsItsOwnStemInItsLanguage(): void
+    {
+        $stemmer = TrendingWiring::stemmer();
+        foreach (FeedLanguage::cases() as $language) {
+            foreach (array_keys(self::stemsByLanguage()[$language->value]) as $stem) {
+                self::assertSame($stem, $stemmer->stem($stem, $language), $language->value . ' ' . $stem);
+            }
+        }
+    }
+
     #[DataProvider('spellingsByLanguage')]
     public function testEachLanguagesSpellingOfAPlaceSharesItsCanonical(
         FeedLanguage $language,
