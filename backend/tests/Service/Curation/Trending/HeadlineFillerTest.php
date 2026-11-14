@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Trending;
 
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Support\HeadlineStems;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class HeadlineFillerTest extends TestCase
@@ -55,5 +57,39 @@ final class HeadlineFillerTest extends TestCase
     {
         self::assertEqualsWithDelta(6.6214, $this->filler->rarityWeight(1, 1_000), 0.0001);
         self::assertEqualsWithDelta(5.7044, $this->filler->rarityWeight(9, 3_000), 0.0001);
+    }
+
+    #[DataProvider('frenchAndSpanishFunctionWords')]
+    public function testFrenchAndSpanishFunctionWordsAreSeeds(string $stem): void
+    {
+        self::assertTrue($this->filler->isSeed($stem));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function frenchAndSpanishFunctionWords(): iterable
+    {
+        $french = 'les pour que dans une sur avec est pas qui aux par fois';
+        $spanish = 'del los las para una por mas sus entre';
+        foreach (explode(' ', $french . ' ' . $spanish) as $word) {
+            yield $word => [$word];
+        }
+    }
+
+    public function testAWordThatCarriesMeaningInAnotherLanguageIsNotASeed(): void
+    {
+        $meaningful = ['son', 'sin', 'fin', 'plus', 'con', 'han', 'sans'];
+        $names = ['contra', 'contre', 'durant', 'esa', 'ces', 'como'];
+        foreach ([...$meaningful, ...$names] as $word) {
+            self::assertFalse($this->filler->isSeed($word), $word);
+        }
+    }
+
+    public function testEverySeedIsInStemForm(): void
+    {
+        $seeds = new \ReflectionClassConstant(HeadlineFiller::class, 'SEED_STEMS')->getValue();
+        self::assertIsArray($seeds);
+        foreach (array_keys($seeds) as $seed) {
+            self::assertSame([(string) $seed], HeadlineStems::ofWords(HeadlineStems::words((string) $seed)));
+        }
     }
 }

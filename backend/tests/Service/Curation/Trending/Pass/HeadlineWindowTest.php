@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending\Pass;
 
+use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use PHPUnit\Framework\TestCase;
@@ -18,7 +19,7 @@ final class HeadlineWindowTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->window = new HeadlineWindow(new HeadlineFiller());
+        $this->window = new HeadlineWindow(new HeadlineFiller(), new HeadlineEquivalents());
     }
 
     public function testSeedWordsAreNeverWeighed(): void
@@ -45,6 +46,25 @@ final class HeadlineWindowTest extends TestCase
         self::assertSame([1], array_keys($shared));
         self::assertEqualsWithDelta(1.5 * self::TWICE, $shared[1], 0.0001);
         self::assertSame([], $this->window->sharedWeightsWithEarlier(1));
+    }
+
+    public function testEquivalentSpellingsShareWeight(): void
+    {
+        $this->window->add(1, 10, 'Zelensky warns', '');
+        $this->window->add(2, 20, 'Selenskyj mahnt', '');
+
+        $shared = $this->window->sharedWeightsWithEarlier(2);
+
+        self::assertSame([1], array_keys($shared));
+        self::assertEqualsWithDelta(self::TWICE, $shared[1], 0.0001);
+    }
+
+    public function testAnEquivalentInTheBodyCountsAtBodyWeight(): void
+    {
+        $this->window->add(1, 10, 'Vereinte Nationen tagen in Genf', '');
+        $this->window->add(2, 20, 'Genf empfängt Gäste', 'Die UN beraten');
+
+        self::assertEqualsWithDelta(1.5 * self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
     }
 
     public function testAStemInTheEarlierBodyIsSharedAtHalfWhereverTheLaterEntryHoldsIt(): void

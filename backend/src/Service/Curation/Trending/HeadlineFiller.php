@@ -35,6 +35,23 @@ final readonly class HeadlineFiller
         'bis' => true, 'unter' => true, 'gegen' => true, 'durch' => true, 'ins' => true, 'vom' => true,
         'seit' => true, 'beim' => true, 'ohne' => true, 'sein' => true, 'seine' => true, 'diese' => true,
         'dieser' => true, 'dieses' => true, 'kann' => true, 'soll' => true, 'alle' => true,
+        'les' => true, 'une' => true, 'aux' => true, 'dans' => true, 'sur' => true, 'sous' => true, 'pour' => true,
+        'par' => true, 'avec' => true, 'que' => true, 'qui' => true, 'quoi' => true, 'dont' => true,
+        'est' => true, 'sont' => true, 'etre' => true, 'ont' => true, 'pas' => true, 'cet' => true,
+        'cette' => true, 'ses' => true, 'leur' => true, 'leurs' => true, 'elle' => true,
+        'ils' => true, 'elles' => true, 'nous' => true, 'vous' => true, 'mais' => true, 'donc' => true,
+        'apres' => true, 'avant' => true, 'entre' => true, 'chez' => true, 'vers' => true, 'selon' => true,
+        'depuis' => true, 'lors' => true, 'tres' => true, 'aussi' => true, 'deja' => true,
+        'encore' => true, 'comme' => true, 'tout' => true, 'tous' => true, 'toute' => true, 'fait' => true,
+        'fois' => true,
+        'los' => true, 'las' => true, 'una' => true, 'unos' => true, 'unas' => true, 'del' => true, 'por' => true,
+        'para' => true, 'mas' => true, 'sus' => true, 'pero' => true,
+        'sobre' => true, 'hasta' => true, 'desde' => true, 'tras' => true, 'ante' => true, 'este' => true,
+        'esta' => true, 'estos' => true, 'estas' => true, 'ese' => true, 'eso' => true,
+        'esos' => true, 'esas' => true, 'muy' => true, 'tambie' => true, 'fue' => true, 'ser' => true,
+        'hay' => true, 'sido' => true, 'segun' => true, 'cuando' => true, 'donde' => true,
+        'porque' => true, 'tiene' => true, 'todo' => true, 'todos' => true, 'toda' => true, 'otro' => true,
+        'otra' => true,
     ];
 
     public function isSeed(string $stem): bool
