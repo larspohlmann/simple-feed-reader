@@ -134,3 +134,10 @@ Measured on the dev windows (day ≈ 4,700 entries, week ≈ 28,400):
   `ukrain` at 2.6 % (day). Stems that would catch unrelated words became exact words instead
   (*Schweiz* — `schwei` holds *schweigen*; *Austria* — `austri` holds *Austritt*; *Großbritannien* — `grossb`
   holds *Großbrand*; *Niederlande* — `nieder` holds *Niederlage*; *Francia* — `franci` holds *Francisco*).
+- **After the final review:** the all-caps guard applies only to abbreviations that are ordinary words in a
+  shouted headline (*UN* — French *un*, *UNO* — Spanish *uno*); every other exact word fires next to capitals
+  (*EU AI Act*, *FIFA WM*, *Großbritanniens EU-Austritt*). German genitive/dative phrases and *-s* genitives
+  were added (*der Europäischen Union*, *den Vereinten Nationen*, *Polens*, *des Kremls*). Seeds that swallow
+  names or meaningful prefixes were dropped (*contra*, *contre*, *durant*, *esa*, *ces*, *como*).
+- **Known risk:** Mexican Spanish writes *EU* for Estados Unidos; with Mexican feeds subscribed, *EU* would
+  join their US stories to European Union stories.
