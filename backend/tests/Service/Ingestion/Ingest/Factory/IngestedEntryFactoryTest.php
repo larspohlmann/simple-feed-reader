@@ -289,10 +289,10 @@ final class IngestedEntryFactoryTest extends TestCase
         $parsed = new ParsedEntryModel(
             'g-de',
             null,
-            Headline::fromFeed('Die Bundesregierung kündigt neue Maßnahmen an'),
+            Headline::derived('…'),
+            null,
             null,
             '<p>Der Kanzler sagte am Montag, dass die Regierung weitere Hilfen für die Menschen vorbereitet.</p>',
-            null,
             null,
         );
 

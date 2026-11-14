@@ -74,7 +74,7 @@ final readonly class IngestedEntryFactory
             return;
         }
 
-        $text = $parsed->headline->text . "\n" . (EntryPlainText::of($parsed->summary) ?? '');
+        $text = $parsed->headline->text . "\n" . (EntryPlainText::of($parsed->summary ?? $parsed->contentHtml) ?? '');
         $entry->recordText($entry->getText()->withLanguage($this->languageGuess->bestFor($text)));
     }
 
