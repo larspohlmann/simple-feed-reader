@@ -51,7 +51,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
 
     private function gzipOfFixture(string $directory, string $file): string
     {
-        $path = __DIR__ . '/../../Fixtures/backup/' . $directory . '/' . $file;
+        $path = __DIR__ . '/../../../Fixtures/backup/' . $directory . '/' . $file;
         $gzip = gzencode((string) file_get_contents($path));
         self::assertIsString($gzip);
 

@@ -16,7 +16,7 @@ final class TagesschauCarouselRecognizerTest extends TestCase
 
     public function testDecodesTheDataVGallery(): void
     {
-        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/tagesschau-carousel.html');
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/Slideshow/tagesschau-carousel.html');
         self::assertIsString($html);
         $document = $this->document($html);
 

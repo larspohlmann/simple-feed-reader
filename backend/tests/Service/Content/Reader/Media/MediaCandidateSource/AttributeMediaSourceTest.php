@@ -154,7 +154,7 @@ final class AttributeMediaSourceTest extends TestCase
 
     public function testFindsTheEpisodeInTheCapturedDeutschlandradioPage(): void
     {
-        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/deutschlandradio-audio.html');
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/deutschlandradio-audio.html');
         self::assertIsString($html);
 
         $found = $this->find($html, 'https://www.deutschlandfunkkultur.de/bildung-100.html');
@@ -167,7 +167,7 @@ final class AttributeMediaSourceTest extends TestCase
 
     public function testFindsTheVideoInTheCapturedArdPage(): void
     {
-        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/ard-video.html');
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/ard-video.html');
         self::assertIsString($html);
 
         $found = $this->find($html, 'https://www.tagesschau.de/ausland/beispiel-100.html');

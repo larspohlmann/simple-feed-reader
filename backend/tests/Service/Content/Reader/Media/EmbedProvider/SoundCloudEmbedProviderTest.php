@@ -63,7 +63,7 @@ final class SoundCloudEmbedProviderTest extends TestCase
     /** The 5 Magazine widget stores the id as a double-encoded `soundcloud%3Atracks%3A` URN, not a bare id. */
     public function testAcceptsTheRealFiveMagazineWidgetSrc(): void
     {
-        $fixture = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/soundcloud-page.html');
+        $fixture = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/soundcloud-page.html');
         self::assertNotFalse($fixture);
         $found = preg_match('#src="(https://w\.soundcloud\.com/player/[^"]*)"#', $fixture, $matches);
         self::assertSame(1, $found);

@@ -80,7 +80,7 @@ trait BuildsFeedDiscovery
 
     private function rss2BasicXml(): string
     {
-        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         return $xml;

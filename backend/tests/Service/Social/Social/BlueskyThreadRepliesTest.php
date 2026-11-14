@@ -61,7 +61,7 @@ final class BlueskyThreadRepliesTest extends TestCase
 
     public function testASelfReplyRendersLikeItsThreadComment(): void
     {
-        $contents = file_get_contents(__DIR__ . '/../../Fixtures/Bluesky/self-thread-replies.json');
+        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/Bluesky/self-thread-replies.json');
         Assert::assertIsString($contents);
         $thread = JsonNodeModel::of(json_decode($contents, true))->node('thread');
         $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
@@ -301,7 +301,7 @@ final class BlueskyThreadRepliesTest extends TestCase
 
     private static function fixture(): string
     {
-        $contents = file_get_contents(__DIR__ . '/../../Fixtures/social/bluesky-post-thread.json');
+        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/social/bluesky-post-thread.json');
         Assert::assertIsString($contents);
 
         return $contents;

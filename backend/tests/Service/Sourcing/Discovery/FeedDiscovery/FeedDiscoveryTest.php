@@ -23,7 +23,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
     public function testDirectFeedUrlReturnsCanonicalFinalUrl(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
+        $xml = file_get_contents(__DIR__ . '/../../../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         $fetcher = $this->fetcherReturning('https://example.com/feed', 'https://example.com/feed.xml', $xml);
@@ -214,7 +214,7 @@ final class FeedDiscoveryTest extends KernelTestCase
     /** A real feed under a conventional path beats a feed synthesized from the page. */
     public function testAScrapablePageStillPrefersAConventionalFeed(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
+        $xml = file_get_contents(__DIR__ . '/../../../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         $fetcher = $this->fetcherReturning(
@@ -277,7 +277,7 @@ final class FeedDiscoveryTest extends KernelTestCase
     /** The site refuses its own page but serves the feed under a conventional path, so the subscribe completes. */
     public function testARefusedPageSubscribesTheFeedFoundUnderAConventionalPath(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
+        $xml = file_get_contents(__DIR__ . '/../../../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         $fetcher = $this->fetcher();
@@ -300,7 +300,7 @@ final class FeedDiscoveryTest extends KernelTestCase
     /** A 404 is an answer from a live site, so the conventional paths are worth asking for. */
     public function testAMissingPageSubscribesTheFeedFoundUnderAConventionalPath(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
+        $xml = file_get_contents(__DIR__ . '/../../../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         $fetcher = $this->fetcher();

@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class EmbedDetailsTest extends TestCase
 {
-    private const string FIXTURES = __DIR__ . '/../../Fixtures/Chapter/';
+    private const string FIXTURES = __DIR__ . '/../../../Fixtures/Chapter/';
     private const string TRACKLIST = "0:00 Intro\n3:10 Track two\n7:45 Track three";
 
     public function testStampsInADescriptionBecomeChapters(): void

@@ -32,7 +32,7 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 {
     use BuildsCommentsSources;
 
-    private const string FIXTURE = __DIR__ . '/../../../Fixtures/lemmy/comment-list.json';
+    private const string FIXTURE = __DIR__ . '/../../../../Fixtures/lemmy/comment-list.json';
     private const string POST = 'https://lemmy.world/post/54385737';
     private const string COMMENTS_API =
         'https://lemmy.world/api/v3/comment/list?post_id=54385737&sort=Hot&type_=All&max_depth=8&limit=50';

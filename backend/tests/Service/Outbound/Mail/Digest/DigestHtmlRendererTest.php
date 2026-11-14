@@ -23,7 +23,7 @@ final class DigestHtmlRendererTest extends TestCase
     {
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
-        $translationsDirectory = \dirname(__DIR__, 4) . '/translations';
+        $translationsDirectory = \dirname(__DIR__, 5) . '/translations';
         $translator->addResource('yaml', "{$translationsDirectory}/emails.en.yaml", 'en', 'emails');
         $translator->addResource('yaml', "{$translationsDirectory}/emails.de.yaml", 'de', 'emails');
 

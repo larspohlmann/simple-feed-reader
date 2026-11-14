@@ -31,7 +31,7 @@ final class OpmlImporterTest extends DbTestCase
 
     private function fixture(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');
+        return (string) file_get_contents(__DIR__ . '/../../../Fixtures/opml/subscriptions.opml');
     }
 
     /** Wraps the given <body> inner markup in a minimal OPML 2.0 document. */

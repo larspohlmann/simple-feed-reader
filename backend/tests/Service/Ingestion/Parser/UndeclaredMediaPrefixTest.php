@@ -11,7 +11,7 @@ final class UndeclaredMediaPrefixTest extends TestCase
 {
     public function testAnUndeclaredMediaContentOriginalWinsOverTheBodyThumbnail(): void
     {
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/feeds/smarticular-undeclared-media.xml');
+        $xml = (string) file_get_contents(__DIR__ . '/../../../Fixtures/feeds/smarticular-undeclared-media.xml');
         $feed = FeedFormatParsers::feed($xml);
 
         self::assertSame(

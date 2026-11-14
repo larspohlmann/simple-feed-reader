@@ -279,7 +279,7 @@ final class MastodonContextRepliesTest extends TestCase
 
     private static function fixture(): string
     {
-        $contents = file_get_contents(__DIR__ . '/../../Fixtures/social/mastodon-context.json');
+        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/social/mastodon-context.json');
         Assert::assertIsString($contents);
 
         return $contents;

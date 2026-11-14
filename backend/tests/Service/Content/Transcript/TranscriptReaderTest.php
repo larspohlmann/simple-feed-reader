@@ -48,7 +48,7 @@ final class TranscriptReaderTest extends TestCase
 
     public function testTheChangelogFixtureReadsAsHtml(): void
     {
-        $body = (string) file_get_contents(__DIR__ . '/../../Fixtures/Transcript/changelog.html');
+        $body = (string) file_get_contents(__DIR__ . '/../../../Fixtures/Transcript/changelog.html');
 
         $paragraphs = $this->reader()->read($body, TranscriptFormat::Html)->paragraphs;
 
@@ -63,7 +63,7 @@ final class TranscriptReaderTest extends TestCase
 
     public function testTheDarknetDiariesFixtureMergesIntoFewParagraphsWithTheirSpeakers(): void
     {
-        $body = (string) file_get_contents(__DIR__ . '/../../Fixtures/Transcript/darknet-diaries.vtt');
+        $body = (string) file_get_contents(__DIR__ . '/../../../Fixtures/Transcript/darknet-diaries.vtt');
 
         $paragraphs = $this->reader()->read($body, TranscriptFormat::Vtt)->paragraphs;
 

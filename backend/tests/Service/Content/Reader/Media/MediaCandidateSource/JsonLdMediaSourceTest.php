@@ -104,7 +104,7 @@ final class JsonLdMediaSourceTest extends TestCase
 
     public function testFindsTheCompanionVideoInTheCapturedHeisePage(): void
     {
-        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/heise-video.html');
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/heise-video.html');
         self::assertIsString($html);
 
         $found = $this->find($html, 'https://www.heise.de/news/x.html');

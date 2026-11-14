@@ -137,7 +137,7 @@ final class OidcBoundaryTest extends TestCase
         self::assertIsString($file);
 
         // src/Service/Identity/OAuth/Oidc/Model/IdTokenModel.php -> src/
-        $src = \dirname($file, 5);
+        $src = \dirname($file, 6);
         self::assertSame('src', basename($src));
 
         $paths = [];

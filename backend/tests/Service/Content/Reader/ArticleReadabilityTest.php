@@ -23,7 +23,7 @@ final class ArticleReadabilityTest extends TestCase
         $html = str_replace(
             '</article>',
             $this->relatedTeaserGrid() . '</article>',
-            (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-block-components.html'),
+            (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-block-components.html'),
         );
         $normalizer = new FetchedPageNormalizer([]);
         $readability = new ArticleReadability(

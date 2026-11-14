@@ -48,7 +48,7 @@ final class DigestMailerTest extends TestCase
 
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
-        $translationsDirectory = \dirname(__DIR__, 5) . '/translations';
+        $translationsDirectory = \dirname(__DIR__, 6) . '/translations';
         $translator->addResource('yaml', "{$translationsDirectory}/emails.en.yaml", 'en', 'emails');
         $translator->addResource('yaml', "{$translationsDirectory}/emails.de.yaml", 'de', 'emails');
         $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
@@ -66,7 +66,7 @@ final class DigestMailerTest extends TestCase
                 new MockClock('2026-08-30T12:00:00Z'),
             ),
             $links,
-            new DigestBrandLogo(\dirname(__DIR__, 5)),
+            new DigestBrandLogo(\dirname(__DIR__, 6)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
         );
 

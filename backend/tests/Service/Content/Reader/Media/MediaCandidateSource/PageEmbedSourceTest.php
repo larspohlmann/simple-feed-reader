@@ -83,7 +83,7 @@ final class PageEmbedSourceTest extends TestCase
 
     public function testRecoversTheYouTubeEmbedFromTheHeiseFixture(): void
     {
-        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/heise-video.html');
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/heise-video.html');
         self::assertIsString($html);
 
         $pageUrl = 'https://www.heise.de/hintergrund/Was-ich-ueber-lokale-KI-gelernt-habe.html';

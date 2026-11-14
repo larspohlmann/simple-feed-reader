@@ -23,7 +23,7 @@ final class CatalogDocumentTest extends TestCase
 
     private function shippedOpml(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../../../resources/catalog/catalog.opml');
+        return (string) file_get_contents(__DIR__ . '/../../../../resources/catalog/catalog.opml');
     }
 
     /** @param list<string> $feedOutlines */

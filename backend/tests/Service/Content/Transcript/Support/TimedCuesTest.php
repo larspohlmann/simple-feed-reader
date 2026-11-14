@@ -156,7 +156,7 @@ final class TimedCuesTest extends TestCase
     public function testTheRealFixturesYieldTimedCues(): void
     {
         foreach (['logbuch.vtt', 'darknet-diaries.vtt', 'lage-der-nation.vtt', 'sample.srt'] as $fixture) {
-            $cues = TimedCues::of((string) file_get_contents(__DIR__ . '/../../../Fixtures/Transcript/' . $fixture));
+            $cues = TimedCues::of((string) file_get_contents(__DIR__ . '/../../../../Fixtures/Transcript/' . $fixture));
 
             self::assertNotSame([], $cues, $fixture);
             self::assertNotNull($cues[0]->startSeconds, $fixture);

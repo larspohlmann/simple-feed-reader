@@ -67,7 +67,7 @@ final class MastodonSelfThreadFoldTest extends DbTestCase
 
     private static function fixture(): string
     {
-        $contents = file_get_contents(__DIR__ . '/../../Fixtures/social/mastodon-self-thread-context.json');
+        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/social/mastodon-self-thread-context.json');
         Assert::assertIsString($contents);
 
         return $contents;

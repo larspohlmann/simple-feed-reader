@@ -485,7 +485,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
      */
     public function testEveryDroppedThingAppearsInTheUserFacingDoc(): void
     {
-        $documentation = (string) file_get_contents(__DIR__ . '/../../../../../docs/backup.md');
+        $documentation = (string) file_get_contents(__DIR__ . '/../../../../../../docs/backup.md');
 
         $this->assertEveryEntityIsMentioned(self::INSTANCE_SCOPED, $documentation, self::SECTION_INSTANCE_SCOPED);
         $this->assertEveryEntityIsMentioned(

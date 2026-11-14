@@ -47,7 +47,7 @@ final class PageMediaScannerWiringTest extends KernelTestCase
     /** @return iterable<string, array{string}> */
     public static function mediaFixtureProvider(): iterable
     {
-        foreach (glob(__DIR__ . '/../../../Fixtures/reader/media/*.html') ?: [] as $path) {
+        foreach (glob(__DIR__ . '/../../../../Fixtures/reader/media/*.html') ?: [] as $path) {
             yield basename($path) => [$path];
         }
     }

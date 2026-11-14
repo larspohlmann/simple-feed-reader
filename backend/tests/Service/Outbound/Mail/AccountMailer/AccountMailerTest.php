@@ -39,7 +39,7 @@ final class AccountMailerTest extends TestCase
         // localised bodies rather than a fixture that could drift from them.
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
-        $translationsDirectory = \dirname(__DIR__, 4) . '/translations';
+        $translationsDirectory = \dirname(__DIR__, 5) . '/translations';
         foreach (SupportedLocale::ALL as $locale) {
             $translator->addResource('yaml', "{$translationsDirectory}/emails.{$locale}.yaml", $locale, 'emails');
         }

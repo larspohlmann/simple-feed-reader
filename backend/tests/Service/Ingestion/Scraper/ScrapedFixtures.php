@@ -8,6 +8,6 @@ trait ScrapedFixtures
 {
     private function scrapedFixture(string $name): string
     {
-        return (string) file_get_contents(__DIR__ . '/../../Fixtures/scraped/' . $name);
+        return (string) file_get_contents(__DIR__ . '/../../../Fixtures/scraped/' . $name);
     }
 }

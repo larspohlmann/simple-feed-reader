@@ -28,7 +28,7 @@ final class SlideshowModelExtractionTest extends TestCase
 
     public function testTagesschauGalleryBecomesAReaderSlideshowAfterItsHeading(): void
     {
-        $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/tagesschau-carousel.html');
+        $raw = file_get_contents(__DIR__ . '/../../../../../Fixtures/Slideshow/tagesschau-carousel.html');
         self::assertIsString($raw);
         $rawDocument = $this->document($raw);
 
@@ -46,7 +46,7 @@ final class SlideshowModelExtractionTest extends TestCase
 
     public function testSwiperTeaserCaptionsAndLinksSurviveTheSanitizer(): void
     {
-        $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/swiper-teaser-carousel.html');
+        $raw = file_get_contents(__DIR__ . '/../../../../../Fixtures/Slideshow/swiper-teaser-carousel.html');
         self::assertIsString($raw);
         $rawDocument = $this->document($raw);
 
@@ -67,7 +67,7 @@ final class SlideshowModelExtractionTest extends TestCase
 
     public function testRestoresTheExcerptWhenTheGalleryLeavesTheBodyWithoutProse(): void
     {
-        $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/tagesschau-carousel.html');
+        $raw = file_get_contents(__DIR__ . '/../../../../../Fixtures/Slideshow/tagesschau-carousel.html');
         self::assertIsString($raw);
         $rawDocument = $this->document($raw);
 
@@ -87,7 +87,7 @@ final class SlideshowModelExtractionTest extends TestCase
 
     public function testDropsTheTeaserCarouselsOfIdenticalPlaceholderImages(): void
     {
-        $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/toi-placeholder-carousel.html');
+        $raw = file_get_contents(__DIR__ . '/../../../../../Fixtures/Slideshow/toi-placeholder-carousel.html');
         self::assertIsString($raw);
         $rawDocument = $this->document($raw);
 
@@ -96,7 +96,7 @@ final class SlideshowModelExtractionTest extends TestCase
 
     public function testRecoversRealImagesBehindARepeatedRemotePlaceholderSrc(): void
     {
-        $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/lazy-placeholder-gallery.html');
+        $raw = file_get_contents(__DIR__ . '/../../../../../Fixtures/Slideshow/lazy-placeholder-gallery.html');
         self::assertIsString($raw);
         $rawDocument = $this->document($raw);
 

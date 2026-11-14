@@ -12,7 +12,7 @@ final class DigestBrandLogoTest extends TestCase
 {
     private function projectDir(): string
     {
-        return \dirname(__DIR__, 4);
+        return \dirname(__DIR__, 5);
     }
 
     public function testBytesReturnsThePngLogoFromDisk(): void

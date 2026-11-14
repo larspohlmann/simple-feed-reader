@@ -67,7 +67,7 @@ final class JsonCuesTest extends TestCase
 
     public function testTheSampleFixtureKeepsItsSpeakers(): void
     {
-        $cues = JsonCues::of((string) file_get_contents(__DIR__ . '/../../../Fixtures/Transcript/sample.json'));
+        $cues = JsonCues::of((string) file_get_contents(__DIR__ . '/../../../../Fixtures/Transcript/sample.json'));
 
         self::assertSame(
             ['Ann', 'Ann', 'Bob'],

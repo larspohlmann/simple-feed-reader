@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 final class FeedDirectoryFilesTest extends TestCase
 {
-    private const string FIXTURES = __DIR__ . '/../../Fixtures/feed-directory';
+    private const string FIXTURES = __DIR__ . '/../../../Fixtures/feed-directory';
 
     /** @var list<string> */
     private array $directories = [];

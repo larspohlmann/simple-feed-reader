@@ -62,7 +62,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
     private function wordPressComments(): array
     {
         $feed = self::WORDPRESS_POST . 'feed/';
-        $xml = (string) file_get_contents(__DIR__ . '/../../../Fixtures/wordpress/post-comments.rss');
+        $xml = (string) file_get_contents(__DIR__ . '/../../../../Fixtures/wordpress/post-comments.rss');
         $this->fetcher->willReturn($feed, FetchResponseModel::fetched($feed, false, $xml, null, null));
         $entry = self::entry(guid: 'https://blog.example.org/?p=7');
         $entry->setDiscussion(
@@ -74,7 +74,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
 
     private function serveRedditThread(): void
     {
-        $xml = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reddit/thread-comments.atom');
+        $xml = (string) file_get_contents(__DIR__ . '/../../../../Fixtures/reddit/thread-comments.atom');
         $this->fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
     }
 

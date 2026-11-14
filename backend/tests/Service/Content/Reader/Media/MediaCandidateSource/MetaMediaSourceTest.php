@@ -48,7 +48,7 @@ final class MetaMediaSourceTest extends TestCase
 
     public function testRefusesTheCapturedArdPageThroughThisLayer(): void
     {
-        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/ard-video.html');
+        $html = file_get_contents(__DIR__ . '/../../../../../Fixtures/reader/media/ard-video.html');
         self::assertIsString($html);
 
         self::assertSame([], $this->find($html, 'https://www.tagesschau.de/x.html'));

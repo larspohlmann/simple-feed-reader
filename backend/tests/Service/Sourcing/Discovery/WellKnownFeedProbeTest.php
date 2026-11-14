@@ -34,7 +34,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
 
     private function feedAt(string $url, ?string $finalUrl = null): FetchResponseModel
     {
-        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         return FetchResponseModel::fetched(

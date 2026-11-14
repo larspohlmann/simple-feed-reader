@@ -31,7 +31,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
 {
     use BuildsCommentsSources;
 
-    private const string FIXTURES = __DIR__ . '/../../../Fixtures/substack';
+    private const string FIXTURES = __DIR__ . '/../../../../Fixtures/substack';
     private const string POST = 'https://joe.substack.com/p/one-post';
     private const string POST_API = 'https://joe.substack.com/api/v1/posts/one-post';
     private const string COMMENTS_API =

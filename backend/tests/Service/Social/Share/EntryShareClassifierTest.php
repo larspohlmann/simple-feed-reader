@@ -307,7 +307,7 @@ final class EntryShareClassifierTest extends TestCase
 
     public function testAMastodonPostWhoseLinkTextIsSplitIntoSpansKeepsItsLinkCard(): void
     {
-        $body = (string) file_get_contents(__DIR__ . '/../../Fixtures/Mastodon/discovery-week-post.html');
+        $body = (string) file_get_contents(__DIR__ . '/../../../Fixtures/Mastodon/discovery-week-post.html');
 
         self::assertSame(ShareKind::Link, $this->classified(self::post($body))->getShareKind());
     }

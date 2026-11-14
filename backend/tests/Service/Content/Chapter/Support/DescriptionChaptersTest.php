@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 final class DescriptionChaptersTest extends TestCase
 {
-    private const string FIXTURES = __DIR__ . '/../../../Fixtures/Chapter/';
+    private const string FIXTURES = __DIR__ . '/../../../../Fixtures/Chapter/';
     private const string VERITASIUM = '<p>Head to https://brilliant.org</p>'
         . '<p>▀▀▀<br />0:00 Who invented Enigma?<br />4:16 How did Enigma work?<br />10:51 The Secret Spy Mansion</p>'
         . '<p>▀▀▀<br />A huge thanks</p>';

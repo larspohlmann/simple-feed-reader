@@ -75,6 +75,8 @@ final class ArticleExtractorTest extends TestCase
     use NoEgressProxy;
     use ReadsFixtures;
 
+    private const string READER_FIXTURES = __DIR__ . '/../../../../Fixtures/reader/';
+
     private const string WINDOWS_1252_SENTENCE = 'Café crème für señor Müller — “quoted” ½ ©.';
 
     /**
@@ -190,7 +192,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testExtractsAndAbsolutisesImages(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -250,7 +252,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // A "Mehr zum Thema" grid of headline-linked thumbnails: readability keeps the images but strips the
         // links, leaving orphan thumbnails at the tail. The grid goes, the lead image stays.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/related-teaser-grid.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'related-teaser-grid.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -266,8 +268,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testDropsTheTeaserGridBesideASlideshowWhoseCarouselCarriesNoSignature(): void
     {
-        $page = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/related-teaser-grid.html');
-        $carousel = (string) file_get_contents(__DIR__ . '/../../../Fixtures/Slideshow/tagesschau-carousel.html');
+        $page = (string) file_get_contents(self::READER_FIXTURES . 'related-teaser-grid.html');
+        $carousel = (string) file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/tagesschau-carousel.html');
         $unsignedCarousel = (string) preg_replace('/ class="v-instance [^"]*"/', '', $carousel);
         $html = str_replace('</body>', strip_tags($unsignedCarousel, '<div>') . '</body>', $page);
         $extractor = $this->extractor(
@@ -284,7 +286,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testStampsFeedDeclaredDimensionsOnAMatchingBodyImage(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
         $entry = new Entry(
             new Feed('https://site.test/feed.xml'),
@@ -307,7 +309,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // The page's own <audio> names its file only in data-src, which the sanitizer strips, so it must not
         // survive as a dead control. The one player that reaches the reader is the recovered, marked one.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-narration-zeit.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-narration-zeit.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -323,7 +325,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // A narration audio player is top-placed, but it is not a picture, so the page hero is still restored,
         // above the compact player.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-narration-with-hero-zeit.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-narration-with-hero-zeit.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -340,7 +342,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // A script-driven text-to-speech widget with no <audio>: the reader has no player to attach, so the
         // whole widget is chrome, and the lead figure and prose beside it stay.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-tts-widget-cbc.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-tts-widget-cbc.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -357,7 +359,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // Normalisation keeps a pp-media carousel's slideshow classes because each slide holds caption text, so
         // the recogniser sees it on the raw page and the cleaner rebuilds it after readability drops the box.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-slideshow-ppmedia.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-slideshow-ppmedia.html');
         $extractor = $this->extractor(
             [new MockResponse($html, ['http_code' => 200])],
             slideshowScanner: new SlideshowScanner(
@@ -382,7 +384,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // Teaser carousels after the author bio whose every slide carries the same placeholder src resolve to one
         // image and must not become a slideshow.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-toi-placeholder-carousel.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-toi-placeholder-carousel.html');
         $extractor = $this->extractor(
             [new MockResponse($html, ['http_code' => 200])],
             slideshowScanner: new SlideshowScanner(
@@ -401,7 +403,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-lazy-images.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-lazy-images.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -420,7 +422,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // The real photo sits only inside <noscript>, next to a `data:` placeholder <img>; the sanitizer would
         // otherwise drop the tag with the image still inside it.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-noscript-image.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-noscript-image.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -438,7 +440,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // readability drops the og:image (it sits outside the scored body) and the body carries no picture of
         // its own. With nothing to duplicate, the lead is restored at the top.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-lead-image.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-lead-image.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -451,7 +453,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // The dropped header figure carries a figcaption naming the photographer; the restored lead brings that
         // caption along, not just the bare image.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-lead-image-caption.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-lead-image-caption.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -469,7 +471,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // The og:image hero sits in the page header, a different picture from the body photo. Readability drops
         // it as chrome; the page draws it, so the lead is restored at the top.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-distinct-hero.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-distinct-hero.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -662,7 +664,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testStripsASemanticHeaderMasthead(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-header.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-masthead-header.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $hints = new EntryHintsModel(title: 'The Haiku Challenge', author: 'Clark Strand');
@@ -700,7 +702,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testStripsABreadcrumbSeparatorAndKickerMasthead(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-breadcrumb.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-masthead-breadcrumb.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Political Balancing Act'));
@@ -716,7 +718,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testStripsAMetaToolbarThatSitsBelowAStandfirst(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-toolbar.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-masthead-toolbar.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Shoulder to Shoulder'));
@@ -736,7 +738,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testStripsAReadingTimeAndCategoryMetaBar(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-metabar.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-masthead-metabar.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'September Wallpapers'));
@@ -750,7 +752,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testKeepsHeadingsAndImagesOnBlockComponentPages(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-block-components.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-block-components.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Block Component Headline'));
@@ -771,7 +773,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // On this page the wrapper-chain collapse flips readability's winner to the promo banner; dual extraction
         // keeps the richer, article result.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-shopify-promo.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-shopify-promo.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -785,7 +787,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // article.html has no single-child <div> chain, so the collapsed
         // candidate equals the conservative one and only one parse runs.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
@@ -798,7 +800,7 @@ final class ArticleExtractorTest extends TestCase
     {
         // A Shariff share bar leads the body ("teilen … merken"); it must not reach the extracted HTML, while the
         // article text does.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/hanfjournal-shariff.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'hanfjournal-shariff.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/cannafair');
@@ -861,7 +863,7 @@ final class ArticleExtractorTest extends TestCase
      */
     public function testRestoresAnInlineVideoAfterTheParagraphItFollowed(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-inline-video.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-inline-video.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Inline video headline'));
@@ -998,7 +1000,7 @@ final class ArticleExtractorTest extends TestCase
     /** Lazy pictures on data-srcset, in a custom element, a media-classed wrapper and a captioned figure. */
     public function testKeepsEveryPhotoOfAnImmersiveGalleryBesideItsCaption(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-immersive-gallery.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-immersive-gallery.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/immersive/story/index.html');
@@ -1017,7 +1019,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testPlacesTheBrightcovePlayerWhereTheBodyShowedItsThumbnail(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/aljazeera-brightcove.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'media/aljazeera-brightcove.html');
         $result = $this->extractor(
             [new MockResponse($html, ['http_code' => 200])],
             ['www.aljazeera.com' => ['93.184.216.34']],
@@ -1046,7 +1048,7 @@ final class ArticleExtractorTest extends TestCase
     public function testOneVideoObjectWithFileAndPlayerPageYieldsOnePlayer(): void
     {
         $html = (string) file_get_contents(
-            __DIR__ . '/../../../Fixtures/reader/media/aljazeera-file-and-brightcove.html'
+            self::READER_FIXTURES . 'media/aljazeera-file-and-brightcove.html'
         );
         $result = $this->extractor(
             [new MockResponse($html, ['http_code' => 200])],
@@ -1063,7 +1065,7 @@ final class ArticleExtractorTest extends TestCase
     /** ZDF: the stream is a <video> at the master its playlist URL redirects to. */
     public function testEmitsAnHlsStreamAsAVideoAtItsLanding(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/zdf-hls-video.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'media/zdf-hls-video.html');
         $master = 'https://zdfvod.akamaized.net/i/mp4/none/zdf/26/08/260831_istaf_moma/1/'
             . '260831_istaf_moma,_508k_p9,_808k_p11,_1628k_p13,_3328k_p15,_6628k_p61,v17.mp4.csmil/master.m3u8';
         $result = $this->extractor(
@@ -1089,7 +1091,7 @@ final class ArticleExtractorTest extends TestCase
     /** The body opens with the player where the page had no URL at all, and no stacked lead. */
     public function testAYouTubeIdInADataAttributeBecomesTheLeadPlayer(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/guardian-youtube-atom.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'media/guardian-youtube-atom.html');
         $url = 'https://www.theguardian.com/science/video/2026/sep/01'
             . '/could-humans-ever-communicate-with-whales-video';
         $result = $this->extractor(
@@ -1112,7 +1114,7 @@ final class ArticleExtractorTest extends TestCase
     /** Both players reach the body; the video carries the still the page drew beside it. */
     public function testABroadcastPageWithoutOgImageKeepsItsVideoBesideTheAudio(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/ard-broadcast-no-og-image.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'media/ard-broadcast-no-og-image.html');
         $result = $this->extractor(
             [new MockResponse($html, ['http_code' => 200])],
             ['www.tagesschau.de' => ['93.184.216.34']],
@@ -1138,7 +1140,7 @@ final class ArticleExtractorTest extends TestCase
     /** Three of four videos exist only as ids in the payload; the page's own template recovers them. */
     public function testRecoversTheVideosThePageNamesOnlyByASiblingId(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/zdf-sibling-video-configs.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'media/zdf-sibling-video-configs.html');
         $landing = static fn (string $name): string => 'https://zdfvod.akamaized.net/i/mp4/none/zdf/26/09/'
             . $name . '/1/' . $name . ',_508k_p9,_6628k_p61,v17.mp4.csmil/master.m3u8';
         $pair = static fn (string $name): array => [
@@ -1198,7 +1200,7 @@ final class ArticleExtractorTest extends TestCase
 
     private function extractFixture(string $fixture): ExtractionResultModel
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/' . $fixture);
+        $html = (string) file_get_contents(self::READER_FIXTURES . $fixture);
 
         return $this->extractor([new MockResponse($html, ['http_code' => 200])])->extract('https://site.test/post');
     }
@@ -1206,7 +1208,7 @@ final class ArticleExtractorTest extends TestCase
     public function testDecodesAPageWhoseCharsetOnlyTheHttpHeaderDeclares(): void
     {
         // A legacy site that states its charset in Content-Type alone.
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-windows-1252.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-windows-1252.html');
         $extractor = $this->extractor([new MockResponse($html, [
             'http_code' => 200,
             'response_headers' => ['content-type' => ['text/html; charset=windows-1252']],
@@ -1221,7 +1223,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testDecodesAPageWhoseMetaDeclaresItsCharset(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-windows-1252-meta.html');
+        $html = (string) file_get_contents(self::READER_FIXTURES . 'article-windows-1252-meta.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');

@@ -124,7 +124,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
     private static function declaredImplementations(): array
     {
         $implementations = [];
-        $folder = __DIR__ . '/../../../../src/Service/Operations/Maintenance/MaintenanceSweep';
+        $folder = __DIR__ . '/../../../../../src/Service/Operations/Maintenance/MaintenanceSweep';
         foreach (glob($folder . '/*.php') ?: [] as $path) {
             $class = 'App\\Service\\Operations\\Maintenance\\MaintenanceSweep\\' . basename($path, '.php');
             if (is_subclass_of($class, MaintenanceSweepInterface::class)) {
