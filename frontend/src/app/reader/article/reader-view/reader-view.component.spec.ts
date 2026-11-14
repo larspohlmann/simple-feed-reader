@@ -48,7 +48,6 @@ import { PostMediaComponent } from '../../media/post-media/post-media.component'
 import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { DiscussionVotes } from '../../vote-pill/discussion-votes.service';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -57,11 +56,8 @@ const entryActions = {
   open: jest.fn(),
 };
 
-const discussionVotes = { vote: jest.fn(), refresh: jest.fn() };
-
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
-  Object.values(discussionVotes).forEach((spy) => spy.mockReset());
 });
 
 /** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
@@ -206,7 +202,6 @@ describe('ReaderViewComponent', () => {
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: EntryStateActions, useValue: { share: jest.fn() } },
-        { provide: DiscussionVotes, useValue: discussionVotes },
         provideRouter([]),
         { provide: LinkReaderNavigation, useValue: { layer: jest.fn() } },
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
@@ -233,12 +228,6 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('the vote pill in the head line (#2217)', () => {
-    it('refreshesTheVoteOnOpen', () => {
-      mount(entryWithBody('<p>x</p>', { score: 5, myVote: 0 }));
-
-      expect(discussionVotes.refresh).toHaveBeenCalledTimes(1);
-    });
-
     it('givesTheHeadPillTheVote', () => {
       const fixture = mount(entryWithBody('<p>x</p>', { score: 5, myVote: 1 }));
 

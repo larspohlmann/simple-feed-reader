@@ -7,7 +7,6 @@ import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action
 import { describeShortPill } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
-import { provideDiscussionVotesStub } from '../../../../../../testing/discussion-votes-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -35,7 +34,6 @@ function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryKickerComponent, provideTranslocoTesting()],
     providers: [
-      provideDiscussionVotesStub(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),

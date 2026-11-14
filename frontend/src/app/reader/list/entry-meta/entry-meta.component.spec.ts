@@ -10,20 +10,17 @@ import { makeSubscription } from '../../testing/subscription.factory';
 import { anEntry } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
-import { DiscussionVotes } from '../../vote-pill/discussion-votes.service';
-
-const discussionVotes = { vote: jest.fn() };
 
 const entryActions = {
   favorite: jest.fn(),
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
+  vote: jest.fn(),
 };
 
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
-  discussionVotes.vote.mockReset();
 });
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
@@ -42,7 +39,6 @@ function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imag
     providers: [
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
-      { provide: DiscussionVotes, useValue: discussionVotes },
       provideRouter([]),
     ],
   });
@@ -61,7 +57,7 @@ describe('EntryMetaComponent', () => {
 
     (element.querySelector('button[aria-label="Downvote"]') as HTMLButtonElement).click();
 
-    expect(discussionVotes.vote).toHaveBeenCalledWith(votable, -1);
+    expect(entryActions.vote).toHaveBeenCalledWith(votable, -1);
   });
 
   describe('discussion counts', () => {
@@ -167,7 +163,6 @@ describe('EntryMetaComponent', () => {
       providers: [
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
-        { provide: DiscussionVotes, useValue: discussionVotes },
         provideRouter([]),
       ],
     });

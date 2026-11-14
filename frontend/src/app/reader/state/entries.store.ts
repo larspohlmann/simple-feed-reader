@@ -248,6 +248,16 @@ export class EntriesStore {
     );
   }
 
+  /** Asks the network which vote the account holds on a Lemmy post and adopts it; a failure is silent. */
+  refreshVote(entry: EntryDto): void {
+    const from = entry.myVote;
+    if (from === null) return;
+    this.socialPosts.myVote(entry.id).subscribe({
+      next: (answer) => this.adoptVote(entry.id, { from, to: answer.myVote }),
+      error: () => undefined,
+    });
+  }
+
   /** The vote the network reports, laid over entries still showing `from`; a click made since wins. */
   adoptVote(entryId: number, change: { from: VoteValue; to: VoteValue }): void {
     if (change.from === change.to) return;

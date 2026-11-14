@@ -16,7 +16,6 @@ import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { provideDiscussionVotesStub } from '../../../../testing/discussion-votes-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -106,7 +105,6 @@ describe('EntryRowComponent', () => {
     TestBed.configureTestingModule({
       imports: [EntryRowComponent, provideTranslocoTesting()],
       providers: [
-        provideDiscussionVotesStub(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ImageProxyService, useValue: imageProxy },

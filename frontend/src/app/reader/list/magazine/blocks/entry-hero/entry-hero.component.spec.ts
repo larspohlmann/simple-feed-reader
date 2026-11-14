@@ -9,7 +9,6 @@ import { ImageProxyService } from '../../../../../shared/proxied-image/image-pro
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
-import { provideDiscussionVotesStub } from '../../../../../../testing/discussion-votes-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -39,7 +38,6 @@ function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryHeroComponent, provideTranslocoTesting()],
     providers: [
-      provideDiscussionVotesStub(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: ImageProxyService, useValue: imageProxy },

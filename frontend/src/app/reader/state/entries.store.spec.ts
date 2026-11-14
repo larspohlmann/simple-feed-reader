@@ -1016,6 +1016,35 @@ describe('EntriesStore', () => {
       expect(store.entries()[0]).toMatchObject({ myVote: null, score: 10 });
     });
 
+    it('refreshesTheVoteFromTheNetwork', () => {
+      loadVotable(0);
+
+      store.refreshVote(store.entries()[0]);
+      const request = ctrl.expectOne(votePath);
+      expect(request.request.method).toBe('GET');
+      request.flush({ myVote: -1 });
+
+      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 10 });
+    });
+
+    it('staysSilentWhenTheRefreshFails', () => {
+      loadVotable(0);
+
+      store.refreshVote(store.entries()[0]);
+      ctrl.expectOne(votePath).flush({}, { status: 500, statusText: 'Server Error' });
+
+      expect(store.entries()[0].myVote).toBe(0);
+      expect(store.error()).toBeNull();
+    });
+
+    it('asksNothingForAnEntryWithoutAVote', () => {
+      loadVotable(null);
+
+      store.refreshVote(store.entries()[0]);
+
+      ctrl.expectNone(votePath);
+    });
+
     it('adoptsTheNetworksVoteWithoutTouchingTheScore', () => {
       loadVotable(0);
 

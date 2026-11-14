@@ -2,6 +2,7 @@ import { Component, computed, forwardRef, inject, input, signal } from '@angular
 import { CdkConnectedOverlay, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
+import { VoteValue } from '../vote-pill/vote';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { entryRelativeTime } from '../../format';
@@ -96,6 +97,10 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
 
   like(copy: EntryDto): void {
     this.shellActions.like(copy);
+  }
+
+  vote(copy: EntryDto, to: VoteValue): void {
+    this.shellActions.vote(copy, to);
   }
 
   keep(copy: EntryDto): void {

@@ -43,7 +43,6 @@ import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
-import { provideDiscussionVotesStub } from '../../../../testing/discussion-votes-testing';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads, so the real CatalogAvailability (and AuthService) stay out of this unit test.
@@ -87,7 +86,6 @@ function mount(
   TestBed.configureTestingModule({
     imports: [EntryListComponent, provideTranslocoTesting()],
     providers: [
-      provideDiscussionVotesStub(),
       provideRouter([]),
       provideAccountIdentity(),
       { provide: ListScrollMemory, useValue: memory },

@@ -4,7 +4,7 @@
     <app-vote-pill
       [score]="score"
       [myVote]="entry().myVote"
-      (voted)="votes.vote(entry(), $event)"
+      (voted)="actions.vote(entry(), $event)"
     />
     @if (comments(); as comments) {
       <span

@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
@@ -16,6 +16,7 @@ import { ReaderRouteState } from './reader-route-state.service';
 import { PostActions } from '../article/composer/post-actions.service';
 import { SOCIAL_NETWORK_NAMES } from '../../core/social-network';
 import { RemovedPost, RemovedPosts } from '../removed-posts.service';
+import { VoteValue } from '../vote-pill/vote';
 
 @Injectable()
 export class EntryStateActions implements EntryActionHandler {
@@ -28,6 +29,10 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly toast = inject(ToastService);
   private readonly postActions = inject(PostActions);
   private readonly transloco = inject(TranslocoService);
+  private readonly openVotableId = computed(() => {
+    const entry = this.routeState.openEntry();
+    return entry !== null && entry.myVote !== null ? entry.id : null;
+  });
 
   private readonly viewedOnOpen = new Set<number>();
   private readonly leaving = signal<ReadonlySet<number>>(new Set());
@@ -44,6 +49,10 @@ export class EntryStateActions implements EntryActionHandler {
         this.viewedOnOpen.add(entry.id);
         this.markOpenedViewed(entry);
       });
+    });
+    effect(() => {
+      if (this.openVotableId() === null) return;
+      untracked(() => this.refreshOpenVote());
     });
     inject(RemovedPosts)
       .removed$.pipe(takeUntilDestroyed())
@@ -64,6 +73,15 @@ export class EntryStateActions implements EntryActionHandler {
     this.entries.setLiked(entry, !entry.social?.isLiked, (problem) =>
       this.toast.showProblem(problem),
     );
+  }
+
+  vote(entry: EntryDto, to: VoteValue): void {
+    this.entries.setVote(entry, to, (problem) => this.toast.showProblem(problem));
+  }
+
+  private refreshOpenVote(): void {
+    const entry = this.routeState.openEntry();
+    if (entry !== null) this.entries.refreshVote(entry);
   }
 
   keep(entry: EntryDto): void {

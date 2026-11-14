@@ -453,3 +453,78 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
+
+describe('EntryStateActions voting (#2218)', () => {
+  const setVote = jest.fn();
+  const refreshVote = jest.fn();
+  const showProblem = jest.fn();
+  const openEntry = signal<EntryDto | null>(null);
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    [setVote, refreshVote, showProblem].forEach((spy) => spy.mockReset());
+    openEntry.set(null);
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        EntryStateActions,
+        provideRouter([]),
+        { provide: EntriesStore, useValue: { setVote, refreshVote } },
+        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId: signal(null), openEntry },
+        },
+        { provide: ToastService, useValue: { showProblem } },
+        { provide: PostActions, useValue: {} },
+      ],
+    });
+    actions = TestBed.inject(EntryStateActions);
+  });
+
+  it('votesThroughTheStoreAndToastsAFailure', () => {
+    const entry = anEntry({ score: 3, myVote: 0 });
+
+    actions.vote(entry, 1);
+    const onError = setVote.mock.calls[0][2];
+    onError({ title: 'Nope' });
+
+    expect(setVote).toHaveBeenCalledWith(entry, 1, expect.any(Function));
+    expect(showProblem).toHaveBeenCalledWith({ title: 'Nope' });
+  });
+
+  it('refreshesTheVoteOnceWhenAVotableEntryOpens', () => {
+    openEntry.set(anEntry({ id: 4, score: 3, myVote: 0 }));
+    TestBed.tick();
+
+    expect(refreshVote).toHaveBeenCalledTimes(1);
+  });
+
+  it('doesNotRefreshAgainWhenTheSameEntryChangesItsVote', () => {
+    openEntry.set(anEntry({ id: 4, score: 3, myVote: 0 }));
+    TestBed.tick();
+
+    openEntry.set(anEntry({ id: 4, score: 4, myVote: 1 }));
+    TestBed.tick();
+
+    expect(refreshVote).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshesAgainForAnotherEntry', () => {
+    openEntry.set(anEntry({ id: 4, score: 3, myVote: 0 }));
+    TestBed.tick();
+
+    openEntry.set(anEntry({ id: 5, score: 3, myVote: 0 }));
+    TestBed.tick();
+
+    expect(refreshVote).toHaveBeenCalledTimes(2);
+  });
+
+  it('leavesAnEntryWithoutAVoteAlone', () => {
+    openEntry.set(anEntry({ id: 4, myVote: null }));
+    TestBed.tick();
+
+    expect(refreshVote).not.toHaveBeenCalled();
+  });
+});
