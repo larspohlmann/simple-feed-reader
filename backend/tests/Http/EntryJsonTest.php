@@ -20,6 +20,7 @@ use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Enum\VoteScore;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnrichment;
@@ -372,6 +373,20 @@ final class EntryJsonTest extends TestCase
         );
     }
 
+    public function testTheReadersDownVoteIsSentAsMinusOne(): void
+    {
+        $row = $this->row($this->entryTitled('Post'), new EntryListRowEnrichment(myVote: VoteScore::Down));
+
+        self::assertSame(-1, JsonMappers::entryJson()->listRow($row)['myVote']);
+    }
+
+    public function testAnEntryTheReaderCannotVoteOnSendsNoVote(): void
+    {
+        $row = $this->row($this->entryTitled('Article'));
+
+        self::assertNull(JsonMappers::entryJson()->listRow($row)['myVote']);
+    }
+
     public function testMyOwnPostSaysItIsMine(): void
     {
         $row = $this->row(
@@ -488,7 +503,7 @@ final class EntryJsonTest extends TestCase
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',
-                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'duplicates',
+                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'myVote', 'duplicates',
             ],
             array_keys($json),
         );

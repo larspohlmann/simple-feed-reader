@@ -51,6 +51,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   social: array{
  *     network: 'bluesky'|'lemmy'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null,
  *   }|null,
+ *   myVote: int|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
  *   score: int|null, commentCount: int|null,
@@ -109,6 +110,7 @@ final readonly class EntryJson
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
             'social' => self::socialOf($row),
+            'myVote' => $row->enrichment->myVote?->value,
             'duplicates' => array_map($this->listRow(...), $row->duplicates),
         ];
     }
