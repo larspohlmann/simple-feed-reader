@@ -53,8 +53,8 @@ final class HeadlineWindow
     /** Entries must arrive in ascending id order: the postings stay sorted. */
     public function add(int $entryId, int $feedId, string $headline, string $body): void
     {
-        $headlineIds = $this->idsOf(HeadlineStems::of($headline));
-        $bodyIds = array_values(array_diff($this->idsOf(HeadlineStems::of($body)), $headlineIds));
+        $headlineIds = $this->idsOf(HeadlineStems::ofWords(HeadlineStems::words($headline)));
+        $bodyIds = array_values(array_diff($this->idsOf(HeadlineStems::ofWords(HeadlineStems::words($body))), $headlineIds));
         $this->headlineStems[$entryId] = $headlineIds;
         $this->bodyStems[$entryId] = $bodyIds;
         $this->feedOfEntry[$entryId] = $feedId;
