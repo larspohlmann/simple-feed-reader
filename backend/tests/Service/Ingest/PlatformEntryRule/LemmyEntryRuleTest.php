@@ -59,6 +59,13 @@ final class LemmyEntryRuleTest extends TestCase
         self::assertFalse((new LemmyEntryRule())->supports($entry));
     }
 
+    public function testIgnoresAPostOnAHostWithAPort(): void
+    {
+        $entry = self::entry('https://h:8080/post/1', 'https://h:8080/post/1', self::HEADER);
+
+        self::assertFalse((new LemmyEntryRule())->supports($entry));
+    }
+
     public function testSupportsAPostIdentifiedOnlyByItsGuid(): void
     {
         $entry = self::entry(self::LINK_POST, null, self::HEADER);

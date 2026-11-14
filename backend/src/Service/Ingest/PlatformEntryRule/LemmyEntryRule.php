@@ -10,7 +10,7 @@ use App\Service\Parser\Model\ParsedEntryModel;
 
 final readonly class LemmyEntryRule implements PlatformEntryRuleInterface
 {
-    private const string POST_URL = '#^https://[^/]+/post/\d+/?$#i';
+    private const string POST_URL = '#^https://[a-z0-9.-]+/post/\d+/?$#i';
 
     public function supports(ParsedEntryModel $entry): bool
     {
