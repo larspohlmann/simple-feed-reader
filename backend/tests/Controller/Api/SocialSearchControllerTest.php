@@ -92,14 +92,12 @@ final class SocialSearchControllerTest extends ApiTestCase
         $this->requestSearchPreview($client, $account, 'rss');
 
         self::assertResponseIsSuccessful();
-        $posts = $this->payload($client)['posts'];
-        self::assertIsArray($posts);
         self::assertSame(
             [
-                ['https://lemmy.example/post/7', 'A reader for feeds — The whole text'],
-                ['https://lemmy.example/post/7', 'A reader for feeds'],
+                self::lemmyPreviewPost('A reader for feeds — The whole text'),
+                self::lemmyPreviewPost('A reader for feeds'),
             ],
-            array_map(static fn (array $post): array => [$post['url'], $post['text']], $posts),
+            $this->payload($client)['posts'],
         );
     }
 
@@ -354,6 +352,18 @@ final class SocialSearchControllerTest extends ApiTestCase
         );
 
         return $post->asDiscussionThread(Discussion::platformThread('https://lemmy.example/post/7'));
+    }
+
+    /** @return array<string, ?string> */
+    private static function lemmyPreviewPost(string $text): array
+    {
+        return [
+            'url' => 'https://lemmy.example/post/7',
+            'author' => 'amy',
+            'authorAvatarUrl' => null,
+            'text' => $text,
+            'publishedAt' => self::publishedAt(7),
+        ];
     }
 
     private static function postHtml(int $number): string
