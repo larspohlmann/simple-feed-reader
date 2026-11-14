@@ -610,4 +610,18 @@ final class Atom10ParserTest extends TestCase
 
         self::assertNull($feed->declaredLanguage);
     }
+
+    public function testTheFeedXmlLangIsTrimmed(): void
+    {
+        $feed = $this->parse('<feed xmlns="http://www.w3.org/2005/Atom" xml:lang=" es "><title>F</title></feed>');
+
+        self::assertSame('es', $feed->declaredLanguage);
+    }
+
+    public function testABlankFeedXmlLangDeclaresNone(): void
+    {
+        $feed = $this->parse('<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="  "><title>F</title></feed>');
+
+        self::assertNull($feed->declaredLanguage);
+    }
 }
