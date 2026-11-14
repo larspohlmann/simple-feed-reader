@@ -1517,6 +1517,7 @@
     "shortBadge": "Short",
     "moreFrom": "Mehr von {{source}}",
     "moreFromCount": "{{count}} weitere von {{source}}",
+    "showMore": "Mehr anzeigen",
     "showLess": "Weniger anzeigen",
     "backToList": "Zurück zur Liste",
     "backToTop": "Nach oben",

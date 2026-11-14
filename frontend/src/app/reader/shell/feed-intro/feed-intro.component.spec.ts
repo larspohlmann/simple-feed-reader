@@ -2,6 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
+import {
+  installMockResizeObserver,
+  MockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 import { FeedIntroComponent } from './feed-intro.component';
 
 describe('FeedIntroComponent', () => {
@@ -138,5 +142,78 @@ describe('FeedIntroComponent', () => {
     fixture.detectChanges();
     expect(host.querySelector('img')).toBeNull();
     expect(imageProxy.attempts).toEqual([]);
+  });
+
+  describe('a long description', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    function wrapOnto(lines: number): void {
+      jest
+        .spyOn(HTMLElement.prototype, 'getClientRects')
+        .mockReturnValue(Array.from({ length: lines }) as unknown as DOMRectList);
+    }
+
+    function renderWrapped(lines: number, description = 'A very long blurb.'): HTMLElement {
+      wrapOnto(lines);
+      const host = render({ description, siteUrl: 'https://example.com/' });
+      fixture.detectChanges();
+      return host;
+    }
+
+    function toggle(host: HTMLElement): HTMLButtonElement {
+      return host.querySelector<HTMLButtonElement>('button.toggle')!;
+    }
+
+    it('leaves a description of two lines whole, without a toggle', () => {
+      const host = renderWrapped(2);
+      expect(host.querySelector('.description.clamped')).toBeNull();
+      expect(host.querySelector('button.toggle')).toBeNull();
+    });
+
+    it('clamps a description of three lines behind a Show more toggle', () => {
+      const host = renderWrapped(3);
+      expect(host.querySelector('.description.clamped')).not.toBeNull();
+      expect(toggle(host).textContent?.trim()).toBe('Show more');
+      expect(toggle(host).getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('keeps the homepage link outside the clamped text', () => {
+      const host = renderWrapped(3);
+      expect(host.querySelector('.description a.homepage')).toBeNull();
+      expect(host.querySelector('.text > a.homepage')).not.toBeNull();
+    });
+
+    it('shows the rest on Show more and clamps again on Show less', () => {
+      const host = renderWrapped(3);
+      toggle(host).click();
+      fixture.detectChanges();
+      expect(host.querySelector('.description.clamped')).toBeNull();
+      expect(toggle(host).textContent?.trim()).toBe('Show less');
+      expect(toggle(host).getAttribute('aria-expanded')).toBe('true');
+
+      toggle(host).click();
+      fixture.detectChanges();
+      expect(host.querySelector('.description.clamped')).not.toBeNull();
+    });
+
+    it('clamps again when another feed takes the place of an expanded one', () => {
+      const host = renderWrapped(3);
+      toggle(host).click();
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('description', 'Another very long blurb.');
+      fixture.detectChanges();
+      fixture.detectChanges();
+      expect(host.querySelector('.description.clamped')).not.toBeNull();
+    });
+
+    it('drops the toggle once the text has room for the whole description', () => {
+      installMockResizeObserver();
+      const host = renderWrapped(3);
+      wrapOnto(2);
+      MockResizeObserver.instances.at(-1)?.fire();
+      fixture.detectChanges();
+      expect(host.querySelector('button.toggle')).toBeNull();
+    });
   });
 });
