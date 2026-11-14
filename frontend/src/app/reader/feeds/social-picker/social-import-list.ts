@@ -43,6 +43,12 @@ const IMPORT_TABS: Readonly<Record<SocialNetworkName, readonly ImportTab[]>> = {
   lemmy: ['accounts', 'lists'],
 };
 
+const TAB_LABEL_PREFIXES: Readonly<Record<SocialNetworkName, string>> = {
+  bluesky: 'settings.social.importTab.',
+  mastodon: 'settings.social.importTab.',
+  lemmy: 'settings.social.importTabLemmy.',
+};
+
 /**
  * The import dialog's follows list: the open tab, the filter, the ticks and what Apply sends. Provided by the
  * dialog, so all of it outlives a trip to the Search tab.
@@ -63,10 +69,7 @@ export class SocialImportList {
   };
   private readonly listTabs = IMPORT_TABS[this.data.network];
   readonly tabs: readonly DialogTab[] = [...this.listTabs, 'search'];
-  readonly tabLabelPrefix =
-    this.data.network === 'lemmy'
-      ? 'settings.social.importTabLemmy.'
-      : 'settings.social.importTab.';
+  readonly tabLabelPrefix = TAB_LABEL_PREFIXES[this.data.network];
   readonly tab = signal<DialogTab>('accounts');
   /** The list tab on show; null on Search. */
   readonly listTab = computed(() => {

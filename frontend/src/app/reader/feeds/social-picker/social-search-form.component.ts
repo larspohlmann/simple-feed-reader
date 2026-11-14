@@ -42,6 +42,12 @@ interface SyntaxRule {
 const OPERATOR_EXAMPLE = '"rss reader" -gazette';
 const COMBINED_EXAMPLE = '("rss reader" || "feed reader" || rssreader) -gazette';
 
+const COMBINED_EXAMPLES: Readonly<Record<SocialNetworkName, string | null>> = {
+  bluesky: COMBINED_EXAMPLE,
+  mastodon: COMBINED_EXAMPLE,
+  lemmy: null,
+};
+
 const EXAMPLE_QUERIES: Readonly<Record<SocialNetworkName, string>> = {
   bluesky: OPERATOR_EXAMPLE,
   mastodon: OPERATOR_EXAMPLE,
@@ -104,9 +110,7 @@ export class SocialSearchFormComponent {
 
   readonly normalizedQuery = computed(() => this.query().trim().replace(/\s+/g, ' '));
   protected readonly exampleQuery = computed(() => EXAMPLE_QUERIES[this.network()]);
-  protected readonly combinedExample = computed(() =>
-    this.network() === 'lemmy' ? null : COMBINED_EXAMPLE,
-  );
+  protected readonly combinedExample = computed(() => COMBINED_EXAMPLES[this.network()]);
   protected readonly syntaxRules = computed(() => SEARCH_SYNTAX[this.network()]);
   protected readonly canPreview = computed(
     () => this.normalizedQuery() !== '' && !this.previewing(),

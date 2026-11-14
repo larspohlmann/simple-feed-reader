@@ -48,15 +48,24 @@ export const NETWORK_FEED_KIND_DESCRIPTORS: Readonly<
   },
 };
 
+type NetworkFeedKindLabels = Pick<NetworkFeedKindDescriptor, 'labelKey' | 'toggleKey'>;
+
+const NETWORK_FEED_KIND_LABELS: Readonly<
+  Record<SocialNetworkName, Readonly<Partial<Record<NetworkFeedKind, NetworkFeedKindLabels>>>>
+> = {
+  bluesky: {},
+  mastodon: {},
+  lemmy: {
+    profile: { labelKey: 'reader.lemmyCommunities', toggleKey: 'reader.toggleLemmyCommunities' },
+  },
+};
+
 export function networkFeedKindLabels(
   kind: NetworkFeedKind,
   network: SocialNetworkName,
-): Pick<NetworkFeedKindDescriptor, 'labelKey' | 'toggleKey'> {
-  if (kind === 'profile' && network === 'lemmy') {
-    return { labelKey: 'reader.lemmyCommunities', toggleKey: 'reader.toggleLemmyCommunities' };
-  }
+): NetworkFeedKindLabels {
   const { labelKey, toggleKey } = NETWORK_FEED_KIND_DESCRIPTORS[kind];
-  return { labelKey, toggleKey };
+  return NETWORK_FEED_KIND_LABELS[network][kind] ?? { labelKey, toggleKey };
 }
 
 export const NETWORK_FEED_KINDS_IN_ORDER: readonly NetworkFeedKind[] = (
