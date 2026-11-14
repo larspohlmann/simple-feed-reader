@@ -18,7 +18,9 @@ final class AbsoluteHttpUrl
 
     public static function httpsOrNull(?string $url): ?string
     {
-        return $url !== null && preg_match('#^https://#i', $url) === 1 ? $url : null;
+        $absolute = self::orNull($url);
+
+        return null !== $absolute && 0 === stripos($absolute, 'https://') ? $absolute : null;
     }
 
     public static function orNullWithin(?string $url, int $maxLength): ?string
