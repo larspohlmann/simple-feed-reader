@@ -18,6 +18,9 @@ final class ServiceRoleRuleTest extends RuleTestCase
     private const string TILL = 'App\Service\Fixture\Till\Support\\';
     private const string SUB_MODULE_FIXTURE = __DIR__ . '/data/service-role-sub-module-fixture.php';
     private const string PROBE = 'App\Service\Fixture\Probe\\';
+    private const string MODULE_PLACEMENT_FIXTURE = __DIR__ . '/data/service-role-module-placement-fixture.php';
+    private const string OUTSIDE_A_MODULE = 'sits outside a module folder';
+    private const string MODULE = 'a module folder, App\Service\<Group>\<Module>';
     private const string NEEDS_SUFFIX = 'is an interface, so its name ends in Interface';
     private const string OUTSIDE_ITS_FOLDER = 'sits outside the folder named after it';
     private const string NOT_READONLY = 'keeps no state, so it is readonly';
@@ -367,6 +370,16 @@ final class ServiceRoleRuleTest extends RuleTestCase
         require_once self::SUB_MODULE_FIXTURE;
 
         $this->analyse([self::SUB_MODULE_FIXTURE], []);
+    }
+
+    public function testAClassLooseInAGroupOrTheServiceRootIsReported(): void
+    {
+        require_once self::MODULE_PLACEMENT_FIXTURE;
+
+        $this->analyse([self::MODULE_PLACEMENT_FIXTURE], [
+            [self::message('moduleHome', 'App\Service\Fixture\LooseInGroup', self::OUTSIDE_A_MODULE, self::MODULE), 10],
+            [self::message('moduleHome', 'App\Service\LooseInRoot', self::OUTSIDE_A_MODULE, self::MODULE), 21],
+        ]);
     }
 
     public function testAClassReflectionCannotResolveIsReportedNotDropped(): void
