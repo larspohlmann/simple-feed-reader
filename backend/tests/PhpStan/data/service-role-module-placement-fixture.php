@@ -37,3 +37,14 @@ namespace App\Service\Fixture\Shelf {
         }
     }
 }
+
+namespace App\Service\Widget\Shelf {
+    /** @noinspection AutoloadingIssuesInspection */
+    final readonly class InAnUnknownGroup
+    {
+        public function name(): string
+        {
+            return 'unknown group';
+        }
+    }
+}

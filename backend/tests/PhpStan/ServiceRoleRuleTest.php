@@ -19,8 +19,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
     private const string SUB_MODULE_FIXTURE = __DIR__ . '/data/service-role-sub-module-fixture.php';
     private const string PROBE = 'App\Service\Fixture\Probe\\';
     private const string MODULE_PLACEMENT_FIXTURE = __DIR__ . '/data/service-role-module-placement-fixture.php';
-    private const string OUTSIDE_A_MODULE = 'sits outside a module folder';
-    private const string MODULE = 'a module folder, App\Service\<Group>\<Module>';
+    private const array GROUPS = ['Fixture', 'Curation'];
     private const string NEEDS_SUFFIX = 'is an interface, so its name ends in Interface';
     private const string OUTSIDE_ITS_FOLDER = 'sits outside the folder named after it';
     private const string NOT_READONLY = 'keeps no state, so it is readonly';
@@ -45,6 +44,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
         return new ServiceRoleRule(
             self::getContainer()->getByType(ReflectionProvider::class),
             self::serviceModules(),
+            self::GROUPS,
         );
     }
 
@@ -372,13 +372,14 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $this->analyse([self::SUB_MODULE_FIXTURE], []);
     }
 
-    public function testAClassLooseInAGroupOrTheServiceRootIsReported(): void
+    public function testAClassLooseInAGroupOrTheServiceRootOrInAnUnknownGroupIsReported(): void
     {
         require_once self::MODULE_PLACEMENT_FIXTURE;
 
         $this->analyse([self::MODULE_PLACEMENT_FIXTURE], [
-            [self::message('moduleHome', 'App\Service\Fixture\LooseInGroup', self::OUTSIDE_A_MODULE, self::MODULE), 10],
-            [self::message('moduleHome', 'App\Service\LooseInRoot', self::OUTSIDE_A_MODULE, self::MODULE), 21],
+            [self::outsideAModule('App\Service\Fixture\LooseInGroup'), 10],
+            [self::outsideAModule('App\Service\LooseInRoot'), 21],
+            [self::outsideAModule('App\Service\Widget\Shelf\InAnUnknownGroup'), 43],
         ]);
     }
 
@@ -466,6 +467,16 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $message = sprintf('Service role "%s": %s %s.', $check, $class, $problem);
 
         return null === $home ? $message : $message . sprintf(' Its home is %s.', $home);
+    }
+
+    private static function outsideAModule(string $class): string
+    {
+        return self::message(
+            'moduleHome',
+            $class,
+            'sits outside a module folder',
+            'App\Service\<Group>\<Module>, with <Group> one of Fixture, Curation',
+        );
     }
 
     private static function serviceModules(): ServiceModules

@@ -222,7 +222,7 @@ and ORM extensions — never imports a service. Decided in #1182.
   `MagazineStyle`, `MailKind`, `RecommendationBatchSize`…). It does not fold into `App\Entity`: several of its enums
   never touch an entity: it also holds the value sets a stored column is limited to when no entity type names them
   (`SupportedLocale`, the locales `User::$locale` may hold, which the request DTO, `translation.yaml` and the signup
-  factory all read; `SourceFormat`). Module enums, including ones several `Service/*` modules share, stay in the
+  factory all read; `SourceFormat`). Module enums, including ones several `Service/*/*` modules share, stay in the
   module that owns their meaning (`ScrapeFallback`, `SocksReplyCode`, `CatalogImportMode`, `CommentsStatus`,
   `TickDriver`, `RecommendationDriverKind`, `ScrapeFailureReason`, `VisualMediaKind`): `ServiceModuleCycleRule`
   guarantees sharing one closes no cycle, and an enum that returns a Service value (`TickDriver::retryPlan()`)
@@ -242,7 +242,7 @@ Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` o
 
 ## 9. Service modules form no cycle
 
-A `Service/*` module is the second directory under `backend/src/Service`, below its group: `Content/Reader` with all
+A `Service/*/*` module is the second directory under `backend/src/Service`, below its group: `Content/Reader` with all
 its feature folders (`ArticleExtractor/`, `Paywall/`, `Media/`, …) is one module. Every service belongs to a module, and
 the modules depend on each other without a cycle, so each one can be read, tested and moved without the others.
 Decided in #1161.
@@ -264,8 +264,9 @@ may run either way (`Ingest → Reader` and `LinkCard → Ingest` both cross `In
 | `Identity` | Account, Auth, OAuth, Passkey |
 | `Operations` | Admin, Backup, Maintenance, SelfUpdate, Version, Grafana, Logging, ClientError, Settings, Worker, Queue |
 
-A new module goes into the group whose concern it serves; a class loose in a group folder or in the `Service` root is
-rejected (`ServiceRoleRule`'s `moduleHome`).
+A new module goes into the group whose concern it serves. A class loose in a group folder or in the `Service` root, or
+below a group not listed in `serviceGroups` (`backend/phpstan.dist.neon`), is rejected (`ServiceRoleRule`'s
+`moduleHome`).
 
 A directory below a module can be declared a **sub-module** by adding it, relative to `Service/`, to
 `serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Curation\Recommendation\Llm` and

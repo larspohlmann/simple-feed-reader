@@ -4,21 +4,24 @@ declare(strict_types=1);
 
 namespace App\Tests\PhpStan;
 
-/** Every service class sits in a module folder, `App\Service\<Group>\<Module>`, never loose in a group or the root. */
+/** Every service class sits in a module folder, `App\Service\<Group>\<Module>`, below one of the declared groups. */
 final readonly class ModulePlacement implements ServiceRoleChecker
 {
-    private const int MODULE_DEPTH = 2;
+    /** @param list<string> $groups */
+    public function __construct(private array $groups)
+    {
+    }
 
     public function violationsIn(ServiceRoleMap $map): array
     {
         $violations = [];
         foreach ($map->classes() as $class) {
-            if (ServiceRoleNames::isService($class->name()) && !self::sitsInAModule($class)) {
+            if (ServiceRoleNames::isService($class->name()) && !$this->sitsInAModule($class)) {
                 $violations[] = new ServiceRoleViolation(
                     ServiceRoleCheck::ModuleHome,
                     $class,
                     'sits outside a module folder',
-                    'a module folder, App\Service\<Group>\<Module>',
+                    sprintf('App\Service\<Group>\<Module>, with <Group> one of %s', implode(', ', $this->groups)),
                 );
             }
         }
@@ -26,10 +29,11 @@ final readonly class ModulePlacement implements ServiceRoleChecker
         return $violations;
     }
 
-    private static function sitsInAModule(ServiceRoleClass $class): bool
+    private function sitsInAModule(ServiceRoleClass $class): bool
     {
-        $belowService = substr($class->namespace(), \strlen(ServiceModules::SERVICE_NAMESPACE) - 1);
+        $belowService = substr($class->namespace(), \strlen(ServiceModules::SERVICE_NAMESPACE));
+        [$group, $module] = explode('\\', $belowService, 3) + ['', ''];
 
-        return substr_count($belowService, '\\') >= self::MODULE_DEPTH;
+        return \in_array($group, $this->groups, true) && '' !== $module;
     }
 }

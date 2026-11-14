@@ -16,12 +16,25 @@ parameters:
         - tests/PhpStan/data/*
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    # The navigation groups every src/Service module sits in (docs/architecture.md §9).
+    serviceGroups:
+        - Foundation
+        - Outbound
+        - Sourcing
+        - Ingestion
+        - Content
+        - Library
+        - Social
+        - Curation
+        - Identity
+        - Operations
     # Directories below a src/Service module that are modules of their own (docs/architecture.md §9).
     serviceSubModules:
         - Curation\Recommendation\Llm
         - Curation\Recommendation\Scoring
 
 parametersSchema:
+    serviceGroups: listOf(string())
     serviceSubModules: listOf(string())
 
 services:
@@ -95,6 +108,8 @@ services:
             - phpstan.collector
     -
         class: App\Tests\PhpStan\ServiceRoleRule
+        arguments:
+            groups: %serviceGroups%
         tags:
             - phpstan.rules.rule
     -

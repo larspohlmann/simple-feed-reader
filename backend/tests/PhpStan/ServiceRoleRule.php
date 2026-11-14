@@ -22,10 +22,14 @@ final readonly class ServiceRoleRule implements Rule
     /** @var list<ServiceRoleChecker> */
     private array $checkers;
 
-    public function __construct(private ReflectionProvider $reflectionProvider, private ServiceModules $modules)
-    {
+    /** @param list<string> $groups the navigation groups below App\Service */
+    public function __construct(
+        private ReflectionProvider $reflectionProvider,
+        private ServiceModules $modules,
+        array $groups,
+    ) {
         $this->checkers = [
-            new ModulePlacement(),
+            new ModulePlacement($groups),
             new InterfacePlacement(),
             new RoleFolderNames(),
             new RoleFolderInterfaces(),

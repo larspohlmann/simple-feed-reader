@@ -113,13 +113,13 @@ Non-negotiables:
   DBAL alike; services orchestrate and own the unit of work
   ([docs/architecture.md](docs/architecture.md) §7, `QueriesLiveInRepositoriesRule`).
 - **Errors are exceptions**, typed and namespaced next to their service
-  (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
+  (`Service/*/*/Exception/`). Never signal failure with `null` or a magic value.
   Map a new one to HTTP by adding an arm to its module's
   `src/Http/Problem/ExceptionProblems/*Problems` mapper.
 - **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*`,
   anything in `App\Dto\*`, and Symfony's HttpFoundation and HTTP-exception classes,
   class names in strings included, in `Service`, `Repository`, `Entity`, `Enum`,
-  `Doctrine`, `Exception` and `Pagination`. A controller hands a service a `Service/<Module>` value
+  `Doctrine`, `Exception` and `Pagination`. A controller hands a service a `Service/<Group>/<Module>` value
   (`$request->toChange()`) or a plain field, never the DTO (#1182). Services build no
   response arrays either: a `src/Http/*Json` mapper shapes every response, and a value
   that serialises for a store names the method after it (`toLogContext()`,
@@ -129,7 +129,7 @@ Non-negotiables:
   extension uses lives with them, so persistence never imports a service: `App\Entity`
   for what an entity stores, embeds, takes or returns, `App\Enum` for enums an entity or
   a repository uses, `App\Doctrine` for the persistence plumbing the ORM extensions
-  share. Module enums, including ones several `Service/*` modules share, stay in the
+  share. Module enums, including ones several `Service/*/*` modules share, stay in the
   module that owns their meaning ([docs/architecture.md](docs/architecture.md) §8,
   `PersistenceKnowsNoServiceRule`). A repository names only Service values (a model, a
   helper, an exception) and the interfaces it implements.
@@ -212,7 +212,7 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`InvocationMatchersOnThisRule`** (`tests/PhpStan/InvocationMatchersOnThisRule.php`) — PHPUnit's invocation matchers are called on `$this`
   (`$this->once()`, `$this->never()`); PhpStorm's EA warning on `self::once()` blocks the lint gate.
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
-  `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
+  `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out
   three dependencies decided against (`Reader → Search`, `Recommendation → Reader`,
   `Reading → Recommendation`); each message names its issue.
