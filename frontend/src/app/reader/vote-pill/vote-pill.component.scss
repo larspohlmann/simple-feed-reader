@@ -10,7 +10,9 @@
   border-radius: var(--radius-pill);
   font-size: var(--fs-sm);
   color: var(--text-muted);
+}
 
+:host(:not(.bare)) .pill {
   @include glass-rim.ring(var(--border-strong), control);
 }
 
@@ -26,12 +28,6 @@
 }
 
 :host(.bare) .pill {
-  border: 0;
-
-  &::after {
-    display: none;
-  }
-
   .arrow {
     padding: 0 var(--space-1);
   }
