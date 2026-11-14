@@ -1405,6 +1405,7 @@
     "lemmyCommunities": "Communities",
     "socialSearches": "Searches",
     "socialHome": "Home@{{network}}",
+    "socialSubscribed": "Subscribed@{{network}}",
     "savedFrom": {
       "bluesky": "Saved from Bluesky",
       "mastodon": "Saved from Mastodon",

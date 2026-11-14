@@ -18,7 +18,7 @@ import {
   visibleSearchTerm,
 } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
-import { isUnrenamedHome } from '../feeds/display-title';
+import { isUnrenamedTimeline } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
@@ -138,7 +138,7 @@ export class ListHeading {
 
   private feedTitle(subscription: SubscriptionDto): string {
     const handle = this.sharedNetworkHandle(subscription);
-    return handle !== null && isUnrenamedHome(subscription)
+    return handle !== null && isUnrenamedTimeline(subscription)
       ? `${subscription.title} · ${handle}`
       : subscription.title;
   }

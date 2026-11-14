@@ -1,11 +1,22 @@
 import { makeSubscription } from '../testing/subscription.factory';
-import { isUnrenamedHome, titleFollowsSource } from './display-title';
+import { isUnrenamedTimeline, titleFollowsSource } from './display-title';
 
 const home = { network: 'bluesky', accountId: 3, kind: 'home' } as const;
 
-describe('isUnrenamedHome', () => {
+describe('isUnrenamedTimeline', () => {
   it('holds for a Home without a title of its own', () => {
-    expect(isUnrenamedHome(makeSubscription({ title: 'Timeline', social: home }))).toBe(true);
+    expect(isUnrenamedTimeline(makeSubscription({ title: 'Timeline', social: home }))).toBe(true);
+  });
+
+  it("holds for Lemmy's unrenamed Local and All and fails for Mastodon's Trending", () => {
+    const lemmy = { network: 'lemmy', accountId: 4 } as const;
+    const local = makeSubscription({ social: { ...lemmy, kind: 'local' } });
+    const all = makeSubscription({ social: { ...lemmy, kind: 'all' } });
+    const trending = makeSubscription({
+      social: { network: 'mastodon', accountId: 4, kind: 'trending' },
+    });
+
+    expect([local, all, trending].map(isUnrenamedTimeline)).toEqual([true, true, false]);
   });
 
   it('fails for a renamed Home, a list and an ordinary feed', () => {
@@ -13,7 +24,7 @@ describe('isUnrenamedHome', () => {
     const list = makeSubscription({ title: 'Writers', social: { ...home, kind: 'list' } });
     const ordinary = makeSubscription({ title: 'Heise' });
 
-    expect([renamed, list, ordinary].map(isUnrenamedHome)).toEqual([false, false, false]);
+    expect([renamed, list, ordinary].map(isUnrenamedTimeline)).toEqual([false, false, false]);
   });
 });
 

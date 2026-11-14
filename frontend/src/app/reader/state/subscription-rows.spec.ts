@@ -43,6 +43,14 @@ const renamedSearch = makeSubscription({
   social: search,
 });
 
+const lemmyTimelines = (['home', 'local', 'all'] as const).map((kind, index) =>
+  makeSubscription({
+    id: 20 + index,
+    title: kind,
+    social: { network: 'lemmy', accountId: 5, kind },
+  }),
+);
+
 function rows(): SubscriptionRows {
   TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
   const held = TestBed.inject(SubscriptionRows);
@@ -81,6 +89,17 @@ describe('SubscriptionRows', () => {
     i18n.setActiveLang('de');
 
     expect(title()).toMatch(/^Start@/);
+  });
+
+  it("titles Lemmy's unrenamed Subscribed, Local and All in the active language", () => {
+    const held = rows();
+    held.stored.set(lemmyTimelines);
+    const titles = computed(() => held.all().map((subscription) => subscription.title));
+    expect(titles()).toEqual(['Subscribed@lemmy', 'Local', 'All']);
+
+    TestBed.inject(TranslocoService).setActiveLang('de');
+
+    expect(titles()).toEqual(['Abonniert@lemmy', 'Lokal', 'Alle']);
   });
 
   it('titles an unrenamed saved feed from the language and keeps a custom title', () => {

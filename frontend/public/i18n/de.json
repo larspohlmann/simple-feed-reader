@@ -1405,6 +1405,7 @@
     "lemmyCommunities": "Communities",
     "socialSearches": "Suchen",
     "socialHome": "Startseite@{{network}}",
+    "socialSubscribed": "Abonniert@{{network}}",
     "savedFrom": {
       "bluesky": "Gespeichert aus Bluesky",
       "mastodon": "Gespeichert aus Mastodon",
