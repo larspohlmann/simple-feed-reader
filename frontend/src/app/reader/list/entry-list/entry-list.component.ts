@@ -53,6 +53,7 @@ import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { heldFor } from '../../../core/held-for';
+import { FeedLanguage } from '../../feed-language';
 
 // How long a reload or a command may run before it earns the overlay. One that
 // lands sooner would only flash it, which reads as a glitch rather than as progress.
@@ -107,6 +108,7 @@ export class EntryListComponent implements OnDestroy {
    *  — mirrors the sidebar row's icon so heading and row read as the same feed.
    *  Null, and unrendered, for every other selection. */
   readonly titleFaviconUrl = input<string | null>(null);
+  readonly titleLanguage = input<FeedLanguage | null>(null);
   readonly titleAvatarUrl = input<string | null>(null);
   readonly entries = input.required<EntryDto[]>();
   /** Ids of rows collapsed out of the list (un-favourited/un-kept/marked-unread

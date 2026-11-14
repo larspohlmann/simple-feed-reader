@@ -94,11 +94,18 @@
       </span>
     }
   </div>
-  @if (lastRefreshedLabel()) {
-    <span class="last-refreshed">
-      {{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}
-      @if (nextRefreshLabel(); as label) {
-        <span class="next-refresh">({{ 'reader.nextRefresh' | transloco }} {{ label }})</span>
+  @if (titleLanguageKey() || lastRefreshedLabel()) {
+    <span class="meta">
+      @if (titleLanguageKey(); as key) {
+        <span class="feed-language">{{ key | transloco }}</span>
+      }
+      @if (lastRefreshedLabel(); as refreshed) {
+        <span class="last-refreshed">
+          {{ 'reader.lastRefreshed' | transloco }} {{ refreshed }}
+          @if (nextRefreshLabel(); as label) {
+            <span class="next-refresh">({{ 'reader.nextRefresh' | transloco }} {{ label }})</span>
+          }
+        </span>
       }
     </span>
   }

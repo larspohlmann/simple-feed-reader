@@ -528,6 +528,15 @@ describe('EditSubscriptionDialogComponent', () => {
       expect(languageSelect(fixture)).toBeNull();
     });
 
+    it('is not offered for a saved feed, which is never refreshed and mixes languages', () => {
+      const fixture = mount({
+        ...sub,
+        sourceFormat: 'saved',
+        social: { network: 'mastodon', accountId: null, kind: 'saved' },
+      });
+      expect(languageSelect(fixture)).toBeNull();
+    });
+
     it('is offered for a profile feed, which is an ordinary feed', () => {
       const fixture = mount({
         ...sub,

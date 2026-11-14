@@ -22,12 +22,7 @@
   }
   <div class="body">
     @if (title(); as name) {
-      <p class="title">
-        {{ name }}
-        @if (languageNameKey(); as key) {
-          <span class="language">{{ key | transloco }}</span>
-        }
-      </p>
+      <p class="title">{{ name }}</p>
     }
     <!-- Blurb, toggle and link are inline siblings in one flow, so the link
          trails the last line of a wrapped description instead of claiming a row

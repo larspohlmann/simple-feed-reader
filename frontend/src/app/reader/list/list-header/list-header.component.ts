@@ -29,6 +29,7 @@ import {
 import { isPhraseTerm, isWholeWordTerm } from '../../query/search-term';
 import { relativeTime, relativeTimeUntil } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
+import { FeedLanguage, feedLanguageNameKey } from '../../feed-language';
 
 /** Each list's heading icon; null means the heading leads with its own glyph, favicon or logo. */
 const LIST_ICON: Record<SelectionKind, string | null> = {
@@ -85,6 +86,7 @@ export class ListHeaderComponent {
   readonly titleCount = input<TitleCount>({ value: 0, counts: 'items' });
   readonly titleTag = input<TagDto | null>(null);
   readonly titleFaviconUrl = input<string | null>(null);
+  readonly titleLanguage = input<FeedLanguage | null>(null);
   readonly titleAvatarUrl = input<string | null>(null);
   readonly lastRefreshed = input<string | null>(null);
   readonly nextRefresh = input<string | null>(null);
@@ -160,6 +162,12 @@ export class ListHeaderComponent {
     const iso = this.lastRefreshed();
     if (!isSingleStreamView(this.selection()) || !iso) return null;
     return relativeTime(iso, this.language.lang());
+  });
+
+  protected readonly titleLanguageKey = computed(() => {
+    const language = this.titleLanguage();
+    if (this.selection().kind !== 'subscription' || language === null) return null;
+    return feedLanguageNameKey(language);
   });
 
   /** A localised "next refresh in 20 min" label beside the last-refreshed hint,

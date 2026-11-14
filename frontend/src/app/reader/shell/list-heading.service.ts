@@ -78,10 +78,11 @@ export class ListHeading {
     const hasIntro =
       subscription.description !== null ||
       subscription.imageUrl !== null ||
-      subscription.siteUrl !== null ||
-      Boolean(subscription.language);
+      subscription.siteUrl !== null;
     return hasIntro ? subscription : null;
   });
+
+  readonly feedLanguage = computed(() => this.selectedSubscription()?.language ?? null);
 
   readonly feedIntroTitle = computed(() => {
     const subscription = this.feedIntroSubscription();

@@ -138,6 +138,7 @@ describe('ReaderShellComponent', () => {
         includeInForYou: true,
         includeInSavedSearches: true,
         includeInTrending: true,
+        language: null,
       },
     ],
     socialAccounts: [],
@@ -457,6 +458,7 @@ describe('ReaderShellComponent', () => {
     createdAt: 'x',
     tags: [],
     unreadCount: 0,
+    language: null,
   };
 
   // Boot the shell against a CUSTOM subscriptions list, draining the three
@@ -3645,7 +3647,7 @@ describe('ReaderShellComponent', () => {
         siteUrl: string | null;
         title?: string;
         social?: { network: string; accountId: number; kind: string };
-        language?: string;
+        language?: string | null;
       },
       layout: ReadingLayout = 'magazine',
     ): HTMLElement {
@@ -3702,16 +3704,19 @@ describe('ReaderShellComponent', () => {
       expect(host.querySelector('app-feed-intro .title')?.textContent?.trim()).toBe('Home@bsky');
     });
 
-    it("names the feed's language in the intro", () => {
-      const host = mountWithSubscriptionSelected({
-        description: null,
-        imageUrl: null,
-        siteUrl: null,
-        language: 'es',
-      });
+    for (const layout of ['list', 'magazine'] as const) {
+      it(`names the feed's language once, in the list header, in the ${layout} layout`, () => {
+        const host = mountWithSubscriptionSelected(
+          { description: 'About things.', imageUrl: null, siteUrl: null, language: 'es' },
+          layout,
+        );
 
-      expect(host.querySelector('app-feed-intro .language')?.textContent?.trim()).toBe('Spanish');
-    });
+        expect(host.querySelector('app-list-header .feed-language')?.textContent?.trim()).toBe(
+          'Spanish',
+        );
+        expect(host.textContent!.match(/Spanish/g)).toHaveLength(1);
+      });
+    }
 
     it('shows no feed intro in the list layout', () => {
       // The block is a member of the magazine column — it takes that column's

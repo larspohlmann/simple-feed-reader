@@ -156,15 +156,19 @@ h2.search-title {
   flex: none;
 }
 
-/* "Last refreshed …" hint under a single-feed or for-you title. Shown at
-   every width, but dropped in the narrow header's collapsed state below,
-   so a scrolled-down list keeps a slim bar. */
-.last-refreshed {
+/* A single feed's language and its "Last refreshed …" hint, under the title
+   (for-you shows only the hint). Shown at every width, but dropped in the narrow
+   header's collapsed state below, so a scrolled-down list keeps a slim bar. */
+.meta {
   font-size: var(--fs-xs, var(--fs-sm));
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.feed-language + .last-refreshed::before {
+  content: '· ';
 }
 
 // The next-refresh aside sits a step below even the last-refreshed hint it
@@ -185,7 +189,7 @@ h2.search-title {
     display: none;
   }
 
-  :host(.collapsed) .last-refreshed,
+  :host(.collapsed) .meta,
   :host(.collapsed) .whole-word-badge,
   :host(.collapsed) .phrase-badge {
     display: none;
