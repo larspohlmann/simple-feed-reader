@@ -151,9 +151,9 @@ final readonly class HeadlineEquivalents
     public function stemsOf(string $text, ?FeedLanguage $language): array
     {
         $stems = [];
-        foreach ($this->collapsePhrases(HeadlineStems::words($this->replaceExactWords($text))) as $word) {
-            if (HeadlineStems::isKept($word)) {
-                $stems[] = $this->stemOf($word, $language);
+        foreach ($this->collapsePhrases(HeadlineStems::words($this->replaceExactWords($text))) as [$word, $bare]) {
+            if (HeadlineStems::isKept($bare)) {
+                $stems[] = $this->stemOf($word, $bare, $language);
             }
         }
 
@@ -161,9 +161,8 @@ final readonly class HeadlineEquivalents
     }
 
     /** A canonical is a stem already: stemming it in a language would split it from the others. */
-    private function stemOf(string $word, ?FeedLanguage $language): string
+    private function stemOf(string $word, string $bare, ?FeedLanguage $language): string
     {
-        $bare = HeadlineStems::bare($word);
         if (isset($this->canonicals[$bare])) {
             return $bare;
         }
@@ -214,7 +213,7 @@ final readonly class HeadlineEquivalents
     /**
      * @param list<string> $words
      *
-     * @return list<string>
+     * @return list<array{string, string}> each word or phrase canonical, with its bare form
      */
     private function collapsePhrases(array $words): array
     {
@@ -223,7 +222,7 @@ final readonly class HeadlineEquivalents
         $index = 0;
         while ($index < \count($words)) {
             [$length, $canonical] = $this->phraseAt($bareWords, $index);
-            $collapsed[] = $canonical ?? $words[$index];
+            $collapsed[] = $canonical === null ? [$words[$index], $bareWords[$index]] : [$canonical, $canonical];
             $index += $length;
         }
 

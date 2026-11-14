@@ -174,6 +174,23 @@ final class HeadlineEquivalentsTest extends TestCase
         self::assertSame(['ukrain', 'talks'], $this->equivalents->stemsOf('Ukraine Ukrainian talks', null));
     }
 
+    public function testAHangulHeadlineWithoutALanguageKeepsItsWords(): void
+    {
+        self::assertCount(3, $this->equivalents->stemsOf('한국 경제 뉴스', null));
+        self::assertCount(3, $this->equivalents->stemsOf('서울 대통령 선거', null));
+    }
+
+    public function testAnUncomposableMarkDoesNotLengthenAWord(): void
+    {
+        self::assertSame([], $this->equivalents->stemsOf("ab\u{0303}", null));
+    }
+
+    public function testASpacingMarkStaysInsideItsWord(): void
+    {
+        self::assertSame(['नमस्ते'], HeadlineStems::words('नमस्ते'));
+        self::assertCount(1, $this->equivalents->stemsOf('नमस्ते', null));
+    }
+
     public function testEveryCanonicalIsAnOpaqueIdNoMapKeysAndNoLanguageSeeds(): void
     {
         $filler = TrendingWiring::filler();
